@@ -8,9 +8,9 @@ Welcome to mmengine's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Tutorials
 
-
+   tutorials/registry.md
 
 Indices and tables
 ==================
