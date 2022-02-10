@@ -3,18 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to mmengine's documentation!
-====================================
-You can switch between Chinese and English documents in the lower-left corner of the layout.
+欢迎来到 mmengine 的中文文档！
+=========================================
+您可以在页面左下角切换中英文文档。
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials
+   :caption: 教程
 
    tutorials/registry.md
 
 .. toctree::
-   :caption: Switch Language
+   :caption: 语言切换
 
    switch_language.md
 

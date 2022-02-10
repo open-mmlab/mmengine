@@ -1,9 +1,9 @@
-## Registry
+# Registry
 
-**MMEngine** implements `registry` to manage different modules that share similar functionalities, e.g., backbones, head, and necks, in detectors.
+**MMEngine** implements [registry](https://mmengine.readthedocs.io/en/latest/api.html#mmengine.registry.Registry) to manage different modules that share similar functionalities, e.g., backbones, head, and necks, in detectors.
 Most projects in OpenMMLab use registry to manage modules of datasets and models, such as [MMDetection](https://github.com/open-mmlab/mmdetection), [MMDetection3D](https://github.com/open-mmlab/mmdetection3d), [MMClassification](https://github.com/open-mmlab/mmclassification), [MMEditing](https://github.com/open-mmlab/mmediting), etc.
 
-### What is registry
+## What is registry
 
 In MMEngine, `registry` can be regarded as a mapping that maps a class to a string.
 These classes contained by a single registry usually have similar APIs but implement different algorithms or support different datasets.
@@ -16,9 +16,9 @@ To manage your modules in the codebase by `Registry`, there are three steps as b
 2. Create a registry.
 3. Use this registry to manage the modules.
 
-`build_func` argument of `Registry` is to customize how to instantiate the class instance, the default one is `build_from_cfg` implemented [here](https://mmcv.readthedocs.io/en/latest/api.html?highlight=registry#mmcv.utils.build_from_cfg).
+`build_func` argument of `Registry` is to customize how to instantiate the class instance, the default one is `build_from_cfg` implemented [here](https://mmengine.readthedocs.io/en/latest/api.html#mmengine.registry.build_from_cfg).
 
-### A Simple Example
+## A Simple Example
 
 Here we show a simple example of using `registry` to manage modules in a package.
 You can find more practical examples in OpenMMLab projects.
@@ -63,7 +63,7 @@ converter_cfg = dict(type='Converter1', a=a_value, b=b_value)
 converter = CONVERTERS.build(converter_cfg)
 ```
 
-### Customize Build Function
+## Customize Build Function
 
 Suppose we would like to customize how `converters` are built, we could implement a customized `build_func` and pass it into the registry.
 
@@ -92,14 +92,14 @@ The functionality is similar to the default `build_from_cfg`. In most cases, def
 `build_model_from_cfg` is also implemented to build PyTorch module in `nn.Sequentail`, you may directly use them instead of implementing by yourself.
 ```
 
-### Hierarchy Registry
+## Hierarchy Registry
 
 You could also build modules from more than one OpenMMLab frameworks, e.g. you could use all backbones in [MMClassification](https://github.com/open-mmlab/mmclassification) for object detectors in [MMDetection](https://github.com/open-mmlab/mmdetection), you may also combine an object detection model in [MMDetection](https://github.com/open-mmlab/mmdetection) and semantic segmentation model in [MMSegmentation](https://github.com/open-mmlab/mmsegmentation).
 
 All `MODELS` registries of downstream codebases are children registries of MMCV's `MODELS` registry.
 Basically, there are two ways to build a module from child or sibling registries.
 
-#### Build from children registries
+### Build from children registries
 
 In MMDetection we define a module `NetA`:
 
@@ -143,7 +143,7 @@ net_a = MODELS.build(cfg=dict(type='mmdet.NetA'))
 net_b = MODELS.build(cfg=dict(type='NetB'))
 ```
 
-If we don't want to provide a scope in the type like 'NetA' rather than 'mmdet.NetA', we can pass the argument `default_scope='mmdet'` to the `build` method and it will start looking at the `class` from that registry corresponding to the default_scope.
+For some reason we may not want to provide the scope prefix in the type, e.g. just `type='NetA1'` instead of `type='mmdet.NetA'`, we can pass the `default_scope='mmdet'` parameter to the `build` method, which will search for the registry corresponding to `default_ scope` registry and re-invoke the `build` method with that registry.
 
 ```python
 from mmcls.models import MODELS
@@ -151,7 +151,7 @@ net_a = MODELS.build(cfg=dict(type='NetA'), default_scope='mmdet')
 net_b = MODELS.build(cfg=dict(type='NetB'))
 ```
 
-#### Build from parent registry
+### Build from parent registry
 
 The shared `MODELS` registry in MMCV is the parent registry for all downstream codebases (root registry):
 
