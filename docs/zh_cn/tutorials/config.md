@@ -4,7 +4,7 @@ MMEngine 使用配置文件为训练过程的各个组件提供实例化参数�
 
 ## **通过配置文件传递参数**
 
-### **解析 Python 内置类型**
+### **解析 Python 内置类型变量**
 
 程序运行时会使用 `Config.fromfile` 解析配置文件定义的变量。`.py` 格式的配置文件一般只含 python 的内置类型。其中 `dict` 在运行时会被解析成 `mmengine.ConfigDict` ，其余基础类型（str，list，tuple）保持类型不变 。对于含有 `type` 字段的 `dict` 可以使用 `build_from_cfg` 完成对象的实例化。
 
@@ -28,9 +28,9 @@ if __name__ == '__main__':
     cfg_path = '/path/to/train_config.py'
     cfg = Config.fromfile(cfg_path)
     test_int = cfg.test_int
-    # test_int: int
+    # test_int: 1
     test_list = cfg.test_list
-    # test_list: list
+    # test_list: [1, 2, 3]
     optimizer = build_from_cfg(cfg.optimizer, OPTIMIZER)
     # optimizer: torch.optim.SGD，cfg.optimizer: ConfigDict
 ```
@@ -67,13 +67,17 @@ print(cfg)
 
 ### **解析外部模块**
 
-如果需要批量导入系统环境变量或者注册自定义模块，可以将需要导入的文件写入配问文件的 `custom_imports` 字段。`Config` 会解析 `custom_imports` 关键字在运行时导入该模块修改的环境变量。
+如果需要批量导入系统环境变量或者注册自定义模块，可以将需要导入的模块写入配置文件的 `custom_imports` 字段。`Config` 会解析 `custom_imports` 在运行时导入对应模块。
 
 `config.py`：
 
 ```Python
 custom_imports = dict(imports=['path.to.module.env_cfg'], allow_failed_imports=False)
-env_cfg.py
+```
+
+`env_cfg.py`：
+
+```env_cfg.py
 os.environ["TEST_VALUE"] = 'test'
 ```
 
@@ -89,7 +93,7 @@ print(os.environ["TEST_VALUE"])
 
 下游 codebase 一般会有通用配置文件，如 `default_runtime.py`，`default_schedule.py`。继承各种类型的通用配置文件可以减少具体任务的配置流程。以 `optimizer_cfg.py` 为例：
 
-`default_runtime_cfg`：
+`optimizer_cfg.py`：
 
 ```Python
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
@@ -110,9 +114,9 @@ _base_ = ['path/to/default_runtime_cfg.py']
 
 #### **子配置文件修改变量**
 
-有时候需要修改继承过来的变量，根据修改变量的字段层级，可分以下两种情况：
+有时候需要修改继承过来的变量，根据修改变量的字段类型级，可分以下两种情况：
 
-- 子文件需要修改的变量类型不是 `dict` ;或者需要 修改的变量类型是 `dict`，并且`_base_`中该字段类型同为`dict`。子文件中直接覆盖需要修改的变量即可。
+- 子文件需要修改的变量类型不是 `dict` ;或者需要修改的变量类型是 `dict`，并且`_base_`中该字段类型同为`dict`。子文件中直接覆盖需要修改的变量即可。
 
 `task_sample.py`：
 
@@ -128,7 +132,7 @@ optimizer = dict(type='SGD', lr=0.1)
 
 ```Python
 _base_ = ['path/to/default_runtime_cfg.py']
-# grad_clip: None -> dict
+# grad_clip: None -> dict, need _delete_=True
 optimizer_config = dict(
     _delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
 ```
@@ -140,6 +144,7 @@ optimizer_config = dict(
 ```python
 _base_ = ['path/to/default_runtime_cfg.py']
 a = {{_base_.optimizer}}
+# Equivalent to： a = dict(type='SGD', lr=0.1)
 ```
 
 \```{tip} `_base_` 的各个文件不能定义重名变量 ```
@@ -165,7 +170,6 @@ optimizer:
   type: SGD
   weight_decay: 0.0001
 optimizer_config:
-
   grad_clip: null
 ```
 
