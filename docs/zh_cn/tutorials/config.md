@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
 ### **解析预定义字段**
 
-`Config` 还能解析预定义的字段，目前支持以下四种（变量名引用自[VS Code](https://code.visualstudio.com/docs/editor/variables-reference)）：
+`Config` 能解析预定义的字段，目前支持以下四种（变量名引用自[VS Code](https://code.visualstudio.com/docs/editor/variables-reference)）：
 
 `{{ fileDirname }}` - 当前打开文件的目录名，例如 /home/your-username/your-project/folder
 
@@ -97,7 +97,7 @@ class NewConv2:
 
 ```Python
 cfg = Config.fromfile('/path/to/config_custom_module.py', import_custom_modules=True)
-assert os.environ["TEST_VALUE"] == 'test' 
+assert os.environ["TEST_VALUE"] == 'test'
 assert 'NewConv1' in CONV_LAYERS.module_dict
 assert 'NewConv2' in CONV_LAYERS.module_dict
 ```
@@ -124,7 +124,7 @@ gpu_ids = [0, 1]
 `task_config.py`：
 
 ```Python
-_base_ = ['path/to/default_runtime_cfg.py'] 
+_base_ = ['path/to/default_runtime_cfg.py']
 ```
 
 - **修改字段**
@@ -239,4 +239,3 @@ env_cfg = dict(backend='nccl')
 ![runner模块分布](../../en/_static/runner_module.png)
 
 每个模块的配置方法可见具体模块的用户文档。
-
