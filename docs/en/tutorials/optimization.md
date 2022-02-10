@@ -2,11 +2,11 @@
 
 ## How to adjust learning rate
 
-Like the `torch.optim.lr_scheduler` in PyTorch, mmengine provides a variety of parameter schedulers to adjust the learning rate in the optimizer parameter groups. Through the schedulers in mmengine, you can adjust the learning rate according to epoch or iteration, you can also combine multiple schedulers, or add your custom schedulers.
+Like the `torch.optim.lr_scheduler` in PyTorch, MMEngine provides a variety of parameter schedulers to adjust the learning rate in the optimizer's parameter groups. Through the schedulers in MMEngine, you can adjust the learning rate according to epoch or iteration, you can also combine multiple schedulers, or customize your own schedulers.
 
 ### Use a single learning rate scheduler
 
-To use a single learning rate scheduler in mmengine, you can set the `scheduler` field in the configuration file. For example:
+To use a single learning rate scheduler in MMEngine, you can set the `scheduler` field in the configuration file. For example:
 
 ```python
 scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
@@ -14,7 +14,7 @@ scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.
 
 ### Combine multiple learning rate schedulers (such as warmup)
 
-mmengine supports stacking multiple schedulers, just set the `scheduler` field in the configuration file to a list of schedulers. Take the most common learning rate warmup as an example:
+MMEngine supports stacking multiple schedulers, just set the `scheduler` field in the configuration file to a list of schedulers. Take the most common strategy, warmup, as an example:
 
 ```python
 scheduler = [
@@ -36,7 +36,7 @@ Just like the lr schedulers in PyTorch, most schedulers can be called back-to-ba
 
 ### Update frequency
 
-mmengine supports two different frequencies of learning rate updates: epoch-based updates and iteration-based updates. It can be switched by the `by_epoch` parameter in the scheduler.
+MMEngine supports two different frequencies of learning rate updates: epoch-based updates and iteration-based updates. It can be switched by the `by_epoch` parameter in the scheduler.
 
 Update by epoch:
 
@@ -58,7 +58,7 @@ scheduler = dict(type='MultiStepLR',
 
 ### Effective interval
 
-You can set the effective interval of the schedulers in mmengine. Through the two parameters of `begin` and `end`, you can control the interval in which the scheduler is updated.
+You can set the effective interval of the schedulers in MMEngine. Through the two parameters of `begin` and `end`, you can control the interval in which the scheduler is applied.
 
 Example:
 
@@ -97,7 +97,7 @@ scheduler = [
 
 ## How to adjust custom parameters
 
-mmengine provides a set of general parameter schedulers for scheduling different parameter in optimizer's `param_groups`. You can set the `param_name` parameter of the scheduler to control what parameters you want to schedule.
+MMEngine provides a set of general parameter schedulers for scheduling different parameter in optimizer's `param_groups`. You can set the `param_name` parameter of the scheduler to control what parameters you want to schedule.
 
 Example:
 
