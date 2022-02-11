@@ -275,6 +275,7 @@ class ToyDataset(BaseDataset):
                 img_prefix, raw_data['img_path')
         return raw_data
 
+    # 必须支持的方法，需要返回样本的类别
     def get_cat_ids(self, idx):
         data_info = self.get_data_info(idx)
         return [int(data_info['img_label'])]
