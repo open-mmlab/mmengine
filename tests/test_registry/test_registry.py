@@ -5,13 +5,6 @@ from mmengine.registry import Registry, build_from_cfg
 
 class TestRegistry:
 
-    def __init__(self):
-
-        def _build_from_cfg(cfg, registry, default_args=None):
-            pass
-
-        self.custom_build_function = _build_from_cfg
-
     def test_init(self):
         CATS = Registry('cat')
         assert CATS.name == 'cat'
@@ -20,8 +13,11 @@ class TestRegistry:
         assert len(CATS) == 0
 
         # test `build_func` parameter
-        CATS = Registry('cat', build_func=self.custom_build_function)
-        assert CATS.build_func is self.custom_build_function
+        def build_func(cfg, registry, default_args):
+            pass
+
+        CATS = Registry('cat', build_func=build_func)
+        assert CATS.build_func is build_func
 
         # test `parent` parameter
         # `parent` is either None or a `Registry` instance
@@ -168,16 +164,15 @@ class TestRegistry:
         return DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS
 
     def test_get(self):
-        r"""Hierarchy Registry.
-
-                        DOGS
-                         |
-                       HOUNDS (hound)
-                     /       \
-                    /         \
-            LITTLE_HOUNDS    MID_HOUNDS
-            (little_hound)   (mid_hound)
-        """
+        #        Hierarchy Registry
+        #
+        #               DOGS
+        #                |
+        #              HOUNDS (hound)
+        #             /       \
+        #            /         \
+        #   LITTLE_HOUNDS    MID_HOUNDS
+        #   (little_hound)   (mid_hound)
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
 
         @DOGS.register_module()
@@ -196,8 +191,8 @@ class TestRegistry:
         assert DOGS.get('hound.BloodHound') is BloodHound
         assert HOUNDS.get('hound.BloodHound') is BloodHound
 
-        # If the key is not found in the current registry, then look for the
-        # its parent
+        # If the key is not found in the current registry, then look for its
+        # parent
         assert HOUNDS.get('GoldenRetriever') is GoldenRetriever
 
         @LITTLE_HOUNDS.register_module()
@@ -210,8 +205,8 @@ class TestRegistry:
         assert HOUNDS.get('little_hound.Dachshund') is Dachshund
         assert DOGS.get('hound.little_hound.Dachshund') is Dachshund
 
-        # If the key is not found in the current registry, then look for the
-        # its parent
+        # If the key is not found in the current registry, then look for its
+        # parent
         assert LITTLE_HOUNDS.get('BloodHound') is BloodHound
         assert LITTLE_HOUNDS.get('GoldenRetriever') is GoldenRetriever
 
@@ -226,22 +221,21 @@ class TestRegistry:
         assert MID_HOUNDS.get('hound.BloodHound') is BloodHound
         assert MID_HOUNDS.get('hound.Dachshund') is None
 
-        # If the key is not found in the current registry, then look for the
-        # its parent
+        # If the key is not found in the current registry, then look for its
+        # parent
         assert MID_HOUNDS.get('BloodHound') is BloodHound
         assert MID_HOUNDS.get('GoldenRetriever') is GoldenRetriever
 
     def test_build(self):
-        r"""Hierarchy Registry.
-
-                        DOGS
-                         |
-                       HOUNDS (hound)
-                     /       \
-                    /         \
-            LITTLE_HOUNDS    MID_HOUNDS
-            (little_hound)   (mid_hound)
-        """
+        #        Hierarchy Registry
+        #
+        #               DOGS
+        #                |
+        #              HOUNDS (hound)
+        #             /       \
+        #            /         \
+        #   LITTLE_HOUNDS    MID_HOUNDS
+        #   (little_hound)   (mid_hound)
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
 
         @DOGS.register_module()
