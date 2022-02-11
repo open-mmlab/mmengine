@@ -91,9 +91,9 @@ optimizer = build_from_cfg(cfg.optimizer, OPTIMIZER)
 # optimizer: torch.optim.SGD，cfg.optimizer: ConfigDict
 ```
 
-# **配置文件进阶用法**
+## 配置文件进阶用法
 
-## **解析预定义字段**
+### 解析预定义字段
 
 `Config` 能解析预定义的字段，目前支持以下四种（变量名引用自[VS Code](https://code.visualstudio.com/docs/editor/variables-reference)）：
 
@@ -122,7 +122,7 @@ cfg = Config.fromfile('./config_a.py')
 # dict(a=1, b='./work_dir/config_a', c='.py')
 ```
 
-## **解析外部模块**
+### 解析外部模块
 
 如果需要批量导入系统环境变量或者注册自定义模块，可以将需要导入的模块写入配置文件的 `custom_imports` 。`Config` 会在解析阶段导入 `custom_imports` 中定义的模块。
 
@@ -160,7 +160,7 @@ assert 'NewConv2' in CONV_LAYERS.module_dict
 
 使用 `custom_imports` 能够非侵入式导入自定义注册模块。
 
-## **继承式的配置文件**
+### 继承式的配置文件
 
 下游 `codebase` 一般会有通用配置文件，如 `default_runtime.py`，`default_schedule.py`。继承各种类型的通用配置可以减少具体任务的配置流程。以 `optimizer_cfg.py` 为例：
 
@@ -210,9 +210,11 @@ a = {{_base_.optimizer}}
 # Equivalent to： a = dict(type='SGD', lr=0.1)
 ```
 
-\```{tip} `_base_` 的各个文件不能定义重名变量 ```
+:::{tip}
+_base_ 的各个文件不能定义重名变量
+:::
 
-# **构建最简 runner**
+## 构建最简 runner
 
 以 `.py` 格式的配置文件为例，要想基于 MMEngine 构建最简训练流程，需要给 `runner` 配置最低限度的参数，包括 `model` 、`optimzer`、`runner`、`env_cfg`、`scheduler` 和 `train_dataloader`，示例如下：
 
