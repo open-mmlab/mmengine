@@ -261,7 +261,7 @@ toy_dataset_repeat = BaseRepeatDataset(dataset=toy_dataset, times=5)
 
 ## BaseClassBalancedDataset
 
-MMEngine 提供了 `BaseClassBalancedDataset` 包装来基于数据集中类别出现频率重复采样相应样本，**请注意，** `BaseClassBalancedDataset` 包装需要被包装的数据集必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 对应的 `data_info` 包含的样本类别，使用方法如下：
+MMEngine 提供了 `BaseClassBalancedDataset` 包装来基于数据集中类别出现频率重复采样相应样本，**请注意，** `BaseClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 对应的 `data_info` 包含的样本类别，使用方法如下：
 
 ```python
 from mmengine.data import BaseDataset, BaseClassBalancedDataset
