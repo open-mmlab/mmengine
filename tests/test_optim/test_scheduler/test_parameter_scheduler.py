@@ -5,10 +5,16 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.testing._internal.common_utils import TestCase
 
-from mmengine.optim.scheduler import (
-    ConstantParameterScheduler, CosineAnnealingParameterScheduler,
-    ExponentialParameterScheduler, LinearParameterScheduler,
-    MultiStepParameterScheduler, StepParameterScheduler, _ParameterShceduler)
+# yapf: disable
+from mmengine.optim.scheduler import (ConstantParameterScheduler,
+                                      CosineAnnealingParameterScheduler,
+                                      ExponentialParameterScheduler,
+                                      LinearParameterScheduler,
+                                      MultiStepParameterScheduler,
+                                      StepParameterScheduler,
+                                      _ParameterShceduler)
+
+# yapf: enable
 
 
 class ToyModel(torch.nn.Module):
