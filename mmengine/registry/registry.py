@@ -12,10 +12,30 @@ def build_from_cfg(cfg: dict,
                    default_args: Optional[dict] = None):
     """Build a module from config dict.
 
+    At least one of the ``cfg`` and ``default_args`` contains the key "type"
+    which type should be either str or class. If they all contain it, the key
+    in ``cfg`` will be used because ``cfg`` has a high priority than
+    ``default_args`` that means if a key exist in both of them, the value of
+    the key will be ``cfg[key]``. They will be merged first and the key "type"
+    will be popped up and the remaining keys will be used as initialization
+    arguments.
+
+    Examples:
+        >>> from mmengine import Registry, build_from_cfg
+        >>> MODELS = Registry('models')
+        >>> @MODELS.register_module()
+        >>> class ResNet:
+        >>>     def __init__(self, depth, stages=4):
+        >>>         self.depth = depth
+        >>>         self.stages = stages
+        >>> cfg = dict(type='ResNet', depth=50)
+        >>> model = build_from_cfg(cfg, MODELS)
+
     Args:
         cfg (dict): Config dict. It should at least contain the key "type".
         registry (:obj:`Registry`): The registry to search the type from.
         default_args (dict, optional): Default initialization arguments.
+            Defaults to None.
 
     Returns:
         object: The constructed object.
@@ -51,6 +71,7 @@ def build_from_cfg(cfg: dict,
     else:
         raise TypeError(
             f'type must be a str or valid type, but got {type(obj_type)}')
+
     try:
         return obj_cls(**args)  # type: ignore
     except Exception as e:
@@ -76,13 +97,13 @@ class Registry:
 
     Args:
         name (str): Registry name.
-        build_func(callable, optional): Build function to construct instance
-            from Registry, func:`build_from_cfg` is used if neither ``parent``
+        build_func (callable, optional): A function to construct instance
+            from Registry, :func:`build_from_cfg` is used if neither ``parent``
             or ``build_func`` is specified. If ``parent`` is specified and
             ``build_func`` is not given,  ``build_func`` will be inherited
             from ``parent``. Defaults to None.
         parent (Registry, optional): Parent registry. The class registered in
-            children registry could be built from parent. Default: None.
+            children registry could be built from parent. Defaults to None.
         scope (str, optional): The scope of registry. It is the key to search
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
@@ -98,7 +119,7 @@ class Registry:
         self._module_dict: Dict[str, Type] = dict()
         self._children: Dict[str, 'Registry'] = dict()
 
-        if scope:
+        if scope is not None:
             assert isinstance(scope, str)
             self._scope = scope
         else:
@@ -122,7 +143,7 @@ class Registry:
         self.parent: Optional['Registry']
         if parent is not None:
             assert isinstance(parent, Registry)
-            parent._add_children(self)
+            parent._add_child(self)
             self.parent = parent
         else:
             self.parent = None
@@ -204,7 +225,7 @@ class Registry:
     def children(self):
         return self._children
 
-    def _goto_root(self) -> 'Registry':
+    def _get_root_registry(self) -> 'Registry':
         """Return the root registry."""
         parent = self
         while parent.parent is not None:
@@ -234,8 +255,7 @@ class Registry:
                 return self._module_dict[real_key]
 
             if scope is None:
-                # New Feature: unit tests
-                # try to get from its parent
+                # try to get the target from its parent or ancestors
                 parent = self.parent
                 while parent is not None:
                     if real_key in parent._module_dict:
@@ -247,20 +267,21 @@ class Registry:
                 return self._children[scope].get(real_key)
             else:
                 # jump to the root registry
-                root = self._goto_root()
+                root = self._get_root_registry()
                 return root.get(key)
 
         return None
 
-    def _find_registry(self, scope: str) -> Optional['Registry']:
-        """Depth-first find for the corresponding registry.
+    def _search_children(self, scope: str) -> Optional['Registry']:
+        """Depth-first search for the corresponding registry.
 
-        Note that the method only find the corresponding registry from the
-        current registry. Therefore, if we want to find from the root registry,
-        we need to call :meth:`_goto_root` first.
+        Note that the method only search the corresponding registry from the
+        current registry. Therefore, if we want to search from the root
+        registry, :meth:`_get_root_registry` should be called to get the
+        root registry first.
 
         Args:
-            scope (str): The ``scope`` to find the corresponding registry.
+            scope (str): The ``scope`` to search the corresponding registry.
 
         Returns:
             Registry or None: Return the corresponding registry if the
@@ -270,7 +291,7 @@ class Registry:
             return self
 
         for child in self._children.values():
-            registry = child._find_registry(scope)
+            registry = child._search_children(scope)
             if registry is not None:
                 return registry
 
@@ -287,8 +308,8 @@ class Registry:
                 reset the current registry. Defaults to None.
         """
         if default_scope:
-            root = self._goto_root()
-            registry = root._find_registry(default_scope)
+            root = self._get_root_registry()
+            registry = root._search_children(default_scope)
             if registry is None:
                 raise KeyError(
                     f'{default_scope} does not exist in the registry tree.')
@@ -297,7 +318,7 @@ class Registry:
 
         return registry.build_func(*args, **kwargs, registry=registry)
 
-    def _add_children(self, registry: 'Registry') -> None:
+    def _add_child(self, registry: 'Registry') -> None:
         """Add children for a registry.
 
         The ``registry`` will be added as children based on its scope.
@@ -322,6 +343,16 @@ class Registry:
                          module_class: Type,
                          module_name: Optional[Union[str, List[str]]] = None,
                          force: bool = False) -> None:
+        """Register a module.
+
+        Args:
+            module_class (type): Module class to be registered.
+            module_name (str or list of str, optional): The module name to be
+                registered. If not specified, the class name will be used.
+                Defaults to None.
+            force (bool): Whether to override an existing class with the same
+                name. Default to False.
+        """
         if not inspect.isclass(module_class):
             raise TypeError('module must be a class, '
                             f'but got {type(module_class)}')
