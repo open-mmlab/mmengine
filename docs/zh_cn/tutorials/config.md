@@ -48,7 +48,7 @@ cfg = Config.fromfile('/path/to/config.py')
 ## 配置文件的使用
 
 通过读取配置文件来初始化配置对象后，就可以像使用普通字典或者 Python 类一样来使用这个变量了。
-我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者 类似 python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
+我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
 
 ```python
 cfg = Config.fromfile('config.py')
