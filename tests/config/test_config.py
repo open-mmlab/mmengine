@@ -14,7 +14,7 @@ from mmengine.config import Config, ConfigDict, DictAction, dump, load
 data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'test_data/')
 
 
-class TestConig:
+class TestConfig:
 
     def test_construct(self, tmp_path):
         # test init Config by __init__
