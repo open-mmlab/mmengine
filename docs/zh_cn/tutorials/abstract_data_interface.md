@@ -70,6 +70,7 @@ gt_instances2 = gt_instances1.new()
 类似的，用户可以通过 `meta_info_keys`，`meta_info_values`，和`meta_info_items` 来访问只存在于 meta_info 中的键值，
 也可以通过 `data_keys`，`data_values`，和 `data_items` 来访问只存在于 data 中的键值。
 用户还能通过 `keys`，`values`， `items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
+**注意：** `BaseDataElement` 不支持 meta_info 和 data 属性中有同名的字段，所以用户应当避免 meta_info 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
 
 ```python
 gt_instances = BaseDataElement()
