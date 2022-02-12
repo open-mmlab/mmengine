@@ -4,3 +4,5 @@ _base_ = [
 ]
 item3 = False
 item4 = 'test'
+item_bool = True
+item_float = 1.0
