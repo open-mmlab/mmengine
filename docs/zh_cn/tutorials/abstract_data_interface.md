@@ -213,8 +213,97 @@ tensor([0, 1, 2, 3])
 ### BaseDataSample
 
 `BaseDataSample` 是所有基础数据元素的封装，并作为一个算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
-因此 `BaseDataSample` 支持 `BaseDataElement` 的上述所有使用方式，唯一的不同点在于每个算法库内会对齐样本数据的字段进行规约和校验。
+OpenMMLab 每个算法库都会继承 `BaseDataSample` 实现该算法方向的的样本数据封装，并对其字段进行规约和校验。
+因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验（property）。
+下游算法库的样本数据封装 `DetDataSample` 可以使用 `BaseDataSample` 实现的 `_get_field`, `_del_field` 来快捷地定义对属性的访问和删除操作，
+同时 `BaseDataSample` 还提供了 `_set_field` 接口，支持设置实际要维护的变量别名，并且在设置过程中检查数据的类型是否符合约束。
+一个简单粗略的实现和用例如下。
+
+```python
+from abc import ABC
+from functools import partial
+
+
+class BaseDataSample(ABC):
+
+    def __init__(self):
+        self._data_fields = set()
+
+    def _get_field(self, name):
+        return getattr(self, name)
+
+    def _set_field(self, val, name, dtype):
+        assert isinstance(val, dtype)
+        super().__setattr__(name, val)
+        self._data_fields.add(name)
+
+    def _del_field(self, name):
+        super().__delattr__(name)
+        self._data_fields.remove(name)
+
+```
+
+基于 `BaseDataSample`，下游算法库可以定义 `DetDataSample`，并且复用 `BaseDataSample` 中的实现，快速地定义和约束 3 个 property：proposals，gt_instances，pred_instances。
+
+```python
+class DetDataSample(BaseDataSample):
+
+    proposals = property(
+        # 定义了 get 方法，通过 name '_proposals' 来访问实际维护的变量
+        fget=partial(BaseDataSample._get_field, name='_proposals'),
+        # 定义了 set 方法，将实际维护的变量设置为 '_proposals'，并在设置的时候检查类型是否是 dtype 定义的类型 InstanceData
+        fset=partial(BaseDataSample._set_field, name='_proposals', dtype=InstanceData),
+        fdel=partial(BaseDataSample._del_field, name='_proposals'),
+        doc='Region proposals of an image'
+    )
+
+    gt_instances = property(
+        fget=partial(BaseDataSample._get_field, name='_gt_instances'),
+        fset=partial(BaseDataSample._set_field, name='_gt_instances', dtype=InstanceData),
+        fdel=partial(BaseDataSample._del_field, name='_gt_instances'),
+        doc='Ground truth instances of an image'
+    )
+
+    pred_instances = property(
+        fget=partial(BaseDataSample._get_field, name='_pred_instances'),
+        fset=partial(BaseDataSample._set_field, name='_pred_instances', dtype=InstanceData),
+        fdel=partial(BaseDataSample._del_field, name='_pred_instances'),
+        doc='Predicted instances of an image'
+    )
+```
+
+`DetDataSample` 的如下所示，在数据类型不符合要求的时候（例如用 `torch.Tensor` 而非 `InstanceData` 定义 proposals 时） ，`DetDataSample` 就会报错。
+
+```python
+a = DetDataSample()
+a.proposals = InstanceData(data=dict(bboxes=torch.rand((5,4))))
+assert 'proposals' in example
+print(a.proposals)
+del a.proposals
+```
 
 ## 命名规约
 
-为了保持不同任务数据之间的兼容性和统一性，我们建议抽象数据接口中相同的数据使用统一的字段命名，并在下文的命名列表中进行约束。
+为了保持不同任务数据之间的兼容性和统一性，我们建议抽象数据接口中对相同的数据使用统一的字段命名。
+用户在使用各算法库抽象接口的过程中，可以假定对应的数据（如有）在样本数据封装中是按照如下约定进行命名的。
+
+### ClsDataSample
+
+- gt_label (SampleData): 数据的分类标签
+- pred_label (SampleData): 模型对数据的分类预测结果
+
+### DetDataSample
+
+- pred_instances (InstanceData): 模型预测的实例
+- gt_instances (InstanceData): 标注的实例
+- gt_sem_seg (PixelData): 语义分割的标注
+- pred_sem_seg (PixelData): 语义分割任务的模型预测
+- gt_panoptic_seg (PixelData): 全景分割的标注
+- pred_panoptic_seg (PixelData): 全景分割任务的模型预测
+- proposals (InstanceData): 用于双阶段检测器的候选框提名
+- ignored_instances (InstanceData): 在训练中应当被忽视的实例
+
+### SegDataSample
+
+- gt_sem_seg (PixelData): 语义分割的标注
+- pred_sem_seg (PixelData): 语义分割任务的模型预测
