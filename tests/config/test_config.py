@@ -518,10 +518,6 @@ class TestConfig:
             Config.fromfile(cfg_file)
 
     def test_syntax_error(self, tmp_path):
-        # the name can not be used to open the file a second time in windows,
-        # so `delete` should be set as `False` and we need to manually remove
-        # it.more details can be found at
-        # https://github.com/open-mmlab/mmengine/pull/1077
         temp_cfg_path = tmp_path / 'tmp_file.py'
         # write a file with syntax error
         with open(temp_cfg_path, 'w') as f:
@@ -529,7 +525,6 @@ class TestConfig:
         with pytest.raises(
                 SyntaxError, match='There are syntax errors in config file'):
             Config.fromfile(temp_cfg_path)
-        os.remove(temp_cfg_path)
 
     def test_pickle_support(self, tmp_path):
         cfg_file = osp.join(data_path, 'config/py_config/pickle_support.py')
