@@ -34,8 +34,8 @@
 # 可以声明一个空的 object
 gt_instances = BaseDataElement()
 
-bboxes = torch.tensor((5, 4))  # 假定 bboxes 是一个 Nx4 维的 tensor，N 代表框的个数
-scores = torch.tensor((5,))  # 假定框的分数是一个 N 维的 tensor，N 代表框的个数
+bboxes = torch.rand((5, 4))  # 假定 bboxes 是一个 Nx4 维的 tensor，N 代表框的个数
+scores = torch.rand((5,))  # 假定框的分数是一个 N 维的 tensor，N 代表框的个数
 img_id = 0  # 图像的 ID
 H = 800  # 图像的高度
 W = 1333  # 图像的宽度
@@ -50,15 +50,15 @@ gt_instances = BaseDataElement(dict(img_id=img_id, img_shape=(H, W)))
 ```
 
 2. 使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 meta_info 和 data，使得新的 BaseDataElement 有相同的状态但是不同的数据。
-也可以直接使用 `new()` 来获得一份拷贝。
+也可以直接使用 `new()` 来获得一份深拷贝。
 
 ```python
 gt_instances = BaseDataElement()
 
-# 可以在创建新 `BaseDataElement` 时设置 meta_info 和 data，使得新的 BaseDataElement 有相同的状态但是不同的数据
+# 可以在创建新 `BaseDataElement` 时设置 meta_info 和 data，使得新的 BaseDataElement 有不同的数据但是数据在相同的 device 上
 gt_instances1 = gt_instance.new(
     meta_info=dict(img_id=1, img_shape=(640, 640)),
-    data=dict(bboxes=torch.tensor((5, 4)), scores=torch.tensor((5,)))
+    data=dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5,)))
 )
 
 # 也可以声明一个新的 object，新的 object 会拥有和 gt_instance 相同的 data 和 meta_info 内容
@@ -66,9 +66,9 @@ gt_instances2 = gt_instances1.new()
 ```
 
 3. 属性的增加与查询：用户可以通过 `set_meta_info` 和 `set_data` 来增加 `BaseDataElement` 的属性，这种方式会显式声明了字段属于 `meta_info` 还是 `data` ，并将属性添加到对应的字段列表中。
-用户也可以像增加类属性或者字典字段那样增加 `BaseDataElement` 的属性，此时数据会被默认为 data 类型增加到 `BaseDataElement` 中。
-类似的，用户可以通过 `meta_info_keys`，`meta_info_values`，和`meta_info_items` 来访问 meta_info 中的键值，
-也可以通过 `data_keys`，`data_values`，和 `data_items` 来访问 data 中的键值。
+用户也可以像增加类属性或者字典字段那样增加 `BaseDataElement` 的属性，此时数据会被**默认为 data 类型**增加到 `BaseDataElement` 中。
+类似的，用户可以通过 `meta_info_keys`，`meta_info_values`，和`meta_info_items` 来访问只存在于 meta_info 中的键值，
+也可以通过 `data_keys`，`data_values`，和 `data_items` 来访问只存在于 data 中的键值。
 用户还能通过 `keys`，`values`， `items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
 
 ```python
@@ -92,7 +92,7 @@ assert 'bboxes' in gt_instances
 assert 'bboxes' not in gt_instances.meta_info_skeys()
 
 # 直接设置 gt_instance 的 scores 属性，默认该数据属于 data
-gt_instances.scores = torch.tensor((5,))
+gt_instances.scores = torch.rand((5,))
 assert 'scores' in gt_instances.data_keys()
 # 通过 keys 来访问所有属性
 assert 'scores' in gt_instances.keys()
@@ -101,7 +101,7 @@ assert 'scores' in gt_instances
 assert 'scores' not in gt_instances.meta_info_skeys()
 
 # 直接像字典一样设置 gt_instance 的 labels 属性，默认该数据属于 data
-gt_instances['labels'] = torch.tensor((5,))
+gt_instances['labels'] = torch.rand((5,))
 assert 'labels' in gt_instances.data_keys()
 # 通过 keys 来访问所有属性
 assert 'labels' in gt_instances.keys()
@@ -118,7 +118,7 @@ for k, v in gt_instances.items():
 ```python
 gt_instances = BaseDataElement(
     meta_info=dict(img_id=0, img_shape=(640, 640))，
-    data=dict(bboxes=torch.tensor((6, 4)), scores=torch.tensor((6,))))
+    data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
 
 # 对类的属性进行修改
 gt_instances.img_shape = (1280, 1280)
@@ -144,6 +144,7 @@ gt_instances.get('bboxes', None)  # None
 ```
 
 5. 用户可以像 torch.Tensor 那样对 `BaseDataElement` 的 data 进行状态转换，目前支持 `cuda`， `cpu`， `to`， `numpy` 等操作。
+其中，`to` 函数拥有和 `torch.Tensor.to()` 相同的接口，使得用户可以灵活地将被封装的 tensor 进行状态转换。
 
 ```python
 # 将所有 data 转移到 GPU 上
@@ -153,6 +154,11 @@ cuda_instances = gt_instancess.to('cuda:0')
 # 将所有 data 转移到 cpu 上
 cpu_instances = cuda_instances.cpu()
 cpu_instances = cuda_instances.to('cpu')
+
+# 将所有 data 变成 FP16
+fp16_instances = cuda_instances.to(
+    device=None, dtype=None, non_blocking=False, copy=False,
+    memory_format=torch.preserve_format)
 
 # 阻断所有 data 的梯度
 cpu_instances = cuda_instances.detach()
@@ -170,8 +176,8 @@ np_instances = cpu_instances.numpy()
 >>> instance_data = BaseDataElement(meta_info=img_meta)
 >>> img_shape in instance_data
 True
->>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
->>> instance_data["det_scores"] = torch.Tensor([0.01, 0.1, 0.2, 0.3])
+>>> instance_data.det_labels = torch.Longrand([0, 1, 2, 3])
+>>> instance_data["det_scores"] = torch.rand([0.01, 0.1, 0.2, 0.3])
 >>> print(results)
 <BaseDataElement(
   META INFORMATION
@@ -182,11 +188,11 @@ shape of det_labels: torch.Size([4])
 shape of det_scores: torch.Size([4])
 ) at 0x7f84acd10f90>
 >>> instance_data.det_scores
-tensor([0.0100, 0.1000, 0.2000, 0.3000])
+rand([0.0100, 0.1000, 0.2000, 0.3000])
 >>> instance_data.det_labels
-tensor([0, 1, 2, 3])
+rand([0, 1, 2, 3])
 >>> instance_data['det_labels']
-tensor([0, 1, 2, 3])
+rand([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 True
 >>> instance_data.img_shape
@@ -198,7 +204,7 @@ True
 False
 >>> det_labels = instance_data.pop('det_labels', None)
 >>> det_labels
-tensor([0, 1, 2, 3])
+rand([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 >>> False
 ```
