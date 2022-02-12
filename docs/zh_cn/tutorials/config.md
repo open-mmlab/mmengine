@@ -42,7 +42,7 @@ test_dict:
 from mmengine import Config
 
 cfg = Config.fromfile('/path/to/config.py')
-# Config (path: config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'optimizer': {'key1: 'value1', "key2": 0.1}
+# Config (path: config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1: 'value1', "key2": 0.1}
 ```
 
 ## 配置文件的使用
