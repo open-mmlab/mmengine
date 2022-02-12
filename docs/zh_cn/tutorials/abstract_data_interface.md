@@ -18,7 +18,11 @@
 
 2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注，标签级的场景分类标注，和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，`BaseDataSample` 的属性会是各种类型的基础数据元素，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
-为了保证抽象数据接口内数据的完整性，抽象数据接口内部有两种数据，除了被封装的数据本身，还有一种是数据的元信息，例如图片大小和 ID 等。
+两种类型的封装和他们的继承关系如下图所示
+<div align="center">
+<img src="../_static/abi.jpeg" width="600"/>
+</div>
+为了保证抽象数据接口内数据的完整性，抽象数据接口内部有两种数据，除了被封装的数据（data）本身，还有一种是数据的元信息（metainfo），例如图片大小和 ID 等。
 两种类型的抽象数据接口都可以像 Python 的基础数据结构 dict 一样被使用。同时，因为他们封装的数据大多是 Tensor，他们也提供了类似 Tensor 的基础操作。
 
 ## 用法
@@ -214,7 +218,7 @@ tensor([0, 1, 2, 3])
 
 `BaseDataSample` 是所有基础数据元素的封装，并作为一个算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
 OpenMMLab 每个算法库都会继承 `BaseDataSample` 实现该算法方向的的样本数据封装，并对其字段进行规约和校验。
-因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验（property）。
+因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，内部依然区分 metainfo 和 data，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验（property）。
 下游算法库的样本数据封装 `DetDataSample` 可以使用 `BaseDataSample` 实现的 `_get_field`, `_del_field` 来快捷地定义对属性的访问和删除操作，
 同时 `BaseDataSample` 还提供了 `_set_field` 接口，支持设置实际要维护的变量别名，并且在设置过程中检查数据的类型是否符合约束。
 一个简单粗略的实现和用例如下。
@@ -228,6 +232,7 @@ class BaseDataSample(ABC):
 
     def __init__(self):
         self._data_fields = set()
+        self._metainfo_fields = set()
 
     def _get_field(self, name):
         return getattr(self, name)
@@ -289,8 +294,8 @@ del a.proposals
 
 ### ClsDataSample
 
-- gt_label (SampleData): 数据的分类标签
-- pred_label (SampleData): 模型对数据的分类预测结果
+- gt_label (LabelData): 数据的分类标签
+- pred_label (LabelData): 模型对数据的分类预测结果
 
 ### DetDataSample
 
