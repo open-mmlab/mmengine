@@ -22,9 +22,9 @@ class TestRegistry:
         # test `parent` parameter
         # `parent` is either None or a `Registry` instance
         with pytest.raises(AssertionError):
-            CATS = Registry('little_cat', parent='cat', scope='little_cat')
+            CATS = Registry('little_cat', parent='cat')
 
-        LITTLECATS = Registry('little_cat', parent=CATS, scope='little_cat')
+        LITTLECATS = Registry('little_cat', parent=CATS)
         assert LITTLECATS.parent is CATS
         assert CATS._children.get('little_cat') is LITTLECATS
 
