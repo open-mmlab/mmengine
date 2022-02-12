@@ -244,14 +244,18 @@ class Registry:
             if scope in self._children:
                 return self._children[scope].get(real_key)
             else:
-                # goto root
+                # jump to the root registry
                 root = self._goto_root()
                 return root.get(key)
 
         return None
 
     def _find_registry(self, scope: str) -> Optional['Registry']:
-        """Depth-first find for the corresponding node.
+        """Depth-first find for the corresponding registry.
+
+        Note that the method only find the corresponding registry from the
+        current registry. Therefore, if we want to find from the root registry,
+        we need to call :meth:`_goto_root` first.
 
         Args:
             scope (str): The ``scope`` to find the corresponding registry.
