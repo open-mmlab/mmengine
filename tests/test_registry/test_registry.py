@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
 from mmengine.registry import Registry, build_from_cfg
