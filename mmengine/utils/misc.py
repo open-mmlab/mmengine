@@ -1,14 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from collections import abc
+from typing import Sequence, Type
 
 
-def is_seq_of(seq, expected_type, seq_type=None):
+def is_seq_of(seq: Sequence,
+              expected_type: Type,
+              seq_type: Type = None) -> bool:
     """Check whether it is a sequence of some type.
 
     Args:
         seq (Sequence): The sequence to be checked.
         expected_type (type): Expected type of sequence items.
         seq_type (type, optional): Expected sequence type.
+
     Returns:
         bool: Whether the sequence is valid.
     """
