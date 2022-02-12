@@ -25,6 +25,7 @@
 
 ### BaseDataElement
 
+`BaseDataElement` 被用于模型内部模块之间的数据交换，同时对一些可以归结到一起的元素进行了封装。例如，其派生的 `InstanceData` 封装了检测框、框对应的标签和实例掩码、甚至关键点等数据。
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `meta_info` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
 1. 数据元素的创建
@@ -201,6 +202,11 @@ tensor([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 >>> False
 ```
+
+### BaseDataSample
+
+`BaseDataSample` 是所有基础数据元素的封装，并作为一个算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
+因此 `BaseDataSample` 支持 `BaseDataElement` 的上述所有使用方式，唯一的不同点在于每个算法库内会对齐样本数据的字段进行规约和校验。
 
 ## 命名规约
 
