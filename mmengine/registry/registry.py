@@ -117,6 +117,8 @@ class Registry:
         else:
             self.build_func = build_func
 
+        # See https://mypy.readthedocs.io/en/stable/common_issues.html#
+        # variables-vs-type-aliases for the use
         self.parent: Optional['Registry']
         if parent is not None:
             assert isinstance(parent, Registry)
