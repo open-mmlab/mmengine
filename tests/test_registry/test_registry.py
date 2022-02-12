@@ -37,7 +37,7 @@ class TestRegistry:
         assert CATS.scope == 'test_registry'
 
         CATS = Registry('cat', scope='cat')
-        assert self.scope == 'cat'
+        assert CATS.scope == 'cat'
 
     def test_split_scope_key(self):
         DOGS = Registry('dogs')
@@ -91,7 +91,7 @@ class TestRegistry:
         with pytest.raises(
                 TypeError,
                 match=('name must be either of None, an instance of str or a '
-                       'sequence of str, but got int')):
+                       "sequence of str, but got <class 'int'>")):
 
             @CATS.register_module(name=7474741)
             class SiameseCat:
@@ -100,7 +100,8 @@ class TestRegistry:
         # test `force` parameter, which must be a boolean
         # force is not a boolean
         with pytest.raises(
-                TypeError, match='force must be a boolean, but got int'):
+                TypeError,
+                match="force must be a boolean, but got <class 'int'>"):
 
             @CATS.register_module(force=1)
             class BritishShorthair:
@@ -120,34 +121,34 @@ class TestRegistry:
         class BritishShorthair:
             pass
 
-        assert len(CATS) == 5
+        assert len(CATS) == 4
 
         # test `module` parameter, which is either None or a class
         # when the `register_module`` is called as a method rather than a
         # decorator, which must be a class
         with pytest.raises(
-                TypeError, match='module must be a class, but got str'):
+                TypeError,
+                match="module must be a class, but got <class 'str'>"):
             CATS.register_module(module='string')
 
         class SphynxCat:
             pass
 
         CATS.register_module(module=SphynxCat)
-        assert CATS.get('Sphynx') is SphynxCat
-        assert len(CATS) == 6
+        assert CATS.get('SphynxCat') is SphynxCat
+        assert len(CATS) == 5
 
         CATS.register_module(name='Sphynx1', module=SphynxCat)
         assert CATS.get('Sphynx1') is SphynxCat
-        assert len(CATS) == 7
+        assert len(CATS) == 6
 
         CATS.register_module(name=['Sphynx2', 'Sphynx3'], module=SphynxCat)
         assert CATS.get('Sphynx2') is SphynxCat
         assert CATS.get('Sphynx3') is SphynxCat
-        assert len(CATS) == 9
+        assert len(CATS) == 8
 
     def _build_registry(self):
         r"""A helper function to build a hierarchy registry.
-
                         DOGS
                          |
                        HOUNDS (hound)
@@ -272,8 +273,7 @@ class TestRegistry:
         with pytest.raises(KeyError):
             LITTLE_HOUNDS.build(b_cfg, default_scope='invalid_mid_hound')
 
-        # switch the current registry to the registry which scope is
-        # 'mid_hound'
+        # switch the current registry to another registry
         dog = LITTLE_HOUNDS.build(b_cfg, default_scope='mid_hound')
         assert isinstance(dog, Beagle)
 
@@ -289,10 +289,12 @@ class TestRegistry:
             pass
 
         repr_str = 'Registry(name=cat, items={'
-        repr_str += ("'BritishShorthair': <class 'test_registry.TestRegistry."
-                     "<locals>.BritishShorthair'>, ")
-        repr_str += ("'Munchkin': <class 'test_registry.TestRegistry."
-                     "<locals>.Munchkin'>")
+        repr_str += (
+            "'BritishShorthair': <class 'test_registry.TestRegistry.test_repr."
+            "<locals>.BritishShorthair'>, ")
+        repr_str += (
+            "'Munchkin': <class 'test_registry.TestRegistry.test_repr."
+            "<locals>.Munchkin'>")
         repr_str += '})'
         assert repr(CATS) == repr_str
 
@@ -331,7 +333,8 @@ def test_build_from_cfg():
     assert model.depth == 50 and model.stages == 4
 
     # `cfg` should be a dict
-    with pytest.raises(TypeError, match='cfg must be a dict, but got str'):
+    with pytest.raises(
+            TypeError, match="cfg must be a dict, but got <class 'str'>"):
         cfg = 'ResNet'
         model = build_from_cfg(cfg, BACKBONES)
 
@@ -342,7 +345,8 @@ def test_build_from_cfg():
 
     # cfg['type'] should be a str or class
     with pytest.raises(
-            TypeError, match='type must be a str or valid type, but got int'):
+            TypeError,
+            match="type must be a str or valid type, but got <class 'int'>"):
         cfg = dict(type=1000)
         model = build_from_cfg(cfg, BACKBONES)
 
@@ -387,6 +391,7 @@ def test_build_from_cfg():
     # incorrect registry type
     with pytest.raises(
             TypeError,
-            match='registry must be an Registry object, but got str'):
-        cfg = dict(type='ResNet')
+            match=('registry must be a mmengine.Registry object, but got '
+                   "<class 'str'>")):
+        cfg = dict(type='ResNet', depth=50)
         model = build_from_cfg(cfg, 'BACKBONES')
