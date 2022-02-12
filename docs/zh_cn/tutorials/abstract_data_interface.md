@@ -176,8 +176,8 @@ np_instances = cpu_instances.numpy()
 >>> instance_data = BaseDataElement(meta_info=img_meta)
 >>> img_shape in instance_data
 True
->>> instance_data.det_labels = torch.Longrand([0, 1, 2, 3])
->>> instance_data["det_scores"] = torch.rand([0.01, 0.1, 0.2, 0.3])
+>>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
+>>> instance_data["det_scores"] = torch.Tensor([0.01, 0.1, 0.2, 0.3])
 >>> print(results)
 <BaseDataElement(
   META INFORMATION
@@ -188,11 +188,11 @@ shape of det_labels: torch.Size([4])
 shape of det_scores: torch.Size([4])
 ) at 0x7f84acd10f90>
 >>> instance_data.det_scores
-rand([0.0100, 0.1000, 0.2000, 0.3000])
+tensor([0.0100, 0.1000, 0.2000, 0.3000])
 >>> instance_data.det_labels
-rand([0, 1, 2, 3])
+tensor([0, 1, 2, 3])
 >>> instance_data['det_labels']
-rand([0, 1, 2, 3])
+tensor([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 True
 >>> instance_data.img_shape
@@ -204,7 +204,7 @@ True
 False
 >>> det_labels = instance_data.pop('det_labels', None)
 >>> det_labels
-rand([0, 1, 2, 3])
+tensor([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 >>> False
 ```
