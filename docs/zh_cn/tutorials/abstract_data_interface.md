@@ -1,13 +1,13 @@
 # 抽象数据接口
 
-在模型的训练/测试过程中，组件之间往往有大量的数据需要传递，不同的算法需要传递的数据经常是不一样的
-例如，在 MMDetection 中训练单阶段检测器时，模型需要获得数据集的标注框（ground truth bounding boxes）和标签（ground truth box labels），训练 Mask R-CNN 时还需要实例掩码（instance masks），训练 Panoptic FPN 时还需要语义分割掩码（semantic segmentation maps）。
-算法之间所需数据的不一致导致了不同算法模块之间接口的不一致，这种不一致性在算法库之间体现地更加明显，导致在实现多任务（同时进行如语义分割、检测、关键点检测等多个任务）感知模型时有明显的不方便，使得一个算法库内的模块为了保持兼容性在接口上也存在冗余，也影响了算法库的拓展性。
+在模型的训练/测试过程中，组件之间往往有大量的数据需要传递，不同的算法需要传递的数据经常是不一样的，
+例如，训练单阶段检测器需要获得数据集的标注框（ground truth bounding boxes）和标签（ground truth box labels），训练 Mask R-CNN 时还需要实例掩码（instance masks）。
+在不加封装的情况下，不同算法所需数据的不一致导致了不同算法模块之间接口的不一致，影响了算法库的拓展性，同时一个算法库内的模块为了保持兼容性往往在接口上存在冗余。
+上述弊端在算法库之间会体现地更加明显，导致在实现多任务（同时进行如语义分割、检测、关键点检测等多个任务）感知模型时模块难以复用，接口难以拓展。
 
-为了解决上述问题，MMEngine 定义了一套抽象的数据接口来封装模型运行过程中产生的各种数据。
-抽象数据接口会被用于算法库中 dataset，model，visualizer，和 evaluator 组件之间，或者 model 内各个模块之间的数据传递。
+为了解决上述问题，MMEngine 定义了一套抽象的数据接口来封装模型运行过程中的各种数据。
+通过对各种数据提供统一的封装，抽象数据接口统一并简化了算法库中各个模块的接口，可以被用于算法库中 dataset，model，visualizer，和 evaluator 组件之间，或者 model 内各个模块之间的数据传递。
 抽象数据接口实现了基本的增/删/改/查功能，同时支持不同设备之间的迁移，支持类字典和张量的操作，可以充分满足算法库对于这些数据的使用要求。
-通过对各种数据提供统一的封装，抽象数据接口统一并简化了算法库中各个模块的接口。
 基于 MMEngine 的算法库可以继承这套抽象数据接口并实现自己的抽象数据接口来适应不同算法中数据的特点与实际需要，在保持统一接口的同时提高了算法模块的拓展性。
 
 ## 设计
@@ -16,14 +16,14 @@
 
 1. 基础数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的性质），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将基础数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了基础数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
 
-2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注，标签级的场景分类标注，和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
+2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
 两种类型的封装和他们的继承关系如下图所示
 <div align="center">
 <img src="../_static/abi.jpeg" width="600"/>
 </div>
 为了保证抽象数据接口内数据的完整性，抽象数据接口内部有两种数据，除了被封装的数据（data）本身，还有一种是数据的元信息（metainfo），例如图片大小和 ID 等。
-两种类型的抽象数据接口都可以像 Python 的基础数据结构 dict 一样被使用。同时，因为他们封装的数据大多是 Tensor，他们也提供了类似 Tensor 的基础操作。
+两种类型的抽象数据接口都可以作为 Python 类去使用和操作他们的属性。同时，因为他们封装的数据大多是 Tensor，他们也提供了类似 Tensor 的基础操作。
 
 ## 用法
 
@@ -195,7 +195,7 @@ np_instances = cpu_instances.numpy()
 >>> img_shape in instance_data
 True
 >>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
->>> instance_data["det_scores"] = torch.Tensor([0.01, 0.1, 0.2, 0.3])
+>>> instance_data.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
 >>> print(results)
 <BaseDataElement(
   META INFORMATION
@@ -208,8 +208,6 @@ shape of det_scores: torch.Size([4])
 >>> instance_data.det_scores
 tensor([0.0100, 0.1000, 0.2000, 0.3000])
 >>> instance_data.det_labels
-tensor([0, 1, 2, 3])
->>> instance_data['det_labels']
 tensor([0, 1, 2, 3])
 >>> 'det_labels' in instance_data
 True
@@ -313,7 +311,7 @@ assert 'proposals' not in a
 
 ### 对接口的简化
 
-下面以 MMDetection 为例说明抽象数据接口是如何简化模块和组件之间接口的。假定算法库和 MMEngine 中实现了 DetDataSample 和 InstanceData。
+下面以 MMDetection 为例说明抽象数据接口是如何简化模块和组件之间接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
 
 1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下
 
@@ -389,7 +387,7 @@ class MaskHungarianAssigner(BaseAssigner):
                eps=1e-7):
 ```
 
-`InstanceData` 可以推动 `HungarianAssigner` 和 `MaskHungarianAssigner` 合并成一个具有通用接口的 `HungarianAssigner`。
+`InstanceData` 可以使得 `HungarianAssigner` 和 `MaskHungarianAssigner` 合并成一个具有通用接口的 `HungarianAssigner`。
 
 ```python
 class HungarianAssigner(BaseAssigner):
@@ -404,7 +402,7 @@ class HungarianAssigner(BaseAssigner):
 ## 命名规约
 
 为了保持不同任务数据之间的兼容性和统一性，我们建议抽象数据接口中对相同的数据使用统一的字段命名。
-在本文档中，我们暂时性地在下文列举一些方向的样本数据封装及其属性约定，后续会有更全面的文档来描述命名规约。
+在本文档中，我们暂时性地在下文列举一些算法方向的样本数据封装及其属性约定，后续会有更全面的文档来描述命名规约。
 用户在使用各算法库抽象接口的过程中，可以假定对应的数据（如有）在样本数据封装中是按照如下约定进行命名的。
 
 ### ClsDataSample
