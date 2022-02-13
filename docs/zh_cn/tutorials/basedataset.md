@@ -1,12 +1,16 @@
-# 数据集基类
+# 数据集基类（BaseDataset）
 
-**MMEngine** 提供了数据集基类来满足各种任务对数据集的基础需求。
+**MMEngine** 提供了数据集基类来满足各种任务对数据集的基础需求，典型的如图像分类、目标检测任务等。
 
 ## 基本用法
 
 ### 数据标注文件规范
 
-数据集基类（BaseDataset）假定数据标注文件满足 **OpenMMLab 2.0 数据集格式规范**。简而言之，标注文件是一个字典，必须包含 `metadata` 和 `data_infos` 两个字段。其中 `metadata` 是一个字典，里面包含数据集的元信息； `data_infos` 是一个列表，列表中每个元素是一个字典，该字典定义了一个原始数据（raw data），每个原始数据包含一个或若干个训练/测试样本。以下是一个标注文件的例子（该例子中每个原始数据只包含一个训练/测试样本）:
+数据集基类（BaseDataset）假定数据标注文件满足 **OpenMMLab 2.0 数据集格式规范**。如果你提供的数据标注文件不是规定格式，你可以选择将其转化为规定格式。
+
+OpenMMLab 2.0 数据集格式规范规定，标注文件必须为 `json` 或 `yaml`，`yml` 或 `pickle`，`pkl` 格式；标注文件中存储的字典必须包含 `metadata` 和 `data_infos` 两个字段。其中 `metadata` 是一个字典，里面包含数据集的元信息，元信息是指与数据集自身相关的信息，比如 `classes` 等，元信息通常需要被外部组件获取，比如 `model`； `data_infos` 是一个列表，列表中每个元素是一个字典，该字典定义了一个原始数据（raw data），每个原始数据包含一个或若干个训练/测试样本。
+
+以下是一个 JSON 标注文件的例子（该例子中每个原始数据只包含一个训练/测试样本）:
 
 ```python
 
@@ -33,9 +37,23 @@
 }
 ```
 
-### 定义图像的数据集类
+### 自定义图像的数据集类
 
-数据集基类是一个抽象类，它有且只有一个抽象方法 `_parse_raw_data()` 来解析标注文件里的每个原始数据，因此用户需要基于数据集基类实现 `_parse_raw_data()` 方法才可以实例化对象。
+数据集基类的初始化流程如下：
+
+1. 获取数据集的元信息，元信息有三种来源，优先级从高到低为：`__init__()` 方法中用户传入的 `meta` 字典，类属性 `BaseDataset.META` 字典，标注文件中包含的 `meta` 字典，如果三种来源中有相同的字段，优先级最高的来源决定该字段的值；
+
+2. 构建数据流水线（data pipeline），用于数据预处理与数据准备；
+
+3. 读取与解析标注文件，该步骤中会有 `_parse_raw_data()` 抽象方法，该抽象方法负责解析标注文件里的每个原始数据；
+
+4. 过滤无用数据，比如不包含标注的样本等；
+
+5. 采样数据，比如只取前 10 个样本参与训练/测试；
+
+6. 序列化全部样本，以达到节省内存的效果，详情请参考[节省内存](#节省内存)。
+
+从上述步骤可知，数据集基类是一个抽象类。此外它有且只有一个抽象方法 `_parse_raw_data()` 来解析标注文件里的每个原始数据，因此对于自定义数据集类，用户必须要实现 `_parse_raw_data()` 方法。
 
 `_parse_raw_data()` 定义了将一个原始数据处理成一个或若干个训练/测试样本的方法。以下是一个使用数据集基类来实现某一具体数据集的例子。
 
@@ -62,7 +80,7 @@ class ToyDataset(BaseDataset):
 
 ```
 
-### 使用自定义数据集类
+### 使用自定义的图像数据集类
 
 假设数据存放路径如下：
 ```
@@ -91,29 +109,37 @@ toy_dataset = ToyDataset(
     pipeline=pipeline)
 ```
 
-`toy_dataset` 主要提供了 `meta`, `get_data_info(idx)`, `__len__()`, `__getitem__()` 接口来访问具体的数据信息：
-```python
-# 获得 toy_dataset 的元信息，返回值为字典
-toy_dataset.meta
+数据集基类主要提供了以下接口来访问具体的数据信息：
 
-# 获取 toy_dataset 中某个样本的全量信息，返回值为字典：
+- `meta` 返回元信息，返回值为字典
+
+- `get_data_info(idx)` 返回指定 `idx` 的样本全量信息，返回值为字典
+
+- `__len__()` 返回数据集长度，返回值为整数型
+
+- `__getitem__(idx)` ：返回指定 `idx` 的样本经过 pipeline 之后的结果（也就是送入模型的数据），返回值为字典
+
+```python
+toy_dataset.meta
+# dict(classes=('cat', 'dog'))
+
+toy_dataset.get_data_info(0)
 # {
 #     'img_path': "data/train/xxx/xxx_0.jpg",
 #     'img_label': 0,
 #     ...
 # }
-toy_dataset.get_data_info(0)
 
-# 获取 toy_dataset 的长度，即样本总数量，返回值为整数型
 len(toy_dataset)
+# 2
 
-# 获取 toy_dataset 中某个样本经过 pipeline 之后的结果（也就是送入模型的数据），返回值为字典
 toy_dataset[0]
+# dict(img=xxx, label=0)
 ```
 
 经过以上步骤，可以了解基于数据集基类如何自定义新的数据集类，以及如何使用自定义数据集类。
 
-### 定义视频的数据集类
+### 自定义视频的数据集类
 
 在上面的例子中，标注文件的每个原始数据只包含一个训练/测试样本（通常是图像领域）。如果每个原始数据包含若干个训练/测试样本（通常是视频领域），则只需保证 `_parse_raw_data()` 的返回值为 `list[dict]` 即可：
 
@@ -149,7 +175,7 @@ class ToyVideoDataset(BaseDataset):
 
 ### lazy init
 
-在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息（meta），并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，我们定义了 lazy init：
+在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息（meta），可能并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，我们定义了 lazy init：
 
 ```python
 pipeline = [
@@ -167,11 +193,11 @@ toy_dataset = ToyDataset(
     lazy_init=True)
 ```
 
-此时 `toy_dataset` 并未被完全初始化，因为 `toy_dataset` 并不会读取与解析标注文件，只会设置数据集类的元信息（meta）。
+当 `lazy_init=True` 时，`ToyDataset` 的初始化方法只执行了[数据集基类初始化流程](#自定义图像的数据集类)中的 1、2 步骤，此时 `toy_dataset` 并未被完全初始化，因为 `toy_dataset` 并不会读取与解析标注文件，只会设置数据集类的元信息（`meta`）。
 
-自然的，如果之后需要访问具体的数据信息，可以调用 `toy_dataset.full_init()` 接口来执行完整的初始化过程，在这个过程中标注文件将被读取与解析。调用 `get_data_info(idx)`, `__len__()`, `__getitem__()` 接口也会执行完整的初始化过程。
+自然的，如果之后需要访问具体的数据信息，可以手动调用 `toy_dataset.full_init()` 接口来执行完整的初始化过程，在这个过程中标注文件将被读取与解析。调用 `get_data_info(idx)`, `__len__()`, `__getitem__()` 接口也会自动地执行完整的初始化过程（仅在第一次调用时，之后调用不会重复地执行完整的初始化过程）。
 
-**值得注意的是**, 通过调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，这会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，仅通过 `full_init()` 接口来执行完整的初始化过程。**
+**值得注意的是**, 通过调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，虽然这样可能可以正常运行，但是会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，仅通过 `full_init()` 接口来执行完整的初始化过程。**
 
 以上通过设置 `lazy_init=True` 未进行完全初始化，之后根据需求再进行完整初始化的方式，称为 lazy init。
 
@@ -179,7 +205,7 @@ toy_dataset = ToyDataset(
 
 在具体的读取数据过程中，数据加载器（dataloader）通常会起多个 worker 来预取数据，多个 worker 都拥有完整的数据集类备份，因此内存中会存在多份相同的 `data_infos`，为了节省这部分内存消耗，数据集基类可以提前将 `data_infos` 序列化存入内存中，使得多个 worker 可以共享同一份 `data_infos`，以达到节省内存的目的。
 
-数据集基类通过 `serialize_data` 变量（默认为 `True`）来控制是否提前将 `data_infos` 序列化存入内存中：
+数据集基类默认是将 `data_infos` 序列化存入内存，也可以通过 `serialize_data` 变量（默认为 `True`）来控制是否提前将 `data_infos` 序列化存入内存中：
 
 ```python
 pipeline = [
@@ -199,11 +225,11 @@ toy_dataset = ToyDataset(
 
 上面例子不会提前将 `data_infos` 序列化存入内存中，不建议使用这种方式实例化数据集类。
 
-# 数据集基类包装
+## 数据集基类包装（BaseDatasetWrapper）
 
 除了数据集基类，MMEngine 也提供了若干个数据集基类包装：`BaseConcatDataset`, `BaseRepeatDataset`, `BaseClassBalancedDataset`。这些数据集基类包装同样也支持 lazy init 与拥有节省内存的特性。
 
-## BaseConcatDataset
+### BaseConcatDataset
 
 MMEngine 提供了 `BaseConcatDataset` 包装来连接多个数据集，使用方法如下：
 
@@ -234,7 +260,7 @@ toy_dataset_12 = BaseConcatDataset(datasets=[toy_dataset_1, toy_dataset_2])
 
 上述例子将数据集的 `train` 部分与 `val` 部分合成一个大的数据集。
 
-## BaseRepeatDataset
+### BaseRepeatDataset
 
 MMEngine 提供了 `BaseRepeatDataset` 包装来重复采样某个数据集若干次，使用方法如下：
 
@@ -259,9 +285,9 @@ toy_dataset_repeat = BaseRepeatDataset(dataset=toy_dataset, times=5)
 
 上述例子将数据集的 `train` 部分重复采样了 5 次。
 
-## BaseClassBalancedDataset
+### BaseClassBalancedDataset
 
-MMEngine 提供了 `BaseClassBalancedDataset` 包装来基于数据集中类别出现频率重复采样相应样本，**请注意，** `BaseClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 对应的 `data_info` 包含的样本类别，使用方法如下：
+MMEngine 提供了 `BaseClassBalancedDataset` 包装，来基于数据集中类别出现频率，重复采样相应样本，**请注意，** `BaseClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 指定的 `data_info` 包含的样本类别，使用方法如下：
 
 ```python
 from mmengine.data import BaseDataset, BaseClassBalancedDataset
@@ -296,4 +322,4 @@ toy_dataset_repeat = BaseClassBalancedDataset(dataset=toy_dataset, oversample_th
 
 ```
 
-上述例子将数据集以 `oversample_thr=1e-3` 重新采样 `toy_dataset`。
+上述例子将数据集的 `train` 部分以 `oversample_thr=1e-3` 重新采样，具体地，对于数据集中出现频率低于 `1e-3` 的类别，会重复采样该类别对应的样本，否则不重复采样，具体采样策略请参考 `BaseClassBalancedDataset` API 文档。
