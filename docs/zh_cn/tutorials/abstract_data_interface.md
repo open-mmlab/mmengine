@@ -14,7 +14,7 @@
 
 一个算法库中的数据可以被归类成具有不同性质的基础数据元素。一个训练样本（如一张图片）的所有基础数据元素构成了一个训练样本的完整数据，称为样本数据。相应地，MMEngine 为基础数据元素和样本数据分别定义了一种封装。
 
-1. 基础数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的数据特性），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将基础数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了基础数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
+1. 基础数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的性质），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将基础数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了基础数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
 
 2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注，标签级的场景分类标注，和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
@@ -30,9 +30,9 @@
 ### BaseDataElement
 
 MMEngine 为基础数据元素的封装提供了一个基类 `BaseDataElement`。
-基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`, `PixelData`, 和 `LabelData` 三个典型的子类，封装了实例级别，像素级别，和标签级别的基础数据元素，并针对他们的数据特性支持一些额外的功能。例如，`InstanceData` 可以封装检测框、框对应的标签和实例掩码、甚至关键点等数据，同时要求这些属性具有相同的长度 N，N 代表实例的个数，并支持对实例进行索引。
+基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`, `PixelData`, 和 `LabelData` 三个典型的子类，封装了实例级别，像素级别，和标签级别的基础数据元素，并针对他们的数据特性支持了一些额外的功能。例如，`InstanceData` 可以封装检测框、框对应的标签和实例掩码、甚至关键点等数据，同时要求这些属性具有相同的长度 N，N 代表实例的个数，并支持对实例进行索引。
 
-`BaseDataElement` 可以作为独立的模块被使用。但是，为了和 `InstanceData`, `PixelData`, 和 `LabelData` 保持命名的一致性，MMEngine 实现了 `GeneralData`，它拥有和 `BaseDataElement` 一样的功能，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 一保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。
+虽然 `BaseDataElement` 可以作为独立的模块被使用。但是为了和 `InstanceData`, `PixelData`, 和 `LabelData` 保持命名的一致性，MMEngine 实现了 `GeneralData`，它拥有和 `BaseDataElement` 一样的功能，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。
 在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
 
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
@@ -75,14 +75,15 @@ gt_instances2 = gt_instances1.new()
 ```
 
 3. 属性的增加与查询：
-用户可以像增加类属性那样增加 `BaseDataElement` 的属性，此时数据会被**默认为 data 类型**增加到 `BaseDataElement` 中。
-用户还可以通过 `set_metainfo` 来增加 metainfo 的属性。
-类似的，用户可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值，
+用户可以像增加类属性那样增加 `BaseDataElement` 的属性，此时数据会被**当作 data 类型**增加到 `BaseDataElement` 中。
+如果需要增加 metainfo 属性，用户应当使用 `set_metainfo`。
+用户可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值，
 也可以通过 `data_keys`，`data_values`，和 `data_items` 来访问只存在于 data 中的键值。
 用户还能通过 `keys`，`values`， `items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
+
 **注意：**
     1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
-    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免歧义性，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以 `BaseDataElement[name]` 是不合法的。
+    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免歧义性，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
 
 ```python
 gt_instances = BaseDataElement()
@@ -123,11 +124,17 @@ assert 'bboxes' not in gt_instances.metainfo_keys()
 print(gt_instances.bboxes)
 
 for k, v in gt_instances.items():
-    print(f'{k}: {v}')  # 包含 img_shapes， img_id， bboxes，scores，labels
+    print(f'{k}: {v}')  # 包含 img_shapes， img_id， bboxes，scores
+
+for k, v in gt_instances.metainfo_items():
+    print(f'{k}: {v}')  # 包含 img_shapes， img_id
+
+for k, v in gt_instances.data_items():
+    print(f'{k}: {v}')  # 包含 bboxes，scores
 ```
 
 4. `BaseDataElement` 支持用户可以像使用一个类一样对它的属性进行删改
-同时， `BaseDataElement` 支持 `get` 来方便地在访问不到变量时设置默认值，也支持 `pop` 在方便地在访问属性后删除属性。
+同时， `BaseDataElement` 支持 `get` 来允许在访问不到变量时设置默认值，也支持 `pop` 在在访问属性后删除属性。
 
 ```python
 gt_instances = BaseDataElement(
@@ -222,13 +229,13 @@ tensor([0, 1, 2, 3])
 
 ### BaseDataSample
 
-MMEngine 为样本数据的封装提供了一个基类 `BaseDataSample`，OpenMMLab 的每个算法库都应该继承 `BaseDataSample` 实现自己的样本数据封装，并规约和校验该算法库中的常见字段。算法库自己实现的样本数据封装 会作为该算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
-`BaseDataSample` 虽然可以作为一个模块被单独使用，但是我们不推荐 `BaseDataSample` 被单独拿出来使用。
+MMEngine 为样本数据的封装提供了一个基类 `BaseDataSample`，OpenMMLab 的每个算法库都应该继承 `BaseDataSample` 实现自己的样本数据封装，并规约和校验该算法库中的常见字段。算法库自己实现的样本数据封装会作为该算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
+`BaseDataSample` 虽然可以作为一个模块被单独使用，但是我们不推荐 `BaseDataSample` 这种用法。
 
 `BaseDataSample` 内部依然区分 metainfo 和 data，并且支持像类一样对其属性进行设置和调整，为了保证用户体验的一致性，`BaseDataSample` 的外部接口用法和 `BaseDataElement` 保持一致。
 
-同时，由于 `BaseDataSample` 作为基类一般不会被下游算法库直接使用，为了方便下游算法库较便捷地对其约定的属性进行校验。
- `BaseDataSample` 额外提供了一套内部接口 `_get_field`， `_del_field` 和 `_set_field` 来便利它的子类快捷地定义和规约 data 属性。
+同时，由于 `BaseDataSample` 作为基类一般不会直接使用，为了方便下游算法库快速定义其子类，并对子类的属性进行规约和校验。
+`BaseDataSample` 额外提供了一套内部接口 `_get_field`， `_del_field` 和 `_set_field` 来便利它的子类快捷地定义和规约 data 属性的增删改查。
 `_set_field` 不会被当作外部接口直接使用，而是被用来定义属性（property） 的 `setter` 并提供基本的类型校验。
 
 一个简单粗略的实现和用例如下。
@@ -304,8 +311,95 @@ del a.proposals
 assert 'proposals' not in a
 ```
 
-**注意：**：`_get_field`， `_del_field`，和 `_set_field` 都是面向开发者而非用户的接口，目的是提供一套便捷的接口方便下游算法库方便地定义一个属性。
-用户在使用样本数据的过程中，
+### 对接口的简化
+
+下面以 MMDetection 为例说明抽象数据接口是如何简化模块和组件之间接口的。假定算法库和 MMEngine 中实现了 DetDataSample 和 InstanceData。
+
+1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下
+
+```python
+
+class SingleStageDetector(BaseDetector):
+    ...
+
+    def forward_train(self,
+                      img,
+                      img_metas,
+                      gt_bboxes,
+                      gt_labels,
+                      gt_bboxes_ignore=None):
+
+
+class SingleStageInstanceSegmentor(BaseDetector):
+    ...
+
+    def forward_train(self,
+                      img,
+                      img_metas,
+                      gt_masks,
+                      gt_labels,
+                      gt_bboxes=None,
+                      gt_bboxes_ignore=None,
+                      **kwargs):
+```
+
+在 MMDet 3.0 中，使用 DetDataSample 可以统一简化为
+
+```python
+class SingleStageDetector(BaseDetector):
+    ...
+
+    def forward_train(self,
+                      img,
+                      data_samples):
+
+class SingleStageInstanceSegmentor(BaseDetector):
+    ...
+
+    def forward_train(self,
+                      img,
+                      data_samples):
+
+```
+
+2. 模块接口的简化，推动模块的合并。MMDet 2.X 中 `HungarianAssigner` 只能用于检测，而 end-to-end 实例分割模型需要新实现
+`MaskHungarianAssigner` 来调整接口，尽管他们内部的匹配逻辑是一样的。
+
+```python
+class HungarianAssigner(BaseAssigner):
+
+    def assign(self,
+               bbox_pred,
+               cls_pred,
+               gt_bboxes,
+               gt_labels,
+               img_meta,
+               gt_bboxes_ignore=None,
+               eps=1e-7):
+
+class MaskHungarianAssigner(BaseAssigner):
+
+    def assign(self,
+               cls_pred,
+               mask_pred,
+               gt_labels,
+               gt_mask,
+               img_meta,
+               gt_bboxes_ignore=None,
+               eps=1e-7):
+```
+
+`InstanceData` 可以推动 `HungarianAssigner` 和 `MaskHungarianAssigner` 合并成一个具有通用接口的 `HungarianAssigner`。
+
+```python
+class HungarianAssigner(BaseAssigner):
+
+    def assign(self,
+               pred_instances,
+               gt_instancess,
+               gt_instances_ignore=None,
+               eps=1e-7):
+```
 
 ## 命名规约
 
