@@ -1,7 +1,7 @@
 # 抽象数据接口
 
 在模型的训练/测试过程中，组件之间往往有大量的数据需要传递，不同的算法需要传递的数据经常是不一样的
-例如，在 MMDetection 中训练单阶段检测器时，模型需要获得数据集传出标注框（ground truth bounding boxes）和标签（ground truth box labels），训练 Mask R-CNN 时还需要实例掩码（instance masks），训练 Panoptic FPN 时还需要语义分割掩码（semantic segmentation maps）。
+例如，在 MMDetection 中训练单阶段检测器时，模型需要获得数据集的标注框（ground truth bounding boxes）和标签（ground truth box labels），训练 Mask R-CNN 时还需要实例掩码（instance masks），训练 Panoptic FPN 时还需要语义分割掩码（semantic segmentation maps）。
 算法之间所需数据的不一致导致了不同算法模块之间接口的不一致，这种不一致性在算法库之间体现地更加明显，导致在实现多任务（同时进行如语义分割、检测、关键点检测等多个任务）感知模型时有明显的不方便，使得一个算法库内的模块为了保持兼容性在接口上也存在冗余，也影响了算法库的拓展性。
 
 为了解决上述问题，MMEngine 定义了一套抽象的数据接口来封装模型运行过程中产生的各种数据。
@@ -16,7 +16,7 @@
 
 1. 基础数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的数据特性），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将基础数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了基础数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
 
-2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注，标签级的场景分类标注，和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，`BaseDataSample` 的属性会是各种类型的基础数据元素，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
+2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注，标签级的场景分类标注，和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
 两种类型的封装和他们的继承关系如下图所示
 <div align="center">
@@ -162,7 +162,7 @@ cpu_instances = cuda_instances.to('cpu')
 
 # 将所有 data 变成 FP16
 fp16_instances = cuda_instances.to(
-    device=None, dtype=None, non_blocking=False, copy=False,
+    device=None, dtype=torch.float16, non_blocking=False, copy=False,
     memory_format=torch.preserve_format)
 
 # 阻断所有 data 的梯度
@@ -218,7 +218,7 @@ tensor([0, 1, 2, 3])
 
 `BaseDataSample` 是所有基础数据元素的封装，并作为一个算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
 OpenMMLab 每个算法库都会继承 `BaseDataSample` 实现该算法方向的的样本数据封装，并对其字段进行规约和校验。
-因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，内部依然区分 metainfo 和 data，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验（property）。
+因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，内部依然区分 metainfo 和 data，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验。
 下游算法库的样本数据封装 `DetDataSample` 可以使用 `BaseDataSample` 实现的 `_get_field`, `_del_field` 来快捷地定义对属性的访问和删除操作，
 同时 `BaseDataSample` 还提供了 `_set_field` 接口，支持设置实际要维护的变量别名，并且在设置过程中检查数据的类型是否符合约束。
 一个简单粗略的实现和用例如下。
@@ -290,6 +290,7 @@ del a.proposals
 ## 命名规约
 
 为了保持不同任务数据之间的兼容性和统一性，我们建议抽象数据接口中对相同的数据使用统一的字段命名。
+在本文档中，我们暂时性地在下文列举一些方向的样本数据封装及其属性约定，后续会有更全面的文档来描述命名规约。
 用户在使用各算法库抽象接口的过程中，可以假定对应的数据（如有）在样本数据封装中是按照如下约定进行命名的。
 
 ### ClsDataSample
