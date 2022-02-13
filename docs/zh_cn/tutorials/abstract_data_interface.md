@@ -2,10 +2,28 @@
 
 在模型的训练/测试过程中，组件之间往往有大量的数据需要传递，不同的算法需要传递的数据经常是不一样的，
 例如，训练单阶段检测器需要获得数据集的标注框（ground truth bounding boxes）和标签（ground truth box labels），训练 Mask R-CNN 时还需要实例掩码（instance masks）。
-在不加封装的情况下，不同算法所需数据的不一致导致了不同算法模块之间接口的不一致，影响了算法库的拓展性，同时一个算法库内的模块为了保持兼容性往往在接口上存在冗余。
+训练这些模型时的代码如下所示
+
+```python
+for img, img_metas, gt_bboxes, gt_labels in data_loader:
+    loss = retinanet(img, img_metas, gt_bboxes, gt_labels)
+```
+
+```python
+for img, img_metas, gt_bboxes, gt_masks, gt_labels in data_loader:
+    loss = mask_rcnn(img, img_metas, gt_bboxes, gt_masks, gt_labels)
+```
+
+可以发现，在不加封装的情况下，不同算法所需数据的不一致导致了不同算法模块之间接口的不一致，影响了算法库的拓展性，同时一个算法库内的模块为了保持兼容性往往在接口上存在冗余。
 上述弊端在算法库之间会体现地更加明显，导致在实现多任务（同时进行如语义分割、检测、关键点检测等多个任务）感知模型时模块难以复用，接口难以拓展。
 
-为了解决上述问题，MMEngine 定义了一套抽象的数据接口来封装模型运行过程中的各种数据。
+为了解决上述问题，MMEngine 定义了一套抽象的数据接口来封装模型运行过程中的各种数据。假设将上述不同的数据封装进 `data_sample` ，不同算法的训练都可以被抽象和统一成如下代码
+
+```python
+for img, data_sample in dataloader:
+    loss = model(img, data_sample)
+```
+
 通过对各种数据提供统一的封装，抽象数据接口统一并简化了算法库中各个模块的接口，可以被用于算法库中 dataset，model，visualizer，和 evaluator 组件之间，或者 model 内各个模块之间的数据传递。
 抽象数据接口实现了基本的增/删/改/查功能，同时支持不同设备之间的迁移，支持类字典和张量的操作，可以充分满足算法库对于这些数据的使用要求。
 基于 MMEngine 的算法库可以继承这套抽象数据接口并实现自己的抽象数据接口来适应不同算法中数据的特点与实际需要，在保持统一接口的同时提高了算法模块的拓展性。
@@ -311,7 +329,7 @@ assert 'proposals' not in a
 
 ### 对接口的简化
 
-下面以 MMDetection 为例说明抽象数据接口是如何简化模块和组件之间接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
+下面以 MMDetection 为例更具体地说明 OpenMMLab 的算法库将如何迁移使用抽象数据接口，以简化模块和组件接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
 
 1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下。在训练过程中，`SingleStageDetector` 需要获取
 `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
