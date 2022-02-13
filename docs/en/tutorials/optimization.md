@@ -90,12 +90,16 @@ Like PyTorch's scheduler, MMEngine also allows multiple schedulers to be used at
 
 ## How to adjust momentum
 
-Like the learning rate, momentum is also a set of parameters in the optimizer that can be scheduled. The momentum scheduler is used in the same way as the learning rate scheduler. You only need to add the corresponding configuration under the `scheduler` field in the configuration file.
+Like the learning rate, momentum is also a set of parameters in the optimizer that can be scheduled. The momentum scheduler is used in the same way as the learning rate scheduler. You only need to add the corresponding configuration to the list under the `scheduler` field in the configuration file.
 
 Example:
 
 ```python
 scheduler = [
+    # the lr scheduler
+    dict(type='LinearLR'),
+
+    # the momentum scheduler
     dict(type='LinearMomentum',
          start_factor=0.001,
          by_epoch=False,
@@ -121,4 +125,17 @@ scheduler = [
 ]
 ```
 
-The `param_name` set here is `lr`, so the role of this scheduler is equivalent to the learning rate scheduler.You can also set any other parameter names in `optimizer.param_groups` for scheduling.
+The `param_name` set here is `lr`, so the role of this scheduler is equivalent to the learning rate scheduler.
+
+You can also set any other parameter names in `optimizer.param_groups` for scheduling. For example, you can schedule the `weight_decay` parameter in `optimizer.param_groups` by setting `param_name='weight_decay'`:
+
+```python
+scheduler = [
+    dict(type='LinearParamScheduler',
+         param_name='weight_decay',  # schedule the `weight_decay` parameter in `optimizer.param_groups`
+         start_factor=0.001,
+         by_epoch=False,
+         begin=0,
+         end=1000)
+]
+```
