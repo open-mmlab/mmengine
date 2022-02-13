@@ -291,7 +291,7 @@ class DeformConv2d(nn.Module):
     pass
 ```
 
-如果需要使用 `DeformConv2d`，就需要在 `train.py` 中导入该模块。
+如果需要使用 `DeformConv2d`，就需要修改 `train.py` 。
 
 ```python
 # train.py
@@ -300,7 +300,7 @@ from .model import Conv2d, DeformConv2d
 conv = DeformConv2d()
 ```
 
-而如果使用注册器，我们可以避免 `train.py` 文件的改动。
+而如果使用注册器，则可以避免 `train.py` 文件的改动。
 
 ```python
 # model/conv.py
@@ -327,7 +327,7 @@ conv = MODELS.build(cfg)
 
 ### 灵活组合
 
-假如我们想将多个模块组合成一个新模块，
+如果我们想将多个模块组合成一个新模块，
 
 ```python
 # model/conv.py
@@ -372,7 +372,7 @@ class ConvBlock(nn.Module):
 conv_blcok = ConvBlock()
 ```
 
-但是，如果我们想组合 `DeformConv2d` 和 `AvgPool2d`，那无疑要修改对 `ConvBlock` 。
+但是，如果我们想组合 `DeformConv2d` 和 `AvgPool2d`，那无疑要修改 `ConvBlock` 。
 
 而如果使用注册器，该问题可以轻松解决。
 
@@ -419,7 +419,7 @@ class ConvBlock(nn.Module):
         x = self.pool(x)
         return x
 
-# # 注意，conv_cfg 和 pool_cfg 可以通过解析配置文件得到
+# 注意，conv_cfg 和 pool_cfg 可以通过解析配置文件得到
 conv_cfg = dict(type='DeformConv2d')
 pool_cfg = dict(type='AvgPool2d')
 conv_block = ConvBlock(conv_cfg, pool_cfg)
