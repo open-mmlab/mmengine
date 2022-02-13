@@ -47,7 +47,7 @@ class TestParameterScheduler(TestCase):
                 param_name='lr',
                 gamma=0.1,
                 step_size=3,
-                last_epoch=10)
+                last_step=10)
 
     def test_scheduler_before_optim_warning(self):
         """warns if scheduler is used before optimizer."""
@@ -72,7 +72,7 @@ class TestParameterScheduler(TestCase):
                 param_name='lr',
                 gamma=0.1,
                 step_size=3,
-                last_epoch=10)
+                last_step=10)
             scheduler.step()
             self.optimizer.step()
 
@@ -80,7 +80,42 @@ class TestParameterScheduler(TestCase):
         self.assertWarnsRegex(UserWarning, r'how-to-adjust-learning-rate',
                               call_sch_before_optim_resume)
 
+    def test_get_last_value(self):
+        from torch.nn import Parameter
+        epochs = 10
+        optimizer = torch.optim.SGD(
+            [Parameter(torch.randn(2, 2, requires_grad=True))], 0.1)
+        targets = [[0.1] * 3 + [0.01] * 3 + [0.001] * 3 + [0.0001]]
+        scheduler = StepParameterScheduler(optimizer, 'lr', 3, gamma=0.1)
+        for epoch in range(epochs):
+            result = scheduler.get_last_value()
+            self.optimizer.step()
+            scheduler.step()
+            target = [t[epoch] for t in targets]
+            for t, r in zip(target, result):
+                self.assertEqual(
+                    target,
+                    result,
+                    msg='LR is wrong in epoch {}: expected {}, got {}'.format(
+                        epoch, t, r),
+                    atol=1e-5,
+                    rtol=0)
+
+    def test_scheduler_step_count(self):
+        iteration = 10
+        scheduler = StepParameterScheduler(
+            self.optimizer, param_name='lr', gamma=0.1, step_size=3)
+        self.assertEqual(scheduler.last_step, 0)
+        target = [i + 1 for i in range(iteration)]
+        step_counts = []
+        for i in range(iteration):
+            self.optimizer.step()
+            scheduler.step()
+            step_counts.append(scheduler.last_step)
+        self.assertEqual(step_counts, target)
+
     def test_effective_interval(self):
+        # check invalid begin end
         with self.assertRaisesRegex(ValueError,
                                     'end should be larger than begin'):
             StepParameterScheduler(
@@ -91,59 +126,10 @@ class TestParameterScheduler(TestCase):
                 begin=10,
                 end=5)
 
-    def _check_scheduler_state_dict(self, constr, constr2, epochs=10):
-        scheduler = constr()
-        for _ in range(epochs):
-            scheduler.optimizer.step()
-            scheduler.step()
-        scheduler_copy = constr2()
-        scheduler_copy.load_state_dict(scheduler.state_dict())
-        for key in scheduler.__dict__.keys():
-            if key != 'optimizer':
-                self.assertEqual(scheduler.__dict__[key],
-                                 scheduler_copy.__dict__[key])
-        self.assertEqual(scheduler.get_last_value(),
-                         scheduler_copy.get_last_value())
-
-    def test_step_scheduler_state_dict(self):
-        self._check_scheduler_state_dict(
-            lambda: StepParameterScheduler(
-                self.optimizer, param_name='lr', gamma=0.1, step_size=3),
-            lambda: StepParameterScheduler(
-                self.optimizer, param_name='lr', gamma=0.01 / 2, step_size=1))
-
-    def test_multi_step_scheduler_state_dict(self):
-        self._check_scheduler_state_dict(
-            lambda: MultiStepParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                gamma=0.1,
-                milestones=[2, 5, 9]), lambda: MultiStepParameterScheduler(
-                    self.optimizer,
-                    param_name='lr',
-                    gamma=0.01,
-                    milestones=[1, 4, 6]))
-
-    def test_exp_step_scheduler_state_dict(self):
-        self._check_scheduler_state_dict(
-            lambda: ExponentialParameterScheduler(
-                self.optimizer, param_name='lr', gamma=0.1),
-            lambda: ExponentialParameterScheduler(
-                self.optimizer, param_name='lr', gamma=0.01))
-
-    def test_cosine_scheduler_state_dict(self):
-        epochs = 10
-        eta_min = 1e-10
-        self._check_scheduler_state_dict(
-            lambda: CosineAnnealingParameterScheduler(
-                self.optimizer, param_name='lr', T_max=epochs, eta_min=eta_min
-            ),
-            lambda: CosineAnnealingParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                T_max=epochs // 2,
-                eta_min=eta_min / 2),
-            epochs=epochs)
+    def test_invalid_param_name(self):
+        with self.assertRaises(KeyError):
+            StepParameterScheduler(
+                self.optimizer, param_name='invalid_name', step_size=10)
 
     def _test_scheduler_value(self,
                               schedulers,
@@ -201,43 +187,33 @@ class TestParameterScheduler(TestCase):
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_constant_scheduler(self):
+        # factor should between 0~1
         with self.assertRaises(ValueError):
             ConstantParameterScheduler(
-                self.optimizer, param_name='lr', factor=99, total_iters=5)
+                self.optimizer, param_name='lr', factor=99)
+
         # lr = 0.025     if epoch < 5
         # lr = 0.005    if 5 <= epoch
         epochs = 10
         single_targets = [0.025] * 5 + [0.05] * 5
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = ConstantParameterScheduler(
-            self.optimizer, param_name='lr', factor=1.0 / 2, total_iters=5)
+            self.optimizer, param_name='lr', factor=1.0 / 2)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_linear_scheduler(self):
         with self.assertRaises(ValueError):
             LinearParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                start_factor=10,
-                total_iters=900)
+                self.optimizer, param_name='lr', start_factor=10, end=900)
         with self.assertRaises(ValueError):
             LinearParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                start_factor=-1,
-                total_iters=900)
+                self.optimizer, param_name='lr', start_factor=-1, end=900)
         with self.assertRaises(ValueError):
             LinearParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                end_factor=1.001,
-                total_iters=900)
+                self.optimizer, param_name='lr', end_factor=1.001, end=900)
         with self.assertRaises(ValueError):
             LinearParameterScheduler(
-                self.optimizer,
-                param_name='lr',
-                end_factor=-0.00001,
-                total_iters=900)
+                self.optimizer, param_name='lr', end_factor=-0.00001, end=900)
         # lr = 0.025     if epoch == 0
         # lr = 0.03125   if epoch == 1
         # lr = 0.0375    if epoch == 2
@@ -256,7 +232,7 @@ class TestParameterScheduler(TestCase):
             self.optimizer,
             param_name='lr',
             start_factor=start_factor,
-            total_iters=iters)
+            end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_exp_scheduler(self):
@@ -279,28 +255,103 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', T_max=epochs, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
 
-    def test_get_last_value(self):
-        from torch.nn import Parameter
-        epochs = 10
-        optimizer = torch.optim.SGD(
-            [Parameter(torch.randn(2, 2, requires_grad=True))], 0.1)
-        targets = [[0.1] * 3 + [0.01] * 3 + [0.001] * 3 + [0.0001]]
-        scheduler = StepParameterScheduler(optimizer, 'lr', 3, gamma=0.1)
-        for epoch in range(epochs):
-            result = scheduler.get_last_value()
-            self.optimizer.step()
+    def _check_scheduler_state_dict(self, constr, constr2, epochs=10):
+        scheduler = constr()
+        for _ in range(epochs):
+            scheduler.optimizer.step()
             scheduler.step()
-            target = [t[epoch] for t in targets]
-            for t, r in zip(target, result):
-                self.assertEqual(
-                    target,
-                    result,
-                    msg='LR is wrong in epoch {}: expected {}, got {}'.format(
-                        epoch, t, r),
-                    atol=1e-5,
-                    rtol=0)
+        scheduler_copy = constr2()
+        scheduler_copy.load_state_dict(scheduler.state_dict())
+        for key in scheduler.__dict__.keys():
+            if key != 'optimizer':
+                self.assertEqual(scheduler.__dict__[key],
+                                 scheduler_copy.__dict__[key])
+        self.assertEqual(scheduler.get_last_value(),
+                         scheduler_copy.get_last_value())
 
-    def test_invalid_param_name(self):
-        with self.assertRaises(KeyError):
-            StepParameterScheduler(
-                self.optimizer, param_name='invalid_name', step_size=10)
+    def test_step_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: StepParameterScheduler(
+                self.optimizer, param_name='lr', gamma=0.1, step_size=3),
+            lambda: StepParameterScheduler(
+                self.optimizer, param_name='lr', gamma=0.01 / 2, step_size=1))
+
+    def test_multi_step_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: MultiStepParameterScheduler(
+                self.optimizer,
+                param_name='lr',
+                gamma=0.1,
+                milestones=[2, 5, 9]), lambda: MultiStepParameterScheduler(
+                    self.optimizer,
+                    param_name='lr',
+                    gamma=0.01,
+                    milestones=[1, 4, 6]))
+
+    def test_exp_step_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: ExponentialParameterScheduler(
+                self.optimizer, param_name='lr', gamma=0.1),
+            lambda: ExponentialParameterScheduler(
+                self.optimizer, param_name='lr', gamma=0.01))
+
+    def test_cosine_scheduler_state_dict(self):
+        epochs = 10
+        eta_min = 1e-10
+        self._check_scheduler_state_dict(
+            lambda: CosineAnnealingParameterScheduler(
+                self.optimizer, param_name='lr', T_max=epochs, eta_min=eta_min
+            ),
+            lambda: CosineAnnealingParameterScheduler(
+                self.optimizer,
+                param_name='lr',
+                T_max=epochs // 2,
+                eta_min=eta_min / 2),
+            epochs=epochs)
+
+    def test_linear_scheduler_state_dict(self):
+        epochs = 10
+        self._check_scheduler_state_dict(
+            lambda: LinearParameterScheduler(
+                self.optimizer, param_name='lr', start_factor=1 / 3),
+            lambda: LinearParameterScheduler(
+                self.optimizer,
+                param_name='lr',
+                start_factor=0,
+                end_factor=0.3),
+            epochs=epochs)
+
+    def test_multi_scheduler_without_overlap(self):
+        epochs = 12
+        single_targets = [0.025, 0.03125, 0.0375, 0.04375
+                          ] + [0.05] * 4 + [0.005] * 3 + [0.0005] * 1
+        targets = [single_targets, [x * epochs for x in single_targets]]
+        scheduler1 = LinearParameterScheduler(
+            self.optimizer,
+            param_name='lr',
+            start_factor=1 / 2,
+            begin=0,
+            end=5)
+        scheduler2 = MultiStepParameterScheduler(
+            self.optimizer,
+            param_name='lr',
+            gamma=0.1,
+            milestones=[8, 11],
+            begin=5,
+            end=12)
+        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+
+    def test_multi_scheduler_with_overlap(self):
+        epochs = 10
+        single_targets = [0.025, 0.03125, 0.0375, 0.004375
+                          ] + [0.005] * 2 + [0.0005] * 3 + [0.00005] * 1
+        targets = [single_targets, [x * epochs for x in single_targets]]
+        scheduler1 = LinearParameterScheduler(
+            self.optimizer,
+            param_name='lr',
+            start_factor=1 / 2,
+            begin=0,
+            end=5)
+        scheduler2 = MultiStepParameterScheduler(
+            self.optimizer, param_name='lr', gamma=0.1, milestones=[3, 6, 9])
+        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
