@@ -1,9 +1,10 @@
 import os.path as osp
-import pytest
 from unittest.mock import MagicMock
+
 import torch
 
-from mmengine.data import (BaseDataset,BaseConcatDataset, BaseRepeatDataset, BaseClassBalancedDataset)
+from mmengine.data import (BaseClassBalancedDataset, BaseConcatDataset,
+                           BaseDataset, BaseRepeatDataset)
 
 
 class TestBaseDataset:
@@ -11,27 +12,21 @@ class TestBaseDataset:
     def __init__(self):
         self.base_dataset = BaseDataset
 
-        self.data_info = dict(
-            filename='test_img.jpg',
-            height=604,
-            width=640)
+        self.data_info = dict(filename='test_img.jpg', height=604, width=640)
         self.base_dataset._parse_raw_data = MagicMock(
-            return_value=self.data_info
-        )
+            return_value=self.data_info)
 
-        self.imgs = torch.rand((2,3,32,32))
+        self.imgs = torch.rand((2, 3, 32, 32))
         self.base_dataset.pipeline = MagicMock(
-            return_value=dict(imgs=self.imgs)
-        )
+            return_value=dict(imgs=self.imgs))
 
     def test_init(self):
         # test the instantiation of self.base_dataset
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
-        assert dataset._fully_initialized==True
+            ann_file='dummy_annotation.json')
+        assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
         # test the instantiation of self.base_dataset with lazy init
@@ -39,42 +34,40 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            lazy_init=True
-        )
-        assert dataset._fully_initialized==False
+            lazy_init=True)
+        assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
 
     def test_meta(self):
-        # test dataset.meta with setting the meta from annotation file as the meta of self.base_dataset
+        # test dataset.meta with setting the meta from annotation file as the
+        # meta of self.base_dataset
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
         for key in ['dataset_type', 'task_name']:
             assert key in dataset.meta
-        
+
         # test dataset.meta with setting META in self.base_dataset
         dataset_type = 'new_dataset'
-        self.base_dataset.META = dict(dataset_type=dataset_type, classes=('dog','cat'))
+        self.base_dataset.META = dict(
+            dataset_type=dataset_type, classes=('dog', 'cat'))
 
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
         for key in self.base_dataset.META.keys():
             assert key in dataset.meta
         assert dataset.meta['dataset_type'] == dataset_type
 
         # Test dataset.meta with passing meta into self.base_dataset
-        meta=dict(classes=('dog',))
+        meta = dict(classes=('dog', ))
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            meta=meta
-        )
+            meta=meta)
         for key in meta:
             assert key in dataset.meta
         assert dataset.meta['classes'] == meta['classes']
@@ -86,78 +79,71 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
-        assert len(dataset)==2
-    
+            ann_file='dummy_annotation.json')
+        assert len(dataset) == 2
+
     def test_getitem(self):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
-        assert dataset[0]==dict(imgs=self.imgs)
+            ann_file='dummy_annotation.json')
+        assert dataset[0] == dict(imgs=self.imgs)
 
     def test_full_init(self):
-        # test fullly initialize dataset by calling `full_init()`
+        # test fully initialize dataset by calling `full_init()`
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            lazy_init=True
-        )
-        assert dataset._fully_initialized==False
+            lazy_init=True)
+        assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
         dataset.full_init()
-        assert dataset._fully_initialized==True
+        assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
-        # test fullly initialize dataset by calling `__len__()`
+        # test fully initialize dataset by calling `__len__()`
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            lazy_init=True
-        )
-        assert dataset._fully_initialized==False
+            lazy_init=True)
+        assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
         len(dataset)
-        assert dataset._fully_initialized==True
+        assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
-        # test fullly initialize dataset by calling `__getitem__()`
+        # test fully initialize dataset by calling `__getitem__()`
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            lazy_init=True
-        )
-        assert dataset._fully_initialized==False
+            lazy_init=True)
+        assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
         dataset[0]
-        assert dataset._fully_initialized==True
+        assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
-        # test fullly initialize dataset by calling `get_data_info()`
+        # test fully initialize dataset by calling `get_data_info()`
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='dummy_annotation.json',
-            lazy_init=True
-        )
-        assert dataset._fully_initialized==False
+            lazy_init=True)
+        assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
         dataset.get_data_info(0)
-        assert dataset._fully_initialized==True
+        assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
     def test_get_data_info(self):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
-        assert dataset.get_data_info(0)==self.data_info
+            ann_file='dummy_annotation.json')
+        assert dataset.get_data_info(0) == self.data_info
 
 
 class TestBaseConcatDataset:
@@ -166,147 +152,129 @@ class TestBaseConcatDataset:
         dataset = BaseDataset
 
         # create dataset_a
-        data_info = dict(
-            filename='test_img.jpg',
-            height=604,
-            width=640)
-        dataset._parse_raw_data = MagicMock(
-            return_value=data_info
-        )
-        imgs = torch.rand((2,3,32,32))
-        dataset.pipeline = MagicMock(
-            return_value=dict(imgs=imgs)
-        )
+        data_info = dict(filename='test_img.jpg', height=604, width=640)
+        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        imgs = torch.rand((2, 3, 32, 32))
+        dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset_a = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
 
         # create dataset_b
-        data_info = dict(
-            filename='gray.jpg',
-            height=288,
-            width=512)
-        dataset._parse_raw_data = MagicMock(
-            return_value=data_info
-        )
-        imgs = torch.rand((2,3,32,32))
-        dataset.pipeline = MagicMock(
-            return_value=dict(imgs=imgs)
-        )
+        data_info = dict(filename='gray.jpg', height=288, width=512)
+        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        imgs = torch.rand((2, 3, 32, 32))
+        dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset_b = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
 
         # test init
-        self.cat_datasets = BaseConcatDataset(datasets=[self.dataset_a, self.dataset_b])
+        self.cat_datasets = BaseConcatDataset(
+            datasets=[self.dataset_a, self.dataset_b])
 
     def test_meta(self):
-        assert self.cat_datasets.meta==self.dataset_a.meta
-        assert self.cat_datasets.meta==self.dataset_b.meta
+        assert self.cat_datasets.meta == self.dataset_a.meta
+        assert self.cat_datasets.meta == self.dataset_b.meta
 
     def test_length(self):
-        assert len(self.cat_datasets)==(len(self.dataset_a)+len(self.dataset_b))
-    
+        assert len(self.cat_datasets) == (
+            len(self.dataset_a) + len(self.dataset_b))
+
     def test_getitem(self):
-        assert self.cat_datasets[0]==self.dataset_a[0]
-        assert self.cat_datasets[0]!=self.dataset_b[0]
+        assert self.cat_datasets[0] == self.dataset_a[0]
+        assert self.cat_datasets[0] != self.dataset_b[0]
 
-        assert self.cat_datasets[-1]==self.dataset_b[-1]
-        assert self.cat_datasets[-1]!=self.dataset_a[-1]
-    
+        assert self.cat_datasets[-1] == self.dataset_b[-1]
+        assert self.cat_datasets[-1] != self.dataset_a[-1]
+
     def test_get_data_info(self):
-        assert self.cat_datasets.get_data_info(0)==self.dataset_a.get_data_info(0)
-        assert self.cat_datasets.get_data_info(0)!=self.dataset_b.get_data_info(0)
+        assert self.cat_datasets.get_data_info(
+            0) == self.dataset_a.get_data_info(0)
+        assert self.cat_datasets.get_data_info(
+            0) != self.dataset_b.get_data_info(0)
 
-        assert self.cat_datasets.get_data_info(-1)==self.dataset_b.get_data_info(-1)
-        assert self.cat_datasets.get_data_info(-1)!=self.dataset_a[-1].get_data_info(-1)
+        assert self.cat_datasets.get_data_info(
+            -1) == self.dataset_b.get_data_info(-1)
+        assert self.cat_datasets.get_data_info(
+            -1) != self.dataset_a[-1].get_data_info(-1)
 
 
 class TestBaseRepeatDataset:
+
     def __init__(self):
         dataset = BaseDataset
-        data_info = dict(
-            filename='test_img.jpg',
-            height=604,
-            width=640)
-        dataset._parse_raw_data = MagicMock(
-            return_value=data_info
-        )
-        imgs = torch.rand((2,3,32,32))
-        dataset.pipeline = MagicMock(
-            return_value=dict(imgs=imgs)
-        )
+        data_info = dict(filename='test_img.jpg', height=604, width=640)
+        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        imgs = torch.rand((2, 3, 32, 32))
+        dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
 
         self.repeat_times = 5
         # test init
-        self.repeat_datasets = BaseConcatDataset(dataset=self.dataset,times=self.repeat_times)
+        self.repeat_datasets = BaseRepeatDataset(
+            dataset=self.dataset, times=self.repeat_times)
 
     def test_meta(self):
-        assert self.repeat_datasets.meta==self.dataset.meta
+        assert self.repeat_datasets.meta == self.dataset.meta
 
     def test_length(self):
-        assert len(self.repeat_datasets)==len(self.dataset)*self.repeat_times
-    
+        assert len(
+            self.repeat_datasets) == len(self.dataset) * self.repeat_times
+
     def test_getitem(self):
         for i in range(self.repeat_times):
-            assert self.repeat_datasets[len(self.dataset)*i]==self.dataset[0]
-    
+            assert self.repeat_datasets[len(self.dataset) *
+                                        i] == self.dataset[0]
+
     def test_get_data_info(self):
         for i in range(self.repeat_times):
-            assert self.repeat_datasets.get_data_info(len(self.dataset)*i)==self.dataset.get_data_info(0)
+            assert self.repeat_datasets.get_data_info(
+                len(self.dataset) * i) == self.dataset.get_data_info(0)
 
 
 class TestBaseClassBalancedDataset:
+
     def __init__(self):
         dataset = BaseDataset
-        data_info = dict(
-            filename='test_img.jpg',
-            height=604,
-            width=640)
-        dataset._parse_raw_data = MagicMock(
-            return_value=data_info
-        )
-        imgs = torch.rand((2,3,32,32))
-        dataset.pipeline = MagicMock(
-            return_value=dict(imgs=imgs)
-        )
-        dataset.get_cat_ids = MagicMock(
-            return_value=[0]
-        )
+        data_info = dict(filename='test_img.jpg', height=604, width=640)
+        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        imgs = torch.rand((2, 3, 32, 32))
+        dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
+        dataset.get_cat_ids = MagicMock(return_value=[0])
         self.dataset = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json'
-        )
+            ann_file='dummy_annotation.json')
 
-        self.repeat_indices= [0,0,1,1,1]
+        self.repeat_indices = [0, 0, 1, 1, 1]
         # test init
-        self.cls_banlanced_datasets = BaseClassBalancedDataset(dataset=self.dataset,oversample_thr=1e-3)
+        self.cls_banlanced_datasets = BaseClassBalancedDataset(
+            dataset=self.dataset, oversample_thr=1e-3)
         self.cls_banlanced_datasets.repeat_indices = self.repeat_indices
 
     def test_meta(self):
-        assert self.cls_banlanced_datasets.meta==self.dataset.meta
+        assert self.cls_banlanced_datasets.meta == self.dataset.meta
 
     def test_length(self):
-        assert len(self.cls_banlanced_datasets)==len(self.repeat_indices)
-    
+        assert len(self.cls_banlanced_datasets) == len(self.repeat_indices)
+
     def test_getitem(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets[i]==self.dataset[self.repeat_indices[i]]
-    
+            assert self.repeat_datasets[i] == self.dataset[
+                self.repeat_indices[i]]
+
     def test_get_data_info(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets.get_data_info(i)==self.dataset.get_data_info(self.repeat_indices[i])
-    
+            assert self.repeat_datasets.get_data_info(
+                i) == self.dataset.get_data_info(self.repeat_indices[i])
+
     def test_get_cat_ids(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets.get_cat_ids(i)==self.dataset.get_cat_ids(self.repeat_indices[i])
+            assert self.repeat_datasets.get_cat_ids(
+                i) == self.dataset.get_cat_ids(self.repeat_indices[i])
