@@ -29,7 +29,12 @@
 
 ### BaseDataElement
 
-`BaseDataElement` 被用于模型内部模块之间的数据交换，同时对一些可以归结到一起的元素进行了封装。例如，其派生的 `InstanceData` 封装了检测框、框对应的标签和实例掩码、甚至关键点等数据。
+MMEngine 为基础数据元素的封装提供了一个基类 `BaseDataElement`。
+基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`, `PixelData`, 和 `LabelData` 三个典型的子类，封装了实例级别，像素级别，和标签级别的基础数据元素，并针对他们的数据特性支持一些额外的功能。例如，`InstanceData` 可以封装检测框、框对应的标签和实例掩码、甚至关键点等数据，同时要求这些属性具有相同的长度 N，N 代表实例的个数，并支持对实例进行索引。
+
+`BaseDataElement` 可以作为独立的模块被使用。但是，为了和 `InstanceData`, `PixelData`, 和 `LabelData` 保持命名的一致性，MMEngine 实现了 `GeneralData`，它拥有和 `BaseDataElement` 一样的功能，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 一保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。
+在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
+
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
 1. 数据元素的创建
@@ -69,56 +74,60 @@ gt_instances1 = gt_instance.new(
 gt_instances2 = gt_instances1.new()
 ```
 
-3. 属性的增加与查询：用户可以通过 `set_metainfo` 和 `set_data` 来增加 `BaseDataElement` 的属性，这种方式会显式声明了字段属于 `metainfo` 还是 `data` ，并将属性添加到对应的字段列表中。
-用户也可以像增加类属性或者字典字段那样增加 `BaseDataElement` 的属性，此时数据会被**默认为 data 类型**增加到 `BaseDataElement` 中。
+3. 属性的增加与查询：
+用户可以像增加类属性那样增加 `BaseDataElement` 的属性，此时数据会被**默认为 data 类型**增加到 `BaseDataElement` 中。
+用户还可以通过 `set_metainfo` 来增加 metainfo 的属性。
 类似的，用户可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值，
 也可以通过 `data_keys`，`data_values`，和 `data_items` 来访问只存在于 data 中的键值。
 用户还能通过 `keys`，`values`， `items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
-**注意：** `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
+**注意：**
+    1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
+    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免歧义性，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以 `BaseDataElement[name]` 是不合法的。
 
 ```python
 gt_instances = BaseDataElement()
 # 设置 gt_instances 的 meta 字段，img_id 和 img_shape 会被作为 metainfo 的字段成为 gt_instances 的属性
 gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
 assert 'img_shape' in gt_instaces.metainfo_keys()
+# 'img_shape' 是 gt_instances 的属性
+assert 'img_shape' in gt_instaces
 # img_shape 不是 gt_instances 的 data 字段
 assert 'img_shape' not in gt_instaces.data_keys()
 # 通过 keys 来访问所有属性
 assert 'img_shape' in gt_instaces.keys()
-assert 'img_shape' in gt_instaces
-
-# 设置 gt_instances 的 data 字段，bboxes 会被作为 data 的字段成为 gt_instances 的属性
-gt_instances.set_data(dict(bboxes=bboxes))
-assert 'bboxes' in gt_instances.data_keys()
-# 通过 keys 来访问所有属性
-assert 'bboxes' in gt_instances.keys()
-assert 'bboxes' in gt_instances
-# bboxes 不是 gt_instances 的 metainfo 字段
-assert 'bboxes' not in gt_instances.metainfo_skeys()
+# 访问类属性一样访问 'img_shape'
+print(gt_instances.img_shape)
 
 # 直接设置 gt_instance 的 scores 属性，默认该数据属于 data
 gt_instances.scores = torch.rand((5,))
 assert 'scores' in gt_instances.data_keys()
+# 'scores' 是 gt_instances 的属性
+assert 'scores' in gt_instances
 # 通过 keys 来访问所有属性
 assert 'scores' in gt_instances.keys()
-assert 'scores' in gt_instances
 # scores 不是 gt_instances 的 metainfo 字段
-assert 'scores' not in gt_instances.metainfo_skeys()
+assert 'scores' not in gt_instances.metainfo_keys()
+# 访问类属性一样访问 'scores'
+print(gt_instances.scores)
 
-# 直接像字典一样设置 gt_instance 的 labels 属性，默认该数据属于 data
-gt_instances['labels'] = torch.rand((5,))
-assert 'labels' in gt_instances.data_keys()
+# 设置 gt_instances 的 data 字段 bboxes
+gt_instances.bboxes = torch.rand((5, 4))
+assert 'bboxes' in gt_instances.data_keys()
+# 'bboxes' 是 gt_instances 的属性
+assert 'bboxes' in gt_instances
 # 通过 keys 来访问所有属性
-assert 'labels' in gt_instances.keys()
-assert 'labels' in gt_instances
-# labels 不是 gt_instances 的 metainfo 字段
-assert 'labels' not in gt_instances.metainfo_skeys()
+assert 'bboxes' in gt_instances.keys()
+# bboxes 不是 gt_instances 的 metainfo 字段
+assert 'bboxes' not in gt_instances.metainfo_keys()
+# 访问类属性一样访问 'bboxes'
+print(gt_instances.bboxes)
 
 for k, v in gt_instances.items():
     print(f'{k}: {v}')  # 包含 img_shapes， img_id， bboxes，scores，labels
 ```
 
-4. `BaseDataElement` 支持类字典操作来对字段进行删改，同时用户也可以像使用一个类一样对它的属性进行删改。
+4. `BaseDataElement` 支持用户可以像使用一个类一样对它的属性进行删改
+同时， `BaseDataElement` 支持 `get` 来方便地在访问不到变量时设置默认值，也支持 `pop` 在方便地在访问属性后删除属性。
 
 ```python
 gt_instances = BaseDataElement(
@@ -130,22 +139,19 @@ gt_instances.img_shape = (1280, 1280)
 gt_instances.img_shape  # (1280, 1280)
 gt_instances.bboxes = gt_instances.bboxes * 2
 
-# 像字典一样对属性进行修改
-gt_instances['img_shape'] = (640, 640)
-gt_instances['img_shape']  # (640, 640)
-gt_instances['bboxes'] = gt_instances['bboxes'] / 2
-
-# 提供了类字典的访问方式
+# 提供了可设置默认值的获取方式 get
 gt_instances.get('img_shape', None)  # (640， 640)
 gt_instances.get('bboxes', None)    # 6x4 tensor
 
 # 属性的删除
 del gt_instances.img_shape
 del gt_instances.bboxes
-assert 'img_shape' not in gt_instances
+assert 'img_shape' in gt_instances
 assert 'bboxes' not in gt_instances
+
+# 提供了便捷的属性删除和访问操作 pop
 gt_instances.pop('img_shape', None)  # None
-gt_instances.get('bboxes', None)  # None
+gt_instances.pop('bboxes', None)  # None
 ```
 
 5. 用户可以像 torch.Tensor 那样对 `BaseDataElement` 的 data 进行状态转换，目前支持 `cuda`， `cpu`， `to`， `numpy` 等操作。
@@ -216,11 +222,15 @@ tensor([0, 1, 2, 3])
 
 ### BaseDataSample
 
-`BaseDataSample` 是所有基础数据元素的封装，并作为一个算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
-OpenMMLab 每个算法库都会继承 `BaseDataSample` 实现该算法方向的的样本数据封装，并对其字段进行规约和校验。
-因此，`BaseDataSample` 支持 `BaseDataElement` 用例中的所有使用方式，内部依然区分 metainfo 和 data，并且提供了一套对属性进行规约和校验的接口方便下游算法库较便捷地对其约定的属性进行校验。
-下游算法库的样本数据封装 `DetDataSample` 可以使用 `BaseDataSample` 实现的 `_get_field`, `_del_field` 来快捷地定义对属性的访问和删除操作，
-同时 `BaseDataSample` 还提供了 `_set_field` 接口，支持设置实际要维护的变量别名，并且在设置过程中检查数据的类型是否符合约束。
+MMEngine 为样本数据的封装提供了一个基类 `BaseDataSample`，OpenMMLab 的每个算法库都应该继承 `BaseDataSample` 实现自己的样本数据封装，并规约和校验该算法库中的常见字段。算法库自己实现的样本数据封装 会作为该算法库内 dataset，visualizer，evaluator，model 组件之间的数据接口进行流通。
+`BaseDataSample` 虽然可以作为一个模块被单独使用，但是我们不推荐 `BaseDataSample` 被单独拿出来使用。
+
+`BaseDataSample` 内部依然区分 metainfo 和 data，并且支持像类一样对其属性进行设置和调整，为了保证用户体验的一致性，`BaseDataSample` 的外部接口用法和 `BaseDataElement` 保持一致。
+
+同时，由于 `BaseDataSample` 作为基类一般不会被下游算法库直接使用，为了方便下游算法库较便捷地对其约定的属性进行校验。
+ `BaseDataSample` 额外提供了一套内部接口 `_get_field`， `_del_field` 和 `_set_field` 来便利它的子类快捷地定义和规约 data 属性。
+`_set_field` 不会被当作外部接口直接使用，而是被用来定义属性（property） 的 `setter` 并提供基本的类型校验。
+
 一个简单粗略的实现和用例如下。
 
 ```python
@@ -230,9 +240,12 @@ from functools import partial
 
 class BaseDataSample(ABC):
 
-    def __init__(self):
+    def __init__(self, metainfo=dict(), data=dict()):
         self._data_fields = set()
         self._metainfo_fields = set()
+
+    # 其他功能实现
+    ...
 
     def _get_field(self, name):
         return getattr(self, name)
@@ -248,7 +261,7 @@ class BaseDataSample(ABC):
 
 ```
 
-基于 `BaseDataSample`，下游算法库可以定义 `DetDataSample`，并且复用 `BaseDataSample` 中的实现，快速地定义和约束 3 个 property：proposals，gt_instances，pred_instances。
+基于 `BaseDataSample`，下游算法库可以定义 `DetDataSample`，并且使用 `BaseDataSample` 中的接口，快速定义 3 个 property：proposals，gt_instances，pred_instances，并约束他们的类型。
 
 ```python
 class DetDataSample(BaseDataSample):
@@ -277,15 +290,22 @@ class DetDataSample(BaseDataSample):
     )
 ```
 
-`DetDataSample` 的如下所示，在数据类型不符合要求的时候（例如用 `torch.Tensor` 而非 `InstanceData` 定义 proposals 时） ，`DetDataSample` 就会报错。
+`DetDataSample` 的用法如下所示，在数据类型不符合要求的时候（例如用 `torch.Tensor` 而非 `InstanceData` 定义 proposals 时） ，`DetDataSample` 就会报错。
 
 ```python
 a = DetDataSample()
+
 a.proposals = InstanceData(data=dict(bboxes=torch.rand((5,4))))
-assert 'proposals' in example
+
+assert 'proposals' in a
 print(a.proposals)
+
 del a.proposals
+assert 'proposals' not in a
 ```
+
+**注意：**：`_get_field`， `_del_field`，和 `_set_field` 都是面向开发者而非用户的接口，目的是提供一套便捷的接口方便下游算法库方便地定义一个属性。
+用户在使用样本数据的过程中，
 
 ## 命名规约
 
