@@ -4,7 +4,7 @@
 
 ## 参数调度器的使用
 
-这里我们先简单介绍一下如何使用 PyTorch 内置的学习率调度器来进行学习率的调整。下面是 [PyTorch 官方文档](https://pytorch.org/docs/stable/optim.html)中的一个例子，我们构造一个 ExponentialLR，并且在每个 epoch 结束后调用 `scheduler.step()`，实现了随 epoch 指数下降的学习率调整策略。
+这里我们先简单介绍一下如何使用 PyTorch 内置的学习率调度器来进行学习率的调整。下面是 [PyTorch 官方文档](https://pytorch.org/docs/stable/optim.html) 中的一个例子，我们构造一个 ExponentialLR，并且在每个 epoch 结束后调用 `scheduler.step()`，实现了随 epoch 指数下降的学习率调整策略。
 
 ```python
 model = [Parameter(torch.randn(2, 2, requires_grad=True))]
@@ -51,7 +51,7 @@ scheduler = dict(type='MultiStepLR', by_epoch=False, milestones=[60000, 80000], 
 
 有些算法在训练过程中，并不是自始至终按照某个调度策略进行学习率调整的。最常见的例子是学习率预热，比如在训练刚开始的若干迭代次数使用线性的调整策略将学习率从一个较小的值增长到正常，然后按照另外的调整策略进行正常训练。
 
-MMEngine 支持组合多个调度器一起使用，只需将配置文件中的 `scheduler` 字段这只为一组调度器配置的列表，SchedulerStepHook 可以自动对调度器列表进行处理。下面的例子便实现了学习率预热。
+MMEngine 支持组合多个调度器一起使用，只需将配置文件中的 `scheduler` 字段修改为一组调度器配置的列表，SchedulerStepHook 可以自动对调度器列表进行处理。下面的例子便实现了学习率预热。
 
 ```python
 scheduler = [
@@ -132,9 +132,9 @@ scheduler = [
 ]
 ```
 
-这里设置的参数名是`lr`，因此这个调度器的作用等同于直接使用学习率调度器 `LinearLRScheduler`。
+这里设置的参数名是 `lr`，因此这个调度器的作用等同于直接使用学习率调度器 `LinearLRScheduler`。
 
-除了动量之外，用户也可以设置 `optimizer.param_groups` 中的其他参数名进行调度，可调度的参数取决于所使用的优化器。 例如，当使用带 `weight_decay` 的 SGD 优化器时，可以按照以下示例对调整 `weight_decay`：
+除了动量之外，用户也可以对 `optimizer.param_groups` 中的其他参数名进行调度，可调度的参数取决于所使用的优化器。 例如，当使用带 `weight_decay` 的 SGD 优化器时，可以按照以下示例对调整 `weight_decay`：
 
 ```python
 scheduler = [
