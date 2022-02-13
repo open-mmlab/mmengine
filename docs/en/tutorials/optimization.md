@@ -127,7 +127,7 @@ scheduler = [
 
 The `param_name` set here is `lr`, so the role of this scheduler is equivalent to the learning rate scheduler.
 
-You can also set any other parameter names in `optimizer.param_groups` for scheduling. For example, you can schedule the `weight_decay` parameter in `optimizer.param_groups` by setting `param_name='weight_decay'`:
+You can also set any other parameter names in `optimizer.param_groups` for scheduling. The schedulable parameter is determined by the optimizer. For example, when using SGD with weight decay, you can schedule the `weight_decay` parameter in `optimizer.param_groups` by setting `param_name='weight_decay'`:
 
 ```python
 scheduler = [

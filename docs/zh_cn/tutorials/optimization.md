@@ -134,7 +134,7 @@ scheduler = [
 
 这里设置的参数名是`lr`，因此这个调度器的作用等同于学习率调度器。
 
-当然，用户也可以设置 `optimizer.param_groups` 中的其他参数名进行调度。 例如，可以通过设置`param_name='weight_decay'`来对调整模型的 weight_decay:
+当然，用户也可以设置 `optimizer.param_groups` 中的其他参数名进行调度，可被调度的参数取决于所使用的优化器。 例如，当使用带 `weight_decay` 的 SGD 优化器时，可以通过设置`param_name='weight_decay'`来对调整模型的 `weight_decay`:
 
 
 ```python
