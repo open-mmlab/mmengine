@@ -117,11 +117,11 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - HOOKS: 钩子，如 `CheckpointHook`, `ProfilerHook`
 - DATASETS: 数据集
 - SAMPLERS: `Dataloader` 的 `sampler`，用于采样数据
-- PIPELINES: 包含各种数据处理，如 `Resize`, `Reshape`
+- PIPELINES: 各种数据预处理，如 `Resize`, `Reshape`
 - MODELS: 模型的各种模块
 - WEIGHT_INITIALIZERS: 权重初始化的工具
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
-- OPTIMIZER_CONSTRUCTORS:
+- OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
