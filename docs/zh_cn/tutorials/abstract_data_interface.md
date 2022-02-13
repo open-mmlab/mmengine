@@ -19,9 +19,9 @@
 2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
 两种类型的封装和他们的继承关系如下图所示
-<div align="center">
-<img src="../_static/abi.jpeg" width="600"/>
-</div>
+
+![abi](https://user-images.githubusercontent.com/40779233/153757255-3cd5de05-62d6-4ace-b661-66e185d66428.jpeg)
+
 为了保证抽象数据接口内数据的完整性，抽象数据接口内部有两种数据，除了被封装的数据（data）本身，还有一种是数据的元信息（metainfo），例如图片大小和 ID 等。
 两种类型的抽象数据接口都可以作为 Python 类去使用和操作他们的属性。同时，因为他们封装的数据大多是 Tensor，他们也提供了类似 Tensor 的基础操作。
 
@@ -32,8 +32,8 @@
 MMEngine 为基础数据元素的封装提供了一个基类 `BaseDataElement`。
 基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`, `PixelData`, 和 `LabelData` 三个典型的子类，封装了实例级别，像素级别，和标签级别的基础数据元素，并针对他们的数据特性支持了一些额外的功能。例如，`InstanceData` 可以封装检测框、框对应的标签和实例掩码、甚至关键点等数据，同时要求这些属性具有相同的长度 N，N 代表实例的个数，并支持对实例进行索引。
 
-虽然 `BaseDataElement` 可以作为独立的模块被使用。但是为了和 `InstanceData`, `PixelData`, 和 `LabelData` 保持命名的一致性，MMEngine 实现了 `GeneralData`，它拥有和 `BaseDataElement` 一样的功能，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。
-在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
+虽然 `BaseDataElement` 可以作为独立的模块被使用，但是我们不推荐用户直接使用基类。因此，MMEngine 实现了 `GeneralData` 和 `InstanceData`, `PixelData`, 和 `LabelData` 保持使用和继承层次的一致性。
+它拥有和 `BaseDataElement` 完全一样的功能和接口，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
 
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
@@ -83,7 +83,7 @@ gt_instances2 = gt_instances1.new()
 
 **注意：**
     1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
-    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免歧义性，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
+    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免 `[]` 用法的不一致，同时减少同种需求的不同方法，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
 
 ```python
 gt_instances = BaseDataElement()
@@ -313,7 +313,8 @@ assert 'proposals' not in a
 
 下面以 MMDetection 为例说明抽象数据接口是如何简化模块和组件之间接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
 
-1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下
+1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下。在训练过程中，`SingleStageDetector` 需要获取
+`img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
 
 ```python
 
@@ -341,7 +342,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
                       **kwargs):
 ```
 
-在 MMDet 3.0 中，使用 DetDataSample 可以统一简化为
+在 MMDet 3.0 中，所有检测器的训练接口都可以使用 DetDataSample 统一简化为 `img` 和 `data_samples`，不同模块可以根据需要去访问 `data_samples` 封装的各种所需要的属性。
 
 ```python
 class SingleStageDetector(BaseDetector):
@@ -360,8 +361,8 @@ class SingleStageInstanceSegmentor(BaseDetector):
 
 ```
 
-2. 模块接口的简化，推动模块的合并。MMDet 2.X 中 `HungarianAssigner` 只能用于检测，而 end-to-end 实例分割模型需要新实现
-`MaskHungarianAssigner` 来调整接口，尽管他们内部的匹配逻辑是一样的。
+2. 模块接口的简化：MMDet 2.X 中 `HungarianAssigner` 和 `MaskHungarianAssigner` 分别用于在训练过程中将检测框和实例掩码和标注的实例进行匹配。他们内部的匹配逻辑实现是一样的，只是接口和损失函数的计算不同。
+但是，接口的不同使得 `HungarianAssigner` 中的代码无法被复用，`MaskHungarianAssigner` 中重写了很多冗余的逻辑。
 
 ```python
 class HungarianAssigner(BaseAssigner):
@@ -387,7 +388,8 @@ class MaskHungarianAssigner(BaseAssigner):
                eps=1e-7):
 ```
 
-`InstanceData` 可以使得 `HungarianAssigner` 和 `MaskHungarianAssigner` 合并成一个具有通用接口的 `HungarianAssigner`。
+`InstanceData` 可以封装实例的框、分数、和掩码，将 `HungarianAssigner` 的核心参数简化成 `pred_instances`，`gt_instancess`，和 `gt_instances_ignore`
+使得 `HungarianAssigner` 和 `MaskHungarianAssigner` 可以合并成一个通用的 `HungarianAssigner`。
 
 ```python
 class HungarianAssigner(BaseAssigner):
