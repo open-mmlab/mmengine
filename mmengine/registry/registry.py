@@ -84,25 +84,33 @@ class Registry:
 
     Registered object could be built from registry.
 
-    Example:
+    Examples:
+        >>> # define a registry
         >>> MODELS = Registry('models')
+        >>> # registry the ``ResNet`` to ``MODELS``
         >>> @MODELS.register_module()
         >>> class ResNet:
         >>>     pass
+        >>> # build model from ``MODELS``
         >>> resnet = MODELS.build(dict(type='ResNet'))
+        >>> # hierarchy registry
+        >>> DETECTORS = Registry('detectors', parent=MODELS, scope='det')
+        >>> @DETECTORS.register_module()
+        >>> class FasterRCNN:
+        >>>     pass
+        >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
 
-    Please refer to
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html for
-    advanced usage.
+    More advanced usages can be found at
+    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 
     Args:
         name (str): Registry name.
         build_func (callable, optional): A function to construct instance
-            from Registry, :func:`build_from_cfg` is used if neither ``parent``
+            from Registry. :func:`build_from_cfg` is used if neither ``parent``
             or ``build_func`` is specified. If ``parent`` is specified and
             ``build_func`` is not given,  ``build_func`` will be inherited
             from ``parent``. Defaults to None.
-        parent (Registry, optional): Parent registry. The class registered in
+        parent (Registry`, optional): Parent registry. The class registered in
             children registry could be built from parent. Defaults to None.
         scope (str, optional): The scope of registry. It is the key to search
             for children registry. If not specified, scope will be the name of
@@ -166,7 +174,7 @@ class Registry:
 
         The name of the package where registry is defined will be returned.
 
-        Example:
+        Examples:
             >>> # in mmdet/models/backbone/resnet.py
             >>> MODELS = Registry('models')
             >>> @MODELS.register_module()
@@ -235,11 +243,31 @@ class Registry:
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
 
-        If the ``key`` contains a scope, it first get the key in the current
-        registry. If failed, it will try to find the key in the whole registry
-        tree.
-        If the ``key`` does not contain a scope, it will find the key from
-        the current registry to its parent or ancestors until finding the key.
+        If ``key`` contains a scope, it firstly get the key in the current
+        registry. If failed, it will try to search the key in the whole
+        registry tree.
+        If ``key`` does not contain a scope, it will search the key from the
+        current registry to its parent or ancestors until finding the ``key``.
+
+        Examples:
+            >>> # define a registry
+            >>> MODELS = Registry('models')
+            >>> # registry the ``ResNet`` to ``MODELS``
+            >>> @MODELS.register_module()
+            >>> class ResNet:
+            >>>     pass
+            >>> resnet_cls = MODELS.get('ResNet')
+            >>> # hierarchy registry
+            >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
+            >>> # ``ResNet`` does not exists in ``DETECTORS`` but ``get``
+            >>> # will try to search from its parenet or ancestors
+            >>> resnet_cls = DETECTORS.get('ResNet')
+            >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
+            >>> @CLASSIFIER.register_module()
+            >>> class MobileNet:
+            >>>     pass
+            >>> ``get`` from its sibling registry
+            >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
 
         Args:
             key (str): The class name in string format.
@@ -266,7 +294,19 @@ class Registry:
             if scope in self._children:
                 return self._children[scope].get(real_key)
             else:
-                # jump to the root registry
+                # MODELS = Registry('model', scope='mmengine')
+                # DET_MODELS = Registry('model', parent=MODELS, scope='mmdet')
+                # CLS_MODELS = Registry('model', parent=MODELS, scope='mmcls')
+                # Suppose the current registry is `DET_MODELS` and it wants to
+                # get `ResNet` backbone from `CLS_MODELS` like
+                # `ResNet = DET_MODELS.get('mmcls.ResNet')`.
+                # `DET_MODELS.get`` firstly splits the `mmcls.ResNet` into
+                # 'mmcls' and 'ResNet' and it finds the scope 'mmcls' is
+                # neither equal to current scope 'mmdet' nor the child of
+                # 'mmdet' so `DET_MODELS.get` enters the block which gets the
+                # root registry MODELS and passes the 'mmcls.ResNet' to `get`
+                # of root. `MODELS.get` finds 'mmcls' is its child and finally
+                # get `ResNet` from `MODELS._children['mmcls'].get('ResNet')`.
                 root = self._get_root_registry()
                 return root.get(key)
 
@@ -319,18 +359,16 @@ class Registry:
         return registry.build_func(*args, **kwargs, registry=registry)
 
     def _add_child(self, registry: 'Registry') -> None:
-        """Add children for a registry.
+        """Add a child for a registry.
 
-        The ``registry`` will be added as children based on its scope.
+        The ``registry`` will be added as child based on its scope.
         The parent registry could build objects from children registry.
 
-        Example:
+        Examples:
             >>> models = Registry('models')
             >>> mmdet_models = Registry('models', parent=models)
-            >>> @mmdet_models.register_module()
-            >>> class ResNet:
-            >>>     pass
-            >>> resnet = models.build(dict(type='mmdet.ResNet'))
+            >>> models.parent is mmdet_models
+            >>> True
         """
 
         assert isinstance(registry, Registry)
@@ -378,8 +416,9 @@ class Registry:
         name or the specified name, and value is the class itself.
         It can be used as a decorator or a normal function.
 
-        Example:
+        Examples:
             >>> backbones = Registry('backbone')
+            >>> # as a decorator
             >>> @backbones.register_module()
             >>> class ResNet:
             >>>     pass
@@ -388,7 +427,7 @@ class Registry:
             >>> @backbones.register_module(name='mnet')
             >>> class MobileNet:
             >>>     pass
-
+            >>> # as a normal function
             >>> backbones = Registry('backbone')
             >>> class ResNet:
             >>>     pass

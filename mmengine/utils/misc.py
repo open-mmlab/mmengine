@@ -8,13 +8,21 @@ def is_seq_of(seq: Sequence,
               seq_type: Type = None) -> bool:
     """Check whether it is a sequence of some type.
 
+    Examples:
+        >>> from mmengine.utils import is_seq_of
+        >>> seq = ['a', 'b', 'c']
+        >>> is_seq_of(seq, str)
+        True
+        >>> is_seq_of(seq, int)
+        False
+
     Args:
         seq (Sequence): The sequence to be checked.
         expected_type (type): Expected type of sequence items.
-        seq_type (type, optional): Expected sequence type.
+        seq_type (type, optional): Expected sequence type. Defaults to None.
 
     Returns:
-        bool: Whether the sequence is valid.
+        bool: Return True if ``seq`` is valid else False.
     """
     if seq_type is None:
         exp_seq_type = abc.Sequence

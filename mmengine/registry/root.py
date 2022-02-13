@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .registry import Registry
 
-# TODO
 RUNNERS = Registry('runner')
 RUNNER_CONSTRUCTORS = Registry('runner constructor')
 HOOKS = Registry('hook')
