@@ -149,24 +149,24 @@ class TestParameterScheduler(TestCase):
 
     def test_constant_scheduler(self):
         with self.assertRaises(ValueError):
-            ConstantLR(self.optimizer, factor=99, total_iters=5)
+            ConstantLR(self.optimizer, factor=99, end=5)
         # lr = 0.025     if epoch < 5
         # lr = 0.005    if 5 <= epoch
         epochs = 10
-        single_targets = [0.025] * 5 + [0.05] * 5
+        single_targets = [0.025] * 4 + [0.05] * 6
         targets = [single_targets, [x * epochs for x in single_targets]]
-        scheduler = ConstantLR(self.optimizer, factor=1.0 / 2, total_iters=5)
+        scheduler = ConstantLR(self.optimizer, factor=1.0 / 2, end=5)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_linear_scheduler(self):
         with self.assertRaises(ValueError):
-            LinearLR(self.optimizer, start_factor=10, total_iters=900)
+            LinearLR(self.optimizer, start_factor=10, end=900)
         with self.assertRaises(ValueError):
-            LinearLR(self.optimizer, start_factor=-1, total_iters=900)
+            LinearLR(self.optimizer, start_factor=-1, end=900)
         with self.assertRaises(ValueError):
-            LinearLR(self.optimizer, end_factor=1.001, total_iters=900)
+            LinearLR(self.optimizer, end_factor=1.001, end=900)
         with self.assertRaises(ValueError):
-            LinearLR(self.optimizer, end_factor=-0.00001, total_iters=900)
+            LinearLR(self.optimizer, end_factor=-0.00001, end=900)
         # lr = 0.025     if epoch == 0
         # lr = 0.03125   if epoch == 1
         # lr = 0.0375    if epoch == 2
@@ -182,7 +182,7 @@ class TestParameterScheduler(TestCase):
             epochs - iters)
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = LinearLR(
-            self.optimizer, start_factor=start_factor, total_iters=iters)
+            self.optimizer, start_factor=start_factor, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_exp_scheduler(self):

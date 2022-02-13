@@ -195,10 +195,10 @@ class TestParameterScheduler(TestCase):
         # lr = 0.025     if epoch < 5
         # lr = 0.005    if 5 <= epoch
         epochs = 10
-        single_targets = [0.025] * 5 + [0.05] * 5
+        single_targets = [0.025] * 4 + [0.05] * 6
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = ConstantParameterScheduler(
-            self.optimizer, param_name='lr', factor=1.0 / 2)
+            self.optimizer, param_name='lr', factor=1.0 / 2, end=5)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_linear_scheduler(self):

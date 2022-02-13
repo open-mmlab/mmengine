@@ -153,26 +153,24 @@ class TestParameterScheduler(TestCase):
 
     def test_constant_scheduler(self):
         with self.assertRaises(ValueError):
-            ConstantMomentum(self.optimizer, factor=99, total_iters=5)
+            ConstantMomentum(self.optimizer, factor=99, end=5)
         # momentum = 0.025     if epoch < 5
         # momentum = 0.005    if 5 <= epoch
         epochs = 10
-        single_targets = [0.025] * 5 + [0.05] * 5
+        single_targets = [0.025] * 4 + [0.05] * 6
         targets = [single_targets, [x * epochs for x in single_targets]]
-        scheduler = ConstantMomentum(
-            self.optimizer, factor=1.0 / 2, total_iters=5)
+        scheduler = ConstantMomentum(self.optimizer, factor=1.0 / 2, end=5)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_linear_scheduler(self):
         with self.assertRaises(ValueError):
-            LinearMomentum(self.optimizer, start_factor=10, total_iters=900)
+            LinearMomentum(self.optimizer, start_factor=10, end=900)
         with self.assertRaises(ValueError):
-            LinearMomentum(self.optimizer, start_factor=-1, total_iters=900)
+            LinearMomentum(self.optimizer, start_factor=-1, end=900)
         with self.assertRaises(ValueError):
-            LinearMomentum(self.optimizer, end_factor=1.001, total_iters=900)
+            LinearMomentum(self.optimizer, end_factor=1.001, end=900)
         with self.assertRaises(ValueError):
-            LinearMomentum(
-                self.optimizer, end_factor=-0.00001, total_iters=900)
+            LinearMomentum(self.optimizer, end_factor=-0.00001, end=900)
         # momentum = 0.025     if epoch == 0
         # momentum = 0.03125   if epoch == 1
         # momentum = 0.0375    if epoch == 2
@@ -188,7 +186,7 @@ class TestParameterScheduler(TestCase):
             epochs - iters)
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = LinearMomentum(
-            self.optimizer, start_factor=start_factor, total_iters=iters)
+            self.optimizer, start_factor=start_factor, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_exp_scheduler(self):
