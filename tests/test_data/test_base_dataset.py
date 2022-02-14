@@ -92,6 +92,7 @@ class TestBaseDataset:
         for key in meta:
             assert key in dataset.meta
         assert dataset.meta['classes'] == meta['classes']
+        # reset `base_dataset.META`, the `dataset.meta` should not change
         self.base_dataset.META['classes'] = ('dog', 'cat')
         assert dataset.meta['classes'] == meta['classes']
 
