@@ -89,9 +89,10 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
             meta=meta)
-        self.base_dataset.META['classes'] = ('dog', 'cat')
         for key in meta:
             assert key in dataset.meta
+        assert dataset.meta['classes'] == meta['classes']
+        self.base_dataset.META['classes'] = ('dog', 'cat')
         assert dataset.meta['classes'] == meta['classes']
 
         # test dataset.meta with passing meta into self.base_dataset and
