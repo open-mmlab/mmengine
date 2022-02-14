@@ -48,14 +48,16 @@ for img, data_sample in dataloader:
 ### BaseDataElement
 
 MMEngine 为基础数据元素的封装提供了一个基类 `BaseDataElement`。
-基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`, `PixelData`, 和 `LabelData` 三个典型的子类，封装了实例级别，像素级别，和标签级别的基础数据元素，并针对他们的数据特性支持了一些额外的功能。例如，`InstanceData` 可以封装检测框、框对应的标签和实例掩码、甚至关键点等数据，同时要求这些属性具有相同的长度 N，N 代表实例的个数，并支持对实例进行索引。
+基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`， `PixelData`， `LabelData` 和 `GeneralData` 四个典型的子类，封装了实例级别，像素级别，标签级别和其他普通的基础数据元素，并针对他们的数据特性支持了一些额外的功能。
 
-虽然 `BaseDataElement` 可以作为独立的模块被使用，但是我们不推荐用户直接使用基类。因此，MMEngine 实现了 `GeneralData` 和 `InstanceData`, `PixelData`, 和 `LabelData` 保持使用和继承层次的一致性。
-它拥有和 `BaseDataElement` 完全一样的功能和接口，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
+1. `InstanceData`：封装检测框、框对应的标签和实例掩码、甚至关键点等实例级别数据，`InstanceData` 假定它封装的数据具有相同的长度 N，N 代表实例的个数，并基于此假定对数据进行校验、支持对实例进行索引和拼接。
+2. `PixelData`：封装逐像素级别的数据，如语义分割图和深度图等。`PixelData` 假定它封装的数据有相同的长度和宽度，第一和第二维为图片的长宽，第三维为通道数。`PixelData` 基于此假定对数据进行校验、支持对实例进行空间维度的索引和各维度的拼接。
+3. `LabelData`：封装标签数据，如场景分类标签等。
+4. `GeneralData`：`BaseDataElement` 的等价类。虽然 `BaseDataElement` 可以作为独立的模块被使用，但是我们不推荐用户直接使用基类。因此，MMEngine 实现了 `GeneralData` 和 `InstanceData`, `PixelData`, 和 `LabelData` 保持使用和继承层次的一致性。它拥有和 `BaseDataElement` 完全一样的功能和接口，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
 
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
-1. 数据元素的创建
+#### 1. 数据元素的创建
 
 ```python
 # 可以声明一个空的 object
@@ -76,7 +78,9 @@ gt_instances = BaseDataElement(
 gt_instances = BaseDataElement(dict(img_id=img_id, img_shape=(H, W)))
 ```
 
-2. 使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 metainfo 和 data，使得新的 BaseDataElement 有相同的状态但是不同的数据。
+#### 2. `new` 函数
+
+用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 metainfo 和 data，使得新的 BaseDataElement 有相同的状态但是不同的数据。
 也可以直接使用 `new()` 来获得一份深拷贝。
 
 ```python
@@ -92,7 +96,8 @@ gt_instances1 = gt_instance.new(
 gt_instances2 = gt_instances1.new()
 ```
 
-3. 属性的增加与查询：
+#### 3. 属性的增加与查询
+
 用户可以像增加类属性那样增加 `BaseDataElement` 的属性，此时数据会被**当作 data 类型**增加到 `BaseDataElement` 中。
 如果需要增加 metainfo 属性，用户应当使用 `set_metainfo`。
 用户可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值，
@@ -100,8 +105,9 @@ gt_instances2 = gt_instances1.new()
 用户还能通过 `keys`，`values`， `items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
 
 **注意：**
-    1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
-    2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免 `[]` 用法的不一致，同时减少同种需求的不同方法，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
+
+1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
+2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免 `[]` 用法的不一致，同时减少同种需求的不同方法，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
 
 ```python
 gt_instances = BaseDataElement()
@@ -151,7 +157,9 @@ for k, v in gt_instances.data_items():
     print(f'{k}: {v}')  # 包含 bboxes，scores
 ```
 
-4. `BaseDataElement` 支持用户可以像使用一个类一样对它的属性进行删改
+#### 4. 属性的删改
+
+`BaseDataElement` 支持用户可以像使用一个类一样对它的属性进行删改
 同时， `BaseDataElement` 支持 `get` 来允许在访问不到变量时设置默认值，也支持 `pop` 在在访问属性后删除属性。
 
 ```python
@@ -179,7 +187,9 @@ gt_instances.pop('img_shape', None)  # None
 gt_instances.pop('bboxes', None)  # None
 ```
 
-5. 用户可以像 torch.Tensor 那样对 `BaseDataElement` 的 data 进行状态转换，目前支持 `cuda`， `cpu`， `to`， `numpy` 等操作。
+#### 5. 类张量操作
+
+用户可以像 torch.Tensor 那样对 `BaseDataElement` 的 data 进行状态转换，目前支持 `cuda`， `cpu`， `to`， `numpy` 等操作。
 其中，`to` 函数拥有和 `torch.Tensor.to()` 相同的接口，使得用户可以灵活地将被封装的 tensor 进行状态转换。
 
 ```python
@@ -203,15 +213,15 @@ cpu_instances = cuda_instances.detach()
 np_instances = cpu_instances.numpy()
 ```
 
-6. `BaseDataElement` 还实现了 `__nice__` 和 `__repr__`，因此，用户可以直接通过 `print` 函数看到其中的所有数据信息。
+#### 6. 属性的展示
+
+`BaseDataElement` 还实现了 `__nice__` 和 `__repr__`，因此，用户可以直接通过 `print` 函数看到其中的所有数据信息。
 同时，为了便捷开发者 debug，`BaseDataElement` 中的属性都会添加进 `__dict__` 中，方便用户在 IDE 界面可以直观看到 `BaseDataElement` 中的内容。
-一个完整的用例展示如下
+一个完整的属性展示如下
 
 ```python
 >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
 >>> instance_data = BaseDataElement(metainfo=img_meta)
->>> img_shape in instance_data
-True
 >>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
 >>> instance_data.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
 >>> print(results)
@@ -223,24 +233,6 @@ pad_shape: (800, 1216, 3)
 shape of det_labels: torch.Size([4])
 shape of det_scores: torch.Size([4])
 ) at 0x7f84acd10f90>
->>> instance_data.det_scores
-tensor([0.0100, 0.1000, 0.2000, 0.3000])
->>> instance_data.det_labels
-tensor([0, 1, 2, 3])
->>> 'det_labels' in instance_data
-True
->>> instance_data.img_shape
-(800, 1196, 3)
->>> 'det_scores' in instance_data
-True
->>> del instance_data.det_scores
->>> 'det_scores' in instance_data
-False
->>> det_labels = instance_data.pop('det_labels', None)
->>> det_labels
-tensor([0, 1, 2, 3])
->>> 'det_labels' in instance_data
->>> False
 ```
 
 ### BaseDataSample
@@ -331,7 +323,9 @@ assert 'proposals' not in a
 
 下面以 MMDetection 为例更具体地说明 OpenMMLab 的算法库将如何迁移使用抽象数据接口，以简化模块和组件接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
 
-1. 组件接口的简化：检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下。在训练过程中，`SingleStageDetector` 需要获取
+#### 1. 组件接口的简化
+
+检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下。在训练过程中，`SingleStageDetector` 需要获取
 `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
 
 ```python
@@ -379,7 +373,9 @@ class SingleStageInstanceSegmentor(BaseDetector):
 
 ```
 
-2. 模块接口的简化：MMDet 2.X 中 `HungarianAssigner` 和 `MaskHungarianAssigner` 分别用于在训练过程中将检测框和实例掩码和标注的实例进行匹配。他们内部的匹配逻辑实现是一样的，只是接口和损失函数的计算不同。
+#### 2. 模块接口的简化
+
+MMDet 2.X 中 `HungarianAssigner` 和 `MaskHungarianAssigner` 分别用于在训练过程中将检测框和实例掩码和标注的实例进行匹配。他们内部的匹配逻辑实现是一样的，只是接口和损失函数的计算不同。
 但是，接口的不同使得 `HungarianAssigner` 中的代码无法被复用，`MaskHungarianAssigner` 中重写了很多冗余的逻辑。
 
 ```python
