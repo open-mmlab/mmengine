@@ -53,7 +53,7 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 前面说过，Visualizer 接受的数据除了 image，还包括规定好的数据命名规约。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
 
 ```python
-class DetLocalVisualizer(BaseVisualizer):
+		class DetLocalVisualizer(BaseVisualizer):
     
     @BaseVisualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
@@ -63,6 +63,26 @@ class DetLocalVisualizer(BaseVisualizer):
     def draw_sem_seg(self, pixel_data, data_type):    
         ...
 ```
+
+除了常见的 draw_bbox 等可视化功能外，Visualizer 还提供了 两个实用功能：
+
+- **支持用户自定义组合调用进行可视化**
+
+  例如用户可以先绘制边界框，在此基础上绘制文本，绘制线段，最后保存起来，则调用过程为：
+
+  ```python
+  visualizer.draw_bbox(...).draw_text(...).draw_line(...).save()
+  ```
+
+  所有的 draw_xx 函数返回都是对象本身，用户可以自由组合。
+
+- **特征图可视化**
+
+   特征图可视化是一个常见的功能，通过调用 `draw_featmap` 可以直接可视化特征图，目前该函数支持如下功能：
+
+  - 输入 batch tensor，通道是 1 或者 3 时候，展开成一张图片显示
+  - 输入 batch tensor，通道大于 3 时候，则支持选择激活度最高通道，展开成一张图片显示
+  - 输入 3 维 tensor，则选择激活度最高的 topk，然后拼接成一张图显示      
 
 ### 自定义 Visualizer
 
@@ -114,9 +134,11 @@ BaseWriter 定义了对外调用的接口规范，主要接口如下：
 
 BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。
 
+由于 Visualizer 和 Writer 对象是解耦的，用户可以通过配置文件自由组合各种 Visualizer 和 Writer，例如 WandbWriter 绑定 LocalVisualizer，表示图片可视化功能由 LocalVisualizer 提供，但是最终图片是写到了 Wandb 端，也可以 LocalWriter 绑定 WandbVisualizer，表示图片可视化功能由 WandbVisualizer 提供，然后直接保存到本地端。
+
 ## RuntimeWriter
 
-考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，设计了对外的 RuntimeWriter 类，在训练或者测试过程中  RuntimeWriter 会依次调用各个 Writer，主要接口如下：
+考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 RuntimeWriter 类，在训练或者测试过程中  RuntimeWriter 会依次调用各个 Writer，主要接口如下：
 
 - add_hyperparams()  写超参
 - add_image() 写图片
@@ -126,7 +148,7 @@ BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功
 - `__enter__`
 - `__exit__`
 
-为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类，从而调用该类的各种可视化和写方法。
+为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。
 
 
 
