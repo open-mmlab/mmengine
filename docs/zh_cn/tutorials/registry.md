@@ -1,13 +1,14 @@
 # 注册器（Registry）
 
-OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于 model。
+OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。
 为了管理这些功能相似的模块，MMEngine 实现了 [注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)。
 OpenMMLab 大多数算法库均使用注册器来管理他们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification)，和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
 
 ## 什么是注册器
 
-MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类的映射，使得用户可以借助字符串查找到相应的类。
-而模块构建方法则定义了如何根据字符串查找到对应的类，并定义了如何实例化这个类。MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 来查找并实例化字符串对应的类。
+MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类的映射，使得用户可以借助字符串查找到相应的类，例如维护字符串 `"ResNet"` 到 `ResNet` 的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类。
+而模块构建方法则定义了如何根据字符串查找到对应的类，并定义了如何实例化这个类，例如根据规则通过字符串 `"bn"` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。
+MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 来查找并实例化字符串对应的类。
 
 一个注册器中管理的类通常有相似的接口和功能，因此该注册器可以被视作这些类的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了  `ResNet`， `SEResNet`，和 `RegNetX` 等分类网络的类。
 使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至最后一个章节了解`为什么使用注册器`。
