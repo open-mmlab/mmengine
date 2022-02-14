@@ -110,11 +110,12 @@ class ToyDataset(BaseDataset):
     #    ...
     # }
     def parse_annotations(self, raw_data_info):
+        data_info = raw_data_info
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
-            raw_data_info['img_path'] = osp.join(
-                img_prefix, raw_data_info['img_path')
-        return raw_data_info
+            data_info['img_path'] = osp.join(
+                img_prefix, data_info['img_path')
+        return data_info
 
 ```
 
