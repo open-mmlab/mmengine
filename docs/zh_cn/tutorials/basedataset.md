@@ -109,7 +109,7 @@ class ToyDataset(BaseDataset):
 
 ```
 
-### 使用自定义的图像数据集类
+### 使用自定义数据集类
 
 在定义了数据集类后，就可以通过如下配置实例化 `ToyDataset`：
 
