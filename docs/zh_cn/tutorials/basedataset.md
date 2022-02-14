@@ -10,7 +10,7 @@
 
 ### 数据标注文件规范
 
-为了统一不同任务的数据集接口，便于多任务的算法模型训练，OpenMMLab 制定了 **OpenMMLab 2.0 数据集格式规范**， 数据集标注文件需符合该规范，数据集基类基于该规范去读取与解析数据标注文件。如果用户提供的数据标注文件不是规定格式，用户可以选择将其转化为规定格式。
+为了统一不同任务的数据集接口，便于多任务的算法模型训练，OpenMMLab 制定了 **OpenMMLab 2.0 数据集格式规范**， 数据集标注文件需符合该规范，数据集基类基于该规范去读取与解析数据标注文件。如果用户提供的数据标注文件不符合规定格式，用户应该将其转化为规定格式才能使用 OpenMMLab 的算法库基于该数据标注文件进行算法训练和测试。
 
 OpenMMLab 2.0 数据集格式规范规定，标注文件必须为 `json` 或 `yaml`，`yml` 或 `pickle`，`pkl` 格式；标注文件中存储的字典必须包含 `metadata` 和 `data_infos` 两个字段。其中 `metadata` 是一个字典，里面包含数据集的元信息；`data_infos` 是一个列表，列表中每个元素是一个字典，该字典定义了一个原始数据（raw data），每个原始数据包含一个或若干个训练/测试样本。
 
@@ -195,7 +195,7 @@ class ToyVideoDataset(BaseDataset):
 
 ### 懒加载（lazy init）
 
-在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息，可能并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，我们定义了懒加载：
+在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息，可能并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，数据集基类支持懒加载：
 
 ```python
 pipeline = [
@@ -226,7 +226,9 @@ len(toy_dataset) # 2
 toy_dataset[0] # dict(img=xxx, label=0)
 ```
 
-**值得注意的是**, 直接通过调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，虽然这样可能可以正常运行，但是会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，提前手动调用 `full_init()` 接口来执行完整的初始化过程。**
+**注意：**
+
+通过直接调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，虽然这样可能可以正常运行，但是会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，提前手动调用 `full_init()` 接口来执行完整的初始化过程。**
 
 以上通过设置 `lazy_init=True` 未进行完全初始化，之后根据需求再进行完整初始化的方式，称为懒加载。
 
@@ -316,7 +318,11 @@ toy_dataset_repeat = RepeatDataset(dataset=toy_dataset, times=5)
 
 ### ClassBalancedDataset
 
-MMEngine 提供了 `ClassBalancedDataset` 包装，来基于数据集中类别出现频率，重复采样相应样本，**请注意，** `ClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 指定的 `data_info` 包含的样本类别，使用方法如下：
+MMEngine 提供了 `ClassBalancedDataset` 包装，来基于数据集中类别出现频率，重复采样相应样本。
+
+**注意：**
+
+`ClassBalancedDataset` 包装假设了被包装的数据集类支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 指定的 `data_info` 包含的样本类别，使用方法如下：
 
 ```python
 from mmengine.data import BaseDataset, ClassBalancedDataset
