@@ -9,9 +9,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-
-from mmengine.config import Config, ConfigDict, DictAction
-from mmengine.utils import dump, load
+from mmcv import Config, ConfigDict, DictAction, dump, load
 
 
 class TestConfig:
@@ -84,7 +82,7 @@ class TestConfig:
                  f'b={file_basename}\n' \
                  f'c={file_basename_no_extension}\n' \
                  f'd={file_extname}\n'
-
+        target = target.replace('\\', '/')
         with open(tmp_cfg1, 'w') as f:
             f.write(ori)
         Config._substitute_predefined_vars(tmp_cfg1, tmp_cfg2)
