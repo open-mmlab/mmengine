@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from mmengine.data import (BaseClassBalancedDataset, BaseConcatDataset,
-                           BaseDataset, BaseRepeatDataset)
+from mmengine.data import (ClassBalancedDataset, ConcatDataset,
+                           BaseDataset, RepeatDataset)
 
 
 class TestBaseDataset:
@@ -178,7 +178,7 @@ class TestBaseDataset:
         assert dataset.get_data_info(0) == self.data_info
 
 
-class TestBaseConcatDataset:
+class TestConcatDataset:
 
     def __init__(self):
         dataset = BaseDataset
@@ -204,7 +204,7 @@ class TestBaseConcatDataset:
             ann_file='annotations/dummy_annotation.json')
 
         # test init
-        self.cat_datasets = BaseConcatDataset(
+        self.cat_datasets = ConcatDataset(
             datasets=[self.dataset_a, self.dataset_b])
 
     def test_meta(self):
@@ -234,7 +234,7 @@ class TestBaseConcatDataset:
             -1) != self.dataset_a[-1].get_data_info(-1)
 
 
-class TestBaseRepeatDataset:
+class TestRepeatDataset:
 
     def __init__(self):
         dataset = BaseDataset
@@ -249,7 +249,7 @@ class TestBaseRepeatDataset:
 
         self.repeat_times = 5
         # test init
-        self.repeat_datasets = BaseRepeatDataset(
+        self.repeat_datasets = RepeatDataset(
             dataset=self.dataset, times=self.repeat_times)
 
     def test_meta(self):
@@ -270,7 +270,7 @@ class TestBaseRepeatDataset:
                 len(self.dataset) * i) == self.dataset.get_data_info(0)
 
 
-class TestBaseClassBalancedDataset:
+class TestClassBalancedDataset:
 
     def __init__(self):
         dataset = BaseDataset
@@ -286,7 +286,7 @@ class TestBaseClassBalancedDataset:
 
         self.repeat_indices = [0, 0, 1, 1, 1]
         # test init
-        self.cls_banlanced_datasets = BaseClassBalancedDataset(
+        self.cls_banlanced_datasets = ClassBalancedDataset(
             dataset=self.dataset, oversample_thr=1e-3)
         self.cls_banlanced_datasets.repeat_indices = self.repeat_indices
 
