@@ -1,4 +1,4 @@
-_base_ = ['./test_nested.py']
+_base_ = ['./test_base_variables_nested.py']
 item21 = {{_base_.item11}}
 item22 = item21
 item23 = {{_base_.item10}}
