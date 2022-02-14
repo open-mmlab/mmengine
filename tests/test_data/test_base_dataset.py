@@ -29,6 +29,18 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
+        assert hasattr(dataset, 'data_address')
+
+        # test the instantiation of self.base_dataset with
+        # `serialize_data=False`
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            serialize_data=False)
+        assert dataset._fully_initialized is True
+        assert hasattr(dataset, 'data_infos')
+        assert not hasattr(dataset, 'data_address')
 
         # test the instantiation of self.base_dataset with lazy init
         dataset = self.base_dataset(
@@ -113,9 +125,8 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        # call `full_init()`
-        tmp = len(dataset)
-        assert tmp == 2
+        # call `full_init()` automatically
+        assert len(dataset) == 2
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -134,9 +145,8 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        # call `full_init()`
-        tmp = dataset[0]
-        assert tmp == dict(imgs=self.imgs)
+        # call `full_init()` automatically
+        assert dataset[0] == dict(imgs=self.imgs)
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -155,9 +165,8 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        # call `full_init()`
-        tmp = dataset.get_data_info(0)
-        assert tmp == self.data_info
+        # call `full_init()` automatically
+        assert dataset.get_data_info(0) == self.data_info
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
