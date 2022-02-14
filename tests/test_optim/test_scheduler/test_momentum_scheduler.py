@@ -1,15 +1,16 @@
 import math
+from unittest import TestCase
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.testing._internal.common_utils import TestCase
+from torch.testing import assert_allclose
 
 from mmengine.optim.scheduler import (ConstantMomentum,
                                       CosineAnnealingMomentum,
                                       ExponentialMomentum, LinearMomentum,
                                       MultiStepMomentum, StepMomentum,
-                                      _ParameterShceduler)
+                                      _ParameterScheduler)
 
 
 class ToyModel(torch.nn.Module):
@@ -97,7 +98,7 @@ class TestParameterScheduler(TestCase):
             lambda: MultiStepMomentum(
                 self.optimizer, gamma=0.01, milestones=[1, 4, 6]))
 
-    def test_exp_step_scheduler_state_dict(self):
+    def test_exp_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
             lambda: ExponentialMomentum(self.optimizer, gamma=0.1),
             lambda: ExponentialMomentum(self.optimizer, gamma=0.01))
@@ -113,12 +114,12 @@ class TestParameterScheduler(TestCase):
             epochs=epochs)
 
     def _test_scheduler_value(self, schedulers, targets, epochs=10):
-        if isinstance(schedulers, _ParameterShceduler):
+        if isinstance(schedulers, _ParameterScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
                                            targets):
-                self.assertEqual(
+                assert_allclose(
                     target[epoch],
                     param_group['momentum'],
                     msg='Momentum is wrong in epoch {}: expected {}, got {}'.
@@ -221,7 +222,7 @@ class TestParameterScheduler(TestCase):
             scheduler.step()
             target = [t[epoch] for t in targets]
             for t, r in zip(target, result):
-                self.assertEqual(
+                assert_allclose(
                     target,
                     result,
                     msg='Momentum is wrong in epoch {}: expected {}, got {}'.

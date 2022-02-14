@@ -1,9 +1,10 @@
 import math
+from unittest import TestCase
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.testing._internal.common_utils import TestCase
+from torch.testing import assert_allclose
 
 # yapf: disable
 from mmengine.optim.scheduler import (ConstantParameterScheduler,
@@ -12,7 +13,7 @@ from mmengine.optim.scheduler import (ConstantParameterScheduler,
                                       LinearParameterScheduler,
                                       MultiStepParameterScheduler,
                                       StepParameterScheduler,
-                                      _ParameterShceduler)
+                                      _ParameterScheduler)
 
 # yapf: enable
 
@@ -41,6 +42,7 @@ class TestParameterScheduler(TestCase):
             StepParameterScheduler('invalid_optimizer', 'lr', step_size=1)
 
     def test_wrong_resume(self):
+        """test optimizer and scheduler are not both resumed."""
         with self.assertRaises(KeyError):
             StepParameterScheduler(
                 self.optimizer,
@@ -93,7 +95,7 @@ class TestParameterScheduler(TestCase):
             scheduler.step()
             target = [t[epoch] for t in targets]
             for t, r in zip(target, result):
-                self.assertEqual(
+                assert_allclose(
                     target,
                     result,
                     msg='LR is wrong in epoch {}: expected {}, got {}'.format(
@@ -136,12 +138,12 @@ class TestParameterScheduler(TestCase):
                               targets,
                               epochs=10,
                               param_name='lr'):
-        if isinstance(schedulers, _ParameterShceduler):
+        if isinstance(schedulers, _ParameterScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
                                            targets):
-                self.assertEqual(
+                assert_allclose(
                     target[epoch],
                     param_group[param_name],
                     msg='{} is wrong in epoch {}: expected {}, got {}'.format(
@@ -160,7 +162,11 @@ class TestParameterScheduler(TestCase):
                                                                     ] * 3
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = StepParameterScheduler(
-            self.optimizer, param_name='lr', gamma=0.1, step_size=3)
+            self.optimizer,
+            param_name='lr',
+            gamma=0.1,
+            step_size=3,
+            verbose=True)
         self._test_scheduler_value(scheduler, targets, epochs)
 
         # momentum = 0.01     if epoch < 2
@@ -288,7 +294,7 @@ class TestParameterScheduler(TestCase):
                     gamma=0.01,
                     milestones=[1, 4, 6]))
 
-    def test_exp_step_scheduler_state_dict(self):
+    def test_exp_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
             lambda: ExponentialParameterScheduler(
                 self.optimizer, param_name='lr', gamma=0.1),
