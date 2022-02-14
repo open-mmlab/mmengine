@@ -8,6 +8,12 @@
 您可以在页面左下角切换中英文文档。
 
 .. toctree::
+   :maxdepth: 2
+   :caption: API 文档
+
+   api.rst
+
+.. toctree::
    :caption: 语言切换
 
    switch_language.md

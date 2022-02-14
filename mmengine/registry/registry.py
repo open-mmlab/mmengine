@@ -87,12 +87,13 @@ class Registry:
     Examples:
         >>> # define a registry
         >>> MODELS = Registry('models')
-        >>> # registry the ``ResNet`` to ``MODELS``
+        >>> # registry the `ResNet` to `MODELS`
         >>> @MODELS.register_module()
         >>> class ResNet:
         >>>     pass
-        >>> # build model from ``MODELS``
+        >>> # build model from `MODELS`
         >>> resnet = MODELS.build(dict(type='ResNet'))
+
         >>> # hierarchy registry
         >>> DETECTORS = Registry('detectors', parent=MODELS, scope='det')
         >>> @DETECTORS.register_module()
@@ -181,7 +182,7 @@ class Registry:
             >>> @MODELS.register_module()
             >>> class ResNet:
             >>>     pass
-            The scope of ``ResNet`` will be ``mmdet``.
+            >>> # The scope of ``ResNet`` will be ``mmdet``.
 
         Returns:
             str: The inferred scope name.
@@ -244,30 +245,40 @@ class Registry:
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
 
-        If ``key`` contains a scope, it firstly get the key in the current
-        registry. If failed, it will try to search the key in the whole
-        registry tree.
-        If ``key`` does not contain a scope, it will search the key from the
-        current registry to its parent or ancestors until finding the ``key``.
+        The logic to search :attr:`key`:
+
+        - ``key`` does not contain a scope: :meth:`get` will search the key
+          from the current registry to its parent or ancestors until finding
+          the ``key``.
+
+        - ``key`` contains a scope and it is equal to the scope of the current
+          registry: :meth:`get` will only search the key in the current
+          registry.
+
+        - ``key`` contains a scope and it is not equal to the scope of the
+          current registry: If the scope exists in its children, :meth:`get`
+          will get the key from them. If not, :meth:`get` will firstly get the
+          root registry and root registry call its own :meth:`get` method.
 
         Examples:
             >>> # define a registry
             >>> MODELS = Registry('models')
-            >>> # registry the ``ResNet`` to ``MODELS``
+            >>> # registry the `ResNet` to `MODELS`
             >>> @MODELS.register_module()
             >>> class ResNet:
             >>>     pass
             >>> resnet_cls = MODELS.get('ResNet')
+
             >>> # hierarchy registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
-            >>> # ``ResNet`` does not exists in ``DETECTORS`` but ``get``
+            >>> # `ResNet` does not exist in `DETECTORS` but `get` method
             >>> # will try to search from its parenet or ancestors
             >>> resnet_cls = DETECTORS.get('ResNet')
             >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
             >>> @CLASSIFIER.register_module()
             >>> class MobileNet:
             >>>     pass
-            >>> ``get`` from its sibling registry
+            >>> # `get` from its sibling registries
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
 
         Args:
@@ -275,7 +286,7 @@ class Registry:
 
         Returns:
             Type or None: Return the corresponding class if key exists else
-            return None.
+            None.
         """
         scope, real_key = self.split_scope_key(key)
         if scope is None or scope == self._scope:
@@ -295,19 +306,6 @@ class Registry:
             if scope in self._children:
                 return self._children[scope].get(real_key)
             else:
-                # MODELS = Registry('model', scope='mmengine')
-                # DET_MODELS = Registry('model', parent=MODELS, scope='mmdet')
-                # CLS_MODELS = Registry('model', parent=MODELS, scope='mmcls')
-                # Suppose the current registry is `DET_MODELS` and it wants to
-                # get `ResNet` backbone from `CLS_MODELS` like
-                # `ResNet = DET_MODELS.get('mmcls.ResNet')`.
-                # `DET_MODELS.get`` firstly splits the `mmcls.ResNet` into
-                # 'mmcls' and 'ResNet' and it finds the scope 'mmcls' is
-                # neither equal to current scope 'mmdet' nor the child of
-                # 'mmdet' so `DET_MODELS.get` enters the block which gets the
-                # root registry MODELS and passes the 'mmcls.ResNet' to `get`
-                # of root. `MODELS.get` finds 'mmcls' is its child and finally
-                # get `ResNet` from `MODELS._children['mmcls'].get('ResNet')`.
                 root = self._get_root_registry()
                 return root.get(key)
 
@@ -342,13 +340,28 @@ class Registry:
               *args,
               default_scope: Optional[str] = None,
               **kwargs) -> None:
-        """Build an instance by calling the :attr:`build_func`.
+        """Build an instance.
+
+        build an instance by calling the :attr:`build_func`. If
+        :attr:`default_scope` is given, :meth:`build` will first get the
+        responding registry and then call its own :meth:`build`.
+
+        Examples:
+            >>> from mmengine import Registry
+            >>> MODELS = Registry('models')
+            >>> @MODELS.register_module()
+            >>> class ResNet:
+            >>>     def __init__(self, depth, stages=4):
+            >>>         self.depth = depth
+            >>>         self.stages = stages
+            >>> cfg = dict(type='ResNet', depth=50)
+            >>> model = MODELS.build(cfg)
 
         Args:
             default_scope (str, optional): The ``default_scope`` is used to
                 reset the current registry. Defaults to None.
         """
-        if default_scope:
+        if default_scope is not None:
             root = self._get_root_registry()
             registry = root._search_child(default_scope)
             if registry is None:
@@ -369,7 +382,7 @@ class Registry:
             >>> models = Registry('models')
             >>> mmdet_models = Registry('models', parent=models)
             >>> models.parent is mmdet_models
-            >>> True
+            True
         """
 
         assert isinstance(registry, Registry)
@@ -423,13 +436,12 @@ class Registry:
             >>> @backbones.register_module()
             >>> class ResNet:
             >>>     pass
-
             >>> backbones = Registry('backbone')
             >>> @backbones.register_module(name='mnet')
             >>> class MobileNet:
             >>>     pass
+
             >>> # as a normal function
-            >>> backbones = Registry('backbone')
             >>> class ResNet:
             >>>     pass
             >>> backbones.register_module(module=ResNet)

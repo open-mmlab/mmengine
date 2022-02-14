@@ -8,6 +8,12 @@ Welcome to mmengine's documentation!
 You can switch between Chinese and English documents in the lower-left corner of the layout.
 
 .. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api.rst
+
+.. toctree::
    :caption: Switch Language
 
    switch_language.md
