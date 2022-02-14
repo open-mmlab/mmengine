@@ -1,6 +1,7 @@
 import os.path as osp
 from unittest.mock import MagicMock
 
+import pytest
 import torch
 
 from mmengine.data import (BaseClassBalancedDataset, BaseConcatDataset,
@@ -25,7 +26,7 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -33,10 +34,18 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
+            ann_file='annotations/dummy_annotation.json',
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
+
+        # test the instantiation of self.base_dataset when the ann_file is
+        # wrong
+        with pytest.raises(ValueError):
+            self.base_dataset(
+                data_root=osp.join(osp.dirname(__file__), '../data/'),
+                data_prefix=dict(img='imgs'),
+                ann_file='annotations/wrong_annotation.json')
 
     def test_meta(self):
         # test dataset.meta with setting the meta from annotation file as the
@@ -44,7 +53,7 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
         for key in ['dataset_type', 'task_name']:
             assert key in dataset.meta
 
@@ -56,21 +65,35 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
         for key in self.base_dataset.META.keys():
             assert key in dataset.meta
         assert dataset.meta['dataset_type'] == dataset_type
 
-        # Test dataset.meta with passing meta into self.base_dataset
+        # test dataset.meta with passing meta into self.base_dataset
         meta = dict(classes=('dog', ))
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
+            ann_file='annotations/dummy_annotation.json',
             meta=meta)
         for key in meta:
             assert key in dataset.meta
         assert dataset.meta['classes'] == meta['classes']
+
+        # test dataset.meta with passing meta into self.base_dataset and
+        # lazy_init is True
+        meta = dict(classes=('dog', ))
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            meta=meta,
+            lazy_init=True)
+        for key in meta:
+            assert key in dataset.meta
+        assert dataset.meta['classes'] == meta['classes']
+        assert 'task_name' not in dataset.meta
 
         # set self.base_dataset to initial state
         self.__init__()
@@ -79,62 +102,37 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
         assert len(dataset) == 2
+
+        # test `__len__()` when lazy_init is True
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=True)
+        assert dataset._fully_initialized is False
+        assert not hasattr(dataset, 'data_infos')
+        assert len(dataset) == 2
+        assert dataset._fully_initialized is True
+        assert hasattr(dataset, 'data_infos')
 
     def test_getitem(self):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
         assert dataset[0] == dict(imgs=self.imgs)
 
-    def test_full_init(self):
-        # test fully initialize dataset by calling `full_init()`
+        # test `__getitem__()` when lazy_init is True
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
+            ann_file='annotations/dummy_annotation.json',
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        dataset.full_init()
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
-
-        # test fully initialize dataset by calling `__len__()`
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        len(dataset)
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
-
-        # test fully initialize dataset by calling `__getitem__()`
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        dataset[0]
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
-
-        # test fully initialize dataset by calling `get_data_info()`
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        dataset.get_data_info(0)
+        assert dataset[0] == dict(imgs=self.imgs)
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -142,7 +140,35 @@ class TestBaseDataset:
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
+        assert dataset.get_data_info(0) == self.data_info
+
+        # test `get_data_info()` when lazy_init is True
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=True)
+        assert dataset._fully_initialized is False
+        assert not hasattr(dataset, 'data_infos')
+        assert dataset.get_data_info(0) == self.data_info
+        assert dataset._fully_initialized is True
+        assert hasattr(dataset, 'data_infos')
+
+    def test_full_init(self):
+        # test fully initialize dataset by calling `full_init()`
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=True)
+        assert dataset._fully_initialized is False
+        assert not hasattr(dataset, 'data_infos')
+        dataset.full_init()
+        assert dataset._fully_initialized is True
+        assert hasattr(dataset, 'data_infos')
+        assert len(dataset) == 2
+        assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
 
 
@@ -159,7 +185,7 @@ class TestBaseConcatDataset:
         self.dataset_a = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
 
         # create dataset_b
         data_info = dict(filename='gray.jpg', height=288, width=512)
@@ -169,7 +195,7 @@ class TestBaseConcatDataset:
         self.dataset_b = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
 
         # test init
         self.cat_datasets = BaseConcatDataset(
@@ -213,7 +239,7 @@ class TestBaseRepeatDataset:
         self.dataset = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
 
         self.repeat_times = 5
         # test init
@@ -250,7 +276,7 @@ class TestBaseClassBalancedDataset:
         self.dataset = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json')
 
         self.repeat_indices = [0, 0, 1, 1, 1]
         # test init

@@ -1,0 +1,50 @@
+{
+    "meta":
+    {
+      "dataset_type": "test_dataset",
+      "task_name": "test_task"
+    },
+    "data":
+    [
+      {
+        "img_path": "test_img.jpg",
+        "height": 604,
+        "width": 640,
+        "instances":
+        [
+          {
+            "bbox": [0, 0, 10, 20],
+            "bbox_label": 1,
+            "mask": [[0,0],[0,10],[10,20],[20,0]],
+            "extra_anns": [1,2,3]
+          },
+          {
+            "bbox": [10, 10, 110, 120],
+            "bbox_label": 2,
+            "mask": [[10,10],[10,110],[110,120],[120,10]],
+            "extra_anns": [4,5,6]
+          }
+        ]
+      },
+      {
+        "img_path": "gray.jpg",
+        "height": 288,
+        "width": 512,
+        "instances":
+        [
+          {
+            "bbox": [0, 0, 10, 20],
+            "bbox_label": 1,
+            "mask": [[0,0],[0,10],[10,20],[20,0]],
+            "extra_anns": [1,2,3]
+          },
+          {
+            "bbox": [10, 10, 110, 120],
+            "bbox_label": 2,
+            "mask": [[10,10],[10,110],[110,120],[120,10]],
+            "extra_anns": [4,5,6]
+          }
+        ]
+      }
+    ]
+  }
