@@ -4,7 +4,7 @@
 
 算法库中的数据集类负责在训练/测试过程中为模型提供输入数据，OpenMMLab 下各个算法库中的数据集有一些共同的特点和需求，比如需要高效的内部数据存储格式，需要支持数据集拼接、数据集重复采样等功能。
 
-因此 **MMEngine** 实现了一个数据集基类（BaseDataset）并定义了一些基本接口，且基于这套接口实现了一些数据集包装（BaseDatasetWrapper）。OpenMMLab 算法库中的大部分数据集都会满足这套数据集基类定义的接口，并使用统一的数据集包装。
+因此 **MMEngine** 实现了一个数据集基类（BaseDataset）并定义了一些基本接口，且基于这套接口实现了一些数据集包装（DatasetWrapper）。OpenMMLab 算法库中的大部分数据集都会满足这套数据集基类定义的接口，并使用统一的数据集包装。
 
 数据集基类的基本功能是加载数据集信息，这里我们将数据集信息分成两类，一种是元信息 (meta information)，代表数据集自身相关的信息，有时需要被模型或其他外部组件获取，比如在图像分类任务中，数据集的元信息一般包含类别信息 `classes`，因为分类模型 `model` 一般需要记录数据集的类别信息；另一种为数据信息 (data information)，在数据信息中，定义了具体样本的文件路径、对应标签等的信息。除此之外，数据集基类的另一个功能为将数据送入数据流水线（data pipeline）中，进行数据预处理。
 
@@ -324,11 +324,12 @@ from mmengine.data import BaseDataset, ClassBalancedDataset
 class ToyDataset(BaseDataset):
 
     def parse_annotations(self, raw_data_info):
+        data_info = raw_data_info
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
-            raw_data_info['img_path'] = osp.join(
-                img_prefix, raw_data_info['img_path')
-        return raw_data_info
+            data_info['img_path'] = osp.join(
+                img_prefix, data_info['img_path')
+        return data_info
 
     # 必须支持的方法，需要返回样本的类别
     def get_cat_ids(self, idx):
