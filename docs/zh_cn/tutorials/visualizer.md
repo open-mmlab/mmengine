@@ -1,0 +1,132 @@
+# 可视化 (Visualizer)
+
+可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 早期设计中，可视化功能由一个个独立的函数实现，例如 `imshow_bboxes` 和 `imshow_det_bboxes`，该设计存在的主要问题可以总结为：
+
+- 扩展性不足，功能单一，无法通过扩展实现定制可视化需求
+- OpenMMLab 各个下游库没有统一可视化接口，不利于理解和维护
+- 无法在训练和测试流程的任意点位进行可视化
+
+基于上述问题，结合 [抽象数据格式和命名规约]()，提出了可视化对象 Visualizer 和写端对象 Writer 的概念
+
+- **Visualizer** 负责单张图片的各类绘制和可视化功能
+- **Writer** 负责将各类数据写入到指定后端，写入的数据可以是图片，模型结构图，也可以是标量例如 Acc 指标，而写入后端可以选择本地写端 LocalWriter、TensorboardWriter、 WandbWriter 或者自定义 Writer
+- **RuntimeWriter** 负责管理所有运行中实例化的 Writer 对象。假设训练或者测试过程中同时存在多个  Writer 对象，RuntimeWriter 会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法
+
+Visualizer、Writer 和 RuntimeWriter 三者联系如下图所示：
+
+![Visualizer](https://user-images.githubusercontent.com/17425982/153836473-d6e1708d-20b8-433e-9fd7-880bfb4e42bf.png)
+
+![Writer 和 RuntimeWriter](https://user-images.githubusercontent.com/17425982/153836639-8f08bfac-6574-484c-827e-7cac81283d57.png)
+
+在训练或者测试过程中，常用的可视化做法为：先利用 Visualizer 对当前图片进行绘制，例如绘制边界框 bbox 和 掩码 mask 等等，然后将 Visualizer 绘制后的图片传递给 Writer 对象，由 Writer 对象负责写入到指定后端。如果想可视化训练或者测试过程中的曲线，例如 Acc 指标曲线，可以直接利用 Writer 对象接口实现，无需使用 Visualizer。
+
+在其他场合，例如用户单独写脚本进行图片可视化场合，用户只需要实例化 Visualizer 对象即可，而无需考虑 Writer 对象，利用 Visualizer 对当前图片进行绘制，然后调用 Visualizer 的 save/show 等接口进行图片保存/显示。
+
+## 可视化对象 Visualizer
+
+可视化对象 Visualizer 负责单张图片的各类绘制和可视化功能。为了统一 OpenMMLab 各个下游库的可视化接口，设计了 BaseVisualizer 类，下游库可以继承 BaseVisualizer，实现自己的可视化需求，例如 MMDetection 的 DetLocalVisualizer、DetTensorboardVisualizer、DetWandbVisualizer，用于进行本地端可视化、Tensorboard 端可视化和 Wandb 端可视化等等。
+
+### BaseVisualizer
+
+BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下：
+
+**(1) 绘制无关类接口**
+
+- set_image 设置原始图片数据
+- get_image 获取绘制后的图片数据
+- save 保存图片
+- show 可视化
+- register_task 注册绘制函数
+
+**(2) 绘制相关基础接口**
+
+- draw 对外抽象绘制接口
+
+- draw_bbox 绘制边界框
+- draw_text 绘制文本框
+- draw_line 绘制线段
+- draw_circle 绘制圆
+- draw_polygon 绘制多边形
+- draw_binary_mask 绘制二值掩码
+- draw_featmap 绘制特征图
+
+前面说过，Visualizer 接受的数据除了 image，还包括规定好的数据命名规约。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
+
+```python
+class DetLocalVisualizer(BaseVisualizer):
+    
+    @BaseVisualizer.register_task('instances')
+    def draw_instance(self, instances, data_type):
+        ...
+        
+    @BaseVisualizer.register_task('sem_seg')
+    def draw_sem_seg(self, pixel_data, data_type):    
+        ...
+```
+
+### 自定义 Visualizer
+
+自定义 Visualizer 中大部分情况下只需要实现 get_image 和 draw 接口。以检测任务中可视化 instances 和 sem_seg 为例，则本地端可视化核心代码如下：
+
+```python
+class DetLocalVisualizer(BaseVisualizer):
+     
+    def get_image(self):
+        ...
+    
+    def draw(self,data_sample, image=None,show_gt=True, show_pred=True):
+        if show_gt:
+            for task in self.task_dict:
+                task_attr = 'gt_' + task 
+                if task_attr in data_sample:
+                    self.task_dict[task](self, data_sample[task_attr], DataType.GT)
+        if show_pred:
+            for task in self.task_dict:
+                task_attr = 'pred_' + task 
+                if task_attr in data_sample:
+                    self.task_dict[task](self, data_sample[task_attr], DataType.PRED)
+    
+    @BaseVisualizer.register_task('instances')
+    def draw_instance(self, instances, data_type):
+        ...
+        
+    @BaseVisualizer.register_task('sem_seg')
+    def draw_sem_seg(self, pixel_data, data_type):    
+        ...
+```
+
+DetLocalVisualizer 的使用可以直接实例化，或者在配置文件中注册器模式实例化 `visualizer= dict(type='DetLocalVisualizer')`。
+
+## 写端 Writer
+
+Visualizer 只是实现了单张图片的可视化功能，但是在训练或者测试过程中，对一些关键指标的记录或者模型训练超参依然非常重要，此功能通过写端 Writer 实现。同时写端 Writer 也可以通过 `bind_visualizer` 方法绑定 Visualizer 对象，从而通过 Writer 实现写图片、写指标等功能。
+
+### BaseWriter
+
+BaseWriter 定义了对外调用的接口规范，主要接口如下：
+
+- add_hyperparams()  写超参
+- add_image() 写图片
+- add_scalar() 写标量
+- add_graph() 写模型图
+- bind_visualizer() 绑定可视化对象
+- experiment 写后端对象，例如 Wandb 对象和 Tensorboard 对象
+
+BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。
+
+## RuntimeWriter
+
+考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，设计了对外的 RuntimeWriter 类，在训练或者测试过程中  RuntimeWriter 会依次调用各个 Writer，主要接口如下：
+
+- add_hyperparams()  写超参
+- add_image() 写图片
+- add_scalar() 写标量
+- add_graph() 写模型图
+- get_writer() 获取某个 writer
+- `__enter__`
+- `__exit__`
+
+为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类，从而调用该类的各种可视化和写方法。
+
+
+
