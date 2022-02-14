@@ -25,7 +25,7 @@ class ToyModel(torch.nn.Module):
 class TestParameterScheduler(TestCase):
 
     def __init__(self, methodName='runTest'):
-        super(TestParameterScheduler, self).__init__(methodName)
+        super().__init__(methodName)
         self.model = ToyModel()
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.05)
 
