@@ -34,7 +34,8 @@ class RandomFlip(BaseTransform):
         return results
 ```
 
-And then, you can use `RandomFlip` as a callable object to process the data dict.
+And then, we can instance a `RandomFlip` object and use it as a callable object
+to process the data dict.
 
 ```python
 import numpy as np
