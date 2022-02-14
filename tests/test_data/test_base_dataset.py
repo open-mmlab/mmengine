@@ -113,7 +113,9 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        assert len(dataset) == 2
+        # call `full_init()`
+        tmp = len(dataset)
+        assert tmp == 2
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -132,7 +134,9 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        assert dataset[0] == dict(imgs=self.imgs)
+        # call `full_init()`
+        tmp = dataset[0]
+        assert tmp == dict(imgs=self.imgs)
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
@@ -151,7 +155,9 @@ class TestBaseDataset:
             lazy_init=True)
         assert dataset._fully_initialized is False
         assert not hasattr(dataset, 'data_infos')
-        assert dataset.get_data_info(0) == self.data_info
+        # call `full_init()`
+        tmp = dataset.get_data_info(0)
+        assert tmp == self.data_info
         assert dataset._fully_initialized is True
         assert hasattr(dataset, 'data_infos')
 
