@@ -30,11 +30,11 @@ for img, data_sample in dataloader:
 
 ## 设计
 
-一个算法库中的数据可以被归类成具有不同性质的基础数据元素。一个训练样本（如一张图片）的所有基础数据元素构成了一个训练样本的完整数据，称为样本数据。相应地，MMEngine 为基础数据元素和样本数据分别定义了一种封装。
+一个算法库中的数据可以被归类成具有不同性质的数据元素。一个训练样本（如一张图片）的所有数据元素构成了一个训练样本的完整数据，称为样本数据。相应地，MMEngine 为数据元素和样本数据分别定义了一种封装。
 
-1. 基础数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的性质），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将基础数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了基础数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
+1. 数据元素的封装： 基础的数据元素指的是某一算法任务上的预测数据或标注，例如检测框，实例掩码，语义分割掩码等。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的性质），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。另外，我们将数据元素区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点，因此，MMEngine 定义了数据元素的基类 `BaseDataElement`，并由此派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口将被用于模型内各个模块之间的数据传递。
 
-2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的基础数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
+2. 样本数据的封装：一个训练样本（例如一张图片）的所有标注和预测构成了一个样本数据。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。因此，MMEngine 定义了 `BaseDataSample`作为样本数据封装的基类。也就是说，**`BaseDataSample` 的属性会是各种类型的数据元素**，OpenMMLab 算法库将基于 `BaseDataSample` 实现自己的抽象数据接口，来封装一个算法库中单个样本的所有相关数据，作为 dataset，model，visualizer，和 evaluator 组件之间的数据接口。
 
 两种类型的封装和他们的继承关系如下图所示
 
@@ -47,13 +47,13 @@ for img, data_sample in dataloader:
 
 ### BaseDataElement
 
-MMEngine 为基础数据元素的封装提供了一个基类 `BaseDataElement`。
-基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`， `PixelData`， `LabelData` 和 `GeneralData` 四个典型的子类，封装了实例级别，像素级别，标签级别和其他普通的基础数据元素，并针对他们的数据特性支持了一些额外的功能。
+MMEngine 为数据元素的封装提供了一个基类 `BaseDataElement`。
+基于 `BaseDataElement`，MMEngine 还实现了 `InstanceData`， `PixelData`， `LabelData` 和 `GeneralData` 四个典型的子类，封装了实例级别，像素级别，标签级别和其他普通的数据元素，并针对他们的数据特性支持了一些额外的功能。
 
 1. `InstanceData`：封装检测框、框对应的标签和实例掩码、甚至关键点等实例级别数据，`InstanceData` 假定它封装的数据具有相同的长度 N，N 代表实例的个数，并基于此假定对数据进行校验、支持对实例进行索引和拼接。
 2. `PixelData`：封装逐像素级别的数据，如语义分割图和深度图等。`PixelData` 假定它封装的数据有相同的长度和宽度，第一和第二维为图片的长宽，第三维为通道数。`PixelData` 基于此假定对数据进行校验、支持对实例进行空间维度的索引和各维度的拼接。
 3. `LabelData`：封装标签数据，如场景分类标签等。
-4. `GeneralData`：`BaseDataElement` 的等价类。虽然 `BaseDataElement` 可以作为独立的模块被使用，但是我们不推荐用户直接使用基类。因此，MMEngine 额外实现了 `GeneralData` 。`GeneralData` 保持了和 `InstanceData`, `PixelData`, 以及 `LabelData` 一致的命名习惯和继承层次。它拥有和 `BaseDataElement` 完全一样的功能和接口，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。在下文中，为了阐明基础数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
+4. `GeneralData`：`BaseDataElement` 的等价类。虽然 `BaseDataElement` 可以作为独立的模块被使用，但是我们不推荐用户直接使用基类。因此，MMEngine 额外实现了 `GeneralData` 。`GeneralData` 保持了和 `InstanceData`, `PixelData`, 以及 `LabelData` 一致的命名习惯和继承层次。它拥有和 `BaseDataElement` 完全一样的功能和接口，对数据元素没有任何假定，仅支持最基本的增删改查功能。我们推荐用户在实际应用过程中使用 `GeneralData` 而非 `BaseDataElement` 来保持使用的一致性，在开发过程中继承 `BaseDataElement` 来保持继承层次的统一。在下文中，为了阐明数据元素封装的基本用法，我们还是使用 `BaseDataElement` 来进行描述和用例展示。
 
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
