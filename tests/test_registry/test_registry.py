@@ -150,32 +150,46 @@ class TestRegistry:
 
     def _build_registry(self):
         r"""A helper function to build a hierarchy registry.
-                        DOGS
-                         |
-                       HOUNDS (hound)
-                     /       \
-                    /         \
-            LITTLE_HOUNDS    MID_HOUNDS
-            (little_hound)   (mid_hound)
+                                     DOGS
+                                  /       \
+                                 /         \
+                    HOUNDS (hound)          SAMOYEDS (samoyed)
+                      /        \                 |
+                     /          \                |
+             LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+             (little_hound)   (mid_hound)  (little_samoyed)
         """
+        registries = []
         DOGS = Registry('dogs')
+        registries.append(DOGS)
         HOUNDS = Registry('dogs', parent=DOGS, scope='hound')
+        registries.append(HOUNDS)
+        SAMOYEDS = Registry('dogs', parent=DOGS, scope='samoyed')
+        registries.append(SAMOYEDS)
         LITTLE_HOUNDS = Registry('dogs', parent=HOUNDS, scope='little_hound')
+        registries.append(LITTLE_HOUNDS)
         MID_HOUNDS = Registry('dogs', parent=HOUNDS, scope='mid_hound')
+        registries.append(MID_HOUNDS)
+        LITTLE_SAMOYEDS = Registry(
+            'dogs', parent=SAMOYEDS, scope='little_samoyed')
+        registries.append(LITTLE_SAMOYEDS)
 
-        return DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS
+        return registries
 
     def test_get(self):
         #        Hierarchy Registry
         #
-        #               DOGS
-        #                |
-        #              HOUNDS (hound)
-        #             /       \
-        #            /         \
-        #   LITTLE_HOUNDS    MID_HOUNDS
-        #   (little_hound)   (mid_hound)
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+        #                             DOGS
+        #                          /       \
+        #                         /         \
+        #            HOUNDS (hound)          SAMOYEDS (samoyed)
+        #              /        \                  |
+        #             /          \                 |
+        #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+        #     (little_hound)   (mid_hound)  (little_samoyed)
+        registries = self._build_registry()
+        DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
+        MID_HOUNDS, SAMOYEDS, LITTLE_SAMOYEDS = registries[3:]
 
         @DOGS.register_module()
         class GoldenRetriever:
@@ -189,8 +203,11 @@ class TestRegistry:
             pass
 
         assert len(HOUNDS) == 1
+        # get key from current registry
         assert HOUNDS.get('BloodHound') is BloodHound
+        # get key from its children
         assert DOGS.get('hound.BloodHound') is BloodHound
+        # get key from current registry
         assert HOUNDS.get('hound.BloodHound') is BloodHound
 
         # If the key is not found in the current registry, then look for its
@@ -202,9 +219,13 @@ class TestRegistry:
             pass
 
         assert len(LITTLE_HOUNDS) == 1
+        # get key from current registry
         assert LITTLE_HOUNDS.get('Dachshund') is Dachshund
+        # get key from its parent
         assert LITTLE_HOUNDS.get('hound.BloodHound') is BloodHound
+        # get key from its children
         assert HOUNDS.get('little_hound.Dachshund') is Dachshund
+        # get key from its descendants
         assert DOGS.get('hound.little_hound.Dachshund') is Dachshund
 
         # If the key is not found in the current registry, then look for its
@@ -216,29 +237,41 @@ class TestRegistry:
         class Beagle:
             pass
 
-        assert MID_HOUNDS.get('Beagle') is Beagle
-        assert HOUNDS.get('mid_hound.Beagle') is Beagle
-        assert DOGS.get('hound.mid_hound.Beagle') is Beagle
+        # get key from its sibling registries
         assert LITTLE_HOUNDS.get('hound.mid_hound.Beagle') is Beagle
-        assert MID_HOUNDS.get('hound.BloodHound') is BloodHound
-        assert MID_HOUNDS.get('hound.Dachshund') is None
 
-        # If the key is not found in the current registry, then look for its
-        # parent
-        assert MID_HOUNDS.get('BloodHound') is BloodHound
-        assert MID_HOUNDS.get('GoldenRetriever') is GoldenRetriever
+        @SAMOYEDS.register_module()
+        class PedigreeSamoyed:
+            pass
+
+        assert len(SAMOYEDS) == 1
+        # get key from its uncle
+        assert LITTLE_HOUNDS.get('samoyed.PedigreeSamoyed') is PedigreeSamoyed
+
+        @LITTLE_SAMOYEDS.register_module()
+        class LittlePedigreeSamoyed:
+            pass
+
+        # get key from its cousin
+        assert LITTLE_HOUNDS.get(
+            'samoyed.little_samoyed') is LittlePedigreeSamoyed
+
+        # get key from its nephews
+        assert HOUNDS.get('samoyed.little_samoyed') is LittlePedigreeSamoyed
 
     def test_build(self):
         #        Hierarchy Registry
         #
-        #               DOGS
-        #                |
-        #              HOUNDS (hound)
-        #             /       \
-        #            /         \
-        #   LITTLE_HOUNDS    MID_HOUNDS
-        #   (little_hound)   (mid_hound)
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+        #                             DOGS
+        #                          /       \
+        #                         /         \
+        #            HOUNDS (hound)          SAMOYEDS (samoyed)
+        #              /        \                  |
+        #             /          \                 |
+        #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+        #     (little_hound)   (mid_hound)  (little_samoyed)
+        registries = self._build_registry()
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries
 
         @DOGS.register_module()
         class GoldenRetriever:
