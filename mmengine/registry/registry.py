@@ -237,10 +237,10 @@ class Registry:
 
     def _get_root_registry(self) -> 'Registry':
         """Return the root registry."""
-        parent = self
-        while parent.parent is not None:
-            parent = parent.parent
-        return parent
+        root = self
+        while root.parent is not None:
+            root = root.parent
+        return root
 
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
@@ -282,11 +282,12 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
 
         Args:
-            key (str): The class name in string format.
+            key (str): Name of the registered item, e.g., the class name in
+            string format.
 
         Returns:
-            Type or None: Return the corresponding class if key exists else
-            None.
+            Type or None: Return the corresponding class if the key exists,
+            otherwise return None.
         """
         scope, real_key = self.split_scope_key(key)
         if scope is None or scope == self._scope:
@@ -375,14 +376,9 @@ class Registry:
     def _add_child(self, registry: 'Registry') -> None:
         """Add a child for a registry.
 
-        The ``registry`` will be added as child based on its scope.
-        The parent registry could build objects from children registry.
-
-        Examples:
-            >>> models = Registry('models')
-            >>> mmdet_models = Registry('models', parent=models)
-            >>> models.parent is mmdet_models
-            True
+        Args:
+            registry (:obj:`Registry`): The ``registry`` will be added as a
+                child of the ``self``.
         """
 
         assert isinstance(registry, Registry)
