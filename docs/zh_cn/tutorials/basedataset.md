@@ -2,15 +2,15 @@
 
 ## 基本介绍
 
-算法库中的数据集类负责在训练/测试过程需要模型提供输入数据，OpenMMLab 下不同算法库中的数据集有一些共同的特点和需求，比如需要高效的内部数据存储格式，需要支持数据集连接、数据集重复采样等功能。
-因此 **MMEngine** 实现了一个数据集基类（BaseDataset）并定义了一些基本接口，且基于这套接口实现了一些基础的数据集基类包装（BaseDatasetWrapper）。OpenMMLab 算法库中的大部分数据集都会满足这套数据集基类定义的接口，并使用统一的基础的数据集基类包装。
+算法库中的数据集类负责在训练/测试过程中为模型提供输入数据，OpenMMLab 下各个算法库中的数据集有一些共同的特点和需求，比如需要高效的内部数据存储格式，需要支持数据集拼接、数据集重复采样等功能。
+因此 **MMEngine** 实现了一个数据集基类（BaseDataset）并定义了一些基本接口，且基于这套接口实现了一些数据集包装（BaseDatasetWrapper）。OpenMMLab 算法库中的大部分数据集都会满足这套数据集基类定义的接口，并使用统一的数据集包装。
 
 数据集基类的基本功能是加载数据集信息，这里我们将数据集信息分成两类，一种是元信息 (meta)，代表数据集自身相关的信息，有时需要被模型或其他外部组件获取，比如在图像分类任务中，数据集的元信息一般包含类别信息 `classes`，而分类模型 `model` 一般需要记录数据集的类别信息；另一种为数据信息 (data_infos)，在数据信息中，定义了具体原始数据的文件路径、对应标签等的信息。
 除此之外，数据集基类的另一个功能为将数据送入数据增强流水线中，进行数据预处理。
 
 ### 数据标注文件规范
 
-为了更好地统一不同任务的数据集接口，便于多任务的算法模型训练，OpenMMLab 制定了 **OpenMMLab 2.0 数据集格式规范**， 数据集标注文件需符合该规范，数据集基类基于该规范去读取与解析数据标注文件。如果你提供的数据标注文件不是规定格式，你可以选择将其转化为规定格式。
+为了统一不同任务的数据集接口，便于多任务的算法模型训练，OpenMMLab 制定了 **OpenMMLab 2.0 数据集格式规范**， 数据集标注文件需符合该规范，数据集基类基于该规范去读取与解析数据标注文件。如果用户提供的数据标注文件不是规定格式，用户可以选择将其转化为规定格式。
 
 OpenMMLab 2.0 数据集格式规范规定，标注文件必须为 `json` 或 `yaml`，`yml` 或 `pickle`，`pkl` 格式；标注文件中存储的字典必须包含 `metadata` 和 `data_infos` 两个字段。其中 `metadata` 是一个字典，里面包含数据集的元信息；`data_infos` 是一个列表，列表中每个元素是一个字典，该字典定义了一个原始数据（raw data），每个原始数据包含一个或若干个训练/测试样本。
 
@@ -61,7 +61,7 @@ data
 
 2. 构建数据流水线（data pipeline），用于数据预处理与数据准备；
 
-3. 读取与解析满足 OpenMMLab 2.0 数据集格式规范的标注文件，该步骤中会有 `_parse_raw_data()` 抽象方法，该抽象方法负责解析标注文件里的每个原始数据；
+3. 读取与解析满足 OpenMMLab 2.0 数据集格式规范的标注文件，该步骤中会有 `parse_annotations()` 抽象方法，该抽象方法负责解析标注文件里的每个原始数据；
 
 4. 过滤无用数据，比如不包含标注的样本等；
 
@@ -69,7 +69,7 @@ data
 
 6. 序列化全部样本，以达到节省内存的效果，详情请参考[节省内存](#节省内存)。
 
-数据集基类是一个抽象类，它有且只有一个抽象方法 `_parse_raw_data()` ，`_parse_raw_data()` 定义了将标注文件里的一个原始数据处理成一个或若干个训练/测试样本的方法。因此对于自定义数据集类，用户必须要实现 `_parse_raw_data()` 方法。
+数据集基类是一个抽象类，它有且只有一个抽象方法 `parse_annotations()` ，`parse_annotations()` 定义了将标注文件里的一个原始数据处理成一个或若干个训练/测试样本的方法。因此对于自定义数据集类，用户必须要实现 `parse_annotations()` 方法。
 
 ### 数据集基类提供的接口
 
@@ -85,7 +85,7 @@ data
 
 ## 使用数据集基类自定义数据集类
 
-在了解了数据集基类的初始化流程与提供的接口之后，就可以基于数据集基类自定义数据集类，如上所述，数据集基类是一个抽象类，它有且只有一个抽象方法 `_parse_raw_data()`，因此用户必须在自定义数据集类中实现该方法。以下是一个使用数据集基类来实现某一具体数据集的例子。
+在了解了数据集基类的初始化流程与提供的接口之后，就可以基于数据集基类自定义数据集类，如上所述，数据集基类是一个抽象类，它有且只有一个抽象方法 `parse_annotations()`，因此用户必须在自定义数据集类中实现该方法。以下是一个使用数据集基类来实现某一具体数据集的例子。
 
 ```python
 import os.path as osp
@@ -101,7 +101,7 @@ class ToyDataset(BaseDataset):
     #    'img_label': 0,
     #    ...
     # }
-    def _parse_raw_data(self, raw_data):
+    def parse_annotations(self, raw_data):
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
             raw_data['img_path'] = osp.join(
@@ -152,7 +152,7 @@ toy_dataset[0]
 
 ### 自定义视频的数据集类
 
-在上面的例子中，标注文件的每个原始数据只包含一个训练/测试样本（通常是图像领域）。如果每个原始数据包含若干个训练/测试样本（通常是视频领域），则只需保证 `_parse_raw_data()` 的返回值为 `list[dict]` 即可：
+在上面的例子中，标注文件的每个原始数据只包含一个训练/测试样本（通常是图像领域）。如果每个原始数据包含若干个训练/测试样本（通常是视频领域），则只需保证 `parse_annotations()` 的返回值为 `list[dict]` 即可：
 
 ```python
 from mmengine.data import BaseDataset
@@ -161,7 +161,7 @@ from mmengine.data import BaseDataset
 class ToyVideoDataset(BaseDataset):
 
     # raw_data 仍为一个字典，但它包含了多个样本
-    def _parse_raw_data(self, raw_data):
+    def parse_annotations(self, raw_data):
         data_infos = []
 
         ...
@@ -184,9 +184,9 @@ class ToyVideoDataset(BaseDataset):
 
 数据集基类还包含以下特性：
 
-### lazy init
+### 懒加载（lazy init）
 
-在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息，可能并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，我们定义了 lazy init：
+在数据集类实例化时，需要读取并解析标注文件，因此会消耗一定时间。然而在某些情况比如预测可视化时，往往只需要数据集类的元信息，可能并不需要读取与解析标注文件。为了节省这种情况下数据集类实例化的时间，我们定义了懒加载：
 
 ```python
 pipeline = [
@@ -217,9 +217,9 @@ len(toy_dataset) # 2
 toy_dataset[0] # dict(img=xxx, label=0)
 ```
 
-**值得注意的是**, 直接通过调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，虽然这样可能可以正常运行，但是会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，仅通过 `full_init()` 接口来执行完整的初始化过程。**
+**值得注意的是**, 直接通过调用 `__getitem__()` 接口来执行完整初始化会带来一定风险：如果一个数据集类首先通过设置 `lazy_init=True` 未进行完全初始化，然后直接送入数据加载器（dataloader）中，在后续读取数据的过程中，不同的 worker 会同时读取与解析标注文件，虽然这样可能可以正常运行，但是会消耗大量的时间与内存。**因此，建议在需要访问具体数据之前，提前手动调用 `full_init()` 接口来执行完整的初始化过程。**
 
-以上通过设置 `lazy_init=True` 未进行完全初始化，之后根据需求再进行完整初始化的方式，称为 lazy init。
+以上通过设置 `lazy_init=True` 未进行完全初始化，之后根据需求再进行完整初始化的方式，称为懒加载。
 
 ### 节省内存
 
@@ -243,18 +243,18 @@ toy_dataset = ToyDataset(
     serialize_data=False)
 ```
 
-上面例子不会提前将 `data_infos` 序列化存入内存中，不建议使用这种方式实例化数据集类。
+上面例子不会提前将 `data_infos` 序列化存入内存中，因此不建议在使用数据加载器开多个 worker 加载数据的情况下，使用这种方式实例化数据集类。
 
 ## 数据集基类包装
 
-除了数据集基类，MMEngine 也提供了若干个数据集基类包装：`BaseConcatDataset`, `BaseRepeatDataset`, `BaseClassBalancedDataset`。这些数据集基类包装同样也支持 lazy init 与拥有节省内存的特性。
+除了数据集基类，MMEngine 也提供了若干个数据集基类包装：`ConcatDataset`, `RepeatDataset`, `ClassBalancedDataset`。这些数据集基类包装同样也支持懒加载与拥有节省内存的特性。
 
-### BaseConcatDataset
+### ConcatDataset
 
-MMEngine 提供了 `BaseConcatDataset` 包装来连接多个数据集，使用方法如下：
+MMEngine 提供了 `ConcatDataset` 包装来拼接多个数据集，使用方法如下：
 
 ```python
-from mmengine.data import BaseConcatDataset
+from mmengine.data import ConcatDataset
 
 pipeline = [
     dict(type='xxx', ...),
@@ -274,18 +274,18 @@ toy_dataset_2 = ToyDataset(
     ann_file='annotations/val.json',
     pipeline=pipeline)
 
-toy_dataset_12 = BaseConcatDataset(datasets=[toy_dataset_1, toy_dataset_2])
+toy_dataset_12 = ConcatDataset(datasets=[toy_dataset_1, toy_dataset_2])
 
 ```
 
 上述例子将数据集的 `train` 部分与 `val` 部分合成一个大的数据集。
 
-### BaseRepeatDataset
+### RepeatDataset
 
-MMEngine 提供了 `BaseRepeatDataset` 包装来重复采样某个数据集若干次，使用方法如下：
+MMEngine 提供了 `RepeatDataset` 包装来重复采样某个数据集若干次，使用方法如下：
 
 ```python
-from mmengine.data import BaseRepeatDataset
+from mmengine.data import RepeatDataset
 
 pipeline = [
     dict(type='xxx', ...),
@@ -299,22 +299,22 @@ toy_dataset = ToyDataset(
     ann_file='annotations/train.json',
     pipeline=pipeline)
 
-toy_dataset_repeat = BaseRepeatDataset(dataset=toy_dataset, times=5)
+toy_dataset_repeat = RepeatDataset(dataset=toy_dataset, times=5)
 
 ```
 
 上述例子将数据集的 `train` 部分重复采样了 5 次。
 
-### BaseClassBalancedDataset
+### ClassBalancedDataset
 
-MMEngine 提供了 `BaseClassBalancedDataset` 包装，来基于数据集中类别出现频率，重复采样相应样本，**请注意，** `BaseClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 指定的 `data_info` 包含的样本类别，使用方法如下：
+MMEngine 提供了 `ClassBalancedDataset` 包装，来基于数据集中类别出现频率，重复采样相应样本，**请注意，** `ClassBalancedDataset` 包装需要被包装的数据集类必须支持 `get_cat_ids(idx)` 方法，`get_cat_ids(idx)` 方法返回一个列表，该列表包含了 `idx` 指定的 `data_info` 包含的样本类别，使用方法如下：
 
 ```python
-from mmengine.data import BaseDataset, BaseClassBalancedDataset
+from mmengine.data import BaseDataset, ClassBalancedDataset
 
 class ToyDataset(BaseDataset):
 
-    def _parse_raw_data(self, raw_data):
+    def parse_annotations(self, raw_data):
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
             raw_data['img_path'] = osp.join(
@@ -338,8 +338,8 @@ toy_dataset = ToyDataset(
     ann_file='annotations/train.json',
     pipeline=pipeline)
 
-toy_dataset_repeat = BaseClassBalancedDataset(dataset=toy_dataset, oversample_thr=1e-3)
+toy_dataset_repeat = ClassBalancedDataset(dataset=toy_dataset, oversample_thr=1e-3)
 
 ```
 
-上述例子将数据集的 `train` 部分以 `oversample_thr=1e-3` 重新采样，具体地，对于数据集中出现频率低于 `1e-3` 的类别，会重复采样该类别对应的样本，否则不重复采样，具体采样策略请参考 `BaseClassBalancedDataset` API 文档。
+上述例子将数据集的 `train` 部分以 `oversample_thr=1e-3` 重新采样，具体地，对于数据集中出现频率低于 `1e-3` 的类别，会重复采样该类别对应的样本，否则不重复采样，具体采样策略请参考 `ClassBalancedDataset` API 文档。
