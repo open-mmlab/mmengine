@@ -23,9 +23,9 @@ class TestRegistry:
         # test `parent` parameter
         # `parent` is either None or a `Registry` instance
         with pytest.raises(AssertionError):
-            CATS = Registry('little_cat', parent='cat')
+            CATS = Registry('little_cat', parent='cat', scope='little_cat')
 
-        LITTLECATS = Registry('little_cat', parent=CATS)
+        LITTLECATS = Registry('little_cat', parent=CATS, scope='little_cat')
         assert LITTLECATS.parent is CATS
         assert CATS._children.get('little_cat') is LITTLECATS
 
@@ -164,12 +164,12 @@ class TestRegistry:
         registries.append(DOGS)
         HOUNDS = Registry('dogs', parent=DOGS, scope='hound')
         registries.append(HOUNDS)
-        SAMOYEDS = Registry('dogs', parent=DOGS, scope='samoyed')
-        registries.append(SAMOYEDS)
         LITTLE_HOUNDS = Registry('dogs', parent=HOUNDS, scope='little_hound')
         registries.append(LITTLE_HOUNDS)
         MID_HOUNDS = Registry('dogs', parent=HOUNDS, scope='mid_hound')
         registries.append(MID_HOUNDS)
+        SAMOYEDS = Registry('dogs', parent=DOGS, scope='samoyed')
+        registries.append(SAMOYEDS)
         LITTLE_SAMOYEDS = Registry(
             'dogs', parent=SAMOYEDS, scope='little_samoyed')
         registries.append(LITTLE_SAMOYEDS)
@@ -253,11 +253,12 @@ class TestRegistry:
             pass
 
         # get key from its cousin
-        assert LITTLE_HOUNDS.get(
-            'samoyed.little_samoyed') is LittlePedigreeSamoyed
+        assert LITTLE_HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
+                                 ) is LittlePedigreeSamoyed
 
         # get key from its nephews
-        assert HOUNDS.get('samoyed.little_samoyed') is LittlePedigreeSamoyed
+        assert HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
+                          ) is LittlePedigreeSamoyed
 
     def test_build(self):
         #        Hierarchy Registry
@@ -271,7 +272,7 @@ class TestRegistry:
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = self._build_registry()
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
 
         @DOGS.register_module()
         class GoldenRetriever:
