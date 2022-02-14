@@ -2,7 +2,7 @@
 
 OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。
 为了管理这些功能相似的模块，MMEngine 实现了 [注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)。
-OpenMMLab 大多数算法库均使用注册器来管理他们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification)，和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
+OpenMMLab 大多数算法库均使用注册器来管理他们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification) 和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
 
 ## 什么是注册器
 
@@ -10,8 +10,8 @@ MMEngine 实现的注册器可以看作一个映射表和模块构建方法（bu
 而模块构建方法则定义了如何根据字符串查找到对应的类，并定义了如何实例化这个类，例如根据规则通过字符串 `"bn"` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。
 MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 来查找并实例化字符串对应的类。
 
-一个注册器中管理的类通常有相似的接口和功能，因此该注册器可以被视作这些类的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了  `ResNet`， `SEResNet`，和 `RegNetX` 等分类网络的类。
-使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至最后一个章节了解`为什么使用注册器`。
+一个注册器管理的类通常有相似的接口和功能，因此该注册器可以被视作这些类的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类。
+使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至`使用注册器提高代码的扩展性`章节了解注册器是如何提供代码拓展性的。
 
 ## 入门用法
 
@@ -27,7 +27,7 @@ MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.re
 
 ```python
 # model/builder.py
-from mmengine.registry import Registry
+from mmengine import Registry
 # 创建转换器的注册器
 CONVERTERS = Registry('converter')
 ```
@@ -62,7 +62,7 @@ class Converter2(object):
 ```
 
 ```{note}
-只有模块所在的文件被导入时，注册机制才会被触发，所以我们需要在某处导入该文件。
+只有模块所在的文件被导入时，注册机制才会被触发，所以我们需要在某处导入该文件或者使用 `custom_imports` 字段动态导入该模块进而触发注册机制，详情见 [导入自定义 Python 模块](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html#python).
 ```
 
 模块成功注册后，我们可以通过配置文件使用这个转换器。
@@ -84,7 +84,7 @@ converter = CONVERTERS.build(converter_cfg)
 假如我们想在创建实例前检查输入参数的类型（或者任何其他操作），我们可以实现一个构建方法并将其传递给注册器从而实现自定义构建流程。
 
 ```python
-from mmengine.registry import Registry
+from mmengine import Registry
 
 # 创建一个构建方法
 def build_converter(cfg, registry, *args, **kwargs):
@@ -134,7 +134,7 @@ class ConvBlock(nn.Module):
 conv_blcok = ConvBlock()
 ```
 
-可以发现，此时 ConvBlock 只支持 `nn.Conv2d` 和 `nn.ReLU` 的组合。如过我们想要让 `ConvBlock` 更加通用，例如让它可以使用其他类型的卷积层或者激活层，在不使用注册器的情况下，需要进行如下改动
+可以发现，此时 ConvBlock 只支持 `nn.Conv2d` 和 `nn.ReLU` 的组合。如果我们想要让 `ConvBlock` 更加通用，例如让它可以使用其他类型的卷积层或者激活层，在不使用注册器的情况下，需要进行如下改动
 
 ```python
 # train.py
@@ -162,7 +162,7 @@ conv_blcok = ConvBlock()
 
 ```python
 import torch.nn as nn
-from mmengine.registry import MODELS, ACTIVATION_LAYERS
+from mmengine import MODELS, ACTIVATION_LAYERS
 
 # 将 conv 和 act 分别加入 MODELS 和 ACTIVATION_LAYERS 的注册器
 
@@ -231,7 +231,7 @@ conv = DeformConv2d()
 
 ```python
 # model/conv.py
-from mmengine.registry import Registry, MODELS
+from mmengine import Registry, MODELS
 
 import torch.nn as nn
 
@@ -246,7 +246,7 @@ class DeformConv2d(nn.Module):
 
 ```python
 # train.py
-from mmengine.registry import MODELS
+from mmengine import MODELS
 
 cfg = dict(type='Conv2d')  # 注意，这个配置可以通过解析配置文件得到
 conv = MODELS.build(cfg)
@@ -256,7 +256,7 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 12 个根注册器：
+为了方便跨库调用，MMEngine 提供了 11 个根注册器：
 
 - RUNNERS: Runner 相关的注册器，如 `EpochBasedRunner`, `IterBasedRunner`
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -277,7 +277,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 `MMEngine` 中定义了模块 `Conv2d`，
 
 ```python
-from mmengine.registry import Registry, MODELS
+from mmengine import Registry, MODELS
 
 MODELS.register_module()
 class Conv2d(nn.Module):
@@ -287,7 +287,7 @@ class Conv2d(nn.Module):
 `MMDetection` 中定义了模块 `RetinaNet`，
 
 ```python
-from mmengine.registry import Registry, MODELS as MMENGINE_MODELS
+from mmengine import Registry, MODELS as MMENGINE_MODELS
 # parent 参数表示当前节点的父节点，通过 parent 参数实现层级结构
 # scope 参数可以理解为当前节点的标志。如果不传入该参数，则 scope 被推导为当前文件所在
 # 包的包名，这里为 mmdet
@@ -300,7 +300,7 @@ class RetinaNet(nn.Module):
 
 下图是 `MMEngine`, `MMDetection` 两个项目的注册器层级结构。
 
-![registry](../static/../_static/imgs/registry1.png)
+![registry](https://user-images.githubusercontent.com/58739961/153880947-1d66ac06-e5ee-448e-8d7d-201e96d1101d.png)
 
 我们可以在 `MMDetection` 中调用 `MMEngine` 中模块。
 
@@ -310,13 +310,13 @@ from mmdet.models import MODELS
 model = MODELS.build(cfg=dict(type='RetinaNet'))
 # 也可以加 mmdet 前缀
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
-# 创建 ResNet 实例
-model = MODELS.build(cfg=dict(type='mmengine.ResNet'))
+# 创建 Conv2d 实例
+model = MODELS.build(cfg=dict(type='mmengine.Conv2d'))
 # 也可以不加 mmengine 前缀
-model = MODELS.build(cfg=dict(type='ResNet'))
+model = MODELS.build(cfg=dict(type='Conv2d'))
 ```
 
-需要注意的是，如果不加前缀，`build` 方法首先查找当前节点是否存在该模块，如果存在则返回该模块，否则会继续向上查找父节点甚至祖先节点直到找到该模块。因此，如果当前节点和父节点存在同一模块并且希望调用父节点的模块，我们需要指定 `scope` 前缀。
+如果不加前缀，`build` 方法首先查找当前节点是否存在该模块，如果存在则返回该模块，否则会继续向上查找父节点甚至祖先节点直到找到该模块，因此，如果当前节点和父节点存在同一模块并且希望调用父节点的模块，我们需要指定 `scope` 前缀。需要注意的是，向上查找父节点甚至祖先节点的**前提是父节点或者祖先节点的模块已通过某种方式被导入进而完成注册**。例如，在上面这个示例中，之所以没有显示导入父节点 `mmengine` 中的 `MODELS`，是因为通过 `from mmdet.models import MODELS` 间接触发 `mmengine.MODELS` 完成模块的注册。
 
 ### 调用兄弟节点的模块
 
@@ -335,7 +335,7 @@ class ResNet(nn.Module):
 
 下图是 `MMEngine`, `MMDetection`, `MMClassification` 三个项目的注册器层级结构。
 
-![registry](../static/../_static/imgs/registry2.png)
+![registry](https://user-images.githubusercontent.com/58739961/153880996-f0572157-f8c8-46d5-a097-e4968e6a97b2.png)
 
 我们可以在 `MMDetection` 中调用 `MMClassification` 定义的模块，
 
@@ -360,40 +360,40 @@ model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
 
 注册器除了支持两层结构，三层甚至更多层结构也是支持的。
 
-例如 `MMOCR` 会 `MMDetection`
+假设我们新建了一个项目 `NewProject`，它的 `MODELS` 注册器继承自 `MMDetection` 的 `MODELS`，并且它会用到 `MMClassification` 中的 `ResNet` 模块。
 
-`MMClassification` 中定义了模块 `ResNet`，
+`NewProject` 中定义了模块 `MetaNet`，
 
 ```python
 from mmengine.model import Registry
 from mmdet.model import MODELS as MMDET_MODELS
-MODELS = Registry('model', parent=MMDET_MODELS)
+MODELS = Registry('model', parent=MMDET_MODELS, scope='new_project')
 
 @MODELS.register_module()
-class FCNet(nn.Module):
+class MetaNet(nn.Module):
     pass
 ```
 
-下图是 `MMEngine`, `MMDetection`, `MMClassification`, `MMOCR` 四个项目的注册器层级结构。
+下图是 `MMEngine`, `MMDetection`, `MMClassification` 以及 `NewProject` 四个项目的注册器层级结构。
 
-![registry](../static/../_static/imgs/registry3.png)
+![registry](https://user-images.githubusercontent.com/58739961/153880654-00c30d60-7a2c-4129-9dd7-6deaa12cfefc.png)
 
-我们可以在 `MMOCR` 中调用 `MMDetection` 或者 `MMOCR` 中的模块，
+我们可以在 `NewProject` 中调用 `MMDetection` 或者 `MMClassification` 中的模块，
 
 ```python
 from mmocr.model import MODELS
-# 也可以不提供 mmdet 前缀，如果在 MMOCR 找不到则会向上在 MMDet 中查找
+# 可以不提供 mmdet 前缀，如果在 Meta 找不到则会向上在 MMDet 中查找
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
-# 调用兄弟节点的模块需提供 mmcls 前缀，也可以设置 default_scope 参数
+# 调用兄弟节点的模块需提供 mmcls 前缀，但也可以设置 default_scope 参数
 model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 ```
 
-也可以在 `MMClassification` 中调用 `MMOCR` 的模块。
+也可以在 `MMClassification` 中调用 `NewProject` 的模块。
 
 ```python
 from mmcls.models import MODELS
-# 需要注意前缀的顺序，'mmocr.mmdet.ResNet' 是不正确的
-model = MODELS.build(cfg=dict(type='mmdet.mmocr.FCNet'))
+# 需要注意前缀的顺序，'meta.mmdet.ResNet' 是不正确的
+model = MODELS.build(cfg=dict(type='mmdet.new_project.FCNet'))
 # 当然，更简单的方法是直接设置 default_scope
-model = MODELS.build(cfg=dict(type='FCNet', default_scope='mmocr'))
+model = MODELS.build(cfg=dict(type='FCNet', default_scope='new_project'))
 ```
