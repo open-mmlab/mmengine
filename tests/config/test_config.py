@@ -3,7 +3,6 @@ import argparse
 import json
 import os
 import os.path as osp
-import platform
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -11,7 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mmengine.config import Config, ConfigDict, DictAction, dump, load
+from mmengine.config import Config, ConfigDict, DictAction
+from mmengine.utils import dump, load
 
 
 class TestConfig:
@@ -79,9 +79,6 @@ class TestConfig:
         file_basename = osp.basename(tmp_cfg1)
         file_basename_no_extension = osp.splitext(file_basename)[0]
         file_extname = osp.splitext(tmp_cfg1)[1]
-
-        if platform.system() == 'Windows':
-            file_dirname = file_dirname.replace('\\', '/')
 
         target = f'a={file_dirname}\n' \
                  f'b={file_basename}\n' \
