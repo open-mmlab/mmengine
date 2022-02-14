@@ -176,6 +176,24 @@ class TestRegistry:
 
         return registries
 
+    def test_get_root_registry(self):
+        #        Hierarchy Registry
+        #
+        #                             DOGS
+        #                          /       \
+        #                         /         \
+        #            HOUNDS (hound)          SAMOYEDS (samoyed)
+        #              /        \                  |
+        #             /          \                 |
+        #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+        #     (little_hound)   (mid_hound)  (little_samoyed)
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+
+        assert DOGS._get_root_registry() is DOGS
+        assert HOUNDS._get_root_registry() is DOGS
+        assert LITTLE_HOUNDS._get_root_registry() is DOGS
+        assert MID_HOUNDS._get_root_registry() is DOGS
+
     def test_get(self):
         #        Hierarchy Registry
         #
@@ -259,6 +277,25 @@ class TestRegistry:
         # get key from its nephews
         assert HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
                           ) is LittlePedigreeSamoyed
+
+    def test_search_child(self):
+        #        Hierarchy Registry
+        #
+        #                             DOGS
+        #                          /       \
+        #                         /         \
+        #            HOUNDS (hound)          SAMOYEDS (samoyed)
+        #              /        \                  |
+        #             /          \                 |
+        #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+        #     (little_hound)   (mid_hound)  (little_samoyed)
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+
+        assert DOGS._search_child('hound') is HOUNDS
+        assert DOGS._search_child('not a child') is None
+        assert DOGS._search_child('little_hound') is LITTLE_HOUNDS
+        assert LITTLE_HOUNDS._search_child('hound') is None
+        assert LITTLE_HOUNDS._search_child('mid_hound') is None
 
     def test_build(self):
         #        Hierarchy Registry
