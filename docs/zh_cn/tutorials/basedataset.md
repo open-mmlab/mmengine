@@ -103,18 +103,18 @@ from mmengine.data import BaseDataset
 
 class ToyDataset(BaseDataset):
 
-    # 以上面标注文件为例，在这里 raw_data 代表 `data_infos` 对应列表里的某个字典：
+    # 以上面标注文件为例，在这里 raw_data_info 代表 `data_infos` 对应列表里的某个字典：
     # {
     #    'img_path': "xxx/xxx_0.jpg",
     #    'img_label': 0,
     #    ...
     # }
-    def parse_annotations(self, raw_data):
+    def parse_annotations(self, raw_data_info):
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
-            raw_data['img_path'] = osp.join(
-                img_prefix, raw_data['img_path')
-        return raw_data
+            raw_data_info['img_path'] = osp.join(
+                img_prefix, raw_data_info['img_path')
+        return raw_data_info
 
 ```
 
@@ -168,8 +168,8 @@ from mmengine.data import BaseDataset
 
 class ToyVideoDataset(BaseDataset):
 
-    # raw_data 仍为一个字典，但它包含了多个样本
-    def parse_annotations(self, raw_data):
+    # raw_data_info 仍为一个字典，但它包含了多个样本
+    def parse_annotations(self, raw_data_info):
         data_infos = []
 
         ...
@@ -322,12 +322,12 @@ from mmengine.data import BaseDataset, ClassBalancedDataset
 
 class ToyDataset(BaseDataset):
 
-    def parse_annotations(self, raw_data):
+    def parse_annotations(self, raw_data_info):
         img_prefix = self.data_prefix.get('img', None)
         if img_prefix is not None:
-            raw_data['img_path'] = osp.join(
-                img_prefix, raw_data['img_path')
-        return raw_data
+            raw_data_info['img_path'] = osp.join(
+                img_prefix, raw_data_info['img_path')
+        return raw_data_info
 
     # 必须支持的方法，需要返回样本的类别
     def get_cat_ids(self, idx):
