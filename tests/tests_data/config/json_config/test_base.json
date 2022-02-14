@@ -1,7 +1,7 @@
 {
     "_base_": [
         "../py_config/base1.py",
-        "../yml_config/base2.yaml",
+        "../yaml_config/base2.yaml",
         "./base3.json",
         "../py_config/base4.py"
     ],

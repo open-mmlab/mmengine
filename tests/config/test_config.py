@@ -2,6 +2,7 @@
 import argparse
 import os
 import os.path as osp
+import platform
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -15,7 +16,8 @@ from mmengine.utils import dump, load
 class TestConfig:
     data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'tests_data/')
 
-    def test_init(self, tmp_path):
+    @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
+    def test_init(self, tmp_path, file_format):
         # test init Config by __init__
         cfg = Config()
         assert cfg.filename is None
@@ -23,44 +25,26 @@ class TestConfig:
         assert len(cfg) == 0
         assert cfg._cfg_dict == {}
 
+        # Config() only accept dict or None variable
         with pytest.raises(TypeError):
             Config([0, 1])
 
         cfg_dict = dict(
             item1=[1, 2], item2=dict(a=0), item3=True, item4='test')
         # test simple_config.py
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
+        cfg_file = osp.join(
+            self.data_path,
+            f'config/{file_format}_config/simple_config.{file_format}')
         cfg = Config(cfg_dict, filename=cfg_file)
         assert isinstance(cfg, Config)
         assert cfg.filename == cfg_file
         assert cfg.text == open(cfg_file, 'r').read()
-
-        # test simple_config.json
-        cfg_file = osp.join(self.data_path,
-                            'config/json_config/simple_config.json')
-        cfg = Config(cfg_dict, filename=cfg_file)
-        assert isinstance(cfg, Config)
-        assert cfg.filename == cfg_file
-        assert cfg.text == open(cfg_file, 'r').read()
-
-        # test simple_config.yaml
-        cfg_file = osp.join(self.data_path,
-                            'config/yml_config/simple_config.yaml')
-        cfg = Config(cfg_dict, filename=cfg_file)
-        assert isinstance(cfg, Config)
-        assert cfg.filename == cfg_file
-        assert cfg.text == open(cfg_file, 'r').read()
-
-        dump_file = tmp_path / 'simple_config.yaml'
-        cfg.dump(dump_file)
-        assert cfg.dump() == open(dump_file, 'r').read()
-        assert Config.fromfile(dump_file)
 
     def test_validate_py_syntax(self, tmp_path):
         tmp_cfg = tmp_path / 'tmp_config.py'
         with open(tmp_cfg, 'w') as f:
             f.write('dict(a=1,b=2.c=3)')
+        # syntax context of tmp_cfg
         with pytest.raises(SyntaxError):
             Config._validate_py_syntax(tmp_cfg)
 
@@ -111,7 +95,7 @@ class TestConfig:
         assert cfg_module_dict['item10'].startswith('_item7')
 
         cfg_path = osp.join(self.data_path, 'config',
-                            'yml_config/test_base.yaml')
+                            'yaml_config/test_base.yaml')
         tmp_cfg = tmp_path / 'tmp_cfg.yaml'
         Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
         cfg_module_dict = load(tmp_cfg)
@@ -134,25 +118,18 @@ class TestConfig:
         assert cfg['item5']['item2'] == cfg_base['item2']
 
     def test_file2dict(self, tmp_path):
-        # test load simple config
-        for filename in [
-                'py_config/simple_config.py', 'py_config/simple.config.py',
-                'json_config/simple_config.json',
-                'yml_config/simple_config.yaml'
-        ]:
-            cfg_file = osp.join(self.data_path, 'config', filename)
-            cfg_dict, cfg_text = Config._file2dict(cfg_file)
-            assert isinstance(cfg_text, str)
-            assert isinstance(cfg_dict, dict)
+
         # test error format config
         tmp_cfg = tmp_path / 'tmp_cfg.xml'
         tmp_cfg.write_text('exist')
+        # invalid config format
         with pytest.raises(IOError):
             Config.fromfile(tmp_cfg)
-
+        # invalid config file path
         with pytest.raises(FileNotFoundError):
             Config.fromfile('no_such_file.py')
 
+        self._simple_load()
         self._predefined_vars(tmp_path)
         self._base_variables()
         self._merge_from_base()
@@ -161,8 +138,122 @@ class TestConfig:
         self._merge_delete()
         self._merge_intermediate_variable()
         self._merge_recursive_bases()
-        self._syntax_error(tmp_path)
         self._reserved_key()
+
+    @pytest.mark.parametrize('file_format', ['py', 'yaml', 'json'])
+    def test_dict(self, file_format):
+        cfg_dict = dict(
+            item1=[1, 2], item2=dict(a=0), item3=True, item4='test')
+        filename = f'{file_format}_config/simple_config.{file_format}'
+        cfg_file = osp.join(self.data_path, 'config', filename)
+        cfg = Config.fromfile(cfg_file)
+
+        # len(cfg)
+        assert len(cfg) == 4
+        # cfg.keys()
+        assert set(cfg.keys()) == set(cfg_dict.keys())
+        assert set(cfg._cfg_dict.keys()) == set(cfg_dict.keys())
+        # cfg.values()
+        for value in cfg.values():
+            assert value in cfg_dict.values()
+        # cfg.items()
+        for name, value in cfg.items():
+            assert name in cfg_dict
+            assert value in cfg_dict.values()
+        # cfg.field
+        assert cfg.item1 == cfg_dict['item1']
+        assert cfg.item2 == cfg_dict['item2']
+        assert cfg.item2.a == 0
+        assert cfg.item3 == cfg_dict['item3']
+        assert cfg.item4 == cfg_dict['item4']
+        # access not exist key
+        with pytest.raises(AttributeError):
+            cfg.not_exist
+        # field in cfg, cfg[field], cfg.get()
+        for name in ['item1', 'item2', 'item3', 'item4']:
+            assert name in cfg
+            assert cfg[name] == cfg_dict[name]
+            assert cfg.get(name) == cfg_dict[name]
+            assert cfg.get('not_exist') is None
+            assert cfg.get('not_exist', 0) == 0
+            # access not exist key
+            with pytest.raises(KeyError):
+                cfg['not_exist']
+        assert 'item1' in cfg
+        assert 'not_exist' not in cfg
+        # cfg.update()
+        cfg.update(dict(item1=0))
+        assert cfg.item1 == 0
+        cfg.update(dict(item2=dict(a=1)))
+        assert cfg.item2.a == 1
+
+    def test_setattr(self):
+        cfg = Config()
+        cfg.item1 = [1, 2]
+        cfg.item2 = {'a': 0}
+        cfg['item5'] = {'a': {'b': None}}
+        assert cfg._cfg_dict['item1'] == [1, 2]
+        assert cfg.item1 == [1, 2]
+        assert cfg._cfg_dict['item2'] == {'a': 0}
+        assert cfg.item2.a == 0
+        assert cfg._cfg_dict['item5'] == {'a': {'b': None}}
+        assert cfg.item5.a.b is None
+
+        with pytest.raises(TypeError):
+            cfg[[1, 2]] = 0
+
+    def test_pretty_text(self, tmp_path):
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/simple_config.py')
+        cfg = Config.fromfile(cfg_file)
+        text_cfg_filename = tmp_path / '_text_config.py'
+        with open(text_cfg_filename, 'w') as f:
+            f.write(cfg.pretty_text)
+        text_cfg = Config.fromfile(text_cfg_filename)
+        assert text_cfg._cfg_dict == cfg._cfg_dict
+
+    def test_dict_action(self):
+        parser = argparse.ArgumentParser(description='Train a detector')
+        parser.add_argument(
+            '--options', nargs='+', action=DictAction, help='custom options')
+        # Nested brackets
+        args = parser.parse_args(
+            ['--options', 'item2.a=a,b', 'item2.b=[(a,b), [1,2], false]'])
+        out_dict = {
+            'item2.a': ['a', 'b'],
+            'item2.b': [('a', 'b'), [1, 2], False]
+        }
+        assert args.options == out_dict
+        # Single Nested brackets
+        args = parser.parse_args(['--options', 'item2.a=[[1]]'])
+        out_dict = {'item2.a': [[1]]}
+        assert args.options == out_dict
+        # Imbalance bracket
+        with pytest.raises(AssertionError):
+            parser.parse_args(['--options', 'item2.a=[(a,b), [1,2], false'])
+        # Normal values
+        args = parser.parse_args([
+            '--options', 'item2.a=1', 'item2.b=0.1', 'item2.c=x', 'item3=false'
+        ])
+        out_dict = {
+            'item2.a': 1,
+            'item2.b': 0.1,
+            'item2.c': 'x',
+            'item3': False
+        }
+        assert args.options == out_dict
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/simple_config.py')
+        cfg = Config.fromfile(cfg_file)
+        cfg.merge_from_dict(args.options)
+        assert cfg.item2 == dict(a=1, b=0.1, c='x')
+        assert cfg.item3 is False
+
+    def test_repr(self):
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/simple_config.py')
+        cfg = Config.fromfile(cfg_file)
+        print(cfg)
 
     def test_merge_from_dict(self):
         cfg_file = osp.join(self.data_path,
@@ -207,27 +298,26 @@ class TestConfig:
         #  overwritten by int
         sys.argv[1] = tmp
 
-    def test_fromstring(self):
-        for filename in [
-                'py_config/simple_config.py', 'py_config/simple.config.py',
-                'json_config/simple_config.json',
-                'yml_config/simple_config.yaml'
-        ]:
-            cfg_file = osp.join(self.data_path, 'config', filename)
-            file_format = osp.splitext(filename)[-1]
-            in_cfg = Config.fromfile(cfg_file)
+    @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
+    def test_fromstring(self, file_format):
+        filename = f'{file_format}_config/simple_config.{file_format}'
+        cfg_file = osp.join(self.data_path, 'config', filename)
+        # py to .py
+        file_format = osp.splitext(filename)[-1]
+        in_cfg = Config.fromfile(cfg_file)
 
-            out_cfg = Config.fromstring(in_cfg.pretty_text, '.py')
-            assert in_cfg._cfg_dict == out_cfg._cfg_dict
+        out_cfg = Config.fromstring(in_cfg.pretty_text, '.py')
+        assert in_cfg._cfg_dict == out_cfg._cfg_dict
 
-            cfg_str = open(cfg_file, 'r').read()
-            out_cfg = Config.fromstring(cfg_str, file_format)
-            assert in_cfg._cfg_dict == out_cfg._cfg_dict
+        cfg_str = open(cfg_file, 'r').read()
+        out_cfg = Config.fromstring(cfg_str, file_format)
+        assert in_cfg._cfg_dict == out_cfg._cfg_dict
 
         # test pretty_text only supports py file format
         cfg_file = osp.join(self.data_path, 'config',
                             'json_config/simple_config.json')
         in_cfg = Config.fromfile(cfg_file)
+        # in_cfg.pretty_text is .py format, cannot be parsed to .json
         with pytest.raises(Exception):
             Config.fromstring(in_cfg.pretty_text, '.json')
 
@@ -235,7 +325,7 @@ class TestConfig:
         cfg_str = open(cfg_file, 'r').read()
         with pytest.raises(Exception):
             Config.fromstring(cfg_str, '.py')
-
+        # error format
         with pytest.raises(IOError):
             Config.fromstring(cfg_str, '.xml')
 
@@ -275,6 +365,16 @@ class TestConfig:
 
         assert pkl_cfg._cfg_dict == cfg._cfg_dict
 
+    def _simple_load(self):
+        # test load simple config
+        for file_format in ['py', 'json', 'yaml']:
+            filename = f'{file_format}_config/simple_config.{file_format}'
+
+            cfg_file = osp.join(self.data_path, 'config', filename)
+            cfg_dict, cfg_text = Config._file2dict(cfg_file)
+            assert isinstance(cfg_text, str)
+            assert isinstance(cfg_dict, dict)
+
     def _predefined_vars(self, tmp_path):
         # test parse predefined_var in config
         cfg_file = osp.join(self.data_path,
@@ -306,19 +406,21 @@ class TestConfig:
 
         # test test_predefined_var.yaml
         cfg_file = osp.join(self.data_path,
-                            'config/yml_config/test_predefined_var.yaml')
+                            'config/yaml_config/test_predefined_var.yaml')
 
         # test no use_predefined_variable
         assert Config._file2dict(cfg_file,
                                  False)[0]['item1'] == '{{ fileDirname }}'
-        assert Config._file2dict(cfg_file)[0]['item1'] == osp.dirname(cfg_file)
+        assert Config._file2dict(cfg_file)[0]['item1'] == self._get_file_path(
+            osp.dirname(cfg_file))
 
         # test test_predefined_var.json
         cfg_file = osp.join(self.data_path,
                             'config/json_config/test_predefined_var.json')
 
         assert Config.fromfile(cfg_file, False)['item1'] == '{{ fileDirname }}'
-        assert Config.fromfile(cfg_file)['item1'] == osp.dirname(cfg_file)
+        assert Config.fromfile(cfg_file)['item1'] == self._get_file_path(
+            osp.dirname(cfg_file))
 
         # test custom_imports for Config.fromfile
 
@@ -341,7 +443,7 @@ class TestConfig:
         assert cfg_dict['item2']['a'] == 1
         assert cfg_dict['item3'] is False
         assert cfg_dict['item4'] == 'test_base'
-
+        # item3 is a dict in the child config but is bool in base config
         with pytest.raises(TypeError):
             Config.fromfile(
                 osp.join(self.data_path,
@@ -362,7 +464,7 @@ class TestConfig:
         assert cfg_dict['item6'] == [dict(a=0), dict(b=1)]
         assert cfg_dict['item7'] == dict(
             a=[0, 1, 2], b=dict(c=[3.1, 4.2, 5.3]))
-
+        # Redefine key
         with pytest.raises(KeyError):
             Config.fromfile(
                 osp.join(self.data_path,
@@ -371,7 +473,7 @@ class TestConfig:
     def _base_variables(self):
         for file in [
                 'py_config/test_base_variables.py',
-                'json_config/test_base.json', 'yml_config/test_base.yaml'
+                'json_config/test_base.json', 'yaml_config/test_base.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -392,7 +494,7 @@ class TestConfig:
         for file in [
                 'py_config/test_base_variables_nested.py',
                 'json_config/test_base_variables_nested.json',
-                'yml_config/test_base_variables_nested.yaml'
+                'yaml_config/test_base_variables_nested.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -501,130 +603,12 @@ class TestConfig:
     def _reserved_key(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_reserved_key.py')
+        # reserved keys cannot be set in config
         with pytest.raises(KeyError):
             Config.fromfile(cfg_file)
 
-    def _syntax_error(self, tmp_path):
-        temp_cfg_path = tmp_path / 'tmp_file.py'
-        # write a file with syntax error
-        with open(temp_cfg_path, 'w') as f:
-            f.write('a=0b=dict(c=1)')
-        with pytest.raises(
-                SyntaxError, match='There are syntax errors in config file'):
-            Config.fromfile(temp_cfg_path)
-
-    def test_dict(self):
-        cfg_dict = dict(
-            item1=[1, 2], item2=dict(a=0), item3=True, item4='test')
-
-        for filename in [
-                'py_config/simple_config.py', 'json_config/simple_config.json',
-                'yml_config/simple_config.yaml'
-        ]:
-            cfg_file = osp.join(self.data_path, 'config', filename)
-            cfg = Config.fromfile(cfg_file)
-
-            # len(cfg)
-            assert len(cfg) == 4
-            # cfg.keys()
-            assert set(cfg.keys()) == set(cfg_dict.keys())
-            assert set(cfg._cfg_dict.keys()) == set(cfg_dict.keys())
-            # cfg.values()
-            for value in cfg.values():
-                assert value in cfg_dict.values()
-            # cfg.items()
-            for name, value in cfg.items():
-                assert name in cfg_dict
-                assert value in cfg_dict.values()
-            # cfg.field
-            assert cfg.item1 == cfg_dict['item1']
-            assert cfg.item2 == cfg_dict['item2']
-            assert cfg.item2.a == 0
-            assert cfg.item3 == cfg_dict['item3']
-            assert cfg.item4 == cfg_dict['item4']
-            with pytest.raises(AttributeError):
-                cfg.not_exist
-            # field in cfg, cfg[field], cfg.get()
-            for name in ['item1', 'item2', 'item3', 'item4']:
-                assert name in cfg
-                assert cfg[name] == cfg_dict[name]
-                assert cfg.get(name) == cfg_dict[name]
-                assert cfg.get('not_exist') is None
-                assert cfg.get('not_exist', 0) == 0
-                with pytest.raises(KeyError):
-                    cfg['not_exist']
-            assert 'item1' in cfg
-            assert 'not_exist' not in cfg
-            # cfg.update()
-            cfg.update(dict(item1=0))
-            assert cfg.item1 == 0
-            cfg.update(dict(item2=dict(a=1)))
-            assert cfg.item2.a == 1
-
-    def test_setattr(self):
-        cfg = Config()
-        cfg.item1 = [1, 2]
-        cfg.item2 = {'a': 0}
-        cfg['item5'] = {'a': {'b': None}}
-        assert cfg._cfg_dict['item1'] == [1, 2]
-        assert cfg.item1 == [1, 2]
-        assert cfg._cfg_dict['item2'] == {'a': 0}
-        assert cfg.item2.a == 0
-        assert cfg._cfg_dict['item5'] == {'a': {'b': None}}
-        assert cfg.item5.a.b is None
-
-        with pytest.raises(TypeError):
-            cfg[[1, 2]] = 0
-
-    def test_pretty_text(self, tmp_path):
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
-        cfg = Config.fromfile(cfg_file)
-        text_cfg_filename = tmp_path / '_text_config.py'
-        with open(text_cfg_filename, 'w') as f:
-            f.write(cfg.pretty_text)
-        text_cfg = Config.fromfile(text_cfg_filename)
-        assert text_cfg._cfg_dict == cfg._cfg_dict
-
-    def test_dict_action(self):
-        parser = argparse.ArgumentParser(description='Train a detector')
-        parser.add_argument(
-            '--options', nargs='+', action=DictAction, help='custom options')
-        # Nested brackets
-        args = parser.parse_args(
-            ['--options', 'item2.a=a,b', 'item2.b=[(a,b), [1,2], false]'])
-        out_dict = {
-            'item2.a': ['a', 'b'],
-            'item2.b': [('a', 'b'), [1, 2], False]
-        }
-        assert args.options == out_dict
-        # Single Nested brackets
-        args = parser.parse_args(['--options', 'item2.a=[[1]]'])
-        out_dict = {'item2.a': [[1]]}
-        assert args.options == out_dict
-        # Imbalance bracket
-        with pytest.raises(AssertionError):
-            parser.parse_args(['--options', 'item2.a=[(a,b), [1,2], false'])
-        # Normal values
-        args = parser.parse_args([
-            '--options', 'item2.a=1', 'item2.b=0.1', 'item2.c=x', 'item3=false'
-        ])
-        out_dict = {
-            'item2.a': 1,
-            'item2.b': 0.1,
-            'item2.c': 'x',
-            'item3': False
-        }
-        assert args.options == out_dict
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
-        cfg = Config.fromfile(cfg_file)
-        cfg.merge_from_dict(args.options)
-        assert cfg.item2 == dict(a=1, b=0.1, c='x')
-        assert cfg.item3 is False
-
-    def test_repr(self):
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
-        cfg = Config.fromfile(cfg_file)
-        print(cfg)
+    def _get_file_path(self, file_path):
+        if platform.system() == 'Windows':
+            return file_path.replace('\\', '/')
+        else:
+            return file_path
