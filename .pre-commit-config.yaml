@@ -45,7 +45,7 @@ repos:
       - id: docformatter
         args: ["--in-place", "--wrap-descriptions", "79"]
   - repo: https://github.com/open-mmlab/pre-commit-hooks
-    rev: master # Use the ref you want to point at
+    rev: v0.2.0
     hooks:
       - id: check-copyright
         args: ["mmengine", "tests"]
@@ -53,3 +53,4 @@ repos:
     rev: v0.812
     hooks:
       - id: mypy
+        exclude: "docs"
