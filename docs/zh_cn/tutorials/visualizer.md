@@ -53,15 +53,15 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 前面说过，Visualizer 接受的数据除了 image，还包括规定好的数据命名规约。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
 
 ```python
-	class DetLocalVisualizer(BaseVisualizer):
+class DetLocalVisualizer(BaseVisualizer):
     
-      @BaseVisualizer.register_task('instances')
-      def draw_instance(self, instances, data_type):
-          ...
+    @BaseVisualizer.register_task('instances')
+    def draw_instance(self, instances, data_type):
+        ...
           
-      @BaseVisualizer.register_task('sem_seg')
-      def draw_sem_seg(self, pixel_data, data_type):    
-          ...
+    @BaseVisualizer.register_task('sem_seg')
+    def draw_sem_seg(self, pixel_data, data_type):    
+        ...
 ```
 
 除了常见的 draw_bbox 等可视化功能外，Visualizer 还提供了两个实用功能：
