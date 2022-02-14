@@ -82,7 +82,7 @@ def build_from_cfg(cfg: dict,
 class Registry:
     """A registry to map strings to classes.
 
-    Registered object could be built from registry.
+    Registered objects could be built from registry.
 
     Examples:
         >>> # define a registry
