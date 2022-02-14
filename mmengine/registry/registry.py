@@ -110,8 +110,9 @@ class Registry:
             or ``build_func`` is specified. If ``parent`` is specified and
             ``build_func`` is not given,  ``build_func`` will be inherited
             from ``parent``. Defaults to None.
-        parent (Registry`, optional): Parent registry. The class registered in
-            children registry could be built from parent. Defaults to None.
+        parent (:obj:`Registry`, optional): Parent registry. The class
+            registered in children registry could be built from parent.
+            Defaults to None.
         scope (str, optional): The scope of registry. It is the key to search
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
@@ -312,8 +313,8 @@ class Registry:
 
         return None
 
-    def _search_children(self, scope: str) -> Optional['Registry']:
-        """Depth-first search for the corresponding registry.
+    def _search_child(self, scope: str) -> Optional['Registry']:
+        """Depth-first search for the corresponding registry from its children.
 
         Note that the method only search the corresponding registry from the
         current registry. Therefore, if we want to search from the root
@@ -331,7 +332,7 @@ class Registry:
             return self
 
         for child in self._children.values():
-            registry = child._search_children(scope)
+            registry = child._search_child(scope)
             if registry is not None:
                 return registry
 
@@ -349,7 +350,7 @@ class Registry:
         """
         if default_scope:
             root = self._get_root_registry()
-            registry = root._search_children(default_scope)
+            registry = root._search_child(default_scope)
             if registry is None:
                 raise KeyError(
                     f'{default_scope} does not exist in the registry tree.')
@@ -389,7 +390,7 @@ class Registry:
                 registered. If not specified, the class name will be used.
                 Defaults to None.
             force (bool): Whether to override an existing class with the same
-                name. Default to False.
+                name. Defaults to False.
         """
         if not inspect.isclass(module_class):
             raise TypeError('module must be a class, '
