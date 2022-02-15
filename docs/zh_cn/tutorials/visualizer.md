@@ -177,7 +177,7 @@ wandb_writer.add_image('vis_image', det_local_visualizer.get_image())
 - `__enter__`
 - `__exit__`
 
-为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，并且在 Runner 中使上下文生效，从而在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。一个简单粗略的实现和用例如下
+为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit__`方法，并且在 Runner 中使上下文生效，从而在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。一个简单粗略的实现和用例如下
 
 ```python
 # 假设 writer 只有一个
