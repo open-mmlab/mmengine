@@ -184,71 +184,27 @@ conv_block = ConvBlock(conv_cfg, act_cfg)
 
 ### 模块的灵活拓展
 
-假设实现了一个卷积模块 `Conv2d`，
+如果我们自定义了一个 `DeformConv2d` 卷积模块，我们只需将该模块注册到 `MODELS`，
 
 ```python
-# model/conv.py
 import torch.nn as nn
-
-class Conv2d(nn.Module):
-    pass
-```
-
-我们想在训练中使用该模块，可以在 `train.py` 中导入该模块。
-
-```python
-# train.py
-from .model import Conv2d
-
-conv = Conv2d()
-```
-
-这样看似没有什么问题，但假如添加了新模块 `DeformConv2d`，
-
-```python
-# model/conv.py
-import torch.nn as nn
-
-class Conv2d(nn.Module):
-    pass
-
-class DeformConv2d(nn.Module):
-    pass
-```
-
-如果需要使用 `DeformConv2d`，就需要修改 `train.py` 。
-
-```python
-# train.py
-from .model import Conv2d, DeformConv2d
-
-conv = DeformConv2d()
-```
-
-而如果使用注册器，则可以避免 `train.py` 文件的改动。
-
-```python
-# model/conv.py
-from mmengine import Registry, MODELS
-
-import torch.nn as nn
-
-@MODELS.register_module()
-class Conv2d(nn.Module):
-    pass
-
-@MODELS.register_module()
-class DeformConv2d(nn.Module):
-    pass
-```
-
-```python
-# train.py
 from mmengine import MODELS
 
-cfg = dict(type='Conv2d')  # 注意，这个配置可以通过解析配置文件得到
+@MODELS.register_module()
+class DeformConv2d(nn.Module):
+    pass
+```
+
+就可以通过配置使用该模块。
+
+```python
+conv_cfg = dict(type='DeformConv2d')
+act_cfg = dict(type='GELU')
+conv_block = ConvBlock(conv_cfg, act_cfg)
 conv = MODELS.build(cfg)
 ```
+
+可以看到，添加了 `DeformConv2d` 模块并不需要对 `ConvBlock` 做修改。
 
 ## 通过 Registry 实现模块的跨库调用
 
@@ -380,7 +336,7 @@ class MetaNet(nn.Module):
 
 ```python
 from detplus.model import MODELS
-# 可以不提供 mmdet 前缀，如果在 Meta 找不到则会向上在 MMDet 中查找
+# 可以不提供 mmdet 前缀，如果在 detplus 找不到则会向上在 mmdet 中查找
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
 # 调用兄弟节点的模块需提供 mmcls 前缀，但也可以设置 default_scope 参数
 model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
@@ -390,7 +346,7 @@ model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 
 ```python
 from mmcls.models import MODELS
-# 需要注意前缀的顺序，'meta.mmdet.ResNet' 是不正确的
+# 需要注意前缀的顺序，'detplus.mmdet.ResNet' 是不正确的
 model = MODELS.build(cfg=dict(type='mmdet.detplus.MetaNet'))
 # 当然，更简单的方法是直接设置 default_scope
 model = MODELS.build(cfg=dict(type='MetaNet', default_scope='detplus'))
