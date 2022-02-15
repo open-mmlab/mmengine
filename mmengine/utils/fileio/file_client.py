@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# type: ignore
 import inspect
 import os
 import os.path as osp
@@ -9,7 +8,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Tuple, Union
+from typing import Any, Generator, Iterator, Optional, Tuple, Union
 from urllib.request import urlopen
 
 import mmengine
@@ -298,7 +297,10 @@ class PetrelBackend(BaseStorageBackend):
         return '/'.join(formatted_paths)
 
     @contextmanager
-    def get_local_path(self, filepath: Union[str, Path]) -> Iterable[str]:
+    def get_local_path(
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Download a file from ``filepath`` and return a temporary path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
@@ -632,7 +634,9 @@ class HardDiskBackend(BaseStorageBackend):
 
     @contextmanager
     def get_local_path(
-            self, filepath: Union[str, Path]) -> Iterable[Union[str, Path]]:
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Only for unified API and do nothing."""
         yield filepath
 
@@ -701,7 +705,8 @@ class HTTPBackend(BaseStorageBackend):
         return value_buf.decode(encoding)
 
     @contextmanager
-    def get_local_path(self, filepath: str) -> Iterable[str]:
+    def get_local_path(
+            self, filepath: str) -> Generator[Union[str, Path], None, None]:
         """Download a file from ``filepath``.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
@@ -775,15 +780,17 @@ class FileClient:
     # backend appears in the collection, the singleton pattern is disabled for
     # that backend, because if the singleton pattern is used, then the object
     # returned will be the backend before overwriting
-    _overridden_backends = set()
-    _prefix_to_backends = {
+    _overridden_backends: set = set()
+    _prefix_to_backends: dict = {
         's3': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
     }
-    _overridden_prefixes = set()
+    _overridden_prefixes: set = set()
 
-    _instances = {}
+    _instances: dict = {}
+
+    client: Any
 
     def __new__(cls, backend=None, prefix=None, **kwargs):
         if backend is None and prefix is None:
@@ -1093,7 +1100,10 @@ class FileClient:
         return self.client.join_path(filepath, *filepaths)
 
     @contextmanager
-    def get_local_path(self, filepath: Union[str, Path]) -> Iterable[str]:
+    def get_local_path(
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Download data from ``filepath`` and write the data to local path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It

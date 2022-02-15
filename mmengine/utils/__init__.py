@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# type: ignore
 from .fileio import (FileClient, dict_from_file, dump, list_from_file, load,
                      register_handler)
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,

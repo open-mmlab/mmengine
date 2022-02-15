@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# type: ignore
 from io import BytesIO, StringIO
 from pathlib import Path
 
