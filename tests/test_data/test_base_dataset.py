@@ -254,6 +254,8 @@ class TestConcatDataset:
 
     def test_meta(self):
         assert self.cat_datasets.meta == self.dataset_a.meta
+        # meta of self.cat_datasets is from the first dataset when
+        # concatnating datasets with different metas.
         assert self.cat_datasets.meta != self.dataset_b.meta
 
     def test_length(self):
