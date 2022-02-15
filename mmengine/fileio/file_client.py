@@ -43,7 +43,7 @@ class BaseStorageBackend(metaclass=ABCMeta):
 
 
 class PetrelBackend(BaseStorageBackend):
-    """Petrel storage backend (for internal use).
+    """Petrel storage backend (for internal usage).
 
     PetrelBackend supports reading and writing data to multiple clusters.
     If the file path contains the cluster name, PetrelBackend will read data
