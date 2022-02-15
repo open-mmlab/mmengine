@@ -245,7 +245,8 @@ class TestConcatDataset:
         self.dataset_b = dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
-            ann_file='annotations/dummy_annotation.json')
+            ann_file='annotations/dummy_annotation.json',
+            meta=dict(classes=('dog', 'cat')))
 
         # test init
         self.cat_datasets = ConcatDataset(
@@ -253,7 +254,7 @@ class TestConcatDataset:
 
     def test_meta(self):
         assert self.cat_datasets.meta == self.dataset_a.meta
-        assert self.cat_datasets.meta == self.dataset_b.meta
+        assert self.cat_datasets.meta != self.dataset_b.meta
 
     def test_length(self):
         assert len(self.cat_datasets) == (
