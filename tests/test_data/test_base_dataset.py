@@ -27,7 +27,7 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
-        assert dataset._fully_initialized is True
+        assert dataset._fully_initialized
         assert hasattr(dataset, 'data_infos')
         assert hasattr(dataset, 'data_address')
 
@@ -38,7 +38,7 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
             serialize_data=False)
-        assert dataset._fully_initialized is True
+        assert dataset._fully_initialized
         assert hasattr(dataset, 'data_infos')
         assert not hasattr(dataset, 'data_address')
 
@@ -48,7 +48,7 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=True)
-        assert dataset._fully_initialized is False
+        assert not dataset._fully_initialized
         assert not hasattr(dataset, 'data_infos')
 
         # test the instantiation of self.base_dataset when the ann_file is
@@ -68,7 +68,7 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
-        assert dataset._fully_initialized is True
+        assert dataset._fully_initialized
         assert hasattr(dataset, 'data_infos')
         assert hasattr(dataset, 'data_address')
         assert len(dataset) == 4
@@ -167,17 +167,17 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init)
 
-        if lazy_init is False:
-            assert dataset._fully_initialized is True
+        if not lazy_init:
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
             assert len(dataset) == 2
         else:
             # test `__len__()` when lazy_init is True
-            assert dataset._fully_initialized is False
+            assert not dataset._fully_initialized
             assert not hasattr(dataset, 'data_infos')
             # call `full_init()` automatically
             assert len(dataset) == 2
-            assert dataset._fully_initialized is True
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
     @pytest.mark.parametrize('lazy_init', [True, False])
@@ -188,17 +188,17 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init)
 
-        if lazy_init is False:
-            assert dataset._fully_initialized is True
+        if not lazy_init:
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
             assert dataset[0] == dict(imgs=self.imgs)
         else:
             # test `__getitem__()` when lazy_init is True
-            assert dataset._fully_initialized is False
+            assert not dataset._fully_initialized
             assert not hasattr(dataset, 'data_infos')
             # call `full_init()` automatically
             assert dataset[0] == dict(imgs=self.imgs)
-            assert dataset._fully_initialized is True
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
     @pytest.mark.parametrize('lazy_init', [True, False])
@@ -209,17 +209,17 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init)
 
-        if lazy_init is False:
-            assert dataset._fully_initialized is True
+        if not lazy_init:
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
             assert dataset.get_data_info(0) == self.data_info
         else:
             # test `get_data_info()` when lazy_init is True
-            assert dataset._fully_initialized is False
+            assert not dataset._fully_initialized
             assert not hasattr(dataset, 'data_infos')
             # call `full_init()` automatically
             assert dataset.get_data_info(0) == self.data_info
-            assert dataset._fully_initialized is True
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
     @pytest.mark.parametrize('lazy_init', [True, False])
@@ -230,19 +230,19 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init)
 
-        if lazy_init is False:
-            assert dataset._fully_initialized is True
+        if not lazy_init:
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
             assert len(dataset) == 2
             assert dataset[0] == dict(imgs=self.imgs)
             assert dataset.get_data_info(0) == self.data_info
         else:
             # test `full_init()` when lazy_init is True
-            assert dataset._fully_initialized is False
+            assert not dataset._fully_initialized
             assert not hasattr(dataset, 'data_infos')
             # call `full_init()` manually
             dataset.full_init()
-            assert dataset._fully_initialized is True
+            assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
             assert len(dataset) == 2
             assert dataset[0] == dict(imgs=self.imgs)
