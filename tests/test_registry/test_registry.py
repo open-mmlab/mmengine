@@ -149,16 +149,16 @@ class TestRegistry:
         assert len(CATS) == 8
 
     def _build_registry(self):
-        r"""A helper function to build a hierarchy registry.
-                                     DOGS
-                                  /       \
-                                 /         \
-                    HOUNDS (hound)          SAMOYEDS (samoyed)
-                      /        \                 |
-                     /          \                |
-             LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
-             (little_hound)   (mid_hound)  (little_samoyed)
-        """
+        """A helper function to build a hierarchy registry."""
+        #        Hierarchy Registry
+        #                           DOGS
+        #                      _______|_______
+        #                     |               |
+        #            HOUNDS (hound)          SAMOYEDS (samoyed)
+        #           _______|_______                |
+        #          |               |               |
+        #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
+        #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = []
         DOGS = Registry('dogs')
         registries.append(DOGS)
@@ -178,13 +178,12 @@ class TestRegistry:
 
     def test_get_root_registry(self):
         #        Hierarchy Registry
-        #
-        #                             DOGS
-        #                          /       \
-        #                         /         \
+        #                           DOGS
+        #                      _______|_______
+        #                     |               |
         #            HOUNDS (hound)          SAMOYEDS (samoyed)
-        #              /        \                  |
-        #             /          \                 |
+        #           _______|_______                |
+        #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
@@ -196,13 +195,12 @@ class TestRegistry:
 
     def test_get(self):
         #        Hierarchy Registry
-        #
-        #                             DOGS
-        #                          /       \
-        #                         /         \
+        #                           DOGS
+        #                      _______|_______
+        #                     |               |
         #            HOUNDS (hound)          SAMOYEDS (samoyed)
-        #              /        \                  |
-        #             /          \                 |
+        #           _______|_______                |
+        #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = self._build_registry()
@@ -280,13 +278,12 @@ class TestRegistry:
 
     def test_search_child(self):
         #        Hierarchy Registry
-        #
-        #                             DOGS
-        #                          /       \
-        #                         /         \
+        #                           DOGS
+        #                      _______|_______
+        #                     |               |
         #            HOUNDS (hound)          SAMOYEDS (samoyed)
-        #              /        \                  |
-        #             /          \                 |
+        #           _______|_______                |
+        #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
@@ -299,13 +296,12 @@ class TestRegistry:
 
     def test_build(self):
         #        Hierarchy Registry
-        #
-        #                             DOGS
-        #                          /       \
-        #                         /         \
+        #                           DOGS
+        #                      _______|_______
+        #                     |               |
         #            HOUNDS (hound)          SAMOYEDS (samoyed)
-        #              /        \                  |
-        #             /          \                 |
+        #           _______|_______                |
+        #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = self._build_registry()
