@@ -40,11 +40,13 @@ class TestBaseDataElement(TestCase):
     def check_data_device(self, instances, device):
         instances.device = device
         for v in instances.data_values():
-            assert v.device == device
+            if isinstance(v, torch.Tensor):
+                assert v.device == device
 
     def check_data_dtype(self, instances, dtype):
         for v in instances.data_values():
-            assert v.dtype == dtype
+            if isinstance(v, (torch.Tensor, np.ndarray)):
+                assert v.dtype == dtype
 
     def test_init(self):
         # initialization with no data and metainfo
