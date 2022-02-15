@@ -207,9 +207,16 @@ class StepParamScheduler(_ParamScheduler):
         step_size (int): Period of parameter value decay.
         gamma (float): Multiplicative factor of parameter value decay.
             Default: 0.1.
-        last_step (int): The index of last epoch. Default: -1.
-        verbose (bool): If True, prints a message to stdout for
-            each update. Default: False.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
     """
 
     def __init__(self,
@@ -255,9 +262,16 @@ class MultiStepParamScheduler(_ParamScheduler):
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of parameter value decay.
             Default: 0.1.
-        last_step (int): The index of last epoch. Default: -1.
-        verbose (bool): If ``True``, prints a message to stdout for
-            each update. Default: ``False``.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
     """
 
     def __init__(self,
@@ -268,6 +282,7 @@ class MultiStepParamScheduler(_ParamScheduler):
                  last_step: int = -1,
                  begin: int = 0,
                  end: int = INF,
+                 by_epoch: bool = True,
                  verbose: bool = False):
         self.milestones = Counter(milestones)
         self.gamma = gamma
@@ -277,6 +292,7 @@ class MultiStepParamScheduler(_ParamScheduler):
             begin=begin,
             end=end,
             last_step=last_step,
+            by_epoch=by_epoch,
             verbose=verbose)
 
     def _get_value(self):
@@ -301,11 +317,16 @@ class ConstantParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         factor (float): The number we multiply parameter value until the
             milestone. Default: 1./3.
-        total_iters (int): The number of steps that the scheduler decays
-            the parameter value. Default: 5.
-        last_step (int): The index of the last epoch. Default: -1.
-        verbose (bool): If True, prints a message to stdout for
-            each update. Default: False.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
     """
 
     def __init__(self,
@@ -315,6 +336,7 @@ class ConstantParamScheduler(_ParamScheduler):
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
+                 by_epoch: bool = True,
                  verbose: bool = False):
         if factor > 1.0 or factor < 0:
             raise ValueError(
@@ -328,6 +350,7 @@ class ConstantParamScheduler(_ParamScheduler):
             begin=begin,
             end=end,
             last_step=last_step,
+            by_epoch=by_epoch,
             verbose=verbose)
 
     def _get_value(self):
@@ -356,9 +379,16 @@ class ExponentialParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer): Wrapped optimizer.
         gamma (float): Multiplicative factor of parameter value decay.
-        last_step (int): The index of last epoch. Default: -1.
-        verbose (bool): If ``True``, prints a message to stdout for
-            each update. Default: ``False``.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
     """
 
     def __init__(self,
@@ -368,6 +398,7 @@ class ExponentialParamScheduler(_ParamScheduler):
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
+                 by_epoch: bool = True,
                  verbose: bool = False):
         self.gamma = gamma
         super(ExponentialParamScheduler, self).__init__(
@@ -376,6 +407,7 @@ class ExponentialParamScheduler(_ParamScheduler):
             begin=begin,
             end=end,
             last_step=last_step,
+            by_epoch=by_epoch,
             verbose=verbose)
 
     def _get_value(self):
@@ -421,9 +453,16 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         T_max (int): Maximum number of iterations.
         eta_min (float): Minimum parameter value. Default: 0.
-        last_step (int): The index of last epoch. Default: -1.
-        verbose (bool): If ``True``, prints a message to stdout for
-            each update. Default: ``False``.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983
@@ -437,6 +476,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
+                 by_epoch: bool = True,
                  verbose: bool = False):
         self.T_max = T_max
         self.eta_min = eta_min
@@ -446,6 +486,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             begin=begin,
             end=end,
             last_step=last_step,
+            by_epoch=by_epoch,
             verbose=verbose)
 
     def _get_value(self):
@@ -480,11 +521,16 @@ class LinearParamScheduler(_ParamScheduler):
             in the following epochs. Default: 1./3.
         end_factor (float): The number we multiply parameter value at the end
             of linear changing process. Default: 1.0.
-        total_iters (int): The number of iterations that multiplicative factor
-            reaches to 1. Default: 5.
-        last_step (int): The index of the last epoch. Default: -1.
-        verbose (bool): If ``True``, prints a message to stdout for
-            each update. Default: ``False``.
+        begin (int): Step at which to start updating the parameters.
+            Default: 0.
+        end (int): Step at which to stop updating the parameters.
+            Default: INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Default: -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Default: True.
+        verbose (bool): Whether to print the value for each update.
+            Default: False.
     """
 
     def __init__(self,
@@ -495,6 +541,7 @@ class LinearParamScheduler(_ParamScheduler):
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
+                 by_epoch: bool = True,
                  verbose: bool = False):
         if start_factor > 1.0 or start_factor < 0:
             raise ValueError(
@@ -513,6 +560,7 @@ class LinearParamScheduler(_ParamScheduler):
             begin=begin,
             end=end,
             last_step=last_step,
+            by_epoch=by_epoch,
             verbose=verbose)
 
     def _get_value(self):
