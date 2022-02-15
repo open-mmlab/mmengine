@@ -41,7 +41,6 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 **(2) 绘制相关基础接口**
 
 - draw()  用户使用的抽象绘制接口
-
 - draw_bbox()  绘制边界框
 - draw_text()  绘制文本框
 - draw_line()  绘制线段
@@ -54,13 +53,13 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 
 ```python
 class DetLocalVisualizer(BaseVisualizer):
-    
+
     @BaseVisualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
         ...
-          
+
     @BaseVisualizer.register_task('sem_seg')
-    def draw_sem_seg(self, pixel_data, data_type):    
+    def draw_sem_seg(self, pixel_data, data_type):
         ...
 ```
 
@@ -82,7 +81,7 @@ class DetLocalVisualizer(BaseVisualizer):
 
   - 输入 batch tensor，通道是 1 或者 3 时候，展开成一张图片显示
   - 输入 batch tensor，通道大于 3 时候，则支持选择激活度最高通道，展开成一张图片显示
-  - 输入 3 维 tensor，则选择激活度最高的 topk，然后拼接成一张图显示      
+  - 输入 3 维 tensor，则选择激活度最高的 topk，然后拼接成一张图显示
 
 ### 自定义 Visualizer
 
@@ -90,40 +89,40 @@ class DetLocalVisualizer(BaseVisualizer):
 
 ```python
 class DetLocalVisualizer(BaseVisualizer):
-     
+
     def get_image(self):
         ...
-    
+
     def draw(self,data_sample, image=None,show_gt=True, show_pred=True):
         if show_gt:
             for task in self.task_dict:
-                task_attr = 'gt_' + task 
+                task_attr = 'gt_' + task
                 if task_attr in data_sample:
                     self.task_dict[task](self, data_sample[task_attr], DataType.GT)
         if show_pred:
             for task in self.task_dict:
-                task_attr = 'pred_' + task 
+                task_attr = 'pred_' + task
                 if task_attr in data_sample:
                     self.task_dict[task](self, data_sample[task_attr], DataType.PRED)
-    
+
     @BaseVisualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
         ...
-        
+
     @BaseVisualizer.register_task('sem_seg')
-    def draw_sem_seg(self, pixel_data, data_type):    
+    def draw_sem_seg(self, pixel_data, data_type):
         ...
 ```
 
 如果想使用 DetLocalVisualizer，用户可以直接在 python 代码中实例化，代码如下
 
-```py
+```python
 det_local_visualizer=DetLocalVisualizer()
 ```
 
 用户也可以使用注册器实例化，配置如下
 
-```py
+```python
 visualizer= dict(type='DetLocalVisualizer')
 ```
 
@@ -155,10 +154,7 @@ BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功
 - add_scalar() 写标量
 - add_graph() 写模型图
 - get_writer() 获取某个 writer
-- `__enter__`
-- `__exit__`
+- `__enter__()`
+- `__exit__()`
 
 为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。
-
-
-
