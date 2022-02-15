@@ -85,8 +85,8 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
-        for key in ['dataset_type', 'task_name']:
-            assert key in dataset.meta
+        assert dataset.meta == dict(
+            dataset_type='test_dataset', task_name='test_task')
 
         # test dataset.meta with setting META in self.base_dataset
         dataset_type = 'new_dataset'
@@ -97,9 +97,10 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
-        for key in self.base_dataset.META.keys():
-            assert key in dataset.meta
-        assert dataset.meta['dataset_type'] == dataset_type
+        assert dataset.meta == dict(
+            dataset_type=dataset_type,
+            task_name='test_task',
+            classes=('dog', 'cat'))
 
         # test dataset.meta with passing meta into self.base_dataset
         meta = dict(classes=('dog', ))
@@ -108,12 +109,20 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
             meta=meta)
-        for key in meta:
-            assert key in dataset.meta
-        assert dataset.meta['classes'] == meta['classes']
+        assert self.base_dataset.META == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat'))
+        assert dataset.meta == dict(
+            dataset_type=dataset_type,
+            task_name='test_task',
+            classes=('dog', ))
         # reset `base_dataset.META`, the `dataset.meta` should not change
-        self.base_dataset.META['classes'] = ('dog', 'cat')
-        assert dataset.meta['classes'] == meta['classes']
+        self.base_dataset.META['classes'] = ('dog', 'cat', 'fish')
+        assert self.base_dataset.META == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat', 'fish'))
+        assert dataset.meta == dict(
+            dataset_type=dataset_type,
+            task_name='test_task',
+            classes=('dog', ))
 
         # test dataset.meta with passing meta into self.base_dataset and
         # lazy_init is True
@@ -124,10 +133,28 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             meta=meta,
             lazy_init=True)
-        for key in meta:
-            assert key in dataset.meta
-        assert dataset.meta['classes'] == meta['classes']
-        assert 'task_name' not in dataset.meta
+        # 'task_name' not in dataset.meta
+        assert dataset.meta == dict(
+            dataset_type=dataset_type, classes=('dog', ))
+
+        # test whether self.base_dataset.META is changed when a customize
+        # dataset inherit self.base_dataset
+        # test reset META in ToyDataset.
+        class ToyDataset(self.base_dataset):
+            META = dict(xxx='xxx')
+
+        assert ToyDataset.META == dict(xxx='xxx')
+        assert self.base_dataset.META == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat', 'fish'))
+
+        # test update META in ToyDataset.
+        class ToyDataset(self.base_dataset):
+            self.base_dataset.META['classes'] = ('bird', )
+
+        assert ToyDataset.META == dict(
+            dataset_type=dataset_type, classes=('bird', ))
+        assert self.base_dataset.META == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat', 'fish'))
 
         # set self.base_dataset to initial state
         self.__init__()
