@@ -10,7 +10,7 @@ from mmengine.optim.scheduler import (ConstantMomentum,
                                       CosineAnnealingMomentum,
                                       ExponentialMomentum, LinearMomentum,
                                       MultiStepMomentum, StepMomentum,
-                                      _ParameterScheduler)
+                                      _ParamScheduler)
 
 
 class ToyModel(torch.nn.Module):
@@ -26,8 +26,7 @@ class ToyModel(torch.nn.Module):
 
 class TestParameterScheduler(TestCase):
 
-    def __init__(self, methodName='runTest'):
-        super().__init__(methodName)
+    def setUp(self) -> None:
         self.model = ToyModel()
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=0.01, momentum=0.05)
@@ -38,7 +37,7 @@ class TestParameterScheduler(TestCase):
 
     def test_wrong_resume(self):
         with self.assertRaises(KeyError):
-            StepMomentum(self.optimizer, gamma=0.1, step_size=3, last_epoch=10)
+            StepMomentum(self.optimizer, gamma=0.1, step_size=3, last_step=10)
 
     def test_scheduler_before_optim_warning(self):
         """warns if scheduler is used before optimizer."""
@@ -58,7 +57,7 @@ class TestParameterScheduler(TestCase):
 
         def call_sch_before_optim_resume():
             scheduler = StepMomentum(
-                self.optimizer, gamma=0.1, step_size=3, last_epoch=10)
+                self.optimizer, gamma=0.1, step_size=3, last_step=10)
             scheduler.step()
             self.optimizer.step()
 
@@ -114,7 +113,7 @@ class TestParameterScheduler(TestCase):
             epochs=epochs)
 
     def _test_scheduler_value(self, schedulers, targets, epochs=10):
-        if isinstance(schedulers, _ParameterScheduler):
+        if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
@@ -213,7 +212,9 @@ class TestParameterScheduler(TestCase):
         from torch.nn import Parameter
         epochs = 10
         optimizer = torch.optim.SGD(
-            [Parameter(torch.randn(2, 2, requires_grad=True))], 0.1)
+            [Parameter(torch.randn(2, 2, requires_grad=True))],
+            0.1,
+            momentum=0.1)
         targets = [[0.1] * 3 + [0.01] * 3 + [0.001] * 3 + [0.0001]]
         scheduler = StepMomentum(optimizer, 3, gamma=0.1)
         for epoch in range(epochs):

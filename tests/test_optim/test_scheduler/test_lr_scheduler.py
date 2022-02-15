@@ -8,7 +8,7 @@ from torch.testing import assert_allclose
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
                                       ExponentialLR, LinearLR, MultiStepLR,
-                                      StepLR, _ParameterScheduler)
+                                      StepLR, _ParamScheduler)
 
 
 class ToyModel(torch.nn.Module):
@@ -24,8 +24,7 @@ class ToyModel(torch.nn.Module):
 
 class TestParameterScheduler(TestCase):
 
-    def __init__(self, methodName='runTest'):
-        super().__init__(methodName)
+    def setUp(self) -> None:
         self.model = ToyModel()
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.05)
 
@@ -35,7 +34,7 @@ class TestParameterScheduler(TestCase):
 
     def test_wrong_resume(self):
         with self.assertRaises(KeyError):
-            StepLR(self.optimizer, gamma=0.1, step_size=3, last_epoch=10)
+            StepLR(self.optimizer, gamma=0.1, step_size=3, last_step=10)
 
     def test_scheduler_before_optim_warning(self):
         """warns if scheduler is used before optimizer."""
@@ -55,7 +54,7 @@ class TestParameterScheduler(TestCase):
 
         def call_sch_before_optim_resume():
             scheduler = StepLR(
-                self.optimizer, gamma=0.1, step_size=3, last_epoch=10)
+                self.optimizer, gamma=0.1, step_size=3, last_step=10)
             scheduler.step()
             self.optimizer.step()
 
@@ -110,7 +109,7 @@ class TestParameterScheduler(TestCase):
             epochs=epochs)
 
     def _test_scheduler_value(self, schedulers, targets, epochs=10):
-        if isinstance(schedulers, _ParameterScheduler):
+        if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
