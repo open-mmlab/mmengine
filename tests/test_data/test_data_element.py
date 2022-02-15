@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
 
+import numpy as np
 import pytest
 import torch
 
@@ -16,7 +17,7 @@ class TestBaseDataElement:
         data = dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5, )))
         return metainfo, data
 
-    def check_key_existence(self, instances, metainfo=None, data=None):
+    def check_key_value(self, instances, metainfo=None, data=None):
         # check the existence of keys in metainfo, data, and instances
         if metainfo:
             for k, v in metainfo.items():
@@ -25,6 +26,7 @@ class TestBaseDataElement:
                 assert k in instances.metainfo_keys()
                 assert k not in instances.data_keys()
                 assert instances.get(k) == v
+                assert getattr(instances, k) == v
         if data:
             for k, v in data.items():
                 assert k in instances
@@ -32,6 +34,16 @@ class TestBaseDataElement:
                 assert k not in instances.metainfo_keys()
                 assert k in instances.data_keys()
                 assert instances.get(k) == v
+                assert getattr(instances, k) == v
+
+    def check_data_device(self, instances, device):
+        instances.device = device
+        for v in instances.data_values():
+            assert v.device == device
+
+    def check_data_dtype(self, instances, dtype):
+        for v in instances.data_values():
+            assert v.dtype == dtype
 
     def test_init(self):
         # initialization with no data and metainfo
@@ -47,20 +59,19 @@ class TestBaseDataElement:
         # initialization with kwargs
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo=metainfo, data=data)
-        assert instances.bboxes == data['bboxes']
-        assert instances.scores == data['scores']
-        assert instances.img_id == metainfo['img_id']
-        assert instances.img_shape == metainfo['img_shape']
-        self.check_key_existence(instances, metainfo, data)
+        self.check_key_value(instances, metainfo, data)
 
         # initialization with args
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo, data)
-        assert instances.bboxes == data['bboxes']
-        assert instances.scores == data['scores']
-        assert instances.img_id == metainfo['img_id']
-        assert instances.img_shape == metainfo['img_shape']
-        self.check_key_existence(instances, metainfo, data)
+        self.check_key_value(instances, metainfo, data)
+
+        # initialization with args
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo=metainfo)
+        self.check_key_value(instances, metainfo)
+        instances = BaseDataElement(data=data)
+        self.check_key_value(instances, data=data)
 
     def test_new(self):
         metainfo, data = self.setup_data()
@@ -68,27 +79,30 @@ class TestBaseDataElement:
 
         # test new() with no arguments
         new_instances = instances.new()
-        assert new_instances.bboxes == data['bboxes']
-        assert new_instances.scores == data['scores']
-        assert new_instances.img_id == metainfo['img_id']
-        assert new_instances.img_shape == metainfo['img_shape']
+        assert type(new_instances) == type(instances)
+        assert id(new_instances.bboxes) != id(instances.bboxes)
+        assert id(new_instances.bboxes) != id(data['bboxes'])
+        self.check_key_value(instances, metainfo, data)
 
         # test new() with arguments
         metainfo, data = self.setup_data()
         new_instances = instances.new(metainfo=metainfo, data=data)
-        assert new_instances.bboxes == data['bboxes']
-        assert new_instances.scores == data['scores']
-        assert new_instances.img_id == metainfo['img_id']
-        assert new_instances.img_shape == metainfo['img_shape']
+        assert type(new_instances) == type(instances)
+        assert id(new_instances.bboxes) != id(instances.bboxes)
+        assert id(new_instances.bboxes) != id(data['bboxes'])
+        self.check_key_value(instances, metainfo, data)
 
     def test_set_metainfo(self):
-        metainfo, data = self.setup_data()
+        metainfo, _ = self.setup_data()
         instances = BaseDataElement()
         instances.set_metainfo(metainfo)
-        self.check_key_existence(instances, metainfo=metainfo)
+        self.check_key_value(instances, metainfo=metainfo)
 
-        assert instances.img_shape == metainfo['img_shape']
-        assert instances.img_id == metainfo['img_id']
+        # test setting existing keys and new keys
+        new_metainfo, _ = self.setup_data()
+        new_metainfo.update(other=123)
+        instances.set_metainfo(new_metainfo)
+        self.check_key_value(instances, metainfo=new_metainfo)
 
     def test_set_data(self):
         metainfo, data = self.setup_data()
@@ -96,12 +110,12 @@ class TestBaseDataElement:
 
         instances.bboxes = data['bboxes']
         instances.scores = data['scores']
-        self.check_key_existence(instances, data=data)
+        self.check_key_value(instances, data=data)
 
         # a.xx only set data rather than metainfo
         instances.img_shape = metainfo['img_shape']
         instances.img_id = metainfo['img_id']
-        self.check_key_existence(instances, data=metainfo)
+        self.check_key_value(instances, data=metainfo)
 
     def test_delete_modify(self):
         metainfo, data = self.setup_data()
@@ -112,11 +126,7 @@ class TestBaseDataElement:
         instances.scores = new_data['scores']
         instances.img_id = new_metainfo['img_id']
         instances.img_shape = new_metainfo['img_shape']
-
-        assert instances.bboxes == new_data['bboxes']
-        assert instances.scores == new_data['scores']
-        assert instances.img_id == new_metainfo['img_id']
-        assert instances.img_shape == new_metainfo['img_shape']
+        self.check_key_value(instances, new_metainfo, new_data)
 
         assert instances.bboxes != data['bboxes']
         assert instances.scores != data['scores']
@@ -124,14 +134,13 @@ class TestBaseDataElement:
         assert instances.img_shape != metainfo['img_shape']
 
         del instances.bboxes
-        del instances.scores
+        assert instances.pop('scores', None) == new_data['scores']
+        with AttributeError:
+            del instances.scores
         assert 'bboxes' not in instances
         assert 'scores' not in instances
         assert instances.pop('bboxes', None) is None
         assert instances.pop('scores', 'abcdef') == 'abcdef'
-
-        assert instances.pop('img_shape') == new_metainfo['img_shape']
-        assert instances.pop('img_id') == new_metainfo['img_id']
 
     @pytest.mark.skipif(
         not torch.cuda.is_available(), reason='GPU is required!')
@@ -140,29 +149,32 @@ class TestBaseDataElement:
         instances = BaseDataElement(metainfo, data)
 
         cuda_instances = instances.cuda()
-        assert instances.device == 'cpu'
-        assert instances.bboxes.device == 'cpu'
-        assert instances.scores.device == 'cpu'
-        assert cuda_instances.device == 'cuda:0'
-        assert cuda_instances.bboxes.device == 'cuda:0'
-        assert cuda_instances.scores.device == 'cuda:0'
+        self.check_data_device(instances, 'cuda:0')
 
+        # here we further test to convert from cuda to cpu
         cpu_instances = cuda_instances.cpu()
-        assert cpu_instances.device == 'cpu'
-        assert cpu_instances.bboxes.device == 'cpu'
-        assert cpu_instances.scores.device == 'cpu'
+        self.check_data_device(cpu_instances, 'cpu')
         del cuda_instances
 
         cuda_instances = instances.to('cuda:0')
-        assert cuda_instances.device == 'cuda:0'
-        assert cuda_instances.bboxes.device == 'cuda:0'
-        assert cuda_instances.scores.device == 'cuda:0'
+        self.check_data_device(cuda_instances, 'cuda:0')
 
     def test_cpu(self):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo, data)
+        self.check_data_device(instances, 'cpu')
 
         cpu_instances = instances.cpu()
         assert cpu_instances.device == 'cpu'
         assert cpu_instances.bboxes.device == 'cpu'
         assert cpu_instances.scores.device == 'cpu'
+
+    def test_numpy_tensor(self):
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo, data)
+
+        np_instances = instances.numpy()
+        self.check_data_dtype(np_instances, np.ndarray)
+
+        tensor_instances = instances.to_tensor()
+        self.check_data_dtype(tensor_instances, torch.Tensor)
