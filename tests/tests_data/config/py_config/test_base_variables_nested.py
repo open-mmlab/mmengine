@@ -1,4 +1,4 @@
-_base_ = ['./use_basevar.py']
+_base_ = ['./test_base_variables.py']
 base = '_base_.item8'
 item11 = {{_base_.item8}}
 item12 = {{_base_.item9}}

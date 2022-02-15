@@ -1,6 +1,6 @@
 {
     "_base_": [
-        "../py_config/use_basevar.py"
+        "../py_config/test_base_variables.py"
     ],
     "base": "_base_.item8",
     "item11": {{ _base_.item8 }},
