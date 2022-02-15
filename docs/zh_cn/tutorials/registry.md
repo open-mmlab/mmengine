@@ -6,12 +6,12 @@ OpenMMLab 大多数算法库均使用注册器来管理他们的代码模块，�
 
 ## 什么是注册器
 
-MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类的映射，使得用户可以借助字符串查找到相应的类，例如维护字符串 `"ResNet"` 到 `ResNet` 的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类。
+MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类的映射，使得用户可以借助字符串查找到相应的类，例如维护字符串 `"ResNet"` 到 `ResNet` 类的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类。
 而模块构建方法则定义了如何根据字符串查找到对应的类，并定义了如何实例化这个类，例如根据规则通过字符串 `"bn"` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。
 MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 来查找并实例化字符串对应的类。
 
 一个注册器管理的类通常有相似的接口和功能，因此该注册器可以被视作这些类的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类。
-使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至`使用注册器提高代码的扩展性`章节了解注册器是如何提供代码拓展性的。
+使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至`使用注册器提高代码的扩展性`章节了解注册器是如何提高代码拓展性的。
 
 ## 入门用法
 
@@ -109,14 +109,13 @@ CONVERTERS = Registry('converter', build_func=build_converter)
 
 ## 使用注册器提高代码的扩展性
 
-使用注册器管理功能相似的模块可以便利模块的灵活拓展与自由组合。下面通过例子介绍注册器的两个优点。
+使用注册器管理功能相似的模块可以便利模块的自由组合与灵活拓展。下面通过例子介绍注册器的两个优点。
 
 ### 模块的自由组合
 
 假设用户实现了一个模块 `ConvBlock`，`ConvBlock` 中定义了一个卷积层和一个激活层。
 
 ```python
-# train.py
 import torch.nn as nn
 
 class ConvBlock(nn.Module):
@@ -130,23 +129,21 @@ class ConvBlock(nn.Module):
         x = self.act(x)
         return x
 
-
 conv_blcok = ConvBlock()
 ```
 
-可以发现，此时 ConvBlock 只支持 `nn.Conv2d` 和 `nn.ReLU` 的组合。如果我们想要让 `ConvBlock` 更加通用，例如让它可以使用其他类型的卷积层或者激活层，在不使用注册器的情况下，需要进行如下改动
+可以发现，此时 ConvBlock 只支持 `nn.Conv2d` 和 `nn.ReLU` 的组合。如果我们想要让 `ConvBlock` 更加通用，例如让它可以使用其他类型的激活层，在不使用注册器的情况下，需要做如下改动
 
 ```python
-# train.py
 import torch.nn as nn
 
 class ConvBlock(nn.Module):
 
     def __init__(self, act_type):
         self.conv = nn.Conv2d()
-        if act_type = 'relu':
+        if act_type == 'relu':
             self.act = nn.ReLU()
-        elif act_type = 'gelu:
+        elif act_type == 'gelu':
             self.act = nn.GELU()
 
     def forward(self, x):
@@ -154,39 +151,40 @@ class ConvBlock(nn.Module):
         x = self.act(x)
         return x
 
-
-conv_blcok = ConvBlock()
+conv_block = ConvBlock()
 ```
 
 可以发现，上述改动需要枚举模块的各种类型，无法灵活地组合各种模块。而如果使用注册器，该问题可以轻松解决，用户只需要在构建 ConvBlock 的时候设置不同的 `conv_cfg` 和 `act_cfg` 即可达到目的。
 
 ```python
 import torch.nn as nn
-from mmengine import MODELS, ACTIVATION_LAYERS
+from mmengine import MODELS
 
-# 将 conv 和 act 分别加入 MODELS 和 ACTIVATION_LAYERS 的注册器
-
+# 将卷积和激活模块注册到 MODELS
+MODELS.register_module(module=nn.Conv2d)
+MODELS.register_module(module=nn.ReLU)
+MODELS.register_module(module=nn.GELU)
 
 class ConvBlock(nn.Module):
 
     def __init__(self, conv_cfg, act_cfg):
         self.conv = MODELS.build(conv_cfg)
-        self.pool = ACTIVATION_LAYERS.build(act_cfg)
+        self.pool = MODELS.build(act_cfg)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.act(x)
         return x
 
-# 注意，conv_cfg 和 pool_cfg 可以通过解析配置文件得到
-conv_cfg = dict(type='DeformConv2d')
-act_cfg = dict(type='ReLU')
+# 注意，conv_cfg 和 act_cfg 可以通过解析配置文件得到
+conv_cfg = dict(type='Conv2d')
+act_cfg = dict(type='GELU')
 conv_block = ConvBlock(conv_cfg, act_cfg)
 ```
 
 ### 模块的灵活拓展
 
-假设实现了一个卷积模块 `Con2d`，
+假设实现了一个卷积模块 `Conv2d`，
 
 ```python
 # model/conv.py
@@ -258,11 +256,11 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 
 为了方便跨库调用，MMEngine 提供了 11 个根注册器：
 
-- RUNNERS: Runner 相关的注册器，如 `EpochBasedRunner`, `IterBasedRunner`
+- RUNNERS: Runner 的注册器，如 `EpochBasedRunner`, `IterBasedRunner`
 - RUNNER_CONSTRUCTORS: Runner 的构造器
 - HOOKS: 钩子，如 `CheckpointHook`, `ProfilerHook`
 - DATASETS: 数据集
-- SAMPLERS: `Dataloader` 的 `sampler`，用于采样数据
+- DATA_SAMPLERS: `Dataloader` 的 `sampler`，用于采样数据
 - PIPELINES: 各种数据预处理，如 `Resize`, `Reshape`
 - MODELS: 模型的各种模块
 - WEIGHT_INITIALIZERS: 权重初始化的工具
@@ -360,40 +358,40 @@ model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
 
 注册器除了支持两层结构，三层甚至更多层结构也是支持的。
 
-假设我们新建了一个项目 `NewProject`，它的 `MODELS` 注册器继承自 `MMDetection` 的 `MODELS`，并且它会用到 `MMClassification` 中的 `ResNet` 模块。
+假设我们新建了一个项目 `DetPlus`，它的 `MODELS` 注册器继承自 `MMDetection` 的 `MODELS`，并且它会用到 `MMClassification` 中的 `ResNet` 模块。
 
-`NewProject` 中定义了模块 `MetaNet`，
+`DetPlus` 中定义了模块 `MetaNet`，
 
 ```python
 from mmengine.model import Registry
 from mmdet.model import MODELS as MMDET_MODELS
-MODELS = Registry('model', parent=MMDET_MODELS, scope='new_project')
+MODELS = Registry('model', parent=MMDET_MODELS, scope='det_plus')
 
 @MODELS.register_module()
 class MetaNet(nn.Module):
     pass
 ```
 
-下图是 `MMEngine`, `MMDetection`, `MMClassification` 以及 `NewProject` 四个项目的注册器层级结构。
+下图是 `MMEngine`, `MMDetection`, `MMClassification` 以及 `DetPlus` 四个项目的注册器层级结构。
 
-![registry](https://user-images.githubusercontent.com/58739961/153880654-00c30d60-7a2c-4129-9dd7-6deaa12cfefc.png)
+![registry](https://user-images.githubusercontent.com/58739961/153982327-7f93c888-6fb1-4df2-a14c-4bfc6e34fe61.png)
 
-我们可以在 `NewProject` 中调用 `MMDetection` 或者 `MMClassification` 中的模块，
+我们可以在 `DetPlus` 中调用 `MMDetection` 或者 `MMClassification` 中的模块，
 
 ```python
-from mmocr.model import MODELS
+from detplus.model import MODELS
 # 可以不提供 mmdet 前缀，如果在 Meta 找不到则会向上在 MMDet 中查找
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
 # 调用兄弟节点的模块需提供 mmcls 前缀，但也可以设置 default_scope 参数
 model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 ```
 
-也可以在 `MMClassification` 中调用 `NewProject` 的模块。
+也可以在 `MMClassification` 中调用 `DetPlus` 的模块。
 
 ```python
 from mmcls.models import MODELS
 # 需要注意前缀的顺序，'meta.mmdet.ResNet' 是不正确的
-model = MODELS.build(cfg=dict(type='mmdet.new_project.FCNet'))
+model = MODELS.build(cfg=dict(type='mmdet.detplus.MetaNet'))
 # 当然，更简单的方法是直接设置 default_scope
-model = MODELS.build(cfg=dict(type='FCNet', default_scope='new_project'))
+model = MODELS.build(cfg=dict(type='MetaNet', default_scope='detplus'))
 ```
