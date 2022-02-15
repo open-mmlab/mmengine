@@ -1,15 +1,15 @@
 # 可视化 (Visualizer)
 
-可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 早期设计中，可视化功能由一个个独立的函数实现，例如 `imshow_bboxes` 和 `imshow_det_bboxes`，该设计存在的主要问题可以总结为：
+可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 算法库的早期设计中，可视化功能由一个个独立的函数实现，例如 `imshow_bboxes` 和 `imshow_det_bboxes`，该设计存在的主要问题可以总结为：
 
 - 扩展性不足，功能单一，无法通过扩展实现定制可视化需求
 - OpenMMLab 各个下游库没有统一可视化接口，不利于理解和维护
 - 无法在训练和测试流程的任意点位进行可视化
 
-基于上述问题，结合 [抽象数据格式和命名规约]()，提出了可视化对象 Visualizer 和写端对象 Writer 的概念
+基于上述问题，提出了可视化对象 Visualizer 和写端对象 Writer 的概念
 
-- **Visualizer** 负责单张图片的各类绘制和可视化功能
-- **Writer** 负责将各类数据写入到指定后端，写入的数据可以是图片，模型结构图，也可以是标量例如 Acc 指标，而写入后端可以选择本地写端 LocalWriter、TensorboardWriter、 WandbWriter 或者自定义 Writer
+- **Visualizer** 负责单张图片的各类绘制和可视化功能。MMEngine 提供了统一接口的抽象类 BaseVisualizer，各个下游库可以继承 BaseVisualizer 实现所需的可视化功能，例如 DetLocalVisualizer 实现检测相关的本地可视化功能，DetWandbVisualizer 实现检测相关的远程 Wandb 可视化功能
+- **Writer** 负责将各类数据写入到指定后端，写入的数据可以是图片，模型结构图，也可以是标量例如模型精度指标。MMEngine 提供了统一接口的抽象类 BaseWriter，和一些常用的 Writer 如 LocalWriter 来支持将数据写入本地，TensorboardWriter 来支持将数据写入 Tensorboard，WandbWriter 来支持将数据写入 Wandb。用户也可以自定义 Writer 来将数据写入自定义后端。
 - **RuntimeWriter** 负责管理所有运行中实例化的 Writer 对象。假设训练或者测试过程中同时存在多个  Writer 对象，RuntimeWriter 会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法
 
 Visualizer、Writer 和 RuntimeWriter 三者联系如下图所示：
@@ -24,13 +24,13 @@ Visualizer、Writer 和 RuntimeWriter 三者联系如下图所示：
 
 ## 可视化对象 Visualizer
 
-可视化对象 Visualizer 负责单张图片的各类绘制和可视化功能。为了统一 OpenMMLab 各个下游库的可视化接口，设计了 BaseVisualizer 类，下游库可以继承 BaseVisualizer，实现自己的可视化需求，例如 MMDetection 的 DetLocalVisualizer、DetTensorboardVisualizer、DetWandbVisualizer，用于进行本地端可视化、Tensorboard 端可视化和 Wandb 端可视化等等。
+可视化对象 Visualizer 负责单张图片的各类绘制和可视化功能。为了统一 OpenMMLab 各个算法库的可视化接口，MMEngine 定义了 Visualizer 的基类 BaseVisualizer，下游库可以继承 BaseVisualizer，实现自己的可视化需求，例如 MMDetection 的 DetLocalVisualizer、DetTensorboardVisualizer、DetWandbVisualizer，用于进行本地端可视化、Tensorboard 端可视化和 Wandb 端可视化等等。
 
 ### BaseVisualizer
 
 BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下：
 
-**(1) 绘制无关类接口**
+**(1) 绘制无关的功能性接口**
 
 - set_image 设置原始图片数据
 - get_image 获取绘制后的图片数据
@@ -40,7 +40,7 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 
 **(2) 绘制相关基础接口**
 
-- draw 对外抽象绘制接口
+- draw 用户使用的抽象绘制接口
 
 - draw_bbox 绘制边界框
 - draw_text 绘制文本框
@@ -50,7 +50,7 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 - draw_binary_mask 绘制二值掩码
 - draw_featmap 绘制特征图
 
-前面说过，Visualizer 接受的数据除了 image，还包括规定好的数据命名规约。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
+前面说过，Visualizer 接受的数据除了 image，还包括符合抽象数据接口规范的抽象数据封装。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
 
 ```python
 class DetLocalVisualizer(BaseVisualizer):
@@ -86,7 +86,7 @@ class DetLocalVisualizer(BaseVisualizer):
 
 ### 自定义 Visualizer
 
-自定义 Visualizer 中大部分情况下只需要实现 get_image 和 draw 接口。以检测任务中可视化 instances 和 sem_seg 为例，则本地端可视化核心代码如下：
+自定义的 Visualizer 中大部分情况下只需要实现 get_image 和 draw 接口。以检测任务中可视化 instances 和 sem_seg 为例，则本地端可视化核心代码如下：
 
 ```python
 class DetLocalVisualizer(BaseVisualizer):
