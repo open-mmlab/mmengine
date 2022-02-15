@@ -16,7 +16,7 @@ Visualizer、Writer 和 RuntimeWriter 三者联系如下图所示：
 
 ![Visualizer](https://user-images.githubusercontent.com/17425982/153836473-d6e1708d-20b8-433e-9fd7-880bfb4e42bf.png)
 
-![Writer 和 RuntimeWriter](https://user-images.githubusercontent.com/17425982/153836639-8f08bfac-6574-484c-827e-7cac81283d57.png)
+![Writer and RuntimeWriter](https://user-images.githubusercontent.com/17425982/153995219-fa3d57a2-83bc-490c-a16d-b9539dc3a030.png)
 
 在训练或者测试过程中，常用的可视化做法为：先利用 Visualizer 对当前图片进行绘制，例如绘制边界框 bbox 和 掩码 mask 等等，然后将 Visualizer 绘制后的图片传递给 Writer 对象，由 Writer 对象负责写入到指定后端。如果想可视化训练或者测试过程中的曲线，例如 Acc 指标曲线，可以直接利用 Writer 对象接口实现，无需使用 Visualizer。
 
@@ -32,23 +32,23 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 
 **(1) 绘制无关的功能性接口**
 
-- set_image 设置原始图片数据
-- get_image 获取绘制后的图片数据
-- save 保存图片
-- show 可视化
-- register_task 注册绘制函数
+- set_image()  设置原始图片数据
+- get_image()  获取绘制后的图片数据
+- save()  保存图片
+- show()  可视化
+- register_task()  注册绘制函数
 
 **(2) 绘制相关基础接口**
 
-- draw 用户使用的抽象绘制接口
+- draw()  用户使用的抽象绘制接口
 
-- draw_bbox 绘制边界框
-- draw_text 绘制文本框
-- draw_line 绘制线段
-- draw_circle 绘制圆
-- draw_polygon 绘制多边形
-- draw_binary_mask 绘制二值掩码
-- draw_featmap 绘制特征图
+- draw_bbox()  绘制边界框
+- draw_text()  绘制文本框
+- draw_line()  绘制线段
+- draw_circle()  绘制圆
+- draw_polygon()  绘制多边形
+- draw_binary_mask()  绘制二值掩码
+- draw_featmap()  绘制特征图
 
 前面说过，Visualizer 接受的数据除了 image，还包括符合抽象数据接口规范的抽象数据封装。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图，我们希望当输入数据中同时存在 instances 和 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
 
@@ -115,7 +115,17 @@ class DetLocalVisualizer(BaseVisualizer):
         ...
 ```
 
-DetLocalVisualizer 的使用可以直接实例化，或者在配置文件中注册器模式实例化 `visualizer= dict(type='DetLocalVisualizer')`。
+如果想使用 DetLocalVisualizer，用户可以直接在 python 代码中实例化，代码如下
+
+```py
+det_local_visualizer=DetLocalVisualizer()
+```
+
+用户也可以使用注册器实例化，配置如下
+
+```py
+visualizer= dict(type='DetLocalVisualizer')
+```
 
 ## 写端 Writer
 
