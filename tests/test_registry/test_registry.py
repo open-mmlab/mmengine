@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine.registry import Registry, build_from_cfg
+from mmengine import Config, ConfigDict, Registry, build_from_cfg
 
 
 class TestRegistry:
@@ -389,26 +389,29 @@ def test_build_from_cfg():
             self.stages = stages
 
     # test `cfg` parameter
+    # `cfg` should be a dict, ConfigDict or Config object
+    with pytest.raises(
+            TypeError, match="cfg must be a dict, but got <class 'str'>"):
+        cfg = 'ResNet'
+        model = build_from_cfg(cfg, BACKBONES)
+
+    # `cfg` is a dict
     cfg = dict(type='ResNet', depth=50)
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
-    cfg = dict(type='ResNeXt', depth=50, stages=3)
-    model = build_from_cfg(cfg, BACKBONES)
-    assert isinstance(model, ResNeXt)
-    assert model.depth == 50 and model.stages == 3
-
-    cfg = dict(type=ResNet, depth=50)
+    # `cfg` is a ConfigDict object
+    cfg = ConfigDict(dict(type='ResNet', depth=50))
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
-    # `cfg` should be a dict
-    with pytest.raises(
-            TypeError, match="cfg must be a dict, but got <class 'str'>"):
-        cfg = 'ResNet'
-        model = build_from_cfg(cfg, BACKBONES)
+    # `cfg` is a Config object
+    cfg = Config(dict(type='ResNet', depth=50))
+    model = build_from_cfg(cfg, BACKBONES)
+    assert isinstance(model, ResNet)
+    assert model.depth == 50 and model.stages == 4
 
     # `cfg` is a dict but it does not contain the key "type"
     with pytest.raises(KeyError, match='must contain the key "type"'):
@@ -421,6 +424,16 @@ def test_build_from_cfg():
             match="type must be a str or valid type, but got <class 'int'>"):
         cfg = dict(type=1000)
         model = build_from_cfg(cfg, BACKBONES)
+
+    cfg = dict(type='ResNeXt', depth=50, stages=3)
+    model = build_from_cfg(cfg, BACKBONES)
+    assert isinstance(model, ResNeXt)
+    assert model.depth == 50 and model.stages == 3
+
+    cfg = dict(type=ResNet, depth=50)
+    model = build_from_cfg(cfg, BACKBONES)
+    assert isinstance(model, ResNet)
+    assert model.depth == 50 and model.stages == 4
 
     # non-registered class
     with pytest.raises(KeyError, match='VGG is not in the backbone registry'):
