@@ -26,8 +26,8 @@ def list_from_file(filename,
             zeros and negatives mean no limitation.
         encoding (str): Encoding used to open the file. Default utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Default: None.
+            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
+            details. Default: None.
 
     Examples:
         >>> list_from_file('/path/of/your/file')  # disk
@@ -73,8 +73,8 @@ def dict_from_file(filename,
             type conversion will be performed if specified.
         encoding (str): Encoding used to open the file. Default utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Default: None.
+            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
+            details. Default: None.
 
     Examples:
         >>> dict_from_file('/path/of/your/file')  # disk

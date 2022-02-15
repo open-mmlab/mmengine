@@ -13,7 +13,8 @@ from typing import Iterable, Iterator, Optional, Tuple, Union
 from urllib.request import urlopen
 
 import mmengine
-from mmengine.utils import has_method, is_filepath
+from ..misc import has_method
+from ..path import is_filepath
 
 
 class BaseStorageBackend(metaclass=ABCMeta):
@@ -51,10 +52,6 @@ class CephBackend(BaseStorageBackend):
         path_mapping (dict|None): path mapping dict from local path to Petrel
             path. When ``path_mapping={'src': 'dst'}``, ``src`` in ``filepath``
             will be replaced by ``dst``. Default: None.
-
-    .. warning::
-        :class:`mmcv.fileio.file_client.CephBackend` will be deprecated,
-        please use :class:`mmcv.fileio.file_client.PetrelBackend` instead.
     """
 
     def __init__(self, path_mapping=None):
