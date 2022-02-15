@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
+from unittest import TestCase
 
 import numpy as np
 import pytest
@@ -8,7 +9,7 @@ import torch
 from mmengine.data import BaseDataElement
 
 
-class TestBaseDataElement:
+class TestBaseDataElement(TestCase):
 
     def setup_data(self):
         metainfo = dict(
@@ -135,8 +136,9 @@ class TestBaseDataElement:
 
         del instances.bboxes
         assert instances.pop('scores', None) == new_data['scores']
-        with AttributeError:
+        with self.assertRaises(AttributeError):
             del instances.scores
+
         assert 'bboxes' not in instances
         assert 'scores' not in instances
         assert instances.pop('bboxes', None) is None
@@ -178,3 +180,17 @@ class TestBaseDataElement:
 
         tensor_instances = instances.to_tensor()
         self.check_data_dtype(tensor_instances, torch.Tensor)
+
+    def test_repr(self):
+        metainfo = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
+        instances = BaseDataElement(metainfo=metainfo)
+        instances.det_labels = torch.LongTensor([0, 1, 2, 3])
+        instances.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
+        assert repr(instances) == ('<BaseDataElement(\n'
+                                   '  META INFORMATION\n'
+                                   'img_shape: (800, 1196, 3)\n'
+                                   'pad_shape: (800, 1216, 3)\n'
+                                   '  DATA FIELDS\n'
+                                   'shape of det_labels: torch.Size([4])\n'
+                                   'shape of det_scores: torch.Size([4])\n'
+                                   ') at 0x7f84acd10f90>')
