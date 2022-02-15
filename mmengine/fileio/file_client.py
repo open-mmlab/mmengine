@@ -4,7 +4,6 @@ import os
 import os.path as osp
 import re
 import tempfile
-import warnings
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
@@ -43,47 +42,8 @@ class BaseStorageBackend(metaclass=ABCMeta):
         pass
 
 
-class CephBackend(BaseStorageBackend):
-    """Ceph storage backend (for internal use).
-
-    Args:
-        path_mapping (dict|None): path mapping dict from local path to Petrel
-            path. When ``path_mapping={'src': 'dst'}``, ``src`` in ``filepath``
-            will be replaced by ``dst``. Default: None.
-
-    .. warning::
-        :class:`mmcv.fileio.file_client.CephBackend` will be deprecated,
-        please use :class:`mmcv.fileio.file_client.PetrelBackend` instead.
-    """
-
-    def __init__(self, path_mapping=None):
-        try:
-            import ceph
-        except ImportError:
-            raise ImportError('Please install ceph to enable CephBackend.')
-
-        warnings.warn(
-            'CephBackend will be deprecated, please use PetrelBackend instead',
-            DeprecationWarning)
-        self._client = ceph.S3Client()
-        assert isinstance(path_mapping, dict) or path_mapping is None
-        self.path_mapping = path_mapping
-
-    def get(self, filepath):
-        filepath = str(filepath)
-        if self.path_mapping is not None:
-            for k, v in self.path_mapping.items():
-                filepath = filepath.replace(k, v)
-        value = self._client.Get(filepath)
-        value_buf = memoryview(value)
-        return value_buf
-
-    def get_text(self, filepath, encoding=None):
-        raise NotImplementedError
-
-
 class PetrelBackend(BaseStorageBackend):
-    """Petrel storage backend (for internal use).
+    """Petrel storage backend (for internal usage).
 
     PetrelBackend supports reading and writing data to multiple clusters.
     If the file path contains the cluster name, PetrelBackend will read data
@@ -152,8 +112,8 @@ class PetrelBackend(BaseStorageBackend):
 
         Returns:
             memoryview: A memory view of expected bytes object to avoid
-                copying. The memoryview object can be converted to bytes by
-                ``value_buf.tobytes()``.
+            copying. The memoryview object can be converted to bytes by
+            ``value_buf.tobytes()``.
         """
         filepath = self._map_path(filepath)
         filepath = self._format_path(filepath)
@@ -770,7 +730,6 @@ class FileClient:
 
     _backends = {
         'disk': HardDiskBackend,
-        'ceph': CephBackend,
         'memcached': MemcachedBackend,
         'lmdb': LmdbBackend,
         'petrel': PetrelBackend,
