@@ -128,7 +128,7 @@ visualizer= dict(type='DetLocalVisualizer')
 
 ## 写端 Writer
 
-Visualizer 只是实现了单张图片的可视化功能，但是在训练或者测试过程中，对一些关键指标的记录或者模型训练超参依然非常重要，此功能通过写端 Writer 实现。同时写端 Writer 也可以通过 `bind_visualizer` 方法绑定 Visualizer 对象，从而通过 Writer 实现写图片、写指标等功能。
+Visualizer 只是实现了单张图片的可视化功能，但是在训练或者测试过程中，对一些关键指标或者模型训练超参的记录非常重要，此功能通过写端 Writer 实现。同时写端 Writer 也可以通过 `bind_visualizer` 方法绑定 Visualizer 对象，从而通过 Writer 实现写图片、写指标等功能。
 
 ### BaseWriter
 
@@ -143,7 +143,23 @@ BaseWriter 定义了对外调用的接口规范，主要接口如下：
 
 BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。
 
-由于 Visualizer 和 Writer 对象是解耦的，用户可以通过配置文件自由组合各种 Visualizer 和 Writer，例如 WandbWriter 绑定 LocalVisualizer，表示图片可视化功能由 LocalVisualizer 提供，但是最终图片是写到了 Wandb 端，也可以 LocalWriter 绑定 WandbVisualizer，表示图片可视化功能由 WandbVisualizer 提供，然后直接保存到本地端。
+由于 Visualizer 和 Writer 对象是解耦的，用户可以通过配置文件自由组合各种 Visualizer 和 Writer，例如 WandbWriter 绑定 LocalVisualizer，表示图片可视化功能由 LocalVisualizer 提供，但是最终图片是写到了 Wandb 端，也可以 LocalWriter 绑定 WandbVisualizer，表示图片可视化功能由 WandbVisualizer 提供，然后直接保存到本地端。一个简单的例子如下所示
+
+```python
+# 1 实例化
+det_local_visualizer=DetLocalVisualizer()
+wandb_writer=WandbWriter()
+# 2 绑定
+wandb_writer.bind_visualizer(det_local_visualizer)
+
+# 3 在任意代码位置，使用方式 1 (推荐)
+wandb_writer.visualizer.draw(data_sample，image)
+wandb_writer.add_image('vis_image', wandb_writer.visualizer.get_image())
+
+# 3 在任意代码位置，使用方式 2 (如果你可以直接获取到 visualizer 实例)
+det_local_visualizer.draw(data_sample，image)
+wandb_writer.add_image('vis_image', det_local_visualizer.get_image())
+```
 
 ## RuntimeWriter
 
@@ -157,4 +173,29 @@ BaseWriter 定义了 4 种常见的写数据接口，考虑到某些写后端功
 - `__enter__()`
 - `__exit__()`
 
-为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。
+为了让用户可以在代码的任意位置进行数据可视化，RuntimeWriter 类实现 `__enter__` 和 ` __exit`__ 方法，并且在 Runner 中使上下文生效，从而在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 RuntimeWriter 类实例，从而调用该类的各种可视化和写方法。一个简单粗略的实现和用例如下
+
+```python
+# 假设 writer 只有一个
+visualizer=build_visualizer(cfg.visualizer,VISUALIZERS)
+writer =build_writer(cfg.writer,WRITERS)
+writer.bind_visualizer(visualizer)
+
+# 假设在 epoch 训练过程中
+with RuntimeWriter(writer):
+    while self.epoch < self._max_epochs:
+         for i, flow in enumerate(workflow):
+            ...
+```
+
+```python
+# 配置文件写法
+visualizer= dict(type='DetLocalVisualizer', show=False)
+writer = dict(type='WandbWriter',init_kwargs=dict(project='demo'))
+
+# 在上下文作用域生效的任意位置
+runtime_writer=get_writers()
+runtime_writer.visualizer.draw(data_sample，image)
+runtime_writer.add_image('vis_image',runtime_writer.visualizer.get_image(),iter=iter)
+runtime_writer.add_scalar('acc',val,iter=iter)
+```
