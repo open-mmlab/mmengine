@@ -203,8 +203,9 @@ class TestConfig:
             cfg[[1, 2]] = 0
 
     def test_pretty_text(self, tmp_path):
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
+        cfg_file = osp.join(
+            self.data_path,
+            'config/py_config/test_merge_from_multiple_bases.py')
         cfg = Config.fromfile(cfg_file)
         text_cfg_filename = tmp_path / '_text_config.py'
         with open(text_cfg_filename, 'w') as f:
@@ -329,9 +330,12 @@ class TestConfig:
         with pytest.raises(IOError):
             Config.fromstring(cfg_str, '.xml')
 
-    def test_dump(self, tmp_path):
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/simple_config.py')
+    @pytest.mark.parametrize('file_path', [
+        'config/py_config/simple_config.py',
+        'config/py_config/test_merge_from_multiple_bases.py'
+    ])
+    def test_dump(self, file_path, tmp_path):
+        cfg_file = osp.join(self.data_path, file_path)
         cfg = Config.fromfile(cfg_file)
         dump_py = tmp_path / 'simple_config.py'
         dump_json = tmp_path / 'simple_config.json'
@@ -340,6 +344,9 @@ class TestConfig:
         cfg.dump(dump_py)
         cfg.dump(dump_json)
         cfg.dump(dump_yaml)
+
+        assert cfg.dump() == cfg.pretty_text
+
         assert open(dump_py, 'r').read() == cfg.pretty_text
         assert open(dump_json, 'r').read() == cfg.pretty_text
         assert open(dump_yaml, 'r').read() == cfg.pretty_text
