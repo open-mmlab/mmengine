@@ -24,7 +24,7 @@ class ToyModel(torch.nn.Module):
         return self.conv2(F.relu(self.conv1(x)))
 
 
-class TestParameterScheduler(TestCase):
+class TestMomentumScheduler(TestCase):
 
     def setUp(self) -> None:
         self.model = ToyModel()
@@ -36,6 +36,7 @@ class TestParameterScheduler(TestCase):
             StepMomentum('invalid_optimizer', step_size=1)
 
     def test_overwrite_optimzer_step(self):
+        # raise warning if the counter in optimizer.step() is overwritten
         scheduler = ExponentialMomentum(self.optimizer, gamma=0.9)
 
         def overwrite_fun():
@@ -60,7 +61,10 @@ class TestParameterScheduler(TestCase):
         for epoch in range(5):
             for param_group in self.optimizer.param_groups:
                 results.append(param_group['momentum'])
-                # simulate training break here.
+                # The order should be
+                # train_epoch() -> save_checkpoint() -> scheduler.step().
+                # Break at here to simulate the checkpoint is saved before
+                # the scheduler.step().
                 if epoch == 4:
                     break
                 scheduler.step()

@@ -6,15 +6,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.testing import assert_allclose
 
-# yapf: disable
 from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       CosineAnnealingParamScheduler,
                                       ExponentialParamScheduler,
                                       LinearParamScheduler,
                                       MultiStepParamScheduler,
                                       StepParamScheduler, _ParamScheduler)
-
-# yapf: enable
 
 
 class ToyModel(torch.nn.Module):
@@ -44,6 +41,7 @@ class TestParameterScheduler(TestCase):
             StepParamScheduler('invalid_optimizer', 'lr', step_size=1)
 
     def test_overwrite_optimzer_step(self):
+        # raise warning if the counter in optimizer.step() is overwritten
         scheduler = ExponentialParamScheduler(
             self.optimizer, param_name='lr', gamma=0.9)
 
@@ -75,7 +73,10 @@ class TestParameterScheduler(TestCase):
         for epoch in range(5):
             for param_group in self.optimizer.param_groups:
                 results.append(param_group['lr'])
-                # simulate training break here.
+                # The order should be
+                # train_epoch() -> save_checkpoint() -> scheduler.step().
+                # Break at here to simulate the checkpoint is saved before
+                # the scheduler.step().
                 if epoch == 4:
                     break
                 scheduler.step()
