@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from mmengine.data import (ClassBalancedDataset, ConcatDataset,
-                           BaseDataset, RepeatDataset)
+from mmengine.data import (BaseDataset, ClassBalancedDataset, ConcatDataset,
+                           RepeatDataset)
 
 
 class TestBaseDataset:
@@ -14,7 +14,7 @@ class TestBaseDataset:
         self.base_dataset = BaseDataset
 
         self.data_info = dict(filename='test_img.jpg', height=604, width=640)
-        self.base_dataset._parse_raw_data = MagicMock(
+        self.base_dataset.parse_annotations = MagicMock(
             return_value=self.data_info)
 
         self.imgs = torch.rand((2, 3, 32, 32))
@@ -58,6 +58,25 @@ class TestBaseDataset:
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/wrong_annotation.json')
+
+        # test the instantiation of self.base_dataset when `parse_annotations`
+        # return `list[dict]`
+        self.base_dataset.parse_annotations = MagicMock(
+            return_value=[self.data_info,
+                          self.data_info.copy()])
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json')
+        assert dataset._fully_initialized is True
+        assert hasattr(dataset, 'data_infos')
+        assert hasattr(dataset, 'data_address')
+        assert len(dataset) == 4
+        assert dataset[0] == dict(imgs=self.imgs)
+        assert dataset.get_data_info(0) == self.data_info
+
+        # set self.base_dataset to initial state
+        self.__init__()
 
     def test_meta(self):
         # test dataset.meta with setting the meta from annotation file as the
@@ -113,81 +132,94 @@ class TestBaseDataset:
         # set self.base_dataset to initial state
         self.__init__()
 
-    def test_length(self):
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='annotations/dummy_annotation.json')
-        assert len(dataset) == 2
-
-        # test `__len__()` when lazy_init is True
+    @pytest.mark.parametrize('lazy_init', [True, False])
+    def test_length(self, lazy_init):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        # call `full_init()` automatically
-        assert len(dataset) == 2
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
+            lazy_init=lazy_init)
 
-    def test_getitem(self):
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='annotations/dummy_annotation.json')
-        assert dataset[0] == dict(imgs=self.imgs)
+        if lazy_init is False:
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+            assert len(dataset) == 2
+        else:
+            # test `__len__()` when lazy_init is True
+            assert dataset._fully_initialized is False
+            assert not hasattr(dataset, 'data_infos')
+            # call `full_init()` automatically
+            assert len(dataset) == 2
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
 
-        # test `__getitem__()` when lazy_init is True
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='annotations/dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        # call `full_init()` automatically
-        assert dataset[0] == dict(imgs=self.imgs)
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
-
-    def test_get_data_info(self):
-        dataset = self.base_dataset(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img='imgs'),
-            ann_file='annotations/dummy_annotation.json')
-        assert dataset.get_data_info(0) == self.data_info
-
-        # test `get_data_info()` when lazy_init is True
+    @pytest.mark.parametrize('lazy_init', [True, False])
+    def test_getitem(self, lazy_init):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        # call `full_init()` automatically
-        assert dataset.get_data_info(0) == self.data_info
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
+            lazy_init=lazy_init)
 
-    def test_full_init(self):
-        # test fully initialize dataset by calling `full_init()`
+        if lazy_init is False:
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+            assert dataset[0] == dict(imgs=self.imgs)
+        else:
+            # test `__getitem__()` when lazy_init is True
+            assert dataset._fully_initialized is False
+            assert not hasattr(dataset, 'data_infos')
+            # call `full_init()` automatically
+            assert dataset[0] == dict(imgs=self.imgs)
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+
+    @pytest.mark.parametrize('lazy_init', [True, False])
+    def test_get_data_info(self, lazy_init):
         dataset = self.base_dataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
-            lazy_init=True)
-        assert dataset._fully_initialized is False
-        assert not hasattr(dataset, 'data_infos')
-        dataset.full_init()
-        assert dataset._fully_initialized is True
-        assert hasattr(dataset, 'data_infos')
-        assert len(dataset) == 2
-        assert dataset[0] == dict(imgs=self.imgs)
-        assert dataset.get_data_info(0) == self.data_info
+            lazy_init=lazy_init)
+
+        if lazy_init is False:
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+            assert dataset.get_data_info(0) == self.data_info
+        else:
+            # test `get_data_info()` when lazy_init is True
+            assert dataset._fully_initialized is False
+            assert not hasattr(dataset, 'data_infos')
+            # call `full_init()` automatically
+            assert dataset.get_data_info(0) == self.data_info
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+
+    @pytest.mark.parametrize('lazy_init', [True, False])
+    def test_full_init(self, lazy_init):
+        dataset = self.base_dataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=lazy_init)
+
+        if lazy_init is False:
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+            assert len(dataset) == 2
+            assert dataset[0] == dict(imgs=self.imgs)
+            assert dataset.get_data_info(0) == self.data_info
+        else:
+            # test `full_init()` when lazy_init is True
+            assert dataset._fully_initialized is False
+            assert not hasattr(dataset, 'data_infos')
+            # call `full_init()` manually
+            dataset.full_init()
+            assert dataset._fully_initialized is True
+            assert hasattr(dataset, 'data_infos')
+            assert len(dataset) == 2
+            assert dataset[0] == dict(imgs=self.imgs)
+            assert dataset.get_data_info(0) == self.data_info
 
 
 class TestConcatDataset:
@@ -197,7 +229,7 @@ class TestConcatDataset:
 
         # create dataset_a
         data_info = dict(filename='test_img.jpg', height=604, width=640)
-        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
         dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset_a = dataset(
@@ -207,7 +239,7 @@ class TestConcatDataset:
 
         # create dataset_b
         data_info = dict(filename='gray.jpg', height=288, width=512)
-        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
         dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset_b = dataset(
@@ -251,7 +283,7 @@ class TestRepeatDataset:
     def __init__(self):
         dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
-        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
         dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         self.dataset = dataset(
@@ -287,7 +319,7 @@ class TestClassBalancedDataset:
     def __init__(self):
         dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
-        dataset._parse_raw_data = MagicMock(return_value=data_info)
+        dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
         dataset.pipeline = MagicMock(return_value=dict(imgs=imgs))
         dataset.get_cat_ids = MagicMock(return_value=[0])
@@ -310,15 +342,15 @@ class TestClassBalancedDataset:
 
     def test_getitem(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets[i] == self.dataset[
+            assert self.cls_banlanced_datasets[i] == self.dataset[
                 self.repeat_indices[i]]
 
     def test_get_data_info(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets.get_data_info(
+            assert self.cls_banlanced_datasets.get_data_info(
                 i) == self.dataset.get_data_info(self.repeat_indices[i])
 
     def test_get_cat_ids(self):
         for i in range(len(self.repeat_indices)):
-            assert self.repeat_datasets.get_cat_ids(
+            assert self.cls_banlanced_datasets.get_cat_ids(
                 i) == self.dataset.get_cat_ids(self.repeat_indices[i])
