@@ -323,9 +323,9 @@ class MultiStepParamScheduler(_ParamScheduler):
 @SCHEDULERS.register_module()
 class ConstantParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by a small constant
-    factor until the number of epoch reaches a pre-defined milestone:
-    total_iters. Notice that such decay can happen simultaneously with other
-    changes to the parameter value from outside this scheduler.
+    factor until the number of epoch reaches a pre-defined milestone: ``end``.
+    Notice that such decay can happen simultaneously with other changes to the
+    parameter value from outside this scheduler.
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
@@ -527,7 +527,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
 class LinearParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
-    milestone: total_iters.
+    milestone: ``end``.
 
     Notice that such decay can happen simultaneously with other changes to the
     parameter value from outside this scheduler.
