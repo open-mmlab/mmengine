@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import math
 from unittest import TestCase
 
@@ -39,7 +40,7 @@ class TestLRScheduler(TestCase):
             _ParamScheduler(self.optimizer, param_name='lr')
 
     def test_invalid_optimizer(self):
-        with self.assertRaisesRegex(TypeError, 'is not an Optimizer'):
+        with self.assertRaisesRegex(TypeError, 'should be an Optimizer'):
             StepLR('invalid_optimizer', step_size=1)
 
     def test_overwrite_optimzer_step(self):
