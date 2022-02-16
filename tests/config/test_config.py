@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from mmengine import Config, ConfigDict, DictAction
-from mmengine.utils import dump, load
+from mmengine.fileio import dump, load
 
 
 class TestConfig:

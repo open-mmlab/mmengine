@@ -18,8 +18,8 @@ from typing import Any, Generator, Optional, Sequence, Tuple, Union
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
-from mmengine.utils import (check_file_exist, dump,
-                            import_modules_from_strings, load)
+from mmengine.utils import (check_file_exist, import_modules_from_strings)
+from mmengine.fileio import dump, load
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'

@@ -1,6 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .fileio import (FileClient, dict_from_file, dump, list_from_file, load,
-                     register_handler)
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    has_method, import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
@@ -17,6 +15,5 @@ __all__ = [
     'is_filepath', 'fopen', 'check_file_exist', 'mkdir_or_exist', 'symlink',
     'scandir', 'deprecated_api_warning', 'import_modules_from_strings',
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
-    'is_method_overridden', 'has_method', 'dict_from_file', 'list_from_file',
-    'register_handler', 'dump', 'load', 'FileClient'
+    'is_method_overridden', 'has_method'
 ]

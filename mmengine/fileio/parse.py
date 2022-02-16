@@ -12,10 +12,8 @@ def list_from_file(filename,
                    file_client_args=None):
     """Load a text file and parse the content as a list of strings.
 
-    Note:
-        In v1.3.16 and later, ``list_from_file`` supports loading a text file
-        which can be storaged in different backends and parsing the content as
-        a list for strings.
+    ``list_from_file`` supports loading a text file which can be storaged in
+    different backends and parsing the content as a list for strings.
 
     Args:
         filename (str): Filename.
@@ -25,8 +23,8 @@ def list_from_file(filename,
             zeros and negatives mean no limitation.
         encoding (str): Encoding used to open the file. Default utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
-            details. Default: None.
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Default: None.
 
     Examples:
         >>> list_from_file('/path/of/your/file')  # disk
@@ -61,10 +59,8 @@ def dict_from_file(filename,
     whitespaces or tabs. The first column will be parsed as dict keys, and
     the following columns will be parsed as dict values.
 
-    Note:
-        In v1.3.16 and later, ``dict_from_file`` supports loading a text file
-        which can be storaged in different backends and parsing the content as
-        a dict.
+    ``dict_from_file`` supports loading a text file which can be storaged in
+    different backends and parsing the content as a dict.
 
     Args:
         filename(str): Filename.
@@ -72,8 +68,8 @@ def dict_from_file(filename,
             type conversion will be performed if specified.
         encoding (str): Encoding used to open the file. Default utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
-            details. Default: None.
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Default: None.
 
     Examples:
         >>> dict_from_file('/path/of/your/file')  # disk

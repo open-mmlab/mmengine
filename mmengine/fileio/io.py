@@ -2,7 +2,7 @@
 from io import BytesIO, StringIO
 from pathlib import Path
 
-from ..misc import is_list_of, is_str
+from ..utils import is_list_of, is_str
 from .file_client import FileClient
 from .handlers import BaseFileHandler, JsonHandler, PickleHandler, YamlHandler
 
@@ -20,9 +20,8 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
 
     This method provides a unified api for loading data from serialized files.
 
-    Note:
-        In v1.3.16 and later, ``load`` supports loading data from serialized
-        files those can be storaged in different backends.
+    ``load`` supports loading data from serialized files those can be storaged
+    in different backends.
 
     Args:
         file (str or :obj:`Path` or file-like object): Filename or a file-like
@@ -32,8 +31,13 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
             Currently supported formats include "json", "yaml/yml" and
             "pickle/pkl".
         file_client_args (dict, optional): Arguments to instantiate a
+<<<<<<< HEAD:mmengine/utils/fileio/io.py
             FileClient. See :class:`mmengine.utils.fileio.FileClient` for
             details. Default: None.
+=======
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Default: None.
+>>>>>>> 166ca02363ddd2e0a623f0393e9be0cc54243bf3:mmengine/fileio/io.py
 
     Examples:
         >>> load('/path/of/your/file')  # file is storaged in disk
@@ -72,9 +76,8 @@ def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
     This method provides a unified api for dumping data as strings or to files,
     and also supports custom arguments for each file format.
 
-    Note:
-        In v1.3.16 and later, ``dump`` supports dumping data as strings or to
-        files which is saved to different backends.
+    ``dump`` supports dumping data as strings or to files which is saved to
+    different backends.
 
     Args:
         obj (any): The python object to be dumped.
@@ -83,8 +86,13 @@ def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
             specified by the filename or file-like object.
         file_format (str, optional): Same as :func:`load`.
         file_client_args (dict, optional): Arguments to instantiate a
+<<<<<<< HEAD:mmengine/utils/fileio/io.py
             FileClient. See :class:`mmengine.utils.fileio.FileClient` for
             details. Default: None.
+=======
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Default: None.
+>>>>>>> 166ca02363ddd2e0a623f0393e9be0cc54243bf3:mmengine/fileio/io.py
 
     Examples:
         >>> dump('hello world', '/path/of/your/file')  # disk
