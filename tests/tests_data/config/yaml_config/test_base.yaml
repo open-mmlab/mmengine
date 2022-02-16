@@ -1,6 +1,0 @@
-_base_ : ['../py_config/base1.py', './base2.yaml', '../json_config/base3.json', '../py_config/base4.py']
-item3 : False
-item4 : 'test'
-item8 : '{{fileBasename}}'
-item9 : {{ _base_.item2 }}
-item10 : {{ _base_.item7.b.c }}
