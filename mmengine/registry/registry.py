@@ -4,12 +4,15 @@ import sys
 from collections.abc import Callable
 from typing import Dict, List, Optional, Tuple, Type, Union
 
-from mmengine.utils import is_seq_of
+from ..config import Config, ConfigDict
+from ..utils import is_seq_of
 
 
-def build_from_cfg(cfg: dict,
-                   registry: 'Registry',
-                   default_args: Optional[dict] = None):
+def build_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: 'Registry',
+        default_args: Optional[Union[dict, ConfigDict,
+                                     Config]] = None) -> object:
     """Build a module from config dict.
 
     At least one of the ``cfg`` and ``default_args`` contains the key "type"
@@ -32,27 +35,34 @@ def build_from_cfg(cfg: dict,
         >>> model = build_from_cfg(cfg, MODELS)
 
     Args:
-        cfg (dict): Config dict. It should at least contain the key "type".
+        cfg (dict or ConfigDict or Config): Config dict. It should at least
+            contain the key "type".
         registry (:obj:`Registry`): The registry to search the type from.
-        default_args (dict, optional): Default initialization arguments.
-            Defaults to None.
+        default_args (dict or ConfigDict or Config, optional): Default
+            initialization arguments. Defaults to None.
 
     Returns:
         object: The constructed object.
     """
-    if not isinstance(cfg, dict):
-        raise TypeError(f'cfg must be a dict, but got {type(cfg)}')
+    if not isinstance(cfg, (dict, ConfigDict, Config)):
+        raise TypeError(
+            f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}')
+
     if 'type' not in cfg:
         if default_args is None or 'type' not in default_args:
             raise KeyError(
                 '`cfg` or `default_args` must contain the key "type", '
                 f'but got {cfg}\n{default_args}')
+
     if not isinstance(registry, Registry):
         raise TypeError('registry must be a mmengine.Registry object, '
                         f'but got {type(registry)}')
-    if not (isinstance(default_args, dict) or default_args is None):
-        raise TypeError('default_args must be a dict or None, '
-                        f'but got {type(default_args)}')
+
+    if not (isinstance(default_args,
+                       (dict, ConfigDict, Config)) or default_args is None):
+        raise TypeError(
+            'default_args should be a dict, ConfigDict, Config or None, '
+            f'but got {type(default_args)}')
 
     args = cfg.copy()
 
@@ -65,7 +75,11 @@ def build_from_cfg(cfg: dict,
         obj_cls = registry.get(obj_type)
         if obj_cls is None:
             raise KeyError(
-                f'{obj_type} is not in the {registry.name} registry')
+                f'{obj_type} is not in the {registry.name} registry. '
+                f'Please check whether the value of `{obj_type}` is correct or'
+                ' it was registered as expected. More details can be found at'
+                ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+            )
     elif inspect.isclass(obj_type):
         obj_cls = obj_type
     else:
@@ -344,7 +358,7 @@ class Registry:
         """Build an instance.
 
         build an instance by calling the :attr:`build_func`. If
-        :attr:`default_scope` is given, :meth:`build` will first get the
+        :attr:`default_scope` is given, :meth:`build` will firstly get the
         responding registry and then call its own :meth:`build`.
 
         Examples:

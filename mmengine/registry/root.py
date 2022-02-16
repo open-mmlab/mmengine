@@ -16,12 +16,12 @@ HOOKS = Registry('hook')
 
 # manage data-related modules
 DATASETS = Registry('dataset')
-SAMPLERS = Registry('sampler')
-PIPELINES = Registry('pipeline')
+DATA_SAMPLERS = Registry('data sampler')
+TRANSFORMS = Registry('transform')
 
-# mangage all kinds of components to build networks like `DeformConv2d`
+# mangage all kinds of modules subclassing `nn.Module`
 MODELS = Registry('model')
-# mangage all kinds of weight initialization module like `Uniform`
+# mangage all kinds of weight initialization modules like `Uniform`
 WEIGHT_INITIALIZERS = Registry('weight initializer')
 
 # mangage all kinds of optimizer like `SGD` and `Adam`
@@ -29,5 +29,5 @@ OPTIMIZERS = Registry('optimizer')
 # mangage some constructors to custom optimizers
 OPTIMIZER_CONSTRUCTORS = Registry('optimizer constructor')
 
-# manage some components related to task like `AnchorGenerator`
+# manage some components related to tasks like `AnchorGenerator`
 TASK_UTILS = Registry('task util')

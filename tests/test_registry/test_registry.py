@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine import Config, ConfigDict, Registry, build_from_cfg
+from mmengine.config import Config, ConfigDict  # type: ignore
+from mmengine.registry import Registry, build_from_cfg
 
 
 class TestRegistry:
@@ -186,7 +187,8 @@ class TestRegistry:
         #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+        registries = self._build_registry()
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
 
         assert DOGS._get_root_registry() is DOGS
         assert HOUNDS._get_root_registry() is DOGS
@@ -286,7 +288,8 @@ class TestRegistry:
         #          |               |               |
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = self._build_registry()
+        registries = self._build_registry()
+        DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
 
         assert DOGS._search_child('hound') is HOUNDS
         assert DOGS._search_child('not a child') is None
@@ -294,7 +297,8 @@ class TestRegistry:
         assert LITTLE_HOUNDS._search_child('hound') is None
         assert LITTLE_HOUNDS._search_child('mid_hound') is None
 
-    def test_build(self):
+    @pytest.mark.parametrize('constructor', [dict, ConfigDict, Config])
+    def test_build(self, constructor):
         #        Hierarchy Registry
         #                           DOGS
         #                      _______|_______
@@ -311,14 +315,14 @@ class TestRegistry:
         class GoldenRetriever:
             pass
 
-        gr_cfg = dict(type='GoldenRetriever')
+        gr_cfg = constructor(dict(type='GoldenRetriever'))
         assert isinstance(DOGS.build(gr_cfg), GoldenRetriever)
 
         @HOUNDS.register_module()
         class BloodHound:
             pass
 
-        bh_cfg = dict(type='BloodHound')
+        bh_cfg = constructor(dict(type='BloodHound'))
         assert isinstance(HOUNDS.build(bh_cfg), BloodHound)
         assert isinstance(HOUNDS.build(gr_cfg), GoldenRetriever)
 
@@ -326,14 +330,14 @@ class TestRegistry:
         class Dachshund:
             pass
 
-        d_cfg = dict(type='Dachshund')
+        d_cfg = constructor(dict(type='Dachshund'))
         assert isinstance(LITTLE_HOUNDS.build(d_cfg), Dachshund)
 
         @MID_HOUNDS.register_module()
         class Beagle:
             pass
 
-        b_cfg = dict(type='Beagle')
+        b_cfg = constructor(dict(type='Beagle'))
         assert isinstance(MID_HOUNDS.build(b_cfg), Beagle)
 
         # test `default_scope`
@@ -367,7 +371,8 @@ class TestRegistry:
         assert repr(CATS) == repr_str
 
 
-def test_build_from_cfg():
+@pytest.mark.parametrize('constructor', [dict, ConfigDict, Config])
+def test_build_from_cfg(constructor):
     BACKBONES = Registry('backbone')
 
     @BACKBONES.register_module()
@@ -387,24 +392,14 @@ def test_build_from_cfg():
     # test `cfg` parameter
     # `cfg` should be a dict, ConfigDict or Config object
     with pytest.raises(
-            TypeError, match="cfg must be a dict, but got <class 'str'>"):
+            TypeError,
+            match=('cfg should be a dict, ConfigDict or Config, but got '
+                   "<class 'str'>")):
         cfg = 'ResNet'
         model = build_from_cfg(cfg, BACKBONES)
 
-    # `cfg` is a dict
-    cfg = dict(type='ResNet', depth=50)
-    model = build_from_cfg(cfg, BACKBONES)
-    assert isinstance(model, ResNet)
-    assert model.depth == 50 and model.stages == 4
-
-    # `cfg` is a ConfigDict object
-    cfg = ConfigDict(dict(type='ResNet', depth=50))
-    model = build_from_cfg(cfg, BACKBONES)
-    assert isinstance(model, ResNet)
-    assert model.depth == 50 and model.stages == 4
-
-    # `cfg` is a Config object
-    cfg = Config(dict(type='ResNet', depth=50))
+    # `cfg` is a dict, ConfigDict or Config object
+    cfg = constructor(dict(type='ResNet', depth=50))
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
@@ -412,6 +407,7 @@ def test_build_from_cfg():
     # `cfg` is a dict but it does not contain the key "type"
     with pytest.raises(KeyError, match='must contain the key "type"'):
         cfg = dict(depth=50, stages=4)
+        cfg = constructor(cfg)
         model = build_from_cfg(cfg, BACKBONES)
 
     # cfg['type'] should be a str or class
@@ -419,52 +415,56 @@ def test_build_from_cfg():
             TypeError,
             match="type must be a str or valid type, but got <class 'int'>"):
         cfg = dict(type=1000)
+        cfg = constructor(cfg)
         model = build_from_cfg(cfg, BACKBONES)
 
-    cfg = dict(type='ResNeXt', depth=50, stages=3)
+    cfg = constructor(dict(type='ResNeXt', depth=50, stages=3))
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNeXt)
     assert model.depth == 50 and model.stages == 3
 
-    cfg = dict(type=ResNet, depth=50)
+    cfg = constructor(dict(type=ResNet, depth=50))
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
     # non-registered class
     with pytest.raises(KeyError, match='VGG is not in the backbone registry'):
-        cfg = dict(type='VGG')
+        cfg = constructor(dict(type='VGG'))
         model = build_from_cfg(cfg, BACKBONES)
 
     # `cfg` contains unexpected arguments
     with pytest.raises(TypeError):
-        cfg = dict(type='ResNet', non_existing_arg=50)
+        cfg = constructor(dict(type='ResNet', non_existing_arg=50))
         model = build_from_cfg(cfg, BACKBONES)
 
     # test `default_args` parameter
-    cfg = dict(type='ResNet', depth=50)
-    model = build_from_cfg(cfg, BACKBONES, default_args={'stages': 3})
+    cfg = constructor(dict(type='ResNet', depth=50))
+    model = build_from_cfg(cfg, BACKBONES, constructor(dict(stages=3)))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 3
 
     # default_args must be a dict or None
     with pytest.raises(TypeError):
-        cfg = dict(type='ResNet', depth=50)
+        cfg = constructor(dict(type='ResNet', depth=50))
         model = build_from_cfg(cfg, BACKBONES, default_args=1)
 
     # cfg or default_args should contain the key "type"
     with pytest.raises(KeyError, match='must contain the key "type"'):
-        cfg = dict(depth=50)
-        model = build_from_cfg(cfg, BACKBONES, default_args=dict(stages=4))
+        cfg = constructor(dict(depth=50))
+        model = build_from_cfg(
+            cfg, BACKBONES, default_args=constructor(dict(stages=4)))
 
     # "type" defined using default_args
-    cfg = dict(depth=50)
-    model = build_from_cfg(cfg, BACKBONES, default_args=dict(type='ResNet'))
+    cfg = constructor(dict(depth=50))
+    model = build_from_cfg(
+        cfg, BACKBONES, default_args=constructor(dict(type='ResNet')))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
-    cfg = dict(depth=50)
-    model = build_from_cfg(cfg, BACKBONES, default_args=dict(type=ResNet))
+    cfg = constructor(dict(depth=50))
+    model = build_from_cfg(
+        cfg, BACKBONES, default_args=constructor(dict(type=ResNet)))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
@@ -474,5 +474,5 @@ def test_build_from_cfg():
             TypeError,
             match=('registry must be a mmengine.Registry object, but got '
                    "<class 'str'>")):
-        cfg = dict(type='ResNet', depth=50)
+        cfg = constructor(dict(type='ResNet', depth=50))
         model = build_from_cfg(cfg, 'BACKBONES')
