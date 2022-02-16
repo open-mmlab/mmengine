@@ -13,7 +13,7 @@ import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from importlib import import_module
-from typing import Any, Generator, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
@@ -39,7 +39,7 @@ class ConfigDict(Dict):
         """miss attribute."""
         raise KeyError(name)
 
-    def __getattr__(self, name: str) -> Generator[Any, None, None]:
+    def __getattr__(self, name: str) -> Any:
         """Get attribute. with this function, value can be accessed like a
         object property.
 
