@@ -3,14 +3,14 @@ from typing import List
 
 import torch
 
-from mmengine.registry import SCHEDULERS
+from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (INF, ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, StepParamScheduler)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ConstantLR(ConstantParamScheduler):
     """Decays the learning rate value of each parameter group by a small
     constant factor until the number of epoch reaches a pre-defined milestone:
@@ -52,7 +52,7 @@ class ConstantLR(ConstantParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class CosineAnnealingLR(CosineAnnealingParamScheduler):
     r"""Set the learning rate of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
@@ -121,7 +121,7 @@ class CosineAnnealingLR(CosineAnnealingParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ExponentialLR(ExponentialParamScheduler):
     """Decays the learning rate of each parameter group by gamma every epoch.
 
@@ -159,7 +159,7 @@ class ExponentialLR(ExponentialParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class LinearLR(LinearParamScheduler):
     """Decays the learning rate of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
@@ -207,7 +207,7 @@ class LinearLR(LinearParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class MultiStepLR(MultiStepParamScheduler):
     """Decays the specified learning rate in each parameter group by gamma once
     the number of epoch reaches one of the milestones. Notice that such decay
@@ -252,7 +252,7 @@ class MultiStepLR(MultiStepParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class StepLR(StepParamScheduler):
     """Decays the learning rate of each parameter group by gamma every
     step_size epochs. Notice that such decay can happen simultaneously with

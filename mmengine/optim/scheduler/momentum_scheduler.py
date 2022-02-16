@@ -3,14 +3,14 @@ from typing import List
 
 import torch
 
-from mmengine.registry import SCHEDULERS
+from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (INF, ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, StepParamScheduler)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ConstantMomentum(ConstantParamScheduler):
     """Decays the momentum value of each parameter group by a small constant
     factor until the number of epoch reaches a pre-defined milestone: ``end``.
@@ -52,7 +52,7 @@ class ConstantMomentum(ConstantParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
     r"""Set the momentum of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
@@ -121,7 +121,7 @@ class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ExponentialMomentum(ExponentialParamScheduler):
     """Decays the momentum of each parameter group by gamma every epoch.
 
@@ -159,7 +159,7 @@ class ExponentialMomentum(ExponentialParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class LinearMomentum(LinearParamScheduler):
     """Decays the momentum of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
@@ -207,7 +207,7 @@ class LinearMomentum(LinearParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class MultiStepMomentum(MultiStepParamScheduler):
     """Decays the specified momentum in each parameter group by gamma once the
     number of epoch reaches one of the milestones. Notice that such decay can
@@ -252,7 +252,7 @@ class MultiStepMomentum(MultiStepParamScheduler):
             verbose=verbose)
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class StepMomentum(StepParamScheduler):
     """Decays the momentum of each parameter group by gamma every step_size
     epochs. Notice that such decay can happen simultaneously with other changes

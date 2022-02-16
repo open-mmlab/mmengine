@@ -8,19 +8,18 @@ from typing import Callable, List
 
 from torch.optim import Optimizer
 
-from mmengine.registry import SCHEDULERS
+from mmengine.registry import PARAM_SCHEDULERS
 
 INF = int(1e9)
 
 
-@SCHEDULERS.register_module()
 class _ParamScheduler:
     """Base class for parameter schedulers.
 
     It should be inherited by all schedulers that schedule parameters in the
     optimizer's ``param_groups``. All subclasses should overwrite the
     ``_get_value()`` according to their own schedule strategy.
-    The implementation is referred to
+    The implementation is motivated by
     https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
 
     Args:
@@ -31,11 +30,12 @@ class _ParamScheduler:
             Defaults to 0.
         end (int): Step at which to stop updating the parameters.
             Defaults to INF.
-        last_step (int): The index of last step. Used for resume without
-            state dict. Defaults to -1.
+        last_step (int): The index of last step. Used for resuming without
+            state dict. Default value ``-1`` means the ``step`` function is
+            never be called before. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
             epochs. Defaults to True.
-        verbose (bool): If ``True``, prints a message to stdout for each update.
+        verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """  # noqa: E501
 
@@ -50,13 +50,14 @@ class _ParamScheduler:
 
         # Attach optimizer
         if not isinstance(optimizer, Optimizer):
-            raise TypeError('{} is not an Optimizer'.format(
-                type(optimizer).__name__))
+            raise TypeError('``optimizer`` should be an Optimizer,'
+                            'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer
         self.param_name = param_name
 
         if end <= begin:
-            raise ValueError('end should be larger than begin')
+            raise ValueError('end should be larger than begin, but got'
+                             ' begin={}, end={}'.format(begin, end))
         self.begin = begin
         self.end = end
 
@@ -66,6 +67,8 @@ class _ParamScheduler:
         # Initialize valid step count and base values
         if last_step == -1:
             for group in optimizer.param_groups:
+                # If the param is never be scheduled, record the current value
+                # as the initial value.
                 group.setdefault(f'initial_{param_name}', group[param_name])
         else:
             for i, group in enumerate(optimizer.param_groups):
@@ -208,7 +211,7 @@ class _ParamScheduler:
         ]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class StepParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every
     step_size epochs. Notice that such decay can happen simultaneously with
@@ -263,7 +266,7 @@ class StepParamScheduler(_ParamScheduler):
         ]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class MultiStepParamScheduler(_ParamScheduler):
     """Decays the specified parameter in each parameter group by gamma once the
     number of epoch reaches one of the milestones. Notice that such decay can
@@ -320,7 +323,7 @@ class MultiStepParamScheduler(_ParamScheduler):
         ]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ConstantParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by a small constant
     factor until the number of epoch reaches a pre-defined milestone: ``end``.
@@ -387,7 +390,7 @@ class ConstantParamScheduler(_ParamScheduler):
             ]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class ExponentialParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every epoch.
 
@@ -436,7 +439,7 @@ class ExponentialParamScheduler(_ParamScheduler):
         ]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class CosineAnnealingParamScheduler(_ParamScheduler):
     r"""Set the parameter value of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
@@ -523,7 +526,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
                 for group in self.optimizer.param_groups]
 
 
-@SCHEDULERS.register_module()
+@PARAM_SCHEDULERS.register_module()
 class LinearParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
