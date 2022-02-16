@@ -46,7 +46,7 @@ class TestBaseDataElement(TestCase):
     def check_data_dtype(self, instances, dtype):
         for v in instances.data_values():
             if isinstance(v, (torch.Tensor, np.ndarray)):
-                assert v.dtype == dtype
+                assert isinstance(v, dtype)
 
     def test_init(self):
         # initialization with no data and metainfo

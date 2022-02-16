@@ -53,7 +53,7 @@ class TestBaseDataSample(TestCase):
     def check_data_dtype(self, instances, dtype):
         for v in instances.data_values():
             if isinstance(v, (torch.Tensor, np.ndarray)):
-                assert v.dtype == dtype
+                assert isinstance(v, dtype)
             if isinstance(v, BaseDataElement):
                 self.check_data_dtype(v, dtype)
 
