@@ -152,7 +152,7 @@ class TestMomentumScheduler(TestCase):
         # momentum = 0.03125   if epoch == 2
         # momentum = 0.0375    if epoch == 3
         # momentum = 0.04375   if epoch == 4
-        # momentum = 0.005     if 4 < epoch
+        # momentum = 0.005     if epoch > 4
         begin = 1
         epochs = 10
         start_factor = 1.0 / 2
@@ -193,8 +193,9 @@ class TestMomentumScheduler(TestCase):
 
     def test_step_scheduler(self):
         # momentum = 0.05     if epoch < 3
-        # momentum = 0.005    if 30 <= epoch < 6
-        # momentum = 0.0005   if epoch >= 9
+        # momentum = 0.005    if 3 <= epoch < 6
+        # momentum = 0.0005   if 6 <= epoch < 9
+        # momentum = 0.00005  if epoch >=9
         epochs = 10
         single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005
                                                                     ] * 3
@@ -206,7 +207,7 @@ class TestMomentumScheduler(TestCase):
     def test_multi_step_scheduler(self):
         # momentum = 0.05     if epoch < 2
         # momentum = 0.005    if 2 <= epoch < 5
-        # momentum = 0.0005   if epoch < 9
+        # momentum = 0.0005   if 5 <= epoch < 9
         # momentum = 0.00005   if epoch >= 9
         epochs = 10
         single_targets = [0.05] * 2 + [0.005] * 3 + [0.0005] * 4 + [0.00005
@@ -242,7 +243,7 @@ class TestMomentumScheduler(TestCase):
         # momentum = 0.03125   if epoch == 1
         # momentum = 0.0375    if epoch == 2
         # momentum = 0.04375   if epoch == 3
-        # momentum = 0.005     if 4 <= epoch
+        # momentum = 0.005     if epoch >= 4
         epochs = 10
         start_factor = 1.0 / 2
         iters = 4

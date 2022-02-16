@@ -175,7 +175,7 @@ class TestParameterScheduler(TestCase):
         # lr = 0.03125   if epoch == 2
         # lr = 0.0375    if epoch == 3
         # lr = 0.04375   if epoch == 4
-        # lr = 0.005     if 4 < epoch
+        # lr = 0.005     if epoch > 4
         begin = 1
         epochs = 10
         start_factor = 1.0 / 2
@@ -222,8 +222,9 @@ class TestParameterScheduler(TestCase):
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
-        # lr = 0.005    if 30 <= epoch < 6
-        # lr = 0.0005   if epoch >= 9
+        # lr = 0.005    if 3 <= epoch < 6
+        # lr = 0.0005   if 6 <= epoch < 9
+        # lr = 0.00005  if epoch >=9
         epochs = 10
         single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005
                                                                     ] * 3
@@ -249,7 +250,7 @@ class TestParameterScheduler(TestCase):
     def test_multi_step_scheduler(self):
         # lr = 0.05     if epoch < 2
         # lr = 0.005    if 2 <= epoch < 5
-        # lr = 0.0005   if epoch < 9
+        # lr = 0.0005   if 5 <= epoch < 9
         # lr = 0.00005   if epoch >= 9
         epochs = 10
         single_targets = [0.05] * 2 + [0.005] * 3 + [0.0005] * 4 + [0.00005
@@ -290,7 +291,7 @@ class TestParameterScheduler(TestCase):
         # lr = 0.03125   if epoch == 1
         # lr = 0.0375    if epoch == 2
         # lr = 0.04375   if epoch == 3
-        # lr = 0.005     if 4 <= epoch
+        # lr = 0.005     if epoch >= 4
         epochs = 10
         start_factor = 1.0 / 2
         iters = 4
