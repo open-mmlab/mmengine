@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
+from functools import partial
 from unittest import TestCase
 
 import numpy as np
@@ -207,14 +208,14 @@ class TestBaseDataSample(TestCase):
                                    'img_shape: (800, 1196, 3)\n'
                                    'pad_shape: (800, 1216, 3)\n'
                                    '  DATA FIELDS\n'
-                                   '<BaseDataElement(\n'
-                                   '  META INFORMATION\n'
-                                   'img_shape: (800, 1196, 3)\n'
-                                   'pad_shape: (800, 1216, 3)\n'
-                                   '  DATA FIELDS\n'
-                                   'shape of det_labels: torch.Size([4])\n'
-                                   'shape of det_scores: torch.Size([4])\n'
-                                   ') at 0x7f84acd10f90>'
+                                   '\tgt_instances: <BaseDataElement(\n'
+                                   '\t  META INFORMATION\n'
+                                   '\timg_shape: (800, 1196, 3)\n'
+                                   '\tpad_shape: (800, 1216, 3)\n'
+                                   '\t  DATA FIELDS\n'
+                                   '\tshape of det_labels: torch.Size([4])\n'
+                                   '\tshape of det_scores: torch.Size([4])\n'
+                                   '\t) at 0x7f84acd10f90>'
                                    ') at 0x7f84acd10f90>')
 
     def test_set_get_fields(self):
@@ -242,3 +243,49 @@ class TestBaseDataSample(TestCase):
             instances._del_field('gt_instances')
         assert 'gt_instances' not in instances
         assert 'pred_instances' not in instances
+
+    def test_inherence(self):
+
+        class DetDataSample(BaseDataSample):
+            proposals = property(
+                fget=partial(BaseDataSample._get_field, name='_proposals'),
+                fset=partial(
+                    BaseDataSample._set_field,
+                    name='_proposals',
+                    dtype=BaseDataElement),
+                fdel=partial(BaseDataSample._del_field, name='_proposals'),
+                doc='Region proposals of an image')
+            gt_instances = property(
+                fget=partial(BaseDataSample._get_field, name='_gt_instances'),
+                fset=partial(
+                    BaseDataSample._set_field,
+                    name='_gt_instances',
+                    dtype=BaseDataElement),
+                fdel=partial(BaseDataSample._del_field, name='_gt_instances'),
+                doc='Ground truth instances of an image')
+            pred_instances = property(
+                fget=partial(
+                    BaseDataSample._get_field, name='_pred_instances'),
+                fset=partial(
+                    BaseDataSample._set_field,
+                    name='_pred_instances',
+                    dtype=BaseDataElement),
+                fdel=partial(
+                    BaseDataSample._del_field, name='_pred_instances'),
+                doc='Predicted instances of an image')
+
+        det_sample = DetDataSample()
+
+        # test set
+        proposals = BaseDataElement(data=dict(bboxes=torch.rand((5, 4))))
+        det_sample.proposals = proposals
+        assert 'proposals' in det_sample
+
+        # test get
+        assert det_sample.proposals == proposals
+
+        # test delete
+        del det_sample.proposals
+        assert 'proposals' not in det_sample
+        with self.assertRaises(AssertionError):
+            det_sample.proposals = torch.rand((5, 4))

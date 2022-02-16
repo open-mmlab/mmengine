@@ -120,6 +120,11 @@ class TestBaseDataElement(TestCase):
         instances.img_id = metainfo['img_id']
         self.check_key_value(instances, data=metainfo)
 
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo, data)
+        with self.assertRaises(AssertionError):
+            instances.img_shape = metainfo['img_shape']
+
     def test_delete_modify(self):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo, data)
