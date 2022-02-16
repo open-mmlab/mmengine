@@ -10,11 +10,11 @@ from pathlib import Path
 import pytest
 
 from mmengine import Config, ConfigDict, DictAction
-from mmengine.utils import dump, load
+from mmengine.fileio import dump, load
 
 
 class TestConfig:
-    data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'tests_data/')
+    data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'data/')
 
     @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
     def test_init(self, tmp_path, file_format):
@@ -48,15 +48,26 @@ class TestConfig:
         with pytest.raises(KeyError):
             Config.fromfile(cfg_file)
 
-    def test_fromfile(self):
-        cfg_file = osp.join(self.data_path, 'config',
-                            'py_config/test_custom_import.py')
+    @pytest.mark.parametrize(
+        'cfg_file',
+        ['py_config/test_custom_import.py', 'py_config/simple.config.py'])
+    def test_fromfile(self, cfg_file):
+        # test whether import `custom_imports` from cfg_file.
+        cfg_file = osp.join(self.data_path, 'config', cfg_file)
         sys.path.append(osp.join(self.data_path, 'config/py_config'))
-        Config.fromfile(cfg_file, import_custom_modules=True)
-
-        assert os.environ.pop('TEST_VALUE') == 'test'
-        Config.fromfile(cfg_file, import_custom_modules=False)
-        assert 'TEST_VALUE' not in os.environ
+        cfg = Config.fromfile(cfg_file, import_custom_modules=True)
+        assert isinstance(cfg, Config)
+        # If import successfully, os.environ[''TEST_VALUE''] will be
+        # set to 'test'
+        if 'custom_imports' in cfg:
+            assert os.environ.pop('TEST_VALUE') == 'test'
+            Config.fromfile(cfg_file, import_custom_modules=False)
+            assert 'TEST_VALUE' not in os.environ
+        # test filename separated by . can be loaded.
+        else:
+            assert cfg.filename == cfg_file
+            assert cfg.text == osp.abspath(osp.expanduser(cfg_file)) + '\n' + \
+                   open(cfg_file, 'r').read()
 
     @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
     def test_fromstring(self, file_format):
