@@ -30,5 +30,5 @@ OPTIMIZERS = Registry('optimizer')
 # manage constructors that customize the optimization hyperparameters.
 OPTIMIZER_CONSTRUCTORS = Registry('optimizer constructor')
 
-# manage some components related to tasks like `AnchorGenerator`
+# manage task-specific modules like anchor generators and box coders
 TASK_UTILS = Registry('task util')

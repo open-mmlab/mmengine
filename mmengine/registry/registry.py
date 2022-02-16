@@ -98,26 +98,6 @@ class Registry:
 
     Registered objects could be built from registry.
 
-    Examples:
-        >>> # define a registry
-        >>> MODELS = Registry('models')
-        >>> # registry the `ResNet` to `MODELS`
-        >>> @MODELS.register_module()
-        >>> class ResNet:
-        >>>     pass
-        >>> # build model from `MODELS`
-        >>> resnet = MODELS.build(dict(type='ResNet'))
-
-        >>> # hierarchy registry
-        >>> DETECTORS = Registry('detectors', parent=MODELS, scope='det')
-        >>> @DETECTORS.register_module()
-        >>> class FasterRCNN:
-        >>>     pass
-        >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
-
-    More advanced usages can be found at
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
-
     Args:
         name (str): Registry name.
         build_func (callable, optional): A function to construct instance
@@ -132,6 +112,26 @@ class Registry:
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
             Defaults to None.
+
+    Examples:
+        >>> # define a registry
+        >>> MODELS = Registry('models')
+        >>> # registry the `ResNet` to `MODELS`
+        >>> @MODELS.register_module()
+        >>> class ResNet:
+        >>>     pass
+        >>> # build model from `MODELS`
+        >>> resnet = MODELS.build(dict(type='ResNet'))
+
+        >>> # hierarchical registry
+        >>> DETECTORS = Registry('detectors', parent=MODELS, scope='det')
+        >>> @DETECTORS.register_module()
+        >>> class FasterRCNN:
+        >>>     pass
+        >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
+
+    More advanced usages can be found at
+    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
     """
 
     def __init__(self,
@@ -190,6 +190,9 @@ class Registry:
 
         The name of the package where registry is defined will be returned.
 
+        Returns:
+            str: The inferred scope name.
+
         Examples:
             >>> # in mmdet/models/backbone/resnet.py
             >>> MODELS = Registry('models')
@@ -197,9 +200,6 @@ class Registry:
             >>> class ResNet:
             >>>     pass
             >>> # The scope of ``ResNet`` will be ``mmdet``.
-
-        Returns:
-            str: The inferred scope name.
         """
         # `sys._getframe` returns the frame object that many calls below the
         # top of the stack. The call stack for `infer_scope` can be listed as
@@ -217,15 +217,15 @@ class Registry:
 
         The first scope will be split from key.
 
+        Return:
+            tuple[str | None, str]: The former element is the first scope of
+            the key, which can be ``None``. The latter is the remaining key.
+
         Examples:
             >>> Registry.split_scope_key('mmdet.ResNet')
             'mmdet', 'ResNet'
             >>> Registry.split_scope_key('ResNet')
             None, 'ResNet'
-
-        Return:
-            tuple[str | None, str]: The former element is the first scope of
-            the key, which can be ``None``. The latter is the remaining key.
         """
         split_index = key.find('.')
         if split_index != -1:
@@ -259,31 +259,41 @@ class Registry:
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
 
-        The logic to search :attr:`key`:
+        The method will first parse :attr:`key` and check whether it contains
+        a scope name. The logic to search for :attr:`key`:
 
-        - ``key`` does not contain a scope: :meth:`get` will search the key
-          from the current registry to its parent or ancestors until finding
-          the ``key``.
+        - ``key`` does not contain a scope name, i.e., it is purely a module
+          name like "ResNet": :meth:`get` will search for ``ResNet`` from the
+          current registry to its parent or ancestors until finding it.
 
-        - ``key`` contains a scope and it is equal to the scope of the current
-          registry: :meth:`get` will only search the key in the current
-          registry.
+        - ``key`` contains a scope name and it is equal to the scope of the
+          current registry (e.g., "mmcls"), e.g., "mmcls.ResNet": :meth:`get`
+          will only search for ``ResNet`` in the current registry.
 
-        - ``key`` contains a scope and it is not equal to the scope of the
-          current registry: If the scope exists in its children, :meth:`get`
-          will get the key from them. If not, :meth:`get` will firstly get the
-          root registry and root registry call its own :meth:`get` method.
+        - ``key`` contains a scope name and it is not equal to the scope of
+          the current registry (e.g., "mmdet"), e.g., "mmcls.FCNet": If the
+          scope exists in its children, :meth:`get`will get "FCNet" from
+          them. If not, :meth:`get` will first get the root registry and root
+          registry call its own :meth:`get` method.
+
+        Args:
+            key (str): Name of the registered item, e.g., the class name in
+            string format.
+
+        Returns:
+            Type or None: Return the corresponding class if ``key`` exists,
+            otherwise return None.
 
         Examples:
             >>> # define a registry
             >>> MODELS = Registry('models')
-            >>> # registry the `ResNet` to `MODELS`
+            >>> # register `ResNet` to `MODELS`
             >>> @MODELS.register_module()
             >>> class ResNet:
             >>>     pass
             >>> resnet_cls = MODELS.get('ResNet')
 
-            >>> # hierarchy registry
+            >>> # hierarchical registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
             >>> # `ResNet` does not exist in `DETECTORS` but `get` method
             >>> # will try to search from its parenet or ancestors
@@ -294,14 +304,6 @@ class Registry:
             >>>     pass
             >>> # `get` from its sibling registries
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
-
-        Args:
-            key (str): Name of the registered item, e.g., the class name in
-            string format.
-
-        Returns:
-            Type or None: Return the corresponding class if ``key`` exists,
-            otherwise return None.
         """
         scope, real_key = self.split_scope_key(key)
         if scope is None or scope == self._scope:
@@ -362,6 +364,10 @@ class Registry:
         :attr:`default_scope` is given, :meth:`build` will firstly get the
         responding registry and then call its own :meth:`build`.
 
+        Args:
+            default_scope (str, optional): The ``default_scope`` is used to
+                reset the current registry. Defaults to None.
+
         Examples:
             >>> from mmengine import Registry
             >>> MODELS = Registry('models')
@@ -372,10 +378,6 @@ class Registry:
             >>>         self.stages = stages
             >>> cfg = dict(type='ResNet', depth=50)
             >>> model = MODELS.build(cfg)
-
-        Args:
-            default_scope (str, optional): The ``default_scope`` is used to
-                reset the current registry. Defaults to None.
         """
         if default_scope is not None:
             root = self._get_root_registry()
@@ -441,6 +443,14 @@ class Registry:
         name or the specified name, and value is the class itself.
         It can be used as a decorator or a normal function.
 
+        Args:
+            name (str or list of str, optional): The module name to be
+                registered. If not specified, the class name will be used.
+            force (bool): Whether to override an existing class with the same
+                name. Default to False.
+            module (type, optional): Module class to be registered. Defaults to
+                None.
+
         Examples:
             >>> backbones = Registry('backbone')
             >>> # as a decorator
@@ -456,14 +466,6 @@ class Registry:
             >>> class ResNet:
             >>>     pass
             >>> backbones.register_module(module=ResNet)
-
-        Args:
-            name (str or list of str, optional): The module name to be
-                registered. If not specified, the class name will be used.
-            force (bool): Whether to override an existing class with the same
-                name. Default to False.
-            module (type, optional): Module class to be registered. Defaults to
-                None.
         """
         if not isinstance(force, bool):
             raise TypeError(f'force must be a boolean, but got {type(force)}')
