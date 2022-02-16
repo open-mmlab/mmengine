@@ -31,13 +31,8 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
             Currently supported formats include "json", "yaml/yml" and
             "pickle/pkl".
         file_client_args (dict, optional): Arguments to instantiate a
-<<<<<<< HEAD:mmengine/utils/fileio/io.py
-            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
-            details. Default: None.
-=======
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Default: None.
->>>>>>> 166ca02363ddd2e0a623f0393e9be0cc54243bf3:mmengine/fileio/io.py
 
     Examples:
         >>> load('/path/of/your/file')  # file is storaged in disk
@@ -86,13 +81,8 @@ def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
             specified by the filename or file-like object.
         file_format (str, optional): Same as :func:`load`.
         file_client_args (dict, optional): Arguments to instantiate a
-<<<<<<< HEAD:mmengine/utils/fileio/io.py
-            FileClient. See :class:`mmengine.utils.fileio.FileClient` for
-            details. Default: None.
-=======
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Default: None.
->>>>>>> 166ca02363ddd2e0a623f0393e9be0cc54243bf3:mmengine/fileio/io.py
 
     Examples:
         >>> dump('hello world', '/path/of/your/file')  # disk
