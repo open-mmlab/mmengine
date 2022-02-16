@@ -28,10 +28,10 @@ class ToyModel(torch.nn.Module):
 class TestParameterScheduler(TestCase):
 
     def setUp(self):
-        """TestCase will call function in this order:
+        """Setup the model and optimizer which used in every test method.
 
-        setUp() -> testMethod() -> tearDown() -> cleanUp() Setup the model and
-        optimizer which used in every test method.
+        TestCase will call function in this order: setUp() -> testMethod() ->
+        tearDown() -> cleanUp()
         """
         self.model = ToyModel()
         self.optimizer = optim.SGD(

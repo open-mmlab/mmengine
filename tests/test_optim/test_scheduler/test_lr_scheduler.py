@@ -14,7 +14,7 @@ from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
 class ToyModel(torch.nn.Module):
 
     def __init__(self):
-        super(ToyModel, self).__init__()
+        super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 1, 1)
         self.conv2 = torch.nn.Conv2d(1, 1, 1)
 
@@ -25,10 +25,10 @@ class ToyModel(torch.nn.Module):
 class TestLRScheduler(TestCase):
 
     def setUp(self):
-        """TestCase will call function in this order:
+        """Setup the model and optimizer which used in every test method.
 
-        setUp() -> testMethod() -> tearDown() -> cleanUp() Setup the model and
-        optimizer which used in every test method.
+        TestCase will call function in this order: setUp() -> testMethod() ->
+        tearDown() -> cleanUp()
         """
         self.model = ToyModel()
         self.optimizer = optim.SGD(
