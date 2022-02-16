@@ -8,9 +8,12 @@ from typing import Callable, List
 
 from torch.optim import Optimizer
 
+from mmengine.registry import SCHEDULERS
+
 INF = int(1e9)
 
 
+@SCHEDULERS.register_module()
 class _ParamScheduler:
     """Base class for parameter schedulers.
 
@@ -205,6 +208,7 @@ class _ParamScheduler:
         ]
 
 
+@SCHEDULERS.register_module()
 class StepParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every
     step_size epochs. Notice that such decay can happen simultaneously with
@@ -259,6 +263,7 @@ class StepParamScheduler(_ParamScheduler):
         ]
 
 
+@SCHEDULERS.register_module()
 class MultiStepParamScheduler(_ParamScheduler):
     """Decays the specified parameter in each parameter group by gamma once the
     number of epoch reaches one of the milestones. Notice that such decay can
@@ -315,6 +320,7 @@ class MultiStepParamScheduler(_ParamScheduler):
         ]
 
 
+@SCHEDULERS.register_module()
 class ConstantParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by a small constant
     factor until the number of epoch reaches a pre-defined milestone:
@@ -381,6 +387,7 @@ class ConstantParamScheduler(_ParamScheduler):
             ]
 
 
+@SCHEDULERS.register_module()
 class ExponentialParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every epoch.
 
@@ -429,6 +436,7 @@ class ExponentialParamScheduler(_ParamScheduler):
         ]
 
 
+@SCHEDULERS.register_module()
 class CosineAnnealingParamScheduler(_ParamScheduler):
     r"""Set the parameter value of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
@@ -515,6 +523,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
                 for group in self.optimizer.param_groups]
 
 
+@SCHEDULERS.register_module()
 class LinearParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined

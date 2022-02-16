@@ -3,12 +3,14 @@ from typing import List
 
 import torch
 
+from mmengine.registry import SCHEDULERS
 from .param_scheduler import (INF, ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, StepParamScheduler)
 
 
+@SCHEDULERS.register_module()
 class ConstantMomentum(ConstantParamScheduler):
 
     def __init__(self,
@@ -30,6 +32,7 @@ class ConstantMomentum(ConstantParamScheduler):
             verbose=verbose)
 
 
+@SCHEDULERS.register_module()
 class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
 
     def __init__(self,
@@ -53,6 +56,7 @@ class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
             verbose=verbose)
 
 
+@SCHEDULERS.register_module()
 class ExponentialMomentum(ExponentialParamScheduler):
 
     def __init__(self,
@@ -74,6 +78,7 @@ class ExponentialMomentum(ExponentialParamScheduler):
             verbose=verbose)
 
 
+@SCHEDULERS.register_module()
 class LinearMomentum(LinearParamScheduler):
 
     def __init__(self,
@@ -97,6 +102,7 @@ class LinearMomentum(LinearParamScheduler):
             verbose=verbose)
 
 
+@SCHEDULERS.register_module()
 class MultiStepMomentum(MultiStepParamScheduler):
 
     def __init__(self,
@@ -120,6 +126,7 @@ class MultiStepMomentum(MultiStepParamScheduler):
             verbose=verbose)
 
 
+@SCHEDULERS.register_module()
 class StepMomentum(StepParamScheduler):
 
     def __init__(self,
