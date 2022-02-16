@@ -31,8 +31,8 @@ class ConfigDict(Dict):
     """A dictionary for config which has the same interface as python's built-
     in dictionary and can be used as a normal dictionary.
 
-    The `Config` class would transform The nested fields (dictionary-like
-    fields) in config file into `ConfigDict`.
+    The Config class would transform the nested fields (dictionary-like fields)
+    in config file into ``ConfigDict``.
     """
 
     def __missing__(self, name: str):
@@ -40,7 +40,22 @@ class ConfigDict(Dict):
         raise KeyError(name)
 
     def __getattr__(self, name: str) -> Generator[Any, None, None]:
-        """get attribute."""
+        """Get attribute. with this function, value can be accessed like a
+        object property.
+
+        Example:
+        ```
+            optimizer = ConfigDict(type='SGD', lr=0.01)
+            optimizer.lr # 0.01
+        ```
+
+        Args:
+            name (str): Attribute name.
+
+        Returns:
+            Any : Attribute value.
+        """
+
         try:
             value = super(ConfigDict, self).__getattr__(name)
         except KeyError:
@@ -59,7 +74,7 @@ def add_args(parser: ArgumentParser,
 
     Args:
         parser (ArgumentParser): Argument parser.
-        cfg (Dict[str, Any]): Config dictionary.
+        cfg (dict): Config dictionary.
         prefix (str, optional): Prefix of parser argument.
             Defaults to ''.
 
@@ -110,6 +125,77 @@ class Config:
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
     """
 
+    def __init__(self, cfg_dict=None, cfg_text=None, filename=None):
+        if cfg_dict is None:
+            cfg_dict = dict()
+        elif not isinstance(cfg_dict, dict):
+            raise TypeError('cfg_dict must be a dict, but '
+                            f'got {type(cfg_dict)}')
+        for key in cfg_dict:
+            if key in RESERVED_KEYS:
+                raise KeyError(f'{key} is reserved for config file')
+
+        super(Config, self).__setattr__('_cfg_dict', ConfigDict(cfg_dict))
+        super(Config, self).__setattr__('_filename', filename)
+        if cfg_text:
+            text = cfg_text
+        elif filename:
+            with open(filename, 'r') as f:
+                text = f.read()
+        else:
+            text = ''
+        super(Config, self).__setattr__('_text', text)
+
+    @staticmethod
+    def fromfile(filename: str,
+                 use_predefined_variables: bool = True,
+                 import_custom_modules: bool = True) -> 'Config':
+        """Build Config from config file.
+
+        Args:
+            filename (str): Name of config file.
+            use_predefined_variables (bool, optional): Whether use predefined
+                variables. Defaults to True.
+            import_custom_modules (bool, optional): Whether support importing
+                custom modules in config. Defaults to True.
+
+        Returns:
+            Config: Config instance built from config file.
+        """
+        cfg_dict, cfg_text = Config._file2dict(filename,
+                                               use_predefined_variables)
+        if import_custom_modules and cfg_dict.get('custom_imports', None):
+            import_modules_from_strings(**cfg_dict['custom_imports'])
+        return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
+
+    @staticmethod
+    def fromstring(cfg_str: str, file_format: str) -> 'Config':
+        """Generate config from config str.
+
+        Args:
+            cfg_str (str): Config str.
+            file_format (str): Config file format corresponding to the
+               config str. Only py/yml/yaml/json type are supported now!
+
+        Returns:
+            Config: Config object generated from ``cfg_str``.
+        """
+        if file_format not in ['.py', '.json', '.yaml', '.yml']:
+            raise IOError('Only py/yml/yaml/json type are supported now!')
+        if file_format != '.py' and 'dict(' in cfg_str:
+            # check if users specify a wrong suffix for python
+            warnings.warn(
+                'Please check "file_format", the file format may be .py')
+        with tempfile.NamedTemporaryFile(
+                'w', encoding='utf-8', suffix=file_format,
+                delete=False) as temp_file:
+            temp_file.write(cfg_str)
+            # on windows, previous implementation cause error
+            # see PR 1077 for details
+        cfg = Config.fromfile(temp_file.name)
+        os.remove(temp_file.name)
+        return cfg
+
     @staticmethod
     def _validate_py_syntax(filename: str):
         """Validate syntax of python config.
@@ -118,7 +204,6 @@ class Config:
             filename (str): Filename of python config file.
         """
         with open(filename, 'r', encoding='utf-8') as f:
-            # Setting encoding explicitly to resolve coding issue on windows
             content = f.read()
         try:
             ast.parse(content)
@@ -162,8 +247,8 @@ class Config:
 
         Args:
             filename (str): Filename of config.
-            temp_config_name (str): Filename of temporary config. Substitution
-                will be saved in this file.
+            temp_config_name (str): Temporary filename to save substituted
+                config.
         """
         file_dirname = osp.dirname(filename)
         file_basename = osp.basename(filename)
@@ -175,7 +260,6 @@ class Config:
             fileBasenameNoExtension=file_basename_no_extension,
             fileExtname=file_extname)
         with open(filename, 'r', encoding='utf-8') as f:
-            # Setting encoding explicitly to resolve coding issue on windows
             config_file = f.read()
         for key, value in support_templates.items():
             regexp = r'\{\{\s*' + str(key) + r'\s*\}\}'
@@ -192,14 +276,13 @@ class Config:
 
         Args:
             filename (str): Filename of config.
-            temp_config_name (str): Filename of temporary config. Substitution
-                will be saved in this file.
+            temp_config_name (str): Temporary filename to save substituted
+                config.
 
         Returns:
-            dict: A dictionary contain variables in base config.
+            dict: A dictionary contains variables in base config.
         """
         with open(filename, 'r', encoding='utf-8') as f:
-            # Setting encoding explicitly to resolve coding issue on windows
             config_file = f.read()
         base_var_dict = {}
         regexp = r'\{\{\s*' + BASE_KEY + r'\.([\w\.]+)\s*\}\}'
@@ -214,8 +297,20 @@ class Config:
         return base_var_dict
 
     @staticmethod
-    def _substitute_base_vars(cfg, base_var_dict, base_cfg):
-        """Substitute variable strings to their actual values."""
+    def _substitute_base_vars(cfg: Dict, base_var_dict: Dict,
+                              base_cfg: Dict) -> Dict:
+        """Substitute base variables from strings to their actual values.
+
+        Args:
+            cfg (dict): Config dictionary.
+            base_var_dict (dict): A dictionary contains variables in base
+                config.
+            base_cfg (dict): Base config dictionary.
+
+        Returns:
+            dict : A dictionary with origin base variables substituted with
+                actual values.
+        """
         cfg = copy.deepcopy(cfg)
 
         if isinstance(cfg, dict):
@@ -412,56 +507,6 @@ class Config:
         return b
 
     @staticmethod
-    def fromfile(filename: str,
-                 use_predefined_variables: bool = True,
-                 import_custom_modules: bool = True) -> 'Config':
-        """Build Config from config file.
-
-        Args:
-            filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined
-                variables. Defaults to True.
-            import_custom_modules (bool, optional): Whether support import
-                custom modules in config. Defaults to True.
-
-        Returns:
-            Config: Config instance built from config file.
-        """
-        cfg_dict, cfg_text = Config._file2dict(filename,
-                                               use_predefined_variables)
-        if import_custom_modules and cfg_dict.get('custom_imports', None):
-            import_modules_from_strings(**cfg_dict['custom_imports'])
-        return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
-
-    @staticmethod
-    def fromstring(cfg_str: str, file_format: str) -> 'Config':
-        """Generate config from config str.
-
-        Args:
-            cfg_str (str): Config str.
-            file_format (str): Config file format corresponding to the
-               config str. Only py/yml/yaml/json type are supported now!
-
-        Returns:
-            Config: Config obj.
-        """
-        if file_format not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
-        if file_format != '.py' and 'dict(' in cfg_str:
-            # check if users specify a wrong suffix for python
-            warnings.warn(
-                'Please check "file_format", the file format may be .py')
-        with tempfile.NamedTemporaryFile(
-                'w', encoding='utf-8', suffix=file_format,
-                delete=False) as temp_file:
-            temp_file.write(cfg_str)
-            # on windows, previous implementation cause error
-            # see PR 1077 for details
-        cfg = Config.fromfile(temp_file.name)
-        os.remove(temp_file.name)
-        return cfg
-
-    @staticmethod
     def auto_argparser(description=None):
         """Generate argparser from config file automatically (experimental)"""
         partial_parser = ArgumentParser(description=description)
@@ -473,39 +518,18 @@ class Config:
         add_args(parser, cfg)
         return parser, cfg
 
-    def __init__(self, cfg_dict=None, cfg_text=None, filename=None):
-        if cfg_dict is None:
-            cfg_dict = dict()
-        elif not isinstance(cfg_dict, dict):
-            raise TypeError('cfg_dict must be a dict, but '
-                            f'got {type(cfg_dict)}')
-        for key in cfg_dict:
-            if key in RESERVED_KEYS:
-                raise KeyError(f'{key} is reserved for config file')
-
-        super(Config, self).__setattr__('_cfg_dict', ConfigDict(cfg_dict))
-        super(Config, self).__setattr__('_filename', filename)
-        if cfg_text:
-            text = cfg_text
-        elif filename:
-            with open(filename, 'r') as f:
-                text = f.read()
-        else:
-            text = ''
-        super(Config, self).__setattr__('_text', text)
-
     @property
-    def filename(self):
+    def filename(self) -> str:
         """get file name of config."""
         return self._filename
 
     @property
-    def text(self):
+    def text(self) -> str:
         """get config text."""
         return self._text
 
     @property
-    def pretty_text(self):
+    def pretty_text(self) -> str:
         """get formatted python config text."""
 
         indent = 4
@@ -607,8 +631,22 @@ class Config:
         """return length of dictionary."""
         return len(self._cfg_dict)
 
-    def __getattr__(self, name):
-        """get attribute."""
+    def __getattr__(self, name: str) -> Any:
+        """Get attribute. with this function, value can be accessed like a
+        object property.
+
+        Example:
+        ```python
+            cfg = Config.fromfile('config.py')
+            cfg.test_int  # 1
+        ```
+        Args:
+            name (str): Attribute name.
+
+        Returns:
+            Any : Attribute value.
+        """
+
         return getattr(self._cfg_dict, name)
 
     def __getitem__(self, name):
@@ -649,7 +687,7 @@ class Config:
             file (Optional[str], optional): _description_. Defaults to None.
 
         Returns:
-            Optional[str]: Config text.
+            str or None: Config text.
         """
         cfg_dict = super(Config, self).__getattribute__('_cfg_dict').to_dict()
         if self.filename.endswith('.py'):
@@ -695,7 +733,7 @@ class Config:
             allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
               are allowed in ``options`` and will replace the element of the
               corresponding index in the config if the config is a list.
-              Default: True.
+              Defaults to True.
         """
         option_cfg_dict = {}
         for full_key, v in options.items():
