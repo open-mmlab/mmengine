@@ -258,11 +258,16 @@ class TestConfig:
         with pytest.raises(TypeError):
             cfg[[1, 2]] = 0
 
-    def test_repr(self):
+    def test_repr(self, tmp_path):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/simple_config.py')
         cfg = Config.fromfile(cfg_file)
-        print(cfg)
+        tmp_txt = tmp_path / 'tmp.txt'
+        with open(tmp_txt, 'w') as f:
+            print(cfg, file=f)
+        with open(tmp_txt, 'r') as f:
+            assert f.read().strip() == f'Config (path: {cfg.filename}): ' \
+                               f'{cfg._cfg_dict.__repr__()}'
 
     def test_dict_action(self):
         parser = argparse.ArgumentParser(description='Train a detector')
@@ -339,7 +344,10 @@ class TestConfig:
         cfg_path = osp.join(self.data_path, 'config',
                             'py_config/test_pre_substitute_base_vars.py')
         tmp_cfg = tmp_path / 'tmp_cfg.py'
-        Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
+        base_var_dict = Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
+        assert 'item6' in base_var_dict.values()
+        assert 'item10' in base_var_dict.values()
+        assert 'item11' in base_var_dict.values()
         sys.path.append(str(tmp_path))
         cfg_module_dict = import_module(tmp_cfg.name.strip('.py')).__dict__
         assert cfg_module_dict['item22'].startswith('_item11')
