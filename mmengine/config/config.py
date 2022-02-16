@@ -4,26 +4,22 @@ import copy
 import os
 import os.path as osp
 import platform
+import re
 import shutil
 import sys
 import tempfile
 import uuid
 import warnings
-from argparse import Action, ArgumentParser
+from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from importlib import import_module
+from typing import Any, Generator, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
-from mmengine.utils import import_modules_from_strings, check_file_exist
-from mmengine.utils import load, dump
-from typing import Optional, Tuple, Union
-
-if platform.system() == 'Windows':
-    import regex as re
-else:
-    import re
+from mmengine.utils import (check_file_exist, dump,
+                            import_modules_from_strings, load)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -32,38 +28,43 @@ RESERVED_KEYS = ['filename', 'text', 'pretty_text']
 
 
 class ConfigDict(Dict):
+    """A dictionary for config which has the same interface as python's built-
+    in dictionary and can be used as a normal dictionary.
+
+    The `Config` class would transform The nested fields (dictionary-like
+    fields) in config file into `ConfigDict`.
+    """
 
     def __missing__(self, name: str):
-        '''miss attribute'''
+        """miss attribute."""
         raise KeyError(name)
 
-    def __getattr__(self, name: str):
-        '''get attribute'''
+    def __getattr__(self, name: str) -> Generator[Any, None, None]:
+        """get attribute."""
         try:
             value = super(ConfigDict, self).__getattr__(name)
         except KeyError:
-            ex = AttributeError(f"'{self.__class__.__name__}' object has no "
-                                f"attribute '{name}'")
+            raise AttributeError(f"'{self.__class__.__name__}' object has no "
+                                 f"attribute '{name}'")
         except Exception as e:
-            ex = e
+            raise e
         else:
             return value
-        raise ex
 
 
 def add_args(parser: ArgumentParser,
-             cfg: dict,
+             cfg: Dict,
              prefix: str = '') -> ArgumentParser:
-    """Add config fields into ArgumentParser.
+    """Add config fields into argument parser.
 
     Args:
-        parser (ArgumentParser): ArgumentParser.
-        cfg (dict): Config dictionary.
-        prefix (Optional[str], optional): Prefix of parser argument. 
+        parser (ArgumentParser): Argument parser.
+        cfg (Dict[str, Any]): Config dictionary.
+        prefix (str, optional): Prefix of parser argument.
             Defaults to ''.
 
     Returns:
-        ArgumentParser: ArgumentParser include config fields.
+        ArgumentParser: Argument parser containing config fields.
     """
     for k, v in cfg.items():
         if isinstance(v, str):
@@ -77,7 +78,8 @@ def add_args(parser: ArgumentParser,
         elif isinstance(v, dict):
             add_args(parser, v, prefix + k + '.')
         elif isinstance(v, abc.Iterable):
-            parser.add_argument('--' + prefix + k, type=type(v[0]), nargs='+')
+            parser.add_argument(
+                '--' + prefix + k, type=type(next(iter(v))), nargs='+')
         else:
             print(f'cannot parse key {prefix + k} of type {type(v)}')
     return parser
@@ -114,7 +116,6 @@ class Config:
 
         Args:
             filename (str): Filename of python config file.
-
         """
         with open(filename, 'r', encoding='utf-8') as f:
             # Setting encoding explicitly to resolve coding issue on windows
@@ -128,40 +129,40 @@ class Config:
     @staticmethod
     def _substitute_predefined_vars(filename: str, temp_config_name: str):
         """Substitute predefined variables in config with actual values.
-        
-        Sometimes we want some variables in the config to be related to the 
+
+        Sometimes we want some variables in the config to be related to the
         current path or file name, etc.
-        
+
         Here is an example of a typical usage scenario. When training a model,
-        we define a working directory in the config that save the models and 
+        we define a working directory in the config that save the models and
         logs. For different configs, we expect to define different working
-        directories. A common way for users is to use the config file name 
+        directories. A common way for users is to use the config file name
         directly as part of the working directory name, e.g. for the config
-        `config_setting1.py`, the working directory is 
+        `config_setting1.py`, the working directory is
         `. /work_dir/config_setting1`.
-        
-        
-        This can be easily achieved using predefined variables, which can be 
+
+
+        This can be easily achieved using predefined variables, which can be
         written in the config `config_setting1.py` as follows
         ```Python
             work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
         ```
-        
-        Here `{{ fileBasenameNoExtension }}` indicates the file name of the 
-        config (without the extension), and when the config class reads the 
-        config file, it will automatically parse this double-bracketed string 
+
+        Here `{{ fileBasenameNoExtension }}` indicates the file name of the
+        config (without the extension), and when the config class reads the
+        config file, it will automatically parse this double-bracketed string
         to the corresponding actual value.
-        
+
         ```Python
             cfg = Config.fromfile('. /config_setting1.py')
             cfg.work_dir # ". /work_dir/config_setting1"
         ```
-        
+
         For details, Please refer to docs/zh_cn/tutorials/config.md .
 
         Args:
             filename (str): Filename of config.
-            temp_config_name (str): Filename of temporary config. Substitution 
+            temp_config_name (str): Filename of temporary config. Substitution
                 will be saved in this file.
         """
         file_dirname = osp.dirname(filename)
@@ -186,12 +187,12 @@ class Config:
     @staticmethod
     def _pre_substitute_base_vars(filename: str,
                                   temp_config_name: str) -> dict:
-        """Preceding step for substituting variables in base config with 
-           actual value. 
+        """Preceding step for substituting variables in base config with actual
+        value.
 
         Args:
             filename (str): Filename of config.
-            temp_config_name (str): Filename of temporary config. Substitution 
+            temp_config_name (str): Filename of temporary config. Substitution
                 will be saved in this file.
 
         Returns:
@@ -251,9 +252,9 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined 
+            use_predefined_variables (bool, optional): Whether use predefined
                 variables. Defaults to True.
-            
+
         Returns:
             Tuple[dict, str]: Variables dictionary and text of Config.
         """
@@ -324,11 +325,12 @@ class Config:
             cfg_dict_list = list()
             cfg_text_list = list()
             for f in base_filename:
-                _cfg_dict, _cfg_text = Config._file2dict(osp.join(cfg_dir, f))
+                _cfg_dict, _cfg_text = Config._file2dict(
+                    osp.join(cfg_dir, str(f)))
                 cfg_dict_list.append(_cfg_dict)
                 cfg_text_list.append(_cfg_text)
 
-            base_cfg_dict = dict()
+            base_cfg_dict: Dict[str, Any] = dict()
             for c in cfg_dict_list:
                 duplicate_keys = base_cfg_dict.keys() & c.keys()
                 if len(duplicate_keys) > 0:
@@ -393,7 +395,8 @@ class Config:
                 b[k] = Config._merge_a_into_b(v, b[k], allow_list_keys)
             elif isinstance(v, dict):
                 if k in b and not v.pop(DELETE_KEY, False):
-                    allowed_types = (dict, list) if allow_list_keys else dict
+                    allowed_types: Union[Tuple, type] = (
+                        dict, list) if allow_list_keys else dict
                     if not isinstance(b[k], allowed_types):
                         raise TypeError(
                             f'{k}={v} in child config cannot inherit from '
@@ -416,9 +419,9 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined 
+            use_predefined_variables (bool, optional): Whether use predefined
                 variables. Defaults to True.
-            import_custom_modules (bool, optional): Whether support import 
+            import_custom_modules (bool, optional): Whether support import
                 custom modules in config. Defaults to True.
 
         Returns:
@@ -493,17 +496,17 @@ class Config:
 
     @property
     def filename(self):
-        '''get file name of config'''
+        """get file name of config."""
         return self._filename
 
     @property
     def text(self):
-        '''get config text'''
+        """get config text."""
         return self._text
 
     @property
     def pretty_text(self):
-        '''get formatted python config text'''
+        """get formatted python config text."""
 
         indent = 4
 
@@ -597,43 +600,43 @@ class Config:
         return text
 
     def __repr__(self):
-        '''print config filename and dictionary'''
+        """print config filename and dictionary."""
         return f'Config (path: {self.filename}): {self._cfg_dict.__repr__()}'
 
     def __len__(self):
-        '''return length of dictionary'''
+        """return length of dictionary."""
         return len(self._cfg_dict)
 
     def __getattr__(self, name):
-        '''get attribute'''
+        """get attribute."""
         return getattr(self._cfg_dict, name)
 
     def __getitem__(self, name):
-        '''get item from config dictionary'''
+        """get item from config dictionary."""
         return self._cfg_dict.__getitem__(name)
 
     def __setattr__(self, name, value):
-        '''set attribute'''
+        """set attribute."""
         if isinstance(value, dict):
             value = ConfigDict(value)
         self._cfg_dict.__setattr__(name, value)
 
     def __setitem__(self, name, value):
-        '''set config dictionary item'''
+        """set config dictionary item."""
         if isinstance(value, dict):
             value = ConfigDict(value)
         self._cfg_dict.__setitem__(name, value)
 
     def __iter__(self):
-        '''get config dictionary iterator'''
+        """get config dictionary iterator."""
         return iter(self._cfg_dict)
 
     def __getstate__(self):
-        '''get state of config'''
+        """get state of config."""
         return (self._cfg_dict, self._filename, self._text)
 
     def __setstate__(self, state):
-        '''set state of config'''
+        """set state of config."""
         _cfg_dict, _filename, _text = state
         super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
         super(Config, self).__setattr__('_filename', _filename)
@@ -721,8 +724,8 @@ class DictAction(Action):
     """
 
     @staticmethod
-    def _parse_int_float_bool(val: str) -> Union[int, float, bool]:
-        '''parse int/float/bool values in the string'''
+    def _parse_int_float_bool(val: str) -> Union[int, float, bool, Any]:
+        """parse int/float/bool value in the string."""
         try:
             return int(val)
         except ValueError:
@@ -736,7 +739,7 @@ class DictAction(Action):
         return val
 
     @staticmethod
-    def _parse_iterable(val: str) -> Union[list, tuple]:
+    def _parse_iterable(val: str) -> Union[list, tuple, Any]:
         """Parse iterable values in the string.
 
         All elements inside '()' or '[]' are treated as iterable values.
@@ -745,7 +748,8 @@ class DictAction(Action):
             val (str): Value string.
 
         Returns:
-            list | tuple: The expanded list or tuple from the string.
+            list | tuple | Any : The expanded list or tuple from the string,
+                or single value if no iterable values found.
 
         Examples:
             >>> DictAction._parse_iterable('1,2,3')
@@ -794,26 +798,29 @@ class DictAction(Action):
             element = DictAction._parse_iterable(val[:comma_idx])
             values.append(element)
             val = val[comma_idx + 1:]
+
         if is_tuple:
-            values = tuple(values)
+            return tuple(values)
+
         return values
 
     def __call__(self,
-                 parser: 'ArgumentParser',
-                 namespace: 'Namespace',
-                 values: str,
+                 parser: ArgumentParser,
+                 namespace: Namespace,
+                 values: Union[str, Sequence[Any], None],
                  option_string: str = None):
         """Parse Variables in string and add them into argparser.
 
         Args:
             parser (ArgumentParser): Argument parser.
             namespace (Namespace): Argument namespace.
-            values (str): Argument string.
-            option_string (list[str], optional): Option string. 
+            values (Union[str, Sequence[Any], None]): Argument string.
+            option_string (list[str], optional): Option string.
                 Defaults to None.
         """
         options = {}
-        for kv in values:
-            key, val = kv.split('=', maxsplit=1)
-            options[key] = self._parse_iterable(val)
+        if values is not None:
+            for kv in values:
+                key, val = kv.split('=', maxsplit=1)
+                options[key] = self._parse_iterable(val)
         setattr(namespace, self.dest, options)

@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine import Config, ConfigDict, Registry, build_from_cfg
+from mmengine import Registry  # type: ignore
+from mmengine import build_from_cfg  # type: ignore
+from mmengine import Config, ConfigDict
 
 
 class TestRegistry:

@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 _base_ = ['./test_base_variables_nested.py']
 item21 = {{_base_.item11}}
 item22 = item21

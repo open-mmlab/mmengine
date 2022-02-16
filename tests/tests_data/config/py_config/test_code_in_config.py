@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from mmengine import Config  # isort:skip
 
 cfg = Config.fromfile('tests/tests_data/config/py_config/simple_config.py')
