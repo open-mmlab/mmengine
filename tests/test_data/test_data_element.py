@@ -85,7 +85,7 @@ class TestBaseDataElement(TestCase):
         assert type(new_instances) == type(instances)
         assert id(new_instances.bboxes) != id(instances.bboxes)
         assert id(new_instances.bboxes) != id(data['bboxes'])
-        self.check_key_value(instances, metainfo, data)
+        self.check_key_value(new_instances, metainfo, data)
 
         # test new() with arguments
         metainfo, data = self.setup_data()
@@ -93,7 +93,7 @@ class TestBaseDataElement(TestCase):
         assert type(new_instances) == type(instances)
         assert id(new_instances.bboxes) != id(instances.bboxes)
         assert id(new_instances.bboxes) != id(data['bboxes'])
-        self.check_key_value(instances, metainfo, data)
+        self.check_key_value(new_instances, metainfo, data)
 
     def test_set_metainfo(self):
         metainfo, _ = self.setup_data()
@@ -127,8 +127,9 @@ class TestBaseDataElement(TestCase):
         new_metainfo, new_data = self.setup_data()
         instances.bboxes = new_data['bboxes']
         instances.scores = new_data['scores']
-        instances.img_id = new_metainfo['img_id']
-        instances.img_shape = new_metainfo['img_shape']
+
+        # a.xx only set data rather than metainfo
+        instances.set_metainfo(new_metainfo)
         self.check_key_value(instances, new_metainfo, new_data)
 
         assert instances.bboxes != data['bboxes']

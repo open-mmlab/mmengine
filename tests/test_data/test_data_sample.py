@@ -44,13 +44,17 @@ class TestBaseDataSample(TestCase):
     def check_data_device(self, instances, device):
         instances.device = device
         for v in instances.data_values():
-            if isinstance(v, torch.Tensor):
+            if isinstance(v, (torch.Tensor)):
                 assert v.device == device
+            elif isinstance(v, BaseDataElement):
+                self.check_data_device(v, device)
 
     def check_data_dtype(self, instances, dtype):
         for v in instances.data_values():
             if isinstance(v, (torch.Tensor, np.ndarray)):
                 assert v.dtype == dtype
+            if isinstance(v, BaseDataElement):
+                self.check_data_dtype(v, dtype)
 
     def test_init(self):
         # initialization with no data and metainfo
@@ -87,17 +91,17 @@ class TestBaseDataSample(TestCase):
         # test new() with no arguments
         new_instances = instances.new()
         assert type(new_instances) == type(instances)
-        assert id(new_instances.bboxes) != id(instances.bboxes)
-        assert id(new_instances.bboxes) != id(data['bboxes'])
-        self.check_key_value(instances, metainfo, data)
+        assert id(new_instances.data) != id(instances.data)
+        assert id(new_instances.bboxes) != id(data)
+        self.check_key_value(new_instances, metainfo, data)
 
         # test new() with arguments
         metainfo, data = self.setup_data()
         new_instances = instances.new(metainfo=metainfo, data=data)
         assert type(new_instances) == type(instances)
-        assert id(new_instances.bboxes) != id(instances.bboxes)
-        assert id(new_instances.bboxes) != id(data['bboxes'])
-        self.check_key_value(instances, metainfo, data)
+        assert id(new_instances.data) != id(instances.data)
+        assert id(new_instances.data) != id(data)
+        self.check_key_value(new_instances, metainfo, data)
 
     def test_set_metainfo(self):
         metainfo, _ = self.setup_data()
@@ -115,8 +119,8 @@ class TestBaseDataSample(TestCase):
         metainfo, data = self.setup_data()
         instances = BaseDataSample()
 
-        instances.bboxes = data['bboxes']
-        instances.scores = data['scores']
+        instances.gt_instances = data['gt_instances']
+        instances.pred_instances = data['pred_instances']
         self.check_key_value(instances, data=data)
 
         # a.xx only set data rather than metainfo
@@ -129,26 +133,28 @@ class TestBaseDataSample(TestCase):
         instances = BaseDataSample(metainfo, data)
 
         new_metainfo, new_data = self.setup_data()
-        instances.bboxes = new_data['bboxes']
-        instances.scores = new_data['scores']
-        instances.img_id = new_metainfo['img_id']
-        instances.img_shape = new_metainfo['img_shape']
+        instances.gt_instances = new_data['gt_instances']
+        instances.pred_instances = new_data['pred_instances']
+
+        # a.xx only set data rather than metainfo
+        instances.set_metainfo(new_metainfo)
         self.check_key_value(instances, new_metainfo, new_data)
 
-        assert instances.bboxes != data['bboxes']
-        assert instances.scores != data['scores']
+        assert instances.gt_instances != data['gt_instances']
+        assert instances.pred_instances != data['pred_instances']
         assert instances.img_id != metainfo['img_id']
         assert instances.img_shape != metainfo['img_shape']
 
-        del instances.bboxes
-        assert instances.pop('scores', None) == new_data['scores']
+        del instances.gt_instances
+        assert instances.pop('pred_instances',
+                             None) == new_data['pred_instances']
         with self.assertRaises(AttributeError):
-            del instances.scores
+            del instances.pred_instances
 
-        assert 'bboxes' not in instances
-        assert 'scores' not in instances
-        assert instances.pop('bboxes', None) is None
-        assert instances.pop('scores', 'abcdef') == 'abcdef'
+        assert 'gt_instances' not in instances
+        assert 'pred_instances' not in instances
+        assert instances.pop('gt_instances', None) is None
+        assert instances.pop('pred_instances', 'abcdef') == 'abcdef'
 
     @pytest.mark.skipif(
         not torch.cuda.is_available(), reason='GPU is required!')
@@ -189,14 +195,50 @@ class TestBaseDataSample(TestCase):
 
     def test_repr(self):
         metainfo = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
-        instances = BaseDataSample(metainfo=metainfo)
-        instances.det_labels = torch.LongTensor([0, 1, 2, 3])
-        instances.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
+        gt_instances = BaseDataElement(
+            data=dict(
+                det_labels=torch.LongTensor([0, 1, 2, 3],
+                                            det_scores=torch.Tensor(
+                                                [0.01, 0.1, 0.2, 0.3]))))
+        data = dict(gt_instances=gt_instances)
+        instances = BaseDataSample(metainfo=metainfo, data=data)
         assert repr(instances) == ('<BaseDataSample(\n'
+                                   '  META INFORMATION\n'
+                                   'img_shape: (800, 1196, 3)\n'
+                                   'pad_shape: (800, 1216, 3)\n'
+                                   '  DATA FIELDS\n'
+                                   '<BaseDataElement(\n'
                                    '  META INFORMATION\n'
                                    'img_shape: (800, 1196, 3)\n'
                                    'pad_shape: (800, 1216, 3)\n'
                                    '  DATA FIELDS\n'
                                    'shape of det_labels: torch.Size([4])\n'
                                    'shape of det_scores: torch.Size([4])\n'
+                                   ') at 0x7f84acd10f90>'
                                    ') at 0x7f84acd10f90>')
+
+    def test_set_get_fields(self):
+        metainfo, data = self.setup_data()
+        instances = BaseDataSample(metainfo)
+        for key, value in data.items():
+            instances._set_field(value, key, BaseDataElement)
+        self.check_key_value(instances, data=data)
+
+        # test type check
+        _, data = self.setup_data()
+        instances = BaseDataSample()
+        for key, value in data.items():
+            with self.assertRaises(AssertionError):
+                instances._set_field(value, key, BaseDataSample)
+
+    def test_del_field(self):
+        metainfo, data = self.setup_data()
+        instances = BaseDataSample(metainfo)
+        for key, value in data.items():
+            instances._set_field(value, key, BaseDataElement)
+        instances._del_field('gt_instances')
+        instances._del_field('pred_instances')
+        with self.assertRaises(AttributeError):
+            instances._del_field('gt_instances')
+        assert 'gt_instances' not in instances
+        assert 'pred_instances' not in instances
