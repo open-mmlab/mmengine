@@ -1,15 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# type: ignore
 import inspect
 import os
 import os.path as osp
 import re
 import tempfile
-import warnings
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Tuple, Union
+from typing import Any, Generator, Iterator, Optional, Tuple, Union
 from urllib.request import urlopen
 
 import mmengine
@@ -44,47 +42,8 @@ class BaseStorageBackend(metaclass=ABCMeta):
         pass
 
 
-class CephBackend(BaseStorageBackend):
-    """Ceph storage backend (for internal use).
-
-    Args:
-        path_mapping (dict|None): path mapping dict from local path to Petrel
-            path. When ``path_mapping={'src': 'dst'}``, ``src`` in ``filepath``
-            will be replaced by ``dst``. Default: None.
-
-    .. warning::
-        :class:`mmcv.fileio.file_client.CephBackend` will be deprecated,
-        please use :class:`mmcv.fileio.file_client.PetrelBackend` instead.
-    """
-
-    def __init__(self, path_mapping=None):
-        try:
-            import ceph
-        except ImportError:
-            raise ImportError('Please install ceph to enable CephBackend.')
-
-        warnings.warn(
-            'CephBackend will be deprecated, please use PetrelBackend instead',
-            DeprecationWarning)
-        self._client = ceph.S3Client()
-        assert isinstance(path_mapping, dict) or path_mapping is None
-        self.path_mapping = path_mapping
-
-    def get(self, filepath):
-        filepath = str(filepath)
-        if self.path_mapping is not None:
-            for k, v in self.path_mapping.items():
-                filepath = filepath.replace(k, v)
-        value = self._client.Get(filepath)
-        value_buf = memoryview(value)
-        return value_buf
-
-    def get_text(self, filepath, encoding=None):
-        raise NotImplementedError
-
-
 class PetrelBackend(BaseStorageBackend):
-    """Petrel storage backend (for internal use).
+    """Petrel storage backend (for internal usage).
 
     PetrelBackend supports reading and writing data to multiple clusters.
     If the file path contains the cluster name, PetrelBackend will read data
@@ -153,8 +112,8 @@ class PetrelBackend(BaseStorageBackend):
 
         Returns:
             memoryview: A memory view of expected bytes object to avoid
-                copying. The memoryview object can be converted to bytes by
-                ``value_buf.tobytes()``.
+            copying. The memoryview object can be converted to bytes by
+            ``value_buf.tobytes()``.
         """
         filepath = self._map_path(filepath)
         filepath = self._format_path(filepath)
@@ -298,7 +257,10 @@ class PetrelBackend(BaseStorageBackend):
         return '/'.join(formatted_paths)
 
     @contextmanager
-    def get_local_path(self, filepath: Union[str, Path]) -> Iterable[str]:
+    def get_local_path(
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Download a file from ``filepath`` and return a temporary path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
@@ -632,7 +594,9 @@ class HardDiskBackend(BaseStorageBackend):
 
     @contextmanager
     def get_local_path(
-            self, filepath: Union[str, Path]) -> Iterable[Union[str, Path]]:
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Only for unified API and do nothing."""
         yield filepath
 
@@ -701,7 +665,8 @@ class HTTPBackend(BaseStorageBackend):
         return value_buf.decode(encoding)
 
     @contextmanager
-    def get_local_path(self, filepath: str) -> Iterable[str]:
+    def get_local_path(
+            self, filepath: str) -> Generator[Union[str, Path], None, None]:
         """Download a file from ``filepath``.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
@@ -765,7 +730,6 @@ class FileClient:
 
     _backends = {
         'disk': HardDiskBackend,
-        'ceph': CephBackend,
         'memcached': MemcachedBackend,
         'lmdb': LmdbBackend,
         'petrel': PetrelBackend,
@@ -775,15 +739,17 @@ class FileClient:
     # backend appears in the collection, the singleton pattern is disabled for
     # that backend, because if the singleton pattern is used, then the object
     # returned will be the backend before overwriting
-    _overridden_backends = set()
-    _prefix_to_backends = {
+    _overridden_backends: set = set()
+    _prefix_to_backends: dict = {
         's3': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
     }
-    _overridden_prefixes = set()
+    _overridden_prefixes: set = set()
 
-    _instances = {}
+    _instances: dict = {}
+
+    client: Any
 
     def __new__(cls, backend=None, prefix=None, **kwargs):
         if backend is None and prefix is None:
@@ -1093,7 +1059,10 @@ class FileClient:
         return self.client.join_path(filepath, *filepaths)
 
     @contextmanager
-    def get_local_path(self, filepath: Union[str, Path]) -> Iterable[str]:
+    def get_local_path(
+            self,
+            filepath: Union[str,
+                            Path]) -> Generator[Union[str, Path], None, None]:
         """Download data from ``filepath`` and write the data to local path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It

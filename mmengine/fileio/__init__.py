@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# type: ignore
 from .file_client import BaseStorageBackend, FileClient
 from .handlers import BaseFileHandler, JsonHandler, PickleHandler, YamlHandler
 from .io import dump, load, register_handler
