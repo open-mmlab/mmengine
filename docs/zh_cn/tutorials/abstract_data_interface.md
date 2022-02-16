@@ -113,13 +113,13 @@ gt_instances2 = gt_instances1.new()
 gt_instances = BaseDataElement()
 # 设置 gt_instances 的 meta 字段，img_id 和 img_shape 会被作为 metainfo 的字段成为 gt_instances 的属性
 gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
-assert 'img_shape' in gt_instaces.metainfo_keys()
+assert 'img_shape' in gt_instances.metainfo_keys()
 # 'img_shape' 是 gt_instances 的属性
-assert 'img_shape' in gt_instaces
+assert 'img_shape' in gt_instances
 # img_shape 不是 gt_instances 的 data 字段
-assert 'img_shape' not in gt_instaces.data_keys()
+assert 'img_shape' not in gt_instances.data_keys()
 # 通过 keys 来访问所有属性
-assert 'img_shape' in gt_instaces.keys()
+assert 'img_shape' in gt_instances.keys()
 # 访问类属性一样访问 'img_shape'
 print(gt_instances.img_shape)
 
@@ -179,7 +179,7 @@ gt_instances.get('bboxes', None)    # 6x4 tensor
 # 属性的删除
 del gt_instances.img_shape
 del gt_instances.bboxes
-assert 'img_shape' in gt_instances
+assert 'img_shape' not in gt_instances
 assert 'bboxes' not in gt_instances
 
 # 提供了便捷的属性删除和访问操作 pop
@@ -191,6 +191,7 @@ gt_instances.pop('bboxes', None)  # None
 
 用户可以像 torch.Tensor 那样对 `BaseDataElement` 的 data 进行状态转换，目前支持 `cuda`， `cpu`， `to`， `numpy` 等操作。
 其中，`to` 函数拥有和 `torch.Tensor.to()` 相同的接口，使得用户可以灵活地将被封装的 tensor 进行状态转换。
+**注意：** 这些接口只会处理类型为 np.array，torch.Tensor，或者数字的序列，其他属性的数据（如字符串）会被跳过处理。
 
 ```python
 # 将所有 data 转移到 GPU 上
