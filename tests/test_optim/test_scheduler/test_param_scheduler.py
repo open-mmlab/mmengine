@@ -17,7 +17,7 @@ from mmengine.optim.scheduler import (ConstantParamScheduler,
 class ToyModel(torch.nn.Module):
 
     def __init__(self):
-        super(ToyModel, self).__init__()
+        super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 1, 1)
         self.conv2 = torch.nn.Conv2d(1, 1, 1)
 
@@ -27,7 +27,12 @@ class ToyModel(torch.nn.Module):
 
 class TestParameterScheduler(TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
+        """TestCase will call function in this order:
+
+        setUp() -> testMethod() -> tearDown() -> cleanUp() Setup the model and
+        optimizer which used in every test method.
+        """
         self.model = ToyModel()
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=0.05, momentum=0.01, weight_decay=5e-4)
@@ -55,7 +60,8 @@ class TestParameterScheduler(TestCase):
 
     def test_resume(self):
         # test invalid case: optimizer and scheduler are not both resumed
-        with self.assertRaises(KeyError):
+        with self.assertRaisesRegex(KeyError,
+                                    "param 'initial_lr' is not specified"):
             StepParamScheduler(
                 self.optimizer,
                 param_name='lr',

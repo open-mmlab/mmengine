@@ -16,7 +16,7 @@ from mmengine.optim.scheduler import (ConstantMomentum,
 class ToyModel(torch.nn.Module):
 
     def __init__(self):
-        super(ToyModel, self).__init__()
+        super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 1, 1)
         self.conv2 = torch.nn.Conv2d(1, 1, 1)
 
@@ -26,7 +26,12 @@ class ToyModel(torch.nn.Module):
 
 class TestMomentumScheduler(TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
+        """TestCase will call function in this order:
+
+        setUp() -> testMethod() -> tearDown() -> cleanUp() Setup the model and
+        optimizer which used in every test method.
+        """
         self.model = ToyModel()
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=0.01, momentum=0.05, weight_decay=5e-4)
@@ -49,7 +54,8 @@ class TestMomentumScheduler(TestCase):
 
     def test_resume(self):
         # test invalid case: optimizer and scheduler are not both resumed
-        with self.assertRaises(KeyError):
+        with self.assertRaisesRegex(
+                KeyError, "param 'initial_momentum' is not specified"):
             StepMomentum(self.optimizer, gamma=0.1, step_size=3, last_step=10)
 
         # test manually resume with ``last_step`` instead of load_state_dict
