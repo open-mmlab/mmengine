@@ -316,15 +316,16 @@ class TestParameterScheduler(TestCase):
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_cos_anneal_scheduler(self):
-        epochs = 10
+        epochs = 12
+        t = 10
         eta_min = 1e-10
         single_targets = [
-            eta_min + (0.05 - eta_min) *
-            (1 + math.cos(math.pi * x / epochs)) / 2 for x in range(epochs)
+            eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
         ]
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = CosineAnnealingParamScheduler(
-            self.optimizer, param_name='lr', T_max=epochs, eta_min=eta_min)
+            self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
