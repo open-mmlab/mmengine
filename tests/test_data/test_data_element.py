@@ -38,7 +38,7 @@ class TestBaseDataElement(TestCase):
                 assert getattr(instances, k) == v
 
     def check_data_device(self, instances, device):
-        instances.device = device
+        assert instances.device == device
         for v in instances.data_values():
             if isinstance(v, torch.Tensor):
                 assert v.device == device
