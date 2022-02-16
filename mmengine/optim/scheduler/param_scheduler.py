@@ -11,26 +11,30 @@ from torch.optim import Optimizer
 INF = int(1e9)
 
 
-class _ParamScheduler(object):
-    """Base parameter scheduler class. Schedule parameters in optimizer's
-    ``param_groups`` according to the schedule strategy. The implementation is
-    referred to
+class _ParamScheduler:
+    """Base class for parameter schedulers.
+
+    It should be inherited by all schedulers that schedule parameters in the
+    optimizer's ``param_groups``. All subclasses should overwrite the
+    ``_get_value()`` according to their own schedule strategy.
+    The implementation is referred to
     https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
-        param_name (str): Name of the parameter to be adjusted.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
-        verbose (bool): Whether to print the value for each update.
-            Default: False.
-    """  # noqa: W605
+            epochs. Defaults to True.
+        verbose (bool): If ``True``, prints a message to stdout for each update.
+            Defaults to False.
+    """  # noqa: E501
 
     def __init__(self,
                  optimizer: Optimizer,
@@ -47,11 +51,15 @@ class _ParamScheduler(object):
                 type(optimizer).__name__))
         self.optimizer = optimizer
         self.param_name = param_name
+
         if end <= begin:
             raise ValueError('end should be larger than begin')
         self.begin = begin
         self.end = end
+
         self.by_epoch = by_epoch
+
+        assert isinstance(last_step, int) and last_step >= -1
         # Initialize valid step count and base values
         if last_step == -1:
             for group in optimizer.param_groups:
@@ -129,7 +137,7 @@ class _ParamScheduler(object):
         self.__dict__.update(state_dict)
 
     def get_last_value(self):
-        """Return last value computed value by current scheduler.
+        """Return the last computed value by current scheduler.
 
         Returns:
             list: A list of the last computed value of the optimizer's
@@ -165,7 +173,7 @@ class _ParamScheduler(object):
                     'parameter value scheduler initialization. Please, make'
                     'sure to call `optimizer.step()` before'
                     '`scheduler.step()`. See more details at'
-                    'https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate',  # noqa: W605, E501
+                    'https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate',  # noqa: E501
                     UserWarning)
 
             # Just check if there were two first scheduler.step() calls
@@ -178,7 +186,7 @@ class _ParamScheduler(object):
                     '`optimizer.step()` before `scheduler.step()`. '
                     'Failure to do this will result in PyTorch skipping '
                     'the first value of the parameter value schedule. '
-                    'See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate',  # noqa: W605, E501
+                    'See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate',  # noqa: E501
                     UserWarning)
         self._global_step += 1
 
@@ -206,17 +214,17 @@ class StepParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         step_size (int): Period of parameter value decay.
         gamma (float): Multiplicative factor of parameter value decay.
-            Default: 0.1.
+            Defaults to 0.1.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
     """
 
     def __init__(self,
@@ -231,7 +239,7 @@ class StepParamScheduler(_ParamScheduler):
                  verbose: bool = False):
         self.step_size = step_size
         self.gamma = gamma
-        super(StepParamScheduler, self).__init__(
+        super().__init__(
             optimizer=optimizer,
             param_name=param_name,
             begin=begin,
@@ -261,17 +269,17 @@ class MultiStepParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of parameter value decay.
-            Default: 0.1.
+            Defaults to 0.1.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
     """
 
     def __init__(self,
@@ -286,7 +294,7 @@ class MultiStepParamScheduler(_ParamScheduler):
                  verbose: bool = False):
         self.milestones = Counter(milestones)
         self.gamma = gamma
-        super(MultiStepParamScheduler, self).__init__(
+        super().__init__(
             optimizer,
             param_name=param_name,
             begin=begin,
@@ -316,17 +324,17 @@ class ConstantParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer): Wrapped optimizer.
         factor (float): The number we multiply parameter value until the
-            milestone. Default: 1./3.
+            milestone. Defaults to 1./3.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
     """
 
     def __init__(self,
@@ -344,7 +352,7 @@ class ConstantParamScheduler(_ParamScheduler):
 
         self.factor = factor
         self.total_iters = end - begin - 1
-        super(ConstantParamScheduler, self).__init__(
+        super().__init__(
             optimizer,
             param_name=param_name,
             begin=begin,
@@ -380,15 +388,15 @@ class ExponentialParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         gamma (float): Multiplicative factor of parameter value decay.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
     """
 
     def __init__(self,
@@ -401,7 +409,7 @@ class ExponentialParamScheduler(_ParamScheduler):
                  by_epoch: bool = True,
                  verbose: bool = False):
         self.gamma = gamma
-        super(ExponentialParamScheduler, self).__init__(
+        super().__init__(
             optimizer,
             param_name=param_name,
             begin=begin,
@@ -452,17 +460,17 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer): Wrapped optimizer.
         T_max (int): Maximum number of iterations.
-        eta_min (float): Minimum parameter value. Default: 0.
+        eta_min (float): Minimum parameter value. Defaults to 0.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983
@@ -480,7 +488,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
                  verbose: bool = False):
         self.T_max = T_max
         self.eta_min = eta_min
-        super(CosineAnnealingParamScheduler, self).__init__(
+        super().__init__(
             optimizer,
             param_name=param_name,
             begin=begin,
@@ -518,19 +526,19 @@ class LinearParamScheduler(_ParamScheduler):
         optimizer (Optimizer): Wrapped optimizer.
         start_factor (float): The number we multiply parameter value in the
             first epoch. The multiplication factor changes towards end_factor
-            in the following epochs. Default: 1./3.
+            in the following epochs. Defaults to 1./3.
         end_factor (float): The number we multiply parameter value at the end
-            of linear changing process. Default: 1.0.
+            of linear changing process. Defaults to 1.0.
         begin (int): Step at which to start updating the parameters.
-            Default: 0.
+            Defaults to 0.
         end (int): Step at which to stop updating the parameters.
-            Default: INF.
+            Defaults to INF.
         last_step (int): The index of last step. Used for resume without
-            state dict. Default: -1.
+            state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
-            epochs. Default: True.
+            epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
-            Default: False.
+            Defaults to False.
     """
 
     def __init__(self,
@@ -554,7 +562,7 @@ class LinearParamScheduler(_ParamScheduler):
         self.start_factor = start_factor
         self.end_factor = end_factor
         self.total_iters = end - begin - 1
-        super(LinearParamScheduler, self).__init__(
+        super().__init__(
             optimizer,
             param_name=param_name,
             begin=begin,
