@@ -37,7 +37,7 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 **(1) 绘制无关的功能性接口**
 
 - set_image  设置原始图片数据
-- get_image 获取绘制后的图片数据
+- get_image 获取绘制后的 Numpy 格式图片数据
 - save 保存图片
 - show  可视化
 - register_task  注册绘制函数
@@ -53,10 +53,13 @@ BaseVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 - draw_binary_mask  绘制二值掩码
 - draw_featmap  绘制特征图
 
-前面说过，Visualizer 接受的数据除了 image，还包括符合抽象数据接口规范的抽象数据封装。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
+Visualizer 的 draw 接口接受的数据除了 3 维度 HWC 的 Numpy 格式 image，还包括符合抽象数据接口规范的抽象数据封装。假设 MMDetection 中需要同时可视化预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 DetLocalVisualizer 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@BaseVisualizer.register_task` 装饰器。
 
 ```python
 class DetLocalVisualizer(BaseVisualizer):
+
+    def draw(self,data_sample, image=None, show_gt=True, show_pred=True):
+        pass
 
     @BaseVisualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
@@ -69,12 +72,14 @@ class DetLocalVisualizer(BaseVisualizer):
 
 除了常见的 draw_bbox 等可视化功能外，Visualizer 还提供了两个实用功能：
 
-- **支持用户自定义组合调用进行可视化**
+- **支持用户自定义链式调用进行可视化**
 
   例如用户可以先绘制边界框，在此基础上绘制文本，绘制线段，最后保存起来，则调用过程为：
 
   ```python
-  visualizer.draw_bbox(...).draw_text(...).draw_line(...).save()
+  visualizer.set_image(image)
+  visualizer.draw_bbox(...).draw_text(...).draw_line(...)
+  visualizer.save()
   ```
 
   所有的 draw_xx 函数返回都是对象本身，用户可以自由组合。
@@ -83,9 +88,9 @@ class DetLocalVisualizer(BaseVisualizer):
 
    特征图可视化是一个常见的功能，通过调用 `draw_featmap` 可以直接可视化特征图，目前该函数支持如下功能：
 
-  - 输入 batch tensor，通道是 1 或者 3 时候，展开成一张图片显示
-  - 输入 batch tensor，通道大于 3 时候，则支持选择激活度最高通道，展开成一张图片显示
-  - 输入 3 维 tensor，则选择激活度最高的 topk，然后拼接成一张图显示
+  - 输入 4 维 BCHW 格式的 tensor，通道 C 是 1 或者 3 时候，展开成一张图片显示
+  - 输入 4 维 BCHW 格式的 tensor，通道 C 大于 3 时候，则支持选择激活度最高通道，展开成一张图片显示
+  - 输入 3 维 CHW 格式的 tensor，则选择激活度最高的 topk，然后拼接成一张图显示
 
 ### 自定义 Visualizer
 
@@ -128,6 +133,7 @@ det_local_visualizer=DetLocalVisualizer()
 
 ```python
 visualizer= dict(type='DetLocalVisualizer')
+det_local_visualizer=build_visualizer(visualizer)
 ```
 
 ## 写端 Writer
@@ -139,7 +145,7 @@ Visualizer 只是实现了单张图片的可视化功能，但是在训练或者
 BaseWriter 定义了对外调用的接口规范，主要接口如下：
 
 - add_hyperparams  写超参
-- add_image 写图片
+- add_image 写 Numpy 格式的图片
 - add_scalar 写标量
 - add_graph 写模型图
 - bind_visualizer 绑定可视化对象
