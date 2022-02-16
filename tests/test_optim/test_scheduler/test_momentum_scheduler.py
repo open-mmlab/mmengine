@@ -27,9 +27,9 @@ class ToyModel(torch.nn.Module):
 class TestMomentumScheduler(TestCase):
 
     def setUp(self):
-        """Setup the model and optimizer which used in every test method.
+        """Setup the model and optimizer which are used in every test method.
 
-        TestCase will call function in this order: setUp() -> testMethod() ->
+        TestCase calls functions in this order: setUp() -> testMethod() ->
         tearDown() -> cleanUp()
         """
         self.model = ToyModel()
@@ -333,7 +333,7 @@ class TestMomentumScheduler(TestCase):
             epochs=epochs)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):
-        # first 5 epochs use Linear and then use MultiStep
+        # use Linear in the first 5 epochs and then use MultiStep
         epochs = 12
         single_targets = [0.025, 0.03125, 0.0375, 0.04375
                           ] + [0.05] * 4 + [0.005] * 3 + [0.0005] * 1
@@ -345,7 +345,7 @@ class TestMomentumScheduler(TestCase):
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
     def test_multi_scheduler_without_overlap_exp_cosine(self):
-        # first 5 epochs use Exp and then use Cosine
+        # use Exp in the first 5 epochs and then use Cosine
         epochs = 10
         single_targets1 = [0.05 * (0.9**x) for x in range(5)]
         scheduler1 = ExponentialMomentum(
@@ -376,8 +376,8 @@ class TestMomentumScheduler(TestCase):
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
     def test_multi_scheduler_with_gap(self):
-        # first 5 epochs use Exp and 5 epochs with no scheduler and last 5
-        # epochs use Cosine
+        # use Exp in the first 5 epochs and the last 5 epochs use Cosine
+        # no scheduler in the middle 5 epochs
         epochs = 15
         single_targets1 = [0.05 * (0.9**x) for x in range(5)]
         scheduler1 = ExponentialMomentum(
