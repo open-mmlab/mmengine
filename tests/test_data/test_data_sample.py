@@ -44,7 +44,7 @@ class TestBaseDataSample(TestCase):
     def check_data_device(self, instances, device):
         instances.device = device
         for v in instances.data_values():
-            if isinstance(v, (torch.Tensor)):
+            if isinstance(v, torch.Tensor):
                 assert v.device == device
             elif isinstance(v, BaseDataElement):
                 self.check_data_device(v, device)
