@@ -149,6 +149,9 @@ class TestBaseDataSample(TestCase):
         del instances.gt_instances
         assert instances.pop('pred_instances',
                              None) == new_data['pred_instances']
+
+        # pred_instances has been deleted,
+        # instances does not have the pred_instances
         with self.assertRaises(AttributeError):
             del instances.pred_instances
 
@@ -239,12 +242,14 @@ class TestBaseDataSample(TestCase):
             instances._set_field(value, key, BaseDataElement)
         instances._del_field('gt_instances')
         instances._del_field('pred_instances')
+
+        # gt_instance has been deleted, instances does not have the gt_instance
         with self.assertRaises(AttributeError):
             instances._del_field('gt_instances')
         assert 'gt_instances' not in instances
         assert 'pred_instances' not in instances
 
-    def test_inherence(self):
+    def test_inheritance(self):
 
         class DetDataSample(BaseDataSample):
             proposals = property(
@@ -287,5 +292,7 @@ class TestBaseDataSample(TestCase):
         # test delete
         del det_sample.proposals
         assert 'proposals' not in det_sample
+
+        # test the data whether meet the requirements
         with self.assertRaises(AssertionError):
             det_sample.proposals = torch.rand((5, 4))
