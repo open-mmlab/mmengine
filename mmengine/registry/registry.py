@@ -149,19 +149,6 @@ class Registry:
         else:
             self._scope = self.infer_scope() if scope is None else scope
 
-        # self.build_func will be set with the following priority:
-        # 1. build_func
-        # 2. parent.build_func
-        # 3. build_from_cfg
-        if build_func is None:
-            if parent is not None:
-                assert isinstance(parent, Registry)
-                self.build_func = parent.build_func  # type: ignore
-            else:
-                self.build_func = build_from_cfg
-        else:
-            self.build_func = build_func
-
         # See https://mypy.readthedocs.io/en/stable/common_issues.html#
         # variables-vs-type-aliases for the use
         self.parent: Optional['Registry']
@@ -171,6 +158,19 @@ class Registry:
             self.parent = parent
         else:
             self.parent = None
+
+        # self.build_func will be set with the following priority:
+        # 1. build_func
+        # 2. parent.build_func
+        # 3. build_from_cfg
+        self.build_func: Callable
+        if build_func is None:
+            if self.parent is not None:
+                self.build_func = self.parent.build_func
+            else:
+                self.build_func = build_from_cfg
+        else:
+            self.build_func = build_func
 
     def __len__(self):
         return len(self._module_dict)
@@ -300,7 +300,7 @@ class Registry:
             string format.
 
         Returns:
-            Type or None: Return the corresponding class if the key exists,
+            Type or None: Return the corresponding class if ``key`` exists,
             otherwise return None.
         """
         scope, real_key = self.split_scope_key(key)
@@ -327,19 +327,20 @@ class Registry:
         return None
 
     def _search_child(self, scope: str) -> Optional['Registry']:
-        """Depth-first search for the corresponding registry from its children.
+        """Depth-first search for the corresponding registry in its children.
 
-        Note that the method only search the corresponding registry from the
-        current registry. Therefore, if we want to search from the root
+        Note that the method only search for the corresponding registry from
+        the current registry. Therefore, if we want to search from the root
         registry, :meth:`_get_root_registry` should be called to get the
         root registry first.
 
         Args:
-            scope (str): The ``scope`` to search the corresponding registry.
+            scope (str): The scope name used for searching for its
+                corresponding registry.
 
         Returns:
-            Registry or None: Return the corresponding registry if the
-            ``scope`` exists else None.
+            Registry or None: Return the corresponding registry if ``scope``
+            exists, otherwise return None.
         """
         if self._scope == scope:
             return self
@@ -357,7 +358,7 @@ class Registry:
               **kwargs) -> None:
         """Build an instance.
 
-        build an instance by calling the :attr:`build_func`. If
+        Build an instance by calling :attr:`build_func`. If
         :attr:`default_scope` is given, :meth:`build` will firstly get the
         responding registry and then call its own :meth:`build`.
 
@@ -470,8 +471,8 @@ class Registry:
         # raise the error ahead of time
         if not (name is None or isinstance(name, str) or is_seq_of(name, str)):
             raise TypeError(
-                'name must be either of None, an instance of str or a sequence'
-                f' of str, but got {type(name)}')
+                'name must be None, an instance of str, or a sequence of str, '
+                f'but got {type(name)}')
 
         # use it as a normal method: x.register_module(module=SomeClass)
         if module is not None:

@@ -92,8 +92,8 @@ class TestRegistry:
         # `name` is an invalid type
         with pytest.raises(
                 TypeError,
-                match=('name must be either of None, an instance of str or a '
-                       "sequence of str, but got <class 'int'>")):
+                match=('name must be None, an instance of str, or a sequence '
+                       "of str, but got <class 'int'>")):
 
             @CATS.register_module(name=7474741)
             class SiameseCat:
