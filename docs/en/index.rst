@@ -9,6 +9,12 @@ You can switch between Chinese and English documents in the lower-left corner of
    tutorials/registry.md
 
 .. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api.rst
+
+.. toctree::
    :caption: Switch Language
 
    switch_language.md

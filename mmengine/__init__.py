@@ -2,4 +2,5 @@
 # flake8: noqa
 from .config import *
 from .fileio import *
+from .registry import *
 from .utils import *

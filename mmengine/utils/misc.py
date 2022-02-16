@@ -8,6 +8,7 @@ from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
+from typing import Sequence, Type
 
 
 # From PyTorch internals
@@ -125,16 +126,26 @@ def tuple_cast(inputs, dst_type):
     return iter_cast(inputs, dst_type, return_type=tuple)
 
 
-def is_seq_of(seq, expected_type, seq_type=None):
+def is_seq_of(seq: Sequence,
+              expected_type: Type,
+              seq_type: Type = None) -> bool:
     """Check whether it is a sequence of some type.
 
     Args:
         seq (Sequence): The sequence to be checked.
         expected_type (type): Expected type of sequence items.
-        seq_type (type, optional): Expected sequence type.
+        seq_type (type, optional): Expected sequence type. Defaults to None.
 
     Returns:
-        bool: Whether the sequence is valid.
+        bool: Return True if ``seq`` is valid else False.
+
+    Examples:
+        >>> from mmengine.utils import is_seq_of
+        >>> seq = ['a', 'b', 'c']
+        >>> is_seq_of(seq, str)
+        True
+        >>> is_seq_of(seq, int)
+        False
     """
     if seq_type is None:
         exp_seq_type = abc.Sequence
