@@ -709,6 +709,13 @@ class Config:
 
         Merge the dict parsed by MultipleKVAction into this cfg.
 
+        Args:
+            options (dict): dict of configs to merge from.
+            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
+                are allowed in ``options`` and will replace the element of the
+                corresponding index in the config if the config is a list.
+                Defaults to True.
+        
         Examples:
             >>> options = {'model.backbone.depth': 50,
             ...            'model.backbone.with_cp':True}
@@ -726,13 +733,6 @@ class Config:
             >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
             >>> assert cfg_dict == dict(pipeline=[
             ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
-
-        Args:
-            options (dict): dict of configs to merge from.
-            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
-              are allowed in ``options`` and will replace the element of the
-              corresponding index in the config if the config is a list.
-              Defaults to True.
         """
         option_cfg_dict = {}
         for full_key, v in options.items():
