@@ -128,6 +128,17 @@ class TestConfig:
         assert cfg.item1 == 0
         cfg.update(dict(item2=dict(a=1)))
         assert cfg.item2.a == 1
+        # test __setattr__
+        cfg = Config()
+        cfg.item1 = [1, 2]
+        cfg.item2 = {'a': 0}
+        cfg['item5'] = {'a': {'b': None}}
+        assert cfg._cfg_dict['item1'] == [1, 2]
+        assert cfg.item1 == [1, 2]
+        assert cfg._cfg_dict['item2'] == {'a': 0}
+        assert cfg.item2.a == 0
+        assert cfg._cfg_dict['item5'] == {'a': {'b': None}}
+        assert cfg.item5.a.b is None
 
     def test_merge_from_dict(self):
         cfg_file = osp.join(self.data_path,
