@@ -669,7 +669,6 @@ class Config:
         return iter(self._cfg_dict)
 
     def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
-        """Get state of config."""
         return (self._cfg_dict, self._filename, self._text)
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
