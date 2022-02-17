@@ -1,17 +1,17 @@
-import warnings
-import copy
+# Copyright (c) OpenMMLab. All rights reserved.
 import bisect
+import copy
+import warnings
 from typing import List
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
-from .base_dataset import full_init_before_called, BaseDataset
+
+from .base_dataset import BaseDataset, full_init_before_called
 
 
 class ConcatDataset(_ConcatDataset):
 
-    def __init__(self,
-                 datasets: List[BaseDataset],
-                 lazy_init: bool = False):
+    def __init__(self, datasets: List[BaseDataset], lazy_init: bool = False):
         """A wrapper of concatenated dataset.
 
         Same as :obj:`torch.utils.data.dataset.ConcatDataset`, but
@@ -28,8 +28,8 @@ class ConcatDataset(_ConcatDataset):
         for i, dataset in enumerate(datasets):
             if self._meta != dataset.meta:
                 warnings.warn(
-                    f"The meta data of {i + 1}-th dataset is not same as meta "
-                    f"data of 1-st dataset.")
+                    f'The meta data of {i + 1}-th dataset is not same as meta '
+                    f'data of 1-st dataset.')
 
         self._fully_initialized = False
         if not lazy_init:
@@ -38,6 +38,7 @@ class ConcatDataset(_ConcatDataset):
     @property
     def meta(self) -> dict:
         """Get the meta information of the first dataset in ConcatDataset.
+
         Returns:
             dict: meta.
         """
@@ -45,7 +46,7 @@ class ConcatDataset(_ConcatDataset):
         return copy.deepcopy(self._meta)
 
     def full_init(self):
-        """Loop to full_init each dataset"""
+        """Loop to full_init each dataset."""
         if self._fully_initialized:
             return
         for d in self.datasets:
@@ -87,9 +88,8 @@ class ConcatDataset(_ConcatDataset):
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn(
-                'Please call self.full_init() manually to accrelate '
-                'the speed.')
+            warnings.warn('Please call self.full_init() manually to accrelate '
+                          'the speed.')
             self.full_init()
 
         return super().__getitem__(idx)

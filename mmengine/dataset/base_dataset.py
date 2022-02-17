@@ -6,14 +6,14 @@ import os.path as osp
 import pickle
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Optional, Union, List, Any, Tuple, Dict, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from torch.utils.data import Dataset
 
+from mmengine.fileio import list_from_file, load
 from mmengine.registry import TRANSFORMS, build_from_cfg
 from mmengine.utils import check_file_exist
-from mmengine.fileio import list_from_file, load
 
 
 class Compose:
@@ -24,7 +24,7 @@ class Compose:
             config dict to be composed.
     """
 
-    def __init__(self, transforms: Sequence[Dict, Callable]):
+    def __init__(self, transforms: Sequence[Union[Dict, Callable]]):
         assert isinstance(transforms, collections.abc.Sequence)
         self.transforms = []
         for transform in transforms:
@@ -52,7 +52,7 @@ class Compose:
         return data
 
     def __repr__(self):
-        """print ``self.transforms`` in sequence
+        """print ``self.transforms`` in sequence.
 
         Returns:
             str: format string
@@ -86,7 +86,7 @@ def full_init_before_called(old_func: Callable) -> Any:
         if not hasattr(obj, '_fully_initialized'):
             need_init = False
         else:
-            need_init = obj._fully_initialized
+            need_init = getattr(obj, '_fully_initialized')
         if need_init:
             args[0].full_init()
             args[0]._fully_initialized = True
@@ -140,14 +140,14 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     Args:
         ann_file (str): Annotation file path.
-        meta (dict, optional): meta infos for dataset, such as class information.
-            Defaults to None.
+        meta (dict, optional): meta infos for dataset, such as class
+        information. Defaults to None.
         data_root (str, optional): data root for `data_prefix` and `ann_file`.
             Defaults to None.
         data_prefix (dict, optional): prefix for training data. Defaults to
             dict(img=None, ann=None).
-        filter_cfg (dict, optional): filter cfg for ``filter_data``. Defaults to
-            None
+        filter_cfg (dict, optional): filter cfg for ``filter_data``. Defaults
+        to None
         num_samples (int, optional): support only use first few data in
             annotation file. Defaults to -1 and use all ``data_infos``
         serialize_data (bool, optional): whether to hold memory using
@@ -197,11 +197,11 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             self._fully_initialized = True
 
     @abstractmethod
-    def parse_annotations(self, raw_data_info: dict) -> Union[Dict, List[Dict]]:
-        """Parse raw annotation to target format.
-        This method must be implemented by class inherited from BaseDataset.
-        ``parse_annotations`` should return ``dict`` for img task and
-        ``list[dict]`` for video task.
+    def parse_annotations(self,
+                          raw_data_info: dict) -> Union[Dict, List[Dict]]:
+        """Parse raw annotation to target format. This method must be
+        implemented by class inherited from BaseDataset. ``parse_annotations``
+        should return ``dict`` for img task and ``list[dict]`` for video task.
 
         Args:
             raw_data_info (dict): data_info load from ``ann_file``
@@ -213,7 +213,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @classmethod
     def _get_meta_data(cls, in_meta: dict) -> dict:
-        """collect meta infos from meta dict
+        """collect meta infos from meta dict.
 
         Args:
             in_meta (dict): in_meta contains meta infos. if in_meta contains
@@ -325,7 +325,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         return data_infos
 
     def filter_data(self) -> List[Dict]:
-        """Filter data_infos according to filter_cfg. Defaults filter no data
+        """Filter data_infos according to filter_cfg. Defaults filter no data.
 
         Returns:
             list[dict]: Filtered results
@@ -334,8 +334,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return self.data_infos
 
     def slice_data(self):
-        """Slice ``self.data_infos``. BaseDataset supports only using the
-        first few datas.
+        """Slice ``self.data_infos``. BaseDataset supports only using the first
+        few data.
 
         Returns:
             list: slice of ``self.data_infos``
@@ -360,14 +360,15 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             Tuple[list, np.ndarray]: serialize result and corresponding
                 address.
         """
+
         def _serialize(data):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
 
         serialized_data_infos = [_serialize(x) for x in data_infos]
-        data_address = np.asarray([len(x) for x in serialized_data_infos],
+        address_list = np.asarray([len(x) for x in serialized_data_infos],
                                   dtype=np.int64)
-        data_address: np.ndarray = np.cumsum(data_address)
+        data_address: np.ndarray = np.cumsum(address_list)
         serialized_data_infos = np.concatenate(serialized_data_infos)
 
         return serialized_data_infos, data_address
@@ -398,7 +399,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @property
     def meta(self) -> dict:
-        """Get meta of dataset
+        """Get meta of dataset.
 
         Returns:
             dict: meta_info collected from BaseDataset.META, annotation file
@@ -448,7 +449,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @full_init_before_called
     def __len__(self) -> int:
-        """ Get the length of filtered dataset.
+        """Get the length of filtered dataset.
+
         Returns:
             int: The length of filtered dataset.
         """
@@ -471,8 +473,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         if not self._fully_initialized:
             warnings.warn(
                 'Please call `self.full_init()` manually to accrelate the '
-                'speed.'
-            )
+                'speed.')
             self.full_init()
 
         if self.test_mode:
