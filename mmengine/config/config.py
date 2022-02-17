@@ -683,7 +683,7 @@ class Config:
         """Dump config as an local file or return config text.
 
         Args:
-            file (Optional[str], optional): _description_. Defaults to None.
+            file (str, optional): _description_. Defaults to None.
 
         Returns:
             str or None: Config text.
