@@ -351,7 +351,7 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined
+            use_predefined_variables (bool, optional): Whether to use predefined
                 variables. Defaults to True.
 
         Returns:
