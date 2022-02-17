@@ -312,8 +312,8 @@ class Config:
             base_cfg (dict): Base config dictionary.
 
         Returns:
-            dict : A dictionary with origin base variables substituted with
-                actual values.
+            dict: A dictionary with origin base variables substituted with
+            actual values.
         """
         cfg = copy.deepcopy(cfg)
 
