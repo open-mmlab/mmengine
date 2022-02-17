@@ -178,7 +178,7 @@ class TestConfig:
         assert args.config == sys.argv[1]
         for key in cfg._cfg_dict.keys():
             if not isinstance(cfg[key], ConfigDict):
-                assert getattr(args, key) is None
+                assert not getattr(args, key)
         # TODO currently do not support nested keys, bool args will be
         #  overwritten by int
         sys.argv[1] = tmp
