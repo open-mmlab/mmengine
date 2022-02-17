@@ -395,6 +395,7 @@ class TestConfig:
         self._merge_delete()
         self._merge_intermediate_variable()
         self._merge_recursive_bases()
+        self._deprecation()
 
     def _simple_load(self):
         # test load simple config
@@ -625,3 +626,15 @@ class TestConfig:
         assert cfg.cfg.item3 is True
         assert cfg.cfg.item4 == 'test'
         assert cfg.item5 == 1
+
+    def _deprecation(self):
+        deprecated_cfg_files = [
+            osp.join(self.data_path, 'config', 'py_config/test_deprecated.py'),
+            osp.join(self.data_path, 'config',
+                     'py_config/test_deprecated_base.py')
+        ]
+
+        for cfg_file in deprecated_cfg_files:
+            with pytest.warns(DeprecationWarning):
+                cfg = Config.fromfile(cfg_file)
+            assert cfg.item1 == [1, 2]

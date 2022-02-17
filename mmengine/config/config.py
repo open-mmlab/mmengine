@@ -101,7 +101,7 @@ def add_args(parser: ArgumentParser,
 
 class Config:
     """A facility for config and config files.
-    
+
     It supports common file formats as configs: python/json/yaml.
     `Config.fromfile` can parse a dictionary from a config file, then
     build a `Config` instance with the dictionary.
@@ -196,14 +196,20 @@ class Config:
             # check if users specify a wrong suffix for python
             warnings.warn(
                 'Please check "file_format", the file format may be .py')
+
         # A temporary file can not be opened a second time on Windows.
-        # See https://docs.python.org/3/library/tempfile.html#tempfile.NamedTemporaryFile for more details.
-        # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and second in `Config.from_file`.
+        # See https://docs.python.org/3/library/tempfile.html#tempfile.NamedTemporaryFile for more details. # noqa
+        # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and
+        #  second in `Config.from_file`.
         # In addition, a named temporary file will be removed after closed.
-        # As a workround we set `delete=False` and close the temporary file before opening again.
-        temp_file = tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix=file_format, delete=False)
-        temp_file.write(cfg_str)
-        temp_file.closed()  # close the temporary file
+        # As a workround we set `delete=False` and close the temporary file
+        # before opening again.
+
+        with tempfile.NamedTemporaryFile(
+                'w', encoding='utf-8', suffix=file_format,
+                delete=False) as temp_file:
+            temp_file.write(cfg_str)
+
         cfg = Config.fromfile(temp_file.name)
         os.remove(temp_file.name)  # manually delete the temporary file
         return cfg
