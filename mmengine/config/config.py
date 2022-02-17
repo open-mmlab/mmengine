@@ -35,8 +35,7 @@ class ConfigDict(Dict):
     in config file into ``ConfigDict``.
     """
 
-    def __missing__(self, name: str):
-        """miss attribute."""
+    def __missing__(self, name):
         raise KeyError(name)
 
     def __getattr__(self, name: str) -> Any:
