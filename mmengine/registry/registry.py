@@ -2,7 +2,7 @@
 import inspect
 import sys
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
 from ..utils import is_seq_of
@@ -11,8 +11,7 @@ from ..utils import is_seq_of
 def build_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: 'Registry',
-        default_args: Optional[Union[dict, ConfigDict,
-                                     Config]] = None) -> object:
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
     """Build a module from config dict.
 
     At least one of the ``cfg`` and ``default_args`` contains the key "type"
@@ -357,7 +356,7 @@ class Registry:
     def build(self,
               *args,
               default_scope: Optional[str] = None,
-              **kwargs) -> None:
+              **kwargs) -> Any:
         """Build an instance.
 
         Build an instance by calling :attr:`build_func`. If

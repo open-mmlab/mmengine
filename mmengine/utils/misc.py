@@ -2,6 +2,7 @@
 import collections.abc
 import functools
 import itertools
+import pkgutil
 import subprocess
 import warnings
 from collections import abc
@@ -386,3 +387,13 @@ def has_method(obj: object, method: str) -> bool:
         bool: True if the object has the method else False.
     """
     return hasattr(obj, method) and callable(getattr(obj, method))
+
+
+def mmcv_full_available() -> bool:
+    """Check whether mmcv-full is installed.
+
+    Returns:
+        bool: True if mmcv-full is installed else False.
+    """
+    ext_loader = pkgutil.find_loader('mmcv._ext')
+    return ext_loader is not None
