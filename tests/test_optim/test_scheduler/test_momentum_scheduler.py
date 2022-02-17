@@ -38,7 +38,7 @@ class TestMomentumScheduler(TestCase):
             self.model.parameters(), lr=0.01, momentum=0.05, weight_decay=5e-4)
 
     def test_invalid_optimizer(self):
-        with self.assertRaisesRegex(TypeError, 'is not an Optimizer'):
+        with self.assertRaisesRegex(TypeError, 'should be an Optimizer'):
             StepMomentum('invalid_optimizer', step_size=1)
 
     def test_overwrite_optimzer_step(self):
