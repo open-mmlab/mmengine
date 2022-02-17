@@ -231,9 +231,11 @@ class Config:
 
         This can be easily achieved using predefined variables, which can be
         written in the config `config_setting1.py` as follows
-        ```Python
-            work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
-        ```
+        
+        .. code-block:: python
+        
+           work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
+        
 
         Here `{{ fileBasenameNoExtension }}` indicates the file name of the
         config (without the extension), and when the config class reads the
