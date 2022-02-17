@@ -88,7 +88,7 @@ class Config:
 
     It supports common file formats as configs: python/json/yaml.
     ``Config.fromfile`` can parse a dictionary from a config file, then
-    build a `Config` instance with the dictionary.
+    build a ``Config`` instance with the dictionary.
     The interface is the same as a dict object and also allows access config
     values as attributes.
 
