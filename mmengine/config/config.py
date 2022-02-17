@@ -101,13 +101,19 @@ def add_args(parser: ArgumentParser,
 
 
 class Config:
-    """A facility for config and config files.
+    """A facility for config and config files. It supports common file formats
+    as configs: python/json/yaml. `Config.fromfile` can parse a dictionary from
+    a config file, then build a `Config` instance with the dictionary.
 
-    It supports common file formats as configs: python/json/yaml. The interface
-    is the same as a dict object and also allows access config values as
-    attributes.
+    The interface is the same as a dict object and also allows access config
+    values as attributes.
 
-    Example:
+    Args:
+        cfg_dict (dict, optional): A config dictionary. Defaults to None.
+        cfg_text (str, optional): Text of config. Defaults to None.
+        filename (str, optional): Name of config file. Defaults to None.
+
+    Examples:
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> cfg.a
         1
@@ -117,15 +123,19 @@ class Config:
         [0, 1]
         >>> cfg = Config.fromfile('tests/data/config/a.py')
         >>> cfg.filename
-        "/home/kchen/projects/mmengine/tests/data/config/a.py"
+        "/home/username/projects/mmengine/tests/data/config/a.py"
         >>> cfg.item4
         'test'
         >>> cfg
-        "Config [path: /home/kchen/projects/mmengine/tests/data/config/a.py]: "
+        "Config [path: /home/username/projects/mmengine/tests/data/config/a.py]
+        :"
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
     """
 
-    def __init__(self, cfg_dict=None, cfg_text=None, filename=None):
+    def __init__(self,
+                 cfg_dict: Dict = None,
+                 cfg_text: Optional[str] = None,
+                 filename: str = None):
         if cfg_dict is None:
             cfg_dict = dict()
         elif not isinstance(cfg_dict, dict):
@@ -150,14 +160,14 @@ class Config:
     def fromfile(filename: str,
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True) -> 'Config':
-        """Build Config from config file.
+        """Build a Config instance from config file.
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined
-                variables. Defaults to True.
-            import_custom_modules (bool, optional): Whether support importing
-                custom modules in config. Defaults to True.
+            use_predefined_variables (bool, optional): Whether to use
+                predefined variables. Defaults to True.
+            import_custom_modules (bool, optional): Whether to support
+                importing custom modules in config. Defaults to True.
 
         Returns:
             Config: Config instance built from config file.
