@@ -167,7 +167,7 @@ class Config:
         """Build a Config instance from config text.
 
         Args:
-            cfg_str (str): Config str.
+            cfg_str (str): Config text.
             file_format (str): Config file format corresponding to the
                config str. Only py/yml/yaml/json type are supported now!
 
