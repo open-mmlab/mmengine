@@ -277,7 +277,17 @@ class TestConfig:
         tmp_cfg = tmp_path / 'tmp_config.py'
         with open(tmp_cfg, 'w') as f:
             f.write('dict(a=1,b=2.c=3)')
-        # syntax context of tmp_cfg
+        # Incorrect point in dict will cause error
+        with pytest.raises(SyntaxError):
+            Config._validate_py_syntax(tmp_cfg)
+        with open(tmp_cfg, 'w') as f:
+            f.write('[dict(a=1, b=2, c=(1, 2)]')
+        # Imbalance bracket will cause error
+        with pytest.raises(SyntaxError):
+            Config._validate_py_syntax(tmp_cfg)
+        with open(tmp_cfg, 'w') as f:
+            f.write('dict(a=1,b=2\nc=3)')
+        # Incorrect feed line in dict will cause error
         with pytest.raises(SyntaxError):
             Config._validate_py_syntax(tmp_cfg)
 
