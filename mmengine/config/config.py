@@ -129,8 +129,8 @@ class Config:
             if key in RESERVED_KEYS:
                 raise KeyError(f'{key} is reserved for config file')
 
-        super(Config, self).__setattr__('_cfg_dict', ConfigDict(cfg_dict))
-        super(Config, self).__setattr__('_filename', filename)
+        super().__setattr__('_cfg_dict', ConfigDict(cfg_dict))
+        super().__setattr__('_filename', filename)
         if cfg_text:
             text = cfg_text
         elif filename:
