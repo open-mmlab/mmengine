@@ -39,9 +39,8 @@ class ConfigDict(Dict):
         raise KeyError(name)
 
     def __getattr__(self, name):
-
         try:
-            value = super(ConfigDict, self).__getattr__(name)
+            value = super().__getattr__(name)
         except KeyError:
             raise AttributeError(f"'{self.__class__.__name__}' object has no "
                                  f"attribute '{name}'")
