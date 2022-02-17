@@ -67,12 +67,12 @@ def add_args(parser: ArgumentParser,
     for k, v in cfg.items():
         if isinstance(v, str):
             parser.add_argument('--' + prefix + k)
+        elif isinstance(v, bool):
+            parser.add_argument('--' + prefix + k, action='store_true')
         elif isinstance(v, int):
             parser.add_argument('--' + prefix + k, type=int)
         elif isinstance(v, float):
             parser.add_argument('--' + prefix + k, type=float)
-        elif isinstance(v, bool):
-            parser.add_argument('--' + prefix + k, action='store_true')
         elif isinstance(v, dict):
             add_args(parser, v, prefix + k + '.')
         elif isinstance(v, abc.Iterable):
