@@ -785,8 +785,8 @@ class DictAction(Action):
             val (str): Value string.
 
         Returns:
-            list | tuple | Any : The expanded list or tuple from the string,
-                or single value if no iterable values found.
+            list | tuple | Any: The expanded list or tuple from the string,
+            or single value if no iterable values are found.
 
         Examples:
             >>> DictAction._parse_iterable('1,2,3')
