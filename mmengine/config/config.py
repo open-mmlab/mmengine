@@ -660,31 +660,27 @@ class Config:
         return getattr(self._cfg_dict, name)
 
     def __getitem__(self, name):
-        """get item from config dictionary."""
         return self._cfg_dict.__getitem__(name)
 
     def __setattr__(self, name, value):
-        """set attribute."""
         if isinstance(value, dict):
             value = ConfigDict(value)
         self._cfg_dict.__setattr__(name, value)
 
     def __setitem__(self, name, value):
-        """set config dictionary item."""
         if isinstance(value, dict):
             value = ConfigDict(value)
         self._cfg_dict.__setitem__(name, value)
 
     def __iter__(self):
-        """get config dictionary iterator."""
         return iter(self._cfg_dict)
 
-    def __getstate__(self):
-        """get state of config."""
+    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
+        """Get state of config."""
         return (self._cfg_dict, self._filename, self._text)
 
-    def __setstate__(self, state):
-        """set state of config."""
+    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
+        """Set state of config."""
         _cfg_dict, _filename, _text = state
         super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
         super(Config, self).__setattr__('_filename', _filename)
