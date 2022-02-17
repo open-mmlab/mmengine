@@ -1,5 +1,9 @@
 # 可视化 (Visualizer)
 
+## 概述
+
+**(1) 总体介绍**
+
 可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 算法库中，我们期望可视化功能的设计能满足以下需求：
 
 - 提供丰富的开箱即用可视化功能，能够满足大部分计算机视觉可视化任务
@@ -23,6 +27,13 @@
 
   为了统一接口，MMEngine 提供了统一接口的抽象类 BaseWriter，和一些常用的 Writer 如 LocalWriter 来支持将数据写入本地，TensorboardWriter 来支持将数据写入 Tensorboard，WandbWriter 来支持将数据写入 Wandb。用户也可以自定义 Writer 来将数据写入自定义后端。写入的数据可以是图片，模型结构图，标量如模型精度指标等。
 
+  考虑到在训练或者测试过程中同时存在多个  Writer 对象，例如同时想进行本地和远程端写数据，为此设计了 **ComposeWriter**  负责管理所有运行中实例化的 Writer 对象，其会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法。Writer 类的 UML 关系图如下
+<div align="center">
+ <img src="https://user-images.githubusercontent.com/17425982/154225398-7e478f68-58ae-46fd-ae23-47ad37ffb176.png" >
+</div>
+
+
+**(2) Writer 和 Visualizer 关系**
   Writer 和 Visualizer 两者属于松耦合关系，其简要关系如下图：
 
   <div align="center">
@@ -37,14 +48,29 @@
   如果是 WandbWriter 类，其有两种做法
 
   1. 内部调用 Visualizer 接口进行单张图片结果绘制，然后通过 log 接口发送到远程
-  2. 考虑到 wandb 自己有一套可视化效果较好的绘图 API，在这种情况下用户无需调用绑定的 Visualizer 而是利用 wandb 本身 API 实现绘制，然后通过 log 接口发送到远程
+  2. 考虑到 wandb 自己有一套可视化效果较好的绘图 API，在这种情况下用户无需调用绑定的 Visualizer (设置 use_visualizer=False) 而是利用 wandb 本身 API 实现绘制，然后通过 log 接口发送到远程
 
-  **WandbWriter 和 TensorboardWriter 等具备两种写图片做法的类可以通过初始化参数 `use_visualizer` 切换绘制后端。除了写图片，其他写数据功能例如写模型精度指标等和 Visualizer 没有任何关系。**
+**WandbWriter 和 TensorboardWriter 等具备两种写图片做法的类可以通过初始化参数 `use_visualizer` 切换绘制后端。除了写图片，其他写数据功能例如写模型精度指标等和 Visualizer 没有任何关系。**一个简略的实现如下：
 
-  考虑到在训练或者测试过程中同时存在多个  Writer 对象，例如同时想进行本地和远程端写数据，为此设计了 **ComposeWriter**  负责管理所有运行中实例化的 Writer 对象，其会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法。Writer类的 UML 关系图如下
-<div align="center">
- <img src="https://user-images.githubusercontent.com/17425982/154225398-7e478f68-58ae-46fd-ae23-47ad37ffb176.png" >
-</div>
+  ```python
+  @WRITERS.register_module()
+  class WandbWriter(BaseWriter):
+      def __init__(self, ..., use_visualizer=True):
+          self._use_visualizer=use_visualizer
+
+      def add_image(self, name, image, data_sample, ..., **kwargs):
+          if self._use_visualizer:
+              assert self.visualizer
+              self.visualizer.draw(data_sample, image, ...)
+              self.wandb.log({name: self.visualizer.get_image()}, ...)
+          else:
+              self.draw(name, image, data_sample,...,**kwargs)
+
+       def add_scaler(self, name, value, step):
+          self.wandb.log({name: value}, ...)
+  ```
+
+
 ## 可视化对象 Visualizer
 
 可视化对象 Visualizer 负责单张图片的各类绘制和可视化功能，默认绘制后端为 Matplotlib。为了统一 OpenMMLab 各个算法库的可视化接口，MMEngine 定义提供了基于基础绘制功能的 LocalVisualizer 类，下游库可以继承 LocalVisualizer 并实现 `draw` 接口实现自己的可视化需求，例如 MMDetection 的 DetLocalVisualizer。
@@ -80,7 +106,7 @@ LocalVisualizer 提供了基础而通用的可视化功能，主要接口如下�
 ```python
 visualizer.set_image(image)
 visualizer.draw_bboxes(...).draw_texts(...).draw_lines(...)
-visualizer.save()
+visualizer.save(...)
 ```
 
 **(2) 用例 2 - 可视化特征图**
@@ -95,7 +121,7 @@ visualizer.save()
 # 如果提前设置了图片，则特征图或者图片叠加显示，否则只显示特征图
 visualizer.set_image(image)
 visualizer.draw_featmap(...)
-visualizer.save()
+visualizer.save(...)
 ```
 
 ### 自定义 Visualizer
@@ -137,7 +163,7 @@ class DetLocalVisualizer(BaseLocalVisualizer):
 
 ```python
 det_local_visualizer=DetLocalVisualizer()
-det_local_visualizer.draw()
+det_local_visualizer.draw(data_sample,image)
 ```
 
 用户也可以使用注册器实例化，配置如下
@@ -145,7 +171,7 @@ det_local_visualizer.draw()
 ```python
 visualizer= dict(type='DetLocalVisualizer')
 det_local_visualizer=build_visualizer(visualizer)
-det_local_visualizer.draw()
+det_local_visualizer.draw(data_sample,image)
 ```
 
 ## 写端 Writer
