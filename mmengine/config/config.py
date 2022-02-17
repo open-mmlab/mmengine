@@ -230,11 +230,11 @@ class Config:
 
         This can be easily achieved using predefined variables, which can be
         written in the config `config_setting1.py` as follows
-        
+
         .. code-block:: python
-        
+
            work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
-        
+
 
         Here `{{ fileBasenameNoExtension }}` indicates the file name of the
         config (without the extension), and when the config class reads the
@@ -242,7 +242,7 @@ class Config:
         to the corresponding actual value.
 
         .. code-block:: python
-        
+
            cfg = Config.fromfile('. /config_setting1.py')
            cfg.work_dir # ". /work_dir/config_setting1"
 
@@ -351,7 +351,7 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether to use 
+            use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
 
         Returns:
@@ -701,7 +701,7 @@ class Config:
                 are allowed in ``options`` and will replace the element of the
                 corresponding index in the config if the config is a list.
                 Defaults to True.
-        
+
         Examples:
             >>> options = {'model.backbone.depth': 50,
             ...            'model.backbone.with_cp':True}
@@ -720,7 +720,7 @@ class Config:
             >>> assert cfg_dict == dict(pipeline=[
             ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
         """
-        option_cfg_dict = {}
+        option_cfg_dict: dict = {}
         for full_key, v in options.items():
             d = option_cfg_dict
             key_list = full_key.split('.')
