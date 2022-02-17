@@ -464,7 +464,7 @@ class Config:
             b (dict): The origin dict to be fetch keys from ``a``.
             allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
               are allowed in source ``a`` and will replace the element of the
-              corresponding index in b if b is a list. Default: False.
+              corresponding index in b if b is a list. Defaults to False.
 
         Returns:
             dict: The modified dict of ``b`` using ``a``.
