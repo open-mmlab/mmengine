@@ -631,7 +631,6 @@ class Config:
         return f'Config (path: {self.filename}): {self._cfg_dict.__repr__()}'
 
     def __len__(self):
-        """return length of dictionary."""
         return len(self._cfg_dict)
 
     def __getattr__(self, name: str) -> Any:
