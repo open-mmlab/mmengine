@@ -52,7 +52,7 @@ class ConfigDict(Dict):
 
 
 def add_args(parser: ArgumentParser,
-             cfg: Dict,
+             cfg: dict,
              prefix: str = '') -> ArgumentParser:
     """Add config fields into argument parser.
 
