@@ -229,7 +229,6 @@ class Config:
         ``config_setting1.py``, the working directory is
         ``. /work_dir/config_setting1``.
 
-
         This can be easily achieved using predefined variables, which can be
         written in the config `config_setting1.py` as follows
         ```Python
