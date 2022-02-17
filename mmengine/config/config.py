@@ -680,7 +680,7 @@ class Config:
         super(Config, self).__setattr__('_text', _text)
 
     def dump(self, file: Optional[str] = None):
-        """Dump config as an local file or return config text.
+        """Dump config to file or return config text.
 
         Args:
             file (str, optional): _description_. Defaults to None.
