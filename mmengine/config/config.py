@@ -138,7 +138,7 @@ class Config:
                 text = f.read()
         else:
             text = ''
-        super(Config, self).__setattr__('_text', text)
+        super().__setattr__('_text', text)
 
     @staticmethod
     def fromfile(filename: str,
@@ -657,9 +657,9 @@ class Config:
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
         _cfg_dict, _filename, _text = state
-        super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
-        super(Config, self).__setattr__('_filename', _filename)
-        super(Config, self).__setattr__('_text', _text)
+        super().__setattr__('_cfg_dict', _cfg_dict)
+        super().__setattr__('_filename', _filename)
+        super().__setattr__('_text', _text)
 
     def dump(self, file: Optional[str] = None):
         """Dump config to file or return config text.
@@ -672,7 +672,7 @@ class Config:
         Returns:
             str or None: Config text.
         """
-        cfg_dict = super(Config, self).__getattribute__('_cfg_dict').to_dict()
+        cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
         if self.filename.endswith('.py'):
             if file is None:
                 return self.pretty_text
@@ -730,8 +730,8 @@ class Config:
             subkey = key_list[-1]
             d[subkey] = v
 
-        cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-        super(Config, self).__setattr__(
+        cfg_dict = super().__getattribute__('_cfg_dict')
+        super().__setattr__(
             '_cfg_dict',
             Config._merge_a_into_b(
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
