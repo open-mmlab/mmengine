@@ -17,7 +17,7 @@ class TestConfig:
     data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'data/')
 
     @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
-    def test_init(self, tmp_path, file_format):
+    def test_init(self, file_format):
         # test init Config by __init__
         cfg = Config()
         assert cfg.filename is None
@@ -348,7 +348,7 @@ class TestConfig:
         assert cfg_module_dict['item9'].startswith('_item2')
         assert cfg_module_dict['item10'].startswith('_item7')
 
-    def test_substitute_base_vars(self, tmp_path):
+    def test_substitute_base_vars(self):
         cfg = dict(
             item4='_item1.12345',
             item5=dict(item3='1', item2='_item2_.fswf'),
@@ -418,7 +418,7 @@ class TestConfig:
         assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
         assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
 
-        # test no use_predefined_variable
+        # test `use_predefined_variable=False`
         cfg_dict_ori = dict(
             item1='{{fileBasename}}',
             item2='{{ fileDirname}}',
@@ -435,7 +435,7 @@ class TestConfig:
         cfg_file = osp.join(self.data_path,
                             'config/yaml_config/test_predefined_var.yaml')
 
-        # test no use_predefined_variable
+        # test `use_predefined_variable=False`
         assert Config._file2dict(cfg_file,
                                  False)[0]['item1'] == '{{ fileDirname }}'
         assert Config._file2dict(cfg_file)[0]['item1'] == self._get_file_path(
@@ -449,8 +449,6 @@ class TestConfig:
         assert Config.fromfile(cfg_file)['item1'] == self._get_file_path(
             osp.dirname(cfg_file))
 
-        # test custom_imports for Config.fromfile
-
     def _merge_from_base(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_from_base_single.py')
@@ -460,7 +458,7 @@ class TestConfig:
         assert cfg_dict['item2']['a'] == 1
         assert cfg_dict['item3'] is False
         assert cfg_dict['item4'] == 'test_base'
-        # item3 is a dict in the child config but is bool in base config
+        # item3 is a dict in the child config but a boolean in base config
         with pytest.raises(TypeError):
             Config.fromfile(
                 osp.join(self.data_path,
