@@ -673,7 +673,6 @@ class Config:
         return (self._cfg_dict, self._filename, self._text)
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
-        """Set state of config."""
         _cfg_dict, _filename, _text = state
         super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
         super(Config, self).__setattr__('_filename', _filename)
