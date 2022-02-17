@@ -301,8 +301,8 @@ class Config:
         return base_var_dict
 
     @staticmethod
-    def _substitute_base_vars(cfg: Dict, base_var_dict: Dict,
-                              base_cfg: Dict) -> Dict:
+    def _substitute_base_vars(cfg: dict, base_var_dict: dict,
+                              base_cfg: dict) -> dict:
         """Substitute base variables from strings to their actual values.
 
         Args:
