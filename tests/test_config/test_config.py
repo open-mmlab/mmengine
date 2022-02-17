@@ -183,30 +183,29 @@ class TestConfig:
         #  overwritten by int
         sys.argv[1] = tmp
 
-    @pytest.mark.parametrize('file_path', [
-        'config/py_config/simple_config.py',
-        'config/py_config/test_merge_from_multiple_bases.py'
-    ])
-    def test_dump(self, file_path, tmp_path):
+    def test_dump(self, tmp_path):
+        file_path = 'config/py_config/test_merge_from_multiple_bases.py'
         cfg_file = osp.join(self.data_path, file_path)
         cfg = Config.fromfile(cfg_file)
         dump_py = tmp_path / 'simple_config.py'
-        dump_json = tmp_path / 'simple_config.json'
-        dump_yaml = tmp_path / 'simple_config.yaml'
 
         cfg.dump(dump_py)
-        cfg.dump(dump_json)
-        cfg.dump(dump_yaml)
-
         assert cfg.dump() == cfg.pretty_text
-
         assert open(dump_py, 'r').read() == cfg.pretty_text
-        assert open(dump_json, 'r').read() == cfg.pretty_text
-        assert open(dump_yaml, 'r').read() == cfg.pretty_text
+
+        # test dump json/yaml.
+        file_path = 'config/json_config/simple.config.json'
+        cfg_file = osp.join(self.data_path, file_path)
+        cfg = Config.fromfile(cfg_file)
+        dump_json = tmp_path / 'simple_config.json'
+        cfg.dump(dump_json)
+
+        with open(dump_json) as f:
+            assert f.read() == cfg.dump()
 
         # test pickle
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/test_dump_pickle_support.py')
+        file_path = 'config/py_config/test_dump_pickle_support.py'
+        cfg_file = osp.join(self.data_path, file_path)
         cfg = Config.fromfile(cfg_file)
 
         text_cfg_filename = tmp_path / '_text_config.py'
