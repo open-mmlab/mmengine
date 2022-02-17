@@ -196,14 +196,16 @@ class Config:
             # check if users specify a wrong suffix for python
             warnings.warn(
                 'Please check "file_format", the file format may be .py')
-        with tempfile.NamedTemporaryFile(
-                'w', encoding='utf-8', suffix=file_format,
-                delete=False) as temp_file:
-            temp_file.write(cfg_str)
-            # on windows, previous implementation cause error
-            # see PR 1077 for details
+        # A temporary file can not be opened a second time on Windows.
+        # See https://docs.python.org/3/library/tempfile.html#tempfile.NamedTemporaryFile for more details.
+        # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and second in `Config.from_file`.
+        # In addition, a named temporary file will be removed after closed.
+        # As a workround we set `delete=False` and close the temporary file before opening again.
+        temp_file = tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix=file_format, delete=False)
+        temp_file.write(cfg_str)
+        temp_file.closed()  # close the temporary file
         cfg = Config.fromfile(temp_file.name)
-        os.remove(temp_file.name)
+        os.remove(temp_file.name)  # manually delete the temporary file
         return cfg
 
     @staticmethod
