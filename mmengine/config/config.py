@@ -240,10 +240,11 @@ class Config:
         config file, it will automatically parse this double-bracketed string
         to the corresponding actual value.
 
-        ```Python
-            cfg = Config.fromfile('. /config_setting1.py')
-            cfg.work_dir # ". /work_dir/config_setting1"
-        ```
+        .. code-block:: python
+        
+           cfg = Config.fromfile('. /config_setting1.py')
+           cfg.work_dir # ". /work_dir/config_setting1"
+
 
         For details, Please refer to docs/zh_cn/tutorials/config.md .
 
