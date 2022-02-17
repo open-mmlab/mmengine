@@ -11,8 +11,9 @@ from typing import Callable, Optional, Union, List, Any, Tuple, Dict, Sequence
 import numpy as np
 from torch.utils.data import Dataset
 
-from mmengine.Registry import PIPELINES, build_from_cfg
-from mmengine.utils import check_file_exist, list_from_file, load
+from mmengine.registry import TRANSFORMS, build_from_cfg
+from mmengine.utils import check_file_exist
+from mmengine.fileio import list_from_file, load
 
 
 class Compose:
@@ -28,7 +29,7 @@ class Compose:
         self.transforms = []
         for transform in transforms:
             if isinstance(transform, dict):
-                transform = build_from_cfg(transform, PIPELINES)
+                transform = build_from_cfg(transform, TRANSFORMS)
                 self.transforms.append(transform)
             elif callable(transform):
                 self.transforms.append(transform)
@@ -356,7 +357,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             ``parse_annotations``.
 
         Returns:
-            tuple[list, np.ndarray]: serialize result and corresponding
+            Tuple[list, np.ndarray]: serialize result and corresponding
                 address.
         """
         def _serialize(data):
