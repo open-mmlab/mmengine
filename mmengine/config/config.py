@@ -164,7 +164,7 @@ class Config:
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
-        """Generate config from config str.
+        """Build a Config instance from config text.
 
         Args:
             cfg_str (str): Config str.
