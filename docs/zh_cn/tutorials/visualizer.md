@@ -17,11 +17,11 @@
 
   MMEngine 提供了以 Matplotlib 库为绘制后端的 `Visualizer` 类，其具备如下功能：
 
-  - 提供了一系列和视觉任务无关的基础方法，例如  `draw_bboxes` 和 `draw_texts` 等
+  - 提供了一系列和视觉任务无关的基础方法，例如 `draw_bboxes` 和 `draw_texts` 等
   - 上述各个基础方法支持链式调用，方便叠加绘制显示
   - 提供了绘制特征图功能
 
-  各个下游算法库可以继承 `Visualizer` 并在 `draw` 接口实现所需的可视化功能，例如 MMDetection 中的 `DetVisualizer` 继承至 `Visualizer` 并在 `draw` 接口实现可视化检测框、掩码 mask 和语义分割图等功能。Visualizer 类的 UML 关系图如下
+  各个下游算法库可以继承 `Visualizer` 并在 `draw` 接口实现所需的可视化功能，例如 MMDetection 中的 `DetVisualizer` 继承自 `Visualizer` 并在 `draw` 接口实现可视化检测框、实例掩码和语义分割图等功能。Visualizer 类的 UML 关系图如下
 
   <div align="center">
    <img src="https://user-images.githubusercontent.com/17425982/154475592-7208a34b-f6cb-4171-b0be-9dbb13306862.png" >
@@ -31,10 +31,10 @@
 
   为了统一接口调用，MMEngine 提供了统一的抽象类 `BaseWriter`，和一些常用的 Writer 如 `LocalWriter` 来支持将数据写入本地，`TensorboardWriter` 来支持将数据写入 Tensorboard，`WandbWriter` 来支持将数据写入 Wandb。用户也可以自定义 Writer 来将数据写入自定义后端。写入的数据可以是图片，模型结构图，标量如模型精度指标等。
 
-  考虑到在训练或者测试过程中同时存在多个  Writer 对象，例如同时想进行本地和远程端写数据，为此设计了 `ComposedWriter`  负责管理所有运行中实例化的 Writer 对象，其会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法。Writer 类的 UML 关系图如下
-<div align="center">
- <img src="https://user-images.githubusercontent.com/17425982/154474755-080b955b-436b-4cdb-9a49-16a9f231ce81.png" >
-</div>
+  考虑到在训练或者测试过程中同时存在多个 Writer 对象，例如同时想进行本地和远程端写数据，为此设计了 `ComposedWriter` 负责管理所有运行中实例化的 Writer 对象，其会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法。Writer 类的 UML 关系图如下
+  <div align="center">
+   <img src="https://user-images.githubusercontent.com/17425982/154474755-080b955b-436b-4cdb-9a49-16a9f231ce81.png" >
+  </div>
 
 **(2) Writer 和 Visualizer 关系**
 
@@ -67,39 +67,37 @@ class WandbWriter:
          self.wandb.log({name: value}, ...)
 ```
 
-对于非   `LocalWriter`  或者不需要调用写图片的 `add_image` 接口需求场景，visualizer 参数可以为 None。
+对于非 `LocalWriter` 或者不需要调用写图片的 `add_image` 接口需求场景，visualizer 参数可以为 None。
 
-注意 `Visualizer` 仅仅有单图绘制功能，如果想将绘制结果保存，例如保存到本地、Wandb 或者 Tensorboard，可以使用 Writer 写端对象。一个简单的例子如下
-
-```python
-visualizer=dict(type='DetVisualizer')
-visualizer = VISUALIZERS.build(visualizer)
-visualizer.draw(image, datasample)
-
-# 保存到本地
-# 直接实例化
-local_writer=LocalWriter(save_dir='demo_dir')
-# 绘制通过配置实例化
-local_writer=WRITERS.build(dict(type='LocalWriter',save_dir='demo_dir'))
-local_writer.add_image('demo_image',visualizer.get_image())
-
-# 保存到 Wandb
-wandb_writer=WandbWriter()
-wandb_writer.add_image('demo_image',visualizer.get_image())
-
-# 保存到 Tensorboard
-tensorboard_writer=TensorboardWriter()
-tensorboard_writer.add_image('demo_image',visualizer.get_image())
-```
-
-考虑到用户需要自己实例化 Visualizer 和 Writer，步骤较多，不推荐这种调用方法，推荐做法如下
+注意 `Visualizer` 仅仅有单图绘制功能，如果想将绘制结果保存，例如保存到本地、Wandb 或者 Tensorboard，可以使用 Writer 写端对象。一个推荐的写法如下
 
 ```python
 # 配置文件
-writer=dict(type='LocalWriter',save_dir='demo_dir'，visualizer=dict(type='DetVisualizer'))
+writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
 # 实例化和调用
 writer_obj=WRITERS.build(writer)
-writer_obj.add_image('demo_image',image, datasample)
+writer_obj.add_image('demo_image', image, datasample)
+```
+
+在 Runner 中默认的实现方式也是类似上述写法，我们也推荐用户在模型中开发自定义可视化功能的时候也采用这种方式。如果用户有必要直接调用 visualizer 中接口进行绘制功能，则可以采用如下写法
+
+```python
+# 配置文件
+writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
+# 实例化和调用
+writer_obj=WRITERS.build(writer)
+# 以调用 draw 方法为例
+writer_obj.visualizer.draw(image, datasample)
+writer_obj.add_image('demo_image', writer_obj.visualizer.get_image())
+```
+
+在使用 Jupyter notebook 或者其他地方不需要 writer 的情形下，用户可以自己实例化 visualizer。一个简单的例子如下
+
+```python
+# 实例化 visualizer
+visualizer=dict(type='DetVisualizer')
+visualizer = VISUALIZERS.build(visualizer)
+visualizer.draw(image, datasample)
 ```
 
 
@@ -113,21 +111,21 @@ writer_obj.add_image('demo_image',image, datasample)
 
 **(1) 绘制无关的功能性接口**
 
-- set_image  设置原始图片数据
+- set_image 设置原始图片数据
 - get_image 获取绘制后的 Numpy 格式图片数据
-- show  可视化
-- register_task  注册绘制函数(其作用在 *自定义 Visualizer* 小节描述)
+- show 可视化
+- register_task 注册绘制函数(其作用在 *自定义 Visualizer* 小节描述)
 
 **(2) 绘制相关接口**
 
-- draw  用户使用的抽象绘制接口
-- draw_featmap  绘制特征图
-- draw_bboxes  绘制单个或者多个边界框
-- draw_texts  绘制单个或者多个文本框
-- draw_lines  绘制单个或者多个线段
-- draw_circles  绘制单个或者多个圆
-- draw_polygons  绘制单个或者多个多边形
-- draw_binary_masks  绘制单个或者多个二值掩码
+- draw 用户使用的抽象绘制接口
+- draw_featmap 绘制特征图
+- draw_bboxes 绘制单个或者多个边界框
+- draw_texts 绘制单个或者多个文本框
+- draw_lines 绘制单个或者多个线段
+- draw_circles 绘制单个或者多个圆
+- draw_polygons 绘制单个或者多个多边形
+- draw_binary_masks 绘制单个或者多个二值掩码
 
 **(1) 用例 1 - 链式调用**
 
@@ -165,16 +163,18 @@ class DetVisualizer(Visualizer):
     def get_image(self):
         ...
 
-    def draw(self,data_sample, image=None,show_gt=True, show_pred=True):
+    def draw(self, data_sample, image=None, show_gt=True, show_pred=True):
         if show_gt:
             for task in self.task_dict:
                 task_attr = 'gt_' + task
                 if task_attr in data_sample:
+                    # DataType.GT 表示当前绘制标注数据
                     self.task_dict[task](self, data_sample[task_attr], DataType.GT)
         if show_pred:
             for task in self.task_dict:
                 task_attr = 'pred_' + task
                 if task_attr in data_sample:
+                    # DataType.PRED 表示当前绘制预测结果
                     self.task_dict[task](self, data_sample[task_attr], DataType.PRED)
 
     @Visualizer.register_task('instances')
@@ -188,28 +188,13 @@ class DetVisualizer(Visualizer):
 
 注意：是否使用 `register_task` 装饰器函数不是必须的，如果用户自定义 Visualizer，并且 `draw `实现非常简单，则无需考虑 `register_task`。
 
-如果想使用 `DetVisualizer`，用户可以直接在 Python 代码中实例化，代码如下
-
-```python
-det_local_visualizer=DetVisualizer()
-det_local_visualizer.draw(data_sample,image)
-```
-
-用户也可以使用注册器实例化，配置如下
-
-```python
-visualizer= dict(type='DetVisualizer')
-det_local_visualizer=build_visualizer(visualizer)
-det_local_visualizer.draw(data_sample,image)
-```
-
 ## 写端 Writer
 
 Visualizer 只是实现了单张图片的可视化功能，但是在训练或者测试过程中，对一些关键指标或者模型训练超参的记录非常重要，此功能通过写端 Writer 实现。
 
 BaseWriter 定义了对外调用的接口规范，主要接口如下：
 
-- add_hyperparams  写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- add_hyperparams 写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
 - add_image 写图片
 - add_scalar 写标量
 - add_graph 写模型图
@@ -222,20 +207,20 @@ BaseWriter 定义了对外调用的接口规范，主要接口如下：
 
 ```python
 # 配置文件
-writer=dict(type='LocalWriter',save_dir='demo_dir'，visualizer=dict(type='DetVisualizer'))
+writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
 # 实例化和调用
 writer_obj=WRITERS.build(writer)
 # 写图片
-writer_obj.add_image('demo_image',image, datasample)
+writer_obj.add_image('demo_image', image, datasample)
 # 写模型精度值
-writer_obj.add_scalar('mAP',0.9)
+writer_obj.add_scalar('mAP', 0.9)
 ```
 
 ## 组合写端 ComposedWriter
 
-考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 `ComposedWriter` 类，在训练或者测试过程中  `ComposedWriter` 会依次调用各个 Writer，主要接口如下：
+考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 `ComposedWriter` 类，在训练或者测试过程中 `ComposedWriter` 会依次调用各个 Writer，主要接口如下：
 
-- add_hyperparams  写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- add_hyperparams 写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
 - add_image 写图片
 - add_scalar 写标量
 - add_graph 写模型图
@@ -247,10 +232,7 @@ writer_obj.add_scalar('mAP',0.9)
 为了让用户可以在代码的任意位置进行数据可视化，`ComposedWriter` 类实现 `__enter__` 和 ` __exit__`方法，并且在 `Runner` 中使上下文生效，从而在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 `ComposedWriter` 类实例，从而调用该类的各种可视化和写方法。一个简单粗略的实现和用例如下
 
 ```python
-# 假设 writer 只有一个
-visualizer=build_visualizer(cfg.visualizer,VISUALIZERS)
-writer =build_writer(cfg.writer,WRITERS)
-writer.bind_visualizer(visualizer)
+writer=WRITERS.build(cfg.writer)
 
 # 假设在 epoch 训练过程中
 with ComposedWriter(writer):
@@ -261,7 +243,7 @@ with ComposedWriter(writer):
 
 ```python
 # 配置文件写法
-writer = dict(type='WandbWriter',init_kwargs=dict(project='demo'),
+writer = dict(type='WandbWriter', init_kwargs=dict(project='demo'),
               visualizer= dict(type='DetLocalVisualizer', show=False))
 
 # 在上下文作用域生效的任意位置
@@ -270,4 +252,18 @@ composed_writer.add_image('vis_image',image, datasample, iter=iter)
 composed_writer.add_scalar('mAP', val, iter=iter)
 ```
 
-在训练和测试过程中，用户可以在上下文生效的代码任意位置通过调用 `get_writers()` 获得 ComposedWriter 对象，然后通过该对象可以进行绘制或者写操作。
+如果存在多个 writer 对象，则配置文件字段 writer 为列表，如下所示
+
+```python
+# 配置文件写法
+writer = [dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer')),
+         dict(type='WandbWriter', init_kwargs=dict(project='demo'))]
+
+# 在上下文作用域生效的任意位置
+composed_writer=get_writers()
+# 内部会依次调用 LocalWriter 和 WandbWriter 的 add_image 方法进行写图片到本地和 Wandb 远端
+composed_writer.add_image('vis_image', image, datasample, iter=iter)
+composed_writer.add_scalar('mAP', val, iter=iter)
+```
+
+在训练和测试过程中，用户可以在上下文生效的代码任意位置通过调用 `get_writers()` 获得 ComposedWriter 对象，然后通过该对象接口可以进行绘制或者写操作，内部会依次调用配置文件中定义的所有 writer 的相应接口。
