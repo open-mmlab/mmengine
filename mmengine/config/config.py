@@ -67,7 +67,7 @@ class ConfigDict(Dict):
 
 
 def add_args(parser: ArgumentParser,
-             cfg: Dict,
+             cfg: dict,
              prefix: str = '') -> ArgumentParser:
     """Add config fields into argument parser.
 
@@ -133,7 +133,7 @@ class Config:
     """
 
     def __init__(self,
-                 cfg_dict: Dict = None,
+                 cfg_dict: dict = None,
                  cfg_text: Optional[str] = None,
                  filename: str = None):
         if cfg_dict is None:
@@ -315,19 +315,19 @@ class Config:
         return base_var_dict
 
     @staticmethod
-    def _substitute_base_vars(cfg: Dict, base_var_dict: Dict,
-                              base_cfg: Dict) -> Dict:
+    def _substitute_base_vars(cfg: Any, base_var_dict: dict,
+                              base_cfg: dict) -> Any:
         """Substitute base variables from strings to their actual values.
 
         Args:
-            cfg (dict): Config dictionary.
+            Any : Config dictionary.
             base_var_dict (dict): A dictionary contains variables in base
                 config.
             base_cfg (dict): Base config dictionary.
 
         Returns:
-            dict : A dictionary with origin base variables substituted with
-                actual values.
+            Any : A dictionary with origin base variables
+                substituted with actual values.
         """
         cfg = copy.deepcopy(cfg)
 
@@ -443,7 +443,7 @@ class Config:
                 cfg_dict_list.append(_cfg_dict)
                 cfg_text_list.append(_cfg_text)
 
-            base_cfg_dict: Dict[str, Any] = dict()
+            base_cfg_dict: dict = dict()
             for c in cfg_dict_list:
                 duplicate_keys = base_cfg_dict.keys() & c.keys()
                 if len(duplicate_keys) > 0:
@@ -650,21 +650,6 @@ class Config:
         return len(self._cfg_dict)
 
     def __getattr__(self, name: str) -> Any:
-        """Get attribute. with this function, value can be accessed like a
-        object property.
-
-        Example:
-        ```python
-            cfg = Config.fromfile('config.py')
-            cfg.test_int  # 1
-        ```
-        Args:
-            name (str): Attribute name.
-
-        Returns:
-            Any : Attribute value.
-        """
-
         return getattr(self._cfg_dict, name)
 
     def __getitem__(self, name):
@@ -698,7 +683,9 @@ class Config:
         """Dump config as an local file or return config text.
 
         Args:
-            file (Optional[str], optional): _description_. Defaults to None.
+            file (str, optional): If not specified, then the object
+            is dumped to a str, otherwise to a file specified by the filename.
+            Defaults to None.
 
         Returns:
             str or None: Config text.
