@@ -38,25 +38,9 @@ class ConfigDict(Dict):
     def __missing__(self, name):
         raise KeyError(name)
 
-    def __getattr__(self, name: str) -> Any:
-        """Get attribute. with this function, value can be accessed like a
-        object property.
-
-        Example:
-        ```
-            optimizer = ConfigDict(type='SGD', lr=0.01)
-            optimizer.lr # 0.01
-        ```
-
-        Args:
-            name (str): Attribute name.
-
-        Returns:
-            Any : Attribute value.
-        """
-
+    def __getattr__(self, name):
         try:
-            value = super(ConfigDict, self).__getattr__(name)
+            value = super().__getattr__(name)
         except KeyError:
             raise AttributeError(f"'{self.__class__.__name__}' object has no "
                                  f"attribute '{name}'")
@@ -103,8 +87,8 @@ class Config:
     """A facility for config and config files.
 
     It supports common file formats as configs: python/json/yaml.
-    `Config.fromfile` can parse a dictionary from a config file, then
-    build a `Config` instance with the dictionary.
+    ``Config.fromfile`` can parse a dictionary from a config file, then
+    build a ``Config`` instance with the dictionary.
     The interface is the same as a dict object and also allows access config
     values as attributes.
 
@@ -145,8 +129,8 @@ class Config:
             if key in RESERVED_KEYS:
                 raise KeyError(f'{key} is reserved for config file')
 
-        super(Config, self).__setattr__('_cfg_dict', ConfigDict(cfg_dict))
-        super(Config, self).__setattr__('_filename', filename)
+        super().__setattr__('_cfg_dict', ConfigDict(cfg_dict))
+        super().__setattr__('_filename', filename)
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -180,10 +164,10 @@ class Config:
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
-        """Generate config from config str.
+        """Build a Config instance from config text.
 
         Args:
-            cfg_str (str): Config str.
+            cfg_str (str): Config text.
             file_format (str): Config file format corresponding to the
                config str. Only py/yml/yaml/json type are supported now!
 
@@ -241,25 +225,27 @@ class Config:
         logs. For different configs, we expect to define different working
         directories. A common way for users is to use the config file name
         directly as part of the working directory name, e.g. for the config
-        `config_setting1.py`, the working directory is
-        `. /work_dir/config_setting1`.
-
+        ``config_setting1.py``, the working directory is
+        ``. /work_dir/config_setting1``.
 
         This can be easily achieved using predefined variables, which can be
         written in the config `config_setting1.py` as follows
-        ```Python
-            work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
-        ```
+        
+        .. code-block:: python
+        
+           work_dir = '. /work_dir/{{ fileBasenameNoExtension }}'
+        
 
         Here `{{ fileBasenameNoExtension }}` indicates the file name of the
         config (without the extension), and when the config class reads the
         config file, it will automatically parse this double-bracketed string
         to the corresponding actual value.
 
-        ```Python
-            cfg = Config.fromfile('. /config_setting1.py')
-            cfg.work_dir # ". /work_dir/config_setting1"
-        ```
+        .. code-block:: python
+        
+           cfg = Config.fromfile('. /config_setting1.py')
+           cfg.work_dir # ". /work_dir/config_setting1"
+
 
         For details, Please refer to docs/zh_cn/tutorials/config.md .
 
@@ -365,8 +351,8 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether use predefined
-                variables. Defaults to True.
+            use_predefined_variables (bool, optional): Whether to use 
+                predefined variables. Defaults to True.
 
         Returns:
             Tuple[dict, str]: Variables dictionary and text of Config.
@@ -478,7 +464,7 @@ class Config:
             b (dict): The origin dict to be fetch keys from ``a``.
             allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
               are allowed in source ``a`` and will replace the element of the
-              corresponding index in b if b is a list. Default: False.
+              corresponding index in b if b is a list. Defaults to False.
 
         Returns:
             dict: The modified dict of ``b`` using ``a``.
@@ -642,11 +628,9 @@ class Config:
         return text
 
     def __repr__(self):
-        """print config filename and dictionary."""
         return f'Config (path: {self.filename}): {self._cfg_dict.__repr__()}'
 
     def __len__(self):
-        """return length of dictionary."""
         return len(self._cfg_dict)
 
     def __getattr__(self, name: str) -> Any:
@@ -669,18 +653,16 @@ class Config:
         return iter(self._cfg_dict)
 
     def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
-        """Get state of config."""
         return (self._cfg_dict, self._filename, self._text)
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
-        """Set state of config."""
         _cfg_dict, _filename, _text = state
         super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
         super(Config, self).__setattr__('_filename', _filename)
         super(Config, self).__setattr__('_text', _text)
 
     def dump(self, file: Optional[str] = None):
-        """Dump config as an local file or return config text.
+        """Dump config to file or return config text.
 
         Args:
             file (str, optional): If not specified, then the object
@@ -706,11 +688,20 @@ class Config:
                 dump(cfg_dict, file)
                 return None
 
-    def merge_from_dict(self, options, allow_list_keys=True):
+    def merge_from_dict(self,
+                        options: dict,
+                        allow_list_keys: bool = True) -> None:
         """Merge list into cfg_dict.
 
         Merge the dict parsed by MultipleKVAction into this cfg.
 
+        Args:
+            options (dict): dict of configs to merge from.
+            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
+                are allowed in ``options`` and will replace the element of the
+                corresponding index in the config if the config is a list.
+                Defaults to True.
+        
         Examples:
             >>> options = {'model.backbone.depth': 50,
             ...            'model.backbone.with_cp':True}
@@ -728,13 +719,6 @@ class Config:
             >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
             >>> assert cfg_dict == dict(pipeline=[
             ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
-
-        Args:
-            options (dict): dict of configs to merge from.
-            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
-              are allowed in ``options`` and will replace the element of the
-              corresponding index in the config if the config is a list.
-              Defaults to True.
         """
         option_cfg_dict = {}
         for full_key, v in options.items():
@@ -787,8 +771,8 @@ class DictAction(Action):
             val (str): Value string.
 
         Returns:
-            list | tuple | Any : The expanded list or tuple from the string,
-                or single value if no iterable values found.
+            list | tuple | Any: The expanded list or tuple from the string,
+            or single value if no iterable values are found.
 
         Examples:
             >>> DictAction._parse_iterable('1,2,3')
