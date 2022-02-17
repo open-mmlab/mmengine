@@ -38,22 +38,7 @@ class ConfigDict(Dict):
     def __missing__(self, name):
         raise KeyError(name)
 
-    def __getattr__(self, name: str) -> Any:
-        """Get attribute. with this function, value can be accessed like a
-        object property.
-
-        Example:
-        ```
-            optimizer = ConfigDict(type='SGD', lr=0.01)
-            optimizer.lr # 0.01
-        ```
-
-        Args:
-            name (str): Attribute name.
-
-        Returns:
-            Any : Attribute value.
-        """
+    def __getattr__(self, name):
 
         try:
             value = super(ConfigDict, self).__getattr__(name)
