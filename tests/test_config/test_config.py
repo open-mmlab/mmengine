@@ -45,69 +45,51 @@ class TestConfig:
             self.data_path,
             f'config/{file_format}_config/test_reserved_key.{file_format}')
         # reserved keys cannot be set in config
-        with pytest.raises(KeyError):
+        with pytest.raises(
+                KeyError, match='filename is reserved for config '
+                'file'):
             Config.fromfile(cfg_file)
 
-    @pytest.mark.parametrize(
-        'cfg_file',
-        ['py_config/test_custom_import.py', 'py_config/simple.config.py'])
-    def test_fromfile(self, cfg_file):
+    def test_fromfile(self):
         # test whether import `custom_imports` from cfg_file.
-        cfg_file = osp.join(self.data_path, 'config', cfg_file)
+        cfg_file = osp.join(self.data_path, 'config',
+                            'py_config/test_custom_import.py')
         sys.path.append(osp.join(self.data_path, 'config/py_config'))
         cfg = Config.fromfile(cfg_file, import_custom_modules=True)
         assert isinstance(cfg, Config)
         # If import successfully, os.environ[''TEST_VALUE''] will be
         # set to 'test'
-        if 'custom_imports' in cfg:
-            assert os.environ.pop('TEST_VALUE') == 'test'
-            Config.fromfile(cfg_file, import_custom_modules=False)
-            assert 'TEST_VALUE' not in os.environ
-        # test filename separated by . can be loaded.
-        else:
-            assert cfg.filename == cfg_file
-            assert cfg.text == osp.abspath(osp.expanduser(cfg_file)) + '\n' + \
-                   open(cfg_file, 'r').read()
+        assert os.environ.pop('TEST_VALUE') == 'test'
+        Config.fromfile(cfg_file, import_custom_modules=False)
+        assert 'TEST_VALUE' not in os.environ
 
     @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
     def test_fromstring(self, file_format):
         filename = f'{file_format}_config/simple_config.{file_format}'
         cfg_file = osp.join(self.data_path, 'config', filename)
-        # py to .py
         file_format = osp.splitext(filename)[-1]
         in_cfg = Config.fromfile(cfg_file)
-
-        out_cfg = Config.fromstring(in_cfg.pretty_text, '.py')
-        assert in_cfg._cfg_dict == out_cfg._cfg_dict
 
         cfg_str = open(cfg_file, 'r').read()
         out_cfg = Config.fromstring(cfg_str, file_format)
         assert in_cfg._cfg_dict == out_cfg._cfg_dict
 
         # test pretty_text only supports py file format
-        cfg_file = osp.join(self.data_path, 'config',
-                            'json_config/simple_config.json')
-        in_cfg = Config.fromfile(cfg_file)
         # in_cfg.pretty_text is .py format, cannot be parsed to .json
-        with pytest.raises(Exception):
-            Config.fromstring(in_cfg.pretty_text, '.json')
+        if file_format != '.py':
+            with pytest.raises(Exception):
+                Config.fromstring(in_cfg.pretty_text, file_format)
 
-        # test file format error
-        cfg_str = open(cfg_file, 'r').read()
-        with pytest.raises(Exception):
-            Config.fromstring(cfg_str, '.py')
         # error format
         with pytest.raises(IOError):
             Config.fromstring(cfg_str, '.xml')
 
-    @pytest.mark.parametrize('file_format', ['py', 'yaml', 'json'])
-    def test_dict(self, file_format):
+    def test_magic_methods(self):
         cfg_dict = dict(
             item1=[1, 2], item2=dict(a=0), item3=True, item4='test')
-        filename = f'{file_format}_config/simple_config.{file_format}'
+        filename = 'py_config/simple_config.py'
         cfg_file = osp.join(self.data_path, 'config', filename)
         cfg = Config.fromfile(cfg_file)
-
         # len(cfg)
         assert len(cfg) == 4
         # cfg.keys()
@@ -126,7 +108,7 @@ class TestConfig:
         assert cfg.item2.a == 0
         assert cfg.item3 == cfg_dict['item3']
         assert cfg.item4 == cfg_dict['item4']
-        # access not exist key
+        # accessing keys that do not exist will cause error
         with pytest.raises(AttributeError):
             cfg.not_exist
         # field in cfg, cfg[field], cfg.get()
@@ -136,7 +118,7 @@ class TestConfig:
             assert cfg.get(name) == cfg_dict[name]
             assert cfg.get('not_exist') is None
             assert cfg.get('not_exist', 0) == 0
-            # access not exist key
+            # accessing keys that do not exist will cause error
             with pytest.raises(KeyError):
                 cfg['not_exist']
         assert 'item1' in cfg
@@ -243,21 +225,6 @@ class TestConfig:
         text_cfg = Config.fromfile(text_cfg_filename)
         assert text_cfg._cfg_dict == cfg._cfg_dict
 
-    def test_setattr(self):
-        cfg = Config()
-        cfg.item1 = [1, 2]
-        cfg.item2 = {'a': 0}
-        cfg['item5'] = {'a': {'b': None}}
-        assert cfg._cfg_dict['item1'] == [1, 2]
-        assert cfg.item1 == [1, 2]
-        assert cfg._cfg_dict['item2'] == {'a': 0}
-        assert cfg.item2.a == 0
-        assert cfg._cfg_dict['item5'] == {'a': {'b': None}}
-        assert cfg.item5.a.b is None
-
-        with pytest.raises(TypeError):
-            cfg[[1, 2]] = 0
-
     def test_repr(self, tmp_path):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/simple_config.py')
@@ -285,7 +252,7 @@ class TestConfig:
         args = parser.parse_args(['--options', 'item2.a=[[1]]'])
         out_dict = {'item2.a': [[1]]}
         assert args.options == out_dict
-        # Imbalance bracket
+        # Imbalance bracket will cause error
         with pytest.raises(AssertionError):
             parser.parse_args(['--options', 'item2.a=[(a,b), [1,2], false'])
         # Normal values
@@ -386,15 +353,38 @@ class TestConfig:
         assert cfg['item4'] == cfg_base['item1']
         assert cfg['item5']['item2'] == cfg_base['item2']
 
+    def test_file2dict(self, tmp_path):
+
+        # test error format config
+        tmp_cfg = tmp_path / 'tmp_cfg.xml'
+        tmp_cfg.write_text('exist')
+        # invalid config format
+        with pytest.raises(IOError):
+            Config.fromfile(tmp_cfg)
+        # invalid config file path
+        with pytest.raises(FileNotFoundError):
+            Config.fromfile('no_such_file.py')
+
+        self._simple_load()
+        self._predefined_vars()
+        self._base_variables()
+        self._merge_from_base()
+        self._code_in_config()
+        self._merge_from_multiple_bases()
+        self._merge_delete()
+        self._merge_intermediate_variable()
+        self._merge_recursive_bases()
+
     def _simple_load(self):
         # test load simple config
         for file_format in ['py', 'json', 'yaml']:
-            filename = f'{file_format}_config/simple_config.{file_format}'
+            for name in ['simple.config', 'simple_config']:
+                filename = f'{file_format}_config/{name}.{file_format}'
 
-            cfg_file = osp.join(self.data_path, 'config', filename)
-            cfg_dict, cfg_text = Config._file2dict(cfg_file)
-            assert isinstance(cfg_text, str)
-            assert isinstance(cfg_dict, dict)
+                cfg_file = osp.join(self.data_path, 'config', filename)
+                cfg_dict, cfg_text = Config._file2dict(cfg_file)
+                assert isinstance(cfg_text, str)
+                assert isinstance(cfg_dict, dict)
 
     def _get_file_path(self, file_path):
         if platform.system() == 'Windows':
@@ -402,7 +392,7 @@ class TestConfig:
         else:
             return file_path
 
-    def _predefined_vars(self, tmp_path):
+    def _predefined_vars(self):
         # test parse predefined_var in config
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_predefined_var.py')
@@ -616,25 +606,3 @@ class TestConfig:
         assert cfg.cfg.item3 is True
         assert cfg.cfg.item4 == 'test'
         assert cfg.item5 == 1
-
-    def test_file2dict(self, tmp_path):
-
-        # test error format config
-        tmp_cfg = tmp_path / 'tmp_cfg.xml'
-        tmp_cfg.write_text('exist')
-        # invalid config format
-        with pytest.raises(IOError):
-            Config.fromfile(tmp_cfg)
-        # invalid config file path
-        with pytest.raises(FileNotFoundError):
-            Config.fromfile('no_such_file.py')
-
-        self._simple_load()
-        self._predefined_vars(tmp_path)
-        self._base_variables()
-        self._merge_from_base()
-        self._code_in_config()
-        self._merge_from_multiple_bases()
-        self._merge_delete()
-        self._merge_intermediate_variable()
-        self._merge_recursive_bases()
