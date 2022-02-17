@@ -226,8 +226,8 @@ class Config:
         logs. For different configs, we expect to define different working
         directories. A common way for users is to use the config file name
         directly as part of the working directory name, e.g. for the config
-        `config_setting1.py`, the working directory is
-        `. /work_dir/config_setting1`.
+        ``config_setting1.py``, the working directory is
+        ``. /work_dir/config_setting1``.
 
 
         This can be easily achieved using predefined variables, which can be
