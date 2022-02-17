@@ -706,7 +706,7 @@ class Config:
                 dump(cfg_dict, file)
                 return None
 
-    def merge_from_dict(self, options: dict, allow_list_keys: bool =True) -> None:
+    def merge_from_dict(self, options: dict, allow_list_keys: bool = True) -> None:
         """Merge list into cfg_dict.
 
         Merge the dict parsed by MultipleKVAction into this cfg.
