@@ -4,11 +4,12 @@ from typing import List, Optional, Union
 
 import torch
 import torch.nn as nn
-from mmcv.utils import _BatchNorm, _InstanceNorm, build_from_cfg, is_list_of
-from mmcv.utils.ext_loader import check_ops_exist
 from torch.nn import GroupNorm, LayerNorm
 
-from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
+from mmengine.registry import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
+                               build_from_cfg)
+from mmengine.utils import is_list_of, mmcv_full_available
+from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 
 
 @OPTIMIZER_CONSTRUCTORS.register_module()
@@ -61,7 +62,6 @@ class DefaultOptimizerConstructor:
         model contains multiple DCN layers in places other than backbone.
 
     Args:
-        model (:obj:`nn.Module`): The model with parameters to be optimized.
         optimizer_cfg (dict): The config dict of the optimizer.
             Positional fields are
 
@@ -228,7 +228,7 @@ class DefaultOptimizerConstructor:
                             'weight_decay'] = self.base_wd * bias_decay_mult
             params.append(param_group)
 
-        if check_ops_exist():
+        if mmcv_full_available():
             from mmcv.ops import DeformConv2d, ModulatedDeformConv2d
             is_dcn_module = isinstance(module,
                                        (DeformConv2d, ModulatedDeformConv2d))

@@ -11,6 +11,10 @@ from inspect import getfullargspec
 from itertools import repeat
 from typing import Sequence, Type
 
+import torch.nn as nn
+
+from .parrots_wrapper import _BatchNorm, _InstanceNorm
+
 
 # From PyTorch internals
 def _ntuple(n):
@@ -395,5 +399,34 @@ def mmcv_full_available() -> bool:
     Returns:
         bool: True if mmcv-full is installed else False.
     """
+    try:
+        import mmcv  # noqa: F401
+    except ImportError:
+        return False
     ext_loader = pkgutil.find_loader('mmcv._ext')
     return ext_loader is not None
+
+
+def is_norm(layer, exclude=None):
+    """Check if a layer is a normalization layer.
+
+    Args:
+        layer (nn.Module): The layer to be checked.
+        exclude (type | tuple[type]): Types to be excluded.
+
+    Returns:
+        bool: Whether the layer is a norm layer.
+    """
+    if exclude is not None:
+        if not isinstance(exclude, tuple):
+            exclude = (exclude, )
+        if not is_tuple_of(exclude, type):
+            raise TypeError(
+                f'"exclude" must be either None or type or a tuple of types, '
+                f'but got {type(exclude)}: {exclude}')
+
+    if exclude and isinstance(layer, exclude):
+        return False
+
+    all_norm_bases = (_BatchNorm, _InstanceNorm, nn.GroupNorm, nn.LayerNorm)
+    return isinstance(layer, all_norm_bases)
