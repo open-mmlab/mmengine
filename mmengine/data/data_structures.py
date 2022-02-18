@@ -7,6 +7,139 @@ import torch
 
 
 class BaseDataElement:
+    """A base data element structure of OpenMMlab.
+
+    Data elements refer to predicted results or groundtruth labels on an
+    algorithmictask, such as predicted bboxes, instance masks, semantic
+    segmentation masks, etc. Because annotation data and predicted results
+    often have similar properties (for example, the predicted bboxes and the
+    groundtruth bboxes have the same properties), MMEngine uses the same
+    abstract data interface to encapsulate predicted results and groundtruth
+    labels, and it is recommended to use naming to distinguish them, such as
+    `gt_instances` and `pred_instances` to distinguish between labels and
+    predicted results. Additionally, we distinguish data elements at instance
+    level, pixel level, and label level. Each of these types has its own
+    characteristics. Therefore, MMEngine defines the base class
+    `BaseDataElement` , and derives `InstanceData`, ` PixelData`, and
+    `LabelData`, which is used for representing different types of groundtruth
+    labels orpredicted and communication between components.
+
+
+    The attributes in `BaseDataElement` are divided into two parts,
+    the `metainfo` and the `data` respectively.
+
+        - `metainfo`: Usually contains the
+          information about the image such as filename,
+          image_shape, pad_shape, etc.The attributes can be accessed or
+          modified by dict-like or object-like operations, such as
+          `.`(only for accessed) , `in`, `del`, `pop(str)` `get(str)`,
+          `metainfo_keys()`, `metainfo_values()`, `metainfo_items()`,
+          `set_metainfo()`(for ).
+           Users can also apply tensor-like methods to all obj:`torch.Tensor`
+           in the `data_fileds`, such as `.cuda()`, `.cpu()`, `.numpy()`,
+           `.to()`,  `to_tensor()`, `.detach()`, `.numpy()`
+
+        - `data`: Annotations or model predictions are
+          stored. The attributes can be accessed or modified by
+          dict-like or object-like operations, such as
+          `.` , `[]`, `in`, `del`, `pop(str)` `get(str)`, `keys()`,
+          `values()`, `items()`. Users can also apply tensor-like methods
+          to all obj:`torch.Tensor` in the `data_fileds`,
+          such as `.cuda()`, `.cpu()`, `.numpy()`, , `.to()`,  `to_tensor()`
+          `.detach()`, `.numpy()`
+
+    Args:
+        meta_info (dict, optional): A dict contains the meta information
+            of single image. such as `img_shape`, `scale_factor`, etc.
+            Default: None.
+        data (dict, optional): A dict contains annotations of single image or
+            model predictions. Default: None.
+
+    Examples:
+        >>> from mmengine.data import BaseDataElement
+        >>> gt_instances = BaseDataElement()
+
+        >>> bboxes = torch.rand((5, 4))
+        >>> scores = torch.rand((5,))
+        >>> img_id = 0
+        >>> img_shape = (800, 1333)
+        >>> gt_instances = BaseDataElement(
+                metainfo=dict(img_id=img_id, img_shape=img_shape),
+                data=dict(bboxes=bboxes, scores=scores))
+        >>> gt_instances = BaseDataElement(dict(img_id=img_id,
+                                                img_shape=(H, W)))
+        # new
+        >>> gt_instances1 = gt_instance.new(
+                                metainfo=dict(img_id=1, img_shape=(640, 640)),
+                                data=dict(bboxes=torch.rand((5, 4)),
+                                          scores=torch.rand((5,))))
+        >>> gt_instances2 = gt_instances1.new()
+
+        # property add and accesse
+        >>> gt_instances = BaseDataElement()
+        >>> gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
+        >>> assert 'img_shape' in gt_instances.metainfo_keys()
+        >>> assert 'img_shape' in gt_instances
+        >>> assert 'img_shape' not in gt_instances.data_keys()
+        >>> assert 'img_shape' in gt_instances.keys()
+        >>> print(gt_instances.img_shape)
+
+        >>> gt_instances.scores = torch.rand((5,))
+        >>> assert 'scores' in gt_instances.data_keys()
+        >>> assert 'scores' in gt_instances
+        >>> assert 'scores' in gt_instances.keys()
+        >>> assert 'scores' not in gt_instances.metainfo_keys()
+        >>> print(gt_instances.scores)
+
+        >>> gt_instances.bboxes = torch.rand((5, 4))
+        >>> assert 'bboxes' in gt_instances.data_keys()
+        >>> assert 'bboxes' in gt_instances
+        >>> assert 'bboxes' in gt_instances.keys()
+        >>> assert 'bboxes' not in gt_instances.metainfo_keys()
+        >>> print(gt_instances.bboxes)
+
+        # property delete and change
+        >>> gt_instances = BaseDataElement(
+             metainfo=dict(img_id=0, img_shape=(640, 640))，
+             data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        >>> gt_instances.img_shape = (1280, 1280)
+        >>> gt_instances.img_shape  # (1280, 1280)
+        >>> gt_instances.bboxes = gt_instances.bboxes * 2
+        >>> gt_instances.get('img_shape', None)  # (640， 640)
+        >>> gt_instances.get('bboxes', None)    # 6x4 tensor
+        >>> del gt_instances.img_shape
+        >>> del gt_instances.bboxes
+        >>> assert 'img_shape' not in gt_instances
+        >>> assert 'bboxes' not in gt_instances
+        >>> gt_instances.pop('img_shape', None)  # None
+        >>> gt_instances.pop('bboxes', None)  # None
+
+        # Tensor-like
+        >>> cuda_instances = gt_instances.cuda()
+        >>> cuda_instances = gt_instancess.to('cuda:0')
+        >>> cpu_instances = cuda_instances.cpu()
+        >>> cpu_instances = cuda_instances.to('cpu')
+        >>> fp16_instances = cuda_instances.to(
+             device=None, dtype=torch.float16, non_blocking=False, copy=False,
+             memory_format=torch.preserve_format)
+        >>> cpu_instances = cuda_instances.detach()
+        >>> np_instances = cpu_instances.numpy()
+
+        # print
+        >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
+        >>> instance_data = BaseDataElement(metainfo=img_meta)
+        >>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
+        >>> instance_data.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
+        >>> print(results)
+        <BaseDataElement(
+        META INFORMATION
+        img_shape: (800, 1196, 3)
+        pad_shape: (800, 1216, 3)
+        DATA FIELDS
+        shape of det_labels: torch.Size([4])
+        shape of det_scores: torch.Size([4])
+        ) at 0x7f84acd10f90>
+    """
 
     def __init__(self, metainfo: dict = None, data: dict = None):
 
@@ -19,7 +152,7 @@ class BaseDataElement:
             self.set_data(data)
 
     def set_metainfo(self, metainfo: dict):
-        """Add meta information.
+        """Add and change meta information.
 
         Args:
             metainfo (dict): A dict contains the meta information
@@ -53,7 +186,9 @@ class BaseDataElement:
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataElement':
-        """Return a new results with same image meta information.
+        """Return a new results with same type. if metainfo and date are None,
+        the new results will have metainfo and data. if metainfo or data is not
+        None, the new results will have the passed metainfo or data.
 
         Args:
             metainfo (dict, optional): A dict contains the meta information
@@ -92,36 +227,56 @@ class BaseDataElement:
     def data_values(self) -> list:
         """
         Returns:
-            list: Contains all values in data_fields.
+            list: Contains all values in data.
         """
         return [getattr(self, k) for k in self.data_keys()]
 
     def metainfo_values(self) -> list:
         """
         Returns:
-            list: Contains all values in metainfo_fields.
+            list: Contains all values in metainfo.
         """
         return [getattr(self, k) for k in self.metainfo_keys()]
 
     def keys(self) -> list:
+        """
+        Returns:
+            list: Contains all keys in metainfo and data.
+        """
         return self.metainfo_keys() + self.data_keys()
 
     def values(self) -> list:
+        """
+        Returns:
+            list: Contains all values in metainfo and data.
+        """
         return self.metainfo_values() + self.data_values()
 
     def items(self) -> list:
+        """
+        Returns:
+            list: Contains all key and values pairs in metainfo and data.
+        """
         items = list()
         for k in self.keys():
             items.append((k, getattr(self, k)))
         return items
 
     def data_items(self) -> list:
+        """
+        Returns:
+            list: Contains all key and values pairs in data.
+        """
         items = list()
         for k in self.data_keys():
             items.append((k, getattr(self, k)))
         return items
 
     def metainfo_items(self) -> list:
+        """
+        Returns:
+            list: Contains all key and values pairs in metainfo.
+        """
         items = list()
         for k in self.metainfo_keys():
             items.append((k, getattr(self, k)))
@@ -161,10 +316,12 @@ class BaseDataElement:
     __delitem__ = __delattr__
 
     def get(self, *args) -> Any:
+        """get property in data and metainfo as the same as python."""
         assert len(args) < 3, '`get` get more than 2 arguments'
         return self.__dict__.get(*args)
 
     def pop(self, *args) -> Any:
+        """pop property in data and metainfo as the same as python."""
         assert len(args) < 3, '`pop` get more than 2 arguments'
         name = args[0]
         if name in self._metainfo_fields:
@@ -205,7 +362,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def cpu(self) -> 'BaseDataElement':
-        """Apply same name function to all tensors in data_fields."""
+        """Convert all tensors to CPU in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, torch.Tensor):
@@ -221,7 +378,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def cuda(self) -> 'BaseDataElement':
-        """Apply same name function to all tensors in data_fields."""
+        """Convert all tensors to GPU in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, torch.Tensor):
@@ -237,7 +394,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def detach(self) -> 'BaseDataElement':
-        """Apply same name function to all tensors in data_fields."""
+        """Detach all tensors in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, torch.Tensor):
@@ -253,7 +410,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataElement':
-        """Apply same name function to all tensors in data_fields."""
+        """Convert all tensor　to np.narray in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, torch.Tensor):
@@ -268,7 +425,7 @@ class BaseDataElement:
         return new_data
 
     def to_tensor(self) -> 'BaseDataElement':
-        """Apply same name function to all tensors in data_fields."""
+        """Convert all np.narray to tensor in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, np.ndarray):
