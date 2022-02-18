@@ -196,6 +196,60 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             self.full_init()
             self._fully_initialized = True
 
+    @full_init_before_called
+    def get_data_info(self, idx: int) -> dict:
+        """Get annotation by index and automatically call ``full_init`` if the
+        dataset has not been fully init.
+
+        Args:
+            idx (int): Index of data.
+
+        Returns:
+            dict: The i-th annotation of the dataset.
+        """
+        if self.serialize_data:
+            start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
+            end_addr = self.data_address[idx].item()
+            bytes = memoryview(self.data_infos[start_addr:end_addr])
+            data_info = pickle.loads(bytes)
+        else:
+            data_info = self.data_infos[idx]
+        data_info['sample_idx'] = idx
+        return data_info
+
+    def full_init(self):
+        """Load annotation file and set ``self._fully_initialized`` to True.
+
+        ``If ``lazy_init=True``, ``full_init`` will be called during the
+        instantiation phase and ``self._fully_initialized`` will be set to
+        True. If ``obj._fully_initialized=False``, the class method decorated
+        by full_init_before_called will call ``full_init`` automatically.
+        """
+        if self._fully_initialized:
+            return
+
+        # load data information
+        self.data_infos = self._load_data_infos(self.ann_file)
+        # filter illegal data, such as data that has no annotations.
+        self.data_infos = self.filter_data()
+        # slice data_infos
+        self.data_infos = self._slice_data()
+        # serialize data_infos
+        if self.serialize_data:
+            self.data_infos, self.data_address = self._serialize_data()
+
+        self._fully_initialized = True
+
+    @property
+    def meta(self) -> dict:
+        """Get meta of dataset.
+
+        Returns:
+            dict: meta_info collected from BaseDataset.META, annotation file
+                and meta parameter during Instantiation.
+        """
+        return self._meta
+
     @abstractmethod
     def parse_annotations(self,
                           raw_data_info: dict) -> Union[Dict, List[Dict]]:
@@ -204,12 +258,115 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         should return ``dict`` for img task and ``list[dict]`` for video task.
 
         Args:
-            raw_data_info (dict): data_info load from ``ann_file``
+            raw_data_info (dict): raw annotation load from ``ann_file``
 
         Returns:
-            dict, list[dict]: parsed data_info
+            dict, list[dict]: parsed annotation
         """
         pass
+
+    def filter_data(self) -> List[dict]:
+        """Filter annotation according to filter_cfg. Defaults filter no data.
+
+        Returns:
+            list[dict]: Filtered results
+        """
+        if self.filter_cfg is None:
+            return self.data_infos
+
+    def get_cat_ids(self, idx: int) -> List[int]:
+        """Get category ids by index. Dataset wrapped by ClassBalancedDataset
+        must implement this method.
+
+        Args:
+            idx (int): Index of data.
+
+        Returns:
+            list[int]: All categories in the image of specified index.
+        """
+        pass
+
+    def __getitem__(self, idx: int) -> dict:
+        """Get the i-th image of dataset after ``self.pipelines`` and
+        automatically call  ``full_init`` if the  dataset has not been fully
+        init.
+
+        During training phase, if ``self.pipelines`` get ``None``,
+        ``self._rand_another`` will be called until a valid image is retrieved.
+
+        Args:
+            idx: The index of self.data_infos
+
+        Returns:
+            dict: The i-th image of dataset after ``self.pipelines``.
+        """
+        if not self._fully_initialized:
+            warnings.warn(
+                'Please call `self.full_init()` manually to accrelate the '
+                'speed.')
+            self.full_init()
+
+        if self.test_mode:
+            return self._prepare_data(idx)
+        while True:
+            data = self._prepare_data(idx)
+            if data is None:
+                idx = self._rand_another()
+                continue
+            return data
+
+    def _load_data_infos(self, ann_file: str) -> List[Dict]:
+        """load annotation from ann_file.
+
+        Args:
+            ann_file (str): absolute annotation file path if ``self.root=None``
+                or relative path ``self.root=/path/to/data/``
+
+        Note:
+            img_meta in ann_file has lowest priority, which will be over
+            written by ``dataset.META`` and meta passed to __init__
+
+        Returns:
+            list[dict]: list of annotation
+        """
+        check_file_exist(ann_file)
+        anns = load(ann_file)
+        meta_data, raw_data_infos = anns['meta_data'], anns['data_infos']
+
+        # update self._meta
+        for k, v in meta_data.items():
+            # We only merge keys that are not contained in self._meta.
+            if k in self._meta:
+                continue
+
+            if isinstance(v, str):
+                if osp.isfile(v):
+                    file_meta = list_from_file(v)
+                    self.meta[k] = file_meta
+                else:
+                    self.meta[k] = v
+            elif isinstance(v, (tuple, list, dict)):
+                self._meta[k] = v
+            else:
+                raise ValueError(f'Unsupported type {type(v)} of {k}.')
+
+        # load and parse data_infos
+        data_infos = []
+        for raw_data_info in raw_data_infos:
+            data_info = self.parse_annotations(copy.deepcopy(raw_data_info))
+            if isinstance(data_info, dict):
+                data_infos.append(data_info)
+            elif isinstance(data_info, list):
+                # For video dataset, data_info must be a list of dict.
+                for _ in data_info:
+                    if not isinstance(_, dict):
+                        raise TypeError('data_info must be a list[dict] if '
+                                        'data_info is a list')
+                data_infos.extend(data_info)
+            else:
+                raise TypeError
+
+        return data_infos
 
     @classmethod
     def _get_meta_data(cls, in_meta: dict) -> dict:
@@ -271,69 +428,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             elif not osp.isabs(prefix):
                 self.data_prefix[data_key] = osp.join(self.data_root, prefix)
 
-    def load_data_infos(self, ann_file: str) -> List[Dict]:
-        """load annotation from ann_file.
-
-        Args:
-            ann_file (str): absolute annotation file path if ``self.root=None``
-                or relative path ``self.root=/path/to/data/``
-
-        Note:
-            img_meta in ann_file has lowest priority, which will be over
-            written by ``dataset.META`` and meta passed to __init__
-
-        Returns:
-            list[dict]: list of ``data_info``
-        """
-        check_file_exist(ann_file)
-        anns = load(ann_file)
-        meta_data, raw_data_infos = anns['meta_data'], anns['data_infos']
-
-        # update self._meta
-        for k, v in meta_data.items():
-            # We only merge keys that are not contained in self._meta.
-            if k in self._meta:
-                continue
-
-            if isinstance(v, str):
-                if osp.isfile(v):
-                    file_meta = list_from_file(v)
-                    self.meta[k] = file_meta
-                else:
-                    self.meta[k] = v
-            elif isinstance(v, (tuple, list, dict)):
-                self._meta[k] = v
-            else:
-                raise ValueError(f'Unsupported type {type(v)} of {k}.')
-
-        # load and parse data_infos
-        data_infos = []
-        for raw_data_info in raw_data_infos:
-            data_info = self.parse_annotations(copy.deepcopy(raw_data_info))
-            if isinstance(data_info, dict):
-                data_infos.append(data_info)
-            elif isinstance(data_info, list):
-                # For video dataset, data_info must be a list of dict.
-                for _ in data_info:
-                    if not isinstance(_, dict):
-                        raise TypeError('data_info must be a list[dict] if '
-                                        'data_info is a list')
-                data_infos.extend(data_info)
-            else:
-                raise TypeError
-
-        return data_infos
-
-    def filter_data(self) -> List[Dict]:
-        """Filter data_infos according to filter_cfg. Defaults filter no data.
-
-        Returns:
-            list[dict]: Filtered results
-        """
-        if self.filter_cfg is None:
-            return self.data_infos
-
-    def slice_data(self):
+    def _slice_data(self) -> List[dict]:
         """Slice ``self.data_infos``. BaseDataset supports only using the first
         few data.
 
@@ -345,16 +440,11 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         else:
             return self.data_infos
 
-    def _serialize_data(self, data_infos: List[Dict])\
-            -> Tuple[np.ndarray, np.ndarray]:
-        """Serialize self.data_infos, which will called in ``full_init``.
+    def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Serialize ``self.data_infos``, which will called in ``full_init``.
 
         Hold memory using serialized objects, data loader workers can use
         shared RAM from master process instead of making a copy.
-
-        Args:
-            data_infos (list[dict]): ``data_infos`` parsed by
-            ``parse_annotations``.
 
         Returns:
             Tuple[list, np.ndarray]: serialize result and corresponding
@@ -365,47 +455,13 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
 
-        serialized_data_infos = [_serialize(x) for x in data_infos]
+        serialized_data_infos = [_serialize(x) for x in self.data_infos]
         address_list = np.asarray([len(x) for x in serialized_data_infos],
                                   dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
         serialized_data_infos = np.concatenate(serialized_data_infos)
 
         return serialized_data_infos, data_address
-
-    def full_init(self):
-        """Load annotation file and set ``self._fully_initialized`` to True.
-
-        ``If ``lazy_init=True``, ``full_init`` will be called during the
-        instantiation phase and ``self._fully_initialized`` will be set to
-        True. If ``obj._fully_initialized=False``, the class method decorated
-        by full_init_before_called will call ``full_init`` automatically.
-        """
-        if self._fully_initialized:
-            return
-
-        # load data information
-        self.data_infos = self.load_data_infos(self.ann_file)
-        # filter illegal data, such as data that has no annotations.
-        self.data_infos = self.filter_data()
-        # slice data_infos
-        self.data_infos = self.slice_data()
-        # serialize data_infos
-        if self.serialize_data:
-            self.data_infos, self.data_address = self._serialize_data(
-                self.data_infos)
-
-        self._fully_initialized = True
-
-    @property
-    def meta(self) -> dict:
-        """Get meta of dataset.
-
-        Returns:
-            dict: meta_info collected from BaseDataset.META, annotation file
-                and meta parameter during Instantiation.
-        """
-        return self._meta
 
     def _rand_another(self) -> int:
         """Get random index.
@@ -428,28 +484,9 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         return self.pipeline(data_info)
 
     @full_init_before_called
-    def get_data_info(self, idx: int) -> dict:
-        """Get data_info by index.
-
-        Args:
-            idx (int): Index of data.
-
-        Returns:
-            dict: The i_th item of self.data_infos.
-        """
-        if self.serialize_data:
-            start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
-            end_addr = self.data_address[idx].item()
-            bytes = memoryview(self.data_infos[start_addr:end_addr])
-            data_info = pickle.loads(bytes)
-        else:
-            data_info = self.data_infos[idx]
-        data_info['sample_idx'] = idx
-        return data_info
-
-    @full_init_before_called
     def __len__(self) -> int:
-        """Get the length of filtered dataset.
+        """Get the length of filtered dataset and automatically call
+        ``full_init`` if the  dataset has not been fully init.
 
         Returns:
             int: The length of filtered dataset.
@@ -458,29 +495,3 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return len(self.data_address)
         else:
             return len(self.data_infos)
-
-    def __getitem__(self, idx: int) -> dict:
-        """Get the i_th item of ``self.data_infos`` after ``self.pipelines``.
-        If target is ``None``, ``self._rand_another`` will be called until get
-        a valid data.
-
-        Args:
-            idx: The index of self.data_infos
-
-        Returns:
-            dict: The i_th item of ``self.data_infos`` after ``self.pipelines``
-        """
-        if not self._fully_initialized:
-            warnings.warn(
-                'Please call `self.full_init()` manually to accrelate the '
-                'speed.')
-            self.full_init()
-
-        if self.test_mode:
-            return self._prepare_data(idx)
-        while True:
-            data = self._prepare_data(idx)
-            if data is None:
-                idx = self._rand_another()
-                continue
-            return data

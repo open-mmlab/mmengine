@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from mmengine.data import (BaseDataset, ClassBalancedDataset, ConcatDataset,
-                           RepeatDataset)
+from mmengine.dataset import (BaseDataset, ClassBalancedDataset, ConcatDataset,
+                              RepeatDataset)
 
 
 class TestBaseDataset:
