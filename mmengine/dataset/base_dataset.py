@@ -25,7 +25,6 @@ class Compose:
     """
 
     def __init__(self, transforms: Sequence[Union[Dict, Callable]]):
-        assert isinstance(transforms, collections.abc.Sequence)
         self.transforms = []
         for transform in transforms:
             if isinstance(transform, dict):
@@ -83,14 +82,12 @@ def full_init_before_called(old_func: Callable) -> Any:
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
             raise AttributeError(f'{type(obj)} dont have full_init method')
-        if not hasattr(obj, '_fully_initialized'):
-            need_init = False
-        else:
-            need_init = getattr(obj, '_fully_initialized')
-        if need_init:
-            args[0].full_init()
-            args[0]._fully_initialized = True
-        return old_func(*args, **kwargs)
+        if not hasattr(obj, '_fully_initialized') or \
+           not getattr(obj, '_fully_initialized'):
+            obj.full_init()
+            obj._fully_initialized = True
+
+        return old_func(obj, *args, **kwargs)
 
     return wrapper
 
@@ -169,7 +166,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                  filter_cfg: Optional[Dict] = None,
                  num_samples: int = -1,
                  serialize_data: bool = True,
-                 pipeline: Optional[List] = None,
+                 pipeline: Sequence = None,
                  test_mode: bool = False,
                  lazy_init: bool = False):
 
@@ -189,6 +186,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             self._join_prefix()
 
         # build pipeline
+        if not pipeline:
+            pipeline = []
         self.pipeline = Compose(pipeline)
 
         self._fully_initialized = False
@@ -214,7 +213,10 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             data_info = pickle.loads(bytes)
         else:
             data_info = self.data_infos[idx]
-        data_info['sample_idx'] = idx
+        if idx >= 0:
+            data_info['sample_idx'] = idx
+        else:
+            data_info['sample_idx'] = len(self) + idx
         return data_info
 
     def full_init(self):
@@ -330,8 +332,17 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             list[dict]: list of annotation
         """
         check_file_exist(ann_file)
+        if not osp.isfile(ann_file):
+            raise FileNotFoundError('Annotation file not found, please check'
+                                    'your filepath')
         anns = load(ann_file)
-        meta_data, raw_data_infos = anns['meta_data'], anns['data_infos']
+        if not isinstance(anns, dict):
+            raise TypeError('Wrong format annotation file!')
+        if 'data_infos' not in anns or 'metadata' not in anns:
+            raise ValueError('Annotation must have data_infos and metadata '
+                            'keys')
+        # allow meta
+        meta_data, raw_data_infos = anns['metadata'], anns['data_infos']
 
         # update self._meta
         for k, v in meta_data.items():
@@ -369,7 +380,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         return data_infos
 
     @classmethod
-    def _get_meta_data(cls, in_meta: dict) -> dict:
+    def _get_meta_data(cls, in_meta: dict = None) -> dict:
         """collect meta infos from meta dict.
 
         Args:
@@ -380,7 +391,11 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             dict: parsed meta infos.
         """
         # cls.META will be overwritten by in_meta
-        out_meta = copy.deepcopy(cls.META)
+        cls_meta = copy.deepcopy(cls.META)
+        if not in_meta:
+            return cls_meta
+        if not isinstance(in_meta, dict):
+            raise TypeError("in_meta must be a dict!")
         defined_keys = set()
         for k, v in in_meta.items():
             defined_keys.add(k)
@@ -388,16 +403,16 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 # if filename in in_meta, this key will be further parsed.
                 # nested filename will be ignored.:
                 if osp.isfile(v):
-                    out_meta[k] = list_from_file(v)
+                    cls_meta[k] = list_from_file(v)
                 else:
-                    out_meta[k] = v
+                    cls_meta[k] = v
 
             elif isinstance(v, (tuple, list, dict)):
-                out_meta[k] = v
+                cls_meta[k] = v
             else:
                 raise ValueError(f'Unsupported type {type(v)} of {k}.')
 
-        return out_meta
+        return cls_meta
 
     def _join_prefix(self):
         """Join ``self.data_root`` with ``self.data_prefix`` and
@@ -495,3 +510,15 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return len(self.data_address)
         else:
             return len(self.data_infos)
+
+
+if __name__ == '__main__':
+    class ToyDataset(BaseDataset):
+        def parse_annotations(self, raw_data_info):
+            return raw_data_info
+
+
+    dataset = ToyDataset(
+        data_root=osp.join(osp.dirname(__file__), '../data/'),
+        data_prefix=dict(img='imgs'),
+        ann_file='annotations/dummy_annotation.json')

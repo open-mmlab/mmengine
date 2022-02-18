@@ -164,8 +164,8 @@ class RepeatDataset(object):
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        if not hasattr(self.datasets, '_ori_len'):
-            Warning.warn(
+        if not hasattr(self.dataset, '_ori_len'):
+            warnings.warn(
                 'Please call `self.full_init()` manually to accrelate the speed.'
             )
             self.full_init()
@@ -333,8 +333,8 @@ class ClassBalancedDataset(object):
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        if not hasattr(self.datasets, 'repeat_indices'):
-            Warning.warn(
+        if not hasattr(self.dataset, 'repeat_indices'):
+            warnings.warn(
                 'Please call `self.full_init()` manually to accrelate '
                 'the speed.')
             self.full_init()
