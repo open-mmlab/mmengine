@@ -22,11 +22,6 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(sampler.num_replicas, 1)
         self.assertEqual(sampler.rank, 0)
 
-        # test override
-        sampler = DefaultSampler(self.dataset, num_replicas=3, rank=1)
-        self.assertEqual(sampler.num_replicas, 3)
-        self.assertEqual(sampler.rank, 1)
-
         # test round_up=True
         sampler = DefaultSampler(self.dataset, round_up=True, shuffle=False)
         self.assertEqual(sampler.total_size, self.data_length)
@@ -45,15 +40,6 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(sampler.num_replicas, 3)
         self.assertEqual(sampler.rank, 2)
 
-        # test override
-        sampler = DefaultSampler(self.dataset, num_replicas=1, rank=0)
-        self.assertEqual(sampler.num_replicas, 1)
-        self.assertEqual(sampler.rank, 0)
-
-        # test invalid rank
-        with self.assertRaisesRegex(ValueError, 'Invalid rank'):
-            DefaultSampler(self.dataset, num_replicas=3, rank=3)
-
         # test round_up=True
         sampler = DefaultSampler(self.dataset, round_up=True, shuffle=False)
         self.assertEqual(sampler.num_samples, np.ceil(self.data_length / 3))
@@ -71,10 +57,12 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(len(sampler), sampler.num_samples)
         self.assertEqual(list(sampler), list(range(self.data_length))[2::3])
 
-    def test_shuffle(self):
+    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.data.sampler.sync_random_seed', return_value=7)
+    def test_shuffle(self, mock1, mock2):
         # test seed=None
         sampler = InfiniteSampler(self.dataset, seed=None)
-        self.assertEqual(sampler.seed, 0)
+        self.assertEqual(sampler.seed, 7)
 
         # test random seed
         sampler = DefaultSampler(self.dataset, shuffle=True, seed=0)
@@ -106,11 +94,6 @@ class TestInfiniteSampler(TestCase):
         self.assertEqual(sampler.num_replicas, 1)
         self.assertEqual(sampler.rank, 0)
 
-        # test override
-        sampler = InfiniteSampler(self.dataset, num_replicas=3, rank=1)
-        self.assertEqual(sampler.num_replicas, 3)
-        self.assertEqual(sampler.rank, 1)
-
         # test iteration
         sampler = InfiniteSampler(self.dataset, shuffle=False)
         self.assertEqual(len(sampler), self.data_length)
@@ -124,15 +107,6 @@ class TestInfiniteSampler(TestCase):
         self.assertEqual(sampler.num_replicas, 3)
         self.assertEqual(sampler.rank, 2)
 
-        # test override
-        sampler = InfiniteSampler(self.dataset, num_replicas=1, rank=0)
-        self.assertEqual(sampler.num_replicas, 1)
-        self.assertEqual(sampler.rank, 0)
-
-        # test invalid rank
-        with self.assertRaisesRegex(ValueError, 'Invalid rank'):
-            InfiniteSampler(self.dataset, num_replicas=3, rank=3)
-
         # test iteration
         sampler = InfiniteSampler(self.dataset, shuffle=False)
         self.assertEqual(len(sampler), self.data_length)
@@ -141,14 +115,15 @@ class TestInfiniteSampler(TestCase):
         samples = [next(iter(sampler)) for _ in range(len(targets))]
         self.assertEqual(samples, targets)
 
-    def test_shuffle(self):
+    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.data.sampler.sync_random_seed', return_value=7)
+    def test_shuffle(self, mock1, mock2):
         # test seed=None
         sampler = InfiniteSampler(self.dataset, seed=None)
-        self.assertEqual(sampler.seed, 0)
+        self.assertEqual(sampler.seed, 7)
 
         # test the random seed
-        sampler = InfiniteSampler(
-            self.dataset, rank=0, num_replicas=1, shuffle=True, seed=42)
+        sampler = InfiniteSampler(self.dataset, shuffle=True, seed=42)
 
         sampler_iter = iter(sampler)
         samples = [next(sampler_iter) for _ in range(self.data_length)]

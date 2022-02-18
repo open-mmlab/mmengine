@@ -6,7 +6,7 @@ from typing import Iterator, Optional, Sized
 import torch
 from torch.utils.data import Sampler
 
-from mmengine.dist import get_dist_info
+from mmengine.dist import get_dist_info, sync_random_seed
 from mmengine.registry import DATA_SAMPLERS
 
 
@@ -23,7 +23,7 @@ class DefaultSampler(Sampler[int]):
     2. The round up behaviors are a little different.
 
        - If ``round_up=True``, this sampler will add extra samples to make the
-         number of samples is evenly divisible by the ``num_replicas``. And
+         number of samples is evenly divisible by the world size. And
          this behavior is the same as the ``DistributedSampler`` with
          ``drop_last=False``.
        - If ``round_up=False``, this sampler won't remove or add any samples
@@ -32,35 +32,27 @@ class DefaultSampler(Sampler[int]):
 
     Args:
         dataset (Sized): The dataset.
-        num_replicas (int, optional): Number of processes participating in
-            distributed training. Defaults to None.
-        rank (int, optional): Rank of current process. Default: None.
         shuffle (bool): Whether shuffle the dataset or not. Defaults to True.
-        seed (int, optional): Random seed. If None, use 0. Defaults to 0.
+        seed (int, optional): Random seed. If None, set a random seed.
+            Defaults to None.
         round_up (bool): Whether to add extra samples to make the number of
-            samples evenly divisible by the ``num_replicas``. Defaults to True.
+            samples evenly divisible by the world size. Defaults to True.
     """
 
     def __init__(self,
                  dataset: Sized,
-                 num_replicas: Optional[int] = None,
-                 rank: Optional[int] = None,
                  shuffle: bool = True,
-                 seed: Optional[int] = 0,
+                 seed: Optional[int] = None,
                  round_up: bool = True) -> None:
-        _rank, _num_replicas = get_dist_info()
-        rank = _rank if rank is None else rank
-        num_replicas = _num_replicas if num_replicas is None else num_replicas
-        if rank >= num_replicas or rank < 0:
-            raise ValueError(
-                f'Invalid rank {rank}, rank should be in the interval'
-                ' [0, {num_replicas - 1}]')
+        rank, num_replicas = get_dist_info()
+        self.rank = rank
+        self.num_replicas = num_replicas
 
         self.dataset = dataset
-        self.num_replicas = num_replicas
-        self.rank = rank
         self.shuffle = shuffle
-        self.seed = seed if seed is not None else 0
+        if seed is None:
+            seed = sync_random_seed()
+        self.seed = seed
         self.epoch = 0
         self.round_up = round_up
 
@@ -120,32 +112,26 @@ class InfiniteSampler(Sampler[int]):
 
     Args:
         dataset (Sized): The dataset.
-        num_replicas (int, optional): Number of processes participating in
-            distributed training. Defaults to None.
-        rank (int, optional): Rank of current process. Defaults to None.
         shuffle (bool): Whether shuffle the dataset or not. Defaults to True.
-        seed (int, optional): Random seed. If None, use 0. Defaults to 0.
+        seed (int, optional): Random seed. If None, set a random seed.
+            Defaults to None.
     """  # noqa: W605
 
     def __init__(self,
                  dataset: Sized,
-                 num_replicas: Optional[int] = None,
-                 rank: Optional[int] = None,
                  shuffle: bool = True,
-                 seed: Optional[int] = 0) -> None:
-        _rank, _num_replicas = get_dist_info()
-        rank = _rank if rank is None else rank
-        num_replicas = _num_replicas if num_replicas is None else num_replicas
-        if rank >= num_replicas or rank < 0:
-            raise ValueError(
-                f'Invalid rank {rank}, rank should be in the interval'
-                ' [0, {num_replicas - 1}]')
+                 seed: Optional[int] = None) -> None:
+        rank, num_replicas = get_dist_info()
+        self.rank = rank
+        self.num_replicas = num_replicas
 
         self.dataset = dataset
         self.num_replicas = num_replicas
         self.rank = rank
         self.shuffle = shuffle
-        self.seed = seed if seed is not None else 0
+        if seed is None:
+            seed = sync_random_seed()
+        self.seed = seed
         self.size = len(dataset)
         self.indices = self._indices_of_rank()
 
