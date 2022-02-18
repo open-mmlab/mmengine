@@ -125,8 +125,11 @@ class TesVisualizer(TestCase):
         assert len(Visualizer.task_dict) == 1
         assert 'instances' in Visualizer.task_dict
 
-        # test registration of the same name.
-        with pytest.raises(AssertionError):
+        # test registration of the same names.
+        with pytest.raises(
+                KeyError,
+                match=('instances is already registered in task_dict, '
+                       'add "force=True" if you want to override it')):
 
             class DetVisualizer1(Visualizer):
 
@@ -137,8 +140,6 @@ class TesVisualizer(TestCase):
                 @Visualizer.register_task('instances')
                 def draw_instance2(self, instances, data_type):
                     pass
-
-            DetVisualizer1()
 
         class DetVisualizer2(Visualizer):
 
