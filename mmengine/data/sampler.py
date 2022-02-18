@@ -44,9 +44,9 @@ class DefaultSampler(Sampler[int]):
                  shuffle: bool = True,
                  seed: Optional[int] = None,
                  round_up: bool = True) -> None:
-        rank, num_replicas = get_dist_info()
+        rank, world_size = get_dist_info()
         self.rank = rank
-        self.num_replicas = num_replicas
+        self.world_size = world_size
 
         self.dataset = dataset
         self.shuffle = shuffle
@@ -57,11 +57,11 @@ class DefaultSampler(Sampler[int]):
         self.round_up = round_up
 
         if self.round_up:
-            self.num_samples = math.ceil(len(self.dataset) / num_replicas)
-            self.total_size = self.num_samples * self.num_replicas
+            self.num_samples = math.ceil(len(self.dataset) / world_size)
+            self.total_size = self.num_samples * self.world_size
         else:
             self.num_samples = math.ceil(
-                (len(self.dataset) - rank) / num_replicas)
+                (len(self.dataset) - rank) / world_size)
             self.total_size = len(self.dataset)
 
     def __iter__(self) -> Iterator[int]:
@@ -81,7 +81,7 @@ class DefaultSampler(Sampler[int]):
                 int(self.total_size / len(indices) + 1))[:self.total_size]
 
         # subsample
-        indices = indices[self.rank:self.total_size:self.num_replicas]
+        indices = indices[self.rank:self.total_size:self.world_size]
 
         return iter(indices)
 
@@ -121,12 +121,12 @@ class InfiniteSampler(Sampler[int]):
                  dataset: Sized,
                  shuffle: bool = True,
                  seed: Optional[int] = None) -> None:
-        rank, num_replicas = get_dist_info()
+        rank, world_size = get_dist_info()
         self.rank = rank
-        self.num_replicas = num_replicas
+        self.world_size = world_size
 
         self.dataset = dataset
-        self.num_replicas = num_replicas
+        self.world_size = world_size
         self.rank = rank
         self.shuffle = shuffle
         if seed is None:
@@ -149,7 +149,7 @@ class InfiniteSampler(Sampler[int]):
     def _indices_of_rank(self) -> Iterator[int]:
         """Slice the infinite indices by rank."""
         yield from itertools.islice(self._infinite_indices(), self.rank, None,
-                                    self.num_replicas)
+                                    self.world_size)
 
     def __iter__(self) -> Iterator[int]:
         """Iterate the indices."""

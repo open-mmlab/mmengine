@@ -19,7 +19,7 @@ class TestDefaultSampler(TestCase):
     @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
     def test_non_dist(self, mock):
         sampler = DefaultSampler(self.dataset)
-        self.assertEqual(sampler.num_replicas, 1)
+        self.assertEqual(sampler.world_size, 1)
         self.assertEqual(sampler.rank, 0)
 
         # test round_up=True
@@ -37,7 +37,7 @@ class TestDefaultSampler(TestCase):
     @patch('mmengine.data.sampler.get_dist_info', return_value=(2, 3))
     def test_dist(self, mock):
         sampler = DefaultSampler(self.dataset)
-        self.assertEqual(sampler.num_replicas, 3)
+        self.assertEqual(sampler.world_size, 3)
         self.assertEqual(sampler.rank, 2)
 
         # test round_up=True
@@ -91,7 +91,7 @@ class TestInfiniteSampler(TestCase):
     @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
     def test_non_dist(self, mock):
         sampler = InfiniteSampler(self.dataset)
-        self.assertEqual(sampler.num_replicas, 1)
+        self.assertEqual(sampler.world_size, 1)
         self.assertEqual(sampler.rank, 0)
 
         # test iteration
@@ -104,7 +104,7 @@ class TestInfiniteSampler(TestCase):
     @patch('mmengine.data.sampler.get_dist_info', return_value=(2, 3))
     def test_dist(self, mock):
         sampler = InfiniteSampler(self.dataset)
-        self.assertEqual(sampler.num_replicas, 3)
+        self.assertEqual(sampler.world_size, 3)
         self.assertEqual(sampler.rank, 2)
 
         # test iteration
