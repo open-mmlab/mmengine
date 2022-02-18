@@ -108,7 +108,7 @@ class InfiniteSampler(Sampler[int]):
     each time.
 
     The implementation logic is referred to
-    https://github.com/facebookresearch/detectron2/blob/main/detectron2/data/samplers/grouped_batch_sampler.py
+    https://github.com/facebookresearch/detectron2/blob/main/detectron2/data/samplers/distributed_sampler.py
 
     Args:
         dataset (Sized): The dataset.
