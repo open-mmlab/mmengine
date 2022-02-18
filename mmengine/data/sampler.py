@@ -12,17 +12,23 @@ from mmengine.registry import DATA_SAMPLERS
 
 @DATA_SAMPLERS.register_module()
 class DefaultSampler(Sampler[int]):
-    """The default data sampler for both dist and non-dist environment.
+    """The default data sampler for both distributed and non-distributed
+    environment.
 
-    Modified from the ``DistributedSampler`` in PyTorch with some differences:
+    It has several differences from the PyTorch ``DistributedSampler`` as
+    below:
 
-    1. This sampler supports non-dist environment.
+    1. This sampler supports non-distributed environment.
 
-    2. The round up behaviors are a little different. If ``round_up=True``,
-       the behavior of this sampler is the same as the ``DistributedSampler``
-       with ``drop_last=False``. But if ``round_up=False``, this sampler won't
-       remove or add any samples while the ``DistributedSampler`` with
-       ``drop_last=True`` will remove tail samples.
+    2. The round up behaviors are a little different.
+
+       - If ``round_up=True``, this sampler will add extra samples to make the
+         number of samples is evenly divisible by the ``num_replicas``. And
+         this behavior is the same as the ``DistributedSampler`` with
+         ``drop_last=False``.
+       - If ``round_up=False``, this sampler won't remove or add any samples
+         while the ``DistributedSampler`` with ``drop_last=True`` will remove
+         tail samples.
 
     Args:
         dataset (Sized): The dataset.
