@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from functools import partial
+from typing import Optional
 
 import torch
 
 TORCH_VERSION = torch.__version__
 
 
-def is_rocm_pytorch():
+def is_rocm_pytorch() -> bool:
     is_rocm = False
     if TORCH_VERSION != 'parrots':
         try:
@@ -18,7 +19,7 @@ def is_rocm_pytorch():
     return is_rocm
 
 
-def _get_cuda_home():
+def _get_cuda_home() -> Optional[str]:
     if TORCH_VERSION == 'parrots':
         from parrots.utils.build_extension import CUDA_HOME
     else:
@@ -38,7 +39,7 @@ def get_build_config():
         return torch.__config__.show()
 
 
-def _get_conv():
+def _get_conv() -> tuple:
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.conv import _ConvNd, _ConvTransposeMixin
     else:
@@ -46,7 +47,7 @@ def _get_conv():
     return _ConvNd, _ConvTransposeMixin
 
 
-def _get_dataloader():
+def _get_dataloader() -> tuple:
     if TORCH_VERSION == 'parrots':
         from torch.utils.data import DataLoader, PoolDataLoader
     else:
@@ -66,7 +67,7 @@ def _get_extension():
     return BuildExtension, CppExtension, CUDAExtension
 
 
-def _get_pool():
+def _get_pool() -> tuple:
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.pool import (_AdaptiveAvgPoolNd,
                                              _AdaptiveMaxPoolNd, _AvgPoolNd,
@@ -78,7 +79,7 @@ def _get_pool():
     return _AdaptiveAvgPoolNd, _AdaptiveMaxPoolNd, _AvgPoolNd, _MaxPoolNd
 
 
-def _get_norm():
+def _get_norm() -> tuple:
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.batchnorm import _BatchNorm, _InstanceNorm
         SyncBatchNorm_ = torch.nn.SyncBatchNorm2d

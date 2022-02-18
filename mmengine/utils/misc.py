@@ -9,7 +9,7 @@ from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
-from typing import Sequence, Type
+from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
 
 import torch.nn as nn
 
@@ -301,7 +301,8 @@ def requires_executable(prerequisites):
     return check_prerequisites(prerequisites, checker=_check_executable)
 
 
-def deprecated_api_warning(name_dict, cls_name=None):
+def deprecated_api_warning(name_dict: dict,
+                           cls_name: Optional[str] = None) -> Callable:
     """A decorator to check if some arguments are deprecate and try to replace
     deprecate src_arg_name to dst_arg_name.
 
@@ -361,7 +362,8 @@ def deprecated_api_warning(name_dict, cls_name=None):
     return api_warning_wrapper
 
 
-def is_method_overridden(method, base_class, derived_class):
+def is_method_overridden(method: str, base_class: type,
+                         derived_class: Union[type, Any]) -> bool:
     """Check if a method of base class is overridden in derived class.
 
     Args:
@@ -407,12 +409,13 @@ def mmcv_full_available() -> bool:
     return ext_loader is not None
 
 
-def is_norm(layer, exclude=None):
+def is_norm(layer: nn.Module,
+            exclude: Optional[Union[type, Tuple[type]]] = None) -> bool:
     """Check if a layer is a normalization layer.
 
     Args:
         layer (nn.Module): The layer to be checked.
-        exclude (type | tuple[type]): Types to be excluded.
+        exclude (type, tuple[type], optional): Types to be excluded.
 
     Returns:
         bool: Whether the layer is a norm layer.

@@ -14,16 +14,16 @@ for input, target in dataset:
     optimizer.step()
 ```
 
-关于 PyTorch 中优化器的详细介绍可以参考 [PyTorch 优化器文档](https://pytorch.org/docs/stable/optim.html#)
+关于 PyTorch 优化器的详细介绍可以参考 [PyTorch 优化器文档](https://pytorch.org/docs/stable/optim.html#)
 
-MMEngine 中支持所有的 PyTorch 优化器，用户可以直接构建 PyTorch 优化器对象并将它传给执行器（Runner）。
-和 PyTorch 文档中所给示例不同，MMEngine 中通常不需要手动来实现训练循环以及调用` optimizer.step()`，执行器会自动对损失函数进行反向传播并调用优化器的 `step` 函数。
+MMEngine 支持所有的 PyTorch 优化器，用户可以直接构建 PyTorch 优化器对象并将它传给[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html) 。
+和 PyTorch 文档中所给示例不同，MMEngine 中通常不需要手动实现训练循环以及调用` optimizer.step()`，执行器会自动对损失函数进行反向传播并调用优化器的 `step` 方法更新模型参数。
 
 同时，我们也支持通过配置文件从注册器中构建优化器。更进一步的，我们提供了优化器构造器（optimizer constructor）来对模型的优化进行更细粒度的调整。
 
 ## 使用配置文件构建优化器
 
-MMEngine 会自动将 PyTorch 中的所有优化器都添加进注册表中，用户可以通过设置配置文件中的 `optimizer` 字段来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。
+MMEngine 会自动将 PyTorch 中的所有优化器都添加进 `OPTIMIZERS` 注册表中，用户可以通过设置配置文件中的 `optimizer` 字段来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。
 
 以配置一个 SGD 优化器为例：
 
@@ -53,7 +53,7 @@ optim.SGD([
 
 MMEngine 提供的默认优化器构造器支持对模型中不同类型的参数设置不同的超参系数。
 例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为0，
-来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对偏置进行权值衰减的技巧。
+来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
 示例：
 
@@ -61,16 +61,16 @@ MMEngine 提供的默认优化器构造器支持对模型中不同类型的参�
 optimizer = dict(type='SGD',
                  lr=0.01,
                  weight_decay=0.0001,
-                 paramwise_cfg=dict(bias_decay_mult=0))
+                 paramwise_cfg=dict(norm_decay_mult=0))
 ```
 
-除了可以对偏置（bias）的权重衰减进行配置外，MMEngine 的默认优化器构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
+除了可以对偏置的权重衰减进行配置外，MMEngine 的默认优化器构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
 
-`bias_lr_mult`：偏置（bias）的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
 
-`bias_decay_mult`：偏置（bias）的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_decay_mult`：偏置的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
 
-`norm_decay_mult`：正则化层（normalization layer）权重（weight）和偏置（bias）的权值衰减系数，默认值为 1
+`norm_decay_mult`：正则化层权重和偏置的权值衰减系数，默认值为 1
 
 `dwconv_decay_mult`：Depth-wise 卷积的权值衰减系数，默认值为 1
 
@@ -95,11 +95,11 @@ optimizer = dict(type='SGD',
                  ))
 ```
 
-上面的配置文件实现了对模型的骨干的第一层进行冻结，骨干的其余部分部分使用 0.01 学习率，而对模型的头部则使用 1e-3 学习率。
+上面的配置文件实现了对模型的骨干第一层的学习率和权重衰减设置为 0，骨干的其余部分部分使用 0.01 学习率，而对模型的头部则使用 1e-3 学习率。
 
 ### 进阶用法：实现自定义的优化器构造器
 
-与 MMEngine 中的替他模块一样，优化器构造器也同样由 [注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html) 来管理。
+与 MMEngine 中的其他模块一样，优化器构造器也同样由 [注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html) 来管理。
 用户可以实现自己的优化器构造策略来实现自定义的超参设置策略，并添加进 `OPTIMIZER_CONSTRUCTORS` 注册表中。
 
 例如，我们想实现一个叫做`LayerDecayOptimizerConstructor`的优化器构造器，来实现对模型的不同深度的层自动设置递减的学习率。
