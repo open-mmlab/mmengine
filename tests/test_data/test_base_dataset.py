@@ -3,9 +3,9 @@ import copy
 import os.path as osp
 from unittest.mock import MagicMock
 
+import cv2
 import pytest
 import torch
-import cv2
 
 from mmengine.dataset import (BaseDataset, ClassBalancedDataset, ConcatDataset,
                               RepeatDataset)
@@ -16,6 +16,7 @@ def parse_annotations(self, raw_data_info):
 
 
 class ToyDataset(BaseDataset):
+
     def parse_annotations(self, raw_data_info: dict):
         pass
 
@@ -27,11 +28,11 @@ def simple_load_img(img_info):
 
 class TestBaseDataset:
     dataset_type = ToyDataset
-    data_info = dict(filename='test_img.jpg', height=604, width=640,
-                     sample_idx=0)
+    data_info = dict(
+        filename='test_img.jpg', height=604, width=640, sample_idx=0)
     imgs = torch.rand((2, 3, 32, 32))
     pipeline = MagicMock(return_value=dict(imgs=imgs))
-    META = dict()
+    META: dict = dict()
     parse_annotations = MagicMock(return_value=data_info)
 
     def test_init(self):
@@ -265,6 +266,7 @@ class TestBaseDataset:
 
 
 class TestConcatDataset:
+
     def _init_dataset(self):
         dataset = ToyDataset
 
@@ -307,13 +309,13 @@ class TestConcatDataset:
 
     def test_getitem(self):
         self._init_dataset()
-        assert (self.cat_datasets[0]['imgs'] ==
-                self.dataset_a[0]['imgs']).all()
+        assert (
+            self.cat_datasets[0]['imgs'] == self.dataset_a[0]['imgs']).all()
         assert (self.cat_datasets[0]['imgs'] !=
                 self.dataset_b[0]['imgs']).all()
 
-        assert (self.cat_datasets[-1]['imgs'] ==
-                self.dataset_b[-1]['imgs']).all()
+        assert (
+            self.cat_datasets[-1]['imgs'] == self.dataset_b[-1]['imgs']).all()
         assert (self.cat_datasets[-1]['imgs'] !=
                 self.dataset_a[-1]['imgs']).all()
 

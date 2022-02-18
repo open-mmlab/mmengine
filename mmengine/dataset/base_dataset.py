@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import collections
 import copy
 import functools
 import os.path as osp
@@ -24,11 +23,13 @@ class Compose:
             config dict to be composed.
     """
 
-    def __init__(self, transforms: Sequence[Union[Dict, Callable]]):
-        self.transforms = []
+    def __init__(self, transforms: Sequence[Union[Dict, object]]):
+        self.transforms: List[Any] = []
         for transform in transforms:
             if isinstance(transform, dict):
                 transform = build_from_cfg(transform, TRANSFORMS)
+                if not callable(transform):
+                    raise TypeError(f'{type(transform)} are not callable')
                 self.transforms.append(transform)
             elif callable(transform):
                 self.transforms.append(transform)
@@ -77,15 +78,14 @@ def full_init_before_called(old_func: Callable) -> Any:
     Returns:
         Any: Depend on old_func
     """
-
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
             raise AttributeError(f'{type(obj)} dont have full_init method')
         if not hasattr(obj, '_fully_initialized') or \
            not getattr(obj, '_fully_initialized'):
-            obj.full_init()
-            obj._fully_initialized = True
+            obj.__getattribute__('full_init')()
+            obj.__setattr__('_fully_initialized', True)
 
         return old_func(obj, *args, **kwargs)
 
@@ -156,7 +156,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         lazy_init (bool, optional): whether to load annotation during
             instantiation. Defaults to False
     """
-    META = dict()
+    META: dict = dict()
 
     def __init__(self,
                  ann_file: str,
@@ -177,7 +177,9 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self._num_samples = num_samples
         self.serialize_data = serialize_data
         self.test_mode = test_mode
-        self.data_infos = []
+        self.data_infos: List[dict] = []
+        self.data_infos_bytes = bytearray()
+
         # set meta information
         self._meta = self._get_meta_data(copy.deepcopy(meta))
 
@@ -209,7 +211,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         if self.serialize_data:
             start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
             end_addr = self.data_address[idx].item()
-            bytes = memoryview(self.data_infos[start_addr:end_addr])
+            bytes = memoryview(self.data_infos_bytes[start_addr:end_addr])
             data_info = pickle.loads(bytes)
         else:
             data_info = self.data_infos[idx]
@@ -238,7 +240,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self.data_infos = self._slice_data()
         # serialize data_infos
         if self.serialize_data:
-            self.data_infos, self.data_address = self._serialize_data()
+            self.data_infos_bytes, self.data_address = self._serialize_data()
 
         self._fully_initialized = True
 
@@ -273,8 +275,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         Returns:
             list[dict]: Filtered results
         """
-        if self.filter_cfg is None:
-            return self.data_infos
+        return self.data_infos
 
     def get_cat_ids(self, idx: int) -> List[int]:
         """Get category ids by index. Dataset wrapped by ClassBalancedDataset
@@ -340,7 +341,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             raise TypeError('Wrong format annotation file!')
         if 'data_infos' not in anns or 'metadata' not in anns:
             raise ValueError('Annotation must have data_infos and metadata '
-                            'keys')
+                             'keys')
         # allow meta
         meta_data, raw_data_infos = anns['metadata'], anns['data_infos']
 
@@ -395,7 +396,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         if not in_meta:
             return cls_meta
         if not isinstance(in_meta, dict):
-            raise TypeError("in_meta must be a dict!")
+            raise TypeError('in_meta must be a dict!')
         defined_keys = set()
         for k, v in in_meta.items():
             defined_keys.add(k)
@@ -465,7 +466,6 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             Tuple[list, np.ndarray]: serialize result and corresponding
                 address.
         """
-
         def _serialize(data):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
@@ -511,14 +511,3 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         else:
             return len(self.data_infos)
 
-
-if __name__ == '__main__':
-    class ToyDataset(BaseDataset):
-        def parse_annotations(self, raw_data_info):
-            return raw_data_info
-
-
-    dataset = ToyDataset(
-        data_root=osp.join(osp.dirname(__file__), '../data/'),
-        data_prefix=dict(img='imgs'),
-        ann_file='annotations/dummy_annotation.json')

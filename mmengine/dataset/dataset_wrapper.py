@@ -104,7 +104,7 @@ class ConcatDataset(_ConcatDataset):
         return super().__getitem__(idx)
 
 
-class RepeatDataset(object):
+class RepeatDataset:
     """A wrapper of repeated dataset.
 
     The length of repeated dataset will be `times` larger than the original
@@ -166,8 +166,8 @@ class RepeatDataset(object):
     def __getitem__(self, idx):
         if not hasattr(self.dataset, '_ori_len'):
             warnings.warn(
-                'Please call `self.full_init()` manually to accrelate the speed.'
-            )
+                'Please call `self.full_init()` manually to accrelate the '
+                'speed.')
             self.full_init()
 
         sample_idx = self._get_ori_dataset_idx(idx)
@@ -178,7 +178,7 @@ class RepeatDataset(object):
         return self.times * self._ori_len
 
 
-class ClassBalancedDataset(object):
+class ClassBalancedDataset:
     """A wrapper of class balanced dataset.
 
     Suitable for training on class imbalanced datasets like LVIS. Following
@@ -249,7 +249,8 @@ class ClassBalancedDataset(object):
 
         self._fully_initialized = True
 
-    def _get_repeat_factors(self, dataset: BaseDataset,
+    def _get_repeat_factors(self,
+                            dataset: BaseDataset,
                             repeat_thr: float) -> List[float]:
         """Get repeat factor for each images in the dataset.
 
@@ -264,7 +265,7 @@ class ClassBalancedDataset(object):
         """
         # 1. For each category c, compute the fraction # of images
         #   that contain it: f(c)
-        category_freq = defaultdict(float)
+        category_freq: defaultdict = defaultdict(float)
         num_images = len(dataset)
         for idx in range(num_images):
             cat_ids = set(self.dataset.get_cat_ids(idx))
@@ -302,7 +303,7 @@ class ClassBalancedDataset(object):
             idx: Global index of ``RepeatDataset``.
 
         Returns:
-            idx (int): Local index of data.
+            int: Local index of data.
         """
         return self.repeat_indices[idx]
 
