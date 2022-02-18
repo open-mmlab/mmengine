@@ -297,7 +297,7 @@ class TestBaseDataElement(TestCase):
         assert repr(instances) == (f'<BaseDataElement('
                                    f'\n  META INFORMATION \n'
                                    f'img_shape: (800, 1196, 3) \n'
-                                   f'\n   DATA FIELDS \n'
+                                   f'\n  DATA FIELDS \n'
                                    f'shape of det_labels: torch.Size([4]) \n'
                                    f'\n) at {address}>')
         metainfo = dict(img_shape=(800, 1196, 3))
@@ -307,7 +307,7 @@ class TestBaseDataElement(TestCase):
         assert repr(instances) == (f'<BaseDataElement('
                                    f'\n  META INFORMATION \n'
                                    f'shape of det_labels: torch.Size([4]) \n'
-                                   f'\n   DATA FIELDS \n'
+                                   f'\n  DATA FIELDS \n'
                                    f'img_shape: (800, 1196, 3) \n'
                                    f'\n) at {address}>')
 
