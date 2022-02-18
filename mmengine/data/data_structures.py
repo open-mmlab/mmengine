@@ -7,22 +7,22 @@ import torch
 
 
 class BaseDataElement:
-    """A base data element structure of OpenMMlab.
+    """A base data structure interface of OpenMMlab.
 
-    Data elements refer to predicted results or groundtruth labels on an
-    algorithmictask, such as predicted bboxes, instance masks, semantic
-    segmentation masks, etc. Because annotation data and predicted results
+    Data elements refer to predicted results or groundtruth labels on a
+    task, such as predicted bboxes, instance masks, semantic
+    segmentation masks, etc. Because groundtruth labels and predicted results
     often have similar properties (for example, the predicted bboxes and the
-    groundtruth bboxes have the same properties), MMEngine uses the same
-    abstract data interface to encapsulate predicted results and groundtruth
-    labels, and it is recommended to use naming to distinguish them, such as
-    `gt_instances` and `pred_instances` to distinguish between labels and
-    predicted results. Additionally, we distinguish data elements at instance
-    level, pixel level, and label level. Each of these types has its own
-    characteristics. Therefore, MMEngine defines the base class
-    `BaseDataElement` , and derives `InstanceData`, ` PixelData`, and
-    `LabelData`, which is used for representing different types of groundtruth
-    labels orpredicted and communication between components.
+    groundtruth bboxes), MMEngine uses the same abstract data interface to
+    encapsulate predicted results and groundtruth labels, and it is recommended
+    to use naming to distinguish them, such as `gt_instances` and
+    `pred_instances` to distinguish between labels and predicted results.
+    Additionally, we distinguish data elements at instance level, pixel level,
+    and label level. Each of these types has its own characteristics.
+    Therefore, MMEngine defines the base class `BaseDataElement` , and
+    derives `InstanceData`, ` PixelData`, and `LabelData`, which is used for
+    representing different types of groundtruth labels orpredicted and
+    communication between components.
 
 
     The attributes in `BaseDataElement` are divided into two parts,
@@ -30,11 +30,11 @@ class BaseDataElement:
 
         - `metainfo`: Usually contains the
           information about the image such as filename,
-          image_shape, pad_shape, etc.The attributes can be accessed or
+          image_shape, pad_shape, etc. The attributes can be accessed or
           modified by dict-like or object-like operations, such as
-          `.`(only for accessed) , `in`, `del`, `pop(str)` `get(str)`,
+          `.`(only for data access) , `in`, `del`, `pop(str)` `get(str)`,
           `metainfo_keys()`, `metainfo_values()`, `metainfo_items()`,
-          `set_metainfo()`(for ).
+          `set_metainfo()`(for set or change value in metainfo).
            Users can also apply tensor-like methods to all obj:`torch.Tensor`
            in the `data_fileds`, such as `.cuda()`, `.cpu()`, `.numpy()`,
            `.to()`,  `to_tensor()`, `.detach()`, `.numpy()`
@@ -42,16 +42,16 @@ class BaseDataElement:
         - `data`: Annotations or model predictions are
           stored. The attributes can be accessed or modified by
           dict-like or object-like operations, such as
-          `.` , `[]`, `in`, `del`, `pop(str)` `get(str)`, `keys()`,
-          `values()`, `items()`. Users can also apply tensor-like methods
-          to all obj:`torch.Tensor` in the `data_fileds`,
+          `.` , `in`, `del`, `pop(str)` `get(str)`, `data_keys()`,
+          `data_values()`, `data_items()`. Users can also apply tensor-like
+          methods to all obj:`torch.Tensor` in the `data_fileds`,
           such as `.cuda()`, `.cpu()`, `.numpy()`, , `.to()`,  `to_tensor()`
           `.detach()`, `.numpy()`
 
     Args:
         meta_info (dict, optional): A dict contains the meta information
-            of single image. such as `img_shape`, `scale_factor`, etc.
-            Default: None.
+            of single image. such as `dict(img_shape=(512, 512, 3),
+            scale_factor=(1, 1, 1, 1))`. Default: None.
         data (dict, optional): A dict contains annotations of single image or
             model predictions. Default: None.
 
@@ -141,7 +141,7 @@ class BaseDataElement:
         ) at 0x7f84acd10f90>
     """
 
-    def __init__(self, metainfo: dict = None, data: dict = None):
+    def __init__(self, metainfo: dict = None, data: dict = None) -> None:
 
         self._metainfo_fields: set = set()
         self._data_fields: set = set()
@@ -186,9 +186,10 @@ class BaseDataElement:
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataElement':
-        """Return a new results with same type. if metainfo and date are None,
-        the new results will have metainfo and data. if metainfo or data is not
-        None, the new results will have the passed metainfo or data.
+        """Return a new data element with same type. if metainfo and date are
+        None, the new data element will have same metainfo and data. if
+        metainfo or data is not None, the new results will overwrite it with
+        the input value.
 
         Args:
             metainfo (dict, optional): A dict contains the meta information
@@ -255,7 +256,7 @@ class BaseDataElement:
     def items(self) -> list:
         """
         Returns:
-            list: Contains all key and values pairs in metainfo and data.
+            list: a list of (key, value) tuple pairs in metainfo and data.
         """
         items = list()
         for k in self.keys():
@@ -265,7 +266,7 @@ class BaseDataElement:
     def data_items(self) -> list:
         """
         Returns:
-            list: Contains all key and values pairs in data.
+            list: a list of (key, value) tuple pairs in data.
         """
         items = list()
         for k in self.data_keys():
@@ -275,7 +276,7 @@ class BaseDataElement:
     def metainfo_items(self) -> list:
         """
         Returns:
-            list: Contains all key and values pairs in metainfo.
+            list: a list of (key, value) tuple pairs in metainfo.
         """
         items = list()
         for k in self.metainfo_keys():

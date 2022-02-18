@@ -130,6 +130,9 @@ class TestBaseDataElement(TestCase):
         with self.assertRaises(AttributeError):
             instances.set_metainfo(data)
 
+        with self.assertRaises(AssertionError):
+            instances.set_metainfo(123)
+
     def test_set_data(self):
         metainfo, data = self.setup_data()
         instances = BaseDataElement()
@@ -153,6 +156,9 @@ class TestBaseDataElement(TestCase):
             instances._metainfo_fields = 1
         with self.assertRaises(AttributeError):
             instances._data_fields = 1
+
+        with self.assertRaises(AssertionError):
+            instances.set_data(123)
 
     def test_delete_modify(self):
         metainfo, data = self.setup_data()
