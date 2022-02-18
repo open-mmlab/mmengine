@@ -249,8 +249,7 @@ class ClassBalancedDataset:
 
         self._fully_initialized = True
 
-    def _get_repeat_factors(self,
-                            dataset: BaseDataset,
+    def _get_repeat_factors(self, dataset: BaseDataset,
                             repeat_thr: float) -> List[float]:
         """Get repeat factor for each images in the dataset.
 

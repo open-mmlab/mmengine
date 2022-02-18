@@ -24,7 +24,7 @@ class Compose:
     """
 
     def __init__(self, transforms: Sequence[Union[Dict, object]]):
-        self.transforms: List[Any] = []
+        self.transforms: List[Callable] = []
         for transform in transforms:
             if isinstance(transform, dict):
                 transform = build_from_cfg(transform, TRANSFORMS)
@@ -78,6 +78,7 @@ def full_init_before_called(old_func: Callable) -> Any:
     Returns:
         Any: Depend on old_func
     """
+
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
@@ -466,6 +467,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             Tuple[list, np.ndarray]: serialize result and corresponding
                 address.
         """
+
         def _serialize(data):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
@@ -510,4 +512,3 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return len(self.data_address)
         else:
             return len(self.data_infos)
-
