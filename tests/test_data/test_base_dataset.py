@@ -3,7 +3,6 @@ import copy
 import os.path as osp
 from unittest.mock import MagicMock
 
-import cv2
 import pytest
 import torch
 
@@ -11,19 +10,10 @@ from mmengine.dataset import (BaseDataset, ClassBalancedDataset, ConcatDataset,
                               RepeatDataset)
 
 
-def parse_annotations(self, raw_data_info):
-    return raw_data_info
-
-
 class ToyDataset(BaseDataset):
 
     def parse_annotations(self, raw_data_info: dict):
         pass
-
-
-def simple_load_img(img_info):
-    img = cv2.imread(img_info['filename'])
-    return img
 
 
 class TestBaseDataset:
