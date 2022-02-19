@@ -460,18 +460,19 @@ class BaseDataElement:
 class BaseDataSample:
     """A base data structure interface of OpenMMlab.
 
-    All the annotations and predictions of a training sample (such as an img)
-    constitute a sample data. In general, an image can have multiple types of
+    A sample data consist of input data (such as an image) and its annotations
+    and predictions. In general, an image can have multiple types of
     annotations and/or predictions at the same time (for example, both
     pixel-level semantic segmentation annotations and instance-level detection
-    bboxes annotations). Therefore, MMEngine defines `BaseDataSample` as the
-    base class for sample data encapsulation. **The attributes of
-    `BaseDataSample` will be various types of data elements**, and the
-    OpenMMLab repo need to implement its own abstract data interface based on
-    `BaseDataSample` to encapsulate all relevant data, as a data interface
-    between dataset, model, visualizer, and evaluator components.
+    bboxes annotations). To facilitate data access of multitask, MMEngine
+    defines `BaseDataSample` as the base class for sample data encapsulation.
+    **The attributes of `BaseDataSample` will be various types of data
+    elements**, and the codebases in OpenMMLab need to implement its own
+    xxxDataSample such as ClsDataSample, DetDataSample, SegDataSample based on
+    `BaseDataSample` to encapsulate all relevant data, as a data
+    interface between dataset, model, visualizer, and evaluator components.
 
-    The attributes in `BaseDataElement` are divided into two parts,
+    These attributes in `BaseDataElement` are divided into two parts,
     the `metainfo` and the `data` respectively.
 
         - `metainfo`: Usually contains the
@@ -496,9 +497,9 @@ class BaseDataSample:
 
     Args:
         meta_info (dict, optional): A dict contains the meta information
-            of single image. such as `dict(img_shape=(512, 512, 3),
+            of a sample. such as `dict(img_shape=(512, 512, 3),
             scale_factor=(1, 1, 1, 1))`. Default: None.
-        data (dict, optional): A dict contains annotations of single image or
+        data (dict, optional): A dict contains annotations of a sample or
             model predictions. Default: None.
 
     Examples:
@@ -531,7 +532,7 @@ class BaseDataSample:
 
         >>> gt_instances2 = gt_instances1.new()
 
-        # property add and accesse
+        # property add and access
         >>> sample = BaseDataSample()
         >>> gt_instances = BaseDataElement(
                 metainfo=dict(img_id=9, img_shape=(100, 100)),
@@ -663,7 +664,7 @@ class BaseDataSample:
         if data is not None:
             self.set_data(data)
 
-    def set_metainfo(self, metainfo: dict):
+    def set_metainfo(self, metainfo: dict) -> None:
         """Add and change meta information.
 
         Args:
@@ -683,7 +684,7 @@ class BaseDataSample:
             self._metainfo_fields.add(k)
             self.__dict__[k] = v
 
-    def set_data(self, data: dict):
+    def set_data(self, data: dict) -> None:
         """Update a dict to `data_fields`.
 
         Args:
@@ -830,7 +831,7 @@ class BaseDataSample:
 
     def get(self, *args) -> Any:
         """get property in data and metainfo as the same as python."""
-        assert len(args) < 3, '`get` get more than 2 arguments'
+        assert len(args) < 3, f'`get` get more than 2 arguments {args}'
         return self.__dict__.get(*args)
 
     def pop(self, *args) -> Any:
@@ -959,7 +960,7 @@ class BaseDataSample:
         new_data = self.new()
         for k, v in self.data_items():
             data = {}
-            if isinstance(v, torch.Tensor):
+            if isinstance(v, np.ndarray):
                 v = torch.from_numpy(v)
                 data.update({k: v})
             elif isinstance(v, (BaseDataElement, BaseDataSample)):
@@ -968,7 +969,7 @@ class BaseDataSample:
             new_data.set_data(data)
         for k, v in self.metainfo_items():
             data = {}
-            if isinstance(v, torch.Tensor):
+            if isinstance(v, np.ndarray):
                 v = torch.from_numpy(v)
                 data.update({k: v})
             elif isinstance(v, (BaseDataElement, BaseDataSample)):

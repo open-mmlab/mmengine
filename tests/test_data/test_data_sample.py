@@ -55,14 +55,14 @@ class TestBaseDataSample(TestCase):
         for v in instances.data_values():
             if isinstance(v, torch.Tensor):
                 assert v.device == torch.device(device)
-            elif isinstance(v, BaseDataElement):
+            elif isinstance(v, (BaseDataSample, BaseDataElement)):
                 self.check_data_device(v, device)
 
     def check_data_dtype(self, instances, dtype):
         for v in instances.data_values():
             if isinstance(v, (torch.Tensor, np.ndarray)):
                 assert isinstance(v, dtype)
-            if isinstance(v, BaseDataElement):
+            if isinstance(v, (BaseDataSample, BaseDataElement)):
                 self.check_data_dtype(v, dtype)
 
     def check_requires_grad(self, instances):
@@ -144,7 +144,7 @@ class TestBaseDataSample(TestCase):
         # test have the same key in data
         # TODO
         _, data = self.setup_data()
-        instances = BaseDataElement(data=data)
+        instances = BaseDataSample(data=data)
         _, data = self.setup_data()
         with self.assertRaises(AttributeError):
             instances.set_metainfo(data)
@@ -165,9 +165,9 @@ class TestBaseDataSample(TestCase):
         instances.img_id = metainfo['img_id']
         self.check_key_value(instances, data=metainfo)
 
-        # TODO
+        # test can not set metainfo with `.`
         metainfo, data = self.setup_data()
-        instances = BaseDataElement(metainfo, data)
+        instances = BaseDataSample(metainfo, data)
         with self.assertRaises(AttributeError):
             instances.img_shape = metainfo['img_shape']
 
@@ -276,15 +276,16 @@ class TestBaseDataSample(TestCase):
 
     def test_numpy_tensor(self):
         metainfo, data = self.setup_data()
+        data.update(bboxes=torch.rand((5, 4)))
         instances = BaseDataSample(metainfo, data)
-
         np_instances = instances.numpy()
         self.check_data_dtype(np_instances, np.ndarray)
 
-        tensor_instances = instances.to_tensor()
+        tensor_instances = np_instances.to_tensor()
         self.check_data_dtype(tensor_instances, torch.Tensor)
 
         _, data = self.setup_data()
+        data.update(bboxes=torch.rand((5, 4)))
         instances = BaseDataSample(metainfo=data)
 
         np_instances = instances.numpy()
@@ -311,35 +312,50 @@ class TestBaseDataSample(TestCase):
             data=dict(det_labels=torch.LongTensor([0, 1, 2, 3])))
 
         data = dict(gt_instances=gt_instances)
-        instances = BaseDataSample(metainfo=metainfo, data=data)
-        address = hex(id(instances))
-        address_gt_instances = hex(id(instances.gt_instances))
-        assert repr(instances) == (f'<BaseDataSample('
-                                   f'\n  META INFORMATION \n'
-                                   f'img_shape: (800, 1196, 3) \n'
-                                   f'\n  DATA FIELDS \n'
-                                   f'gt_instances:<BaseDataElement('
-                                   f'\n  META INFORMATION \n'
-                                   f'img_shape: (800, 1196, 3) \n'
-                                   f'\n  DATA FIELDS \n'
-                                   f'shape of det_labels: torch.Size([4]) \n'
-                                   f'\n) at {address_gt_instances}>\n'
-                                   f'\n) at {address}>')
+        sample = BaseDataSample(metainfo=metainfo, data=data)
+        address = hex(id(sample))
+        address_gt_instances = hex(id(sample.gt_instances))
+        assert repr(sample) == (f'<BaseDataSample('
+                                f'\n  META INFORMATION \n'
+                                f'img_shape: (800, 1196, 3) \n'
+                                f'\n  DATA FIELDS \n'
+                                f'gt_instances:<BaseDataElement('
+                                f'\n  META INFORMATION \n'
+                                f'img_shape: (800, 1196, 3) \n'
+                                f'\n  DATA FIELDS \n'
+                                f'shape of det_labels: torch.Size([4]) \n'
+                                f'\n) at {address_gt_instances}>\n'
+                                f'\n) at {address}>')
 
-        instances = BaseDataSample(data=metainfo, metainfo=data)
-        address = hex(id(instances))
-        address_gt_instances = hex(id(instances.gt_instances))
-        assert repr(instances) == (f'<BaseDataSample('
-                                   f'\n  META INFORMATION \n'
-                                   f'gt_instances:<BaseDataElement('
-                                   f'\n  META INFORMATION \n'
-                                   f'img_shape: (800, 1196, 3) \n'
-                                   f'\n  DATA FIELDS \n'
-                                   f'shape of det_labels: torch.Size([4]) \n'
-                                   f'\n) at {address_gt_instances}>\n'
-                                   f'\n  DATA FIELDS \n'
-                                   f'img_shape: (800, 1196, 3) \n'
-                                   f'\n) at {address}>')
+        sample = BaseDataSample(data=metainfo, metainfo=data)
+        address = hex(id(sample))
+        address_gt_instances = hex(id(sample.gt_instances))
+        assert repr(sample) == (f'<BaseDataSample('
+                                f'\n  META INFORMATION \n'
+                                f'gt_instances:<BaseDataElement('
+                                f'\n  META INFORMATION \n'
+                                f'img_shape: (800, 1196, 3) \n'
+                                f'\n  DATA FIELDS \n'
+                                f'shape of det_labels: torch.Size([4]) \n'
+                                f'\n) at {address_gt_instances}>\n'
+                                f'\n  DATA FIELDS \n'
+                                f'img_shape: (800, 1196, 3) \n'
+                                f'\n) at {address}>')
+        metainfo = dict(bboxes=torch.rand((5, 4)))
+        sample = BaseDataSample(metainfo=metainfo)
+        address = hex(id(sample))
+        assert repr(sample) == (f'<BaseDataSample('
+                                f'\n  META INFORMATION \n'
+                                f'shape of bboxes: torch.Size([5, 4]) \n'
+                                f'\n  DATA FIELDS \n'
+                                f'\n) at {address}>')
+        sample = BaseDataSample(data=metainfo)
+        address = hex(id(sample))
+        assert repr(sample) == (f'<BaseDataSample('
+                                f'\n  META INFORMATION \n'
+                                f'\n  DATA FIELDS \n'
+                                f'shape of bboxes: torch.Size([5, 4]) \n'
+                                f'\n) at {address}>')
 
     def test_set_get_fields(self):
         metainfo, data = self.setup_data()
@@ -453,3 +469,8 @@ class TestBaseDataSample(TestCase):
 
         # test_data_items
         assert len(dict(instances.data_items())) == len(dict(data.items()))
+
+
+if __name__ == '__main__':
+    sample = TestBaseDataSample()
+    sample.test_repr()
