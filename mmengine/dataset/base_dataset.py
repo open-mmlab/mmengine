@@ -29,7 +29,7 @@ class Compose:
             if isinstance(transform, dict):
                 transform = TRANSFORMS.build(transform)
                 if not callable(transform):
-                    raise TypeError(f'{type(transform)} are not callable')
+                    raise TypeError(f'{type(transform)} is not callable')
                 self.transforms.append(transform)
             elif callable(transform):
                 self.transforms.append(transform)
