@@ -2,13 +2,18 @@
 import collections.abc
 import functools
 import itertools
+import pkgutil
 import subprocess
 import warnings
 from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
-from typing import Sequence, Type
+from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
+
+import torch.nn as nn
+
+from .parrots_wrapper import _BatchNorm, _InstanceNorm
 
 
 # From PyTorch internals
@@ -296,7 +301,8 @@ def requires_executable(prerequisites):
     return check_prerequisites(prerequisites, checker=_check_executable)
 
 
-def deprecated_api_warning(name_dict, cls_name=None):
+def deprecated_api_warning(name_dict: dict,
+                           cls_name: Optional[str] = None) -> Callable:
     """A decorator to check if some arguments are deprecate and try to replace
     deprecate src_arg_name to dst_arg_name.
 
@@ -356,7 +362,8 @@ def deprecated_api_warning(name_dict, cls_name=None):
     return api_warning_wrapper
 
 
-def is_method_overridden(method, base_class, derived_class):
+def is_method_overridden(method: str, base_class: type,
+                         derived_class: Union[type, Any]) -> bool:
     """Check if a method of base class is overridden in derived class.
 
     Args:
@@ -386,3 +393,43 @@ def has_method(obj: object, method: str) -> bool:
         bool: True if the object has the method else False.
     """
     return hasattr(obj, method) and callable(getattr(obj, method))
+
+
+def mmcv_full_available() -> bool:
+    """Check whether mmcv-full is installed.
+
+    Returns:
+        bool: True if mmcv-full is installed else False.
+    """
+    try:
+        import mmcv  # noqa: F401
+    except ImportError:
+        return False
+    ext_loader = pkgutil.find_loader('mmcv._ext')
+    return ext_loader is not None
+
+
+def is_norm(layer: nn.Module,
+            exclude: Optional[Union[type, Tuple[type]]] = None) -> bool:
+    """Check if a layer is a normalization layer.
+
+    Args:
+        layer (nn.Module): The layer to be checked.
+        exclude (type, tuple[type], optional): Types to be excluded.
+
+    Returns:
+        bool: Whether the layer is a norm layer.
+    """
+    if exclude is not None:
+        if not isinstance(exclude, tuple):
+            exclude = (exclude, )
+        if not is_tuple_of(exclude, type):
+            raise TypeError(
+                f'"exclude" must be either None or type or a tuple of types, '
+                f'but got {type(exclude)}: {exclude}')
+
+    if exclude and isinstance(layer, exclude):
+        return False
+
+    all_norm_bases = (_BatchNorm, _InstanceNorm, nn.GroupNorm, nn.LayerNorm)
+    return isinstance(layer, all_norm_bases)
