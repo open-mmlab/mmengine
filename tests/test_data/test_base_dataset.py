@@ -57,8 +57,8 @@ class TestBaseDataset:
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_infos')
         assert not hasattr(dataset, 'data_address')
-        assert len(dataset)==2
-        assert dataset.get_data_info(0)==self.data_info
+        assert len(dataset) == 2
+        assert dataset.get_data_info(0) == self.data_info
 
         # test the instantiation of self.base_dataset with lazy init
         dataset = self.dataset_type(
@@ -110,16 +110,14 @@ class TestBaseDataset:
         # test the instantiation of self.base_dataset when `parse_annotations`
         # return unsupported data.
         with pytest.raises(TypeError):
-            self.dataset_type.parse_annotations = MagicMock(
-                return_value='xxx')
+            self.dataset_type.parse_annotations = MagicMock(return_value='xxx')
             dataset = self.dataset_type(
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/dummy_annotation.json')
         with pytest.raises(TypeError):
             self.dataset_type.parse_annotations = MagicMock(
-                return_value=[self.data_info,
-                            'xxx'])
+                return_value=[self.data_info, 'xxx'])
             dataset = self.dataset_type(
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
@@ -176,8 +174,11 @@ class TestBaseDataset:
             classes=('dog', ),
             empty_list=[])
 
-        # test dataset.meta with passing meta containing a file into self.base_dataset
-        meta = dict(classes=osp.join(osp.dirname(__file__), '../data/meta/classes.txt'))
+        # test dataset.meta with passing meta containing a file into
+        # self.base_dataset
+        meta = dict(
+            classes=osp.join(
+                osp.dirname(__file__), '../data/meta/classes.txt'))
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
@@ -188,8 +189,9 @@ class TestBaseDataset:
             task_name='test_task',
             classes=['dog'],
             empty_list=[])
-        
-        # test dataset.meta with passing unsupported meta into self.base_dataset
+
+        # test dataset.meta with passing unsupported meta into
+        # self.base_dataset
         with pytest.raises(TypeError):
             meta = 'dog'
             dataset = self.dataset_type(
@@ -322,7 +324,7 @@ class TestBaseDataset:
             assert len(dataset) == 2
             assert dataset[0] == dict(imgs=self.imgs)
             assert dataset.get_data_info(0) == self.data_info
-    
+
     def test_slice_data(self):
         # test the instantiation of self.base_dataset when passing num_samples
         dataset = self.dataset_type(
@@ -330,7 +332,7 @@ class TestBaseDataset:
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             num_samples=1)
-        assert len(dataset)==1
+        assert len(dataset) == 1
 
     def test_rand_another(self):
         # test the instantiation of self.base_dataset when passing num_samples
@@ -339,8 +341,8 @@ class TestBaseDataset:
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             num_samples=1)
-        assert dataset._rand_another()>=0
-        assert dataset._rand_another()<len(dataset)
+        assert dataset._rand_another() >= 0
+        assert dataset._rand_another() < len(dataset)
 
 
 class TestConcatDataset:
@@ -372,6 +374,7 @@ class TestConcatDataset:
         # test init
         self.cat_datasets = ConcatDataset(
             datasets=[self.dataset_a, self.dataset_b])
+
     def test_full_init(self):
         dataset = ToyDataset
 
@@ -400,11 +403,11 @@ class TestConcatDataset:
         cat_datasets = ConcatDataset(
             datasets=[dataset_a, dataset_b], lazy_init=True)
         cat_datasets.full_init()
-        assert len(cat_datasets)==4
+        assert len(cat_datasets) == 4
         cat_datasets.full_init()
-        cat_datasets._fully_initialized=False
+        cat_datasets._fully_initialized = False
         cat_datasets[1]
-        assert len(cat_datasets)==4
+        assert len(cat_datasets) == 4
 
     def test_meta(self):
         self._init_dataset()
@@ -444,8 +447,10 @@ class TestConcatDataset:
 
     def test_get_ori_dataset_idx(self):
         self._init_dataset()
-        assert self.cat_datasets._get_ori_dataset_idx(3) == (1, 3 - len(self.dataset_a))
-        assert self.cat_datasets._get_ori_dataset_idx(-1) == (1, len(self.dataset_b) - 1)
+        assert self.cat_datasets._get_ori_dataset_idx(3) == (
+            1, 3 - len(self.dataset_a))
+        assert self.cat_datasets._get_ori_dataset_idx(-1) == (
+            1, len(self.dataset_b) - 1)
         with pytest.raises(ValueError):
             assert self.cat_datasets._get_ori_dataset_idx(-10)
 
@@ -467,7 +472,7 @@ class TestRepeatDataset:
         # test init
         self.repeat_datasets = RepeatDataset(
             dataset=self.dataset, times=self.repeat_times)
-    
+
     def test_full_init(self):
         dataset = ToyDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
@@ -483,13 +488,13 @@ class TestRepeatDataset:
         # test init
         repeat_datasets = RepeatDataset(
             dataset=dataset, times=repeat_times, lazy_init=True)
-        
+
         repeat_datasets.full_init()
-        assert len(repeat_datasets)==repeat_times*len(dataset)
+        assert len(repeat_datasets) == repeat_times * len(dataset)
         repeat_datasets.full_init()
-        repeat_datasets._fully_initialized=False
+        repeat_datasets._fully_initialized = False
         repeat_datasets[1]
-        assert len(repeat_datasets)==repeat_times*len(dataset)
+        assert len(repeat_datasets) == repeat_times * len(dataset)
 
     def test_meta(self):
         self._init_dataset()
@@ -532,7 +537,7 @@ class TestClassBalancedDataset:
         self.cls_banlanced_datasets = ClassBalancedDataset(
             dataset=self.dataset, oversample_thr=1e-3)
         self.cls_banlanced_datasets.repeat_indices = self.repeat_indices
-    
+
     def test_full_init(self):
         dataset = ToyDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
@@ -552,12 +557,12 @@ class TestClassBalancedDataset:
 
         cls_banlanced_datasets.full_init()
         cls_banlanced_datasets.repeat_indices = repeat_indices
-        assert len(cls_banlanced_datasets)==len(repeat_indices)
+        assert len(cls_banlanced_datasets) == len(repeat_indices)
         cls_banlanced_datasets.full_init()
-        cls_banlanced_datasets._fully_initialized=False
+        cls_banlanced_datasets._fully_initialized = False
         cls_banlanced_datasets[1]
         cls_banlanced_datasets.repeat_indices = repeat_indices
-        assert len(cls_banlanced_datasets)==len(repeat_indices)
+        assert len(cls_banlanced_datasets) == len(repeat_indices)
 
     def test_meta(self):
         self._init_dataset()
