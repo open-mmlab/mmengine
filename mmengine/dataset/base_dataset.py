@@ -27,7 +27,7 @@ class Compose:
         self.transforms: List[Callable] = []
         for transform in transforms:
             if isinstance(transform, dict):
-                transform = build_from_cfg(transform, TRANSFORMS)
+                transform = TRANSFORMS.build(transform)
                 if not callable(transform):
                     raise TypeError(f'{type(transform)} are not callable')
                 self.transforms.append(transform)
