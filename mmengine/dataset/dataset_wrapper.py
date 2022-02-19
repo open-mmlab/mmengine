@@ -4,7 +4,7 @@ import copy
 import math
 import warnings
 from collections import defaultdict
-from typing import List, Tuple
+from typing import List, Sequence, Tuple
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
@@ -17,15 +17,17 @@ class ConcatDataset(_ConcatDataset):
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
     Args:
-        datasets (list[mmengine.BaseDataset]): A list of datasets.
+        datasets (list[BaseDataset]): A list of datasets.
         lazy_init (bool, optional): whether to load annotation during
         instantiation. Defaults to False.
     """
 
-    def __init__(self, datasets: List[BaseDataset], lazy_init: bool = False):
+    def __init__(self,
+                 datasets: Sequence[BaseDataset],
+                 lazy_init: bool = False):
         # Only use meta of first dataset.
         self._meta = datasets[0].meta
-        self.datasets = datasets
+        self.datasets = datasets  # type: ignore
         for i, dataset in enumerate(datasets):
             if self._meta != dataset.meta:
                 warnings.warn(

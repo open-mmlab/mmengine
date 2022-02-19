@@ -11,7 +11,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from mmengine.fileio import list_from_file, load
-from mmengine.registry import TRANSFORMS, build_from_cfg
+from mmengine.registry import TRANSFORMS
 from mmengine.utils import check_file_exist
 
 
@@ -179,7 +179,6 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self.serialize_data = serialize_data
         self.test_mode = test_mode
         self.data_infos: List[dict] = []
-        self.data_infos_bytes = bytearray()
 
         # set meta information
         self._meta = self._get_meta_data(copy.deepcopy(meta))
@@ -449,7 +448,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         else:
             return self.data_infos
 
-    def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _serialize_data(self) -> Tuple[List[Any], np.ndarray]:
         """Serialize ``self.data_infos``, which will called in ``full_init``.
 
         Hold memory using serialized objects, data loader workers can use
