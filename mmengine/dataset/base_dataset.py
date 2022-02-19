@@ -162,10 +162,10 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     def __init__(self,
                  ann_file: str,
-                 meta: Optional[Dict] = None,
+                 meta: Optional[dict] = None,
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
-                 filter_cfg: Optional[Dict] = None,
+                 filter_cfg: Optional[dict] = None,
                  num_samples: int = -1,
                  serialize_data: bool = True,
                  pipeline: Sequence = None,
@@ -260,7 +260,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @abstractmethod
     def parse_annotations(self,
-                          raw_data_info: dict) -> Union[Dict, List[Dict]]:
+                          raw_data_info: dict) -> Union[dict, List[dict]]:
         """Parse raw annotation to target format. This method must be
         implemented by class inherited from BaseDataset. ``parse_annotations``
         should return ``dict``or ``list[dict]``. Each dict denotes a sample.
@@ -327,7 +327,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 continue
             return data
 
-    def _load_data_infos(self, ann_file: str) -> List[Dict]:
+    def _load_data_infos(self, ann_file: str) -> List[dict]:
         """load annotation from ann_file.
 
         Args:
