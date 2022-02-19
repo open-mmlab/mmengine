@@ -4,7 +4,6 @@ import copy
 import os
 import os.path as osp
 import platform
-import re
 import shutil
 import sys
 import tempfile
@@ -25,6 +24,11 @@ BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
 DEPRECATION_KEY = '_deprecation_'
 RESERVED_KEYS = ['filename', 'text', 'pretty_text']
+
+if platform.system() == 'Windows':
+    import regex as re
+else:
+    import re  # type: ignore
 
 
 class ConfigDict(Dict):

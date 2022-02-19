@@ -169,7 +169,9 @@ class TestConfig:
             cfg.merge_from_dict(input_options, allow_list_keys=True)
 
     def test_auto_argparser(self):
-        tmp = sys.argv[1]
+        # Temporarily make sys.argv only has one argument and keep backups
+        tmp = sys.argv[1:]
+        sys.argv = sys.argv[:2]
         sys.argv[1] = osp.join(
             self.data_path,
             'config/py_config/test_merge_from_multiple_bases.py')
@@ -181,7 +183,7 @@ class TestConfig:
                 assert not getattr(args, key)
         # TODO currently do not support nested keys, bool args will be
         #  overwritten by int
-        sys.argv[1] = tmp
+        sys.argv.extend(tmp)
 
     def test_dump(self, tmp_path):
         file_path = 'config/py_config/test_merge_from_multiple_bases.py'
