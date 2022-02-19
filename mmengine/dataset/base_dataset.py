@@ -156,7 +156,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             to False.
         lazy_init (bool, optional): whether to load annotation during
             instantiation. Defaults to False
-        max_cycle (int): The maximum number of cycles to get a valid image.
+        max_refetch (int): The maximum number of cycles to get a valid image.
     """
     META: dict = dict()
 
@@ -171,7 +171,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                  pipeline: Sequence = None,
                  test_mode: bool = False,
                  lazy_init: bool = False,
-                 max_cycle: int = 1000):
+                 max_refetch: int = 1000):
 
         self.data_root = data_root
         self.data_prefix = copy.deepcopy(data_prefix)
@@ -180,7 +180,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self._num_samples = num_samples
         self.serialize_data = serialize_data
         self.test_mode = test_mode
-        self.max_cycle = max_cycle
+        self.max_refetch = max_refetch
         self.data_infos: List[dict] = []
         self.data_infos_bytes: bytearray = bytearray()
 
@@ -317,7 +317,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return self._prepare_data(idx)
         loop_count = 0
         while True:
-            if loop_count >= self.max_cycle:
+            if loop_count >= self.max_refetch:
                 raise Exception(f'Cannot find valid image after {loop_count}! '
                                 f'please check your image path and pipelines')
             loop_count += 1
