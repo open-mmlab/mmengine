@@ -6,8 +6,26 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from mmengine.dataset import (BaseDataset, ClassBalancedDataset, ConcatDataset,
-                              RepeatDataset)
+from mmengine.dataset import (BaseDataset, ClassBalancedDataset, Compose,
+                              ConcatDataset, RepeatDataset,
+                              full_init_before_called)
+from mmengine.registry import TRANSFORMS
+
+
+def function_pipeline(data_info):
+    return data_info
+
+
+@TRANSFORMS._register_module
+class CallableTransform:
+
+    def __call__(self, data_info):
+        return data_info
+
+
+@TRANSFORMS._register_module
+class NotCallableTransform:
+    pass
 
 
 class ToyDataset(BaseDataset):
@@ -253,6 +271,35 @@ class TestBaseDataset:
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
+    def test_compose(self):
+        # test callable transform
+        transforms = [function_pipeline]
+        compose = Compose(transforms=transforms)
+        assert (self.imgs == compose(dict(img=self.imgs))['img']).all()
+        # test transform build from cfg_dict
+        transforms = [dict(type='CallableTransform')]
+        compose = Compose(transforms=transforms)
+        assert (self.imgs == compose(dict(img=self.imgs))['img']).all()
+        # test return None in advance
+        none_func = MagicMock(return_value=None)
+        transforms = [none_func, function_pipeline]
+        compose = Compose(transforms=transforms)
+        assert compose(dict(img=self.imgs)) is None
+        # test repr
+        repr_str = f'Compose(\n' \
+                   f'    {none_func}\n' \
+                   f'    {function_pipeline}\n' \
+                   f')'
+        assert repr(compose) == repr_str
+        # non-callable transform will raise error
+        with pytest.raises(TypeError):
+            transforms = [dict(type='NotCallableTransform')]
+            Compose(transforms)
+
+        # transform must be callable or dict
+        with pytest.raises(TypeError):
+            Compose([1])
+
     @pytest.mark.parametrize('lazy_init', [True, False])
     def test_getitem(self, lazy_init):
         dataset = self.dataset_type(
@@ -274,9 +321,16 @@ class TestBaseDataset:
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
-        # Test with test mode
+        # test with test mode
         dataset.test_mode = True
         assert dataset[0] == dict(imgs=self.imgs)
+
+        pipeline = MagicMock(return_value=None)
+        dataset.pipeline = pipeline
+        # test cannot get a valid image.
+        dataset.test_mode = False
+        with pytest.raises(Exception):
+            dataset[0]
 
     @pytest.mark.parametrize('lazy_init', [True, False])
     def test_get_data_info(self, lazy_init):
@@ -298,6 +352,18 @@ class TestBaseDataset:
             assert dataset.get_data_info(0) == self.data_info
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
+
+    def test_full_init_before_called(self):
+        with pytest.raises(AttributeError):
+
+            class ClassWithoutFullInit:
+
+                @full_init_before_called
+                def foo(self):
+                    pass
+
+            class_without_full_init = ClassWithoutFullInit()
+            class_without_full_init.foo()
 
     @pytest.mark.parametrize('lazy_init', [True, False])
     def test_full_init(self, lazy_init):

@@ -36,7 +36,7 @@ class Compose:
             else:
                 raise TypeError('transform must be callable or a dict')
 
-    def __call__(self, data: dict) -> object:
+    def __call__(self, data: dict) -> Optional[dict]:
         """Call function to apply transforms sequentially.
 
         Args:
@@ -156,6 +156,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             to False.
         lazy_init (bool, optional): whether to load annotation during
             instantiation. Defaults to False
+        max_cycle (int): The maximum number of cycles to get a valid image.
     """
     META: dict = dict()
 
@@ -169,7 +170,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                  serialize_data: bool = True,
                  pipeline: Sequence = None,
                  test_mode: bool = False,
-                 lazy_init: bool = False):
+                 lazy_init: bool = False,
+                 max_cycle: int = 1000):
 
         self.data_root = data_root
         self.data_prefix = copy.deepcopy(data_prefix)
@@ -178,7 +180,9 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self._num_samples = num_samples
         self.serialize_data = serialize_data
         self.test_mode = test_mode
+        self.max_cycle = max_cycle
         self.data_infos: List[dict] = []
+        self.data_infos_bytes: bytearray = bytearray()
 
         # set meta information
         self._meta = self._get_meta_data(copy.deepcopy(meta))
@@ -241,7 +245,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         # serialize data_infos
         if self.serialize_data:
             self.data_infos_bytes, self.data_address = self._serialize_data()
-
+            self.data_infos = []
         self._fully_initialized = True
 
     @property
@@ -311,7 +315,12 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
         if self.test_mode:
             return self._prepare_data(idx)
+        loop_count = 0
         while True:
+            if loop_count >= self.max_cycle:
+                raise Exception(f'Cannot find valid image after {loop_count}! '
+                                f'please check your image path and pipelines')
+            loop_count += 1
             data = self._prepare_data(idx)
             if data is None:
                 idx = self._rand_another()
@@ -347,15 +356,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             # We only merge keys that are not contained in self._meta.
             if k in self._meta:
                 continue
-
-            if isinstance(v, str):
-                if osp.isfile(v):
-                    file_meta = list_from_file(v)
-                    self.meta[k] = file_meta
-                else:
-                    self.meta[k] = v
-            else:
-                self._meta[k] = v
+            self._meta[k] = v
         # load and parse data_infos
         data_infos = []
         for raw_data_info in raw_data_infos:
@@ -448,7 +449,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         else:
             return self.data_infos
 
-    def _serialize_data(self) -> Tuple[List[Any], np.ndarray]:
+    def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Serialize ``self.data_infos``, which will called in ``full_init``.
 
         Hold memory using serialized objects, data loader workers can use
@@ -463,11 +464,11 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
 
-        serialized_data_infos = [_serialize(x) for x in self.data_infos]
-        address_list = np.asarray([len(x) for x in serialized_data_infos],
+        serialized_data_infos_list = [_serialize(x) for x in self.data_infos]
+        address_list = np.asarray([len(x) for x in serialized_data_infos_list],
                                   dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
-        serialized_data_infos = np.concatenate(serialized_data_infos)
+        serialized_data_infos = np.concatenate(serialized_data_infos_list)
 
         return serialized_data_infos, data_address
 
