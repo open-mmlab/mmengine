@@ -27,7 +27,7 @@ class Compose:
         self.transforms: List[Callable] = []
         for transform in transforms:
             if isinstance(transform, dict):
-                transform = build_from_cfg(transform, TRANSFORMS)
+                transform = TRANSFORMS.build(transform)
                 if not callable(transform):
                     raise TypeError(f'{type(transform)} is not callable')
                 self.transforms.append(transform)
@@ -72,8 +72,8 @@ def full_init_before_called(old_func: Callable) -> Any:
      ``obj._fully_initialized=True``.
 
     Args:
-        old_func (Callable): Decorated function, make sure first arg is an
-            instance with full_init method.
+        old_func (Callable): Decorated function, make sure the first arg is an
+            instance with ``full_init`` method.
 
     Returns:
         Any: Depend on old_func
@@ -82,7 +82,7 @@ def full_init_before_called(old_func: Callable) -> Any:
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
-            raise AttributeError(f'{type(obj)} dont have full_init method')
+            raise AttributeError(f"{type(obj)} don't have full_init method'")
         if not hasattr(obj, '_fully_initialized') or \
            not getattr(obj, '_fully_initialized'):
             obj.__getattribute__('full_init')()
@@ -94,10 +94,10 @@ def full_init_before_called(old_func: Callable) -> Any:
 
 
 class BaseDataset(Dataset, metaclass=ABCMeta):
-    r""" BaseDataset for mmengine.
+    r""" BaseDataset for open source projects in OpenMMLab.
 
     The class inherited from ``BaseDataset`` need to implement
-    parse_annotations method. The annotation format is shown as follows.
+    ``parse_annotations`` method. The annotation format is shown as follows.
 
     .. code-block:: none
 
@@ -260,7 +260,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                           raw_data_info: dict) -> Union[Dict, List[Dict]]:
         """Parse raw annotation to target format. This method must be
         implemented by class inherited from BaseDataset. ``parse_annotations``
-        should return ``dict`` for img task and ``list[dict]`` for video task.
+        should return ``dict``or ``list[dict]``. Each dict denotes a sample.
 
         Args:
             raw_data_info (dict): raw annotation load from ``ann_file``
@@ -324,19 +324,16 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
         Args:
             ann_file (str): absolute annotation file path if ``self.root=None``
-                or relative path ``self.root=/path/to/data/``
+                or relative path if ``self.root=/path/to/data/``
 
         Note:
-            img_meta in ann_file has lowest priority, which will be over
-            written by ``dataset.META`` and meta passed to __init__
+            `metadata` in ann_file has the lowest priority, which will be
+            overwritten by ``dataset.META`` during instantiation
 
         Returns:
             list[dict]: list of annotation
         """
         check_file_exist(ann_file)
-        if not osp.isfile(ann_file):
-            raise FileNotFoundError('Annotation file not found, please check'
-                                    'your filepath')
         anns = load(ann_file)
         if not isinstance(anns, dict):
             raise TypeError('Wrong format annotation file!')
@@ -358,11 +355,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                     self.meta[k] = file_meta
                 else:
                     self.meta[k] = v
-            elif isinstance(v, (tuple, list, dict)):
-                self._meta[k] = v
             else:
-                raise ValueError(f'Unsupported type {type(v)} of {k}.')
-
+                self._meta[k] = v
         # load and parse data_infos
         data_infos = []
         for raw_data_info in raw_data_infos:
@@ -370,7 +364,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             if isinstance(data_info, dict):
                 data_infos.append(data_info)
             elif isinstance(data_info, list):
-                # For video dataset, data_info must be a list of dict.
+                # data_info can also be a list of dict, which means one
+                # data_info contains multiple samples.
                 for _ in data_info:
                     if not isinstance(_, dict):
                         raise TypeError('data_info must be a list[dict] if '
@@ -409,11 +404,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 else:
                     cls_meta[k] = v
 
-            elif isinstance(v, (tuple, list, dict)):
-                cls_meta[k] = v
             else:
-                raise ValueError(f'Unsupported type {type(v)} of {k}.')
-
+                cls_meta[k] = v
         return cls_meta
 
     def _join_prefix(self):

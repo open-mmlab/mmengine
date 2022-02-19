@@ -97,11 +97,11 @@ class ConcatDataset(_ConcatDataset):
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn('Please call self.full_init() manually to accrelate '
-                          'the speed.')
+            warnings.warn('Please call self.full_init() manually to '
+                          'accelerate the speed.')
             self.full_init()
-
-        return super().__getitem__(idx)
+        dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
+        return self.datasets[dataset_idx][sample_idx]
 
 
 class RepeatDataset:
@@ -164,10 +164,9 @@ class RepeatDataset:
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        if not hasattr(self.dataset, '_ori_len'):
-            warnings.warn(
-                'Please call `self.full_init()` manually to accrelate the '
-                'speed.')
+        if not self._fully_initialized:
+            warnings.warn('Please call self.full_init() manually to '
+                          'accelerate the speed.')
             self.full_init()
 
         sample_idx = self._get_ori_dataset_idx(idx)
@@ -333,10 +332,9 @@ class ClassBalancedDataset:
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        if not hasattr(self.dataset, 'repeat_indices'):
-            warnings.warn(
-                'Please call `self.full_init()` manually to accrelate '
-                'the speed.')
+        warnings.warn('Please call self.full_init() manually to '
+                      'accelerate the speed.')
+        if not self._fully_initialized:
             self.full_init()
 
         ori_index = self._get_ori_dataset_idx(idx)
