@@ -101,6 +101,11 @@ class TestBaseDataset:
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/annotation_wrong_format.json')
+        with pytest.raises(TypeError):
+            self.dataset_type(
+                data_root=osp.join(osp.dirname(__file__), '../data/'),
+                data_prefix=dict(img=['img']),
+                ann_file='annotations/annotation_wrong_format.json')
 
         # test the instantiation of self.base_dataset when `parse_annotations`
         # return `list[dict]`

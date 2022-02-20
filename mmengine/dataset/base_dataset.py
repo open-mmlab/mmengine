@@ -83,10 +83,9 @@ def full_init_decorator(old_func: Callable) -> Any:
         if not hasattr(obj, 'full_init'):
             raise AttributeError(f"{type(obj)} doesn't have full_init "
                                  f"method.'")
-        if not hasattr(obj, '_fully_initialized') or \
-           not getattr(obj, '_fully_initialized'):
+        if not getattr(obj, '_fully_initialized', False):
             obj.full_init()  # type: ignore
-            obj.__setattr__('_fully_initialized', True)
+            obj._fully_initialized = True # type: ignore
 
         return old_func(obj, *args, **kwargs)
 
@@ -94,10 +93,9 @@ def full_init_decorator(old_func: Callable) -> Any:
 
 
 class BaseDataset(Dataset):
-    r""" BaseDataset for open source projects in OpenMMLab.
+    r"""BaseDataset for open source projects in OpenMMLab.
 
-    The class inherited from ``BaseDataset`` need to implement
-    ``parse_annotations`` method. The annotation format is shown as follows.
+    The annotation format is shown as follows.
 
     .. code-block:: none
 
@@ -131,8 +129,6 @@ class BaseDataset(Dataset):
               },
             ]
         }
-
-    All subclasses should implement ``parse_annotations()`` method.
 
     Args:
         ann_file (str): Annotation file path.
@@ -174,7 +170,7 @@ class BaseDataset(Dataset):
                  max_refetch: int = 1000):
 
         self.data_root = data_root
-        self.data_prefix = copy.deepcopy(data_prefix)
+        self.data_prefix = copy.copy(data_prefix)
         self.ann_file = ann_file
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._num_samples = num_samples
@@ -402,13 +398,12 @@ class BaseDataset(Dataset):
         """
         # cls.META will be overwritten by in_meta
         cls_meta = copy.deepcopy(cls.META)
-        if not in_meta:
+        if in_meta is None:
             return cls_meta
         if not isinstance(in_meta, dict):
-            raise TypeError('in_meta must be a dict!')
-        defined_keys = set()
+            raise TypeError(
+                f'in_meta should be a dict, but got {type(in_meta)}')
         for k, v in in_meta.items():
-            defined_keys.add(k)
             if isinstance(v, str):
                 # if filename in in_meta, this key will be further parsed.
                 # nested filename will be ignored.:
@@ -416,9 +411,9 @@ class BaseDataset(Dataset):
                     cls_meta[k] = list_from_file(v)
                 else:
                     cls_meta[k] = v
-
             else:
                 cls_meta[k] = v
+
         return cls_meta
 
     def _join_prefix(self):
@@ -426,20 +421,24 @@ class BaseDataset(Dataset):
         ``self.ann_file``.
 
         Examples:
-            self.data_prefix contains relative paths
+            >>> # self.data_prefix contains relative paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='d/e/')
             >>> self.ann_file = 'f'
             >>> self._join_prefix()
-            self.data_prefix = dict(img='a/b/c/d/e')
-            self.ann_file = 'a/b/c/f'
-            self.data_prefix contains absolute paths
+            >>> self.data_prefix
+            dict(img='a/b/c/d/e')
+            >>> self.ann_file
+            'a/b/c/f'
+            >>> # self.data_prefix contains absolute paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='/d/e/')
             >>> self.ann_file = 'f'
             >>> self._join_prefix()
-            self.data_prefix = dict(img='/d/e')
-            self.ann_file = 'a/b/c/f'
+            >>> self.data_prefix
+            dict(img='/d/e')
+            >>> self.ann_file
+            'a/b/c/f'
         """
         if not osp.isabs(self.ann_file):
             self.ann_file = osp.join(self.data_root, self.ann_file)
@@ -447,8 +446,12 @@ class BaseDataset(Dataset):
         for data_key, prefix in self.data_prefix.items():
             if prefix is None:
                 self.data_prefix[data_key] = self.data_root
-            elif not osp.isabs(prefix):
-                self.data_prefix[data_key] = osp.join(self.data_root, prefix)
+            elif isinstance(prefix, str):
+                if not osp.isabs(prefix):
+                    self.data_prefix[data_key] = osp.join(
+                        self.data_root, prefix)
+            else:
+                raise TypeError(f'{type(prefix)} is not a valid prefix')
 
     def _slice_data(self) -> List[dict]:
         """Slice ``self.data_infos``. BaseDataset supports only using the first
