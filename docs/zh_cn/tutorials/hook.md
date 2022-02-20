@@ -1,10 +1,27 @@
 # 钩子（Hook）
 
-钩子编程（hooking），也称作“挂钩”，是计算机程序设计术语，指通过拦截软件模块间的函数调用、消息传递、事件传递来修改或扩展操作系统、应用程序或其他软件组件的行为的各种技术。处理被拦截的函数调用、事件、消息的代码，被称为钩子（hook）。--维基百科
+钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用所有运行时注册到挂载点的方法。钩子编程的优点之一是提高程序的灵活性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
+
+```python
+pre_hooks = []
+post_hooks = []
+
+def main():
+    for func, arg in pre_hooks:
+        func(arg)
+    # do something here
+    for func, arg in post_hooks:
+        func(arg)
+
+pre_hooks.append((print, 'hello'))
+post_hooks.append((print, 'good bye'))
+
+main()
+```
 
 ## 钩子设计
 
-在介绍钩子的设计之前，我们先简单介绍如何使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)：
+在介绍 MMEngine 钩子的设计之前，我们先简单介绍如何使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)：
 
 ```python
 import torch
@@ -58,23 +75,25 @@ def main():
 ```
 
 上面的伪代码是训练一个模型的基本过程，为了实现无侵入定制训练过程，我们将训练过程划分为数个位点，只需要在这些位点插入各种逻辑即可达到目的，例如加载模型权重、更新模型参数。
+因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。根据需要，我们将训练过程划分成 16 个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
 
-因此，MMEngine 中钩子的作用就是在训练和验证模型的时候，在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。训练过程被划分成以下 14 个位点：
-
-- before_run
-- after_load_checkpoint
-- before_train_epoch
-- before_train_iter
-- after_train_iter
-- before_val_iter
-- after_val_iter
-- before_save_checkpoint
-- after_train_epoch
-- before_test_epoch
-- before_test_iter
-- after_test_iter
-- after_test_epoch
-- after_run
+- before_run: 训练开始前执行
+- after_load_checkpoint: 加载权重后执行
+- before_train_epoch: 遍历训练数据集前执行
+- before_train_iter: 模型前向计算前执行
+- after_train_iter: 模型前向计算后执行
+- after_train_epoch: 遍历完成训练数据集后执行
+- before_val_epoch: 遍历验证数据集前执行
+- before_val_iter: 模型前向计算前执行
+- after_val_iter: 模型前向计算后执行
+- after_val_epoch: 遍历完成验证数据集前执行
+- before_save_checkpoint: 保存权重前执行
+- after_train_epoch: 遍历完成训练数据集后执行
+- before_test_epoch: 遍历测试数据集前执行
+- before_test_iter: 模型前向计算前执行
+- after_test_iter: 模型前向计算后执行
+- after_test_epoch: 遍历完成测试数据集后执行
+- after_run: 训练结束后执行
 
 而控制整个训练过程的抽象在 MMEngine 中被设计为 Trainer，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Trainer，一种是以 epoch 为单位迭代的 [EpochBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_runner.py)，另一种是以 iteration 为单位迭代的 [IterBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_runner.py)。下面给出 EpochBasedTrainer 调用钩子的伪代码。
 
@@ -87,30 +106,29 @@ class EpochBasedTrainer(BaseTrainer):
         # train + val
         for i in range(self.max_epochs):
             self.call_hook('before_train_epoch')
-
             for img, data_sample in self.train_dataloader:
                 self.call_hook('before_train_iter', data_sample)
                 outputs = model(img, data_sample)
                 self.call_hook('after_train_iter', data_sample, outputs)
+            self.call_hook('after_train_epoch')
 
+            self.call_hook('before_val_epoch')
             if self._should_validate(i):
                 for img, data_sample in self.val_dataloader:
                     self.call_hook('before_val_iter', data_sample)
                     outputs = model(img, data_sample)
                     self.call_hook('after_val_iter', data_sample, outputs)
+            self.call_hook('after_val_epoch')
 
             self.call_hook('before_save_checkpoint', checkpoint)
-            self.call_hook('after_train_epoch')
 
         # test
         self.call_hook('before_test_epoch')
-
         if self._should_test():
             for img, data_sample in self.test_dataloader:
                 self.call_hook('before_test_iter', data_sample)
                 outputs = model(img, data_sample)
                 self.call_hook('after_test_iter', data_sample, outputs)
-
         self.call_hook('after_test_epoch')
 
         self.call_hook('after_run')
@@ -124,7 +142,7 @@ MMEngine 提供数个常用钩子，下面一一介绍这些钩子的用法。
 
 CheckpointHook 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。
 
-假设我们一共训练 21 个 epoch，希望每间隔 5 个 epoch 保存一次权重。
+假设我们一共训练 21 个 epoch 并希望每间隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
 ```python
 from mmengine import HOOKS
