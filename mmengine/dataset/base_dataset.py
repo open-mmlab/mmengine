@@ -278,7 +278,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         ``data_infos``.
 
         If some ``data_infos`` should be filtered according to specific logic,
-        the subclass override this method.
+        the subclass should override this method.
 
         Returns:
             List[dict]: Filtered results.
@@ -289,7 +289,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """Get category ids by index. Dataset wrapped by ClassBalancedDataset
         must implement this method.
 
-        The ``ClassBalancedDataset`` requires a subclass implements this
+        The ``ClassBalancedDataset`` requires a subclass which implements this
         method.
 
         Args:
