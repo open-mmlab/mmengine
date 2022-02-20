@@ -33,8 +33,9 @@ class DefaultSampler(Sampler[int]):
     Args:
         dataset (Sized): The dataset.
         shuffle (bool): Whether shuffle the dataset or not. Defaults to True.
-        seed (int, optional): Random seed. If None, set a random seed.
-            Defaults to None.
+        seed (int, optional): Random seed used to shuffle the sampler if
+            :attr:`shuffle=True`. This number should be identical across all
+            processes in the distributed group. Defaults to None.
         round_up (bool): Whether to add extra samples to make the number of
             samples evenly divisible by the world size. Defaults to True.
     """
