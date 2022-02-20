@@ -140,7 +140,7 @@ MMEngine 提供数个常用钩子，下面一一介绍这些钩子的用法。
 
 ### CheckpointHook
 
-CheckpointHook 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。
+`CheckpointHook` 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。
 
 假设我们一共训练 21 个 epoch 并希望每间隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
@@ -148,32 +148,32 @@ CheckpointHook 按照给定间隔保存模型的权重，如果是分布式多�
 from mmengine import HOOKS
 
 # by_epoch 的默认值为 True
-ckpt_cfg = dict(type='CheckpointHook', internal=5, by_epoch=True)
-HOOKS.build(ckpt_cfg)
+checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True)
+HOOKS.build(checkpoint_config)
 ```
 
 上面的配置会保存第 5, 10, 15, 20 个 epoch 的权重。但是不会保存最后一个 epoch（第 21 个 epoch）的权重，因为 `interval=5` 表示每间隔 5 个 epoch 才会保存一次权重，而第 21 个 epoch 还没有间隔 5 个 epoch，不过可以通过设置 `save_last=True` 保存最后一个 epoch 的权重。
 
 ```python
-ckpt_cfg = dict(type='CheckpointHook', internal=5, by_epoch=True, save_last=True)
+checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True, save_last=True)
 ```
 
-如果 IterBasedRunner，则可以将 `by_epoch` 设为 False，`internal=5` 表示每迭代 5 次保存一次权重。
+如果使用 `IterBasedTrainer`，则可以将 `by_epoch` 设为 False，`internal=5` 则表示每迭代 5 次保存一次权重。
 
 ```python
-ckpt_cfg = dict(type='CheckpointHook', internal=5, by_epoch=False)
+checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=False)
 ```
 
 权重默认保存在工作目录（work_dir），但可以通过设置 `out_dir` 改变保存路径。
 
 ```python
-ckpt_cfg = dict(type='CheckpointHook', internal=5, out_dir='/path/of/directory')
+checkpoint_config = dict(type='CheckpointHook', internal=5, out_dir='/path/of/directory')
 ```
 
 如果只想保存一定数量的权重，可以通过设置 `max_keep_ckpts` 参数实现最多保存 `max_keep_ckpts` 个权重，当保存的权重数超过 `max_keep_ckpts` 时，前面的权重会被删除。
 
 ```python
-ckpt_cfg = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
+checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 ```
 
 假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
@@ -181,10 +181,64 @@ ckpt_cfg = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 考虑到分布式训练过程，如果有必要（例如分布式训练中没有使用同步 BN，而是普通 BN），则可以设置参数 `sync_buffer=True`，在保存权重前，会对模型 buffers（典型的例如 BN 的全局均值和方差参数）进行跨卡同步，让每张卡的 buffers 参数都相同，此时在主进程保存的权重和 buffer 才是符合期望的行为。
 
 ```python
-ckpt_cfg = dict(type='CheckpointHook', internal=5, sync_buffer=True)
+checkpoint_config = dict(type='CheckpointHook', internal=5, sync_buffer=True)
 ```
 
 ### OptimizerHook
+
+`OptimizerHook` 包含一些 optimizer 相关的操作：
+
+- 梯度清零 runner.optimizer.zero_grad()
+- 反向传播 runner.output['loss'].backward()
+- 梯度截断 clip_grads（可选）
+- 参数更新 runner.optimizer.step()
+
+```python
+from mmengine import HOOKS
+
+optimizer_config = dict(type='OptimizerHook')
+HOOKS.build(optimizer_config)
+```
+
+使用以上配置即可实现在 Trainer 中完成梯度清零、反向传播以及参数更新。
+
+如果我们想对梯度进行阶段，避免梯度爆炸，则可以提供 grad_clip 参数，该参数的设置可参考 [clip_grad_norm_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+
+```python
+optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_type=2))
+```
+
+模型中可能存在不参与计算图的模型参数，有两种可能，一种是该参数没有参与前向计算，另一种参与了前向计算但没有参与 loss 的计算。而如果模型中存在这种参数，会导致 PyTorch 抛出错误 `RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one`。我们可以通过设置 `detect_anomalous_params=True` 来检测并找出这种参数。
+
+```python
+optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
+```
+
+注意，`detect_anomalous_params=True` 会降低训练速度，故只应用于调试。
+
+除了 `OptimizerHook`，MMEngine 还提供了 `Fp16OptimizerHook` 和 `GradientCumulativeOptimizerHook`，前者用于混合精度训练，后者用于梯度累计。
+
+`Fp16OptimizerHook` 是混合精度训练在 MMEngine 中的实现，主要逻辑如下：
+
+- 维护一个 FP32 数值精度模型的副本
+- 在每个 iteration
+  - 拷贝并且转换成 FP16 模型
+  - 前向传播（FP16 的模型参数)，此时 weights, activations 都是 FP16
+  - loss 乘 scale factor s
+  - 反向传播（FP16 的模型参数和参数梯度)， 此时 gradients 也是 FP16
+  - 参数梯度乘 1/s
+  - 利用 FP16 的梯度更新 FP32 的模型参数
+
+![Fp16OptimizerHook](https://user-images.githubusercontent.com/58739961/154833936-abd7de05-ab67-4176-afef-bb647363736c.png)
+
+关于 `Fp16OptimizerHook` 的使用请阅读[如何节省显存消耗](TODO)。
+
+`GradientCumulativeOptimizerHook` 用于节省显存，即通过指定梯度累积的次数，实现反向传播多次才更新参数，常常用于显存不足但希望用较大的 batch size 训练模型。
+
+```python
+# cumulative_iters=4 表示累加参数梯度 4 次才更新一次参数
+optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters=4)
+```
 
 ### ParamSchedulerHook
 
