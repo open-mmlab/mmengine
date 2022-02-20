@@ -65,7 +65,7 @@ class Compose:
         return format_string
 
 
-def full_init_before_called(old_func: Callable) -> Any:
+def full_init_decorator(old_func: Callable) -> Any:
     """Auto full_init decorator for class method.
 
      The decorated function will call ``obj.full_init()``, if
@@ -82,10 +82,11 @@ def full_init_before_called(old_func: Callable) -> Any:
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
-            raise AttributeError(f"{type(obj)} don't have full_init method.'")
+            raise AttributeError(f"{type(obj)} doesn't have full_init "
+                                 f"method.'")
         if not hasattr(obj, '_fully_initialized') or \
            not getattr(obj, '_fully_initialized'):
-            obj.__getattribute__('full_init')()
+            obj.full_init()  # type: ignore
             obj.__setattr__('_fully_initialized', True)
 
         return old_func(obj, *args, **kwargs)
@@ -131,33 +132,31 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
               },
             ]
         }
-    All subclasses should implement the following APIs:
 
-
-    - ``parse_annotations()``
+    All subclasses should implement ``parse_annotations()`` method.
 
     Args:
         ann_file (str): Annotation file path.
         meta (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
-        data_root (str, optional): Data root for `data_prefix` and `ann_file`.
-            Defaults to None.
+        data_root (str, optional): The root directory for ``data_prefix`` and
+            ``ann_file``. Defaults to None.
         data_prefix (dict, optional): Prefix for training data. Defaults to
             dict(img=None, ann=None).
-        filter_cfg (dict, optional): Filter cfg for ``filter_data``. Defaults
-            to None.
-        num_samples (int, optional): Support only use first few data in
+        filter_cfg (dict, optional): Config for filter data. Defaults to None.
+        num_samples (int, optional): Support using first few data in
             annotation file. Defaults to -1 which means using all
             ``data_infos``.
         serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
             shared RAM from master process instead of making a copy.
         pipeline (list, optional): Processing pipeline. Defaults to [].
-        test_mode (bool, optional): `test_mode=True` means in test phase.
+        test_mode (bool, optional): ``test_mode=True`` means in test phase.
             Defaults to False.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
-        max_refetch (int): The maximum number of cycles to get a valid image.
+        max_refetch (int, optional): The maximum number of cycles to get a
+            valid image. Defaults to 1000.
     """
     META: dict = dict()
 
@@ -200,7 +199,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             self.full_init()
             self._fully_initialized = True
 
-    @full_init_before_called
+    @full_init_decorator
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index and automatically call ``full_init`` if the
         dataset has not been fully initialized.
@@ -230,7 +229,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         If ``lazy_init=False``, ``full_init`` will be called during the
         instantiation phase and ``self._fully_initialized`` will be set to
         True. If ``obj._fully_initialized=False``, the class method decorated
-        by full_init_before_called will call ``full_init`` automatically.
+        by full_init_decorator will call ``full_init`` automatically.
         """
         if self._fully_initialized:
             return
@@ -253,7 +252,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
         Returns:
             dict: meta information collected from ``BaseDataset.META``,
-                annotation file and meta parameter during instantiation.
+            annotation file and meta parameter during instantiation.
         """
         return copy.deepcopy(self._meta)
 
@@ -505,7 +504,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         data_info = self.get_data_info(idx)
         return self.pipeline(data_info)
 
-    @full_init_before_called
+    @full_init_decorator
     def __len__(self) -> int:
         """Get the length of filtered dataset and automatically call
         ``full_init`` if the  dataset has not been fully init.

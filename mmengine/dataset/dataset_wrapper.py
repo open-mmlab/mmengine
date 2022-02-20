@@ -8,7 +8,7 @@ from typing import List, Sequence, Tuple
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
-from .base_dataset import BaseDataset, full_init_before_called
+from .base_dataset import BaseDataset, full_init_decorator
 
 
 class ConcatDataset(_ConcatDataset):
@@ -57,7 +57,7 @@ class ConcatDataset(_ConcatDataset):
         super(ConcatDataset, self).__init__(self.datasets)
         self._fully_initialized = True
 
-    @full_init_before_called
+    @full_init_decorator
     def _get_ori_dataset_idx(self, idx: int) -> Tuple[int, int]:
         """Convert global idx to local index.
 
@@ -82,7 +82,7 @@ class ConcatDataset(_ConcatDataset):
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
         return dataset_idx, sample_idx
 
-    @full_init_before_called
+    @full_init_decorator
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index.
 
@@ -95,7 +95,7 @@ class ConcatDataset(_ConcatDataset):
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
         return self.datasets[dataset_idx].get_data_info(sample_idx)
 
-    @full_init_before_called
+    @full_init_decorator
     def __len__(self):
         return super().__len__()
 
@@ -153,7 +153,7 @@ class RepeatDataset:
         self._ori_len = len(self.dataset)
         self._fully_initialized = True
 
-    @full_init_before_called
+    @full_init_decorator
     def _get_ori_dataset_idx(self, idx: int) -> int:
         """Convert global idx to local index.
 
@@ -165,7 +165,7 @@ class RepeatDataset:
         """
         return idx % self._ori_len
 
-    @full_init_before_called
+    @full_init_decorator
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index.
 
@@ -187,7 +187,7 @@ class RepeatDataset:
         sample_idx = self._get_ori_dataset_idx(idx)
         return self.dataset[sample_idx]
 
-    @full_init_before_called
+    @full_init_decorator
     def __len__(self):
         return self.times * self._ori_len
 
@@ -308,7 +308,7 @@ class ClassBalancedDataset:
 
         return repeat_factors
 
-    @full_init_before_called
+    @full_init_decorator
     def _get_ori_dataset_idx(self, idx: int) -> int:
         """Convert global idx to local index.
 
@@ -320,7 +320,7 @@ class ClassBalancedDataset:
         """
         return self.repeat_indices[idx]
 
-    @full_init_before_called
+    @full_init_decorator
     def get_cat_ids(self, idx: int) -> List[int]:
         """Get category ids of class balanced dataset by index.
 
@@ -333,7 +333,7 @@ class ClassBalancedDataset:
         sample_idx = self._get_ori_dataset_idx(idx)
         return self.dataset.get_cat_ids(sample_idx)
 
-    @full_init_before_called
+    @full_init_decorator
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index.
 
@@ -355,6 +355,6 @@ class ClassBalancedDataset:
         ori_index = self._get_ori_dataset_idx(idx)
         return self.dataset[ori_index]
 
-    @full_init_before_called
+    @full_init_decorator
     def __len__(self):
         return len(self.repeat_indices)

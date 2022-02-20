@@ -8,7 +8,7 @@ import torch
 
 from mmengine.dataset import (BaseDataset, ClassBalancedDataset, Compose,
                               ConcatDataset, RepeatDataset,
-                              full_init_before_called)
+                              full_init_decorator)
 from mmengine.registry import TRANSFORMS
 
 
@@ -353,12 +353,12 @@ class TestBaseDataset:
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_infos')
 
-    def test_full_init_before_called(self):
+    def test_full_init_decorator(self):
         with pytest.raises(AttributeError):
 
             class ClassWithoutFullInit:
 
-                @full_init_before_called
+                @full_init_decorator
                 def foo(self):
                     pass
 
