@@ -66,7 +66,7 @@ class DefaultSampler(Sampler[int]):
 
     def __iter__(self) -> Iterator[int]:
         """Iterate the indices."""
-        # deterministically shuffle based on epoch
+        # deterministically shuffle based on epoch and seed
         if self.shuffle:
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch)
