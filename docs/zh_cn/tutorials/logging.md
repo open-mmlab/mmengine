@@ -97,7 +97,7 @@ custom_log = log_buffer.excute('custom_method')  #  被 MethodRegister 修饰后
 
 ### 消息枢纽的创建与访问
 
-简单介绍如何访问 `root_message_hub`，对应 `task_name` 的 `message_hub`，以及最近被创建的 `latest_message_hub`
+简单介绍如何访问 `root_message_hub`，如果通过 `task_name` 访问对应 runner 的 `message_hub`，以及如何访问最近被创建的 `latest_message_hub`。
 
 ```Python
 root_message_hub = MessageHub.get_message_hub()  # 不传参，默认返回 root_message_hub
@@ -146,7 +146,7 @@ class CustomModels(nn.Module):
 
 - 消息汇总
 
-[LoggerHook](TODO) 需要将各组件分发的日志进行汇总，通过 [Visualizer/Writer]([mmengine/visualizer.md at main · open-mmlab/mmengine (github.com)](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)) 写到指定端。这边简单介绍 `LoggerHook` 是如何使用 `MessageHub` 及其成员 `LogBuffer`，灵活的选择需要被记录的字段（`momentum`，`lr` 等）及其统计方式（`latest`，`moving_mean` 等）。
+[LoggerHook](TODO) 需要将各组件分发的日志进行汇总，通过 [Writer]([mmengine/visualizer.md at main · open-mmlab/mmengine (github.com)](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)) 写到指定端。这边简单介绍 `LoggerHook` 是如何使用 `MessageHub` 及其成员 `LogBuffer`，灵活的选择需要被记录的字段（`momentum`，`lr` 等）及其统计方式（`latest`，`moving_mean` 等）。
 
 ```python
 # LoggerHook 模块收集日志：
@@ -193,14 +193,65 @@ class LoggerHook(Hook):
         ...
 ```
 
-如果需要可视化模型的特征图， `Visualizer` 也可以通过 `MessageHub` 来获取 `CustomModels ` 中分发的 `custom_feat`。
+如果需要可视化模型的特征图， `VisualizerHook` 也可以通过 `MessageHub` 来获取 `CustomModels ` 中分发的 `custom_feat`，实现特征可视化。
 
 ```python
-class VisualizerHook(Hook):
+class CustomVisualizerHook(Hook):
     def __init__(...
                 custom_keys=)
-	def after_train_iter(runner):
+	def after_train_epoch(runner):
         ...
         custom_feat = self.message.get_cache('custom_feat')
+        self.visualizer.draw_featmap(custom_feat)
+        ...
+```
+
+## 记录系统日志
+
+系统日志用于监视模型的训练状态，而记录器（`logger`）决定了系统日志的输出方式。为了能够导出格式统一、且能监听多进程训练状况的日志，MMEngine 在 `logging` 模块基础上，简化了配置流程，让用户可以十分简单的获取功能强大的记录器。
+
+### 获取记录器
+
+- `get_logger(name, log_file=None, log_level=logging.INFO, file_mode='w')`：通过 `name `来获取对应名字的 `logger`，记录日志时 `name` 会出现在日志抬头。当 `log_file` 不为空时， `logger` 在终端输出日志的同时，会将日志保存到本地。log_level 用于控制日志等级，默认为 `logging.INFO`，`file_mode` 控制导出文件的读写权限，默认为 `w`。
+
+我们可以通过 `get_logger` 来获取 `logger`，并将日志保存到本地。
+
+```Python
+logger = get_logger('mmengine', log_file='tmp.log')
+logger.info("this is a test")
+# 2022-02-20 22:26:38,860 - mmengine - INFO - this is a test
+```
+
+tmp.log
+
+```text
+2022-02-20 22:26:38,860 - mmengine - INFO - this is a test
+```
+
+### 日志等级不同，格式不同
+
+对于 `ERROR` 级别的日志，我们不仅需要输出日志的内容，还需要输出错误发生的位置：
+
+```python
+logger = get_logger('mmengine', log_file='tmp.log')
+logger.error('division by zero')
+
+#2022-02-20 22:49:11,317 - mmengine - ERROR - division by zero Found error in file: /path/to/test_logger.py function:div line: #111
+```
+
+### 分布式训练时导出日志
+
+分布式训练时，不同的进程会导出不同的日志
+
+```Python
+./work_dir
+├── rank1_tmp.log
+├── rank2_tmp.log
+├── rank3_tmp.log
+├── rank4_tmp.log
+├── rank5_tmp.log
+├── rank6_tmp.log
+├── rank7_tmp.log
+└── tmp.log
 ```
 
