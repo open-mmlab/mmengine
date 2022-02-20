@@ -70,7 +70,6 @@ for iter in range(max_iter):
 如果用户想使用自定义的日志统计方式，可以继承 `LogBuffer`类，并使用  `MethodRegister` 来装饰自定义方法，让其可以被 `execute` 函数调用。
 
 ```Python
-@LOG_
 class CustomLogBuffer(LogBuffer)
 	@MethodRegister
 	def custom_method(self, *args, *kwargs):
@@ -254,3 +253,4 @@ logger.error('division by zero')
 ├── rank7_tmp.log
 └── tmp.log
 ```
+
