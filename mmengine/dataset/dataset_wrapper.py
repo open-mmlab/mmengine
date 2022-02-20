@@ -45,6 +45,7 @@ class ConcatDataset(_ConcatDataset):
         Returns:
             dict: Meta information of first dataset.
         """
+        # Prevent `self._meta` from being modified by outside.
         return copy.deepcopy(self._meta)
 
     def full_init(self):

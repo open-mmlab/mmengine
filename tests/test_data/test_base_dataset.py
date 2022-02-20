@@ -28,14 +28,8 @@ class NotCallableTransform:
     pass
 
 
-class ToyDataset(BaseDataset):
-
-    def parse_annotations(self, raw_data_info: dict):
-        pass
-
-
 class TestBaseDataset:
-    dataset_type = ToyDataset
+    dataset_type = BaseDataset
     data_info = dict(
         filename='test_img.jpg', height=604, width=640, sample_idx=0)
     imgs = torch.rand((2, 3, 32, 32))
@@ -414,7 +408,7 @@ class TestBaseDataset:
 class TestConcatDataset:
 
     def _init_dataset(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
 
         # create dataset_a
         data_info = dict(filename='test_img.jpg', height=604, width=640)
@@ -442,7 +436,7 @@ class TestConcatDataset:
             datasets=[self.dataset_a, self.dataset_b])
 
     def test_full_init(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
 
         # create dataset_a
         data_info = dict(filename='test_img.jpg', height=604, width=640)
@@ -524,7 +518,7 @@ class TestConcatDataset:
 class TestRepeatDataset:
 
     def _init_dataset(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
@@ -540,7 +534,7 @@ class TestRepeatDataset:
             dataset=self.dataset, times=self.repeat_times)
 
     def test_full_init(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
@@ -587,7 +581,7 @@ class TestRepeatDataset:
 class TestClassBalancedDataset:
 
     def _init_dataset(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))
@@ -605,7 +599,7 @@ class TestClassBalancedDataset:
         self.cls_banlanced_datasets.repeat_indices = self.repeat_indices
 
     def test_full_init(self):
-        dataset = ToyDataset
+        dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_annotations = MagicMock(return_value=data_info)
         imgs = torch.rand((2, 3, 32, 32))

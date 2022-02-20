@@ -4,7 +4,6 @@ import functools
 import os.path as osp
 import pickle
 import warnings
-from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -94,7 +93,7 @@ def full_init_decorator(old_func: Callable) -> Any:
     return wrapper
 
 
-class BaseDataset(Dataset, metaclass=ABCMeta):
+class BaseDataset(Dataset):
     r""" BaseDataset for open source projects in OpenMMLab.
 
     The class inherited from ``BaseDataset`` need to implement
@@ -145,11 +144,12 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             dict(img=None, ann=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         num_samples (int, optional): Support using first few data in
-            annotation file. Defaults to -1 which means using all
-            ``data_infos``.
+            annotation file to facilitate training/testing on a smaller
+            dataset. Defaults to -1 which means using all ``data_infos``.
         serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
-            shared RAM from master process instead of making a copy.
+            shared RAM from master process instead of making a copy. Defaults
+            to True.
         pipeline (list, optional): Processing pipeline. Defaults to [].
         test_mode (bool, optional): ``test_mode=True`` means in test phase.
             Defaults to False.
@@ -235,7 +235,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return
 
         # load data information
-        self.data_infos = self.load_data_infos(self.ann_file)
+        self.data_infos = self.load_annotation(self.ann_file)
         # filter illegal data, such as data that has no annotations.
         self.data_infos = self.filter_data()
         # slice data_infos
@@ -243,6 +243,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         # serialize data_infos
         if self.serialize_data:
             self.data_infos_bytes, self.data_address = self._serialize_data()
+            # Empty cache for preventing making multiple copies of
+            # `self.data_info` when loading data multi-processes.
             self.data_infos = []
         self._fully_initialized = True
 
@@ -256,13 +258,13 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """
         return copy.deepcopy(self._meta)
 
-    @abstractmethod
     def parse_annotations(self,
                           raw_data_info: dict) -> Union[dict, List[dict]]:
-        """Parse raw annotation to target format. This method must be
-        implemented by class inherited from ``BaseDataset``.
+        """Parse raw annotation to target format.
+
         ``parse_annotations`` should return ``dict``or ``List[dict]``. Each
-        dict denotes a sample.
+        dict denotes a sample (For OpenMMLab 2.0 format dataset, this method
+        should be overridden rather than ``load_annotations``).
 
         Args:
             raw_data_info (dict): Raw annotation load from ``ann_file``
@@ -270,7 +272,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         Returns:
             Union[dict, List[dict]]: Parsed annotation.
         """
-        pass
+        return raw_data_info
 
     def filter_data(self) -> List[dict]:
         """Filter annotations according to filter_cfg. Defaults return all
@@ -334,10 +336,10 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 continue
             return data
 
-    def load_data_infos(self, ann_file: str) -> List[dict]:
+    def load_annotation(self, ann_file: str) -> List[dict]:
         """Load annotation from ann_file.
 
-        If the annotation file doesn't conform to `OpenMMLab 2.0 dataset format
+        If the annotation file doesn't conform to `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
         The subclass must override this method to load annotation.
 
@@ -371,7 +373,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         # load and parse data_infos
         data_infos = []
         for raw_data_info in raw_data_infos:
-            data_info = self.parse_annotations(copy.deepcopy(raw_data_info))
+            data_info = self.parse_annotations(raw_data_info)
             if isinstance(data_info, dict):
                 data_infos.append(data_info)
             elif isinstance(data_info, list):
