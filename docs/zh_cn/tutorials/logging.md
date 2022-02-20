@@ -1,269 +1,206 @@
-# 可视化 (Visualization)
+# 记录日志 (logging)
+
+在模型训练过程中，我们往往需要记录一些日志信息，例如迭代次数（`iter`），学习率（`lr`），损失（`loss`）等。常见的做法是将需要统计的日志存储到列表，然后根据个人偏好平滑、显示、保存数据。MMEnging 在保证记录方式灵活性的前提下，抽象出了具有统一接口的日志类，用户可以十分自然的使用日志类来管理日志信息。在 **OpenMMLab2.0** 中，用户可以通过更改配置文件，来决定哪些日志需要被记录，以何种方式被记录。
 
 ## 概述
 
-**(1) 总体介绍**
+我们将模型训练过程中的日志分成两类
 
-可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 算法库中，我们期望可视化功能的设计能满足以下需求：
+- 训练日志
 
-- 提供丰富的开箱即用可视化功能，能够满足大部分计算机视觉可视化任务
-- 高扩展性，可视化功能通常多样化，应该能够通过简单扩展实现定制需求
-- 能够在训练和测试流程的任意点位进行可视化
-- OpenMMLab 各个算法库具有统一可视化接口，利于用户理解和维护
+  训练日志用于监视模型的收敛情况，观察损失收敛是否正常，学习率变化是否符合预期，模型训练的数据是否正确，推理的结果是否变好等。[TensorBoard ](https://www.tensorflow.org/tensorboard?hl=zh-cn) 、 [Wandb](https://wandb.ai/site) 等工具会将训练日志以图表的形式展示，便于用户观察。
 
-基于上述需求，OpenMMLab 2.0 引入了绘制对象 Visualizer 和写端对象 Writer 的概念
+- 系统日志
 
-- **Visualizer 负责单张图片的绘制功能**
+  系统日志用于监视模型训练的状态，观察每次迭代的时间，三方库抛出的警告或异常。当然系统日志也会记录部分训练日志，但是只会在终端显示，或者以文本格式保存在本地。
 
-  MMEngine 提供了以 Matplotlib 库为绘制后端的 `Visualizer` 类，其具备如下功能：
+然而训练日志和系统日志可能来自于 [Runner](TODO) 的不同组件，例如需要从 [Scheduler](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/param_scheduler.md) 中获取学习率，[Hook](TODO) 中获取迭代时间、训练图片，[Model](TODO) 中获取特征图信息，因此需要一套组件之间的消息传输方案。MMEngine 通过 `MessageHub` 类实现跨模块通讯，让同一个 Runner 的不同组件能够轻松访问/修改同一份日志。最后 `LoggerHook` 汇总日志信息，将训练日志、系统日志分别输出到终端/本地/网页。
 
-  - 提供了一系列和视觉任务无关的基础方法，例如 `draw_bboxes` 和 `draw_texts` 等
-  - 上述各个基础方法支持链式调用，方便叠加绘制显示
-  - 提供了绘制特征图功能
+考虑到损失（`loss`）一类的日志需要额外记录历史信息（用于平滑），而学习率，迭代次数之类的却不需要。因此 MMEngine 设计了 `LogBuffer` 类以统一日志的存储方式。`LogBuffer` 除了提供一些基础接口来统计日志，如`latest`，`moving_mean` ，还支持用字符串来调用对应的统计方法。这一特性让用户能够在配置文件中选择日志的统计方式。
 
-  各个下游算法库可以继承 `Visualizer` 并在 `draw` 接口实现所需的可视化功能，例如 MMDetection 中的 `DetVisualizer` 继承自 `Visualizer` 并在 `draw` 接口实现可视化检测框、实例掩码和语义分割图等功能。Visualizer 类的 UML 关系图如下
+MMEngine 中 `MessageHub` 与 `LogBuffer` 结构关系如下：
 
-  <div align="center">
-   <img src="https://user-images.githubusercontent.com/17425982/154475592-7208a34b-f6cb-4171-b0be-9dbb13306862.png" >
-  </div>
+![结构关系](https://user-images.githubusercontent.com/57566630/154812484-25247662-242f-4b94-bc29-db0d42d6c181.png)
 
-- **Writer 负责将各类数据写入到指定后端**
+可以看到 `MessaeHub` 除了记录日志外，还会缓存（caches）信息。缓存主要用来记录临时变量，例如某次迭代时的特征图，缓存信息没有历史记录，每次更新都会被覆盖。
 
-  为了统一接口调用，MMEngine 提供了统一的抽象类 `BaseWriter`，和一些常用的 Writer 如 `LocalWriter` 来支持将数据写入本地，`TensorboardWriter` 来支持将数据写入 Tensorboard，`WandbWriter` 来支持将数据写入 Wandb。用户也可以自定义 Writer 来将数据写入自定义后端。写入的数据可以是图片，模型结构图，标量如模型精度指标等。
+## 日志存储（LogBuffer）的使用
 
-  考虑到在训练或者测试过程中同时存在多个 Writer 对象，例如同时想进行本地和远程端写数据，为此设计了 `ComposedWriter` 负责管理所有运行中实例化的 Writer 对象，其会自动管理所有 Writer 对象，并遍历调用所有 Writer 对象的方法。Writer 类的 UML 关系图如下
-  <div align="center">
-   <img src="https://user-images.githubusercontent.com/17425982/154474755-080b955b-436b-4cdb-9a49-16a9f231ce81.png" >
-  </div>
+`LogBuffer ` 的主要接口如下：
 
-**(2) Writer 和 Visualizer 关系**
+- `update(value, count)`：将 `value ` 和 `count` 更新到日志队列（队列长度有上限），`value` 为日志统计 `count` 次的累加值。以统计训练时间为例，每个 `Iter`（一个 `batch_size`）的训练耗时为 `iter_time`。如果我们想统计每个 `Iter` 的平均耗时，需要调用 `update(value=iter_time, count=1)`（含义为 1 个 iter 的耗时为 `iter_time`），如果需要统计每张图片的平均耗时，则调用 `update(value=iter_time, count=batch_size)` （含义为 `batch_size ` 张图片的耗时为 `iter_time`）。`LogBuffer` 的滑动平均接口会根据 `count ` 的值返回不同含义的日志。
 
-Writer 对象的核心功能是写各类数据到指定后端中，例如写图片、写模型图、写超参和写模型精度指标等，后端可以指定为本地存储、Wandb 和 Tensorboard 等等。在写图片过程中，通常希望能够将预测结果或者标注结果绘制到图片上，然后再进行写操作，为此在 Writer 内部维护了 Visualizer 对象，将 Visualizer 作为 Writer 的一个属性。当需要利用 Visualizer 对象来绘制结果到图片上时候，可以通过调用 Writer 的 Visualizer 属性对象进行绘制。一个简略的演示代码如下
+- `moving_mean(window_size=None)`：平滑窗口内的日志，即 `sum(values[-window_size:]) / sum(counts[-window_size:]) `，默认返回全局平均值。
+- `min(window_size=None)`：返回窗口内日志的最小值，默认返回全局最小值。
+- `max(window_size=None)`：返回窗口内日志的最大值，默认返回全局最大值。
+- `latest()`：返回最近一次更新的日志。
+- `excute('name', *args, **kwargs)`：通过字符串来访问方法。
+- `data()`：返回日志。
 
-```python
-# 为了方便理解，没有继承 BaseWriter
-class WandbWriter:
-    def __init__(self, visualizer=None):
-        self._visualizer = None
-        if visualizer:
-            # 示例配置 visualizer=dict(type='DetVisualizer')
-            self._visualizer = VISUALIZERS.build(visualizer)
+这里简单介绍如何使用 `LogBuffer` 记录日志。
 
-    @property
-    def visualizer(self):
-        return self._visualizer
-
-    def add_image(self, name, image, datasample=None, step=0, **kwargs):
-        if self._visualize:
-           self._visualize.draw(image, datasample)
-           # 调用 Writer API 写图片到后端
-           self.wandb.log({name: self.visualizer.get_image()}, ...)
-           ...
-        else:
-           # 调用 Writer API 汇总并写图片到后端
-           ...
-
-    def add_scaler(self, name, value, step):
-         self.wandb.log({name: value}, ...)
+```Python
+logs = dict(lr=LogBuffer(), loss=LogBuffer())  # 字典配合 LogBuffer 记录不同字段的日志
+max_iter = 100
+log_interval = 20
+for iter in range(max_iter):
+    lr = iter / max_iter * 0.1  # 线性学习率变化
+    loss = 1 / iter  # loss
+    logs['lr'].update('lr', 1)
+    logs['loss'].update('lr', 1)
+ 	if iter % log_interval == 0:
+        latest_lr = logs['lr'].latest()
+        mean_loss = logs['loss'].moving_mean(log_interval)
+        print(f'lr:   {latest_lr}'   # 平滑最新更新的 log_interval 个数据。
+              f'loss: {mean_loss}')  # 返回最近一次更新的学习率。
+    
 ```
 
-对于非 `LocalWriter` 或者不需要调用写图片的 `add_image` 接口需求场景，visualizer 参数可以为 None。
-
-注意 `Visualizer` 仅仅有单图绘制功能，如果想将绘制结果保存，例如保存到本地、Wandb 或者 Tensorboard，可以使用 Writer 写端对象。一个推荐的写法如下
+为了让用户能够通过配置文件来指定日志的统计方式， `LogBuffer` 支持用字符串来访问方法。
 
 ```python
-# 配置文件
-writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
-# 实例化和调用
-writer_obj=WRITERS.build(writer)
-writer_obj.add_image('demo_image', image, datasample)
-```
-
-在 Runner 中默认的实现方式也是类似上述写法，我们也推荐用户在模型中开发自定义可视化功能的时候也采用这种方式。如果用户有必要直接调用 visualizer 中接口进行绘制功能，则可以采用如下写法
-
-```python
-# 配置文件
-writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
-# 实例化和调用
-writer_obj=WRITERS.build(writer)
-# 以调用 draw 方法为例
-writer_obj.visualizer.draw(image, datasample)
-writer_obj.add_image('demo_image', writer_obj.visualizer.get_image())
-```
-
-在使用 Jupyter notebook 或者其他地方不需要 writer 的情形下，用户可以自己实例化 visualizer。一个简单的例子如下
-
-```python
-# 实例化 visualizer
-visualizer=dict(type='DetVisualizer')
-visualizer = VISUALIZERS.build(visualizer)
-visualizer.draw(image, datasample)
-```
-
-
-## 绘制对象 Visualizer
-
-绘制对象 Visualizer 负责单张图片的各类绘制功能，默认绘制后端为 Matplotlib。为了统一 OpenMMLab 各个算法库的可视化接口，MMEngine 定义提供了基于基础绘制功能的 `Visualizer` 类，下游库可以继承 `Visualizer` 并实现 `draw` 接口实现自己的可视化需求，例如 MMDetection 的 [`DetVisualizer`]()。
-
-### Visualizer
-
-`Visualizer` 提供了基础而通用的绘制功能，主要接口如下：
-
-**(1) 绘制无关的功能性接口**
-
-- set_image 设置原始图片数据
-- get_image 获取绘制后的 Numpy 格式图片数据
-- show 可视化
-- register_task 注册绘制函数(其作用在 *自定义 Visualizer* 小节描述)
-
-**(2) 绘制相关接口**
-
-- draw 用户使用的抽象绘制接口
-- draw_featmap 绘制特征图
-- draw_bboxes 绘制单个或者多个边界框
-- draw_texts 绘制单个或者多个文本框
-- draw_lines 绘制单个或者多个线段
-- draw_circles 绘制单个或者多个圆
-- draw_polygons 绘制单个或者多个多边形
-- draw_binary_masks 绘制单个或者多个二值掩码
-
-**(1) 用例 1 - 链式调用**
-
-例如用户先绘制边界框，在此基础上绘制文本，绘制线段，则调用过程为：
-
-```python
-visualizer.set_image(image)
-visualizer.draw_bboxes(...).draw_texts(...).draw_lines(...)
-```
-
-**(2) 用例 2 - 可视化特征图**
-
-特征图可视化是一个常见的功能，通过调用 `draw_featmap` 可以直接可视化特征图，目前该函数支持如下功能：
-
-- 输入 4 维 BCHW 格式的 tensor，通道 C 是 1 或者 3 时候，展开成一张图片显示
-- 输入 4 维 BCHW 格式的 tensor，通道 C 大于 3 时候，则支持选择激活度最高通道，展开成一张图片显示
-- 输入 3 维 CHW 格式的 tensor，则选择激活度最高的 topk，然后拼接成一张图显示
-
-```python
-# 如果提前设置了图片，则特征图或者图片叠加显示，否则只显示特征图
-visualizer.set_image(image)
-visualizer.draw_featmap(...)
-visualizer.save(...)
-```
-
-### 自定义 Visualizer
-
-自定义的 Visualizer 中大部分情况下只需要实现 `get_image` 和 `draw` 接口。`draw` 是最高层的用户调用接口，`draw` 接口负责所有绘制功能，例如绘制检测框、检测掩码 mask 和 检测语义分割图等等。依据任务的不同，`draw` 接口实现的复杂度也不同。
-
-以目标检测可视化需求为例，可能需要同时绘制边界框 bbox、掩码 mask 和语义分割图 seg_map，如果如此多功能全部写到 `draw` 方法中会难以理解和维护。为了解决该问题，`Visualizer` 基于 OpenMMLab 2.0 抽象数据接口规范支持了 `register_task` 函数。假设 MMDetection 中需要同时绘制预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 `DetVisualizer` 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@Visualizer.register_task` 装饰器。
-
-```python
-class DetVisualizer(Visualizer):
-
-    def get_image(self):
-        ...
-
-    def draw(self, data_sample, image=None, show_gt=True, show_pred=True):
-        if show_gt:
-            for task in self.task_dict:
-                task_attr = 'gt_' + task
-                if task_attr in data_sample:
-                    # DataType.GT 表示当前绘制标注数据
-                    self.task_dict[task](self, data_sample[task_attr], DataType.GT)
-        if show_pred:
-            for task in self.task_dict:
-                task_attr = 'pred_' + task
-                if task_attr in data_sample:
-                    # DataType.PRED 表示当前绘制预测结果
-                    self.task_dict[task](self, data_sample[task_attr], DataType.PRED)
-
-    @Visualizer.register_task('instances')
-    def draw_instance(self, instances, data_type):
-        ...
-
-    @Visualizer.register_task('sem_seg')
-    def draw_sem_seg(self, pixel_data, data_type):
+for iter in range(max_iter):
+		...
+    if iter % log_interval == 0:
+        latest_lr = logs['lr'].excute('latest')							# 通过字符串来访问方法
+        mean_loss = logs['loss'].excute('moving_mean', log_interval)
         ...
 ```
 
-注意：是否使用 `register_task` 装饰器函数不是必须的，如果用户自定义 Visualizer，并且 `draw `实现非常简单，则无需考虑 `register_task`。
+如果用户想使用自定义的日志统计方式，可以继承 `LogBuffer`类，并使用  `MethodRegister` 来装饰自定义方法，让其可以被 `excute` 函数调用。
 
-## 写端 Writer
+```Python
+@LOG_
+class CustomLogBuffer(LogBuffer)
+	@MethodRegister
+	def custom_method(self, *args, *kwargs):
+		...
 
-Visualizer 只是实现了单张图片的可视化功能，但是在训练或者测试过程中，对一些关键指标或者模型训练超参的记录非常重要，此功能通过写端 Writer 实现。
-
-BaseWriter 定义了对外调用的接口规范，主要接口如下：
-
-- add_hyperparams 写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
-- add_image 写图片
-- add_scalar 写标量
-- add_graph 写模型图
-- visualizer 绘制对象，可以为 None
-- experiment 写后端对象，例如 Wandb 对象和 Tensorboard 对象
-
-`BaseWriter` 定义了 4 种常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。
-
-由于 Visualizer 和 Writer 对象是解耦的，用户可以通过配置文件自由组合各种 Visualizer 和 Writer，例如 `WandbWriter` 绑定 `Visualizer`，表示图片上绘制结果功能由 `Visualizer` 提供，但是最终图片是写到了 Wandb 端，一个简单的例子如下所示
-
-```python
-# 配置文件
-writer=dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer'))
-# 实例化和调用
-writer_obj=WRITERS.build(writer)
-# 写图片
-writer_obj.add_image('demo_image', image, datasample)
-# 写模型精度值
-writer_obj.add_scalar('mAP', 0.9)
+log_buffer = CustomLogBuffer()
+custom_log = log_buffer.excute('custom_method')  #  被 MethodRegister 修饰后，可以通过字符串调用对应方法。
 ```
 
-## 组合写端 ComposedWriter
+## 消息枢纽 （MessageHub）的使用
 
-考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 `ComposedWriter` 类，在训练或者测试过程中 `ComposedWriter` 会依次调用各个 Writer，主要接口如下：
+`LogBuffer` 可以十分简单的完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 MMEngine  使用 `MessageHub` 来实现组件与组件之间、`runner` 与 `runner` 之间的互联互通。`MessageHub` 不仅会管理各个模块分发的 `LogBuffer`，还会管理一些缓存，例如模型的特征图，缓存信息每次更新都会被覆盖。
 
-- add_hyperparams 写超参，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
-- add_image 写图片
-- add_scalar 写标量
-- add_graph 写模型图
-- setup_env 设置 work_dir 等必备的环境变量
-- get_writer 获取某个 writer
-- `__enter__` 上下文进入函数
-- `__exit__` 上下文推出函数
+`MessageHub` 的主要接口如下：
 
-为了让用户可以在代码的任意位置进行数据可视化，`ComposedWriter` 类实现 `__enter__` 和 ` __exit__`方法，并且在 `Runner` 中使上下文生效，从而在该上下文作用域内，用户可以通过 `get_writers` 工具函数获取 `ComposedWriter` 类实例，从而调用该类的各种可视化和写方法。一个简单粗略的实现和用例如下
+- `get_message_hub(name='', log_cfg=dict(type='LogBuffer'))`：当不指定 `name` 时，获取汇总所有 `runner` 消息的 `root_message_hub`。当指定 `name=task_name` 时，则返回对应 runner 的 `message_hub`（task 和 runner 之间的关系见：[runner](TODO)）。`log_cfg` 用于配置自定义的 `LogBuffer ` 类型，默认使用 MMEngine 的 `LogBuffer`。
+- `get_message_hub_latest()`：获取最近被创建的 `message_hub`。考虑到有些组件无法获取到对应 runner 的 `task_name`，可以通过 `get_message_hub_latest` 来获取当前组件隶属 runner 的 `message_hub`。
+- `update_log(key, value, count=1)`：更新指定字段的日志。`value，count` 即 `LogBuffer` 的 `update` 接口的入参。
+- `update_cache(key, value)`： 更新缓存并覆盖。
+- `get_log(key)`: 获取指定字段的日志。
+- `get_cache(key)`: 获取指定字段的缓存。
+- `log_buffers`: 返回所有日志
+- `caches`：返回所有缓存。
 
-```python
-writer=WRITERS.build(cfg.writer)
+### 消息枢纽的创建与访问
 
-# 假设在 epoch 训练过程中
-with ComposedWriter(writer):
-    while self.epoch < self._max_epochs:
-         for i, flow in enumerate(workflow):
-            ...
+简单介绍如何访问 `root_message_hub`，对应 `task_name` 的 `message_hub`，以及最近被创建的 `latest_message_hub`
+
+```Python
+root_message_hub = MessageHub.get_message_hub()  # 不传参，默认返回 root_message_hub
+task1_message_hub1 = MessageHub.get_message_hub('task1')  # 创建 task1_message_hub
+latest_message_hub = MessageHub.get_message_hub_latest()  # task1_message_hub 是最近创建，因此返回 task1_message_hub
+task2_message_hub2 = MessageHub.get_message_hub('task2')  # 创建 task2_message_hub2
+latest_message_hub = MessageHub.get_message_hub_latest()  # task2_message_hub2 是最近创建，因此返回 task2_message_hub2
+message_hub = MessageHub.get_message_hub('task1')  # 指定 task_name，访问之前创建的 task1_message_hub
 ```
 
-```python
-# 配置文件写法
-writer = dict(type='WandbWriter', init_kwargs=dict(project='demo'),
-              visualizer= dict(type='DetLocalVisualizer', show=False))
+### 消息枢纽的分发与记录
 
-# 在上下文作用域生效的任意位置
-composed_writer=get_writers()
-composed_writer.add_image('vis_image',image, datasample, iter=iter)
-composed_writer.add_scalar('mAP', val, iter=iter)
-```
+这边以 [IterTimerHook](TODO) 和 用户自定义的 `CustomModels` 为例，介绍 MMEngine 如实使用  `MessageHub` 实现模块之间的信息交互。
 
-如果存在多个 writer 对象，则配置文件字段 writer 为列表，如下所示
+- 消息分发
 
 ```python
-# 配置文件写法
-writer = [dict(type='LocalWriter', save_dir='demo_dir', visualizer=dict(type='DetVisualizer')),
-         dict(type='WandbWriter', init_kwargs=dict(project='demo'))]
+class IterTimerHook(Hook):
+    def before_run(self, runner):
+        # 对于能获取到 task 信息的组件，根据 task 获取对应 runner 的 message_hub
+        self.message_hub = MessageHub.get_message_hub(runner.task)
+        
+    def before_epoch(self, runner):
+        self.t = time.time()
+        
+    def before_iter(self, runner):
+        # 使用 update_log 更新日志信息
+        self.message_hub.update_log 更新日志信息('data_time', time.time() - self.t)
 
-# 在上下文作用域生效的任意位置
-composed_writer=get_writers()
-# 内部会依次调用 LocalWriter 和 WandbWriter 的 add_image 方法进行写图片到本地和 Wandb 远端
-composed_writer.add_image('vis_image', image, datasample, iter=iter)
-composed_writer.add_scalar('mAP', val, iter=iter)
+    def after_iter(self, runner):
+        # 使用 update_log 更新日志信息
+        self.message_hub.update_log('time', time.time() - self.t)
+        self.t = time.time()
+        
+class CustomModels(nn.Module):
+    def __init__():
+        ...
+        # model 模块无法获取 task 信息，直接使用 get_message_hub_latest() 获取当前 runner 的 message_hub
+        self.message_hub = MessageHub.get_message_hub_latest()
+    
+    def forward(img):
+        feat = self.model(x)
+        # 更新缓存。
+        self.message_hub.update_cache('custom_feat', feat)
 ```
 
-在训练和测试过程中，用户可以在上下文生效的代码任意位置通过调用 `get_writers()` 获得 ComposedWriter 对象，然后通过该对象接口可以进行绘制或者写操作，内部会依次调用配置文件中定义的所有 writer 的相应接口。
+- 消息汇总
+
+[LoggerHook](TODO) 需要将各组件分发的日志进行汇总，通过 [Visualizer/Writer]([mmengine/visualizer.md at main · open-mmlab/mmengine (github.com)](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)) 写到指定端。这边简单介绍 `LoggerHook` 是如何使用 `MessageHub` 及其成员 `LogBuffer`，灵活的选择需要被记录的字段（`momentum`，`lr` 等）及其统计方式（`latest`，`moving_mean` 等）。
+
+```python
+# LoggerHook 模块收集日志：
+class LoggerHook(Hook):
+    # 默认的平滑方式
+    def __init__(...
+                 interval=20,
+        		 custom_keys=[dict(log_key='momentum',
+                                   type='latest', 
+                                   method='latest')]
+                 smooth_method='moving_mean',
+                 ...
+                 ):
+        ...
+        # 额外记录用户感兴趣的日志，用户需要提供日志的字段以及平滑方式
+        self.interval = interval
+        self.custom_keys = custom_keys
+        self.smooth_method = smooth_method
+        
+    def log(self, runner):
+        ...
+        log_dict = OrderedDict()
+        log_buffers = self.message.log_buffers
+        log_dict['lr'] = log_buffers['lr'].latest() # 对于统计方式固定的字段，直接调用对应方法，例如字段为 `lr` 时，使用 `latest` 接口
+        for key, log_buffer in log_buffers:
+            # 根据用户配置的 `smooth_method`，对数据进行平滑，默认 窗口大小为 self.interval。
+            log_dict[key]  = log_buffer[key].excute(self.smooth_method,
+                                              self.interval)
+        # 根据用户给出的平滑尺度和平滑方法来统计自定义字段的日志。
+        for item in self.custom_keys:
+            key = item['log_key']
+            method = item['method']
+            method_type = item['type']
+            if method_type == 'latest':
+                log_dict[key] = log_buffer[key].excute('latest')
+            elif method_type == 'global_smooth'  # 全局平滑 ，窗口大小为日志的总长度，不需要传参，平滑方式由用户指定。
+                log_dict[key] = log_buffer[key].excute(method)
+            elif method_type == 'epoch_smooth'	 # 窗口大小为 runner.inner_iter
+                log_dict[key] = log_buffer[key].excute(method,
+                                                       runner.inner_iter)
+            elif method_type == 'iter_smooth'
+                log_dict[key] = log_buffer[key].excute(method,
+                                                       self.interval)
+        ...
+```
+
+如果需要可视化模型的特征图， `Visualizer` 也可以通过 `MessageHub` 来获取 `CustomModels ` 中分发的 `custom_feat`。
+
+```python
+class VisualizerHook(Hook):
+    def __init__(...
+                custom_keys=)
+	def after_train_iter(runner):
+        ...
+        custom_feat = self.message.get_cache('custom_feat')
+```
+
