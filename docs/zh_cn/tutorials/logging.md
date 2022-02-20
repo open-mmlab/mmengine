@@ -34,7 +34,7 @@ MMEngine 中 `MessageHub` 与 `LogBuffer` 结构关系如下：
 - `min(window_size=None)`：返回窗口内日志的最小值，默认返回全局最小值。
 - `max(window_size=None)`：返回窗口内日志的最大值，默认返回全局最大值。
 - `latest()`：返回最近一次更新的日志。
-- `excute('name', *args, **kwargs)`：通过字符串来访问方法。
+- `execute('name', *args, **kwargs)`：通过字符串来访问方法。
 - `data()`：返回日志。
 
 这里简单介绍如何使用 `LogBuffer` 记录日志。
@@ -53,7 +53,7 @@ for iter in range(max_iter):
         mean_loss = logs['loss'].moving_mean(log_interval)
         print(f'lr:   {latest_lr}'   # 平滑最新更新的 log_interval 个数据。
               f'loss: {mean_loss}')  # 返回最近一次更新的学习率。
-    
+
 ```
 
 为了让用户能够通过配置文件来指定日志的统计方式， `LogBuffer` 支持用字符串来访问方法。
@@ -62,12 +62,12 @@ for iter in range(max_iter):
 for iter in range(max_iter):
 		...
     if iter % log_interval == 0:
-        latest_lr = logs['lr'].excute('latest')							# 通过字符串来访问方法
-        mean_loss = logs['loss'].excute('moving_mean', log_interval)
+        latest_lr = logs['lr'].execute('latest')							# 通过字符串来访问方法
+        mean_loss = logs['loss'].execute('moving_mean', log_interval)
         ...
 ```
 
-如果用户想使用自定义的日志统计方式，可以继承 `LogBuffer`类，并使用  `MethodRegister` 来装饰自定义方法，让其可以被 `excute` 函数调用。
+如果用户想使用自定义的日志统计方式，可以继承 `LogBuffer`类，并使用  `MethodRegister` 来装饰自定义方法，让其可以被 `execute` 函数调用。
 
 ```Python
 @LOG_
@@ -77,7 +77,7 @@ class CustomLogBuffer(LogBuffer)
 		...
 
 log_buffer = CustomLogBuffer()
-custom_log = log_buffer.excute('custom_method')  #  被 MethodRegister 修饰后，可以通过字符串调用对应方法。
+custom_log = log_buffer.execute('custom_method')  #  被 MethodRegister 修饰后，可以通过字符串调用对应方法。
 ```
 
 ## 消息枢纽 （MessageHub）的使用
@@ -119,10 +119,10 @@ class IterTimerHook(Hook):
     def before_run(self, runner):
         # 对于能获取到 task 信息的组件，根据 task 获取对应 runner 的 message_hub
         self.message_hub = MessageHub.get_message_hub(runner.task)
-        
+
     def before_epoch(self, runner):
         self.t = time.time()
-        
+
     def before_iter(self, runner):
         # 使用 update_log 更新日志信息
         self.message_hub.update_log 更新日志信息('data_time', time.time() - self.t)
@@ -131,13 +131,13 @@ class IterTimerHook(Hook):
         # 使用 update_log 更新日志信息
         self.message_hub.update_log('time', time.time() - self.t)
         self.t = time.time()
-        
+
 class CustomModels(nn.Module):
     def __init__():
         ...
         # model 模块无法获取 task 信息，直接使用 get_message_hub_latest() 获取当前 runner 的 message_hub
         self.message_hub = MessageHub.get_message_hub_latest()
-    
+
     def forward(img):
         feat = self.model(x)
         # 更新缓存。
@@ -155,7 +155,7 @@ class LoggerHook(Hook):
     def __init__(...
                  interval=20,
         		 custom_keys=[dict(log_key='momentum',
-                                   type='latest', 
+                                   type='latest',
                                    method='latest')]
                  smooth_method='moving_mean',
                  ...
@@ -165,7 +165,7 @@ class LoggerHook(Hook):
         self.interval = interval
         self.custom_keys = custom_keys
         self.smooth_method = smooth_method
-        
+
     def log(self, runner):
         ...
         log_dict = OrderedDict()
@@ -173,7 +173,7 @@ class LoggerHook(Hook):
         log_dict['lr'] = log_buffers['lr'].latest() # 对于统计方式固定的字段，直接调用对应方法，例如字段为 `lr` 时，使用 `latest` 接口
         for key, log_buffer in log_buffers:
             # 根据用户配置的 `smooth_method`，对数据进行平滑，默认 窗口大小为 self.interval。
-            log_dict[key]  = log_buffer[key].excute(self.smooth_method,
+            log_dict[key]  = log_buffer[key].execute(self.smooth_method,
                                               self.interval)
         # 根据用户给出的平滑尺度和平滑方法来统计自定义字段的日志。
         for item in self.custom_keys:
@@ -181,14 +181,14 @@ class LoggerHook(Hook):
             method = item['method']
             method_type = item['type']
             if method_type == 'latest':
-                log_dict[key] = log_buffer[key].excute('latest')
+                log_dict[key] = log_buffer[key].execute('latest')
             elif method_type == 'global_smooth'  # 全局平滑 ，窗口大小为日志的总长度，不需要传参，平滑方式由用户指定。
-                log_dict[key] = log_buffer[key].excute(method)
+                log_dict[key] = log_buffer[key].execute(method)
             elif method_type == 'epoch_smooth'	 # 窗口大小为 runner.inner_iter
-                log_dict[key] = log_buffer[key].excute(method,
+                log_dict[key] = log_buffer[key].execute(method,
                                                        runner.inner_iter)
             elif method_type == 'iter_smooth'
-                log_dict[key] = log_buffer[key].excute(method,
+                log_dict[key] = log_buffer[key].execute(method,
                                                        self.interval)
         ...
 ```
@@ -254,4 +254,3 @@ logger.error('division by zero')
 ├── rank7_tmp.log
 └── tmp.log
 ```
-
