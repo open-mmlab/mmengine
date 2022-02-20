@@ -5,7 +5,7 @@ import os.path as osp
 import pickle
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -23,18 +23,18 @@ class Compose:
             config dict to be composed.
     """
 
-    def __init__(self, transforms: Sequence[Union[Dict, object]]):
+    def __init__(self, transforms: Sequence[Union[dict, Callable]]):
         self.transforms: List[Callable] = []
         for transform in transforms:
             if isinstance(transform, dict):
                 transform = TRANSFORMS.build(transform)
                 if not callable(transform):
-                    raise TypeError(f'{type(transform)} is not callable')
+                    raise TypeError(f'{type(transform)} is not callable.')
                 self.transforms.append(transform)
             elif callable(transform):
                 self.transforms.append(transform)
             else:
-                raise TypeError('transform must be callable or a dict')
+                raise TypeError('transform must be callable or a dict.')
 
     def __call__(self, data: dict) -> Optional[dict]:
         """Call function to apply transforms sequentially.
@@ -52,10 +52,10 @@ class Compose:
         return data
 
     def __repr__(self):
-        """print ``self.transforms`` in sequence.
+        """Print ``self.transforms`` in sequence.
 
         Returns:
-            str: format string
+            str: Formatted string.
         """
         format_string = self.__class__.__name__ + '('
         for t in self.transforms:
@@ -69,20 +69,20 @@ def full_init_before_called(old_func: Callable) -> Any:
     """Auto full_init decorator for class method.
 
      The decorated function will call ``obj.full_init()``, if
-     ``obj._fully_initialized=True``.
+     ``obj._fully_initialized=False``.
 
     Args:
         old_func (Callable): Decorated function, make sure the first arg is an
             instance with ``full_init`` method.
 
     Returns:
-        Any: Depend on old_func
+        Any: Depends on old_func.
     """
 
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
-            raise AttributeError(f"{type(obj)} don't have full_init method'")
+            raise AttributeError(f"{type(obj)} don't have full_init method.'")
         if not hasattr(obj, '_fully_initialized') or \
            not getattr(obj, '_fully_initialized'):
             obj.__getattribute__('full_init')()
@@ -138,24 +138,25 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     Args:
         ann_file (str): Annotation file path.
-        meta (dict, optional): meta infos for dataset, such as class
-        information. Defaults to None.
-        data_root (str, optional): data root for `data_prefix` and `ann_file`.
+        meta (dict, optional): Meta information for dataset, such as class
+            information. Defaults to None.
+        data_root (str, optional): Data root for `data_prefix` and `ann_file`.
             Defaults to None.
-        data_prefix (dict, optional): prefix for training data. Defaults to
+        data_prefix (dict, optional): Prefix for training data. Defaults to
             dict(img=None, ann=None).
-        filter_cfg (dict, optional): filter cfg for ``filter_data``. Defaults
-        to None
-        num_samples (int, optional): support only use first few data in
-            annotation file. Defaults to -1 and use all ``data_infos``
-        serialize_data (bool, optional): whether to hold memory using
+        filter_cfg (dict, optional): Filter cfg for ``filter_data``. Defaults
+            to None.
+        num_samples (int, optional): Support only use first few data in
+            annotation file. Defaults to -1 which means using all
+            ``data_infos``.
+        serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
             shared RAM from master process instead of making a copy.
-        pipeline (list, optional): Processing pipeline. Defaults to None.
-        test_mode (bool, optional): test_mode=True during test phase. Defaults
-            to False.
-        lazy_init (bool, optional): whether to load annotation during
-            instantiation. Defaults to False
+        pipeline (list, optional): Processing pipeline. Defaults to [].
+        test_mode (bool, optional): `test_mode=True` means in test phase.
+            Defaults to False.
+        lazy_init (bool, optional): Whether to load annotation during
+            instantiation. Defaults to False.
         max_refetch (int): The maximum number of cycles to get a valid image.
     """
     META: dict = dict()
@@ -168,7 +169,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                  filter_cfg: Optional[dict] = None,
                  num_samples: int = -1,
                  serialize_data: bool = True,
-                 pipeline: Sequence = None,
+                 pipeline: List[Union[dict, Callable]] = [],
                  test_mode: bool = False,
                  lazy_init: bool = False,
                  max_refetch: int = 1000):
@@ -192,8 +193,6 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             self._join_prefix()
 
         # build pipeline
-        if not pipeline:
-            pipeline = []
         self.pipeline = Compose(pipeline)
 
         self._fully_initialized = False
@@ -204,13 +203,13 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     @full_init_before_called
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index and automatically call ``full_init`` if the
-        dataset has not been fully init.
+        dataset has not been fully initialized.
 
         Args:
-            idx (int): Index of data.
+            idx (int): The index of data.
 
         Returns:
-            dict: The i-th annotation of the dataset.
+            dict: The idx-th annotation of the dataset.
         """
         if self.serialize_data:
             start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
@@ -228,7 +227,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     def full_init(self):
         """Load annotation file and set ``self._fully_initialized`` to True.
 
-        ``If ``lazy_init=True``, ``full_init`` will be called during the
+        If ``lazy_init=False``, ``full_init`` will be called during the
         instantiation phase and ``self._fully_initialized`` will be set to
         True. If ``obj._fully_initialized=False``, the class method decorated
         by full_init_before_called will call ``full_init`` automatically.
@@ -237,7 +236,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return
 
         # load data information
-        self.data_infos = self._load_data_infos(self.ann_file)
+        self.data_infos = self.load_data_infos(self.ann_file)
         # filter illegal data, such as data that has no annotations.
         self.data_infos = self.filter_data()
         # slice data_infos
@@ -250,34 +249,39 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @property
     def meta(self) -> dict:
-        """Get meta of dataset.
+        """Get meta information of dataset.
 
         Returns:
-            dict: meta_info collected from BaseDataset.META, annotation file
-                and meta parameter during Instantiation.
+            dict: meta information collected from ``BaseDataset.META``,
+                annotation file and meta parameter during instantiation.
         """
-        return self._meta
+        return copy.deepcopy(self._meta)
 
     @abstractmethod
     def parse_annotations(self,
                           raw_data_info: dict) -> Union[dict, List[dict]]:
         """Parse raw annotation to target format. This method must be
-        implemented by class inherited from BaseDataset. ``parse_annotations``
-        should return ``dict``or ``list[dict]``. Each dict denotes a sample.
+        implemented by class inherited from ``BaseDataset``.
+        ``parse_annotations`` should return ``dict``or ``List[dict]``. Each
+        dict denotes a sample.
 
         Args:
-            raw_data_info (dict): raw annotation load from ``ann_file``
+            raw_data_info (dict): Raw annotation load from ``ann_file``
 
         Returns:
-            dict, list[dict]: parsed annotation
+            Union[dict, List[dict]]: Parsed annotation.
         """
         pass
 
     def filter_data(self) -> List[dict]:
-        """Filter annotation according to filter_cfg. Defaults filter no data.
+        """Filter annotations according to filter_cfg. Defaults return all
+        ``data_infos``.
+
+        If some ``data_infos`` should be filtered according to specific logic,
+        the subclass override this method.
 
         Returns:
-            list[dict]: Filtered results
+            List[dict]: Filtered results.
         """
         return self.data_infos
 
@@ -285,27 +289,31 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """Get category ids by index. Dataset wrapped by ClassBalancedDataset
         must implement this method.
 
+        The ``ClassBalancedDataset`` requires a subclass implements this
+        method.
+
         Args:
-            idx (int): Index of data.
+            idx (int): The index of data.
 
         Returns:
-            list[int]: All categories in the image of specified index.
+            List[int]: All categories in the image of specified index.
         """
-        pass
+        raise NotImplementedError(f'{type(self)} must implement `get_cat_ids` '
+                                  f'method')
 
     def __getitem__(self, idx: int) -> dict:
-        """Get the i-th image of dataset after ``self.pipelines`` and
-        automatically call  ``full_init`` if the  dataset has not been fully
-        init.
+        """Get the idx-th image of dataset after ``self.pipelines`` and
+        ``full_init`` will be called if the  dataset has not been fully
+        initialized.
 
         During training phase, if ``self.pipelines`` get ``None``,
         ``self._rand_another`` will be called until a valid image is retrieved.
 
         Args:
-            idx: The index of self.data_infos
+            idx (int): The index of self.data_infos
 
         Returns:
-            dict: The i-th image of dataset after ``self.pipelines``.
+            dict: The idx-th image of dataset after ``self.pipelines``.
         """
         if not self._fully_initialized:
             warnings.warn(
@@ -327,20 +335,24 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 continue
             return data
 
-    def _load_data_infos(self, ann_file: str) -> List[dict]:
-        """load annotation from ann_file.
+    def load_data_infos(self, ann_file: str) -> List[dict]:
+        """Load annotation from ann_file.
+
+        If the annotation file doesn't conform to `OpenMMLab 2.0 dataset format
+        <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
+        The subclass must override this method to load annotation.
 
         Args:
-            ann_file (str): absolute annotation file path if ``self.root=None``
-                or relative path if ``self.root=/path/to/data/``
+            ann_file (str): Absolute annotation file path if ``self.root=None``
+                or relative path if ``self.root=/path/to/data/``.
 
         Note:
             `metadata` in ann_file has the lowest priority, which will be
             overwritten by ``dataset.META`` during instantiation
 
         Returns:
-            list[dict]: list of annotation
-        """
+            List[dict]: A list of annotation.
+        """  # noqa: E501
         check_file_exist(ann_file)
         anns = load(ann_file)
         if not isinstance(anns, dict):
@@ -378,14 +390,14 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @classmethod
     def _get_meta_data(cls, in_meta: dict = None) -> dict:
-        """collect meta infos from meta dict.
+        """Collect meta information from meta dict.
 
         Args:
-            in_meta (dict): in_meta contains meta infos. if in_meta contains
-             existed filename, it will be parsed by ``list_from_file``.
+            in_meta (dict): Meta information dict. if in_meta contains existed
+                filename, it will be parsed by ``list_from_file``.
 
         Returns:
-            dict: parsed meta infos.
+            dict: Parsed meta information.
         """
         # cls.META will be overwritten by in_meta
         cls_meta = copy.deepcopy(cls.META)
@@ -442,7 +454,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         few data.
 
         Returns:
-            list: slice of ``self.data_infos``
+            List[dict]: A slice of ``self.data_infos``
         """
         if self._num_samples > 0:
             return self.data_infos[:self._num_samples]
@@ -450,13 +462,14 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             return self.data_infos
 
     def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Serialize ``self.data_infos``, which will called in ``full_init``.
+        """Serialize ``self.data_infos``, which will be called in
+        ``full_init``.
 
         Hold memory using serialized objects, data loader workers can use
         shared RAM from master process instead of making a copy.
 
         Returns:
-            Tuple[list, np.ndarray]: serialize result and corresponding
+            Tuple[np.ndarray, np.ndarray]: serialize result and corresponding
                 address.
         """
 
@@ -476,7 +489,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """Get random index.
 
         Returns:
-            int: Random int from 0 to ``len(self)``
+            int: Random int from 0 to ``len(self)-1``
         """
         return np.random.randint(0, len(self))
 
@@ -484,10 +497,10 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """Get data after pipeline.
 
         Args:
-            idx (int): index of dataset.
+            idx (int): The index of dataset.
 
         Returns:
-            Any: Depends on ``self.pipeline``
+            Any: Depends on ``self.pipeline``.
         """
         data_info = self.get_data_info(idx)
         return self.pipeline(data_info)

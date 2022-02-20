@@ -17,9 +17,9 @@ class ConcatDataset(_ConcatDataset):
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
     Args:
-        datasets (list[BaseDataset]): A list of datasets.
-        lazy_init (bool, optional): whether to load annotation during
-        instantiation. Defaults to False.
+        datasets (Sequence[BaseDataset]): A list of datasets.
+        lazy_init (bool, optional): Whether to load annotation during
+            instantiation. Defaults to False.
     """
 
     def __init__(self,
@@ -43,7 +43,7 @@ class ConcatDataset(_ConcatDataset):
         """Get the meta information of the first dataset in ``ConcatDataset``.
 
         Returns:
-            dict: meta of fitest dataset.
+            dict: Meta information of first dataset.
         """
         return copy.deepcopy(self._meta)
 
@@ -62,15 +62,17 @@ class ConcatDataset(_ConcatDataset):
         """Convert global idx to local index.
 
         Args:
-            idx: Global index of ``RepeatDataset``.
+            idx (int): Global index of ``RepeatDataset``.
 
         Returns:
-            idx (int): Local index of data.
+            Tuple[int, int]: The index of ``self.datasets`` and the local index
+                of data.
         """
         if idx < 0:
             if -idx > len(self):
                 raise ValueError(
-                    'absolute value of index should not exceed dataset length')
+                    'absolute value of index should not exceed dataset '
+                    'length.')
             idx = len(self) + idx
         # Get the inner index of single dataset
         dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
@@ -85,10 +87,10 @@ class ConcatDataset(_ConcatDataset):
         """Get annotation by index.
 
         Args:
-            idx: Global index of ``ConcatDataset``.
+            idx (int): Global index of ``ConcatDataset``.
 
         Returns:
-            dict: The i-th annotation of the dataset.
+            dict: The idx-th annotation of the datasets.
         """
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
         return self.datasets[dataset_idx].get_data_info(sample_idx)
@@ -117,11 +119,14 @@ class RepeatDataset:
     Args:
         dataset (BaseDataset): The dataset to be repeated.
         times (int): Repeat times.
-        lazy_init (bool, optional): whether to load annotation during
-        instantiation. Defaults to False.
+        lazy_init (bool, optional): Whether to load annotation during
+            instantiation. Defaults to False.
     """
 
-    def __init__(self, dataset, times, lazy_init=False):
+    def __init__(self,
+                 dataset: BaseDataset,
+                 times: int,
+                 lazy_init: bool = False):
         self.dataset = dataset
         self.times = times
         self._meta = dataset.meta
@@ -161,7 +166,15 @@ class RepeatDataset:
         return idx % self._ori_len
 
     @full_init_before_called
-    def get_data_info(self, idx):
+    def get_data_info(self, idx: int) -> dict:
+        """Get annotation by index.
+
+        Args:
+            idx (int): Global index of ``ConcatDataset``.
+
+        Returns:
+            dict: The idx-th annotation of the datasets.
+        """
         sample_idx = self._get_ori_dataset_idx(idx)
         return self.dataset.get_data_info(sample_idx)
 
@@ -255,13 +268,13 @@ class ClassBalancedDataset:
         """Get repeat factor for each images in the dataset.
 
         Args:
-            dataset (BaseDataset): The dataset
+            dataset (BaseDataset): The dataset.
             repeat_thr (float): The threshold of frequency. If an image
                 contains the categories whose frequency below the threshold,
                 it would be repeated.
 
         Returns:
-            list[float]: The repeat factors for each images in the dataset.
+            List[float]: The repeat factors for each images in the dataset.
         """
         # 1. For each category c, compute the fraction # of images
         #   that contain it: f(c)
@@ -300,7 +313,7 @@ class ClassBalancedDataset:
         """Convert global idx to local index.
 
         Args:
-            idx: Global index of ``RepeatDataset``.
+            idx (int): Global index of ``RepeatDataset``.
 
         Returns:
             int: Local index of data.
@@ -308,27 +321,27 @@ class ClassBalancedDataset:
         return self.repeat_indices[idx]
 
     @full_init_before_called
-    def get_cat_ids(self, idx):
+    def get_cat_ids(self, idx: int) -> List[int]:
         """Get category ids of class balanced dataset by index.
 
         Args:
             idx (int): Index of data.
 
         Returns:
-            list[int]: All categories in the image of specified index.
+            List[int]: All categories in the image of specified index.
         """
         sample_idx = self._get_ori_dataset_idx(idx)
         return self.dataset.get_cat_ids(sample_idx)
 
     @full_init_before_called
-    def get_data_info(self, idx):
+    def get_data_info(self, idx: int) -> dict:
         """Get annotation by index.
 
         Args:
-            idx: Global index of ``ConcatDataset``.
+            idx (int): Global index of ``ConcatDataset``.
 
         Returns:
-            dict: The i-th annotation of the dataset.
+            dict: The idx-th annotation of the dataset.
         """
         sample_idx = self._get_ori_dataset_idx(idx)
         return self.dataset.get_data_info(sample_idx)
