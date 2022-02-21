@@ -57,7 +57,7 @@ class ConcatDataset(_ConcatDataset):
             d.full_init()
         # Get the cumulative sizes of `self.datasets`. For example, the length
         # of `self.datasets` is [2, 3, 4], the cumulative sizes is [2, 5, 9]
-        super(ConcatDataset, self).__init__(self.datasets)
+        super().__init__(self.datasets)
         self._fully_initialized = True
 
     @force_full_init

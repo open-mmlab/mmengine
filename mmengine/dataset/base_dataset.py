@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import functools
+import gc
 import os.path as osp
 import pickle
 import warnings
@@ -82,9 +83,13 @@ def force_full_init(old_func: Callable) -> Any:
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
-            raise AttributeError(f"{type(obj)} doesn't have full_init "
-                                 f"method.'")
+            raise AttributeError(f'{type(obj)} does not have full_init '
+                                 'method.')
         if not getattr(obj, '_fully_initialized', False):
+            warnings.warn('Attribute `_fully_initialized` is not defined in'
+                          f'{type(obj)}, `full_init` will still be called '
+                          f'and {type(obj)}._fully_initialized will be set to'
+                          f'True')
             obj.full_init()  # type: ignore
             obj._fully_initialized = True  # type: ignore
 
@@ -159,7 +164,7 @@ class BaseDataset(Dataset):
             valid image. Defaults to 1000.
 
     Note:
-        BaseDataset collect meta information from `annotation file` (the
+        BaseDataset collects meta information from `annotation file` (the
         lowest priority), ``BaseDataset.META``(medium) and `meta parameter`
         (highest) passed to constructors. The lower priority meta information
         will be overwritten by higher one.
@@ -224,7 +229,7 @@ class BaseDataset(Dataset):
             data_info = pickle.loads(bytes)
         else:
             data_info = self.data_infos[idx]
-
+        # The same as accessing the list by a negative index.
         if idx >= 0:
             data_info['sample_idx'] = idx
         else:
@@ -240,7 +245,8 @@ class BaseDataset(Dataset):
         ``obj._fully_initialized=False``, the class method decorated by
         ``force_full_init`` will call ``full_init`` automatically.
 
-        The following steps will be called by ``full_init``.
+        Several steps to initialize annotation:
+
             - load_annotations: Load annotations from annotation file.
             - filter data information: Filter annotations according to
             filter_cfg.
@@ -262,7 +268,8 @@ class BaseDataset(Dataset):
             self.data_infos_bytes, self.data_address = self._serialize_data()
             # Empty cache for preventing making multiple copies of
             # `self.data_info` when loading data multi-processes.
-            self.data_infos = []
+            self.data_infos.clear()
+            gc.collect()
         self._fully_initialized = True
 
     @property
@@ -279,9 +286,10 @@ class BaseDataset(Dataset):
                           raw_data_info: dict) -> Union[dict, List[dict]]:
         """Parse raw annotation to target format.
 
-        ``parse_annotations`` should return ``dict``or ``List[dict]``. Each
-        dict denotes a sample (For OpenMMLab 2.0 format dataset, this method
-        should be overridden rather than ``load_annotationss``).
+        ``parse_annotations`` should return ``dict`` or ``List[dict]``. Each
+        dict contains the annotations of a training sample. If the protocol of
+        the sample annotations is changed, this function can be overridden to
+        update the parsing logic while keeping compatibility.
 
         Args:
             raw_data_info (dict): Raw annotation load from ``ann_file``
@@ -295,7 +303,7 @@ class BaseDataset(Dataset):
         """Filter annotations according to filter_cfg. Defaults return all
         ``data_infos``.
 
-        If some ``data_infos`` should be filtered according to specific logic,
+        If some ``data_infos`` could be filtered according to specific logic,
         the subclass should override this method.
 
         Returns:
@@ -325,7 +333,8 @@ class BaseDataset(Dataset):
         initialized.
 
         During training phase, if ``self.pipelines`` get ``None``,
-        ``self._rand_another`` will be called until a valid image is retrieved.
+        ``self._rand_another`` will be called until a valid image is fetched or
+         the maximum limit of refetech is reached.
 
         Args:
             idx (int): The index of self.data_infos
@@ -343,11 +352,11 @@ class BaseDataset(Dataset):
             return self._prepare_data(idx)
 
         for _ in range(self.max_refetch):
-            data = self._prepare_data(idx)
-            if data is None:
+            data_sample = self._prepare_data(idx)
+            if data_sample is None:
                 idx = self._rand_another()
                 continue
-            return data
+            return data_sample
 
         raise Exception(f'Cannot find valid image after {self.max_refetch}! '
                         'Please check your image path and pipelines')
@@ -355,7 +364,7 @@ class BaseDataset(Dataset):
     def load_annotations(self, ann_file: str) -> List[dict]:
         """Load annotations from an annotation file.
 
-        If the annotation file doesn't conform to `OpenMMLab 2.0 format dataset
+        If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
         The subclass must override this method for load annotations.
 
@@ -407,8 +416,8 @@ class BaseDataset(Dataset):
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_meta (dict): Meta information dict. if in_meta contains existed
-                filename, it will be parsed by ``list_from_file``.
+            in_meta (dict): Meta information dict. If ``in_meta`` contains
+                existed filename, it will be parsed by ``list_from_file``.
 
         Returns:
             dict: Parsed meta information.
@@ -466,7 +475,7 @@ class BaseDataset(Dataset):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
             else:
-                raise TypeError(f'prefix should be a string or None, but got '
+                raise TypeError('prefix should be a string or None, but got '
                                 f'{type(prefix)}')
 
     def _slice_data(self) -> List[dict]:
@@ -489,7 +498,7 @@ class BaseDataset(Dataset):
         """Serialize ``self.data_infos`` to save memory when launching multiple
         workers in data loading. This function will be called in ``full_init``.
 
-        Hold memory using serialized objects, data loader workers can use
+        Hold memory using serialized objects, and data loader workers can use
         shared RAM from master process instead of making a copy.
 
         Returns:
@@ -521,7 +530,7 @@ class BaseDataset(Dataset):
         """Get data processed by ``self.pipeline``.
 
         Args:
-            idx (int): The index of dataset.
+            idx (int): The index of ``data_info``.
 
         Returns:
             Any: Depends on ``self.pipeline``.
