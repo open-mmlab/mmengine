@@ -15,14 +15,14 @@ def function_pipeline(data_info):
     return data_info
 
 
-@TRANSFORMS._register_module
+@TRANSFORMS.register_module()
 class CallableTransform:
 
     def __call__(self, data_info):
         return data_info
 
 
-@TRANSFORMS._register_module
+@TRANSFORMS.register_module()
 class NotCallableTransform:
     pass
 
