@@ -361,7 +361,7 @@ class TestBaseDataSample(TestCase):
         metainfo, data = self.setup_data()
         instances = BaseDataSample(metainfo)
         for key, value in data.items():
-            instances._set_field(key, value, dtype=BaseDataElement)
+            instances.set_field(name=key, value=value, dtype=BaseDataElement)
         self.check_key_value(instances, data=data)
 
         # test type check
@@ -369,19 +369,20 @@ class TestBaseDataSample(TestCase):
         instances = BaseDataSample()
         for key, value in data.items():
             with self.assertRaises(AssertionError):
-                instances._set_field(key, value, dtype=BaseDataSample)
+                instances.set_field(
+                    name=key, value=value, dtype=BaseDataSample)
 
     def test_del_field(self):
         metainfo, data = self.setup_data()
         instances = BaseDataSample(metainfo)
         for key, value in data.items():
-            instances._set_field(value=value, name=key, dtype=BaseDataElement)
-        instances._del_field('gt_instances')
-        instances._del_field('pred_instances')
+            instances.set_field(value=value, name=key, dtype=BaseDataElement)
+        instances.del_field('gt_instances')
+        instances.del_field('pred_instances')
 
         # gt_instance has been deleted, instances does not have the gt_instance
         with self.assertRaises(AttributeError):
-            instances._del_field('gt_instances')
+            instances.del_field('gt_instances')
         assert 'gt_instances' not in instances
         assert 'pred_instances' not in instances
 
@@ -467,8 +468,3 @@ class TestBaseDataSample(TestCase):
 
         # test_data_items
         assert len(dict(instances.data_items())) == len(dict(data.items()))
-
-
-if __name__ == '__main__':
-    sample = TestBaseDataSample()
-    sample.test_set_get_fields()

@@ -282,15 +282,14 @@ class BaseDataElement:
             if not hasattr(self, name):
                 super().__setattr__(name, val)
             else:
-                raise AttributeError(
-                    f'{name} has been used as a '
-                    f'private attribute, which is immutable. ')
+                raise AttributeError(f'{name} has been used as a '
+                                     'private attribute, which is immutable. ')
         else:
             if name in self._metainfo_fields:
                 raise AttributeError(f'`{name}` is used in meta information,'
-                                     f'which is immutable. if you want to'
-                                     f'change the key in metainfo, please use'
-                                     f'set_metainfo(dict(name=val))')
+                                     'which is immutable. if you want to'
+                                     'change the key in metainfo, please use'
+                                     'set_metainfo(dict(name=val))')
 
             self._data_fields.add(name)
             super().__setattr__(name, val)
@@ -611,7 +610,7 @@ class BaseDataSample:
         >>>     proposals = property(
         >>>         fget=partial(BaseDataSample._get_field, name='_proposals'),
         >>>         fset=partial(
-        >>>             BaseDataSample._set_field,
+        >>>             BaseDataSample.set_field,
         >>>             name='_proposals',
         >>>             dtype=BaseDataElement),
         >>>         fdel=partial(BaseDataSample._del_field, name='_proposals'),
@@ -620,7 +619,7 @@ class BaseDataSample:
         >>>         fget=partial(BaseDataSample._get_field,
                                  name='_gt_instances'),
         >>>         fset=partial(
-        >>>             BaseDataSample._set_field,
+        >>>             BaseDataSample.set_field,
         >>>             name='_gt_instances',
         >>>             dtype=BaseDataElement),
         >>>         fdel=partial(BaseDataSample._del_field,
@@ -630,7 +629,7 @@ class BaseDataSample:
         >>>         fget=partial(
         >>>             BaseDataSample._get_field, name='_pred_instances'),
         >>>         fset=partial(
-        >>>             BaseDataSample._set_field,
+        >>>             BaseDataSample.set_field,
         >>>             name='_pred_instances',
         >>>             dtype=BaseDataElement),
         >>>         fdel=partial(
@@ -658,34 +657,6 @@ class BaseDataSample:
         if data is not None:
             self.set_data(data)
 
-    def _set_field(self,
-                   name: str,
-                   value: Any,
-                   field_type: str = 'data',
-                   dtype: Optional[Type] = None) -> None:
-        assert field_type in ['metainfo', 'data']
-        if dtype is not None:
-            assert isinstance(
-                value,
-                dtype), f'{value} should be a {dtype} but get {type(value)}'
-
-        super().__setattr__(name, value)
-        if field_type == 'metainfo':
-            self._metainfo_fields.add(name)
-        else:
-            self._data_fields.add(name)
-
-    def _get_field(self, name: str) -> Any:
-        return getattr(self, name)
-
-    def _del_field(self, name: str, field_type: str = 'data') -> None:
-        assert field_type in ['metainfo', 'data']
-        super().__delattr__(name)
-        if field_type == 'metainfo':
-            self._metainfo_fields.remove(name)
-        else:
-            self._data_fields.remove(name)
-
     def set_metainfo(self, metainfo: dict) -> None:
         """Add and change meta information.
 
@@ -703,7 +674,7 @@ class BaseDataSample:
                                      f'which is immutable. if you want to'
                                      f'change the key in data, please use'
                                      f'set_data')
-            self._set_field(k, v, 'metainfo', None)
+            self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
         """Update a dict to `data_fields`.
@@ -715,7 +686,7 @@ class BaseDataSample:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but get {data}'
         for k, v in data.items():
-            self._set_field(k, v, 'data', None)
+            self.set_field(name=k, value=v, field_type='data', dtype=None)
 
     def new(self,
             metainfo: dict = None,
@@ -812,10 +783,10 @@ class BaseDataSample:
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
 
-    def __setattr__(self, name: str, val: Any):
+    def __setattr__(self, name: str, value: Any):
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
-                super().__setattr__(name, val)
+                super().__setattr__(name, value)
             else:
                 raise AttributeError(
                     f'{name} has been used as a '
@@ -827,20 +798,19 @@ class BaseDataSample:
                                      f'change the key in metainfo, please use'
                                      f'set_metainfo(dict(name=val))')
 
-            self._set_field(name, val, 'data', None)
+            self.set_field(
+                name=name, value=value, field_type='data', dtype=None)
 
     def __delattr__(self, item: str):
 
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
                                  f'private attribute, which is immutable. ')
+        super().__delattr__(item)
         if item in self._metainfo_fields:
-            self._del_field(item, 'metainfo')
-        elif item in self._data_fields:
-            self._del_field(item, 'data')
+            self._metainfo_fields.remove(item)
         else:
-            # TODO
-            super().__delattr__(item)
+            self._data_fields.remove(item)
 
     # dict-like methods
     __setitem__ = __setattr__
@@ -876,16 +846,33 @@ class BaseDataSample:
                     item in self._metainfo_fields
 
     def get_field(self, name: str) -> Any:
-        """Special method for get union field."""
-        return self._get_field(name)
+        """Special method for get union field, used as property.getter
+        functions."""
+        return getattr(self, name)
 
-    def set_field(self, val: Any, name: str, dtype: Type):
-        """Special method for set union field."""
-        self._set_field(name, val, 'data', dtype)
+    def set_field(self,
+                  value: Any,
+                  name: str,
+                  dtype: Optional[Type] = None,
+                  field_type: str = 'data') -> None:
+        """Special method for set union field, used as property.setter
+        functions."""
+        assert field_type in ['metainfo', 'data']
+        if dtype is not None:
+            assert isinstance(
+                value,
+                dtype), f'{value} should be a {dtype} but get {type(value)}'
 
-    def del_field(self, name: str):
-        """Special method for del union field."""
-        self._del_field(name, 'data')
+        super().__setattr__(name, value)
+        if field_type == 'metainfo':
+            self._metainfo_fields.add(name)
+        else:
+            self._data_fields.add(name)
+
+    def del_field(self, name: str) -> None:
+        """Special method for del union field, used as property.delter
+        functions."""
+        self.__delattr__(name)
 
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataSample':
