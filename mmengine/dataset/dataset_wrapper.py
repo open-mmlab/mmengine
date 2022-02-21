@@ -69,7 +69,7 @@ class ConcatDataset(_ConcatDataset):
 
         Returns:
             Tuple[int, int]: The index of ``self.datasets`` and the local index
-                of data.
+            of data.
         """
         if idx < 0:
             if -idx > len(self):
