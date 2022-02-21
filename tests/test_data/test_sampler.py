@@ -61,7 +61,7 @@ class TestDefaultSampler(TestCase):
     @patch('mmengine.data.sampler.sync_random_seed', return_value=7)
     def test_shuffle(self, mock1, mock2):
         # test seed=None
-        sampler = InfiniteSampler(self.dataset, seed=None)
+        sampler = DefaultSampler(self.dataset, seed=None)
         self.assertEqual(sampler.seed, 7)
 
         # test random seed
