@@ -68,7 +68,7 @@ class Compose:
 
 
 def force_full_init(old_func: Callable) -> Any:
-    """The class method decorated by ``force_full_init`` will be forced to call
+    """Those methods decorated by ``force_full_init`` will be forced to call
     ``full_init`` if the instance has not been fully initiated.
 
     Args:
@@ -151,7 +151,10 @@ class BaseDataset(Dataset):
         test_mode (bool, optional): ``test_mode=True`` means in test phase.
             Defaults to False.
         lazy_init (bool, optional): Whether to load annotation during
-            instantiation. Defaults to False.
+            instantiation. In some cases, such as visualization, only the meta
+            information of the dataset is needed, which is not necessary to
+            load annotation file. ``Basedataset`` can skip load annotations to
+            save time by set ``lazy_init=False``. Defaults to False.
         max_refetch (int, optional): The maximum number of cycles to get a
             valid image. Defaults to 1000.
 
@@ -221,10 +224,12 @@ class BaseDataset(Dataset):
             data_info = pickle.loads(bytes)
         else:
             data_info = self.data_infos[idx]
+
         if idx >= 0:
             data_info['sample_idx'] = idx
         else:
             data_info['sample_idx'] = len(self) + idx
+
         return data_info
 
     def full_init(self):
@@ -336,17 +341,16 @@ class BaseDataset(Dataset):
 
         if self.test_mode:
             return self._prepare_data(idx)
-        loop_count = 0
-        while True:
-            if loop_count >= self.max_refetch:
-                raise Exception(f'Cannot find valid image after {loop_count}! '
-                                f'please check your image path and pipelines')
-            loop_count += 1
+
+        for _ in range(self.max_refetch):
             data = self._prepare_data(idx)
             if data is None:
                 idx = self._rand_another()
                 continue
             return data
+
+        raise Exception(f'Cannot find valid image after {self.max_refetch}! '
+                        'Please check your image path and pipelines')
 
     def load_annotations(self, ann_file: str) -> List[dict]:
         """Load annotations from an annotation file.
@@ -365,8 +369,8 @@ class BaseDataset(Dataset):
         check_file_exist(ann_file)
         annotations = load(ann_file)
         if not isinstance(annotations, dict):
-            raise TypeError(f'The annotations load from annotation file should'
-                            f'be a dict, but got {type(annotations)}!')
+            raise TypeError(f'The annotations loaded from annotation file '
+                            f'should be a dict, but got {type(annotations)}!')
         if 'data_infos' not in annotations or 'metadata' not in annotations:
             raise ValueError('Annotation must have data_infos and metadata '
                              'keys')
@@ -416,14 +420,12 @@ class BaseDataset(Dataset):
         if not isinstance(in_meta, dict):
             raise TypeError(
                 f'in_meta should be a dict, but got {type(in_meta)}')
+
         for k, v in in_meta.items():
-            if isinstance(v, str):
+            if isinstance(v, str) and osp.isfile(v):
                 # if filename in in_meta, this key will be further parsed.
                 # nested filename will be ignored.:
-                if osp.isfile(v):
-                    cls_meta[k] = list_from_file(v)
-                else:
-                    cls_meta[k] = v
+                cls_meta[k] = list_from_file(v)
             else:
                 cls_meta[k] = v
 
@@ -511,12 +513,12 @@ class BaseDataset(Dataset):
         """Get random index.
 
         Returns:
-            int: Random int from 0 to ``len(self)-1``
+            int: Random index from 0 to ``len(self)-1``
         """
         return np.random.randint(0, len(self))
 
     def _prepare_data(self, idx) -> Any:
-        """Get data after pipeline.
+        """Get data processed by ``self.pipeline``.
 
         Args:
             idx (int): The index of dataset.

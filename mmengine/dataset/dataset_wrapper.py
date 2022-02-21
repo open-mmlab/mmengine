@@ -17,7 +17,8 @@ class ConcatDataset(_ConcatDataset):
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
     Args:
-        datasets (Sequence[BaseDataset]): A list of datasets.
+        datasets (Sequence[BaseDataset]): A list of datasets which will be
+            concat.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
@@ -31,8 +32,8 @@ class ConcatDataset(_ConcatDataset):
         for i, dataset in enumerate(datasets):
             if self._meta != dataset.meta:
                 warnings.warn(
-                    f'The meta data of {i + 1}-th dataset is not same as meta '
-                    f'data of 1-st dataset.')
+                    f"The meta information of the {i + 1}-th dataset doesn't "
+                    f'match meta information of the first dataset')
 
         self._fully_initialized = False
         if not lazy_init:
@@ -40,7 +41,7 @@ class ConcatDataset(_ConcatDataset):
 
     @property
     def meta(self) -> dict:
-        """Get the meta information of the first dataset in ``ConcatDataset``.
+        """Get the meta information of the first dataset in ``self.datasets``.
 
         Returns:
             dict: Meta information of first dataset.
@@ -54,7 +55,8 @@ class ConcatDataset(_ConcatDataset):
             return
         for d in self.datasets:
             d.full_init()
-        # explain the reason.
+        # Get the cumulative sizes of `self.datasets`. For example, the length
+        # of `self.datasets` is [2, 3, 4], the cumulative sizes is [2, 5, 9]
         super(ConcatDataset, self).__init__(self.datasets)
         self._fully_initialized = True
 
@@ -72,8 +74,8 @@ class ConcatDataset(_ConcatDataset):
         if idx < 0:
             if -idx > len(self):
                 raise ValueError(
-                    'absolute value of index should not exceed dataset '
-                    'length.')
+                    f'absolute value of index({idx}) should not exceed dataset'
+                    f'length({len(self)}).')
             idx = len(self) + idx
         # Get the inner index of single dataset
         dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
@@ -81,6 +83,7 @@ class ConcatDataset(_ConcatDataset):
             sample_idx = idx
         else:
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
+
         return dataset_idx, sample_idx
 
     @force_full_init
@@ -156,7 +159,7 @@ class RepeatDataset:
 
     @force_full_init
     def _get_ori_dataset_idx(self, idx: int) -> int:
-        """Convert global idx to local index.
+        """Convert global index to local index.
 
         Args:
             idx: Global index of ``RepeatDataset``.
@@ -311,7 +314,7 @@ class ClassBalancedDataset:
 
     @force_full_init
     def _get_ori_dataset_idx(self, idx: int) -> int:
-        """Convert global idx to local index.
+        """Convert global index to local index.
 
         Args:
             idx (int): Global index of ``RepeatDataset``.
