@@ -29,11 +29,11 @@ class ConcatDataset(_ConcatDataset):
         # Only use meta of first dataset.
         self._meta = datasets[0].meta
         self.datasets = datasets  # type: ignore
-        for i, dataset in enumerate(datasets):
+        for i, dataset in enumerate(datasets, 1):
             if self._meta != dataset.meta:
                 warnings.warn(
-                    f"The meta information of the {i + 1}-th dataset doesn't "
-                    f'match meta information of the first dataset')
+                    f'The meta information of the {i}-th dataset does not'
+                    'match meta information of the first dataset')
 
         self._fully_initialized = False
         if not lazy_init:
@@ -207,7 +207,7 @@ class ClassBalancedDataset:
     category labeled in that image. The "frequency of category c" in [0, 1]
     is defined by the fraction of images in the training set (without repeats)
     in which category c appears.
-    The dataset needs to instantiate :func:`self.get_cat_ids` to support
+    The dataset needs to instantiate :meth:`get_cat_ids` to support
     ClassBalancedDataset.
 
     The repeat factor is computed as followed.

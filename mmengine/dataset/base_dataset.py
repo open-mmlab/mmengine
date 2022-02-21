@@ -209,7 +209,6 @@ class BaseDataset(Dataset):
         self._fully_initialized = False
         if not lazy_init:
             self.full_init()
-            self._fully_initialized = True
 
     @force_full_init
     def get_data_info(self, idx: int) -> dict:
