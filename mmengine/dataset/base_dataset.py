@@ -28,12 +28,15 @@ class Compose:
             if isinstance(transform, dict):
                 transform = TRANSFORMS.build(transform)
                 if not callable(transform):
-                    raise TypeError(f'{type(transform)} is not callable.')
+                    raise TypeError(f'transform should be a callable object, '
+                                    f'but got {type(transform)}')
                 self.transforms.append(transform)
             elif callable(transform):
                 self.transforms.append(transform)
             else:
-                raise TypeError('transform must be callable or a dict.')
+                raise TypeError(
+                    f'transform must be a callable object or dict, '
+                    f'but got {type(transform)}')
 
     def __call__(self, data: dict) -> Optional[dict]:
         """Call function to apply transforms sequentially.
@@ -64,11 +67,9 @@ class Compose:
         return format_string
 
 
-def full_init_decorator(old_func: Callable) -> Any:
-    """Auto full_init decorator for class method.
-
-     The decorated function will call ``obj.full_init()``, if
-     ``obj._fully_initialized=False``.
+def force_full_init(old_func: Callable) -> Any:
+    """The class method decorated by ``force_full_init`` will be forced to call
+    ``full_init`` if the instance has not been fully initiated.
 
     Args:
         old_func (Callable): Decorated function, make sure the first arg is an
@@ -85,7 +86,7 @@ def full_init_decorator(old_func: Callable) -> Any:
                                  f"method.'")
         if not getattr(obj, '_fully_initialized', False):
             obj.full_init()  # type: ignore
-            obj._fully_initialized = True # type: ignore
+            obj._fully_initialized = True  # type: ignore
 
         return old_func(obj, *args, **kwargs)
 
@@ -153,7 +154,14 @@ class BaseDataset(Dataset):
             instantiation. Defaults to False.
         max_refetch (int, optional): The maximum number of cycles to get a
             valid image. Defaults to 1000.
+
+    Note:
+        BaseDataset collect meta information from `annotation file` (the
+        lowest priority), ``BaseDataset.META``(medium) and `meta parameter`
+        (highest) passed to constructors. The lower priority meta information
+        will be overwritten by higher one.
     """
+
     META: dict = dict()
 
     def __init__(self,
@@ -195,7 +203,7 @@ class BaseDataset(Dataset):
             self.full_init()
             self._fully_initialized = True
 
-    @full_init_decorator
+    @force_full_init
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index and automatically call ``full_init`` if the
         dataset has not been fully initialized.
@@ -225,16 +233,16 @@ class BaseDataset(Dataset):
         If ``lazy_init=False``, ``full_init`` will be called during the
         instantiation phase and ``self._fully_initialized`` will be set to
         True. If ``obj._fully_initialized=False``, the class method decorated
-        by full_init_decorator will call ``full_init`` automatically.
+        by ``force_full_init`` will call ``full_init`` automatically.
         """
         if self._fully_initialized:
             return
 
         # load data information
-        self.data_infos = self.load_annotation(self.ann_file)
+        self.data_infos = self.load_annotations(self.ann_file)
         # filter illegal data, such as data that has no annotations.
         self.data_infos = self.filter_data()
-        # slice data_infos
+        # if `num_samples > 0`, return the first `num_samples` data info
         self.data_infos = self._slice_data()
         # serialize data_infos
         if self.serialize_data:
@@ -260,7 +268,7 @@ class BaseDataset(Dataset):
 
         ``parse_annotations`` should return ``dict``or ``List[dict]``. Each
         dict denotes a sample (For OpenMMLab 2.0 format dataset, this method
-        should be overridden rather than ``load_annotations``).
+        should be overridden rather than ``load_annotationss``).
 
         Args:
             raw_data_info (dict): Raw annotation load from ``ann_file``
@@ -332,40 +340,36 @@ class BaseDataset(Dataset):
                 continue
             return data
 
-    def load_annotation(self, ann_file: str) -> List[dict]:
-        """Load annotation from ann_file.
+    def load_annotations(self, ann_file: str) -> List[dict]:
+        """Load annotations from an annotation file.
 
         If the annotation file doesn't conform to `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
-        The subclass must override this method to load annotation.
+        The subclass must override this method for load annotations.
 
         Args:
             ann_file (str): Absolute annotation file path if ``self.root=None``
                 or relative path if ``self.root=/path/to/data/``.
 
-        Note:
-            `metadata` in ann_file has the lowest priority, which will be
-            overwritten by ``dataset.META`` during instantiation
-
         Returns:
             List[dict]: A list of annotation.
         """  # noqa: E501
         check_file_exist(ann_file)
-        anns = load(ann_file)
-        if not isinstance(anns, dict):
-            raise TypeError('Wrong format annotation file!')
-        if 'data_infos' not in anns or 'metadata' not in anns:
+        annotations = load(ann_file)
+        if not isinstance(annotations, dict):
+            raise TypeError(f'The annotations load from annotation file should'
+                            f'be a dict, but got {type(annotations)}!')
+        if 'data_infos' not in annotations or 'metadata' not in annotations:
             raise ValueError('Annotation must have data_infos and metadata '
                              'keys')
-        # allow meta
-        meta_data, raw_data_infos = anns['metadata'], anns['data_infos']
+        meta_data = annotations['metadata']
+        raw_data_infos = annotations['data_infos']
 
         # update self._meta
         for k, v in meta_data.items():
             # We only merge keys that are not contained in self._meta.
-            if k in self._meta:
-                continue
-            self._meta[k] = v
+            self._meta.setdefault(k, v)
+
         # load and parse data_infos
         data_infos = []
         for raw_data_info in raw_data_infos:
@@ -375,19 +379,20 @@ class BaseDataset(Dataset):
             elif isinstance(data_info, list):
                 # data_info can also be a list of dict, which means one
                 # data_info contains multiple samples.
-                for _ in data_info:
-                    if not isinstance(_, dict):
-                        raise TypeError('data_info must be a list[dict] if '
-                                        'data_info is a list')
+                for item in data_info:
+                    if not isinstance(item, dict):
+                        raise TypeError(f'data_info must be a list[dict], but '
+                                        f'got {type(item)}')
                 data_infos.extend(data_info)
             else:
-                raise TypeError
+                raise TypeError(f'data_info should be a dict or list[dict], '
+                                f'but got {type(data_info)}')
 
         return data_infos
 
     @classmethod
     def _get_meta_data(cls, in_meta: dict = None) -> dict:
-        """Collect meta information from meta dict.
+        """Collect meta information from the dictionary of meta.
 
         Args:
             in_meta (dict): Meta information dict. if in_meta contains existed
@@ -451,7 +456,8 @@ class BaseDataset(Dataset):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
             else:
-                raise TypeError(f'{type(prefix)} is not a valid prefix')
+                raise TypeError(f'prefix should be a string or None, but got '
+                                f'{type(prefix)}')
 
     def _slice_data(self) -> List[dict]:
         """Slice ``self.data_infos``. BaseDataset supports only using the first
@@ -460,21 +466,25 @@ class BaseDataset(Dataset):
         Returns:
             List[dict]: A slice of ``self.data_infos``
         """
+        assert self._num_samples < len(self.data_infos), \
+            f'Slice size({self._num_samples}) is larger than dataset ' \
+            f'size({self.data_infos}, please keep `num_sample` smaller than' \
+            f'{self.data_infos})'
         if self._num_samples > 0:
             return self.data_infos[:self._num_samples]
         else:
             return self.data_infos
 
     def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Serialize ``self.data_infos``, which will be called in
-        ``full_init``.
+        """Serialize ``self.data_infos`` to save memory when launching multiple
+        workers in data loading. This function will be called in ``full_init``.
 
         Hold memory using serialized objects, data loader workers can use
         shared RAM from master process instead of making a copy.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: serialize result and corresponding
-                address.
+            address.
         """
 
         def _serialize(data):
@@ -509,7 +519,7 @@ class BaseDataset(Dataset):
         data_info = self.get_data_info(idx)
         return self.pipeline(data_info)
 
-    @full_init_decorator
+    @force_full_init
     def __len__(self) -> int:
         """Get the length of filtered dataset and automatically call
         ``full_init`` if the  dataset has not been fully init.
