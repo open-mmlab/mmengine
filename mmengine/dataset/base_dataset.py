@@ -231,9 +231,17 @@ class BaseDataset(Dataset):
         """Load annotation file and set ``self._fully_initialized`` to True.
 
         If ``lazy_init=False``, ``full_init`` will be called during the
-        instantiation phase and ``self._fully_initialized`` will be set to
-        True. If ``obj._fully_initialized=False``, the class method decorated
-        by ``force_full_init`` will call ``full_init`` automatically.
+        instantiation and ``self._fully_initialized`` will be set to True. If
+        ``obj._fully_initialized=False``, the class method decorated by
+        ``force_full_init`` will call ``full_init`` automatically.
+
+        The following steps will be called by ``full_init``.
+            - load_annotations: Load annotations from annotation file.
+            - filter data information: Filter annotations according to
+            filter_cfg.
+            - slice_data: Slice dataset according to ``self._num_samples``
+            - serialize_data: Serialize ``self.data_infos`` if
+            ``self.serialize_data`` is True.
         """
         if self._fully_initialized:
             return
