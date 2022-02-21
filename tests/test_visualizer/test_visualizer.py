@@ -53,18 +53,30 @@ class TesVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
 
         # only support 4 or nx4 tensor and numpy
-        bboxes = torch.tensor([1, 1, 2, 2])
-        visualizer.draw_bboxes(bboxes)
-        bboxes = torch.tensor([[1, 1, 2, 2], [1, 1.5, 1, 2.5]])
+        visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2]))
+        # valid bbox
+        visualizer.draw_bboxes(torch.tensor([1, 1, 1, 2]))
+        bboxes = torch.tensor([[1, 1, 2, 2], [1, 2, 2, 2.5]])
         visualizer.draw_bboxes(
             bboxes, alpha=0.5, edge_color='b', line_style='-')
         bboxes = bboxes.numpy()
         visualizer.draw_bboxes(bboxes)
 
+        # test invalid bbox
+        with pytest.raises(AssertionError):
+            # x1 > x2
+            visualizer.draw_bboxes(torch.tensor([5, 1, 2, 2]))
+
+        # test out of bounds
+        with pytest.warns(
+                UserWarning,
+                match='Warning: The bbox is out of bounds,'
+                ' the drawn bbox may not be in the image'):
+            visualizer.draw_bboxes(torch.tensor([1, 1, 20, 2]))
+
         # test incorrect bbox format
         with pytest.raises(AssertionError):
-            bboxes = [1, 1, 2, 2]
-            visualizer.draw_bboxes(bboxes)
+            visualizer.draw_bboxes([1, 1, 2, 2])
 
     def test_draw_texts(self):
         visualizer = Visualizer(image=self.image)
@@ -76,6 +88,13 @@ class TesVisualizer(TestCase):
         visualizer.draw_texts('text1', position=np.array([5, 5]))
         visualizer.draw_texts(['text1', 'text2'],
                               position=np.array([[5, 5], [3, 3]]))
+
+        # test out of bounds
+        with pytest.warns(
+                UserWarning,
+                match='Warning: The text is out of bounds,'
+                ' the drawn text may not be in the image'):
+            visualizer.draw_texts('text1', position=torch.tensor([15, 5]))
 
         # test incorrect format
         with pytest.raises(AssertionError):
@@ -98,6 +117,14 @@ class TesVisualizer(TestCase):
         visualizer.draw_lines(
             x_datas=np.array([1, 5, 4]), y_datas=np.array([2, 6, 6]))
 
+        # test out of bounds
+        with pytest.warns(
+                UserWarning,
+                match='Warning: The line is out of bounds,'
+                ' the drawn line may not be in the image'):
+            visualizer.draw_lines(
+                x_datas=torch.tensor([12, 5]), y_datas=torch.tensor([2, 6]))
+
         # test incorrect format
         with pytest.raises(AssertionError):
             visualizer.draw_texts('text', position=[5, 5])
@@ -115,6 +142,14 @@ class TesVisualizer(TestCase):
         visualizer.draw_circles(np.array([1, 5]))
         visualizer.draw_circles(
             torch.tensor([[1, 5], [2, 6]]), radius=torch.tensor([1, 2]))
+
+        # test out of bounds
+        with pytest.warns(
+                UserWarning,
+                match='Warning: The circle is out of bounds,'
+                ' the drawn circle may not be in the image'):
+            visualizer.draw_circles(torch.tensor([12, 5]))
+            visualizer.draw_circles(torch.tensor([1, 5]), radius=10)
 
         # test incorrect format
         with pytest.raises(AssertionError):
@@ -134,6 +169,13 @@ class TesVisualizer(TestCase):
             np.array([[1, 1], [2, 2], [3, 4]]),
             torch.tensor([[1, 1], [2, 2], [3, 4]])
         ])
+
+        # test out of bounds
+        with pytest.warns(
+                UserWarning,
+                match='Warning: The polygon is out of bounds,'
+                ' the drawn polygon may not be in the image'):
+            visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [16, 4]]))
 
     def test_draw_binary_masks(self):
         binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(np.bool)
