@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, Type
+from typing import Any, Iterator, Optional, Tuple, Type
 
 import numpy as np
 import torch
@@ -9,20 +9,21 @@ import torch
 class BaseDataElement:
     """A base data structure interface of OpenMMlab.
 
-    Data elements refer to predicted results or groundtruth labels on a
+    Data elements refer to predicted results or ground truth labels on a
     task, such as predicted bboxes, instance masks, semantic
     segmentation masks, etc. Because groundtruth labels and predicted results
     often have similar properties (for example, the predicted bboxes and the
     groundtruth bboxes), MMEngine uses the same abstract data interface to
     encapsulate predicted results and groundtruth labels, and it is recommended
-    to use naming to distinguish them, such as `gt_instances` and
-    `pred_instances` to distinguish between labels and predicted results.
-    Additionally, we distinguish data elements at instance level, pixel level,
-    and label level. Each of these types has its own characteristics.
-    Therefore, MMEngine defines the base class `BaseDataElement` , and
-    derives `InstanceData`, ` PixelData`, and `LabelData`, which is used for
-    representing different types of groundtruth labels orpredicted and
-    communication between components.
+    to use different name conventions to distinguish them, such as using
+    `gt_instances` and `pred_instances` to distinguish between labels and
+    predicted results. Additionally, we distinguish data elements at instance
+    level, pixel level, and label level. Each of these types has its own
+    characteristics. Therefore, MMEngine defines the base class
+    `BaseDataElement`, and implement `InstanceData`, `PixelData`, and
+    `LabelData` inheriting from `BaseDataElement` to represent different types
+    of ground truth labels or predictions.
+    They are used as interfaces between different commopenets.
 
 
     The attributes in `BaseDataElement` are divided into two parts,
@@ -32,12 +33,10 @@ class BaseDataElement:
           information about the image such as filename,
           image_shape, pad_shape, etc. The attributes can be accessed or
           modified by dict-like or object-like operations, such as
-          `.`(only for data access) , `in`, `del`, `pop(str)` `get(str)`,
-          `metainfo_keys()`, `metainfo_values()`, `metainfo_items()`,
-          `set_metainfo()`(for set or change value in metainfo).
-           Users can also apply tensor-like methods to all obj:`torch.Tensor`
-           in the `data_fileds`, such as `.cuda()`, `.cpu()`, `.numpy()`,
-           `.to()`,  `to_tensor()`, `.detach()`, `.numpy()`
+          `.`(for data access and modification) , `in`, `del`, `pop(str)`
+          `get(str)`, `metainfo_keys()`, `metainfo_values()`,
+          `metainfo_items()`, `set_metainfo()`(for set or change key-value
+          pairs in metainfo).
 
         - `data`: Annotations or model predictions are
           stored. The attributes can be accessed or modified by
@@ -75,7 +74,7 @@ class BaseDataElement:
                                           scores=torch.rand((5,))))
         >>> gt_instances2 = gt_instances1.new()
 
-        # property add and accesse
+        # add and process property
         >>> gt_instances = BaseDataElement()
         >>> gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
         >>> assert 'img_shape' in gt_instances.metainfo_keys()
@@ -98,7 +97,7 @@ class BaseDataElement:
         >>> assert 'bboxes' not in gt_instances.metainfo_keys()
         >>> print(gt_instances.bboxes)
 
-        # property delete and change
+        # delete and change property
         >>> gt_instances = BaseDataElement(
              metainfo=dict(img_id=0, img_shape=(640, 640))，
              data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
@@ -156,11 +155,12 @@ class BaseDataElement:
 
         Args:
             metainfo (dict): A dict contains the meta information
-                of image. such as `img_shape`, `scale_factor`, etc.
+                of image, such as `img_shape`, `scale_factor`, etc.
                 Default: None.
         """
-        assert isinstance(metainfo,
-                          dict), f'meta should be a `dict` but get {metainfo}'
+        assert isinstance(
+            metainfo,
+            dict), f'metainfo should be a `dict` but get {type(metainfo)}'
         meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
             if k in self._data_fields:
@@ -186,8 +186,8 @@ class BaseDataElement:
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataElement':
-        """Return a new data element with same type. if metainfo and date are
-        None, the new data element will have same metainfo and data. if
+        """Return a new data element with same type. if `metainfo` and `data`
+        are None, the new data element will have same metainfo and data. If
         metainfo or data is not None, the new results will overwrite it with
         the input value.
 
@@ -253,35 +253,29 @@ class BaseDataElement:
         """
         return self.metainfo_values() + self.data_values()
 
-    def items(self) -> list:
+    def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in metainfo and data.
         """
-        items = list()
         for k in self.keys():
-            items.append((k, getattr(self, k)))
-        return items
+            yield (k, getattr(self, k))
 
-    def data_items(self) -> list:
+    def data_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in data.
         """
-        items = list()
         for k in self.data_keys():
-            items.append((k, getattr(self, k)))
-        return items
+            yield (k, getattr(self, k))
 
-    def metainfo_items(self) -> list:
+    def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in metainfo.
         """
-        items = list()
         for k in self.metainfo_keys():
-            items.append((k, getattr(self, k)))
-        return items
+            yield (k, getattr(self, k))
 
     def __setattr__(self, name: str, val: Any):
         if name in ('_metainfo_fields', '_data_fields'):
@@ -460,7 +454,7 @@ class BaseDataElement:
 class BaseDataSample:
     """A base data structure interface of OpenMMlab.
 
-    A sample data consist of input data (such as an image) and its annotations
+    A sample data consists of input data (such as an image) and its annotations
     and predictions. In general, an image can have multiple types of
     annotations and/or predictions at the same time (for example, both
     pixel-level semantic segmentation annotations and instance-level detection
@@ -664,12 +658,40 @@ class BaseDataSample:
         if data is not None:
             self.set_data(data)
 
+    def _set_field(self,
+                   name: str,
+                   value: Any,
+                   field_type: str = 'data',
+                   dtype: Optional[Type] = None) -> None:
+        assert field_type in ['metainfo', 'data']
+        if dtype is not None:
+            assert isinstance(
+                value,
+                dtype), f'{value} should be a {dtype} but get {type(value)}'
+
+        super().__setattr__(name, value)
+        if field_type == 'metainfo':
+            self._metainfo_fields.add(name)
+        else:
+            self._data_fields.add(name)
+
+    def _get_field(self, name: str) -> Any:
+        return getattr(self, name)
+
+    def _del_field(self, name: str, field_type: str = 'data') -> None:
+        assert field_type in ['metainfo', 'data']
+        super().__delattr__(name)
+        if field_type == 'metainfo':
+            self._metainfo_fields.remove(name)
+        else:
+            self._data_fields.remove(name)
+
     def set_metainfo(self, metainfo: dict) -> None:
         """Add and change meta information.
 
         Args:
             metainfo (dict): A dict contains the meta information
-                of image. such as `img_shape`, `scale_factor`, etc.
+                of image, such as `img_shape`, `scale_factor`, etc.
                 Default: None.
         """
         assert isinstance(metainfo,
@@ -681,8 +703,7 @@ class BaseDataSample:
                                      f'which is immutable. if you want to'
                                      f'change the key in data, please use'
                                      f'set_data')
-            self._metainfo_fields.add(k)
-            self.__dict__[k] = v
+            self._set_field(k, v, 'metainfo', None)
 
     def set_data(self, data: dict) -> None:
         """Update a dict to `data_fields`.
@@ -694,13 +715,13 @@ class BaseDataSample:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but get {data}'
         for k, v in data.items():
-            self.__setattr__(k, v)
+            self._set_field(k, v, 'data', None)
 
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataSample':
-        """Return a new data element with same type. if metainfo and date are
-        None, the new data element will have same metainfo and data. if
+        """Return a new data element with same type. if `metainfo` and `data`
+        are None, the new data element will have same metainfo and data. If
         metainfo or data is not None, the new results will overwrite it with
         the input value.
 
@@ -766,35 +787,30 @@ class BaseDataSample:
         """
         return self.metainfo_values() + self.data_values()
 
-    def items(self) -> list:
+    def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in metainfo and data.
         """
-        items = list()
         for k in self.keys():
-            items.append((k, getattr(self, k)))
-        return items
+            yield (k, getattr(self, k))
 
-    def data_items(self) -> list:
+    def data_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in data.
         """
-        items = list()
-        for k in self.data_keys():
-            items.append((k, getattr(self, k)))
-        return items
 
-    def metainfo_items(self) -> list:
+        for k in self.data_keys():
+            yield (k, getattr(self, k))
+
+    def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             list: a list of (key, value) tuple pairs in metainfo.
         """
-        items = list()
         for k in self.metainfo_keys():
-            items.append((k, getattr(self, k)))
-        return items
+            yield (k, getattr(self, k))
 
     def __setattr__(self, name: str, val: Any):
         if name in ('_metainfo_fields', '_data_fields'):
@@ -811,19 +827,20 @@ class BaseDataSample:
                                      f'change the key in metainfo, please use'
                                      f'set_metainfo(dict(name=val))')
 
-            self._data_fields.add(name)
-            super().__setattr__(name, val)
+            self._set_field(name, val, 'data', None)
 
     def __delattr__(self, item: str):
 
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
                                  f'private attribute, which is immutable. ')
-        super().__delattr__(item)
         if item in self._metainfo_fields:
-            self._metainfo_fields.remove(item)
+            self._del_field(item, 'metainfo')
         elif item in self._data_fields:
-            self._data_fields.remove(item)
+            self._del_field(item, 'data')
+        else:
+            # TODO
+            super().__delattr__(item)
 
     # dict-like methods
     __setitem__ = __setattr__
@@ -858,21 +875,17 @@ class BaseDataSample:
         return item in self._data_fields or \
                     item in self._metainfo_fields
 
-    def _get_field(self, name: str) -> Any:
+    def get_field(self, name: str) -> Any:
         """Special method for get union field."""
-        return getattr(self, name)
+        return self._get_field(name)
 
-    def _set_field(self, val: Any, name: str, dtype: Type):
+    def set_field(self, val: Any, name: str, dtype: Type):
         """Special method for set union field."""
-        assert isinstance(
-            val, dtype), f'{val} should be a {dtype} but get {type(val)}'
-        super().__setattr__(name, val)
-        self._data_fields.add(name)
+        self._set_field(name, val, 'data', dtype)
 
-    def _del_field(self, name: str):
+    def del_field(self, name: str):
         """Special method for del union field."""
-        super().__delattr__(name)
-        self._data_fields.remove(name)
+        self._del_field(name, 'data')
 
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataSample':

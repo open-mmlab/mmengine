@@ -361,7 +361,7 @@ class TestBaseDataSample(TestCase):
         metainfo, data = self.setup_data()
         instances = BaseDataSample(metainfo)
         for key, value in data.items():
-            instances._set_field(value, key, BaseDataElement)
+            instances._set_field(key, value, dtype=BaseDataElement)
         self.check_key_value(instances, data=data)
 
         # test type check
@@ -369,13 +369,13 @@ class TestBaseDataSample(TestCase):
         instances = BaseDataSample()
         for key, value in data.items():
             with self.assertRaises(AssertionError):
-                instances._set_field(value, key, BaseDataSample)
+                instances._set_field(key, value, dtype=BaseDataSample)
 
     def test_del_field(self):
         metainfo, data = self.setup_data()
         instances = BaseDataSample(metainfo)
         for key, value in data.items():
-            instances._set_field(value, key, BaseDataElement)
+            instances._set_field(value=value, name=key, dtype=BaseDataElement)
         instances._del_field('gt_instances')
         instances._del_field('pred_instances')
 
@@ -389,30 +389,28 @@ class TestBaseDataSample(TestCase):
 
         class DetDataSample(BaseDataSample):
             proposals = property(
-                fget=partial(BaseDataSample._get_field, name='_proposals'),
+                fget=partial(BaseDataSample.get_field, name='_proposals'),
                 fset=partial(
-                    BaseDataSample._set_field,
+                    BaseDataSample.set_field,
                     name='_proposals',
                     dtype=BaseDataElement),
-                fdel=partial(BaseDataSample._del_field, name='_proposals'),
+                fdel=partial(BaseDataSample.del_field, name='_proposals'),
                 doc='Region proposals of an image')
             gt_instances = property(
-                fget=partial(BaseDataSample._get_field, name='_gt_instances'),
+                fget=partial(BaseDataSample.get_field, name='_gt_instances'),
                 fset=partial(
-                    BaseDataSample._set_field,
+                    BaseDataSample.set_field,
                     name='_gt_instances',
                     dtype=BaseDataElement),
-                fdel=partial(BaseDataSample._del_field, name='_gt_instances'),
+                fdel=partial(BaseDataSample.del_field, name='_gt_instances'),
                 doc='Ground truth instances of an image')
             pred_instances = property(
-                fget=partial(
-                    BaseDataSample._get_field, name='_pred_instances'),
+                fget=partial(BaseDataSample.get_field, name='_pred_instances'),
                 fset=partial(
-                    BaseDataSample._set_field,
+                    BaseDataSample.set_field,
                     name='_pred_instances',
                     dtype=BaseDataElement),
-                fdel=partial(
-                    BaseDataSample._del_field, name='_pred_instances'),
+                fdel=partial(BaseDataSample.del_field, name='_pred_instances'),
                 doc='Predicted instances of an image')
 
         det_sample = DetDataSample()
@@ -473,4 +471,4 @@ class TestBaseDataSample(TestCase):
 
 if __name__ == '__main__':
     sample = TestBaseDataSample()
-    sample.test_repr()
+    sample.test_set_get_fields()
