@@ -2,7 +2,7 @@
 import inspect
 import sys
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
 from ..utils import is_seq_of
