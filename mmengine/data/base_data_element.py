@@ -50,9 +50,9 @@ class BaseDataElement:
     Args:
         meta_info (dict, optional): A dict contains the meta information
             of single image. such as `dict(img_shape=(512, 512, 3),
-            scale_factor=(1, 1, 1, 1))`. Default: None.
+            scale_factor=(1, 1, 1, 1))`. Defaults to None.
         data (dict, optional): A dict contains annotations of single image or
-            model predictions. Default: None.
+            model predictions. Defaults to None.
 
     Examples:
         >>> from mmengine.data import BaseDataElement
@@ -156,7 +156,7 @@ class BaseDataElement:
         Args:
             metainfo (dict): A dict contains the meta information
                 of image, such as `img_shape`, `scale_factor`, etc.
-                Default: None.
+                Defaults to None.
         """
         assert isinstance(
             metainfo,
@@ -165,7 +165,7 @@ class BaseDataElement:
         for k, v in meta.items():
             if k in self._data_fields:
                 raise AttributeError(f'`{k}` is used in data,'
-                                     f'which is immutable. if you want to'
+                                     f'which is immutable. If you want to'
                                      f'change the key in data, please use'
                                      f'set_data')
             self._metainfo_fields.add(k)
@@ -176,7 +176,7 @@ class BaseDataElement:
 
         Args:
             data (dict): A dict contains annotations of image or
-                model predictions. Default: None.
+                model predictions. Defaults to None.
         """
         assert isinstance(data,
                           dict), f'meta should be a `dict` but get {data}'
@@ -186,17 +186,17 @@ class BaseDataElement:
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataElement':
-        """Return a new data element with same type. if `metainfo` and `data`
+        """Return a new data element with same type. If `metainfo` and `data`
         are None, the new data element will have same metainfo and data. If
         metainfo or data is not None, the new results will overwrite it with
         the input value.
 
         Args:
             metainfo (dict, optional): A dict contains the meta information
-                of image. such as `img_shape`, `scale_factor`, etc.
-                Default: None.
+                of image, such as `img_shape`, `scale_factor`, etc.
+                Defaults to None.
             data (dict, optional): A dict contains annotations of image or
-                model predictions. Default: None.
+                model predictions. Defaults to None.
         """
         new_data = self.__class__()
 

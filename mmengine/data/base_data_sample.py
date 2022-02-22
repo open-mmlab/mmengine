@@ -49,9 +49,9 @@ class BaseDataSample:
     Args:
         meta_info (dict, optional): A dict contains the meta information
             of a sample. such as `dict(img_shape=(512, 512, 3),
-            scale_factor=(1, 1, 1, 1))`. Default: None.
+            scale_factor=(1, 1, 1, 1))`. Defaults to None.
         data (dict, optional): A dict contains annotations of a sample or
-            model predictions. Default: None.
+            model predictions. Defaults to None.
 
     Examples:
         >>> from mmengine.data import BaseDataElement, BaseDataSample
@@ -221,7 +221,7 @@ class BaseDataSample:
         Args:
             metainfo (dict): A dict contains the meta information
                 of image, such as `img_shape`, `scale_factor`, etc.
-                Default: None.
+                Defaults to None.
         """
         assert isinstance(metainfo,
                           dict), f'meta should be a `dict` but get {metainfo}'
@@ -239,7 +239,7 @@ class BaseDataSample:
 
         Args:
             data (dict): A dict contains annotations of image or
-                model predictions. Default: None.
+                model predictions. Defaults to None.
         """
         assert isinstance(data,
                           dict), f'meta should be a `dict` but get {data}'
@@ -257,9 +257,9 @@ class BaseDataSample:
         Args:
             metainfo (dict, optional): A dict contains the meta information
                 of image. such as `img_shape`, `scale_factor`, etc.
-                Default: None.
+                Defaults to None.
             data (dict, optional): A dict contains annotations of image or
-                model predictions. Default: None.
+                model predictions. Defaults to None.
         """
         new_data = self.__class__()
 
