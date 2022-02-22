@@ -105,7 +105,7 @@ class ConcatDataset(_ConcatDataset):
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn('Please call self.full_init() manually to '
+            warnings.warn('Please call `full_init` method manually to '
                           'accelerate the speed.')
             self.full_init()
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
@@ -184,7 +184,7 @@ class RepeatDataset:
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn('Please call self.full_init() manually to '
+            warnings.warn('Please call `full_init` method manually to '
                           'accelerate the speed.')
             self.full_init()
 
@@ -351,7 +351,7 @@ class ClassBalancedDataset:
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        warnings.warn('Please call self.full_init() manually to '
+        warnings.warn('Please call `full_init` method manually to '
                       'accelerate the speed.')
         if not self._fully_initialized:
             self.full_init()
