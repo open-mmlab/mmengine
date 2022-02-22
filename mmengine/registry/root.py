@@ -34,3 +34,6 @@ PARAM_SCHEDULERS = Registry('parameter scheduler')
 
 # manage task-specific modules like anchor generators and box coders
 TASK_UTILS = Registry('task util')
+
+# manage all kinds of evaluators for computing metrics
+EVALUATORS = Registry('evaluator')
