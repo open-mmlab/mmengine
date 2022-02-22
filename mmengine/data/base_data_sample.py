@@ -320,7 +320,7 @@ class BaseDataSample:
         """
         Returns:
             iterator: an iterator object whose element is  (key, value) tuple
-        pairs for `metainfo` and `data`.
+            pairs for `metainfo` and `data`.
         """
         for k in self.keys():
             yield (k, getattr(self, k))
@@ -329,7 +329,7 @@ class BaseDataSample:
         """
         Returns:
             iterator: an iterator object whose element is  (key, value) tuple
-        pairs for `data`.
+            pairs for `data`.
         """
 
         for k in self.data_keys():
@@ -339,7 +339,7 @@ class BaseDataSample:
         """
         Returns:
             iterator: an iterator object whose element is  (key, value) tuple
-        pairs for `metainfo`.
+            pairs for `metainfo`.
         """
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
