@@ -18,7 +18,7 @@ class ConcatDataset(_ConcatDataset):
 
     Args:
         datasets (Sequence[BaseDataset]): A list of datasets which will be
-            concat.
+            concatenated.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
@@ -32,7 +32,7 @@ class ConcatDataset(_ConcatDataset):
         for i, dataset in enumerate(datasets, 1):
             if self._meta != dataset.meta:
                 warnings.warn(
-                    f'The meta information of the {i}-th dataset does not'
+                    f'The meta information of the {i}-th dataset does not '
                     'match meta information of the first dataset')
 
         self._fully_initialized = False
@@ -68,8 +68,8 @@ class ConcatDataset(_ConcatDataset):
             idx (int): Global index of ``RepeatDataset``.
 
         Returns:
-            Tuple[int, int]: The index of ``self.datasets`` and the local index
-            of data.
+            Tuple[int, int]: The index of ``self.datasets`` and the local
+            index of data.
         """
         if idx < 0:
             if -idx > len(self):

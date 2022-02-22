@@ -79,17 +79,18 @@ def force_full_init(old_func: Callable) -> Any:
     Returns:
         Any: Depends on old_func.
     """
-
+    # TODO This decorator can also be used in runner.
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         if not hasattr(obj, 'full_init'):
             raise AttributeError(f'{type(obj)} does not have full_init '
                                  'method.')
         if not getattr(obj, '_fully_initialized', False):
-            warnings.warn('Attribute `_fully_initialized` is not defined in'
-                          f'{type(obj)}, `full_init` will still be called '
-                          f'and {type(obj)}._fully_initialized will be set to'
-                          f'True')
+            warnings.warn('Attribute `_fully_initialized` is not defined in '
+                          f'{type(obj)} or `type(obj)._fully_initialized is '
+                          'False, `full_init` will be called and '
+                          f'{type(obj)}._fully_initialized will be set to '
+                          'True')
             obj.full_init()  # type: ignore
             obj._fully_initialized = True  # type: ignore
 
@@ -171,6 +172,7 @@ class BaseDataset(Dataset):
     """
 
     META: dict = dict()
+    _fully_initialized: bool = False
 
     def __init__(self,
                  ann_file: str,
@@ -206,7 +208,6 @@ class BaseDataset(Dataset):
         # build pipeline
         self.pipeline = Compose(pipeline)
 
-        self._fully_initialized = False
         if not lazy_init:
             self.full_init()
 
@@ -228,7 +229,7 @@ class BaseDataset(Dataset):
             data_info = pickle.loads(bytes)
         else:
             data_info = self.data_infos[idx]
-        # The same as accessing the list by a negative index.
+        # To record the real positive index of data information.
         if idx >= 0:
             data_info['sample_idx'] = idx
         else:
@@ -237,7 +238,8 @@ class BaseDataset(Dataset):
         return data_info
 
     def full_init(self):
-        """Load annotation file and set ``self._fully_initialized`` to True.
+        """Load annotation file and set ``BaseDataset._fully_initialized`` to
+        True.
 
         If ``lazy_init=False``, ``full_init`` will be called during the
         instantiation and ``self._fully_initialized`` will be set to True. If
@@ -260,7 +262,7 @@ class BaseDataset(Dataset):
         self.data_infos = self.load_annotations(self.ann_file)
         # filter illegal data, such as data that has no annotations.
         self.data_infos = self.filter_data()
-        # if `num_samples > 0`, return the first `num_samples` data info
+        # if `num_samples > 0`, return the first `num_samples` data information
         self.data_infos = self._slice_data()
         # serialize data_infos
         if self.serialize_data:
@@ -343,8 +345,8 @@ class BaseDataset(Dataset):
         """
         if not self._fully_initialized:
             warnings.warn(
-                'Please call `self.full_init()` manually to accrelate the '
-                'speed.')
+                'Please call `full_init()` method manually to accelerate '
+                'the speed.')
             self.full_init()
 
         if self.test_mode:
