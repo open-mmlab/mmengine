@@ -256,7 +256,8 @@ class BaseDataElement:
     def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in metainfo and data.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `metainfo` and `data`.
         """
         for k in self.keys():
             yield (k, getattr(self, k))
@@ -264,7 +265,8 @@ class BaseDataElement:
     def data_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in data.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `metainfo` and `data`.
         """
         for k in self.data_keys():
             yield (k, getattr(self, k))
@@ -272,7 +274,8 @@ class BaseDataElement:
     def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in metainfo.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `metainfo` and `data`.
         """
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))

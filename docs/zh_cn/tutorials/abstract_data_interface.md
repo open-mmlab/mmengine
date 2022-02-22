@@ -244,8 +244,8 @@ MMEngine 为样本数据的封装提供了一个基类 `BaseDataSample`，OpenMM
 `BaseDataSample` 内部依然区分 metainfo 和 data，并且支持像类一样对其属性进行设置和调整，为了保证用户体验的一致性，`BaseDataSample` 的外部接口用法和 `BaseDataElement` 保持一致。
 
 同时，由于 `BaseDataSample` 作为基类一般不会直接使用，为了方便下游算法库快速定义其子类，并对子类的属性进行规约和校验。
-`BaseDataSample` 额外提供了一套内部接口 `_get_field`， `_del_field` 和 `_set_field` 来便利它的子类快捷地定义和规约 data 属性的增删改查。
-`_set_field` 不会被当作外部接口直接使用，而是被用来定义属性（property） 的 `setter` 并提供基本的类型校验。
+`BaseDataSample` 额外提供了一套内部接口 `get_field`， `del_field` 和 `set_field` 来便利它的子类快捷地定义和规约 data 属性的增删改查。
+`set_field` 不会被当作外部接口直接使用，而是被用来定义属性（property） 的 `setter` 并提供基本的类型校验。
 
 一个简单粗略的实现和用例如下。
 
@@ -263,15 +263,15 @@ class BaseDataSample(ABC):
     # 其他功能实现
     ...
 
-    def _get_field(self, name):
+    def get_field(self, name):
         return getattr(self, name)
 
-    def _set_field(self, val, name, dtype):
+    def set_field(self, val, name, dtype):
         assert isinstance(val, dtype)
         super().__setattr__(name, val)
         self._data_fields.add(name)
 
-    def _del_field(self, name):
+    def del_field(self, name):
         super().__delattr__(name)
         self._data_fields.remove(name)
 
@@ -284,24 +284,24 @@ class DetDataSample(BaseDataSample):
 
     proposals = property(
         # 定义了 get 方法，通过 name '_proposals' 来访问实际维护的变量
-        fget=partial(BaseDataSample._get_field, name='_proposals'),
+        fget=partial(BaseDataSample.get_field, name='_proposals'),
         # 定义了 set 方法，将实际维护的变量设置为 '_proposals'，并在设置的时候检查类型是否是 dtype 定义的类型 InstanceData
-        fset=partial(BaseDataSample._set_field, name='_proposals', dtype=InstanceData),
-        fdel=partial(BaseDataSample._del_field, name='_proposals'),
+        fset=partial(BaseDataSample.set_field, name='_proposals', dtype=InstanceData),
+        fdel=partial(BaseDataSample.del_field, name='_proposals'),
         doc='Region proposals of an image'
     )
 
     gt_instances = property(
-        fget=partial(BaseDataSample._get_field, name='_gt_instances'),
-        fset=partial(BaseDataSample._set_field, name='_gt_instances', dtype=InstanceData),
-        fdel=partial(BaseDataSample._del_field, name='_gt_instances'),
+        fget=partial(BaseDataSample.get_field, name='_gt_instances'),
+        fset=partial(BaseDataSample.set_field, name='_gt_instances', dtype=InstanceData),
+        fdel=partial(BaseDataSample.del_field, name='_gt_instances'),
         doc='Ground truth instances of an image'
     )
 
     pred_instances = property(
-        fget=partial(BaseDataSample._get_field, name='_pred_instances'),
-        fset=partial(BaseDataSample._set_field, name='_pred_instances', dtype=InstanceData),
-        fdel=partial(BaseDataSample._del_field, name='_pred_instances'),
+        fget=partial(BaseDataSample.get_field, name='_pred_instances'),
+        fset=partial(BaseDataSample.set_field, name='_pred_instances', dtype=InstanceData),
+        fdel=partial(BaseDataSample.del_field, name='_pred_instances'),
         doc='Predicted instances of an image'
     )
 ```

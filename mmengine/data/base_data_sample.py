@@ -18,7 +18,7 @@ class BaseDataSample:
     bboxes annotations). To facilitate data access of multitask, MMEngine
     defines `BaseDataSample` as the base class for sample data encapsulation.
     **The attributes of `BaseDataSample` will be various types of data
-    elements**, and the codebases in OpenMMLab need to implement its own
+    elements**, and the codebases in OpenMMLab need to implement their own
     xxxDataSample such as ClsDataSample, DetDataSample, SegDataSample based on
     `BaseDataSample` to encapsulate all relevant data, as a data
     interface between dataset, model, visualizer, and evaluator components.
@@ -166,32 +166,32 @@ class BaseDataSample:
         # inheritance
         >>> class DetDataSample(BaseDataSample):
         >>>     proposals = property(
-        >>>         fget=partial(BaseDataSample._get_field, name='_proposals'),
+        >>>         fget=partial(BaseDataSample.get_field, name='_proposals'),
         >>>         fset=partial(
         >>>             BaseDataSample.set_field,
         >>>             name='_proposals',
         >>>             dtype=BaseDataElement),
-        >>>         fdel=partial(BaseDataSample._del_field, name='_proposals'),
+        >>>         fdel=partial(BaseDataSample.del_field, name='_proposals'),
         >>>         doc='Region proposals of an image')
         >>>     gt_instances = property(
-        >>>         fget=partial(BaseDataSample._get_field,
+        >>>         fget=partial(BaseDataSample.get_field,
                                  name='_gt_instances'),
         >>>         fset=partial(
         >>>             BaseDataSample.set_field,
         >>>             name='_gt_instances',
         >>>             dtype=BaseDataElement),
-        >>>         fdel=partial(BaseDataSample._del_field,
+        >>>         fdel=partial(BaseDataSample.del_field,
                                  name='_gt_instances'),
         >>>         doc='Ground truth instances of an image')
         >>>     pred_instances = property(
         >>>         fget=partial(
-        >>>             BaseDataSample._get_field, name='_pred_instances'),
+        >>>             BaseDataSample.get_field, name='_pred_instances'),
         >>>         fset=partial(
         >>>             BaseDataSample.set_field,
         >>>             name='_pred_instances',
         >>>             dtype=BaseDataElement),
         >>>         fdel=partial(
-        >>>             BaseDataSample._del_field, name='_pred_instances'),
+        >>>             BaseDataSample.del_field, name='_pred_instances'),
         >>>         doc='Predicted instances of an image')
 
         >>> det_sample = DetDataSample()
@@ -229,7 +229,7 @@ class BaseDataSample:
         for k, v in meta.items():
             if k in self._data_fields:
                 raise AttributeError(f'`{k}` is used in data,'
-                                     f'which is immutable. if you want to'
+                                     f'which is immutable. If you want to'
                                      f'change the key in data, please use'
                                      f'set_data')
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
@@ -249,7 +249,7 @@ class BaseDataSample:
     def new(self,
             metainfo: dict = None,
             data: dict = None) -> 'BaseDataSample':
-        """Return a new data element with same type. if `metainfo` and `data`
+        """Return a new data element with same type. If `metainfo` and `data`
         are None, the new data element will have same metainfo and data. If
         metainfo or data is not None, the new results will overwrite it with
         the input value.
@@ -319,7 +319,8 @@ class BaseDataSample:
     def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in metainfo and data.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `metainfo` and `data`.
         """
         for k in self.keys():
             yield (k, getattr(self, k))
@@ -327,7 +328,8 @@ class BaseDataSample:
     def data_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in data.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `data`.
         """
 
         for k in self.data_keys():
@@ -336,7 +338,8 @@ class BaseDataSample:
     def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            list: a list of (key, value) tuple pairs in metainfo.
+            iterator: an iterator object whose element is  (key, value) tuple
+        pairs for `metainfo`.
         """
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
@@ -352,7 +355,7 @@ class BaseDataSample:
         else:
             if name in self._metainfo_fields:
                 raise AttributeError(f'`{name}` is used in meta information,'
-                                     f'which is immutable. if you want to'
+                                     f'which is immutable. If you want to'
                                      f'change the key in metainfo, please use'
                                      f'set_metainfo(dict(name=val))')
 
@@ -408,6 +411,9 @@ class BaseDataSample:
         functions."""
         return getattr(self, name)
 
+    # It's must to keep the parameters order `value`, `name`, for
+    # `partial(BaseDataSample.set_field,
+    #          name='_proposals', dtype=BaseDataElement)`
     def set_field(self,
                   value: Any,
                   name: str,
