@@ -326,7 +326,7 @@ class BaseDataset(Dataset):
             List[int]: All categories in the image of specified index.
         """
         raise NotImplementedError(f'{type(self)} must implement `get_cat_ids` '
-                                  f'method')
+                                  'method')
 
     def __getitem__(self, idx: int) -> dict:
         """Get the idx-th image of dataset after ``self.pipelines`` and
@@ -403,11 +403,11 @@ class BaseDataset(Dataset):
                 # data_info contains multiple samples.
                 for item in data_info:
                     if not isinstance(item, dict):
-                        raise TypeError(f'data_info must be a list[dict], but '
+                        raise TypeError('data_info must be a list[dict], but '
                                         f'got {type(item)}')
                 data_infos.extend(data_info)
             else:
-                raise TypeError(f'data_info should be a dict or list[dict], '
+                raise TypeError('data_info should be a dict or list[dict], '
                                 f'but got {type(data_info)}')
 
         return data_infos
