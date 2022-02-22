@@ -17,9 +17,9 @@ class BaseEvaluator(metaclass=ABCMeta):
     """Base class for an evaluator.
 
     The evaluator first processes each batch of data_samples and
-    predictions, put the processed results in to the results list. Then it
-    collect all results together from all rank if distributed training is
-    used. Finally, it computes the metrics of the entire dataset.
+    predictions, and appends the processed results in to the results list.
+    Then it collects all results together from all ranks if distributed
+    training is used. Finally, it computes the metrics of the entire dataset.
 
     Args:
         collect_device (str): Device name used for collecting results from
@@ -46,9 +46,9 @@ class BaseEvaluator(metaclass=ABCMeta):
 
     @abstractmethod
     def process(self, data_samples: dict, predictions: dict) -> None:
-        """Process one batch of data and predictions. The processed Results
-        should be stored in `self.results`, which will be used to computed the
-        metrics when all batches have been processed.
+        """Process one batch of data samples and predictions. The processed
+        results should be stored in ``self.results``, which will be used to
+        compute the metrics when all batches have been processed.
 
         Args:
             data_samples (dict): The data samples from the dataset.
@@ -63,23 +63,24 @@ class BaseEvaluator(metaclass=ABCMeta):
             results (list): The processed results of each batch.
         Returns:
             dict: The computed metrics. The keys are the names of the metrics,
-                and the values are corresponding results.
+            and the values are corresponding results.
         """
 
     def evaluate(self, size: int) -> dict:
-        """Evaluate the model performance of the whole dataset after process
+        """Evaluate the model performance of the whole dataset after processing
         all batches.
 
         Args:
-            size (int): Length of the entire val dataset. When batch size > 1,
-                the dataloader may pad some samples to make sure all ranks
-                have the same length of dataset slice. The ``collect_results``
-                function will drop the padded data base on this size.
+            size (int): Length of the entire validation dataset. When batch
+                size > 1, the dataloader may pad some data samples to make
+                sure all ranks have the same length of dataset slice. The
+                ``collect_results`` function will drop the padded data base on
+                this size.
 
         Returns:
-            metric (dict): Evaluation metrics dict on the val dataset. The keys
-                are the names of the metrics, and the values are corresponding
-                results.
+            metrics (dict): Evaluation metrics dict on the val dataset. The
+            keys are the names of the metrics, and the values are
+            corresponding results.
         """
         if len(self.results) == 0:
             warnings.warn(
@@ -95,15 +96,15 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         if self.rank == 0:
             # TODO: replace with mmengine.dist.master_only
-            metric = [self.compute_metrics(results)]
+            metrics = [self.compute_metrics(results)]
         else:
-            metric = [None]  # type: ignore
+            metrics = [None]  # type: ignore
         # TODO: replace with mmengine.dist.broadcast
-        metric = dist.broadcast_object_list(metric)
+        metrics = dist.broadcast_object_list(metrics)
 
         # reset the results list
-        self.results = []
-        return metric[0]
+        self.results.clear()
+        return metrics[0]
 
 
 # TODO: replace with mmengine.dist.get_dist_info

@@ -44,26 +44,27 @@ class ComposedEvaluator(BaseEvaluator):
         metrics dict.
 
         Args:
-            size (int): Length of the entire val dataset. When batch size > 1,
-                the dataloader may pad some samples to make sure all ranks
-                have the same length of dataset slice. The ``collect_results``
-                function will drop the padded data base on this size.
+            size (int): Length of the entire validation dataset. When batch
+                size > 1, he dataloader may pad some data samples to make sure
+                all ranks have the same length of dataset slice. The
+                ``collect_results`` function will drop the padded data base on
+                this size.
 
         Returns:
             metrics (dict): Evaluation metrics of all wrapped evaluators. The
-                keys are the names of the metrics, and the values are
-                corresponding results.
+            keys are the names of the metrics, and the values are
+            corresponding results.
         """
         metrics = {}
         for evaluator in self.evaluators:
-            _metric = evaluator.evaluate(size)
+            _metrics = evaluator.evaluate(size)
 
             # Check metric name conflicts
-            for name in _metric.keys():
-                if name in _metric:
+            for name in _metrics.keys():
+                if name in metrics:
                     raise ValueError(
                         'There are multiple evaluators with the same metric '
                         f'name {name}')
 
-            metrics.update(_metric)
+            metrics.update(_metrics)
         return metrics
