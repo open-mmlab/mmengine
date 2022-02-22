@@ -16,40 +16,38 @@ class BaseDataSample:
     annotations and/or predictions at the same time (for example, both
     pixel-level semantic segmentation annotations and instance-level detection
     bboxes annotations). To facilitate data access of multitask, MMEngine
-    defines `BaseDataSample` as the base class for sample data encapsulation.
-    **The attributes of `BaseDataSample` will be various types of data
+    defines ``BaseDataSample`` as the base class for sample data encapsulation.
+    **The attributes of ``BaseDataSample`` will be various types of data
     elements**, and the codebases in OpenMMLab need to implement their own
     xxxDataSample such as ClsDataSample, DetDataSample, SegDataSample based on
-    `BaseDataSample` to encapsulate all relevant data, as a data
+    ``BaseDataSample`` to encapsulate all relevant data, as a data
     interface between dataset, model, visualizer, and evaluator components.
 
-    These attributes in `BaseDataElement` are divided into two parts,
-    the `metainfo` and the `data` respectively.
+    These attributes in ``BaseDataElement`` are divided into two parts,
+    the ``metainfo`` and the ``data`` respectively.
 
-        - `metainfo`: Usually contains the
+        - ``metainfo``: Usually contains the
           information about the image such as filename,
           image_shape, pad_shape, etc. The attributes can be accessed or
           modified by dict-like or object-like operations, such as
-          `.`(only for data access) , `in`, `del`, `pop(str)` `get(str)`,
-          `metainfo_keys()`, `metainfo_values()`, `metainfo_items()`,
-          `set_metainfo()`(for set or change value in metainfo).
-           Users can also apply tensor-like methods to all obj:`torch.Tensor`
-           in the `data_fileds`, such as `.cuda()`, `.cpu()`, `.numpy()`,
-           `.to()`,  `to_tensor()`, `.detach()`, `.numpy()`
+          ``.``(only for data access) , ``in``, ``del``, ``pop(str)``,
+          ``get(str)``, ``metainfo_keys()``, ``metainfo_values()``,
+          ``metainfo_items()``, ``set_metainfo()``(for set or change value
+          in metainfo).
 
-        - `data`: Annotations or model predictions are
+        - ``data``: Annotations or model predictions are
           stored. The attributes can be accessed or modified by
           dict-like or object-like operations, such as
-          `.` , `in`, `del`, `pop(str)` `get(str)`, `data_keys()`,
-          `data_values()`, `data_items()`. Users can also apply tensor-like
-          methods to all obj:`torch.Tensor` in the `data_fileds`,
-          such as `.cuda()`, `.cpu()`, `.numpy()`, , `.to()`,  `to_tensor()`
-          `.detach()`, `.numpy()`
+          ``.`` , ``in``, ``del``, ``pop(str)`` ``get(str)``, ``data_keys()``,
+          ``data_values()``, ``data_items()``. Users can also apply tensor-like
+          methods to all obj:``torch.Tensor`` in the ``data_fileds``,
+          such as ``.cuda()``, ``.cpu()``, ``.numpy()``, , ``.to()``,
+          ``to_tensor()``, ``.detach()``, ``.numpy()``
 
     Args:
         meta_info (dict, optional): A dict contains the meta information
-            of a sample. such as `dict(img_shape=(512, 512, 3),
-            scale_factor=(1, 1, 1, 1))`. Defaults to None.
+            of a sample. such as ``dict(img_shape=(512, 512, 3),
+            scale_factor=(1, 1, 1, 1))``. Defaults to None.
         data (dict, optional): A dict contains annotations of a sample or
             model predictions. Defaults to None.
 
@@ -205,7 +203,9 @@ class BaseDataSample:
                 det_sample.proposals = torch.rand((5, 4))
     """
 
-    def __init__(self, metainfo: dict = None, data: dict = None) -> None:
+    def __init__(self,
+                 metainfo: Optional[dict] = None,
+                 data: Optional[dict] = None) -> None:
 
         self._metainfo_fields: set = set()
         self._data_fields: set = set()
@@ -216,47 +216,48 @@ class BaseDataSample:
             self.set_data(data)
 
     def set_metainfo(self, metainfo: dict) -> None:
-        """Add and change meta information.
+        """Set or change key-value pairs in ``metainfo_field`` by parameter
+        ``metainfo``.
 
         Args:
             metainfo (dict): A dict contains the meta information
-                of image, such as `img_shape`, `scale_factor`, etc.
-                Defaults to None.
+                of image, such as ``img_shape``, ``scale_factor``, etc.
         """
-        assert isinstance(metainfo,
-                          dict), f'meta should be a `dict` but get {metainfo}'
+        assert isinstance(
+            metainfo, dict), f'meta should be a ``dict`` but got {metainfo}'
         meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
             if k in self._data_fields:
                 raise AttributeError(f'`{k}` is used in data,'
-                                     f'which is immutable. If you want to'
-                                     f'change the key in data, please use'
-                                     f'set_data')
+                                     'which is immutable. If you want to'
+                                     'change the key in data, please use'
+                                     'set_data')
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
-        """Update a dict to `data_fields`.
+        """Set or change key-value pairs in ``data_field`` by parameter
+        ``data``.
 
         Args:
             data (dict): A dict contains annotations of image or
                 model predictions. Defaults to None.
         """
         assert isinstance(data,
-                          dict), f'meta should be a `dict` but get {data}'
+                          dict), f'meta should be a ``dict`` but got {data}'
         for k, v in data.items():
             self.set_field(name=k, value=v, field_type='data', dtype=None)
 
     def new(self,
-            metainfo: dict = None,
-            data: dict = None) -> 'BaseDataSample':
-        """Return a new data element with same type. If `metainfo` and `data`
-        are None, the new data element will have same metainfo and data. If
-        metainfo or data is not None, the new results will overwrite it with
-        the input value.
+            metainfo: Optional[dict] = None,
+            data: Optional[dict] = None) -> 'BaseDataSample':
+        """Return a new data element with same type. If ``metainfo`` and
+        ``data`` are None, the new data element will have same metainfo and
+        data. If metainfo or data is not None, the new results will overwrite
+        it with the input value.
 
         Args:
             metainfo (dict, optional): A dict contains the meta information
-                of image. such as `img_shape`, `scale_factor`, etc.
+                of image. such as ``img_shape``, ``scale_factor``, etc.
                 Defaults to None.
             data (dict, optional): A dict contains annotations of image or
                 model predictions. Defaults to None.
@@ -266,8 +267,7 @@ class BaseDataSample:
         if metainfo is not None:
             new_data.set_metainfo(metainfo)
         else:
-            metainfo = dict(self.metainfo_items())
-            new_data.set_metainfo(metainfo)
+            new_data.set_metainfo(dict(self.metainfo_items()))
         if data is not None:
             new_data.set_data(data)
         else:
@@ -279,14 +279,14 @@ class BaseDataSample:
         Returns:
             list: Contains all keys in data_fields.
         """
-        return [key for key in self._data_fields]
+        return list(self._data_fields)
 
     def metainfo_keys(self) -> list:
         """
         Returns:
             list: Contains all keys in metainfo_fields.
         """
-        return [key for key in self._metainfo_fields]
+        return list(self._metainfo_fields)
 
     def data_values(self) -> list:
         """
@@ -319,8 +319,8 @@ class BaseDataSample:
     def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            iterator: an iterator object whose element is  (key, value) tuple
-            pairs for `metainfo` and `data`.
+            iterator: an iterator object whose element is (key, value) tuple
+            pairs for ``metainfo`` and ``data``.
         """
         for k in self.keys():
             yield (k, getattr(self, k))
@@ -328,8 +328,8 @@ class BaseDataSample:
     def data_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            iterator: an iterator object whose element is  (key, value) tuple
-            pairs for `data`.
+            iterator: an iterator object whose element is (key, value) tuple
+            pairs for ``data``.
         """
 
         for k in self.data_keys():
@@ -338,13 +338,14 @@ class BaseDataSample:
     def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
-            iterator: an iterator object whose element is  (key, value) tuple
-            pairs for `metainfo`.
+            iterator: an iterator object whose element is (key, value) tuple
+            pairs for ``metainfo``.
         """
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
 
     def __setattr__(self, name: str, value: Any):
+        """setattr is only used to set data."""
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)
@@ -354,19 +355,18 @@ class BaseDataSample:
                     f'private attribute, which is immutable. ')
         else:
             if name in self._metainfo_fields:
-                raise AttributeError(f'`{name}` is used in meta information,'
-                                     f'which is immutable. If you want to'
-                                     f'change the key in metainfo, please use'
-                                     f'set_metainfo(dict(name=val))')
+                raise AttributeError(
+                    f'``{name}`` is used in meta information.'
+                    'If you want to change the key in metainfo, please use'
+                    'set_metainfo(dict(name=val))')
 
             self.set_field(
                 name=name, value=value, field_type='data', dtype=None)
 
     def __delattr__(self, item: str):
-
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
-                                 f'private attribute, which is immutable. ')
+                                 'private attribute, which is immutable. ')
         super().__delattr__(item)
         if item in self._metainfo_fields:
             self._metainfo_fields.remove(item)
@@ -379,12 +379,12 @@ class BaseDataSample:
 
     def get(self, *args) -> Any:
         """get property in data and metainfo as the same as python."""
-        assert len(args) < 3, f'`get` get more than 2 arguments {args}'
+        assert len(args) < 3, f'``get`` get more than 2 arguments {args}'
         return self.__dict__.get(*args)
 
     def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
-        assert len(args) < 3, '`pop` get more than 2 arguments'
+        assert len(args) < 3, '``pop`` get more than 2 arguments'
         name = args[0]
         if name in self._metainfo_fields:
             self._metainfo_fields.remove(args[0])
@@ -411,9 +411,9 @@ class BaseDataSample:
         functions."""
         return getattr(self, name)
 
-    # It's must to keep the parameters order `value`, `name`, for
-    # `partial(BaseDataSample.set_field,
-    #          name='_proposals', dtype=BaseDataElement)`
+    # It's must to keep the parameters order ``value``, ``name``, for
+    # ``partial(BaseDataSample.set_field,
+    #          name='_proposals', dtype=BaseDataElement)``
     def set_field(self,
                   value: Any,
                   name: str,
@@ -425,7 +425,7 @@ class BaseDataSample:
         if dtype is not None:
             assert isinstance(
                 value,
-                dtype), f'{value} should be a {dtype} but get {type(value)}'
+                dtype), f'{value} should be a {dtype} but got {type(value)}'
 
         super().__setattr__(name, value)
         if field_type == 'metainfo':
