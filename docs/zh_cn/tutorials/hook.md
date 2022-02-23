@@ -1,6 +1,6 @@
 # 钩子（Hook）
 
-钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用所有运行时注册到挂载点的方法。钩子编程的优点之一是提高程序的灵活性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
+钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程的优点之一是提高程序的灵活性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
 
 ```python
 pre_hooks = []
@@ -9,7 +9,7 @@ post_hooks = []
 def main():
     for func, arg in pre_hooks:
         func(arg)
-    # do something here
+    print('do something here')
     for func, arg in post_hooks:
         func(arg)
 
@@ -17,7 +17,15 @@ pre_hooks.append((print, 'hello'))
 post_hooks.append((print, 'good bye'))
 
 main()
+"""
+hello
+do something here
+good bye
+"""
 ```
+
+可以看到，`main` 函数会在两个位置调用对应的钩子而无需做任何改动。
+
 
 ## 钩子设计
 
@@ -95,7 +103,7 @@ def main():
 - after_test_epoch: 遍历完成测试数据集后执行
 - after_run: 训练结束后执行
 
-而控制整个训练过程的抽象在 MMEngine 中被设计为 Trainer，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Trainer，一种是以 epoch 为单位迭代的 [EpochBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_runner.py)，另一种是以 iteration 为单位迭代的 [IterBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_runner.py)。下面给出 EpochBasedTrainer 调用钩子的伪代码。
+而控制整个训练过程的抽象在 MMEngine 中被设计为 Trainer，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Trainer，一种是以 epoch 为单位迭代的 [EpochBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_trainer.py)，另一种是以 iteration 为单位迭代的 [IterBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_trainer.py)。下面给出 EpochBasedTrainer 调用钩子的伪代码。
 
 ```python
 class EpochBasedTrainer(BaseTrainer):
@@ -136,7 +144,7 @@ class EpochBasedTrainer(BaseTrainer):
 
 MMEngine 提供数个常用钩子，下面一一介绍这些钩子的用法。
 
-## 钩子用法
+## MMEngine 内置的钩子
 
 ### CheckpointHook
 
@@ -256,9 +264,9 @@ optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters
 
 ### SyncBuffersHook
 
-## 定制钩子
+## 添加自定义钩子
 
-如果 MMEngine 提供的钩子不能满足需求，我们可以定制自己的钩子，只需继承 Hook 类并重写相应的位点。
+如果 MMEngine 提供的钩子不能满足需求，用户可以自定义钩子，只需继承 Hook 类并重写相应的位点。
 
 例如，如果希望在训练的过程中判断损失值是否有效，如果无穷大则无效，我们可以在每次迭代后判断损失值，因此只需重写  `after_train_iter` 位点。
 
