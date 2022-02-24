@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import math
 from typing import Dict, List, Optional
 from unittest import TestCase
 
@@ -39,10 +40,10 @@ class ToyEvaluator(BaseEvaluator):
 
 
 def generate_test_results(size, batch_size, pred, label):
-    num_batch = np.ceil(size / batch_size, dtype=np.int64)
+    num_batch = math.ceil(size / batch_size)
     bs_residual = size - (num_batch - 1) * batch_size
-    for i in range(size):
-        bs = bs_residual if i == size - 1 else batch_size
+    for i in range(num_batch):
+        bs = bs_residual if i == num_batch - 1 else batch_size
         data_samples = {'label': np.full(bs, label)}
         predictions = {'pred': np.full(bs, pred)}
         yield (data_samples, predictions)
