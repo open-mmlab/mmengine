@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from mmengine import EVALUATORS, BaseEvaluator
+from mmengine import EVALUATORS, BaseEvaluator, ComposedEvaluator
 
 
 @EVALUATORS.register_module()
@@ -49,9 +49,16 @@ def generate_test_results(size, batch_size, pred, label):
 
 class TestBaseEvaluator(TestCase):
 
+    def build_evaluator(self, cfg):
+        if isinstance(cfg, (list, dict)):
+            evaluators = [EVALUATORS.build(_cfg) for _cfg in cfg]
+            return ComposedEvaluator(evaluators=evaluators)
+        else:
+            return EVALUATORS.build(cfg)
+
     def test_single_evaluator(self):
         cfg = dict(type='ToyEvaluator')
-        evaluator = EVALUATORS.build(cfg)
+        evaluator = self.build_evaluator.build(cfg)
 
         size = 10
         batch_size = 4
@@ -65,14 +72,12 @@ class TestBaseEvaluator(TestCase):
         self.assertEqual(metrics['size'], size)
 
     def test_composed_evaluator(self):
-        cfg = dict(
-            type='ComposedEvaluator',
-            evaluators=[
-                dict(type='ToyEvaluator'),
-                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-            ])
+        cfg = [
+            dict(type='ToyEvaluator'),
+            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+        ]
 
-        evaluator = EVALUATORS.build(cfg)
+        evaluator = self.build_evaluator.build(cfg)
 
         size = 10
         batch_size = 4
@@ -89,14 +94,12 @@ class TestBaseEvaluator(TestCase):
 
     def test_ambiguate_metric(self):
 
-        cfg = dict(
-            type='ComposedEvaluator',
-            evaluators=[
-                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0)),
-                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-            ])
+        cfg = [
+            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0)),
+            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+        ]
 
-        evaluator = EVALUATORS.build(cfg)
+        evaluator = self.build_evaluator.build(cfg)
 
         size = 10
         batch_size = 4
@@ -113,14 +116,12 @@ class TestBaseEvaluator(TestCase):
     def test_dataset_meta(self):
         dataset_meta = dict(classes=('cat', 'dog'))
 
-        cfg = dict(
-            type='ComposedEvaluator',
-            evaluators=[
-                dict(type='ToyEvaluator'),
-                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-            ])
+        cfg = [
+            dict(type='ToyEvaluator'),
+            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+        ]
 
-        evaluator = EVALUATORS.build(cfg)
+        evaluator = self.build_evaluator.build(cfg)
         evaluator.dataset_meta = dataset_meta
 
         for _evaluator in evaluator.evaluators():
