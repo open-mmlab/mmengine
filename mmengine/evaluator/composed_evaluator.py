@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Optional, Union
+from typing import Optional, Sequence, Union
 
 from .base import BaseEvaluator
 
@@ -8,16 +8,18 @@ class ComposedEvaluator:
     """Wrapper class to compose multiple :class:`DatasetEvaluator` instances.
 
     Args:
-        evaluators (list[BaseEvaluator]): The evaluators to compose.
+        evaluators (Sequence[BaseEvaluator]): The evaluators to compose.
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
     """
 
-    def __init__(self, evaluators: List[BaseEvaluator], collect_device='cpu'):
+    def __init__(self,
+                 evaluators: Sequence[BaseEvaluator],
+                 collect_device='cpu'):
         self._dataset_meta: Union[None, dict] = None
         self.collect_device = collect_device
-        self.evaluators = evaluators.copy()
+        self.evaluators = evaluators
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -46,8 +48,8 @@ class ComposedEvaluator:
 
         Args:
             size (int): Length of the entire validation dataset. When batch
-                size > 1, he dataloader may pad some data samples to make sure
-                all ranks have the same length of dataset slice. The
+                size > 1, the dataloader may pad some data samples to make
+                sure all ranks have the same length of dataset slice. The
                 ``collect_results`` function will drop the padded data base on
                 this size.
 
