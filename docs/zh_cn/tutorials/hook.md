@@ -240,7 +240,7 @@ optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
 - 在每个 iteration
   - 拷贝并且转换成 FP16 模型
   - 前向传播（FP16 的模型参数)，此时 weights, activations 都是 FP16
-  - loss 乘 scale factor s
+  - loss 乘缩放参数 s，避免非 0 梯度溢出
   - 反向传播（FP16 的模型参数和参数梯度)， 此时 gradients 也是 FP16
   - 参数梯度乘 1/s
   - 利用 FP16 的梯度更新 FP32 的模型参数
@@ -260,11 +260,41 @@ optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters
 
 ### IterTimerHook
 
+`IterTimerHook` 用于记录加载数据的时间以及迭代一次耗费的时间。
+
+```python
+config = dict(type='IterTimerHook')
+```
+
 ### DistSamplerSeedHook
+
+`DistSamplerSeedHook` 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。
+
+```python
+config = dict(type='DistSamplerSeedHook')
+```
 
 ### EmptyCacheHook
 
+`EmptyCacheHook` 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
+
+```python
+config = dict(type='EmptyCacheHook', before_epoch=False, after_epoch=True, after_iter=False)
+```
+
 ### SyncBuffersHook
+
+`SyncBuffersHook` 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
+
+```python
+config = dict(type='SyncBuffersHook')
+```
+
+如果是非分布式训练可以设置 `distributed=False` 便使该钩子失效，即不同步模型的 buffer。
+
+```python
+config = dict(type='SyncBuffersHook', distributed=False)
+```
 
 ## 添加自定义钩子
 
