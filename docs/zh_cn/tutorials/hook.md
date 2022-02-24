@@ -1,10 +1,10 @@
 # 钩子（Hook）
 
-钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程的优点之一是提高程序的灵活性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
+钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程可以提高程序的灵活性和拓展性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
 
 ```python
-pre_hooks = []
-post_hooks = []
+pre_hooks = [(print, 'hello')]
+post_hooks = [(print, 'good bye')]
 
 def main():
     for func, arg in pre_hooks:
@@ -12,9 +12,6 @@ def main():
     print('do something here')
     for func, arg in post_hooks:
         func(arg)
-
-pre_hooks.append((print, 'hello'))
-post_hooks.append((print, 'good bye'))
 
 main()
 """
@@ -24,10 +21,9 @@ good bye
 """
 ```
 
-可以看到，`main` 函数会在两个位置调用对应的钩子而无需做任何改动。
+可以看到，`main` 函数会在两个位置调用钩子中的函数而无需做任何改动。
 
-
-## 钩子设计
+## 钩子的设计
 
 在介绍 MMEngine 钩子的设计之前，我们先简单介绍如何使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)：
 
@@ -83,7 +79,7 @@ def main():
 ```
 
 上面的伪代码是训练一个模型的基本过程，为了实现无侵入定制训练过程，我们将训练过程划分为数个位点，只需要在这些位点插入各种逻辑即可达到目的，例如加载模型权重、更新模型参数。
-因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。根据需要，我们将训练过程划分成 16 个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
+因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。根据需要，我们在训练过程中设置了16个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
 
 - before_run: 训练开始前执行
 - after_load_checkpoint: 加载权重后执行
@@ -103,10 +99,10 @@ def main():
 - after_test_epoch: 遍历完成测试数据集后执行
 - after_run: 训练结束后执行
 
-而控制整个训练过程的抽象在 MMEngine 中被设计为 Trainer，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Trainer，一种是以 epoch 为单位迭代的 [EpochBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_trainer.py)，另一种是以 iteration 为单位迭代的 [IterBasedTrainer](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_trainer.py)。下面给出 EpochBasedTrainer 调用钩子的伪代码。
+而控制整个训练过程的抽象在 MMEngine 中被设计为 Runner，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Runner，一种是以 epoch 为单位迭代的 [EpochBasedRunner](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_runner.py)，另一种是以 iteration 为单位迭代的 [IterBasedRunner](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_runner.py)。下面给出 EpochBasedRunner 调用钩子的伪代码。
 
 ```python
-class EpochBasedTrainer(BaseTrainer):
+class EpochBasedRunner(BaseRunner):
 
     def run(self):
         self.call_hook('before_run')
@@ -142,9 +138,19 @@ class EpochBasedTrainer(BaseTrainer):
         self.call_hook('after_run')
 ```
 
-MMEngine 提供数个常用钩子，下面一一介绍这些钩子的用法。
-
 ## MMEngine 内置的钩子
+
+MMEngine 提供了很多内置的钩子，每个钩子都有对应的优先级。在 Runner 训练过程中，同一位点，钩子的优先级越高，越早被调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。
+
+| 名称      |      用途      |  优先级 |
+|:----------:|:-------------:|:------:|
+| CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
+| OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
+| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
+| IterTimerHook | 统计迭代耗时 | LOW (70) |
+| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
+| EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
+| SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
 
 ### CheckpointHook
 
@@ -210,7 +216,7 @@ HOOKS.build(optimizer_config)
 
 使用以上配置即可实现在 Trainer 中完成梯度清零、反向传播以及参数更新。
 
-如果我们想对梯度进行阶段，避免梯度爆炸，则可以提供 grad_clip 参数，该参数的设置可参考 [clip_grad_norm_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
 
 ```python
 optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_type=2))
@@ -222,7 +228,9 @@ optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_typ
 optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
 ```
 
-注意，`detect_anomalous_params=True` 会降低训练速度，故只应用于调试。
+```{note}
+`detect_anomalous_params=True` 会降低训练速度，推荐只用于调试。
+```
 
 除了 `OptimizerHook`，MMEngine 还提供了 `Fp16OptimizerHook` 和 `GradientCumulativeOptimizerHook`，前者用于混合精度训练，后者用于梯度累计。
 
@@ -250,25 +258,19 @@ optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters
 
 ### ParamSchedulerHook
 
-### LoggerHook
-
-### EMAHook
-
 ### IterTimerHook
 
 ### DistSamplerSeedHook
 
 ### EmptyCacheHook
 
-### ProfilerHook
-
 ### SyncBuffersHook
 
 ## 添加自定义钩子
 
-如果 MMEngine 提供的钩子不能满足需求，用户可以自定义钩子，只需继承 Hook 类并重写相应的位点。
+如果 MMEngine 提供的默认钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
 
-例如，如果希望在训练的过程中判断损失值是否有效，如果无穷大则无效，我们可以在每次迭代后判断损失值，因此只需重写  `after_train_iter` 位点。
+例如，如果希望在训练的过程中判断损失值是否有效，如果值为无穷大则无效，我们可以在每次迭代后判断损失值是否无穷大，因此只需重写  `after_train_iter` 位点。
 
 ```python
 import torch
