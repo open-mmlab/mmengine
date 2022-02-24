@@ -82,7 +82,7 @@ def main():
 ```
 
 上面的伪代码是训练一个模型的基本过程，为了实现无侵入定制训练过程，我们将训练过程划分为数个位点，只需要在这些位点插入各种逻辑即可达到目的，例如加载模型权重、更新模型参数。
-因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。根据需要，我们在训练过程中设置了16个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
+因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。为了满足更丰富的定制化要求，我们在训练过程中设置了16个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
 
 - before_run: 训练开始前执行
 - after_load_checkpoint: 加载权重后执行
@@ -102,10 +102,10 @@ def main():
 - after_test_epoch: 遍历完成测试数据集后执行
 - after_run: 训练结束后执行
 
-而控制整个训练过程的抽象在 MMEngine 中被设计为 Runner，它的行为之一是调用钩子完成训练过程。MMEngine 提供了两种类型的 Runner，一种是以 epoch 为单位迭代的 [EpochBasedRunner](https://github.com/open-mmlab/mmengine/blob/main/trainier/epoch_based_runner.py)，另一种是以 iteration 为单位迭代的 [IterBasedRunner](https://github.com/open-mmlab/mmengine/blob/main/trainier/iter_based_runner.py)。下面给出 EpochBasedRunner 调用钩子的伪代码。
+而控制整个训练过程的抽象在 MMEngine 中被设计为 Runner，它的行为之一是调用钩子完成训练过程。下面给出 Runner 调用钩子的伪代码。
 
 ```python
-class EpochBasedRunner(BaseRunner):
+class Runner(Runner):
 
     def run(self):
         self.call_hook('before_run')
@@ -145,12 +145,21 @@ class EpochBasedRunner(BaseRunner):
 
 MMEngine 提供了很多内置的钩子，每个钩子都有对应的优先级。在 Runner 训练过程中，同一位点，钩子的优先级越高，越早被调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。
 
+MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或缺的，不可或缺的为默认钩子，可或缺的是可定制钩子。
+
+**默认钩子**
+
 | 名称      |      用途      |  优先级 |
 |:----------:|:-------------:|:------:|
 | CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
 | OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
 | ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
+
+**可定制钩子**
+
+| 名称      |      用途      |  优先级 |
+|:----------:|:-------------:|:------:|
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
 | EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
