@@ -65,10 +65,12 @@ class TestBaseEvaluator(TestCase):
         self.assertEqual(metrics['size'], size)
 
     def test_composed_evaluator(self):
-        cfg = [
-            dict(type='ToyEvaluator'),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-        ]
+        cfg = dict(
+            type='ComposedEvaluator',
+            evaluators=[
+                dict(type='ToyEvaluator'),
+                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            ])
 
         evaluator = EVALUATORS.build(cfg)
 
@@ -87,10 +89,12 @@ class TestBaseEvaluator(TestCase):
 
     def test_ambiguate_metric(self):
 
-        cfg = [
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0)),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-        ]
+        cfg = dict(
+            type='ComposedEvaluator',
+            evaluators=[
+                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0)),
+                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            ])
 
         evaluator = EVALUATORS.build(cfg)
 
@@ -109,10 +113,12 @@ class TestBaseEvaluator(TestCase):
     def test_dataset_meta(self):
         dataset_meta = dict(classes=('cat', 'dog'))
 
-        cfg = [
-            dict(type='ToyEvaluator'),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
-        ]
+        cfg = dict(
+            type='ComposedEvaluator',
+            evaluators=[
+                dict(type='ToyEvaluator'),
+                dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            ])
 
         evaluator = EVALUATORS.build(cfg)
         evaluator.dataset_meta = dataset_meta
