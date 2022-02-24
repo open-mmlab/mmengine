@@ -22,7 +22,6 @@ main()
 hello
 do something here
 good bye
-"""
 ```
 
 可以看到，`main` 函数会在两个位置调用钩子中的函数而无需做任何改动。
