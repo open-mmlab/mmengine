@@ -123,23 +123,37 @@ class TestHook:
     def test_every_n_epochs(self):
         hook = Hook()
         runner = Mock()
-        runner.epoch = 1
-        return_val = hook.every_n_epochs(runner, 2)
-        assert return_val
+
+        for i in range(100):
+            runner.epoch = i
+            return_val = hook.every_n_epochs(runner, 3)
+            if (i + 1) % 3 == 0:
+                assert return_val
+            else:
+                assert not return_val
 
     def test_every_n_inner_iters(self):
         hook = Hook()
         runner = Mock()
-        runner.inner_iter = 1
-        return_val = hook.every_n_inner_iters(runner, 2)
-        assert return_val
+
+        for i in range(100):
+            runner.inner_iter = i
+            return_val = hook.every_n_inner_iters(runner, 3)
+            if (i + 1) % 3 == 0:
+                assert return_val
+            else:
+                assert not return_val
 
     def test_every_n_iters(self):
         hook = Hook()
         runner = Mock()
-        runner.iter = 1
-        return_val = hook.every_n_iters(runner, 2)
-        assert return_val
+        for i in range(100):
+            runner.iter = i
+            return_val = hook.every_n_iters(runner, 3)
+            if (i + 1) % 3 == 0:
+                assert return_val
+            else:
+                assert not return_val
 
     def test_end_of_epoch(self):
         hook = Hook()
