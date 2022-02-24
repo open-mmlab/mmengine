@@ -14,7 +14,11 @@ def main():
         func(arg)
 
 main()
-"""
+```
+
+下面是程序的输出：
+
+```
 hello
 do something here
 good bye
