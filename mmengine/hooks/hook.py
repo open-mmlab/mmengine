@@ -33,25 +33,27 @@ class Hook:
         operations after each epoch."""
         pass
 
-    def before_iter(self, runner: object, data_batch=None) -> None:
+    def before_iter(self,
+                    runner: object,
+                    data_batch: Sequence[BaseDataSample] = None) -> None:
         """All subclasses should override this function, if they need any
         operations before each iter."""
         pass
 
     def after_iter(self,
                    runner: object,
-                   data_batch=None,
-                   outputs=None) -> None:
+                   data_batch: Sequence[BaseDataSample] = None,
+                   outputs: Sequence[BaseDataSample] = None) -> None:
         """All subclasses should override this function, if they need any
         operations after each epoch."""
         pass
 
-    def before_save_checkpoint(self, runner: object, checkpoint) -> None:
+    def before_save_checkpoint(self, runner: object, checkpoint: dict) -> None:
         """All subclasses should override this function, if they need any
         operations before saving the checkpoint."""
         pass
 
-    def after_load_checkpoint(self, runner: object, checkpoint) -> None:
+    def after_load_checkpoint(self, runner: object, checkpoint: dict) -> None:
         """All subclasses should override this function, if they need any
         operations after saving the checkpoint."""
         pass
@@ -86,17 +88,23 @@ class Hook:
         operations after each test epoch."""
         self.after_epoch(runner)
 
-    def before_train_iter(self, runner: object, data_batch=None) -> None:
+    def before_train_iter(self,
+                          runner: object,
+                          data_batch: Sequence[BaseDataSample] = None) -> None:
         """All subclasses should override this function, if they need any
         operations before each training iteration."""
         self.before_iter(runner, data_batch=None)
 
-    def before_val_iter(self, runner: object, data_batch=None) -> None:
+    def before_val_iter(self,
+                        runner: object,
+                        data_batch: Sequence[BaseDataSample] = None) -> None:
         """All subclasses should override this function, if they need any
         operations before each validation iteration."""
         self.before_iter(runner, data_batch=None)
 
-    def before_test_iter(self, runner: object, data_batch=None) -> None:
+    def before_test_iter(self,
+                         runner: object,
+                         data_batch: Sequence[BaseDataSample] = None) -> None:
         """All subclasses should override this function, if they need any
         operations before each test iteration."""
         self.before_iter(runner, data_batch=None)
