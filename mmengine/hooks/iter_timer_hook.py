@@ -6,8 +6,9 @@ from .hook import HOOKS, Hook
 
 @HOOKS.register_module()
 class IterTimerHook(Hook):
-    """A hook that logs the time spent during iteration. Eg. ``data_time`` 
-    for loading data and ``time`` for a model train step.
+    """A hook that logs the time spent during iteration.
+
+    Eg. ``data_time`` for loading data and ``time`` for a model train step.
     """
 
     def before_epoch(self, runner):
