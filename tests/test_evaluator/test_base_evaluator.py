@@ -1,10 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from unittest import TestCase
 
 import numpy as np
 
-from mmengine import EVALUATORS, BaseEvaluator, ComposedEvaluator
+from mmengine.evaluator import BaseEvaluator, ComposedEvaluator
+from mmengine.registry import EVALUATORS
 
 
 @EVALUATORS.register_module()
@@ -20,13 +21,13 @@ class ToyEvaluator(BaseEvaluator):
         result = {'pred': predictions['pred'], 'label': data_samples['label']}
         self.results.append(result)
 
-    def compute_metrics(self):
+    def compute_metrics(self, results: List):
         if self.dummy_metrics is not None:
             assert isinstance(self.dummy_metrics, dict)
             return self.dummy_metrics.copy()
 
-        pred = np.concatenate([result['pred'] for result in self.results])
-        label = np.concatenate([result['label'] for result in self.results])
+        pred = np.concatenate([result['pred'] for result in results])
+        label = np.concatenate([result['label'] for result in results])
         acc = (pred == label).sum() / pred.size
 
         metrics = {
@@ -58,7 +59,7 @@ class TestBaseEvaluator(TestCase):
 
     def test_single_evaluator(self):
         cfg = dict(type='ToyEvaluator')
-        evaluator = self.build_evaluator.build(cfg)
+        evaluator = self.build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -77,7 +78,7 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator.build(cfg)
+        evaluator = self.build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -99,7 +100,7 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator.build(cfg)
+        evaluator = self.build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -121,7 +122,7 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator.build(cfg)
+        evaluator = self.build_evaluator(cfg)
         evaluator.dataset_meta = dataset_meta
 
         for _evaluator in evaluator.evaluators():
