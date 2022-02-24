@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List
+from typing import List, Optional, Union
 
 from .base import BaseEvaluator
 
 
-class ComposedEvaluator(BaseEvaluator):
+class ComposedEvaluator:
     """Wrapper class to compose multiple :class:`DatasetEvaluator` instances.
 
     Args:
@@ -15,11 +15,12 @@ class ComposedEvaluator(BaseEvaluator):
     """
 
     def __init__(self, evaluators: List[BaseEvaluator], collect_device='cpu'):
-        super().__init__(collect_device)
+        self._dataset_meta: Union[None, dict] = None
+        self.collect_device = collect_device
         self.evaluators = evaluators.copy()
 
     @property
-    def dataset_meta(self) -> dict:
+    def dataset_meta(self) -> Optional[dict]:
         return self._dataset_meta
 
     @dataset_meta.setter

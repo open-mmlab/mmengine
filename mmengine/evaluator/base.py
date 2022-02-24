@@ -100,7 +100,8 @@ class BaseEvaluator(metaclass=ABCMeta):
         else:
             metrics = [None]  # type: ignore
         # TODO: replace with mmengine.dist.broadcast
-        metrics = dist.broadcast_object_list(metrics)
+        if self.world_size > 1:
+            metrics = dist.broadcast_object_list(metrics)
 
         # reset the results list
         self.results.clear()
