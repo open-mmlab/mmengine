@@ -223,7 +223,9 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - WEIGHT_INITIALIZERS: 权重初始化的工具
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
 - OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
+- PARAM_SCHEDULERS: 各种参数调度器， 如 `MultiStepLR`
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
+- EVALUATORS: 用于验证模型精度的评估器
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 
