@@ -24,7 +24,7 @@
 ```python
 validation_cfg=dict(
     evaluator=dict(type='COCO'),  # 使用 COCO 评测器，无参数
-    save_best='AP',  # 主要评测指标为 AP
+    main_metric='AP',  # 主要评测指标为 AP
     interval=10,  # 每 10 epoch 评测一次
     by_epoch=True,
 )
@@ -40,7 +40,7 @@ validation_cfg=dict(
         dict(type='accuracy', top_k=1),  # 使用分类正确率评测器
         dict(type='f1_score')  # 使用 F1_score 评测器
     ],
-    save_best='accuracy'
+    main_metric='accuracy'
     interval=10,
     by_epoch=True,
 )
@@ -54,7 +54,7 @@ validation_cfg=dict(
         dict(type='accuracy', top_k=1, prefix='top1'),
         dict(type='accuracy', top_k=5, prefix='top5')
     ],
-    save_best='top1_accuracy',  # 前缀 'top1' 被自动添加进指标名称中，用以区分同名指标
+    main_metric='top1_accuracy',  # 前缀 'top1' 被自动添加进指标名称中，用以区分同名指标
     interval=10,
     by_epoch=True,
 )
@@ -74,6 +74,8 @@ validation_cfg=dict(
 - `compute_metrics()`: 计算评测指标，并将所评测指标存放在一个字典中返回。
 
 其中，`compute_metrics()` 会在 `evaluate()` 方法中被调用；后者在计算评测指标前，会在分布式测试时收集和汇总不同 rank 的中间处理结果。而 `process()` 和 `evaluate()` 都会由任务执行器调用。因此，用户只需要在继承 `BaseEvaluator` 后实现 `process()` 和 `compute_metrics()` 方法即可。
+
+需要注意的是，`self.results` 中存放的具体类型取决于自定义评测器类的实现。例如，当测试样本或模型输出数据量较大（如语义分割、图像生成等任务），不宜全部存放在内存中时，可以在 `self.results` 中存放每个批次计算得到的指标，并在 `compute_metrics()` 中汇总；或将每个批次的中间结果存储到临时文件中，并在 `self.results` 中存放临时文件路径，最后由 `compute_metrics()` 从文件中读取数据并计算指标。
 
 ### 自定义评测器类
 
