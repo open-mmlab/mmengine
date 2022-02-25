@@ -119,11 +119,38 @@ def main():
 
 而在 MMEngine 中，控制整个训练过程被抽象成执行器（Runner），执行器除了完成环境的初始化，更重要的是在特定的位点调用钩子完成定制化功能。关于执行器的更多介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
 
-同时，MMEngine 将 16 个位点组织成一个钩子（Hook），我们只需继承钩子基类并根据需求实现特定的钩子，再将钩子注册到执行器中，即可被自动调用。
+同时，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
 
-## 钩子的注册
+## 注册钩子
 
-## MMEngine 内置的钩子
+假如我们实现了一个自定义钩子 `CustomHook`：
+
+```python
+from mmengine import HOOKS
+from mmengine.hooks import Hook
+
+@HOOKS.register_module()
+class CustomHook(Hook):
+
+    def before_train_iter(self, runner):
+        print('prepare forwarding')
+```
+
+我们将钩子的配置传给执行器的 custom_hooks 的参数，
+
+```python
+from mmengine import Runner
+
+custom_hooks = dict(
+    dict(type='CustomHook')
+)
+runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
+runner.run()  # 执行器开始训练
+```
+
+便会在每次模型前向计算前打印 `prepare forwarding`。
+
+## 内置的钩子
 
 MMEngine 提供了很多内置的钩子，每个钩子都有对应的优先级。在 Runner 训练过程中，同一位点，钩子的优先级越高，越早被调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。
 
@@ -148,6 +175,25 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 
 ```{note}
 不建议修改默认钩子的优先级，除非有更高的定制化需求。
+```
+
+两种钩子在执行器中的赋值方式不同，默认钩子定义在 `default_hooks` 参数中，而可定制钩子定义在 `custom_hooks` 中，如下所示：
+
+```python
+from mmengine import Runner
+
+default_hooks = dict(
+    timer=dict(type='IterTimerHook',
+    optimizer=dict(type='OptimizerHook'),
+    param_scheduler=dict(type='LRSchedulerHook'))),
+    )
+
+custom_hooks = [
+    dict(type='EmptyCacheHook', priority='NORMAL'),
+]
+
+runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
+runner.run()
 ```
 
 ### CheckpointHook
