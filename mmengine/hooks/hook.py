@@ -246,7 +246,7 @@ class Hook:
             runner (object): The runner of the training process.
             n (int): Whether or not current epoch can be evenly divided by n.
 
-        Returns
+        Returns:
             bool: whether or not current epoch can be evenly divided by n.
         """
         return (runner.epoch + 1) % n == 0 if n > 0 else False  # type: ignore
@@ -260,7 +260,7 @@ class Hook:
             n (int): Whether or not current inner iteration can be evenly
                 divided by n.
 
-        Returns
+        Returns:
             bool: whether or not current inner iteration can be evenly
                 divided by n.
         """
@@ -275,7 +275,7 @@ class Hook:
             n (int): Whether or not current iteration can be
                 evenly divided by n.
 
-        Returns
+        Returns:
             bool: whether or not current iteration can be evenly divided by n.
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False  # type: ignore
@@ -286,7 +286,7 @@ class Hook:
         Args:
             runner (object): The runner of the training process.
 
-        Returns
+        Returns:
             bool: whether the end of current epoch or not.
         """
         return runner.inner_iter + 1 == len(runner.data_loader)  # type: ignore
@@ -297,7 +297,7 @@ class Hook:
         Args:
             runner (object): The runner of the training process.
 
-        Returns
+        Returns:
             bool: whether or not current epoch is the last epoch.
         """
         return runner.epoch + 1 == runner._max_epochs  # type: ignore
@@ -308,7 +308,7 @@ class Hook:
         Args:
             runner (object): The runner of the training process.
 
-        Returns
+        Returns:
             bool: whether or not current iteration is the last iteration.
         """
         return runner.iter + 1 == runner._max_iters  # type: ignore
