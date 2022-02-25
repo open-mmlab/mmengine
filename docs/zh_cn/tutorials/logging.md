@@ -16,7 +16,7 @@
 
 **MMEngine** 中 `MessageHub` 、 `LogBuffer` 与各组件之间的关系结构关系如下：
 
-![结构关系](https://user-images.githubusercontent.com/57566630/155488205-5778b9aa-b4e3-499f-815b-e6c0d3e9277e.jpg)
+![message_hub关系图](https://user-images.githubusercontent.com/57566630/155653207-00e753ef-f1c5-4a42-995a-1501156a51e6.jpg)
 
 可以看到 `MessaeHub` 除了记录日志（log_buffers）外，还会存储运行时信息（runtime）。运行时信息主要记录 runner 的 meta 信息、迭代次数等，运行时信息不需要历史记录，每次更新都会被覆盖。
 
@@ -173,56 +173,75 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 ### 消息枢纽的创建与访问
 
-简单介绍如何访问 `root_message_hub`，如何通过 name 创建/访问对应 runner 的 `message_hub`，以及如何访问最近被创建的 `latest_message_hub`。
+简单介绍如何创建/访问 `root_message_hub`，如何通过 name 创建/访问对应 runner 的 `message_hub`，以及如何访问最近被创建的 `latest_message_hub`。
 
 ```Python
-root_message_hub = MessageHub.get_message_hub()  # 不传参，默认返回 root_message_hub
-task1_message_hub1 = MessageHub.get_message_hub('task1')  # 创建 task1_message_hub
-latest_message_hub = MessageHub.get_message_hub_latest()  # task1_message_hub 是最近创建，因此返回 task1_message_hub
-task2_message_hub2 = MessageHub.get_message_hub('task2')  # 创建 task2_message_hub2
-latest_message_hub = MessageHub.get_message_hub_latest()  # task2_message_hub2 是最近创建，因此返回 task2_message_hub2
-message_hub = MessageHub.get_message_hub('task1')  # 指定 task_name，访问之前创建的 task1_message_hub
+message_hub = MessageHub.get_message_hub()
+message_hub.name # root 不传参，默认返回 root
+message_hub = MessageHub.get_message_hub('task1')
+message_hub.name # task1，返回 task1
+message_hub = MessageHub.get_message_hub(current=True)
+message_hub.name # task1  返回 task1,最近被创建
+message_hub = MessageHub.get_message_hub('task2') 
+message_hub = MessageHub.get_message_hub(current=True)
+root_message_hub.name # task2 返回 task2,最近被创建
 ```
 
 ### 消息枢纽的分发与记录
 
-不同组件通过 name 来访问同一个 `message_hub`
+不同组件通过 `message_hub` 分发、汇总消息。runner 在运行
 
 ```python
 class Receiver:
     def __init__(self, name):
-        self.message_hub = MessageHub.get_message_hub(name) # 获取 Task 中被创建的 message_hub
+        self.message_hub = MessageHub.get_message_hub(name)
 
     def run(self):
         print(f"Learning rate is {self.message_hub.get_log('lr').current()}")
-        # 接收数据，验证 Receiver 能够接收到 Dispatcher 中更新的日志。
+        print(f"Learning rate is {self.message_hub.get_log('loss').current()}")
+        print(f"Learning rate is {self.message_hub.get_runtime('meta')}")
 
-class Dispatcher:
+
+class LrUpdater:
     def __init__(self, name):
-        self.message_hub = MessageHub.get_message_hub(name)  # 获取 Task 中被创建的 message_hub
+        self.message_hub = MessageHub.get_message_hub(name)
 
     def run(self):
-        self.message_hub.update_log('lr', 0.001)  # 更新数据
+        self.message_hub.update_log('lr', 0.001)
+
+
+class MetaUpdater:
+    def __init__(self, name):
+        self.message_hub = MessageHub.get_message_hub(name)
+
+    def run(self):
+        self.message_hub.update_runtime(
+            'meta',
+            dict(experiment='retinanet_r50_caffe_fpn_1x_coco.py',
+                 repo='mmdetection'))
+
+
+class LossUpdater:
+    def __init__(self, name):
+        self.message_hub = MessageHub.get_message_hub(name)
+
+    def run(self):
+        self.message_hub.update_log('loss', 0.1)
 
 
 class Task:
     def __init__(self, name):
-        self.message_hub = MessageHub.get_message_hub(name)  # 创建制定 name 的 message_hub
+        self.message_hub = MessageHub.get_message_hub(name)
         self.receiver = Receiver(name)
-        self.dispatcher = Dispatcher(name)
+        self.updaters = [LossUpdater(name),
+                         MetaUpdater(name),
+                         LrUpdater(name)]
 
     def run(self):
-        self.dispatcher.run()
+        for updater in self.updaters:
+            updater.run()
         self.receiver.run()
- 
-if __name__ == '__main__':
-        task = Task('name')
-    	task.run()
-        # Learning rate is 0.001  
-
 ```
-
-不显示指定 `name`，不同组件通过 `latest=True` 来访问同一个 message_hub。
 
 
 
