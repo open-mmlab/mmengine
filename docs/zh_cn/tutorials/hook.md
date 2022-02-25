@@ -150,7 +150,7 @@ runner.run()  # 执行器开始训练
 
 便会在每次模型前向计算前打印 `prepare forwarding`。
 
-## 内置的钩子
+## 内置钩子
 
 MMEngine 提供了很多内置的钩子，每个钩子都有对应的优先级。在 Runner 训练过程中，同一位点，钩子的优先级越高，越早被调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。
 
@@ -195,6 +195,8 @@ custom_hooks = [
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.run()
 ```
+
+下面逐一介绍钩子的用法。
 
 ### CheckpointHook
 
