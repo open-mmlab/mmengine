@@ -6,9 +6,11 @@ from torch.nn.parallel import DataParallel
 from torch.nn.parallel.distributed import (DistributedDataParallel,
                                            _find_tensors)
 
+from mmengine.registry import MODEL_WRAPPERS
 from mmengine.utils import TORCH_VERSION, digit_version
 
 
+@MODEL_WRAPPERS.register_module()
 class MMDataParallel(DataParallel):
     """There is no difference between MMDataParallel and pytorch's
     DataParallel, "train_step" and "val_step" are added just to avoid bc
@@ -28,13 +30,13 @@ class MMDataParallel(DataParallel):
             ('MMDataParallel only supports single GPU training, if you need to'
              ' train with multiple GPUs, please use MMDistributedDataParallel'
              ' instead.')
+        assert hasattr(self.module, 'train_step')
         for t in chain(self.module.parameters(), self.module.buffers()):
             if t.device != self.src_device_obj:
                 raise RuntimeError(
                     'module must have its parameters and buffers '
                     f'on device {self.src_device_obj} (device_ids[0]) but '
                     f'found one of them on device: {t.device}')
-
         return self.module.train_step(*inputs, **kwargs)
 
     def val_step(self, *inputs, **kwargs):
@@ -42,6 +44,7 @@ class MMDataParallel(DataParallel):
             ('MMDataParallel only supports single GPU training, if you need to'
              ' train with multiple GPUs, please use MMDistributedDataParallel'
              ' instead.')
+        assert hasattr(self.module, 'val_step')
         for t in chain(self.module.parameters(), self.module.buffers()):
             if t.device != self.src_device_obj:
                 raise RuntimeError(
@@ -51,6 +54,7 @@ class MMDataParallel(DataParallel):
         return self.module.val_step(*inputs, **kwargs)
 
 
+@MODEL_WRAPPERS.register_module()
 class MMDistributedDataParallel(DistributedDataParallel):
     """There is no difference between MMDistributedDataParallel and pytorch's
     DistributedDataParallel, "train_step" and "val_step" are added just to

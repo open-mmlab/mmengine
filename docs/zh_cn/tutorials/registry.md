@@ -219,6 +219,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - DATA_SAMPLERS: `Dataloader` 的 `sampler`，用于采样数据
 - PIPELINES: 各种数据预处理，如 `Resize`, `Reshape`
 - MODELS: 模型的各种模块
+- MODEL_WRAPPERS: 模型的包装器，如 `MMDistributedDataParallel`，用于对分布式数据并行
 - WEIGHT_INITIALIZERS: 权重初始化的工具
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
 - OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
