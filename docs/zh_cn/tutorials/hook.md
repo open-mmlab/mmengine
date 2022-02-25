@@ -1,10 +1,10 @@
 # 钩子（Hook）
 
-钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程可以提高程序的灵活性和拓展性，用户将自定义的方法注册到挂载点便可被调用执行而无需修改程序中的代码。下面是钩子的简单示例。
+钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程可以提高程序的灵活性和拓展性，用户将自定义的方法注册到挂载点便可被调用而无需修改程序中的代码。下面是钩子的简单示例。
 
 ```python
 pre_hooks = [(print, 'hello')]
-post_hooks = [(print, 'good bye')]
+post_hooks = [(print, 'goodbye')]
 
 def main():
     for func, arg in pre_hooks:
@@ -21,14 +21,14 @@ main()
 ```
 hello
 do something here
-good bye
+goodbye
 ```
 
 可以看到，`main` 函数会在两个位置调用钩子中的函数而无需做任何改动。
 
 ## 钩子的设计
 
-在介绍 MMEngine 钩子的设计之前，我们先简单介绍如何使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)：
+在介绍 MMEngine 钩子的设计之前，我们先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
 
 ```python
 import torch
@@ -45,7 +45,6 @@ class Net(nn.Module):
     pass
 
 def main():
-    # define datasets and dataloader
     transform = transforms.ToTensor()
     train_dataset = CustomDataset(transform=transform, ...)
     val_dataset = CustomDataset(transform=transform, ...)
@@ -54,17 +53,13 @@ def main():
     val_dataloader = DataLoader(val_dataset, ...)
     test_dataloader = DataLoader(test_dataset, ...)
 
-    # define a neural network
     net = Net()
-    # define a loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     for i in range(max_epochs):
         for inputs, labels in train_dataloader:
-            # zero the parameter gradients
             optimizer.zero_grad()
-            # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
@@ -81,65 +76,52 @@ def main():
             accuracy = ...
 ```
 
-上面的伪代码是训练一个模型的基本过程，为了实现无侵入定制训练过程，我们将训练过程划分为数个位点，只需要在这些位点插入各种逻辑即可达到目的，例如加载模型权重、更新模型参数。
-因此，MMEngine 中钩子的作用是在不改变训练代码的前提下，灵活地在不同位点插入定制化的功能。为了满足更丰富的定制化要求，我们在训练过程中设置了16个位点，下面根据位点被调用的先后顺序列出这 16 个位点：
-
-- before_run: 训练开始前执行
-- after_load_checkpoint: 加载权重后执行
-- before_train_epoch: 遍历训练数据集前执行
-- before_train_iter: 模型前向计算前执行
-- after_train_iter: 模型前向计算后执行
-- after_train_epoch: 遍历完成训练数据集后执行
-- before_val_epoch: 遍历验证数据集前执行
-- before_val_iter: 模型前向计算前执行
-- after_val_iter: 模型前向计算后执行
-- after_val_epoch: 遍历完成验证数据集前执行
-- before_save_checkpoint: 保存权重前执行
-- after_train_epoch: 遍历完成训练数据集后执行
-- before_test_epoch: 遍历测试数据集前执行
-- before_test_iter: 模型前向计算前执行
-- after_test_iter: 模型前向计算后执行
-- after_test_epoch: 遍历完成测试数据集后执行
-- after_run: 训练结束后执行
-
-而控制整个训练过程的抽象在 MMEngine 中被设计为 Runner，它的行为之一是调用钩子完成训练过程。下面给出 Runner 调用钩子的伪代码。
+上面的伪代码是训练模型的基本步骤，如果我们需要在上面的代码中加入定制化的逻辑，则需要修改 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们在 `main` 方法中插入 16 个位点，只需在这些位点插入定制化逻辑，即可根据需求完成模型的训练，例如加载模型权重、更新模型参数等。
 
 ```python
-class Runner(Runner):
+def main():
+    ...
+    # 1. before_run: 训练开始前执行的逻辑
+    # 2. after_load_checkpoint: 加载权重后执行的逻辑
+    for i in range(max_epochs):
+        # 3. before_train_epoch: 遍历训练数据集前执行的逻辑
+        for inputs, labels in train_dataloader:
+            # 4. before_train_iter: 模型前向计算前执行的逻辑
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            # 5. after_train_iter: 模型前向计算后执行的逻辑
+            loss.backward()
+            optimizer.step()
+        # 6. after_train_epoch: 遍历完成训练数据集后执行的逻辑
 
-    def run(self):
-        self.call_hook('before_run')
-        self.call_hook('after_load_checkpoint', checkpoint)
-        # train + val
-        for i in range(self.max_epochs):
-            self.call_hook('before_train_epoch')
-            for img, data_sample in self.train_dataloader:
-                self.call_hook('before_train_iter', data_sample)
-                outputs = model(img, data_sample)
-                self.call_hook('after_train_iter', data_sample, outputs)
-            self.call_hook('after_train_epoch')
+        # 7. before_val_epoch:
+        with torch.no_grad():
+            for inputs, labels in val_dataloader:
+                # 8. before_val_iter: 模型前向计算前执行
+                outputs = net(inputs)
+                loss = criterion(outputs, labels)
+                # 9. after_val_iter: 模型前向计算后执行
+        # 10. after_val_epoch: 遍历完成验证数据集前执行
 
-            self.call_hook('before_val_epoch')
-            if self._should_validate(i):
-                for img, data_sample in self.val_dataloader:
-                    self.call_hook('before_val_iter', data_sample)
-                    outputs = model(img, data_sample)
-                    self.call_hook('after_val_iter', data_sample, outputs)
-            self.call_hook('after_val_epoch')
+        # 11. before_save_checkpoint: 保存权重前执行的逻辑
 
-            self.call_hook('before_save_checkpoint', checkpoint)
+    # 12. before_test_epoch: 遍历测试数据集前执行的逻辑
+    with torch.no_grad():
+        for inputs, labels in test_dataloader:
+            # 13. before_test_iter: 模型前向计算后执行的逻辑
+            outputs = net(inputs)
+            accuracy = ...
+            # 14. after_test_iter: 遍历完成测试数据集后执行的逻辑
+    # 15. after_test_epoch: 遍历完成测试数据集后执行
 
-        # test
-        self.call_hook('before_test_epoch')
-        if self._should_test():
-            for img, data_sample in self.test_dataloader:
-                self.call_hook('before_test_iter', data_sample)
-                outputs = model(img, data_sample)
-                self.call_hook('after_test_iter', data_sample, outputs)
-        self.call_hook('after_test_epoch')
-
-        self.call_hook('after_run')
+    # 16. after_run: 训练结束后执行的逻辑
 ```
+
+而在 MMEngine 中，控制整个训练过程被抽象成执行器（Runner），执行器除了完成环境的初始化，更重要的是在特定的位点调用钩子完成定制化功能。关于执行器的更多介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+
+同时，MMEngine 将 16 个位点组织成一个钩子（Hook），我们只需继承钩子基类并根据需求实现特定的钩子，再将钩子注册到执行器中，即可被自动调用。
+
+## 钩子的注册
 
 ## MMEngine 内置的钩子
 
@@ -153,7 +135,7 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 |:----------:|:-------------:|:------:|
 | CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
 | OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
-| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
+| SchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
 
 **可定制钩子**
@@ -163,6 +145,10 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
 | EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
+
+```{note}
+不建议修改默认钩子的优先级，除非有更高的定制化需求。
+```
 
 ### CheckpointHook
 
@@ -268,7 +254,9 @@ optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
 optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters=4)
 ```
 
-### ParamSchedulerHook
+### SchedulerHook
+
+`SchedulerHook` 调用优化器参数调整策略（Parameter Scheduler）的 step 方法更新优化器的参数。每一类优化器参数调整策略对应一个具体的 `SchedulerHook`，例如学习率相关的调整策略对应 `LRSchedulerHook`，动量相关的调整策略对应 `MomentumSchedulerHook`。
 
 ### IterTimerHook
 
@@ -329,7 +317,7 @@ class CheckInvalidLossHook(Hook):
 
     Args:
         interval (int): Checking interval (every k iterations).
-            Default: 50.
+            Defaults to 50.
     """
 
     def __init__(self, interval=50):
