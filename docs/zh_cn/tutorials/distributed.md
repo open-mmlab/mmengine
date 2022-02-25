@@ -28,12 +28,12 @@ PyTorch 提供了一套基础的通信原语用于多进程之间张量的通信
 - [get_local_size](todo: add API link)：获取当前进程所在机器的总进程数，非分布式情况下返回 0
 - [get_dist_info](todo: add API link)：获取当前任务的进程总数和当前进程对应到全局的 rank 数，非分布式情况下 word_size = 1，rank = 0
 - [is_main_process](todo: add API link)：判断是否为 0 号主进程，非分布式情况下返回 True
-- [master_only](todo: add API link)：函数装饰器，用于修饰只需要全局 0 号进程（rank 0 而不是 local rank 0）进行的函数
-- [barrier](todo: add API link)：用于各个分布式进程同步
+- [master_only](todo: add API link)：函数装饰器，用于修饰只需要全局 0 号进程（rank 0 而不是 local rank 0）执行的函数
+- [barrier](todo: add API link)：同步所有进程到达相同位置
 
 ## 分布式通信函数
 
-通信函数 （Collective functions），主要用于进程间数据的通信，基于 PyTorch 原生的 all_reduce，all_gather，gather，broadcast 接口，MMEngine 提供了如下接口，函兼容非分布式训练的情况，并支持更丰富数据类型的通信。
+通信函数 （Collective functions），主要用于进程间数据的通信，基于 PyTorch 原生的 all_reduce，all_gather，gather，broadcast 接口，MMEngine 提供了如下接口，兼容非分布式训练的情况，并支持更丰富数据类型的通信。
 
 - [all_reduce](todo: add API link): 对进程间 tensor 进行 AllReduce 操作
 - [all_gather](todo: add API link)：对进程间 tensor 进行 AllGather 操作
@@ -41,7 +41,7 @@ PyTorch 提供了一套基础的通信原语用于多进程之间张量的通信
 - [broadcast](todo: add API link)：对某个进程的 tensor 进行广播
 - [sync_random_seed](todo: add API link)：同步进程之间的随机种子
 - [broadcast_object_list](todo: add API link)：支持 object list 的广播，可以基于 broadcast 接口实现
-- [all_reduce_dict](todo: add API link)：对 dict 中的内容进行 all_reduce  操作，基于 broadcast 和 all_reduce 接口实现
-- [all_gather_object](todo: add API link)：基于 all_gather 实现对任意 python pickable data 的 all_tather 操作
-- [gather_object](todo: add API link)：将 group 里每个 rank 的 picklable data gather 到一个目标 rank，且支持多种方式
-- [collect_results](todo: add API link)：支持基于 CPU 或者 GPU 对不同进程间的数据进行收集·
+- [all_reduce_dict](todo: add API link)：对 dict 中的内容进行 all_reduce 操作，基于 broadcast 和 all_reduce 接口实现
+- [all_gather_object](todo: add API link)：基于 all_gather 实现对任意可以 Python 序列化对象的 all_tather 操作
+- [gather_object](todo: add API link)：将 group 里每个 rank 的  data gather 到一个目标 rank，且支持多种方式
+- [collect_results](todo: add API link)：支持基于 CPU 或者 GPU 对不同进程间的列表数据进行收集·
