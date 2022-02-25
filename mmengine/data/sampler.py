@@ -2,12 +2,17 @@
 import itertools
 import math
 from typing import Iterator, Optional, Sized
+# from mmengine.dist import get_dist_info, sync_random_seed
+from unittest.mock import MagicMock
 
 import torch
 from torch.utils.data import Sampler
 
-from mmengine.dist import get_dist_info, sync_random_seed
 from mmengine.registry import DATA_SAMPLERS
+
+# TODO, need to remove those lines after implementing dist module
+get_dist_info = MagicMock(return_value=(0, 1))
+sync_random_seed = MagicMock(return_value=0)
 
 
 @DATA_SAMPLERS.register_module()
