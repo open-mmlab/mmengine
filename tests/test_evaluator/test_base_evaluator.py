@@ -41,7 +41,7 @@ class ToyEvaluator(BaseEvaluator):
 
 def generate_test_results(size, batch_size, pred, label):
     num_batch = math.ceil(size / batch_size)
-    bs_residual = size - (num_batch - 1) * batch_size
+    bs_residual = size % batch_size
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
         data_samples = {'label': np.full(bs, label)}
@@ -52,7 +52,7 @@ def generate_test_results(size, batch_size, pred, label):
 class TestBaseEvaluator(TestCase):
 
     def build_evaluator(self, cfg):
-        if isinstance(cfg, (list, dict)):
+        if isinstance(cfg, (list, tuple)):
             evaluators = [EVALUATORS.build(_cfg) for _cfg in cfg]
             return ComposedEvaluator(evaluators=evaluators)
         else:
@@ -72,6 +72,12 @@ class TestBaseEvaluator(TestCase):
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['accuracy'], 1.0)
         self.assertEqual(metrics['size'], size)
+
+        # Test empty results
+        cfg = dict(type='ToyEvaluator', dummy_metrics=dict(accuracy=1.0))
+        evaluator = self.build_evaluator(cfg)
+        with self.assertWarnsRegex(UserWarning, 'got empty `self._results`.'):
+            evaluator.evaluate(0)
 
     def test_composed_evaluator(self):
         cfg = [
@@ -126,5 +132,5 @@ class TestBaseEvaluator(TestCase):
         evaluator = self.build_evaluator(cfg)
         evaluator.dataset_meta = dataset_meta
 
-        for _evaluator in evaluator.evaluators():
+        for _evaluator in evaluator.evaluators:
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
