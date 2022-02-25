@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Sequence, Optional
+from typing import Optional, Sequence
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import Registry
@@ -162,7 +162,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -176,7 +176,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -190,7 +190,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -207,7 +207,7 @@ class Hook:
             runner (object): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model. 
+            outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
@@ -222,9 +222,9 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from 
+            outputs (Sequence[BaseDataSample], optional): Outputs from
                 model. Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
