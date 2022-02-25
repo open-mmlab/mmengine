@@ -269,7 +269,7 @@ class Hook:
 
         Returns:
             bool: whether or not current inner iteration can be evenly
-                divided by n.
+            divided by n.
         """
         return (runner.inner_iter +  # type: ignore
                 1) % n == 0 if n > 0 else False
