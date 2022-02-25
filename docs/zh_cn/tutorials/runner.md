@@ -190,7 +190,55 @@ MMEngine 内提供了四种默认的循环：
 
 TODO：流程图
 
-循环基类需要提供两个输入：`runner` 执行器的实例和 `loader` 循环所需要迭代的迭代器。
+用户可以通过继承循环基类来实现自己的训练流程。循环基类需要提供两个输入：`runner` 执行器的实例和 `loader` 循环所需要迭代的迭代器。
+用户如果有自定义的需求，也可以增加更多的输入参数。MMEngine 中同样提供了 LOOPS 注册器对循环类进行管理，用户可以向注册器内注册自定义的循环模块，
+然后在配置文件的 `train_cfg`、`validation_cfg`、`test_cfg` 中增加 `type` 字段来指定使用何种循环。
 
+```python
+from mmengine.registry import LOOPS
+from mmengine.runner.loop import BaseLoop
+
+@LOOPS.register_module()
+class CustomValLoop(BaseLoop):
+    def __init__(self, runner, loader, evaluator, loader2):
+        super().__init__(runner, loader, evaluator)
+        self.loader2 = runner.build_dataloader(loader2)
+
+    def run(self):
+        self.runner.call_hooks('before_val')
+        for idx, databatch in enumerate(self.loader):
+            self.run_iter(idx, databatch)
+        metric = self.evaluator.evaluate()
+        for idx, databatch in enumerate(self.loader2):
+            self.run_iter(idx, databatch)
+        metric2 = self.evaluator.evaluate()
+
+        ...
+
+        self.runner.call_hooks('after_val')
+
+```
+
+上面的例子中实现了一个与默认验证循环不一样的自定义验证循环，它在两个不同的验证集上进行验证，并对两个验证结果进行进一步的处理。在实现了自定义的循环类之后，
+只需要在配置文件的 `validation_cfg` 内设置 `type='CustomValLoop'`，并添加额外的配置即可。
+
+```python
+validation_cfg = dict(type='CustomValLoop', loader2=dict(dataset=dict(type='ValDataset2'), ...))
+```
 
 ### 自定义执行器
+
+如果自定义执行流程依然无法满足需求，用户同样可以实现自己的执行器。具体实现流程与其他模块无异：继承 MMEngine 中的 Runner，重写需要修改的函数，添加进 RUNNERS 注册器中，最后在配置文件中指定 `runner_type` 即可。
+
+```python
+from mmengine.registry import RUNNERS
+from mmengine.runner import Runner
+
+@RUNNERS.register_module()
+class CustomRunner(Runner):
+
+    def setup_env(self):
+        ...
+```
+
+上述例子实现了一个自定义的执行器，并重写了 `setup_env` 函数，然后添加进了 RUNNERS 注册器中，完成了这些步骤之后，便可以在配置文件中设置 `runner_type='CustomRunner'` 来构建自定义的执行器。
