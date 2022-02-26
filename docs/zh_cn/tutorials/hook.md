@@ -1,6 +1,8 @@
 # 钩子（Hook）
 
-钩子编程是一种编程模式，是指在程序的一个或者多个位置设置挂载点（位点），当程序运行至某个挂载点时，会自动调用运行时注册到挂载点的所有方法。钩子编程可以提高程序的灵活性和拓展性，用户将自定义的方法注册到挂载点便可被调用而无需修改程序中的代码。下面是钩子的简单示例。
+钩子编程是一种编程模式，是指在程序的一个或者多个位置设置位点（挂载点），当程序运行至某个位点时，会自动调用运行时注册到位点的所有方法。钩子编程可以提高程序的灵活性和拓展性，用户将自定义的方法注册到位点便可被调用而无需修改程序中的代码。
+
+下面是钩子的简单示例。
 
 ```python
 pre_hooks = [(print, 'hello')]
@@ -24,11 +26,11 @@ do something here
 goodbye
 ```
 
-可以看到，`main` 函数会在两个位置调用钩子中的函数而无需做任何改动。
+可以看到，`main` 函数在两个位置调用钩子中的函数而无需做任何改动。
 
-在 PyTorch 中，钩子的应用也随处可见，例如 Module 中的钩子可以获得 Module 的前向输入输出以及反向的输入输出。举 [`register_forward_hook`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook) 方法为例，该方法往 Module 注册一个前向钩子，钩子可以获得 Module 的输入和输出。
+在 PyTorch 中，钩子的应用也随处可见，例如模块（Module）中的钩子可以获得模块的前向输入输出以及反向的输入输出。举 [`register_forward_hook`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook) 方法为例，该方法往模块注册一个前向钩子，钩子可以获得模块的前向输入和输出。
 
-下面是一个简单的示例：
+下面是 `register_forward_hook` 用法的简单示例：
 
 ```python
 import torch
@@ -73,11 +75,11 @@ input: (tensor([[0., 1., 2.]]),)
 output: tensor([[-1.0036]], grad_fn=<AddmmBackward>)
 ```
 
-我们可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用。更多关于 PyTorch 钩子的用法请阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.htm)。
+可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用，在该钩子中打印了 Linear 模块的权重、偏置、模块的输入以及输出。更多关于 PyTorch 钩子的用法可以阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.htm)。
 
 ## 钩子的设计
 
-在介绍 MMEngine 钩子的设计之前，我们先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
+在介绍 MMEngine 中钩子的设计之前，先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
 
 ```python
 import torch
@@ -125,7 +127,7 @@ def main():
             accuracy = ...
 ```
 
-上面的伪代码是训练模型的基本步骤，如果我们需要在上面的代码中加入定制化的逻辑，则需要修改 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们在 `main` 方法中插入 16 个位点，只需在这些位点插入定制化逻辑，即可根据需求完成模型的训练，例如加载模型权重、更新模型参数等。
+上面的伪代码是训练模型的基本步骤，如果我们需要在上面的代码中加入定制化的逻辑，则需要修改 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们在 `main` 方法中插入 16 个位点，只需在这些位点插入定制化逻辑，即可添加定制化功能，例如加载模型权重、更新模型参数等。
 
 ```python
 def main():
@@ -166,13 +168,13 @@ def main():
     # 16. after_run: 训练结束后执行的逻辑
 ```
 
-而在 MMEngine 中，控制整个训练过程被抽象成执行器（Runner），执行器除了完成环境的初始化，更重要的是在特定的位点调用钩子完成定制化功能。关于执行器的更多介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，更重要的是在特定的位点调用钩子完成定制化功能。更多关于执行器的介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
 
-同时，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
+为了方便管理，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
 
 ## 内置钩子
 
-MMEngine 提供了很多内置的钩子，将钩子分为两类，分类原则是钩子是否是训练不可或缺的，不可或缺的为默认钩子，可或缺的是可定制钩子。
+MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默认钩子以及自定义钩子。
 
 每个钩子都有对应的优先级，在同一位点，钩子的优先级越高，越早被执行器调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。优先级列表如下：
 
@@ -192,27 +194,27 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分类原则�
 | SchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
 | LoggerHook | 打印日志 | LOW (70) |
-
-**可定制钩子**
-
-| 名称      |      用途      |  优先级 |
-|:----------:|:-------------:|:------:|
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
 | EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
+
+**自定义钩子**
+
+| 名称      |      用途      |  优先级 |
+|:----------:|:-------------:|:------:|
 | VisualizerHook | 可视化 | NORMAL (50) |
 
 ```{note}
-不建议修改默认钩子的优先级，除非有更高的定制化需求。另外，可定制钩子的优先级默认为 `NORMAL (50)`。
+不建议修改默认钩子的优先级，除非有更高的定制化需求。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
 ```
 
-两种钩子在执行器中的设置参数不同，默认钩子定义在 `default_hooks` 参数，而可定制钩子定义在 `custom_hooks` 参数，如下所示：
+两种钩子在执行器中的设置参数不同，默认钩子定义在 `default_hooks` 参数，而自定义钩子定义在 `custom_hooks` 参数，如下所示：
 
 ```python
 from mmengine import Runner
 
 default_hooks = dict(
-    param_scheduler=dict(type='LRSchedulerHook'))),
+    scheduler=dict(type='SchedulerHook'))),
     optimizer=dict(type='OptimizerHook'),
     checkpoint=dict(type='CheckpointHook', interval=1)
     timer=dict(type='IterTimerHook',
@@ -220,7 +222,7 @@ default_hooks = dict(
 )
 
 custom_hooks = [
-    dict(type='EmptyCacheHook', priority='NORMAL'),
+    dict(type='VisualizerHook', priority='NORMAL'),
 ]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
@@ -335,7 +337,17 @@ optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters
 
 ### SchedulerHook
 
-`SchedulerHook` 调用优化器参数调整策略（Parameter Scheduler）的 step 方法更新优化器的参数。每一类优化器参数调整策略对应一个具体的 `SchedulerHook`，例如学习率相关的调整策略对应 `LRSchedulerHook`，动量相关的调整策略对应 `MomentumSchedulerHook`。
+`SchedulerHook` 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。
+
+```python
+from mmengine import Runner
+
+scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
+
+default_hooks = dict(scheduler_hook=dict(type='SchedulerHook'))
+runner = Runner(scheduler=scheduler, default_hooks=default_hooks, ...)
+runner.run()
+```
 
 ### IterTimerHook
 
