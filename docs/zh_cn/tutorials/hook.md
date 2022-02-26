@@ -170,40 +170,18 @@ def main():
 
 同时，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
 
-## 注册钩子
-
-假如我们实现了一个自定义钩子 `CustomHook`：
-
-```python
-from mmengine import HOOKS
-from mmengine.hooks import Hook
-
-@HOOKS.register_module()
-class CustomHook(Hook):
-
-    def before_train_iter(self, runner):
-        print('prepare forwarding')
-```
-
-我们只需将钩子的配置传给执行器的 custom_hooks 的参数，执行器初始化的时候会注册钩子，
-
-```python
-from mmengine import Runner
-
-custom_hooks = dict(
-    dict(type='CustomHook')
-)
-runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
-runner.run()  # 执行器开始训练
-```
-
-便会在每次模型前向计算前打印 `prepare forwarding`。
-
 ## 内置钩子
 
-MMEngine 提供了很多内置的钩子，每个钩子都有对应的优先级。在 Runner 训练过程中，同一位点，钩子的优先级越高，越早被调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。
+MMEngine 提供了很多内置的钩子，将钩子分为两类，分类原则是钩子是否是训练不可或缺的，不可或缺的为默认钩子，可或缺的是可定制钩子。
 
-MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或缺的，不可或缺的为默认钩子，可或缺的是可定制钩子。
+每个钩子都有对应的优先级，在同一位点，钩子的优先级越高，越早被执行器调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。优先级列表如下：
+
+- VERY_HIGH (10)
+- HIGH (30)
+- ABOVE_NORMAL (40)
+- NORMAL (50)
+- LOW (70)
+- VERY_LOW (90)
 
 **默认钩子**
 
@@ -222,21 +200,22 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
 | EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
-| VisualizerHook | 可视化 | LOW (70) |
+| VisualizerHook | 可视化 | NORMAL (50) |
 
 ```{note}
-不建议修改默认钩子的优先级，除非有更高的定制化需求。
+不建议修改默认钩子的优先级，除非有更高的定制化需求。另外，可定制钩子的优先级默认为 `NORMAL (50)`。
 ```
 
-两种钩子在执行器中的赋值方式不同，默认钩子定义在 `default_hooks` 参数中，而可定制钩子定义在 `custom_hooks` 中，如下所示：
+两种钩子在执行器中的设置参数不同，默认钩子定义在 `default_hooks` 参数，而可定制钩子定义在 `custom_hooks` 参数，如下所示：
 
 ```python
 from mmengine import Runner
 
 default_hooks = dict(
-    timer=dict(type='IterTimerHook',
-    optimizer=dict(type='OptimizerHook'),
     param_scheduler=dict(type='LRSchedulerHook'))),
+    optimizer=dict(type='OptimizerHook'),
+    checkpoint=dict(type='CheckpointHook', interval=1)
+    timer=dict(type='IterTimerHook',
     logger=dict(type='TextLoggerHook'),
 )
 
@@ -427,4 +406,26 @@ class CheckInvalidLossHook(Hook):
         if self.every_n_iters(runner, self.interval):
             assert torch.isfinite(runner.outputs['loss']), \
                 runner.logger.info('loss become infinite or NaN!')
+```
+
+我们只需将钩子的配置传给执行器的 custom_hooks 的参数，执行器初始化的时候会注册钩子，
+
+```python
+from mmengine import Runner
+
+custom_hooks = dict(
+    dict(type='CheckInvalidLossHook', interval=50)
+)
+runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
+runner.run()  # 执行器开始训练
+```
+
+便会在每次模型前向计算后检查损失值。
+
+注意，自定义钩子的优先级默认为 `NORMAL (50)`，如果想改变钩子的优先级，则可以在配置中设置 priority 字段。
+
+```python
+custom_hooks = dict(
+    dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
+)
 ```
