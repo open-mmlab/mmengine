@@ -97,12 +97,12 @@ import numpy as np
 
 @EVALUATORS.register_module()
 class AccuracyEvaluator(BaseEvaluator):
-    
+
     def process(self, data_samples: Dict, predictions: Dict):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
         to computed the metrics when all batches have been processed.
-        
+
         Args:
             data_samples (dict): The data samples from the dataset.
             predictions (dict): The output of the model.
@@ -113,16 +113,16 @@ class AccuracyEvaluator(BaseEvaluator):
             'pred': predictions.pred_label,
             'gt': data_samples.gt_label
         )
-        
+
         # 将当前 batch 的结果存进 self.results
         self.results.append(result)
-    
+
     def compute_metrics(self, results: List):
         """Compute the metrics from processed results.
 
         Args:
             results (dict): The processed results of each batch.
-    
+
         Returns:
             Dict: The computed metrics. The keys are the names of the metrics,
             and the values are corresponding results.
