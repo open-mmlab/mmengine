@@ -233,7 +233,7 @@ runner.run()
 
 `CheckpointHook` 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。
 
-假设我们一共训练 21 个 epoch 并希望每间隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
+假设我们一共训练 21 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
 ```python
 from mmengine import HOOKS
@@ -243,7 +243,7 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True)
 HOOKS.build(checkpoint_config)
 ```
 
-上面的配置会保存第 5, 10, 15, 20 个 epoch 的权重。但是不会保存最后一个 epoch（第 21 个 epoch）的权重，因为 `interval=5` 表示每间隔 5 个 epoch 才会保存一次权重，而第 21 个 epoch 还没有间隔 5 个 epoch，不过可以通过设置 `save_last=True` 保存最后一个 epoch 的权重。
+上面的配置会保存第 5, 10, 15, 20 个 epoch 的权重。但是不会保存最后一个 epoch（第 21 个 epoch）的权重，因为 `interval=5` 表示每隔 5 个 epoch 才保存一次权重，而第 21 个 epoch 还没有隔 5 个 epoch，不过可以通过设置 `save_last=True` 保存最后一个 epoch 的权重。
 
 ```python
 checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True, save_last=True)
