@@ -26,6 +26,55 @@ goodbye
 
 可以看到，`main` 函数会在两个位置调用钩子中的函数而无需做任何改动。
 
+在 PyTorch 中，钩子的应用也随处可见，例如 Module 中的钩子可以获得 Module 的前向输入输出以及反向的输入输出。举 [`register_forward_hook`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook) 方法为例，该方法往 Module 注册一个前向钩子，钩子可以获得 Module 的输入和输出。
+
+下面是一个简单的示例：
+
+```python
+import torch
+import torch.nn as nn
+
+def forward_hook_fn(
+    module,  # 被注册钩子的对象
+    input,  # module 前向计算的输入
+    output  # module 前向计算的输出
+):
+    print(f'"forward_hook_fn" is invoked by {module.name}')
+    print('weight:', module.weight.data)
+    print('bias:', module.bias.data)
+    print('input:', input)
+    print('output:', output)
+
+class Model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Linear(3, 1)
+
+    def forward(self, x):
+        y = self.fc(x)
+        return y
+
+model = Model()
+# 将 forward_hook_fn 注册到 model 每个子模块
+for module in model.children():
+    module.register_forward_hook(forward_hook_fn)
+
+x = torch.Tensor([[0.0, 1.0, 2.0]])
+y = model(x)
+```
+
+下面是程序的输出：
+
+```python
+"forward_hook_fn" is invoked by Linear(in_features=3, out_features=1, bias=True)
+weight: tensor([[-0.4077,  0.0119, -0.3606]])
+bias: tensor([-0.2943])
+input: (tensor([[0., 1., 2.]]),)
+output: tensor([[-1.0036]], grad_fn=<AddmmBackward>)
+```
+
+我们可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用。更多关于 PyTorch 钩子的用法请阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.htm)。
+
 ## 钩子的设计
 
 在介绍 MMEngine 钩子的设计之前，我们先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
@@ -136,7 +185,7 @@ class CustomHook(Hook):
         print('prepare forwarding')
 ```
 
-我们将钩子的配置传给执行器的 custom_hooks 的参数，
+我们只需将钩子的配置传给执行器的 custom_hooks 的参数，执行器初始化的时候会注册钩子，
 
 ```python
 from mmengine import Runner
@@ -164,6 +213,7 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 | OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
 | SchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
+| LoggerHook | 打印日志 | LOW (70) |
 
 **可定制钩子**
 
@@ -172,6 +222,7 @@ MMEngine 将钩子分为两类，分类原则是钩子是否是训练不可或�
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
 | EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
+| VisualizerHook | 可视化 | LOW (70) |
 
 ```{note}
 不建议修改默认钩子的优先级，除非有更高的定制化需求。
@@ -186,7 +237,8 @@ default_hooks = dict(
     timer=dict(type='IterTimerHook',
     optimizer=dict(type='OptimizerHook'),
     param_scheduler=dict(type='LRSchedulerHook'))),
-    )
+    logger=dict(type='TextLoggerHook'),
+)
 
 custom_hooks = [
     dict(type='EmptyCacheHook', priority='NORMAL'),
