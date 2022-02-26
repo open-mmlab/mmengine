@@ -157,7 +157,7 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 考虑到 runner 中存在多个有全局访问需求的类，例如 logger，[ComposedWriter](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)，和 MessageHub（后文提出），因此设计了 `BaseGlobalAccessible` 基类。继承自 `BaseGlobalAccessible` 的子类，通过 `create_instance` 方法创建的实例，在全局可以通过 `get_instance` 接口获取。
 
-![BaseGlobalAccessible_UML](https://user-images.githubusercontent.com/57566630/155836961-4c27416a-746b-4e5a-acb8-4a4ae2ed6c54.jpg)
+<img src="https://user-images.githubusercontent.com/57566630/155836961-4c27416a-746b-4e5a-acb8-4a4ae2ed6c54.jpg" alt="BaseGlobalAccessible_UML" style="zoom: 50%;" />
 
 继承自 `BaseGlobalAccessible` 的子类，可以通过 `create_instance(name, *args, **kwargs)` 来创建全局实例，在程序的任何位置通过 `get_instance(name,  current=False)` 来获取对应实例。
 
@@ -207,12 +207,12 @@ instance.instance_name # task2 返回 task2,最近被创建
 
 `MessageHub` 类继承自 `BaseGlobalAccessible` ，其主要接口如下：
 
-<img src="https://user-images.githubusercontent.com/57566630/155838812-ecde80fd-be61-45db-bc9e-59bfcbc67e90.jpg" alt="MessageHub_UML" style="zoom:50%;" />
+<img src="https://user-images.githubusercontent.com/57566630/155839170-c044d1b9-3bcb-4184-ad41-34503a47f413.jpg" alt="MessageHub_UML" style="zoom:50%;" />
 
 - `update_log(key, value, count=1)`: 更新指定字段的`LogBuffer` 。value，count 对应 `LogBuffer.update` 接口的入参。
 - `update_info(key, value)`: 更新运行时信息并覆盖。
 - `get_log(key)`: 获取指定字段的日志。
-- `get_info(key)`: 获取指定字段的运行时信息。
+- `get_runtime(key)`: 获取指定字段的运行时信息。
 - `log_buffers`: 返回所有日志
 - `runtime_info`: 返回所有运行时信息。
 
@@ -239,9 +239,9 @@ lr_buffer, loss_buffer = log_dict['lr'], log_dict['loss']
 ```python
 message_hub = MessageHub.create_instance('task')
 message_hub.update_info('meta', dict(task=task))  # 更新 meta
-message_hub.get_info('meta')  # {'task'='task'} 获取 meta
+message_hub.get_runtime('meta')  # {'task'='task'} 获取 meta
 message_hub.update_info('meta', dict(task=task1))  # 覆盖 meta
-message_hub.get_info('meta')  # {'task'='task1'} 之前的信息被覆盖
+message_hub.get_runtime('meta')  # {'task'='task1'} 之前的信息被覆盖
 
 runtime_dict = message_hub.rumtime_info  # 返回存储全部 LogBuffer 的字典
 meta = log_dict['meta']
@@ -258,7 +258,7 @@ class Receiver:
     def run(self):
         print(f"Learning rate is {self.message_hub.get_log('lr').current()}")
         print(f"Learning rate is {self.message_hub.get_log('loss').current()}")
-        print(f"Learning rate is {self.message_hub.get_info('meta')}")
+        print(f"Learning rate is {self.message_hub.get_runtime('meta')}")
 
 
 class LrUpdater:
@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
 为了能够导出层次分明、格式统一的系统日志，**MMEnging** 在 `logging` 模块的基础上设计了 MMLogger，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_intance` 获取的 logger 具备统一的日志格式，且不会继承 `logging.root` ，受到三方库的日志影响。
 
-![MMLogger_UML 图](https://user-images.githubusercontent.com/57566630/155837144-a492c2c4-3859-43e5-8c5d-eee62c3c37a4.jpg)
+<img src="https://user-images.githubusercontent.com/57566630/155837144-a492c2c4-3859-43e5-8c5d-eee62c3c37a4.jpg" alt="MMLogger_UML 图" style="zoom:50%;" />
 
 `MMLogger` 在构造函数中完成了 logger 的配置，除了`BaseGlobalAccessible` 和 `logging.Logger` 的基类接口外，没有提供额外的接口。`MMLogger` 全局获取的方式和 MessageHub 相同，此处不再赘述，我们主要介绍通过 `MMLogger.create_instance` 获取的 logger 具备哪些功能。
 
