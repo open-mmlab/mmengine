@@ -207,12 +207,12 @@ instance.instance_name # task2 返回 task2,最近被创建
 
 `MessageHub` 类继承自 `BaseGlobalAccessible` ，其主要接口如下：
 
-<img src="https://user-images.githubusercontent.com/57566630/155836666-3fb9eec0-5e5d-48ab-8a20-68be3fd62e53.jpg" alt="MessageHub_UML" style="zoom:50%;" />
+<img src="https://user-images.githubusercontent.com/57566630/155838812-ecde80fd-be61-45db-bc9e-59bfcbc67e90.jpg" alt="MessageHub_UML" style="zoom:50%;" />
 
 - `update_log(key, value, count=1)`: 更新指定字段的`LogBuffer` 。value，count 对应 `LogBuffer.update` 接口的入参。
-- `update_runtime(key, value)`: 更新运行时信息并覆盖。
+- `update_info(key, value)`: 更新运行时信息并覆盖。
 - `get_log(key)`: 获取指定字段的日志。
-- `get_runtime(key)`: 获取指定字段的运行时信息。
+- `get_info(key)`: 获取指定字段的运行时信息。
 - `log_buffers`: 返回所有日志
 - `runtime_info`: 返回所有运行时信息。
 
@@ -238,10 +238,10 @@ lr_buffer, loss_buffer = log_dict['lr'], log_dict['loss']
 
 ```python
 message_hub = MessageHub.create_instance('task')
-message_hub.update_runtime('meta', dict(task=task))  # 更新 meta
-message_hub.get_runtime('meta')  # {'task'='task'} 获取 meta
-message_hub.update_runtime('meta', dict(task=task1))  # 覆盖 meta
-message_hub.get_runtime('meta')  # {'task'='task1'} 之前的信息被覆盖
+message_hub.update_info('meta', dict(task=task))  # 更新 meta
+message_hub.get_info('meta')  # {'task'='task'} 获取 meta
+message_hub.update_info('meta', dict(task=task1))  # 覆盖 meta
+message_hub.get_info('meta')  # {'task'='task1'} 之前的信息被覆盖
 
 runtime_dict = message_hub.rumtime_info  # 返回存储全部 LogBuffer 的字典
 meta = log_dict['meta']
@@ -258,7 +258,7 @@ class Receiver:
     def run(self):
         print(f"Learning rate is {self.message_hub.get_log('lr').current()}")
         print(f"Learning rate is {self.message_hub.get_log('loss').current()}")
-        print(f"Learning rate is {self.message_hub.get_runtime('meta')}")
+        print(f"Learning rate is {self.message_hub.get_info('meta')}")
 
 
 class LrUpdater:
@@ -276,7 +276,7 @@ class MetaUpdater:
         self.message_hub = MessageHub.get_instance(name)
 
     def run(self):
-        self.message_hub.update_runtime(
+        self.message_hub.update_info(
             'meta',
             dict(experiment='retinanet_r50_caffe_fpn_1x_coco.py',
                  repo='mmdetection'))    # 更新元信息，每次更新会覆盖上一次的信息
