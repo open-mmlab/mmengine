@@ -1,10 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Sequence, Optional
+from typing import Optional, Sequence
 
 from mmengine.data import BaseDataSample
-from mmengine.registry import Registry
-
-HOOKS = Registry('hook')
 
 
 class Hook:
@@ -91,7 +88,7 @@ class Hook:
 
     def after_load_checkpoint(self, runner: object, checkpoint: dict) -> None:
         """All subclasses should override this method, if they need any
-        operations after saving the checkpoint.
+        operations after loading the checkpoint.
 
         Args:
             runner (object): The runner of the training process.
@@ -162,7 +159,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -176,7 +173,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -190,7 +187,7 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
@@ -207,7 +204,7 @@ class Hook:
             runner (object): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model. 
+            outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
@@ -222,9 +219,9 @@ class Hook:
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from 
+            data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from 
+            outputs (Sequence[BaseDataSample], optional): Outputs from
                 model. Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
@@ -283,7 +280,8 @@ class Hook:
                 evenly divided by n.
 
         Returns:
-            bool: whether or not current iteration can be evenly divided by n.
+            bool: Return True if the current iteration can be evenly divided
+            by n, otherwise False.
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False  # type: ignore
 
@@ -305,7 +303,8 @@ class Hook:
             runner (object): The runner of the training process.
 
         Returns:
-            bool: whether or not current epoch is the last epoch.
+            bool: bool: Return True if the current epoch reaches the
+            `max_epochs`, otherwise False.
         """
         return runner.epoch + 1 == runner._max_epochs  # type: ignore
 

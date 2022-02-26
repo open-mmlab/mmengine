@@ -1,4 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .hook import HOOKS, Hook
+from .hook import Hook
 
-__all__ = ['HOOKS', 'Hook']
+__all__ = ['Hook']
