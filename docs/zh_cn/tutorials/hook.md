@@ -178,20 +178,23 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 每个钩子都有对应的优先级，在同一位点，钩子的优先级越高，越早被执行器调用，如果优先级一样，被调用的顺序和钩子注册的顺序一致。优先级列表如下：
 
+- HIGHEST (0)
 - VERY_HIGH (10)
 - HIGH (30)
 - ABOVE_NORMAL (40)
 - NORMAL (50)
+- BELOW_NORMAL (60)
 - LOW (70)
 - VERY_LOW (90)
+- LOWEST (100)
 
 **默认钩子**
 
 | 名称      |      用途      |  优先级 |
 |:----------:|:-------------:|:------:|
 | CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
-| OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
-| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
+| OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (30) |
+| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | ABOVE_NORMAL (40) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
 | LoggerHook | 打印日志 | LOW (70) |
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
