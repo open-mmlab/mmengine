@@ -2,11 +2,18 @@
 
 ## 概述
 
-模型训练/测试/推理过程中产生的日志可以帮助我们观察模型的训练状态和程序的运行情况，因此我们需要尽可能的收集、统计、导出这些日志，为分析具体问题提供更多的信息。考虑到日志的种类和统计方式众多，需要从不同组件中收集统计，最后以统一的形式导出， **MMEngine** 设计了日志缓冲区 `LogBuffer` ，用来记录统计不同种类的日志；全局可访问基类（`BaseGlobalAccessible`）为有全局访问需求的类提供统一的创建/获取接口；消息枢纽（`MessageHub`）用于组件之前的信息交互；`MMLogger` 用于导出统一风格的日志。
+算法库中日志的种类和统计方式众多，而且需要从不同组件中收集统计，最后以统一的形式导出。MMEngine 设计了如下模块来满足这些复杂的需求：
 
-<img src="https://user-images.githubusercontent.com/57566630/155882212-dde079da-e980-4ce0-aef2-f4ae547cc39d.jpg" alt="UML 图 (3)" style="zoom:50%;" />
+- 日志缓冲区 `LogBuffer` ：用来记录统计不同种类的日志
+- 全局可访问基类（`BaseGlobalAccessible`）：为有全局访问需求的类提供统一的创建/获取接口
+- 消息枢纽（`MessageHub`）：全局可访问基类的子类，用于组件之前的信息交互
+- `MMLogger` ：全局可访问基类的子类，用于导出统一风格的日志
+
+![概述图片](https://user-images.githubusercontent.com/57566630/155884712-917d42df-d360-4784-9135-e22fae2b843b.png)
 
 ## 日志类型
+
+按照日志的功能划分，算法库的日志可以被分成训练日志和组件日志，前者用于观察模型的训练状态，例如 loss 下降是否正常，metric 变化是否符合预期等；后者用于监测程序的运行状态，例如模型迭代时间、内存占用是否正常，程序是否抛出异常等。
 
 ### 训练日志
 
@@ -14,13 +21,11 @@
 
 - **统一的日志存储格式**
 
-- **统一的日志存储格式**
-
 不同类型的日志统计方式不同，损失一类的日志需要记录历史信息（用于平滑），而学习率、动量之类的却不需要。因此 **MMEnging** 在确保日志统计方式灵活性的前提下，抽象出了具有统一接口的日志缓冲区，用户可以十分自然的使用日志缓冲区来管理日志信息。
 
 - **跨模块的日志传输**
 
-在 **MMEngine** 中，各组件使用日志缓冲区来存储训练日志，例如损失、学习率和迭代时间等。最后 [记录器钩子](TODO)  会将这些日志会汇总导出。上述流程涉及了不同组件的信息交互， 因此需要一套组件之间的消息传输方案。**MMEngine** 设计了消息枢纽（`MessageHub`）类实现跨模块通讯，让同一个[执行器](TODO)的不同组件能够轻松读写同一份日志。
+在 **MMEngine** 中，各组件使用日志缓冲区来存储训练日志，例如损失、学习率和迭代时间等。最后 [日志钩子（LoggerHook）](TODO)  会将这些日志会汇总导出。上述流程涉及了不同组件的信息交互， 因此需要一套组件之间的消息传输方案。**MMEngine** 设计了消息枢纽（`MessageHub`）类实现跨模块通讯，让同一个[执行器](TODO)的不同组件能够轻松读写同一份日志。
 
 消息枢纽和日志缓冲区的配合让用户可以通过更改配置文件，来决定哪些日志需要被记录，以何种方式被记录。**MMEngine** 中消息枢纽 、日志缓冲区与各组件之间的关系结构关系如下：
 
@@ -28,17 +33,17 @@
 
 可以看到日志缓冲区除了记录训练日志（`log_buffers`）外，还会存储运行时信息（`runtime_info`）。运行时信息主要是执行器的元信息（meta）、迭代次数等。
 
-### 系统日志
+### 组件日志
 
-系统日志指模型训练过程中产生的所有日志，包括模型初始化方式、模型的迭代耗时、内存占用、程序抛出的警告异常等。系统日志用于监视程序的运行状态，一般会在终端显示。为了让系统日志格式统一，并且能够以文本的形式导出到本地，**MMEngine** 在 `logging` 模块基础上，简化了配置流程，让用户可以十分简单的通过 `MMLogger` 获取功能强大的记录器（`logger`）。使用 `MMLogger` 获取的记录器具备以下优点：
+组件日志指模型训练过程中产生的所有日志，包括模型初始化方式、模型的迭代耗时、内存占用、程序抛出的警告异常等。组件日志用于监视程序的运行状态，一般会在终端显示。为了让组件日志格式统一，并且能够以文本的形式导出到本地，**MMEngine** 在 `logging` 模块基础上，简化了配置流程，让用户可以十分简单的通过 `MMLogger` 获取功能强大的记录器（`logger`）。使用 `MMLogger` 获取的记录器具备以下优点：
 
-- 分布式训练时，能够保存所有进程的系统日志，以体现不同进程的训练状况
-- 系统日志不受 **OpenMMLab** 算法库外的代码的日志影响，不会出现多重打印或日志格式不统一的情况
-- error/warning 级别的日志能够输出代码在哪个文件的哪一行，便于用户调试，且不同级别的日志有不同的色彩高亮
+- 分布式训练时，能够保存所有进程的组件日志，以体现不同进程的训练状况
+- 组件日志不受 **OpenMMLab** 算法库外的代码的日志影响，不会出现多重打印或日志格式不统一的情况
+- 错误（Error）或警告（Warning）级别的日志能够输出代码在哪个文件的哪一行，便于用户调试，且不同级别的日志有不同的色彩高亮
 
 ## 日志缓冲区（LogBuffer）
 
-日志缓冲区用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
+日志缓冲（`LogBuffer`）区用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
 
 - `__init__(log_history=[], count_history=[], max_length=1000000)`: `log_history`，`count_history ` 可以是 `list`、`np.ndarray` 或 `torch.Tensor`，用于初始化日志的历史信息（`log_history`）队列 和日志的历史计数（`count_history`）。`max_length` 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
 
@@ -51,7 +56,7 @@
 - `current()`: 返回最近一次更新的日志，可以通过 `statistics` 方法访问。
 - `data`: 返回日志记录历史记录。
 
-这里简单介绍如何使用 `LogBuffer` 记录日志。
+接下来简单介绍如何使用日志缓冲区记录日志。
 
 ### 日志缓冲区初始化
 
@@ -113,7 +118,7 @@ log_buffer.current()
 # 4
 ```
 
-### 使用 statistics 接口选择统计方法
+### 使用不同的统计方法
 
 为了让用户可以通过配置文件来选择日志的统计方式，日志缓冲区提供了 `statistics` 接口，允许用户通过字符串来选择方法。需要注意，在调用 `statistics(name, *args, **kwargs)` 时，需要保证 name 是已注册的方法名，并且参数和方法相匹配。
 
@@ -149,7 +154,7 @@ for iter in range(max_iter):
 
 ### 自定义统计方式
 
-如果用户想使用自定义的日志统计方式，可以使用 `LogBuffer.register_statistics` 来装饰自己实现的函数。
+考虑到数据的统计方法不会过于复杂，因此不推荐通过继承日志缓冲区来新增功能。我们更倾向于用户使用 `LogBuffer.register_statistcs`  注册自定义的统计函数，被注册的函数可以被 `statistics` 接口通过调用。
 
 ```Python
 @LogBuffer.register_statistcs()
@@ -162,9 +167,9 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 ## 全局可访问基类（BaseGlobalAccessible）
 
-考虑到执行器中存在多个有全局访问需求的类，例如 记录器，[ComposedWriter](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)，和消息枢纽，因此设计了全局可访问基类。继承自全局可访问基类的子类，可以通过 `create_instance` 方法创建实例，然后在任意位置通过 `get_instance` 接口获取。
+执行器中存在多个有全局访问需求的类，例如 记录器，[ComposedWriter](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)，和消息枢纽，因此设计了全局可访问基类（`BaseGlobalAccessible`）。继承自全局可访问基类的子类，可以通过 `create_instance` 方法创建实例，然后在任意位置通过 `get_instance` 接口获取。
 
-<img src="https://user-images.githubusercontent.com/57566630/155848759-e01840fb-c694-4f36-8a2f-00323e41214b.jpg" alt="UML 图 (1)" style="zoom:50%;" />
+![BaseGlobalAccessible](https://user-images.githubusercontent.com/57566630/155887255-3fe416b0-6a70-44a5-9483-5a4dbdf0718c.png)
 
 - `create_instance(name='', *args, **kwargs)`: 当传入 `name ` 时，创建指定 `name` 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
 - `get_instance(name='', current=False)`: 当传入 `name` 时，返回指定 `name` 的实例，如果对应 `name` 不存在，会抛出异常。当不传入 `name` 时，返回最近创建的实例或者根实例（`root_instance`）。
@@ -182,43 +187,64 @@ class GlobalAccessible(BaseGlobalAccessible):
 
 ### 创建实例
 
-不通过 `create_instance(name='', *args, **kwargs)` 创建的子类实例只是普通实例，不具备全局访问特性，无法通过 `get_instance` 获取。调用 `create_instance` 时，传入 `name` 参数会返回对应名字的实例，否则返回根实例。
+不通过 `create_instance(name='', *args, **kwargs)` 创建的子类实例只是普通实例，不具备全局访问特性，无法通过 `get_instance` 获取。
 
 ```python
 instance_local = GlobalAccessible('local')
 instance_local = GlobalAccessible.get_instance('local')  # 错误，local 不是通过 create_instance创建，无法获取
-instance_local = GlobalAccessible()  #返回根实例
-instance_local.instance_name # root
+```
+
+调用 `create_instance` 时，传入 `name` 参数会返回对应名字的实例，但是不允许创建重复名字的实例。
+
+```python
 instance_local = GlobalAccessible.create_instance('global')
 instance_local = GlobalAccessible.get_instance('global')  # 能够获取 global
 instance_local.instance_name  # global
 instance_local = GlobalAccessible.create_instance('global') # 错误，不允许重复创建全局实例
 ```
 
+不传入 `name` 时，则会返回根实例
+
+```python
+instance_local = GlobalAccessible.create_instance()
+instance_local.instance_name  # root
+```
+
 ### 获取实例
 
-调用 `get_instance(name='', current=False)` 时，如果传入 `name` 会返回对应的子类实例，不传入则会根据 `current` 参数返回根实例或者最近被创建的子类实例。
+调用 `get_instance(name='', current=False)` 时，如果传入 `name` 会返回对应的子类实例。如果对应 `name` 的实例未被创建，则会报错。
+
+```python
+instance = GlobalAccessible.create_instance('task1')
+instance = GlobalAccessible.get_instance('task1')
+instance.instance_name # task1
+instance = GlobalAccessible.get_instance('task2') # 错误，task2未被创建
+
+```
+
+当不传入 `name`，且 `current=True` 时，会返回最近一次被创建的实例。
 
 ```python
 instance = GlobalAccessible.get_instance(current=True)  # 错误，尚未创建任何实例，无法返回最近创建的实例
-instance = GlobalAccessible.get_instance()
-instance.instance_name # root 不传参，默认返回 root
 instance = GlobalAccessible.create_instance('task1')
-instance = GlobalAccessible.get_instance(current=True)
-instance.instance_name # task1  返回 task1,最近被创建
+instance = GlobalAccessible.get_instance(current=True)  
+instance.instance_name # task1 返回 task1 最近被创建
 instance = GlobalAccessible.create_instance('task2')
 instance = GlobalAccessible.get_instance(current=True)
-instance.instance_name # task2 返回 task2,最近被创建
-instance = = GlobalAccessible.get_instance('task1')
-instance.instance_name # task1 返回指定name的实例
+instance.instance_name # task2 task2 最近被创建
+```
 
+当不传入 `name`，且 `current=False` 时，会返回根实例。
+
+```python
+instance.instance_name # root 不传参，默认返回 root
 ```
 
 ## 消息枢纽（MessageHub）
 
-日志缓冲区可以十分简单的完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 **MMEngine**  使用全局可访问的消息枢纽来实现组件与组件、执行器与执行器之间的互联互通。消息枢纽不仅会管理各个模块分发的日志缓冲区，还会记录运行时信息例如执行器的元信息，迭代次数等。运行时信息每次更新都会被覆盖。消息枢纽继承自全局可访问基类，其对外接口如下
+日志缓冲区可以十分简单的完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 **MMEngine**  使用全局可访问的消息枢纽（`MessageHub`）来实现组件与组件、执行器与执行器之间的互联互通。消息枢纽不仅会管理各个模块分发的日志缓冲区，还会记录运行时信息例如执行器的元信息，迭代次数等。运行时信息每次更新都会被覆盖。消息枢纽继承自全局可访问基类，其对外接口如下
 
-<img src="https://user-images.githubusercontent.com/57566630/155851051-cb21cfe8-8f19-4364-af8c-f2de49ae686f.jpg" alt="UML 图 (2)" style="zoom:50%;" />
+![MessageHub](https://user-images.githubusercontent.com/57566630/155887420-7ca33aa2-7356-4703-aceb-c8333b8780d5.png)
 
 - `update_log(key, value, count=1)`: 更新指定字段的消息缓冲区。`value`，`count` 对应 `LogBuffer.update` 接口的入参。该方法用于更新训练日志，例如学习率、损失、迭代时间等。
 - `update_info(key, value)`: 更新运行时信息，例如执行器的元信息、迭代次数等。运行时信息每次更新都会覆盖上一次的内容。
@@ -250,7 +276,7 @@ lr_buffer, loss_buffer = log_dict['lr'], log_dict['loss']
 ```python
 message_hub = MessageHub.create_instance('task')
 message_hub.update_info('meta', dict(task=task))  # 更新 meta
-message_hub.('meta')  # {'task'='task'} 获取 meta
+message_hub.get_info('meta')  # {'task'='task'} 获取 meta
 message_hub.update_info('meta', dict(task=task1))  # 覆盖 meta
 message_hub.get_info('meta')  # {'task'='task1'} 之前的信息被覆盖
 
@@ -258,11 +284,13 @@ runtime_dict = message_hub.rumtime_info  # 返回存储全部 LogBuffer 的字�
 meta = log_dict['meta']
 ```
 
-### 消息枢纽的跨模块通讯
+### 消息枢纽的跨组件通讯
+
+执行器运行过程中，各个组件会通过消息枢纽来分发、接受消息。日志钩子会汇总其他组件更新的学习率、损失等信息，将其导出到用户指定的写端（Tensorboard，Wandb 等）。由于上述流程较为复杂，这里用一个简单示例来模拟日志钩子和其他组件通讯的过程。
 
 ```python
 class Receiver:
-    # 汇总不同模块更新的消息
+    # 汇总不同模块更新的消息，类似 LoggerHook
     def __init__(self, name):
         self.message_hub = MessageHub.get_instance(name)  # 获取 MessaeHub
 
@@ -280,9 +308,8 @@ class LrUpdater:
     def run(self):
         self.message_hub.update_log('lr', 0.001)  # 更新学习率，以 LogBuffer 形式存储
 
-
 class MetaUpdater:
-    # 更新 meta 信息
+    # 更新元信息
     def __init__(self, name):
         self.message_hub = MessageHub.get_instance(name)
 
@@ -292,7 +319,6 @@ class MetaUpdater:
             dict(experiment='retinanet_r50_caffe_fpn_1x_coco.py',
                  repo='mmdetection'))    # 更新元信息，每次更新会覆盖上一次的信息
 
-
 class LossUpdater:
     # 更新损失函数
     def __init__(self, name):
@@ -300,7 +326,6 @@ class LossUpdater:
 
     def run(self):
         self.message_hub.update_log('loss', 0.1)
-
 
 class Task:
     # 组合个各个模块
@@ -327,9 +352,9 @@ if __name__ == '__main__':
 
 ## 记录器（MMLogger）
 
-为了能够导出层次分明、格式统一的系统日志，**MMEnging** 在 `logging` 模块的基础上设计了 `MMLogger`，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_instance` 获取的记录器具备统一的日志格式，且不会继承 `logging.root` ，受到三方库的日志影响。
+为了能够导出层次分明、格式统一的组件日志，**MMEnging** 在 `logging` 模块的基础上设计了 `MMLogger`，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_instance` 获取的记录器具备统一的日志格式，且不会继承 `logging.root` ，因此不会受到第三方库中 logger 配置的影响。
 
-<img src="https://user-images.githubusercontent.com/57566630/155837144-a492c2c4-3859-43e5-8c5d-eee62c3c37a4.jpg" alt="MMLogger_UML 图" style="zoom:50%;" />
+![MMLogger](https://user-images.githubusercontent.com/57566630/155887464-d67938b7-b121-40a6-adae-a4d33a37e399.png)
 
 `MMLogger` 在构造函数中完成了记录器的配置，除了`BaseGlobalAccessible` 和 `logging.Logger` 的基类接口外，没有提供额外的接口。`MMLogger` 创建/获取的方式和消息枢纽相同，此处不再赘述，我们主要介绍通过 `MMLogger.create_instance` 获取的记录器具备哪些功能。
 
