@@ -2,13 +2,21 @@
 
 ## 概述
 
+模型训练/测试/推理过程中产生的日志可以帮助我们观察模型的训练状态和程序的运行情况，因此我们需要尽可能的收集、统计、导出这些日志，为分析具体问题提供更多的信息。考虑到日志的种类和统计方式众多，需要从不同组件中收集统计，最后以统一的形式导出， **MMEngine** 设计了日志缓冲区 `LogBuffer` ，用来记录统计不同种类的日志；全局可访问基类（`BaseGlobalAccessible`）为有全局访问需求的类提供统一的创建/获取接口；消息枢纽（`MessageHub`）用于组件之前的信息交互；`MMLogger` 用于导出统一风格的日志。
+
+<img src="https://user-images.githubusercontent.com/57566630/155882212-dde079da-e980-4ce0-aef2-f4ae547cc39d.jpg" alt="UML 图 (3)" style="zoom:50%;" />
+
+## 日志类型
+
 ### 训练日志
 
-训练日志指模型在训练/测试/推理迭代过程中的状态日志，包括学习率（lr）、损失（loss）、评价指标（metric） 等。[TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn) 、 [Wandb](https://wandb.ai/site) 等工具能将训练日志以图表的形式展示，便于我们观察模型的训练情况。由于不同类型的日志统计方式不同，且更新自不同的组件，在 **OpenMMLab1.0** 中用户难以通过修改配置文件来选择输出哪些日志，以及如何统计日志。因此 **MMEngine** 重新设计了日志的存储方式以及 [执行器](TODO) 中的数据流，以支持这一特性。
+训练日志指模型在训练/测试/推理过程中的状态日志，包括学习率（lr）、损失（loss）、评价指标（metric） 等。[TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn) 、 [Wandb](https://wandb.ai/site) 等工具能将训练日志以图表的形式展示，便于我们观察模型的训练情况。为了让用户能够通过修改配置文件来选择输出哪些日志，以及如何统计日志，**MMEngine** 设计了日志缓冲器和消息枢纽以支持这一特性。
 
 - **统一的日志存储格式**
 
-不同类型的日志统计方式不同，损失一类的日志需要记录历史信息（用于平滑），而学习率、动量之类的却不需要。因此 **MMEnging** 在确保日志统计方式灵活性的前提下，抽象出了具有统一接口的日志缓冲区 （`LogBuffer`），用户可以十分自然的使用日志缓冲区来管理日志信息。
+- **统一的日志存储格式**
+
+不同类型的日志统计方式不同，损失一类的日志需要记录历史信息（用于平滑），而学习率、动量之类的却不需要。因此 **MMEnging** 在确保日志统计方式灵活性的前提下，抽象出了具有统一接口的日志缓冲区，用户可以十分自然的使用日志缓冲区来管理日志信息。
 
 - **跨模块的日志传输**
 
@@ -18,11 +26,11 @@
 
 ![message_hub关系图 (1)](https://user-images.githubusercontent.com/57566630/155832053-f2f052fb-8911-46d5-9c7d-c395a12579da.jpg)
 
-可以看到日志缓冲区除了记录训练日志（log_buffers）外，还会存储运行时信息（runtime_info）。运行时信息主要是执行器的元信息（meta）、迭代次数等。
+可以看到日志缓冲区除了记录训练日志（`log_buffers`）外，还会存储运行时信息（`runtime_info`）。运行时信息主要是执行器的元信息（meta）、迭代次数等。
 
 ### 系统日志
 
-系统日志指模型训练过程中产生的所有日志，包括模型初始化方式、模型的迭代耗时、内存占用、程序抛出的警告异常等。系统日志用于监视程序的运行状态，一般会在终端显示。为了让系统日志格式统一，并且能够以文本的形式导出到本地，**MMEngine** 在 `logging` 模块基础上，简化了配置流程，让用户可以十分简单的通过 `MMLogger` 获取功能强大的记录器（logger）。使用 `MMLogger` 获取的记录器具备以下优点：
+系统日志指模型训练过程中产生的所有日志，包括模型初始化方式、模型的迭代耗时、内存占用、程序抛出的警告异常等。系统日志用于监视程序的运行状态，一般会在终端显示。为了让系统日志格式统一，并且能够以文本的形式导出到本地，**MMEngine** 在 `logging` 模块基础上，简化了配置流程，让用户可以十分简单的通过 `MMLogger` 获取功能强大的记录器（`logger`）。使用 `MMLogger` 获取的记录器具备以下优点：
 
 - 分布式训练时，能够保存所有进程的系统日志，以体现不同进程的训练状况
 - 系统日志不受 **OpenMMLab** 算法库外的代码的日志影响，不会出现多重打印或日志格式不统一的情况
@@ -32,9 +40,9 @@
 
 日志缓冲区用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
 
-- `__init__(log_history=[], count_history=[], max_length=1000000)`: log_history，count_history 可以是 `list`，`np.ndarray`，或 `torch.Tensor`，用于初始化日志的历史信息（log_history）队列 和日志的历史计数（count_history）。max_length 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
+- `__init__(log_history=[], count_history=[], max_length=1000000)`: `log_history`，`count_history ` 可以是 `list`、`np.ndarray` 或 `torch.Tensor`，用于初始化日志的历史信息（`log_history`）队列 和日志的历史计数（`count_history`）。`max_length` 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
 
-- `update(value, count=1)`: value 为需要被统计的日志信息，count 为 value 的累加次数，默认为 1。如果 value 已经是日志累加 n 次的结果（例如模型的迭代时间，实际上是 batch 张图片的累计耗时），需要另 `count=n`。
+- `update(value, count=1)`: `value` 为需要被统计的日志信息，`count ` 为 `value ` 的累加次数，默认为 1。如果 `value` 已经是日志累加 n 次的结果（例如模型的迭代时间，实际上是 batch 张图片的累计耗时），需要另 `count=n`。
 - `statistics('name', *args, **kwargs)`: 通过字符串来访问统计方法，传入参数必须和对应方法匹配。
 - `register_statistics(method=None, name=None)`: 被 `register_statistics` 装饰的方法能被 `statistics()` 函数通过字符串访问。
 - `mean(window_size=None)`: 返回最近更新的 window_size 个日志的均值，默认返回全局平均值，可以通过 `statistics` 方法访问。
@@ -54,17 +62,16 @@ log_history, count_history = log_buffer.data
 log_buffer = LogBuffer([1, 2, 3], [1, 2, 3])  # list 初始化
 log_history, count_history = log_buffer.data
 # [1 2 3] [1 2 3]
-log_buffer = LogBuffer([1, 2, 3], [1, 2, 3], , max_length=2)
+log_buffer = LogBuffer([1, 2, 3], [1, 2, 3], max_length=2)
 log_history, count_history = log_buffer.data  # 最大长度为2,只能存储 [2, 3]
 # [2 3] [2 3]
-
 ```
 
 ### 日志缓冲区更新
 
 ```python
 log_buffer = LogBuffer([1, 2, 3], [1, 1, 1])
-log_buffer.update(3, 1)  # 更新日志
+log_buffer.update(4, 1)  # 更新日志
 log_history, count_history = log_buffer.data
 # [1, 2, 3, 4] [1, 1, 1, 1]
 ```
@@ -131,12 +138,12 @@ for iter in range(max_iter):
     lr = iter / max_iter * 0.1  # 线性学习率变化
     loss = 1 / iter  # loss
     logs['lr'].update('lr', 1)
-    logs['loss'].update('lr', 1)
+    logs['loss'].update('loss', 1)
     if iter % log_interval == 0:
         latest_lr = logs['lr'].statistics('current')  # 通过字符串来选择统计方法
         mean_loss = logs['loss'].statistics('mean', log_interval)
         print(f'lr:    {latest_lr}'   # 平滑最新更新的 log_interval 个数据。
-                f'loss: {mean_loss}')  # 返回最近一次更新的学习率。
+              f'loss: {mean_loss}')  # 返回最近一次更新的学习率。
 
 ```
 
@@ -159,8 +166,8 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 <img src="https://user-images.githubusercontent.com/57566630/155848759-e01840fb-c694-4f36-8a2f-00323e41214b.jpg" alt="UML 图 (1)" style="zoom:50%;" />
 
-- `create_instance(name='', *args, **kwargs)`: 当传入 name 时，创建指定 name 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
-- `get_instance(name='', current=False)`: 当传入 name 时，返回指定 name 的实例，如果对应 name 不存在，会抛出异常。当不传入 name 时，返回最近创建的实例或者根实例（`root_instance`）。
+- `create_instance(name='', *args, **kwargs)`: 当传入 `name ` 时，创建指定 `name` 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
+- `get_instance(name='', current=False)`: 当传入 `name` 时，返回指定 `name` 的实例，如果对应 `name` 不存在，会抛出异常。当不传入 `name` 时，返回最近创建的实例或者根实例（`root_instance`）。
 
 ### 定义子类
 
@@ -175,7 +182,7 @@ class GlobalAccessible(BaseGlobalAccessible):
 
 ### 创建实例
 
-不通过 `create_instance(name='', *args, **kwargs)` 创建的子类实例只是普通实例，不具备全局访问特性，无法通过 `get_instance` 获取。调用 `create_instance` 时，传入 name 参数会返回对应名字的实例，否则返回根实例。
+不通过 `create_instance(name='', *args, **kwargs)` 创建的子类实例只是普通实例，不具备全局访问特性，无法通过 `get_instance` 获取。调用 `create_instance` 时，传入 `name` 参数会返回对应名字的实例，否则返回根实例。
 
 ```python
 instance_local = GlobalAccessible('local')
@@ -190,7 +197,7 @@ instance_local = GlobalAccessible.create_instance('global') # 错误，不允许
 
 ### 获取实例
 
-调用 `get_instance(name='', current=False)` 时，如果传入 name 会返回对应的子类实例，不传入则会根据 current 参数返回根实例或者最近被创建的子类实例。
+调用 `get_instance(name='', current=False)` 时，如果传入 `name` 会返回对应的子类实例，不传入则会根据 `current` 参数返回根实例或者最近被创建的子类实例。
 
 ```python
 instance = GlobalAccessible.get_instance(current=True)  # 错误，尚未创建任何实例，无法返回最近创建的实例
@@ -213,8 +220,8 @@ instance.instance_name # task1 返回指定name的实例
 
 <img src="https://user-images.githubusercontent.com/57566630/155851051-cb21cfe8-8f19-4364-af8c-f2de49ae686f.jpg" alt="UML 图 (2)" style="zoom:50%;" />
 
-- `update_log(key, value, count=1)`: 更新指定字段的消息缓冲区。value，count 对应 `LogBuffer.update` 接口的入参。
-- `update_info(key, value)`: 更新运行时信息并覆盖。
+- `update_log(key, value, count=1)`: 更新指定字段的消息缓冲区。`value`，`count` 对应 `LogBuffer.update` 接口的入参。该方法用于更新训练日志，例如学习率、损失、迭代时间等。
+- `update_info(key, value)`: 更新运行时信息，例如执行器的元信息、迭代次数等。运行时信息每次更新都会覆盖上一次的内容。
 - `get_log(key)`: 获取指定字段的日志。
 - `get_info(key)`: 获取指定字段的运行时信息。
 - `log_buffers`: 返回所有日志
@@ -222,7 +229,7 @@ instance.instance_name # task1 返回指定name的实例
 
 ### 更新/获取日志
 
-消息缓冲区以字典的形式存储在 消息枢纽中。当我们第一次调用 `update_log` 时，会初始化对应字段的消息缓冲区，后续每次更新等价于对应字段的消息缓冲区调用 `update` 方法。同样的我们可以通过 `get_log` 来获取对应字段的消息缓冲区，并按需计算统计值。如果想获取消息枢纽的全部日志，可以访问其 `log_buffers` 属性。
+消息缓冲区以字典的形式存储在消息枢纽中。当我们第一次调用 `update_log` 时，会初始化对应字段的消息缓冲区，后续每次更新等价于对应字段的消息缓冲区调用 `update` 方法。同样的我们可以通过 `get_log` 来获取对应字段的消息缓冲区，并按需计算统计值。如果想获取消息枢纽的全部日志，可以访问其 `log_buffers` 属性。
 
 ```python
 message_hub = MessageHub.create_instance('task')
@@ -320,7 +327,7 @@ if __name__ == '__main__':
 
 ## 记录器（MMLogger）
 
-为了能够导出层次分明、格式统一的系统日志，**MMEnging** 在 `logging` 模块的基础上设计了 MMLogger，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_instance` 获取的记录器具备统一的日志格式，且不会继承 `logging.root` ，受到三方库的日志影响。
+为了能够导出层次分明、格式统一的系统日志，**MMEnging** 在 `logging` 模块的基础上设计了 `MMLogger`，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_instance` 获取的记录器具备统一的日志格式，且不会继承 `logging.root` ，受到三方库的日志影响。
 
 <img src="https://user-images.githubusercontent.com/57566630/155837144-a492c2c4-3859-43e5-8c5d-eee62c3c37a4.jpg" alt="MMLogger_UML 图" style="zoom:50%;" />
 
@@ -347,7 +354,7 @@ logger.error('division by zero')
 调用 create_instance 时，如果指定了 log_file，会将日志记录的信息以文本格式导出到本地。
 
 ```Python
-logger = get_logger('mmengine', log_file='tmp.log')
+logger = MMLogger.create_instance('mmengine', log_file='tmp.log')
 logger.info("this is a test")
 # 2022-02-20 22:26:38,860 - mmengine - INFO - this is a test
 ```
@@ -360,9 +367,9 @@ logger.info("this is a test")
 
 ### 分布式训练时导出日志
 
-在使用 runner 分布式训练时，不同的进程会导出不同的日志，日志文件名为 runner 实例化时的时间戳。
+在使用分布式训练时，不同的进程会导出不同的日志，日志文件名为执行器实例化时的时间戳。除主进程外（`rank=0`），每个进程的日志名的抬头为各自的 rank 数。
 
-```Python
+```text
 ./work_dir
 ├── rank1_20220228_121221.log
 ├── rank2_20220228_121221.log
