@@ -8,7 +8,7 @@ import torch
 import torch.multiprocessing as mp
 from torch import distributed as dist
 
-IS_DIST = dist.is_available() and dist.is_initialized()
+IS_DIST = False
 
 
 def init_dist(launcher, backend='nccl', **kwargs):
@@ -22,6 +22,9 @@ def init_dist(launcher, backend='nccl', **kwargs):
         _init_dist_slurm(backend, **kwargs)
     else:
         raise ValueError(f'Invalid launcher type: {launcher}')
+
+    global IS_DIST
+    IS_DIST = True
 
 
 def _init_dist_pytorch(backend, **kwargs):
