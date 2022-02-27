@@ -9,7 +9,7 @@
 - 消息枢纽（`MessageHub`）：全局可访问基类的子类，用于组件之前的信息交互
 - `MMLogger` ：全局可访问基类的子类，用于导出统一风格的日志
 
-![概述图片](https://user-images.githubusercontent.com/57566630/155884712-917d42df-d360-4784-9135-e22fae2b843b.png)
+![image](https://user-images.githubusercontent.com/57566630/155888008-207e75f2-4edc-4f86-8ee2-c21b25e38419.png)
 
 ## 日志类型
 
@@ -169,7 +169,7 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 执行器中存在多个有全局访问需求的类，例如 记录器，[ComposedWriter](https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/visualizer.md)，和消息枢纽，因此设计了全局可访问基类（`BaseGlobalAccessible`）。继承自全局可访问基类的子类，可以通过 `create_instance` 方法创建实例，然后在任意位置通过 `get_instance` 接口获取。
 
-![BaseGlobalAccessible](https://user-images.githubusercontent.com/57566630/155887255-3fe416b0-6a70-44a5-9483-5a4dbdf0718c.png)
+![image](https://user-images.githubusercontent.com/57566630/155887994-dc1fad31-55b9-499c-8d83-7f4c70c3e730.png)
 
 - `create_instance(name='', *args, **kwargs)`: 当传入 `name ` 时，创建指定 `name` 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
 - `get_instance(name='', current=False)`: 当传入 `name` 时，返回指定 `name` 的实例，如果对应 `name` 不存在，会抛出异常。当不传入 `name` 时，返回最近创建的实例或者根实例（`root_instance`）。
@@ -244,7 +244,7 @@ instance.instance_name # root 不传参，默认返回 root
 
 日志缓冲区可以十分简单的完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 **MMEngine**  使用全局可访问的消息枢纽（`MessageHub`）来实现组件与组件、执行器与执行器之间的互联互通。消息枢纽不仅会管理各个模块分发的日志缓冲区，还会记录运行时信息例如执行器的元信息，迭代次数等。运行时信息每次更新都会被覆盖。消息枢纽继承自全局可访问基类，其对外接口如下
 
-![MessageHub](https://user-images.githubusercontent.com/57566630/155887420-7ca33aa2-7356-4703-aceb-c8333b8780d5.png)
+![image](https://user-images.githubusercontent.com/57566630/155887924-2d60dae6-ce71-4b15-993b-3c6cc012ec0e.png)
 
 - `update_log(key, value, count=1)`: 更新指定字段的消息缓冲区。`value`，`count` 对应 `LogBuffer.update` 接口的入参。该方法用于更新训练日志，例如学习率、损失、迭代时间等。
 - `update_info(key, value)`: 更新运行时信息，例如执行器的元信息、迭代次数等。运行时信息每次更新都会覆盖上一次的内容。
@@ -354,7 +354,7 @@ if __name__ == '__main__':
 
 为了能够导出层次分明、格式统一的组件日志，**MMEnging** 在 `logging` 模块的基础上设计了 `MMLogger`，其继承于 `BaseGlobalAccessible` 和 `logging.Logger`。由 `MMLogger.get_instance` 获取的记录器具备统一的日志格式，且不会继承 `logging.root` ，因此不会受到第三方库中 logger 配置的影响。
 
-![MMLogger](https://user-images.githubusercontent.com/57566630/155887464-d67938b7-b121-40a6-adae-a4d33a37e399.png)
+![image](https://user-images.githubusercontent.com/57566630/155887793-9c1e3527-3df0-4702-a69d-6d920c282536.png)
 
 `MMLogger` 在构造函数中完成了记录器的配置，除了`BaseGlobalAccessible` 和 `logging.Logger` 的基类接口外，没有提供额外的接口。`MMLogger` 创建/获取的方式和消息枢纽相同，此处不再赘述，我们主要介绍通过 `MMLogger.create_instance` 获取的记录器具备哪些功能。
 
