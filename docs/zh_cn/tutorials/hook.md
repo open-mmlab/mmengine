@@ -77,7 +77,7 @@ output: tensor([[-1.0036]], grad_fn=<AddmmBackward>)
 
 可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用，在该钩子中打印了 Linear 模块的权重、偏置、模块的输入以及输出。更多关于 PyTorch 钩子的用法可以阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.htm)。
 
-## 钩子的设计
+## MMEngine 中钩子的设计
 
 在介绍 MMEngine 中钩子的设计之前，先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
 
@@ -191,7 +191,7 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 |:----------:|:-------------:|:------:|
 | CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
 | OptimizerHook | 反向传播以及参数更新 | ABOVE_NORMAL (40) |
-| SchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
+| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | VERY_HIGH (10) |
 | IterTimerHook | 统计迭代耗时 | LOW (70) |
 | LoggerHook | 打印日志 | LOW (70) |
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
@@ -205,7 +205,7 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 | VisualizerHook | 可视化 | NORMAL (50) |
 
 ```{note}
-不建议修改默认钩子的优先级，除非有更高的定制化需求。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
+不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamScheduleHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
 ```
 
 两种钩子在执行器中的设置参数不同，默认钩子定义在 `default_hooks` 参数，而自定义钩子定义在 `custom_hooks` 参数，如下所示：
@@ -229,7 +229,7 @@ runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.run()
 ```
 
-下面逐一介绍钩子的用法。
+下面逐一介绍 MMEngine 中内置钩子的用法。
 
 ### CheckpointHook
 
@@ -251,7 +251,7 @@ HOOKS.build(checkpoint_config)
 checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True, save_last=True)
 ```
 
-如果使用 `IterBasedTrainer`，则可以将 `by_epoch` 设为 False，`internal=5` 则表示每迭代 5 次保存一次权重。
+如果想以迭代次数作为保存间隔，则可以将 `by_epoch` 设为 False，`internal=5` 则表示每迭代 5 次保存一次权重。
 
 ```python
 checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=False)
@@ -269,7 +269,7 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, out_dir='/path/of/di
 checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 ```
 
-假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
+上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
 
 考虑到分布式训练过程，如果有必要（例如分布式训练中没有使用同步 BN，而是普通 BN），则可以设置参数 `sync_buffer=True`，在保存权重前，会对模型 buffers（典型的例如 BN 的全局均值和方差参数）进行跨卡同步，让每张卡的 buffers 参数都相同，此时在主进程保存的权重和 buffer 才是符合期望的行为。
 
@@ -335,16 +335,16 @@ optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
 optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters=4)
 ```
 
-### SchedulerHook
+### ParamSchedulerHook
 
-`SchedulerHook` 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。
+`ParamSchedulerHook` 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。
 
 ```python
 from mmengine import Runner
 
 scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
 
-default_hooks = dict(scheduler_hook=dict(type='SchedulerHook'))
+default_hooks = dict(scheduler_hook=dict(type='ParamSchedulerHook'))
 runner = Runner(scheduler=scheduler, default_hooks=default_hooks, ...)
 runner.run()
 ```
