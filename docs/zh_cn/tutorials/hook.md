@@ -208,10 +208,10 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 | VisualizerHook | 可视化 | NORMAL (50) |
 
 ```{note}
-不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamScheduleHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
+不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
 ```
 
-两种钩子在执行器中的设置参数不同，默认钩子定义在 `default_hooks` 参数，而自定义钩子定义在 `custom_hooks` 参数，如下所示：
+两种钩子在执行器中的设置不同，默认钩子的配置传给执行器的 `default_hooks` 参数，自定义钩子的配置传给 `custom_hooks` 参数，如下所示：
 
 ```python
 from mmengine import Runner
