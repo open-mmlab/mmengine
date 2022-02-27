@@ -1,5 +1,3 @@
-import warnings
-
 from mmengine import LogBuffer
 
 import numpy as np
@@ -67,36 +65,57 @@ class TestLoggerBuffer:
     @pytest.mark.parametrize('statistics_method, log_buffer_type',
                              [(np.min, 'min'), (np.max, 'max')]
                              )
-    def test_max_min_log_buffer(self, statistics_method, log_buffer_type):
+    def test_max_min(self, statistics_method, log_buffer_type):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = log_buffer_type(log_history, count_history)
+        log_buffer = LogBuffer(log_history, count_history)
         assert statistics_method(log_history[-10:]) == \
-               log_buffer.statistics(10)
+               getattr(log_buffer, log_buffer_type)(10)
         assert statistics_method(log_history) == \
-               log_buffer.statistics()
+               getattr(log_buffer, log_buffer_type)()
 
-    def test_mean_log_buffer(self):
+    def test_mean(self):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = MeanLogBuffer(log_history, count_history)
+        log_buffer = LogBuffer(log_history, count_history)
         assert np.sum(log_history[-10:]) / \
                np.sum(count_history[-10:]) == \
-               log_buffer.statistics(10)
+               log_buffer.mean(10)
         assert np.sum(log_history) / \
                np.sum(count_history) == \
-               log_buffer.statistics()
+               log_buffer.mean()
 
-    def test_cur_log_buffer(self):
+    def test_current(self):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = CurrentLogBuffer(log_history, count_history)
-        assert log_history[-1] == log_buffer.statistics()
+        log_buffer = LogBuffer(log_history, count_history)
+        assert log_history[-1] == log_buffer.current()
         # test get empty array
-        log_buffer = CurrentLogBuffer()
-        with pytest.warns(Warning):
-            log_buffer = log_buffer.statistics()
-        assert len(log_buffer) == 0
+        log_buffer = LogBuffer()
+        with pytest.raises(ValueError):
+            log_buffer.current()
+
+    def test_statistics(self):
+        log_history = np.array([1, 2, 3, 4, 5])
+        count_history = np.array([1, 1, 1, 1, 1])
+        log_buffer = LogBuffer(log_history, count_history)
+        assert log_buffer.statistics('mean') == 3
+        assert log_buffer.statistics('min') == 1
+        assert log_buffer.statistics('max') == 5
+        assert log_buffer.statistics('current') == 5
+        # Access unknown method will raise an error.
+        with pytest.raises(KeyError):
+            log_buffer.statistics('unknown')
+
+    def test_register_statistics(self):
+        @LogBuffer.register_statistics
+        def custom_statistics(self):
+            return -1
+        log_buffer = LogBuffer()
+        assert log_buffer.statistics('custom_statistics') == -1
+
+
+
 
 
 
