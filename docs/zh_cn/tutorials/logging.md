@@ -222,6 +222,12 @@ instance = GlobalAccessible.get_instance('task2') # 错误，task2未被创建
 
 ```
 
+当不传入 `name`，且 `current=False` 时，会返回根实例。
+
+```python
+instance.instance_name # root 不传参，默认返回 root
+```
+
 当不传入 `name`，且 `current=True` 时，会返回最近一次被创建的实例。
 
 ```python
@@ -234,10 +240,51 @@ instance = GlobalAccessible.get_instance(current=True)
 instance.instance_name # task2 task2 最近被创建
 ```
 
-当不传入 `name`，且 `current=False` 时，会返回根实例。
+如果无法保证目标实例是最近一次被创建的，使用 `get_instance(current=False)` 方法可能会访问到不符合预期的实例。
 
 ```python
-instance.instance_name # root 不传参，默认返回 root
+class ModuleA:
+    def __init__(self, name):
+        self.instance = GlobalAccessible.create_instance(name)
+        self.module = ModuleB()
+
+    def run_module(self):
+        self.module.run()
+
+class ModuleB:
+    def run(self):
+        instance = GlobalAccessible.get_instance(current=True)
+        print(f'moduleB: {instance.instance_name} is called')
+
+
+if __name__ == '__main__':
+    a1 = ModuleA('a1')
+    a2 = ModuleA('a2')
+    a1.run_module()  # moduleB: a2 is called，命名是 a1 运行，却获取了 a2的实例
+```
+
+对于上述情况，建议用户将全局实例实例固化为类的属性，在初始化阶段完成对应实例的绑定。
+
+```python
+class ModuleA:
+    def __init__(self, name):
+        self.instance = GlobalAccessible.create_instance(name)
+        self.module = ModuleB()
+
+    def run_module(self):
+        self.module.run()
+
+class ModuleB:
+    def __init__(self):
+        self.instance = GlobalAccessible.get_instance(current=True)
+    def run(self):
+        print(f'moduleB: {self.instance.instance_name} is called')
+
+
+if __name__ == '__main__':
+    a1 = ModuleA('a1')
+    a2 = ModuleA('a2')
+    a1.run_module()  # moduleB: a1 is called，初始化阶段绑定，确保后续访问到正确实例。
 ```
 
 ## 消息枢纽（MessageHub）
