@@ -1,19 +1,22 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from typing import Optional, Sequence
+
 import torch
 
-from .hook import Hook
+from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
+from .hook import Hook
 
 
 @HOOKS.register_module()
 class EmptyCacheHook(Hook):
-    """Releases all unoccupied cached GPU memory during the process of 
-        training.
+    """Releases all unoccupied cached GPU memory during the process of
+    training.
 
     Args:
-        before_epoch (bool): Whether empty cache before an epoch. Defaults to 
+        before_epoch (bool): Whether empty cache before an epoch. Defaults to
             False.
-        after_epoch (bool): Whether empty cache after an epoch. Defaults to 
+        after_epoch (bool): Whether empty cache after an epoch. Defaults to
             True.
         after_iter (bool): Whether empty cache after an iteration. Defaults to
             False.
@@ -27,7 +30,10 @@ class EmptyCacheHook(Hook):
         self._after_epoch = after_epoch
         self._after_iter = after_iter
 
-    def after_iter(self, runner: object) -> None:
+    def after_iter(self,
+                   runner: object,
+                   data_batch: Optional[Sequence[BaseDataSample]] = None,
+                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Empty cache after an iteration.
 
         Args:
