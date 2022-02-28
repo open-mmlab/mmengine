@@ -45,7 +45,7 @@ model = ResNet()
 model.load_state_dict(torch.load(CKPT_PATH))
 model.eval()
 
-for img in image_list:
+for img in imgs:
     prediction = model(img)
 ```
 
@@ -196,6 +196,7 @@ MMEngine 内提供了四种默认的循环：
 用户可以通过继承循环基类来实现自己的训练流程。循环基类需要提供两个输入：`runner` 执行器的实例和 `loader` 循环所需要迭代的迭代器。
 用户如果有自定义的需求，也可以增加更多的输入参数。MMEngine 中同样提供了 LOOPS 注册器对循环类进行管理，用户可以向注册器内注册自定义的循环模块，
 然后在配置文件的 `train_cfg`、`validation_cfg`、`test_cfg` 中增加 `type` 字段来指定使用何种循环。
+用户可以在自定义的循环中实现任意的执行逻辑，也可以增加或删减钩子（hook）点位，但需要注意的是一旦钩子点位被修改，默认的钩子函数逻辑可能会发生变化，必须非常小心。
 
 ```python
 from mmengine.registry import LOOPS
@@ -208,21 +209,29 @@ class CustomValLoop(BaseLoop):
         self.loader2 = runner.build_dataloader(loader2)
 
     def run(self):
-        self.runner.call_hooks('before_val')
+        self.runner.call_hooks('before_val_epoch')
         for idx, databatch in enumerate(self.loader):
-            self.run_iter(idx, databatch)
+            self.runner.call_hooks('before_val_iter',
+                                   args=dict(databatch=databatch))
+            outputs = self.run_iter(idx, databatch)
+            self.runner.call_hooks('after_val_iter',
+                                   args=dict(databatch=databatch, outputs=outputs))
         metric = self.evaluator.evaluate()
         for idx, databatch in enumerate(self.loader2):
+            self.runner.call_hooks('before_val_iter2',
+                                   args=dict(databatch=databatch))
             self.run_iter(idx, databatch)
+            self.runner.call_hooks('after_val_iter2',
+                                   args=dict(databatch=databatch, outputs=outputs))
         metric2 = self.evaluator.evaluate()
 
         ...
 
-        self.runner.call_hooks('after_val')
+        self.runner.call_hooks('after_val_epoch')
 
 ```
 
-上面的例子中实现了一个与默认验证循环不一样的自定义验证循环，它在两个不同的验证集上进行验证，并对两个验证结果进行进一步的处理。在实现了自定义的循环类之后，
+上面的例子中实现了一个与默认验证循环不一样的自定义验证循环，它在两个不同的验证集上进行验证，同时对第二次验证增加了额外的钩子点位，并在最后对两个验证结果进行进一步的处理。在实现了自定义的循环类之后，
 只需要在配置文件的 `validation_cfg` 内设置 `type='CustomValLoop'`，并添加额外的配置即可。
 
 ```python
