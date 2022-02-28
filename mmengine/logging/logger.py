@@ -5,6 +5,7 @@ from typing import Optional
 import logging
 from logging import Logger
 from termcolor import colored
+import torch.distributed as dist
 
 from .base_global_accsessible import BaseGlobalAccessible
 
@@ -59,13 +60,13 @@ class MMLogger(Logger, BaseGlobalAccessible):
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
                  file_mode='w'):
-        Logger.__init__(self, name, log_level)
+        Logger.__init__(self, name)
         BaseGlobalAccessible.__init__(self, name)
         # Get rank in DDP mode.
-        # if dist.is_available() and dist.is_initialized():
-        #     rank = dist.get_rank()
-        # else:
-        rank = 0
+        if dist.is_available() and dist.is_initialized():
+            rank = dist.get_rank()
+        else:
+            rank = 0
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
@@ -75,7 +76,6 @@ class MMLogger(Logger, BaseGlobalAccessible):
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
 
-
         if log_file is not None:
             if rank != 0:
                 # rename `log_file` with rank prefix.
@@ -84,7 +84,7 @@ class MMLogger(Logger, BaseGlobalAccessible):
                 else:
                     separator = '/'
                 path_split = log_file.split(separator)
-                path_split[-1] = f'rank_{rank}_{path_split[-1]}'
+                path_split[-1] = f'rank{rank}_{path_split[-1]}'
                 log_file = separator.join(path_split)
             # Here, the default behaviour of the official logger is 'a'. Thus,
             # we provide an interface to change the file mode to the default
@@ -94,3 +94,31 @@ class MMLogger(Logger, BaseGlobalAccessible):
             file_handler.setFormatter(MMFormatter(color=False))
             file_handler.setLevel(log_level)
             self.handlers.append(file_handler)
+
+
+def print_log(msg, logger=None, level=logging.INFO):
+    """Print a log message.
+
+    Args:
+        msg (str): The message to be logged.
+        logger (logging.Logger | str | None): The logger to be used.
+            Some special loggers are:
+            - "silent": no message will be printed.
+            - other str: the logger obtained with `get_root_logger(logger)`.
+            - None: The `print()` method will be used to print log messages.
+        level (int): Logging level. Only available when `logger` is a Logger
+            object or "root".
+    """
+    if logger is None:
+        print(msg)
+    elif isinstance(logger, logging.Logger):
+        logger.log(level, msg)
+    elif logger == 'silent':
+        pass
+    elif isinstance(logger, str):
+        _logger = MMLogger.get_instance(logger)
+        _logger.log(level, msg)
+    else:
+        raise TypeError(
+            'logger should be either a logging.Logger object, str, '
+            f'"silent" or None, but got {type(logger)}')
