@@ -13,10 +13,12 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.evaluator import BaseEvaluator
+from mmengine.hooks import Hook
 from mmengine.model.wrappers import MMDataParallel
 from mmengine.optim.scheduler import MultiStepLR
-from mmengine.registry import DATASETS, EVALUATORS, MODELS
+from mmengine.registry import DATASETS, EVALUATORS, HOOKS, MODELS
 from mmengine.runner import Runner
+from mmengine.runner.loop import EpochBasedTrainLoop, IterBasedTrainLoop
 
 
 @MODELS.register_module()
@@ -40,7 +42,7 @@ class ToyModel(nn.Module):
 @DATASETS.register_module()
 class ToyDataset(Dataset):
     META = dict()  # type: ignore
-    data = list(range(50))
+    data = list(range(10))
 
     def __getitem__(self, index):
         return torch.Tensor(self.data[index]).reshape((1, 1, 1))
@@ -225,29 +227,82 @@ class TestRunner(TestCase):
         # load by a new runner but not resume
         runner2 = Runner.build_from_cfg(self.full_cfg)
         runner2.load_checkpoint(path, resume=False)
-        assert runner2.epoch != runner.epoch
-        assert runner2.global_iter != runner.global_iter
+        self.assertNotEqual(runner2.epoch, runner.epoch)
+        self.assertNotEqual(runner2.global_iter, runner.global_iter)
 
         # load by a new runner and resume
         runner3 = Runner.build_from_cfg(self.full_cfg)
         runner3.load_checkpoint(path, resume=True)
-        assert runner3.epoch == runner.epoch
-        assert runner3.global_iter == runner.global_iter
+        self.assertEqual(runner3.epoch, runner.epoch)
+        self.assertEqual(runner3.global_iter, runner.global_iter)
 
     def test_custom_hooks(self):
-        pass
+        results = []
+        targets = [0, 1, 2]
+
+        @HOOKS.register_module()
+        class ToyHook(Hook):
+
+            def before_train_epoch(self, runner):
+                results.append(runner.epoch)
+
+        self.full_cfg.custom_hooks = [dict(type='ToyHook', priority=50)]
+        runner = Runner.build_from_cfg(self.full_cfg)
+        runner.train()
+        for result, target, in zip(results, targets):
+            self.assertEqual(result, target)
 
     def test_iter_based(self):
-        pass
+        self.full_cfg.train_cfg = dict(by_epoch=False, max_iters=30)
+        epoch_results = []
+        iter_results = []
+        targets = [i for i in range(30)]
+
+        @HOOKS.register_module()
+        class TestIterHook(Hook):
+
+            def before_train_epoch(self, runner):
+                epoch_results.append(runner.epoch)
+
+            def before_train_iter(self, runner):
+                iter_results.append(runner.global_iter)
+
+        self.full_cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        assert isinstance(runner._train_loop, IterBasedTrainLoop)
+
+        runner.train()
+
+        self.assertEqual(len(epoch_results), 1)
+        self.assertEqual(epoch_results[0], 0)
+        for result, target, in zip(iter_results, targets):
+            self.assertEqual(result, target)
 
     def test_epoch_based(self):
-        pass
+        self.full_cfg.train_cfg = dict(by_epoch=True, max_epochs=3)
+        epoch_results = []
+        epoch_targets = [i for i in range(33)]
+        iter_results = []
+        iter_targets = [i for i in range(30)]
 
-    def test_train(self):
-        pass
+        @HOOKS.register_module()
+        class TestEpochHook(Hook):
 
-    def test_val(self):
-        pass
+            def before_train_epoch(self, runner):
+                epoch_results.append(runner.epoch)
 
-    def test_test(self):
-        pass
+            def before_train_iter(self, runner):
+                iter_results.append(runner.global_iter)
+
+        self.full_cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        assert isinstance(runner._train_loop, EpochBasedTrainLoop)
+
+        runner.train()
+
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(epoch_results, epoch_targets):
+            self.assertEqual(result, target)
