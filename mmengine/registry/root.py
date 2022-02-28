@@ -22,6 +22,8 @@ TRANSFORMS = Registry('transform')
 
 # mangage all kinds of modules inheriting `nn.Module`
 MODELS = Registry('model')
+# mangage all kinds of model wrappers like 'MMDistributedDataParallel'
+MODEL_WRAPPERS = Registry('model_wrapper')
 # mangage all kinds of weight initialization modules like `Uniform`
 WEIGHT_INITIALIZERS = Registry('weight initializer')
 
@@ -34,3 +36,6 @@ PARAM_SCHEDULERS = Registry('parameter scheduler')
 
 # manage task-specific modules like anchor generators and box coders
 TASK_UTILS = Registry('task util')
+
+# manage all kinds of evaluators for computing metrics
+EVALUATORS = Registry('evaluator')

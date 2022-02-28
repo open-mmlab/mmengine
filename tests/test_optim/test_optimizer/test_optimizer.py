@@ -178,7 +178,9 @@ class TestBuilder(TestCase):
         assert sub_gn_bias['lr'] == self.base_lr
         assert sub_gn_bias['weight_decay'] == self.base_wd * norm_decay_mult
 
-        if torch.cuda.is_available():
+        # test dcn which requires cuda is available and
+        # mmcv-full has been installed
+        if torch.cuda.is_available() and MMCV_FULL_AVAILABLE:
             dcn_conv_weight = param_groups[11]
             assert dcn_conv_weight['lr'] == self.base_lr
             assert dcn_conv_weight['weight_decay'] == self.base_wd
