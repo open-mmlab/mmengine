@@ -16,7 +16,7 @@ sync_random_seed = MagicMock(return_value=0)
 
 
 @DATA_SAMPLERS.register_module()
-class DefaultSampler(Sampler[int]):
+class DefaultSampler(Sampler):
     """The default data sampler for both distributed and non-distributed
     environment.
 
@@ -109,7 +109,7 @@ class DefaultSampler(Sampler[int]):
 
 
 @DATA_SAMPLERS.register_module()
-class InfiniteSampler(Sampler[int]):
+class InfiniteSampler(Sampler):
     """It's designed for iteration-based runner and yields a mini-batch indices
     each time.
 

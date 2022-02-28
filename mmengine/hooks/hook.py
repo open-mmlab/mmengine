@@ -2,9 +2,6 @@
 from typing import Optional, Sequence
 
 from mmengine.data import BaseDataSample
-from mmengine.registry import Registry
-
-HOOKS = Registry('hook')
 
 
 class Hook:
@@ -91,7 +88,7 @@ class Hook:
 
     def after_load_checkpoint(self, runner: object, checkpoint: dict) -> None:
         """All subclasses should override this method, if they need any
-        operations after saving the checkpoint.
+        operations after loading the checkpoint.
 
         Args:
             runner (object): The runner of the training process.
@@ -283,7 +280,8 @@ class Hook:
                 evenly divided by n.
 
         Returns:
-            bool: whether or not current iteration can be evenly divided by n.
+            bool: Return True if the current iteration can be evenly divided
+            by n, otherwise False.
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False  # type: ignore
 
@@ -305,7 +303,8 @@ class Hook:
             runner (object): The runner of the training process.
 
         Returns:
-            bool: whether or not current epoch is the last epoch.
+            bool: bool: Return True if the current epoch reaches the
+            `max_epochs`, otherwise False.
         """
         return runner.epoch + 1 == runner._max_epochs  # type: ignore
 

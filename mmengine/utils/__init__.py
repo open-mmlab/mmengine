@@ -6,8 +6,10 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    requires_executable, requires_package, slice_list,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
                    tuple_cast)
+from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
                    scandir, symlink)
+from .version_utils import digit_version, get_git_hash
 
 __all__ = [
     'is_str', 'iter_cast', 'list_cast', 'tuple_cast', 'is_seq_of',
@@ -16,5 +18,6 @@ __all__ = [
     'is_filepath', 'fopen', 'check_file_exist', 'mkdir_or_exist', 'symlink',
     'scandir', 'deprecated_api_warning', 'import_modules_from_strings',
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
-    'is_method_overridden', 'has_method', 'mmcv_full_available'
+    'is_method_overridden', 'has_method', 'mmcv_full_available',
+    'digit_version', 'get_git_hash', 'TORCH_VERSION'
 ]
