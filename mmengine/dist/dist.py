@@ -13,9 +13,19 @@ from .utils import get_world_size, get_rank, get_backend, get_dist_info
 from mmengine.utils import digit_version, TORCH_VERSION
 import mmengine
 
+REDUCE_OP_MAPPINGS = {
+    'sum': dist.ReduceOp.SUM,
+    'product': dist.ReduceOp.PRODUCT,
+    'mim': dist.ReduceOp.MIN,
+    'max': dist.ReduceOp.MAX,
+    'band': dist.ReduceOp.BAND,
+    'bor': dist.ReduceOp.BOR,
+    'bxor': dist.ReduceOp.BXOR
+}
+
 
 def all_reduce(data: Tensor,
-               op: dist.ReduceOp = dist.ReduceOp.SUM,
+               op: str = 'sum',
                group: Optional[dist.ProcessGroup] = None) -> None:
     """Reduces the tensor data across all machines in such a way that all get
     the final result.
@@ -29,9 +39,7 @@ def all_reduce(data: Tensor,
     Args:
         data (Tensor): Input and output of the collective. The function
             operates in-place.
-        op (dist.ReduceOp): One of the values from
-            ``torch.distributed.ReduceOp`` enum. Specifies an operation used
-            for element-wise reductions.
+        op (str): Operation to reduce data. Defaults to 'sum'.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
@@ -56,8 +64,15 @@ def all_reduce(data: Tensor,
         tensor([4, 6]) # Rank 0
         tensor([4, 6]) # Rank 1
     """
-    if get_world_size(group) > 1:
-        dist.all_reduce(data, op, group)
+    world_size = get_world_size(group)
+    if world_size > 1:
+        # pytorch does not support 'mean' operation so we fall back to support
+        # it with 'sum' operation.
+        if op == 'mean':
+            dist.all_reduce(data, REDUCE_OP_MAPPINGS['sum'], group)
+            data.div_(world_size)
+        else:
+            dist.all_reduce(data, REDUCE_OP_MAPPINGS[op], group)
 
 
 def all_gather(data: Tensor,
@@ -392,7 +407,7 @@ def broadcast_object_list(data: List[Any],
 
 
 def all_reduce_dict(data: Tensor,
-                    op: dist.ReduceOp = dist.ReduceOp.SUM,
+                    op: str = 'sum',
                     group: Optional[dist.ProcessGroup] = None) -> None:
     """Reduces the dict across all machines in such a way that all get the
     final result.
@@ -400,14 +415,9 @@ def all_reduce_dict(data: Tensor,
     The code is modified from https://github.com/Megvii-
     BaseDetection/YOLOX/blob/main/yolox/utils/allreduce_norm.py.
 
-    # TODO
-    # 3. whether op should not be 'mean'
-
     Args:
         data (dict[str, Tensor]): Data to be reduced.
-        op (dist.ReduceOp): One of the values from
-            ``torch.distributed.ReduceOp`` enum. Specifies an operation used
-            for element-wise reductions.
+        op (str): Operation to reduce input. Defaults to 'sum'.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
@@ -446,10 +456,13 @@ def all_reduce_dict(data: Tensor,
 
         flatten_tensor = torch.cat([data[k].flatten() for k in keys])
 
-        dist.all_reduce(flatten_tensor, op=dist.ReduceOp.SUM)
-
         if op == 'mean':
-            flatten_tensor /= world_size
+            dist.all_reduce(
+                flatten_tensor, op=REDUCE_OP_MAPPINGS['sum'], group=group)
+            flatten_tensor.div_(world_size)
+        else:
+            dist.all_reduce(
+                flatten_tensor, op=REDUCE_OP_MAPPINGS[op], group=group)
 
         split_tensors = [
             x.reshape(shape) for x, shape in zip(
