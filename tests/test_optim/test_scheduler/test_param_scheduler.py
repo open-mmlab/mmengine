@@ -5,7 +5,6 @@ from unittest import TestCase
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.testing import assert_allclose as _assert_allclose
 
 from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       CosineAnnealingParamScheduler,
@@ -13,31 +12,7 @@ from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       LinearParamScheduler,
                                       MultiStepParamScheduler,
                                       StepParamScheduler, _ParamScheduler)
-from mmengine.utils import TORCH_VERSION, digit_version
-
-
-def assert_allclose(
-    actual,
-    expected,
-    rtol=None,
-    atol=None,
-    equal_nan=True,
-    msg='',
-):
-    if 'parrots' not in TORCH_VERSION and \
-            digit_version(TORCH_VERSION) >= digit_version('1.6'):
-        _assert_allclose(
-            actual,
-            expected,
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-            msg=msg)
-    else:
-        # torch.testing.assert_allclose has no ``msg`` argument
-        # when PyTorch < 1.6
-        _assert_allclose(
-            actual, expected, rtol=rtol, atol=atol, equal_nan=equal_nan)
+from mmengine.testing import assert_allclose
 
 
 class ToyModel(torch.nn.Module):
