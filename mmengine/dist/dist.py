@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 import shutil
 import pickle
 import numpy as np
@@ -8,7 +8,6 @@ import torch
 import os.path as osp
 from torch import Tensor
 from torch import distributed as dist
-import warnings
 
 from .utils import get_world_size, get_rank, get_backend, get_dist_info
 from mmengine.utils import digit_version, TORCH_VERSION
@@ -21,12 +20,11 @@ def all_reduce(data: Tensor,
     """Reduces the tensor data across all machines in such a way that all get
     the final result.
 
-    After the call ``tensor`` is going to be bitwise identical in all
+    After the call ``data`` is going to be bitwise identical in all
     processes.
 
     Note:
-        Calling ``all_reduce`` in non-distributed environment does nothing
-        and just returns :attr:`data` itself.
+        Calling ``all_reduce`` in non-distributed environment does nothing.
 
     Args:
         data (Tensor): Input and output of the collective. The function
@@ -395,8 +393,7 @@ def broadcast_object_list(data: List[Any],
 
 def all_reduce_dict(data: Tensor,
                     op: dist.ReduceOp = dist.ReduceOp.SUM,
-                    group: Optional[dist.ProcessGroup] = None,
-                    to_float: bool = False) -> Dict[str, Tensor]:
+                    group: Optional[dist.ProcessGroup] = None) -> None:
     """Reduces the dict across all machines in such a way that all get the
     final result.
 
@@ -404,8 +401,6 @@ def all_reduce_dict(data: Tensor,
     BaseDetection/YOLOX/blob/main/yolox/utils/allreduce_norm.py.
 
     # TODO
-    # 1. whether all_reduce_dict should return value.
-    # 2. whether to_float should be removed.
     # 3. whether op should not be 'mean'
 
     Args:
@@ -415,9 +410,6 @@ def all_reduce_dict(data: Tensor,
             for element-wise reductions.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
-
-    Returns:
-        dict[str, Tensor]: Reduced data.
 
     Examples:
         >>> import torch
@@ -446,34 +438,26 @@ def all_reduce_dict(data: Tensor,
     assert isinstance(data, dict)
 
     world_size = get_world_size(group)
-    if world_size == 1:
-        return data
+    if world_size > 1:
+        # ensure keys are consistent across processes
+        keys = sorted(data.keys())
+        tensor_shapes = [data[k].shape for k in keys]
+        tensor_sizes = [data[k].numel() for k in keys]
 
-    # ensure keys are consistent across processes
-    keys = sorted(data.keys())
-    tensor_shapes = [data[k].shape for k in keys]
-    tensor_sizes = [data[k].numel() for k in keys]
-
-    if to_float:
-        # considerate removing this warning
-        warnings.warn('Note: the "to_float" is True, you need to '
-                      'ensure that the behavior is reasonable.')
-        flatten_tensor = torch.cat([data[k].flatten().float() for k in keys])
-    else:
         flatten_tensor = torch.cat([data[k].flatten() for k in keys])
 
-    dist.all_reduce(flatten_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(flatten_tensor, op=dist.ReduceOp.SUM)
 
-    if op == 'mean':
-        flatten_tensor /= world_size
+        if op == 'mean':
+            flatten_tensor /= world_size
 
-    split_tensors = [
-        x.reshape(shape) for x, shape in zip(
-            torch.split(flatten_tensor, tensor_sizes), tensor_shapes)
-    ]
-    output = {k: v for k, v in zip(keys, split_tensors)}
+        split_tensors = [
+            x.reshape(shape) for x, shape in zip(
+                torch.split(flatten_tensor, tensor_sizes), tensor_shapes)
+        ]
 
-    return output
+        for k, v in zip(keys, split_tensors):
+            data[k] = v
 
 
 def _all_gather_object(object_list: List[Any],
