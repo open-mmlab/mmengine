@@ -219,15 +219,15 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 from mmengine import Runner
 
 default_hooks = dict(
-    scheduler=dict(type='SchedulerHook'))),
     optimizer=dict(type='OptimizerHook'),
-    checkpoint=dict(type='CheckpointHook', interval=1)
     timer=dict(type='IterTimerHook',
     logger=dict(type='TextLoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook')),
+    checkpoint=dict(type='CheckpointHook', interval=1)
 )
 
 custom_hooks = [
-    dict(type='VisualizerHook', priority='NORMAL'),
+    dict(type='VisualizerHook', priority='LOWEST'),
 ]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
