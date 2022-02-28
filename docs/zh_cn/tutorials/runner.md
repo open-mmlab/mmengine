@@ -1,6 +1,8 @@
 # 执行器（Runner）
 
-在 MMEngine 中，我们抽象出了任务（Task）这个概念，例如模型的训练、测试、推理，都属于任务，而负责执行这些任务的模块就叫做执行器。
+OpenMMLab 的算法库中提供了各种算法模型的训练、测试、推理功能，这些功能在不同算法方向上都有着相似的接口。
+因此， MMEngine 抽象出了执行器来负责通用的算法模型的训练、测试、推理任务。
+用户一般可以直接使用 MMEngine 中的默认执行器，也可以对执行器进行定制化修改以满足更高级的需求。
 
 在介绍如何使用执行器之前，我们先举几个例子来帮助用户理解为什么需要执行器。
 
@@ -28,7 +30,8 @@ model = ResNet()
 model.load_state_dict(torch.load(CKPT_PATH))
 model.eval()
 
-inference_data =
+test_dataset = ImageNetDataset(...)
+test_dataloader = DataLoader(test_dataset, ...)
 
 for data_batch in test_dataloader:
     outputs = model(data_batch)
@@ -47,8 +50,8 @@ for img in image_list:
 ```
 
 可以从上面的三段代码看出，这三个任务的执行流程都可以归纳为构建模型、读取数据、循环迭代等步骤。上述代码都是以图像分类为例，但不论是图像分类还是目标检测或是图像分割，都脱离不了这套范式。
-因此，我们将模型的训练、验证、测试的流程整合起来，形成了执行器。在执行器中，我们只需要准备好模型、数据等任务必须的模块或是这些模块的配置文件，执行器会自动完成任务流程的准备。
-通过使用执行器以及 MMEngine 中丰富的功能模块，用户不再需要手动搭建训练测试的流程，也不再需要去处理分布式与非分布式训练的区别，可以专心于算法和模型本身。
+因此，我们将模型的训练、验证、测试的流程整合起来，形成了执行器。在执行器中，我们只需要准备好模型、数据等任务必须的模块或是这些模块的配置文件，执行器会自动完成任务流程的准备和执行。
+通过使用执行器以及 MMEngine 中丰富的功能模块，用户不再需要手动搭建训练测试的流程，也不再需要去处理分布式与非分布式训练的区别，可以专注于算法和模型本身。
 
 ## 如何使用执行器
 
@@ -148,7 +151,7 @@ evaluator = dict(type='Accuracy')
 
 # 训练、验证、测试流程配置
 train_cfg = dict(by_epoch=True, max_epochs=100)
-validation_cfg = dict(interval=1)
+validation_cfg = dict(interval=1)  # 每隔一个 epoch 进行一次验证
 test_cfg = dict()
 
 # 自定义钩子
@@ -181,14 +184,14 @@ MMEngine 中的默认执行器能够完成大部分的深度学习任务，但�
 
 ### 自定义执行流程
 
-在 MMEngine 中，我们将任务的执行流程抽象为了循环（Loop），因为大部分的深度学习任务执行流程都可以归纳为模型在一组或多组数据上进行循环迭代。
+在 MMEngine 中，我们将任务的执行流程抽象成循环（Loop），因为大部分的深度学习任务执行流程都可以归纳为模型在一组或多组数据上进行循环迭代。
 MMEngine 内提供了四种默认的循环：
-- EpochTrainLoop 基于轮次的训练循环
-- IterTrainLoop 基于迭代次数的训练循环
+- EpochBasedTrainLoop 基于轮次的训练循环
+- IterBasedTrainLoop 基于迭代次数的训练循环
 - ValLoop 标准的验证循环
 - TestLoop 标准的测试循环
 
-TODO：流程图
+![Loop](https://user-images.githubusercontent.com/12907710/155972762-8ec29ec1-aa2a-42f8-9aee-ff4a56d7bdc0.jpg)
 
 用户可以通过继承循环基类来实现自己的训练流程。循环基类需要提供两个输入：`runner` 执行器的实例和 `loader` 循环所需要迭代的迭代器。
 用户如果有自定义的需求，也可以增加更多的输入参数。MMEngine 中同样提供了 LOOPS 注册器对循环类进行管理，用户可以向注册器内注册自定义的循环模块，
