@@ -1,18 +1,35 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # from mmengine.dist import get_dist_info, all_reduce
+from collections import OrderedDict
+from typing import List, Sequence
 from unittest.mock import MagicMock
-from .hook import HOOKS, Hook
+
+import torch
 from torch._utils import (_flatten_dense_tensors, _take_tensors,
                           _unflatten_dense_tensors)
-from collections import OrderedDict
 
-# TODO, need to remove those lines after implementing dist module
+from mmengine.registry import HOOKS
+from .hook import Hook
+
+# TODO, replace with mmengine.dist.get_dist_info
 get_dist_info = MagicMock(return_value=(0, 1))
+# TODO, replace with mmengine.dist.all_reduce
 all_reduce = MagicMock()
 
 
 # TODO, may need to move to dist.utils after implementing dist module
-def _allreduce_coalesced(tensors, world_size, bucket_size_mb=-1):
+def _allreduce_coalesced(tensors: Sequence[torch.Tensor],
+                         world_size: int,
+                         bucket_size_mb: int = -1) -> None:
+    """All-reduce a sequence of tensors as a whole.
+
+    Args:
+        tensors (Sequence[torch.Tensor]): A sequence of tensors to be
+            all-reduced.
+        world_size (int): The world size of the process group.
+        bucket_size_mb (int): The limit of each chunk in megabytes
+            for grouping tensors into chunks. Defaults to -1.
+    """
     if bucket_size_mb > 0:
         bucket_size_bytes = bucket_size_mb * 1024 * 1024
         buckets = _take_tensors(tensors, bucket_size_bytes)
@@ -34,11 +51,13 @@ def _allreduce_coalesced(tensors, world_size, bucket_size_mb=-1):
             tensor.copy_(synced)
 
 
-def allreduce_params(params, coalesce=True, bucket_size_mb=-1):
-    """Allreduce parameters.
+def allreduce_params(params: List[torch.Tensor],
+                     coalesce: bool = True,
+                     bucket_size_mb: int = -1) -> None:
+    """All-reduce parameters.
 
     Args:
-        params (list[torch.Parameters]): List of parameters or buffers of a
+        params (List[torch.Tensor]): List of parameters or buffers of a
             model.
         coalesce (bool, optional): Whether allreduce parameters as a whole.
             Defaults to True.
@@ -66,10 +85,14 @@ class SyncBuffersHook(Hook):
           effective only for distributed training. Defaults to True.
     """
 
-    def __init__(self, distributed=True):
+    def __init__(self, distributed: bool = True) -> None:
         self.distributed = distributed
 
-    def after_epoch(self, runner):
-        """All-reduce model buffers at the end of each epoch."""
+    def after_epoch(self, runner: object) -> None:
+        """All-reduce model buffers at the end of each epoch.
+
+        Args:
+            runner (object): The runner of the training process.
+        """
         if self.distributed:
-            allreduce_params(runner.model.buffers())
+            allreduce_params(runner.model.buffers())  # type: ignore
