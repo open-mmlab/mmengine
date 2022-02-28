@@ -195,19 +195,19 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 | 名称      |      用途      |  优先级 |
 |:----------:|:-------------:|:------:|
 | OptimizerHook | 反向传播以及参数更新 | HIGH (30) |
-| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | ABOVE_NORMAL (40) |
-| CheckpointHook | 按指定间隔保存权重 | NORMAL (50) |
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
-| EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
 | SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
-| IterTimerHook | 统计迭代耗时 | LOW (70) |
-| LoggerHook | 打印日志 | LOW (70) |
+| EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
+| IterTimerHook | 统计迭代耗时 | NORMAL (50) |
+| LoggerHook | 打印日志 | BELOW_NORMAL (60) |
+| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | LOW (70) |
+| CheckpointHook | 按指定间隔保存权重 | VERY_LOW (90) |
 
 **自定义钩子**
 
 | 名称      |      用途      |  优先级 |
 |:----------:|:-------------:|:------:|
-| VisualizerHook | 可视化 | NORMAL (50) |
+| VisualizerHook | 可视化 | LOWEST (100) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -275,12 +275,6 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 ```
 
 上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
-
-考虑到分布式训练过程，如果有必要（例如分布式训练中没有使用同步 BN，而是普通 BN），则可以设置参数 `sync_buffer=True`，在保存权重前，会对模型 buffers（典型的例如 BN 的全局均值和方差参数）进行跨卡同步，让每张卡的 buffers 参数都相同，此时在主进程保存的权重和 buffer 才是符合期望的行为。
-
-```python
-checkpoint_config = dict(type='CheckpointHook', internal=5, sync_buffer=True)
-```
 
 ### OptimizerHook
 
