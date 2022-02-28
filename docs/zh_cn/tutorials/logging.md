@@ -29,7 +29,7 @@
 
 消息枢纽和日志缓冲区的配合让用户可以通过更改配置文件，来决定哪些日志需要被记录，以何种方式被记录。**MMEngine** 中消息枢纽 、日志缓冲区与各组件之间的关系结构关系如下：
 
-![message_hub关系图 (1)](https://user-images.githubusercontent.com/57566630/155832053-f2f052fb-8911-46d5-9c7d-c395a12579da.jpg)
+![message_hub关系图 (2)](https://user-images.githubusercontent.com/57566630/155918309-517acb62-f423-4878-9be8-c10b105f8d9f.jpg)
 
 可以看到日志缓冲区除了记录训练日志（`log_buffers`）外，还会存储运行时信息（`runtime_info`）。运行时信息主要是执行器的元信息（meta）、迭代次数等。
 
@@ -43,11 +43,11 @@
 
 ## 日志缓冲区（LogBuffer）
 
-日志缓冲（`LogBuffer`）区用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
+日志缓冲区（`LogBuffer`）用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
 
 - `__init__(log_history=[], count_history=[], max_length=1000000)`: `log_history`，`count_history ` 可以是 `list`、`np.ndarray` 或 `torch.Tensor`，用于初始化日志的历史信息（`log_history`）队列 和日志的历史计数（`count_history`）。`max_length` 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
 
-- `update(value, count=1)`: `value` 为需要被统计的日志信息，`count ` 为 `value ` 的累加次数，默认为 1。如果 `value` 已经是日志累加 n 次的结果（例如模型的迭代时间，实际上是 batch 张图片的累计耗时），需要另 `count=n`。
+- `update(value, count=1)`: `value` 为需要被统计的日志信息，`count ` 为 `value ` 的累加次数，默认为 1。如果 `value` 已经是日志累加 n 次的结果（例如模型的迭代时间，实际上是 batch 张图片的累计耗时），需要令 `count=n`。
 - `statistics('name', *args, **kwargs)`: 通过字符串来访问统计方法，传入参数必须和对应方法匹配。
 - `register_statistics(method=None, name=None)`: 被 `register_statistics` 装饰的方法能被 `statistics()` 函数通过字符串访问。
 - `mean(window_size=None)`: 返回最近更新的 window_size 个日志的均值，默认返回全局平均值，可以通过 `statistics` 方法访问。
@@ -171,7 +171,7 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 ![image](https://user-images.githubusercontent.com/57566630/155887994-dc1fad31-55b9-499c-8d83-7f4c70c3e730.png)
 
-- `create_instance(name='', *args, **kwargs)`: 当传入 `name ` 时，创建指定 `name` 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
+- `create_instance(name='', *args, **kwargs)`: 当传入 `name` 时，创建指定 `name` 的实例，否则默认返回根实例。该方法入参要求和子类构造函数完全相同
 - `get_instance(name='', current=False)`: 当传入 `name` 时，返回指定 `name` 的实例，如果对应 `name` 不存在，会抛出异常。当不传入 `name` 时，返回最近创建的实例或者根实例（`root_instance`）。
 
 ### 定义子类
@@ -227,7 +227,7 @@ instance = GlobalAccessible.get_instance('task2') # 错误，task2未被创建
 ```python
 instance = GlobalAccessible.get_instance(current=True)  # 错误，尚未创建任何实例，无法返回最近创建的实例
 instance = GlobalAccessible.create_instance('task1')
-instance = GlobalAccessible.get_instance(current=True)  
+instance = GlobalAccessible.get_instance(current=True)
 instance.instance_name # task1 返回 task1 最近被创建
 instance = GlobalAccessible.create_instance('task2')
 instance = GlobalAccessible.get_instance(current=True)
@@ -243,8 +243,6 @@ instance.instance_name # root 不传参，默认返回 root
 ## 消息枢纽（MessageHub）
 
 日志缓冲区可以十分简单的完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 **MMEngine**  使用全局可访问的消息枢纽（`MessageHub`）来实现组件与组件、执行器与执行器之间的互联互通。消息枢纽不仅会管理各个模块分发的日志缓冲区，还会记录运行时信息例如执行器的元信息，迭代次数等。运行时信息每次更新都会被覆盖。消息枢纽继承自全局可访问基类，其对外接口如下
-
-![image](https://user-images.githubusercontent.com/57566630/155887924-2d60dae6-ce71-4b15-993b-3c6cc012ec0e.png)
 
 - `update_log(key, value, count=1)`: 更新指定字段的消息缓冲区。`value`，`count` 对应 `LogBuffer.update` 接口的入参。该方法用于更新训练日志，例如学习率、损失、迭代时间等。
 - `update_info(key, value)`: 更新运行时信息，例如执行器的元信息、迭代次数等。运行时信息每次更新都会覆盖上一次的内容。
