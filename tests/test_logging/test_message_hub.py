@@ -1,6 +1,8 @@
-import pytest
-from mmengine import MessageHub
+# Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
+import pytest
+
+from mmengine import MessageHub
 
 
 class TestMessageHub:
@@ -53,7 +55,3 @@ class TestMessageHub:
         recorded_dict = dict(a=1, b=2)
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
-
-
-
-

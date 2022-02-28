@@ -1,11 +1,13 @@
-from mmengine import LogBuffer
-
+# Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import pytest
 import torch
 
+from mmengine import LogBuffer
+
 
 class TestLoggerBuffer:
+
     def test_init(self):
         # `BaseLogBuffer` is an abstract class, using `CurrentLogBuffer` to
         # test `update` method
@@ -63,8 +65,7 @@ class TestLoggerBuffer:
             log_buffer.update(array_method([1, 2]))
 
     @pytest.mark.parametrize('statistics_method, log_buffer_type',
-                             [(np.min, 'min'), (np.max, 'max')]
-                             )
+                             [(np.min, 'min'), (np.max, 'max')])
     def test_max_min(self, statistics_method, log_buffer_type):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
@@ -108,17 +109,10 @@ class TestLoggerBuffer:
             log_buffer.statistics('unknown')
 
     def test_register_statistics(self):
+
         @LogBuffer.register_statistics
         def custom_statistics(self):
             return -1
+
         log_buffer = LogBuffer()
         assert log_buffer.statistics('custom_statistics') == -1
-
-
-
-
-
-
-
-
-

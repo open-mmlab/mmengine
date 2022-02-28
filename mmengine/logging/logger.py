@@ -1,20 +1,29 @@
-import sys
-import platform
-from typing import Optional
-
+# Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from logging import Logger
-from termcolor import colored
+import platform
+import sys
+from logging import Logger, LogRecord
+from typing import Optional, Union
+
 import torch.distributed as dist
+from termcolor import colored
 
 from .base_global_accsessible import BaseGlobalAccessible
 
 
 class MMFormatter(logging.Formatter):
-    _color_mapping = dict(ERROR='red', WARNING='yellow', INFO='white',
-                          DEBUG='green')
+    """Colorful format for MMLogger. If the log level is error, the logger will
+    additionally output the location of the code.
 
-    def __init__(self, color=True, *args, **kwargs):
+    Args:
+        color (bool): Whether to use colorful format. filehandler is not
+            allowed to use color format, otherwise it will be garbled.
+    """
+    _color_mapping: dict = dict(
+        ERROR='red', WARNING='yellow', INFO='white', DEBUG='green')
+
+    def __init__(self, color: bool = True, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
         # Get prefix format according to color.
         error_prefix = self._get_prefix('ERROR', color)
@@ -32,15 +41,35 @@ class MMFormatter(logging.Formatter):
         self.debug_format = f'%(asctime)s - %(name)s - {debug_prefix} - %(' \
                             'message)s'
 
-    def _get_prefix(self, level, color):
+    def _get_prefix(self, level: str, color: bool) -> str:
+        """Get the prefix of the target log level.
+        Args:
+            level (str): log level.
+            color (bool): Whether to get colorful prefix.
+
+        Returns:
+            str: The plain or colorful prefix.
+        """
         if color:
-            prefix = colored(level, self._color_mapping[level],
-                             attrs=["blink", "underline"])
+            prefix = colored(
+                level,
+                self._color_mapping[level],
+                attrs=['blink', 'underline'])
         else:
             prefix = level
         return prefix
 
-    def format(self, record):
+    def format(self, record: LogRecord) -> str:
+        """Override the `logging.Formatter.format`` method `. Output the
+        message according to the specified log level.
+
+        Args:
+            record (LogRecord): A LogRecord instance represents an event being
+                logged.
+
+        Returns:
+            str: Formatted result.
+        """
         if record.levelno == logging.ERROR:
             self._style._fmt = self.err_format
         elif record.levelno == logging.WARNING:
@@ -55,11 +84,24 @@ class MMFormatter(logging.Formatter):
 
 
 class MMLogger(Logger, BaseGlobalAccessible):
+    """The Logger manager which can create formatted logger and get specified
+    logger globally. MMLogger is created and accessed in the same way as
+    BaseGlobalAccessible.
+
+    Args:
+        name (str): Logger name. Defaults to ''.
+        log_file (str, optional): The log filename. If specified, a
+        ``FileHandler`` will be added to the logger.
+        log_level: The log level of the handler. Defaults to 'NOTSET'.
+        file_mode (str): The file mode used in opening log file.
+            Defaults to 'w'.
+    """
+
     def __init__(self,
-                 name: Optional[str] = None,
+                 name: str = '',
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
-                 file_mode='w'):
+                 file_mode: str = 'w'):
         Logger.__init__(self, name)
         BaseGlobalAccessible.__init__(self, name)
         # Get rank in DDP mode.
@@ -96,12 +138,14 @@ class MMLogger(Logger, BaseGlobalAccessible):
             self.handlers.append(file_handler)
 
 
-def print_log(msg, logger=None, level=logging.INFO):
+def print_log(msg,
+              logger: Optional[Union[Logger, str]] = None,
+              level=logging.INFO):
     """Print a log message.
 
     Args:
         msg (str): The message to be logged.
-        logger (logging.Logger | str | None): The logger to be used.
+        logger (Union[]): The logger to be used.
             Some special loggers are:
             - "silent": no message will be printed.
             - other str: the logger obtained with `get_root_logger(logger)`.
