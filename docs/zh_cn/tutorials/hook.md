@@ -30,7 +30,7 @@ goodbye
 
 可以看到，`main` 函数在两个位置调用钩子中的函数而无需做任何改动。
 
-在 PyTorch 中，钩子的应用也随处可见，例如模块（Module）中的钩子可以获得模块的前向输入输出以及反向的输入输出。举 [`register_forward_hook`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook) 方法为例，该方法往模块注册一个前向钩子，钩子可以获得模块的前向输入和输出。
+在 PyTorch 中，钩子的应用也随处可见，例如神经网络模块（nn.Module）中的钩子可以获得模块的前向输入输出以及反向的输入输出。以 [`register_forward_hook`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook) 方法为例，该方法往模块注册一个前向钩子，钩子可以获得模块的前向输入和输出。
 
 下面是 `register_forward_hook` 用法的简单示例：
 
@@ -81,7 +81,7 @@ output: tensor([[-1.0036]], grad_fn=<AddmmBackward>)
 
 ## MMEngine 中钩子的设计
 
-在介绍 MMEngine 中钩子的设计之前，先简单介绍使用 PyTorch 编写一个简单的[训练脚本](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)的基本步骤：
+在介绍 MMEngine 中钩子的设计之前，先简单介绍使用 PyTorch 实现模型训练的基本步骤（示例代码来自 [PyTorch Tutorials](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#sphx-glr-beginner-blitz-cifar10-tutorial-py)）：
 
 ```python
 import torch
@@ -129,48 +129,48 @@ def main():
             accuracy = ...
 ```
 
-上面的伪代码是训练模型的基本步骤，如果我们需要在上面的代码中加入定制化的逻辑，则需要修改 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们在 `main` 方法中插入 16 个位点，只需在这些位点插入定制化逻辑，即可添加定制化功能，例如加载模型权重、更新模型参数等。
+上面的伪代码是训练模型的基本步骤。如果要在上面的代码中加入定制化的逻辑，我们需要不断修改和拓展 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们可以在 `main` 方法中插入 16 个位点，并在对应位点实现调用 hook 的抽象逻辑。此时只需在这些位点插入 hook 来实现定制化逻辑，即可添加定制化功能，例如加载模型权重、更新模型参数等。
 
 ```python
 def main():
     ...
-    # 1. before_run: 训练开始前执行的逻辑
-    # 2. after_load_checkpoint: 加载权重后执行的逻辑
+    call_hooks('before_run', hooks)  # 训练开始前执行的逻辑
+    call_hooks('after_load_checkpoint')  # 加载权重后执行的逻辑
     for i in range(max_epochs):
-        # 3. before_train_epoch: 遍历训练数据集前执行的逻辑
+        call_hooks('before_train_epoch')  # 遍历训练数据集前执行的逻辑
         for inputs, labels in train_dataloader:
-            # 4. before_train_iter: 模型前向计算前执行的逻辑
+            call_hooks('before_train_iter')  # 模型前向计算前执行的逻辑
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-            # 5. after_train_iter: 模型前向计算后执行的逻辑
+            call_hooks('after_train_iter')  # 模型前向计算后执行的逻辑
             loss.backward()
             optimizer.step()
-        # 6. after_train_epoch: 遍历完成训练数据集后执行的逻辑
+        call_hooks('after_train_epoch')  # 遍历完训练数据集后执行的逻辑
 
-        # 7. before_val_epoch:
+        call_hooks('before_val_epoch')  # 遍历验证数据集前执行的逻辑
         with torch.no_grad():
             for inputs, labels in val_dataloader:
-                # 8. before_val_iter: 模型前向计算前执行
+                call_hooks('before_val_iter')  # 模型前向计算前执行
                 outputs = net(inputs)
                 loss = criterion(outputs, labels)
-                # 9. after_val_iter: 模型前向计算后执行
-        # 10. after_val_epoch: 遍历完成验证数据集前执行
+                call_hooks('after_val_iter')  # 模型前向计算后执行
+        call_hooks('after_val_epoch')  # 遍历完验证数据集前执行
 
-        # 11. before_save_checkpoint: 保存权重前执行的逻辑
+        call_hooks('before_save_checkpoint')  # 保存权重前执行的逻辑
 
-    # 12. before_test_epoch: 遍历测试数据集前执行的逻辑
+    call_hooks('before_test_epoch')  # 遍历测试数据集前执行的逻辑
     with torch.no_grad():
         for inputs, labels in test_dataloader:
-            # 13. before_test_iter: 模型前向计算后执行的逻辑
+            call_hooks('before_test_iter')  # 模型前向计算后执行的逻辑
             outputs = net(inputs)
             accuracy = ...
-            # 14. after_test_iter: 遍历完成测试数据集后执行的逻辑
-    # 15. after_test_epoch: 遍历完成测试数据集后执行
+            call_hooks('after_test_iter')  # 遍历完成测试数据集后执行的逻辑
+    call_hooks('after_test_epoch')  # 遍历完测试数据集后执行
 
-    # 16. after_run: 训练结束后执行的逻辑
+    call_hooks('after_run')  # 训练结束后执行的逻辑
 ```
 
-在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，更重要的是在特定的位点调用钩子完成定制化功能。更多关于执行器的介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
 
 为了方便管理，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
 
