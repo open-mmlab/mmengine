@@ -5,8 +5,9 @@ from .iter_timer_hook import IterTimerHook
 from .optimizer_hook import OptimizerHook
 from .param_scheduler_hook import ParamSchedulerHook
 from .sampler_seed_hook import DistSamplerSeedHook
+from .checkpoint_hook import CheckpointHook
 
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
-    'OptimizerHook', 'EmptyCacheHook'
+    'OptimizerHook', 'EmptyCacheHook', 'CheckpointHook'
 ]
