@@ -158,23 +158,44 @@ class TestHook:
     def test_end_of_epoch(self):
         hook = Hook()
         runner = Mock()
+
+        # last inner iter
         runner.inner_iter = 1
         runner.data_loader.__len__ = Mock(return_value=2)
         return_val = hook.end_of_epoch(runner)
         assert return_val
 
+        # not the last inner iter
+        runner.inner_iter = 0
+        return_val = hook.end_of_epoch(runner)
+        assert not return_val
+
     def test_is_last_epoch(self):
         hook = Hook()
         runner = Mock()
+
+        # last epoch
         runner.epoch = 1
         runner._max_epochs = 2
         return_val = hook.is_last_epoch(runner)
         assert return_val
 
+        # not the last epoch
+        runner.epoch = 0
+        return_val = hook.is_last_epoch(runner)
+        assert not return_val
+
     def test_is_last_iter(self):
         hook = Hook()
         runner = Mock()
+
+        # last iter
         runner.iter = 1
         runner._max_iters = 2
         return_val = hook.is_last_iter(runner)
         assert return_val
+
+        # not the last iter
+        runner.iter = 0
+        return_val = hook.is_last_iter(runner)
+        assert not return_val
