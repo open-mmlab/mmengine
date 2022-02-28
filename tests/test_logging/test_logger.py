@@ -94,7 +94,7 @@ class TestLogger:
         function_name = sys._getframe().f_code.co_name
         pattern = self.regex_time + r' - test_error - (.*)ERROR(.*) - '\
                                     f'{file_path} - {function_name} - ' \
-                                    f'{lineno} - welcome\n '
+                                    f'{lineno} - welcome\n'
         out, _ = capsys.readouterr()
         match = re.fullmatch(pattern, out)
         assert match is not None
