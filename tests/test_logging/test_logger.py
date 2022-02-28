@@ -1,11 +1,16 @@
+import pytest
+
 from mmengine import MMLogger, print_log
 import logging
 from unittest.mock import patch
 import os
 import re
+import sys
 
 
 class TestLogger:
+    regex_time = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+
     @patch('torch.distributed.get_rank', lambda: 0)
     @patch('torch.distributed.is_initialized', lambda: True)
     @patch('torch.distributed.is_available', lambda: True)
@@ -20,9 +25,7 @@ class TestLogger:
         assert isinstance(logger.handlers[0], logging.StreamHandler)
         assert logger.level == logging.NOTSET
         assert logger.handlers[0].level == logging.INFO
-        # the name can not be used to open the file a second time in windows,
-        # so `delete` should be set as `False` and we need to manually remove
-        # it more details can be found at https://github.com/open-mmlab/mmcv/pull/1077 # noqa: E501
+
         tmp_file = tmp_path / 'tmp_file.log'
         logger = MMLogger.create_instance('rank0.pkg2',
                                           log_level='INFO',
@@ -34,7 +37,6 @@ class TestLogger:
         logger_pkg3 = MMLogger.get_instance('rank0.pkg2')
         assert id(logger_pkg3) == id(logger)
         logging.shutdown()
-        os.remove(tmp_file)
 
     @patch('torch.distributed.get_rank', lambda: 1)
     @patch('torch.distributed.is_initialized', lambda: True)
@@ -50,47 +52,63 @@ class TestLogger:
         assert logger.handlers[1].level == logging.INFO
         assert os.path.exists(log_path)
         logging.shutdown()
-        os.remove(log_path)
 
-
-def test_print_log_print(capsys):
-    print_log('welcome', logger=None)
-    out, _ = capsys.readouterr()
-    assert out == 'welcome\n'
-
-
-def test_print_log_silent(capsys, caplog):
-    print_log('welcome', logger='silent')
-    out, _ = capsys.readouterr()
-    assert out == ''
-    assert len(caplog.records) == 0
-
-
-def test_log_print(capsys, caplog, tmp_path):
-    # MMLogger.create_instance('rank0.pkg3', log_level='ERROR')
-    # print_log('welcome', logger='rank0.pkg3')
-    logger = logging.getLogger('rank0.pkg3')
-    logger.info('aaa')
-    print(f'============================={caplog.handler}================')
-    assert caplog.record_tuples[-1] == ('rank0.pkg3', logging.INFO, 'welcome')
-
-    print_log('welcome', logger='mmcv', level=logging.ERROR)
-    assert caplog.record_tuples[-1] == ('rank0.pkg3', logging.ERROR, 'welcome')
-
-    # the name can not be used to open the file a second time in windows,
-    # so `delete` should be set as `False` and we need to manually remove it
-    # more details can be found at https://github.com/open-mmlab/mmcv/pull/1077
-    tmp_file = tmp_path / 'tmp_file.log'
-    logger = MMLogger.create_instance('abc', log_file=str(tmp_file))
-    print_log('welcome', logger=logger)
-    assert caplog.record_tuples[-1] == ('abc', logging.INFO, 'welcome')
-    with open(tmp_file, 'r') as fin:
-        log_text = fin.read()
-        regex_time = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
-        match = re.fullmatch(regex_time + r' - abc - INFO - welcome\n',
-                             log_text)
+    @pytest.mark.parametrize('log_level', [logging.WARNING,
+                                           logging.INFO,
+                                           logging.DEBUG])
+    def test_handler(self, capsys, tmp_path, log_level):
+        # test stream handler can output correct format logs
+        logger_name = f'test_stream_{str(log_level)}'
+        logger = MMLogger.create_instance(logger_name,
+                                          log_level=log_level)
+        logger.log(level=log_level, msg='welcome')
+        out, _ = capsys.readouterr()
+        # Skip match colored INFO
+        loglevl_name = logging._levelToName[log_level]
+        match = re.fullmatch(self.regex_time + f' - {logger_name} - '
+                             f'(.*){loglevl_name}(.*) - welcome\n', out)
         assert match is not None
-    # flushing and closing all handlers in order to remove `f.name`
-    logging.shutdown()
 
-    os.remove(tmp_file)
+        # test file_handler output plain text without color.
+        tmp_file = tmp_path / 'tmp_file.log'
+        logger_name = f'test_file_{log_level}'
+        logger = MMLogger.create_instance(logger_name, log_level=log_level,
+                                          log_file=tmp_file)
+        logger.log(level=log_level, msg='welcome')
+        with open(tmp_file, 'r') as f:
+            log_text = f.read()
+            match = re.fullmatch(self.regex_time +
+                                 f' - {logger_name} - {loglevl_name} - '
+                                 f'welcome\n',
+                                 log_text)
+            assert match is not None
+        logging.shutdown()
+
+    def test_erro_format(self, capsys):
+        # test error level log can output file path, function name and
+        # line number
+        logger = MMLogger.create_instance('test_error', log_level='INFO')
+        logger.error('welcome')
+        lineno = sys._getframe().f_lineno - 1
+        file_path = __file__
+        function_name = sys._getframe().f_code.co_name
+        pattern = self.regex_time + \
+                  r' - test_error - (.*)ERROR(.*) - ' + \
+                  f'{file_path} - {function_name} - {lineno} - welcome\n'
+        out, _ = capsys.readouterr()
+        match = re.fullmatch(pattern, out)
+        assert match is not None
+
+    def test_print_log(self, capsys, tmp_path):
+        # caplog cannot record MMLogger's logs.
+        # test simple print.
+        print_log('welcome', logger=None)
+        out, _ = capsys.readouterr()
+        assert out == 'welcome\n'
+        # test silent logger and skip print.
+        print_log('welcome', logger='silent')
+        out, _ = capsys.readouterr()
+        assert out == ''
+
+
+

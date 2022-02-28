@@ -11,26 +11,26 @@ from .base_global_accsessible import BaseGlobalAccessible
 
 
 class MMFormatter(logging.Formatter):
-    _color_mapping = dict(ERROR='red', WARN='yellow', INFO='white',
-                          debug='green')
+    _color_mapping = dict(ERROR='red', WARNING='yellow', INFO='white',
+                          DEBUG='green')
 
     def __init__(self, color=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Get prefix format according to color.
         error_prefix = self._get_prefix('ERROR', color)
-        warn_prefix = self._get_prefix('WARN', color)
+        warn_prefix = self._get_prefix('WARNING', color)
         info_prefix = self._get_prefix('INFO', color)
-        debug_prefix = self._get_prefix('debug', color)
+        debug_prefix = self._get_prefix('DEBUG', color)
         # Config output format.
-        self.err_format = f'%(asctime)s - %(name)s - {error_prefix} ' \
-                          f'Filepath: %(pathname)s Function: %(funcName)s ' \
-                          f'Line: %(lineno)d'
-        self.warn_format = f'%(asctime)s - %(name)s - {warn_prefix} %(' \
-                           f'message)s'
-        self.info_format = f'%(asctime)s - %(name)s - {info_prefix} %(' \
-                           f'message)s'
-        self.debug_format = f'%(asctime)s - %(name)s - {debug_prefix} %(' \
-                          f'message)s'
+        self.err_format = f'%(asctime)s - %(name)s - {error_prefix} - ' \
+                          f'%(pathname)s - %(funcName)s - %(lineno)d - ' \
+                          '%(message)s'
+        self.warn_format = f'%(asctime)s - %(name)s - {warn_prefix} - %(' \
+                           'message)s'
+        self.info_format = f'%(asctime)s - %(name)s - {info_prefix} - %(' \
+                           'message)s'
+        self.debug_format = f'%(asctime)s - %(name)s - {debug_prefix} - %(' \
+                            'message)s'
 
     def _get_prefix(self, level, color):
         if color:
