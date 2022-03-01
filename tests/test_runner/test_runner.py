@@ -248,15 +248,24 @@ class TestRunner(TestCase):
 
         self.full_cfg.custom_hooks = [dict(type='ToyHook', priority=50)]
         runner = Runner.build_from_cfg(self.full_cfg)
+
+        # test hook registered in runner
+        hook_names = [hook.__class__.__name__ for hook in runner.hooks]
+        assert 'ToyHook' in hook_names
+
+        # test hook behavior
         runner.train()
         for result, target, in zip(results, targets):
             self.assertEqual(result, target)
 
     def test_iter_based(self):
         self.full_cfg.train_cfg = dict(by_epoch=False, max_iters=30)
+
+        # test iter and epoch counter of IterBasedTrainLoop
         epoch_results = []
-        iter_results = []
-        targets = [i for i in range(30)]
+        global_iter_results = []
+        inner_iter_results = []
+        iter_targets = [i for i in range(30)]
 
         @HOOKS.register_module()
         class TestIterHook(Hook):
@@ -265,7 +274,8 @@ class TestRunner(TestCase):
                 epoch_results.append(runner.epoch)
 
             def before_train_iter(self, runner):
-                iter_results.append(runner.global_iter)
+                global_iter_results.append(runner.global_iter)
+                inner_iter_results.append(runner.inner_iter)
 
         self.full_cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
         runner = Runner.build_from_cfg(self.full_cfg)
@@ -276,15 +286,21 @@ class TestRunner(TestCase):
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)
-        for result, target, in zip(iter_results, targets):
+        for result, target, in zip(global_iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(inner_iter_results, iter_targets):
             self.assertEqual(result, target)
 
     def test_epoch_based(self):
         self.full_cfg.train_cfg = dict(by_epoch=True, max_epochs=3)
+
+        # test iter and epoch counter of EpochBasedTrainLoop
         epoch_results = []
-        epoch_targets = [i for i in range(33)]
-        iter_results = []
-        iter_targets = [i for i in range(30)]
+        epoch_targets = [i for i in range(3)]
+        global_iter_results = []
+        global_iter_targets = [i for i in range(10 * 3)]
+        inner_iter_results = []
+        inner_iter_targets = [i for i in range(10)] * 3  # train and val
 
         @HOOKS.register_module()
         class TestEpochHook(Hook):
@@ -292,8 +308,9 @@ class TestRunner(TestCase):
             def before_train_epoch(self, runner):
                 epoch_results.append(runner.epoch)
 
-            def before_train_iter(self, runner):
-                iter_results.append(runner.global_iter)
+            def before_train_iter(self, runner, databatch=None):
+                global_iter_results.append(runner.global_iter)
+                inner_iter_results.append(runner.inner_iter)
 
         self.full_cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
         runner = Runner.build_from_cfg(self.full_cfg)
@@ -302,7 +319,9 @@ class TestRunner(TestCase):
 
         runner.train()
 
-        for result, target, in zip(iter_results, iter_targets):
-            self.assertEqual(result, target)
         for result, target, in zip(epoch_results, epoch_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(global_iter_results, global_iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(inner_iter_results, inner_iter_targets):
             self.assertEqual(result, target)
