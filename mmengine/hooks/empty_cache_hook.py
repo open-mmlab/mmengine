@@ -16,7 +16,7 @@ class EmptyCacheHook(Hook):
     Args:
         before_epoch (bool): Whether to release cache before an epoch. Defaults to
             False.
-        after_epoch (bool): Whether empty cache after an epoch. Defaults to
+        after_epoch (bool): Whether to release cache after an epoch. Defaults to
             True.
         after_iter (bool): Whether empty cache after an iteration. Defaults to
             False.
