@@ -66,6 +66,13 @@ class TestOptimizerHook:
             dict(max_norm=2), detect_anomalous_params=True)
 
         dummy_runner.outputs['loss'] = model(x)[0].sum()
+
+        dummy_runner.outputs['loss'].backward = Mock(
+            wraps=dummy_runner.outputs['loss'].backward)
+        optimizer_hook.detect_anomalous_parameters = Mock(
+            wraps=optimizer_hook.detect_anomalous_parameters)
+        optimizer_hook.clip_grads = Mock(wraps=optimizer_hook.clip_grads)
+
         optimizer_hook.after_train_iter(dummy_runner)
         # assert the parameters of conv2 and conv3 are not in the
         # computational graph which is with x1.sum() as root.
@@ -75,6 +82,10 @@ class TestOptimizerHook:
         assert 'conv3.bias' in dummy_runner.logger.msg
         assert 'conv1.weight' not in dummy_runner.logger.msg
         assert 'conv1.bias' not in dummy_runner.logger.msg
+        dummy_runner.optimizer.step.assert_called()
+        dummy_runner.outputs['loss'].backward.assert_called()
+        optimizer_hook.clip_grads.assert_called()
+        optimizer_hook.detect_anomalous_parameters.assert_called()
 
         dummy_runner.outputs['loss'] = model(x)[1].sum()
         dummy_runner.logger.msg = ''
@@ -86,3 +97,19 @@ class TestOptimizerHook:
         assert 'conv2.bias' not in dummy_runner.logger.msg
         assert 'conv1.weight' not in dummy_runner.logger.msg
         assert 'conv1.bias' not in dummy_runner.logger.msg
+
+        # grad_clip is None and detect_anomalous_parameters is False
+        optimizer_hook = OptimizerHook(detect_anomalous_params=False)
+        optimizer_hook.detect_anomalous_parameters = Mock(
+            wraps=optimizer_hook.detect_anomalous_parameters)
+        optimizer_hook.clip_grads = Mock(wraps=optimizer_hook.clip_grads)
+        dummy_runner.outputs['loss'] = model(x)[0].sum()
+        dummy_runner.outputs['loss'].backward = Mock(
+            wraps=dummy_runner.outputs['loss'].backward)
+
+        optimizer_hook.after_train_iter(dummy_runner)
+
+        dummy_runner.optimizer.step.assert_called()
+        dummy_runner.outputs['loss'].backward.assert_called()
+        optimizer_hook.clip_grads.assert_not_called()
+        optimizer_hook.detect_anomalous_parameters.assert_not_called()
