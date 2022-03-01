@@ -25,7 +25,7 @@
 
 - **跨模块的日志传输**
 
-在 **MMEngine** 中，各组件使用日志缓冲区来存储训练日志，例如损失、学习率和迭代时间等。最后 [日志钩子（LoggerHook）](TODO)  会将这些日志会汇总导出。上述流程涉及了不同组件的信息交互， 因此需要一套组件之间的消息传输方案。**MMEngine** 设计了消息枢纽（`MessageHub`）类实现跨模块通讯，让同一个[执行器](TODO)的不同组件能够轻松读写同一份日志。
+在 **MMEngine** 中，各组件使用日志缓冲区来存储训练日志，例如损失、学习率和迭代时间等。最后[日志钩子（LoggerHook）](TODO)会将这些日志会汇总导出。上述流程涉及了不同组件的信息交互， 因此需要一套组件之间的消息传输方案。**MMEngine** 设计了消息枢纽（`MessageHub`）类实现跨模块通讯，让同一个[执行器](TODO)的不同组件能够轻松读写同一份日志。
 
 消息枢纽和日志缓冲区的配合让用户可以通过更改配置文件，来决定哪些日志需要被记录，以何种方式被记录。**MMEngine** 中消息枢纽 、日志缓冲区与各组件之间的关系结构关系如下：
 
@@ -45,16 +45,16 @@
 
 日志缓冲区（`LogBuffer`）用于存储、统计不同类型的日志，为更新/统计损失、迭代时间、学习率等日志提供了统一的接口，对外接口如下：
 
-- `__init__(log_history=[], count_history=[], max_length=1000000)`: `log_history`，`count_history ` 可以是 `list`、`np.ndarray` 或 `torch.Tensor`，用于初始化日志的历史信息（`log_history`）队列 和日志的历史计数（`count_history`）。`max_length` 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
+- `__init__(log_history=[], count_history=[], max_length=1000000)`: `log_history`，`count_history ` 可以是 `list`、`np.ndarray` 或 `torch.Tensor`，用于初始化日志的历史信息（`log_history`）队列和日志的历史计数（`count_history`）。`max_length` 为队列的最大长度。当日志的队列超过最大长度时，会舍弃最早更新的日志。
 
 - `update(value, count=1)`: `value` 为需要被统计的日志信息，`count ` 为 `value ` 的累加次数，默认为 1。如果 `value` 已经是日志累加 n 次的结果（例如模型的迭代时间，实际上是 batch 张图片的累计耗时），需要令 `count=n`。
 - `statistics('name', *args, **kwargs)`: 通过字符串来访问统计方法，传入参数必须和对应方法匹配。
-- `register_statistics(method=None, name=None)`: 被 `register_statistics` 装饰的方法能被 `statistics()` 函数通过字符串访问。
-- `mean(window_size=None)`: 返回最近更新的 window_size 个日志的均值，默认返回全局平均值，可以通过 `statistics` 方法访问。
-- `min(window_size=None)`: 返回最近更新的 window_size 个日志的最小值，默认返回全局最小值，可以通过 `statistics` 方法访问。
-- `max(window_size=None)`: 返回最近更新的 window_size 个日志的最大值，默认返回全局最大值，可以通过 `statistics` 方法访问。
+- `register_statistics(method=None, name=None)`: 被 `register_statistics` 注册的方法能通过 `statistics` 函数调用。
+- `mean(window_size=None)`: 返回最近 `window_size` 个日志的均值，默认返回全局平均值，可以通过 `statistics` 方法访问。
+- `min(window_size=None)`: 返回最近 `window_size` 个日志的最小值，默认返回全局最小值，可以通过 `statistics` 方法访问。
+- `max(window_size=None)`: 返回最近 `window_size` 个日志的最大值，默认返回全局最大值，可以通过 `statistics` 方法访问。
 - `current()`: 返回最近一次更新的日志，可以通过 `statistics` 方法访问。
-- `data`: 返回日志记录历史记录。
+- `data`: 返回日志历史记录。
 
 接下来简单介绍如何使用日志缓冲区记录日志。
 
@@ -154,7 +154,7 @@ for iter in range(max_iter):
 
 ### 自定义统计方式
 
-考虑到数据的统计方法不会过于复杂，因此不推荐通过继承日志缓冲区来新增功能。我们更倾向于用户使用 `LogBuffer.register_statistcs`  注册自定义的统计函数，被注册的函数可以被 `statistics` 接口通过调用。
+考虑到数据的统计方法不会过于复杂，因此不推荐通过继承日志缓冲区来新增功能。我们更倾向于用户使用 `LogBuffer.register_statistcs`  注册自定义的统计函数，被注册的函数可以通过 `statistics` 接口调用。
 
 ```Python
 @LogBuffer.register_statistcs()
@@ -180,8 +180,8 @@ custom_log = log_buffer.statistics('custom_method')  #  使用 statistics 接口
 
 ```python
 class GlobalAccessible(BaseGlobalAccessible):
-    def __init__(self, name, *args, **kwargs):  # 必须接收 name 参数
-        super().__init__(name)  #  调用父类构造函数
+    def __init__(self, name='', *args, **kwargs):  # 必须提供 name 参数
+        super().__init__(name)
         ...
 ```
 
@@ -219,7 +219,6 @@ instance = GlobalAccessible.create_instance('task1')
 instance = GlobalAccessible.get_instance('task1')
 instance.instance_name # task1
 instance = GlobalAccessible.get_instance('task2') # 错误，task2未被创建
-
 ```
 
 当不传入 `name`，且 `current=False` 时，会返回根实例。
@@ -277,6 +276,7 @@ class ModuleA:
 class ModuleB:
     def __init__(self):
         self.instance = GlobalAccessible.get_instance(current=True)
+        
     def run(self):
         print(f'moduleB: {self.instance.instance_name} is called')
 
