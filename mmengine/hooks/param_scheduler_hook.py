@@ -19,28 +19,22 @@ class ParamSchedulerHook(Hook):
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
-                Defaults to None.
+            data_batch (Sequence[BaseDataSample]): Data from dataloader. In
+                order to keep this interface consistent with other hooks, we
+                keep ``data_batch`` here. Defaults to None.
+            outputs (Sequence[BaseDataSample]): Outputs from model. In
+                order to keep this interface consistent with other hooks, we
+                keep ``data_batch`` here. Defaults to None.
         """
         for scheduler in runner.schedulers:  # type: ignore
             if not scheduler.by_epoch:
                 scheduler.step()
 
-    def after_epoch(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_epoch(self, runner: object) -> None:
         """Call step function for each scheduler after each epoch.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
-                Defaults to None.
         """
         for scheduler in runner.schedulers:  # type: ignore
             if scheduler.by_epoch:
