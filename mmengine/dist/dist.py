@@ -143,6 +143,14 @@ def gather(
         Calling ``gather`` in non-distributed environment dose nothing
         and just returns a list containing :attr:`data` itself.
 
+    Note:
+        Unlike PyTorch ``torch.distributed.gather``, :meth:`gather` in
+        MMEngine does not pass in a empty list ``gather_list`` but returns
+        the ``gather_list`` directly, which is convenient for the user.
+
+        - MMEngine: gather(data, dst, group) -> gather_list
+        - PyTorch: gather(data, gather_list, dst, group) -> None
+
     Args:
         data (Tensor): Tensor to be gathered.
         dst (int): Destination rank. Defaults to 0.
@@ -547,6 +555,15 @@ def all_gather_object(data: Any,
         Calling ``all_gather_object`` in non-distributed environment does
         nothing and just returns a list containing :attr:`data` itself.
 
+    Note:
+        Unlike PyTorch ``torch.distributed.all_gather_object``,
+        :meth:`all_gather_object` in
+        MMEngine does not pass in a empty list ``gather_list`` but returns
+        the ``gather_list`` directly, which is convenient for the user.
+
+        - MMEngine: all_gather_object(data, group) -> gather_list
+        - PyTorch: all_gather_object(gather_list, data, group) -> None
+
     Args:
         data (Any): Pickable Python object to be broadcast from current
             process.
@@ -683,6 +700,15 @@ def gather_object(
     """Gathers picklable objects from the whole group in a single process.
     Similar to :func:`gather`, but Python objects can be passed in. Note that
     the object must be picklable in order to be gathered.
+
+    Note:
+        Unlike PyTorch ``torch.distributed.gather_object``,
+        :meth:`gather_object` in
+        MMEngine does not pass in a empty list ``gather_list`` but returns
+        the ``gather_list`` directly, which is convenient for the user.
+
+        - MMEngine: gather_object(data, dst, group) -> gather_list
+        - PyTorch: gather_object(data, gather_list, data, group) -> None
 
     Args:
         obj (Any): Input object. Must be picklable.
