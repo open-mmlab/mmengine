@@ -5,11 +5,11 @@ from unittest import TestCase
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.testing import assert_allclose
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
                                       ExponentialLR, LinearLR, MultiStepLR,
                                       StepLR, _ParamScheduler)
+from mmengine.testing import assert_allclose
 
 
 class ToyModel(torch.nn.Module):
