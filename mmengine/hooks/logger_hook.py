@@ -14,8 +14,59 @@ from .hook import Hook
 from mmengine.registry import HOOKS
 
 
+import copy
+from typing import Optional, Union, Tuple, Sequence, Dict
+from collections import OrderedDict
+import datetime
+import os.path as osp
+import os
+
+import torch
+import torch.distributed as dist
+
+from mmengine.data import BaseDataSample
+from mmengine.fileio import FileClient
+from mmengine.utils import is_tuple_of, scandir
+from mmengine.hooks import Hook
+from mmengine.registry import HOOKS
+
+
 @HOOKS.register_module()
 class LoggerHook(Hook):
+    """Logger hook in text.
+
+    In this logger hook, the information will be printed on terminal and
+    saved in json file.
+
+    Args:
+        by_epoch (bool, optional): Whether EpochBasedRunner is used.
+            Default: True.
+        interval (int, optional): Logging interval (every k iterations).
+            Default: 10.
+        ignore_last (bool, optional): Ignore the log of last iterations in each
+            epoch if less than :attr:`interval`. Default: True.
+        reset_flag (bool, optional): Whether to clear the output buffer after
+            logging. Default: False.
+        interval_exp_name (int, optional): Logging interval for experiment
+            name. This feature is to help users conveniently get the experiment
+            information from screen or log file. Default: 1000.
+        out_dir (str, optional): Logs are saved in ``runner.work_dir`` default.
+            If ``out_dir`` is specified, logs will be copied to a new directory
+            which is the concatenation of ``out_dir`` and the last level
+            directory of ``runner.work_dir``. Default: None.
+        out_suffix (str or tuple[str], optional): Those filenames ending with
+            ``out_suffix`` will be copied to ``out_dir``.
+            Default: ('.log.json', '.log', '.py').
+            `New in version 1.3.16.`
+        keep_local (bool, optional): Whether to keep local log when
+            :attr:`out_dir` is specified. If False, the local log will be
+            removed. Default: True.
+            `New in version 1.3.16.`
+        file_client_args (dict, optional): Arguments to instantiate a
+            FileClient. See :class:`mmcv.fileio.FileClient` for details.
+            Default: None.
+            `New in version 1.3.16.`
+    """
     def __init__(self,
                  interval: int = 10,
                  custom_keys: Optional[dict] = None,
@@ -75,10 +126,31 @@ class LoggerHook(Hook):
             runner: object,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
-        self.log_train(runner)
+        if self.every_n_iters(runner, self.interval):
+            self.log_train(runner)
 
     def after_val_epoch(self, runner: object) -> None:
         self.log_val(runner)
+
+    def after_run(self, runner):
+        # copy or upload logs to self.out_dir
+        if self.out_dir is not None:
+            for filename in scandir(runner.work_dir, self.out_suffix, True):
+                local_filepath = osp.join(runner.work_dir, filename)
+                out_filepath = self.file_client.join_path(
+                    self.out_dir, filename)
+                with open(local_filepath, 'r') as f:
+                    self.file_client.put_text(f.read(), out_filepath)
+
+                runner.logger.info(
+                    (f'The file {local_filepath} has been uploaded to '
+                     f'{out_filepath}.'))
+
+                if not self.keep_local:
+                    os.remove(local_filepath)
+                    runner.logger.info(
+                        (f'{local_filepath} was removed due to the '
+                         '`self.keep_local=False`'))
 
     def log_train(self, runner: object):
         tag = self._collect_info(runner)
@@ -103,7 +175,7 @@ class LoggerHook(Hook):
             log_str = f'Epoch [{runner.epoch + 1}]' \
                       f'[{runner.inner_iter + 1}/{len(runner.data_loader)}]\t'
         else:
-            log_str = f'Iter [{runner.global_iter + 1}/{runner.max_iters}]\t'
+            log_str = f'Iter [{runner.iter + 1}/{runner.max_iters}]\t'
         log_str += f'{lr_str}, '
         # Calculate eta time
         self.time_sec_tot += (tag['time'] * self.interval)
@@ -129,7 +201,7 @@ class LoggerHook(Hook):
         runner.logger.info(log_str)
         # Write tag.
         for name, val in tag.items():
-            runner.composed_writers.add_scalar(name, val, runner.global_iter+1)
+            runner.composed_writers.add_scalar(name, val, runner.iter+1)
 
     def log_val(self, runner: object):
         tag = self._collect_info(runner)
@@ -144,7 +216,7 @@ class LoggerHook(Hook):
         runner.logger.info(log_str)
         # Write tag.
         for name, val in tag.items():
-            runner.composed_writers.add_scalar(name, val, runner.global_iter+1)
+            runner.composed_writers.add_scalar(name, val, runner.iter+1)
 
     def _get_window_size(self, runner, window_size):
         if isinstance(window_size, int):
@@ -182,6 +254,7 @@ class LoggerHook(Hook):
                           log_buffers: OrderedDict,
                           tag: OrderedDict,
                           cfg_dicts: Optional[OrderedDict]):
+        cfg_dicts = copy.deepcopy(cfg_dicts)
         if not isinstance(cfg_dicts, dict):
             return
         for key, value in cfg_dicts.items():
@@ -198,7 +271,7 @@ class LoggerHook(Hook):
             assert 'log_name' in cfg_dict, 'time and data_time cannot be ' \
                                            'overwritten by custom keys!'
         if 'window_size' in cfg_dict:
-            cfg_dict['window_size'] = self.get_smooth_window_size(
+            cfg_dict['window_size'] = self._get_window_size(
                                                     runner,
                                                     cfg_dict['window_size'])
         if 'log_name' in cfg_dict:
@@ -216,4 +289,3 @@ class LoggerHook(Hook):
         if runner.world_size > 1:
             dist.reduce(mem_mb, 0, op=dist.ReduceOp.MAX)
         return mem_mb.item()
-
