@@ -380,12 +380,6 @@ config = dict(type='EmptyCacheHook', before_epoch=False, after_epoch=True, after
 config = dict(type='SyncBuffersHook')
 ```
 
-如果是非分布式训练可以设置 `distributed=False` 便使该钩子失效，即不同步模型的 buffer。
-
-```python
-config = dict(type='SyncBuffersHook', distributed=False)
-```
-
 ## 添加自定义钩子
 
 如果 MMEngine 提供的默认钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
