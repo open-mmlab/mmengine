@@ -14,7 +14,7 @@ class EmptyCacheHook(Hook):
     training.
 
     Args:
-        before_epoch (bool): Whether empty cache before an epoch. Defaults to
+        before_epoch (bool): Whether to release cache before an epoch. Defaults to
             False.
         after_epoch (bool): Whether empty cache after an epoch. Defaults to
             True.
