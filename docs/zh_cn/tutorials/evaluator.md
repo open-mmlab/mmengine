@@ -97,7 +97,7 @@ import numpy as np
 
 @EVALUATORS.register_module()
 class Accuracy(BaseEvaluator):
-   
+
     def process(self, data_samples: Dict, predictions: Dict):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used

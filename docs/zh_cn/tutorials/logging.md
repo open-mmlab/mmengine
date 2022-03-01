@@ -276,7 +276,7 @@ class ModuleA:
 class ModuleB:
     def __init__(self):
         self.instance = GlobalAccessible.get_instance(current=True)
-        
+
     def run(self):
         print(f'moduleB: {self.instance.instance_name} is called')
 
