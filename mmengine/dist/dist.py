@@ -721,7 +721,8 @@ def gather_object(
 
 def collect_results(results: list,
                     size: int,
-                    device: str = 'cpu') -> Optional[list]:
+                    device: str = 'cpu',
+                    tmpdir: Optional[str] = None) -> Optional[list]:
     """Collected results in distributed environments.
 
     Args:
@@ -730,6 +731,9 @@ def collect_results(results: list,
         size (int): Size of the results, commonly equal to length of
             the results.
         device (str): Device name. Optional values are 'cpu' and 'gpu'.
+        tmpdir (str | None): Temporal directory for collected results to
+            store. If set to None, it will create a temporal directory for it.
+            ``tmpdir`` should be None when device is 'gpu'. Defaults to None.
 
     Returns:
         list or None: The collected results.
@@ -739,9 +743,11 @@ def collect_results(results: list,
             f"device must be 'cpu' or 'gpu', but got {device}")
 
     if device == 'gpu':
+        assert tmpdir is None, 'tmpdir should be None when device is "gpu"'
+
         return collect_results_gpu(results, size)
     else:
-        return collect_results_cpu(results, size)
+        return collect_results_cpu(results, size, tmpdir)
 
 
 def collect_results_cpu(result_part: list,
