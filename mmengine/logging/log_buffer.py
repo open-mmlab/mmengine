@@ -60,7 +60,7 @@ class BaseLogBuffer:
 
         Returns:
             Tuple[Sequence, Sequence]: The history logs and the counts of the
-                history logs.
+            history logs.
         """
         return self._log_history, self._count_history
 
