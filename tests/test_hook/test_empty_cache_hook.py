@@ -1,16 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import pytest
-import torch
+from unittest.mock import patch
+
 from mock import Mock
 
 from mmengine.hooks import EmptyCacheHook
 
 
+def mock(*args, **kwargs):
+    pass
+
+
 class TestEmptyCacheHook:
 
-    @pytest.mark.skipif(
-        condition=not torch.cuda.is_available(),
-        reason='requires CUDA support')
+    @patch('torch.cuda.empty_cache', mock)
     def test_emtpy_cache_hook(self):
         Hook = EmptyCacheHook(True, True, True)
         Runner = Mock()
