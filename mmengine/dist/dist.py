@@ -120,7 +120,7 @@ def all_gather(data: Tensor,
     if world_size == 1:
         return [data]
 
-    gather_list = [None] * world_size
+    gather_list = [torch.empty_like(data) for _ in range(world_size)]
     dist.all_gather(gather_list, data, group)
     return gather_list
 
@@ -175,7 +175,7 @@ def gather(
         return [data]
 
     if get_rank(group) == dst:
-        gather_list = [None] * world_size
+        gather_list = [torch.empty_like(data) for _ in range(world_size)]
         dist.gather(data, gather_list, dst, group)
         return gather_list
     else:

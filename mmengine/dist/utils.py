@@ -97,8 +97,21 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     assert _LOCAL_PROCESS_GROUP is None
 
     ranks = list(
-        range(node_rank * num_gpus_per_node, node_rank * num_gpus_per_node))
+        range(node_rank * num_gpus_per_node,
+              (node_rank + 1) * num_gpus_per_node))
     _LOCAL_PROCESS_GROUP = dist.new_group(ranks)
+
+
+def get_local_group() -> Optional[dist.ProcessGroup]:
+    """Return local process group."""
+    if not IS_DIST:
+        return None
+
+    if _LOCAL_PROCESS_GROUP is None:
+        raise RuntimeError('Local process group is not created, please use '
+                           '`init_local_group` to setup local process group.')
+
+    return _LOCAL_PROCESS_GROUP
 
 
 def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
