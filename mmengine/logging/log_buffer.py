@@ -80,19 +80,19 @@ class BaseLogBuffer:
         cls._statistics_dict[method_name] = method
         return method
 
-    def statistics(self, name: str, *arg, **kwargs) -> Any:
+    def statistics(self, method_name: str, *arg, **kwargs) -> Any:
         """Access statistics method by name.
 
         Args:
-            name (str): The name of method.
+            method_name (str): The name of method.
 
         Returns:
             Any: Depends on corresponding method.
         """
         if name not in self._statistics_dict:
-            raise KeyError(f'{name} has not been registered in '
+            raise KeyError(f'{method_name} has not been registered in '
                            f'BaseLogBuffer._statistics_dict')
-        method = self._statistics_dict[name]
+        method = self._statistics_dict[method_name]
         # Provide self arguments for registered functions.
         method = partial(method, self)
         return method(*arg, **kwargs)
