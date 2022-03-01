@@ -230,6 +230,10 @@ def broadcast(data: Tensor,
 def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     """Synchronize a random seed to all processes.
 
+    Args:
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
+
     Returns:
         int: Random seed.
 
@@ -258,7 +262,7 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     else:
         random_num = torch.tensor(0, dtype=torch.int32)
 
-    dist.broadcast(random_num, src=0)
+    dist.broadcast(random_num, src=0, group=group)
 
     return random_num.item()
 
@@ -744,7 +748,6 @@ def collect_results(results: list,
 
     if device == 'gpu':
         assert tmpdir is None, 'tmpdir should be None when device is "gpu"'
-
         return collect_results_gpu(results, size)
     else:
         return collect_results_cpu(results, size, tmpdir)
