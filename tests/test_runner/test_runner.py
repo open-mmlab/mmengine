@@ -16,7 +16,7 @@ from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import Hook
 from mmengine.model.wrappers import MMDataParallel
 from mmengine.optim.scheduler import MultiStepLR
-from mmengine.registry import DATASETS, EVALUATORS, HOOKS, MODELS
+from mmengine.registry import DATASETS, EVALUATORS, HOOKS, LOOPS, MODELS
 from mmengine.runner import Runner
 from mmengine.runner.loop import EpochBasedTrainLoop, IterBasedTrainLoop
 
@@ -308,7 +308,7 @@ class TestRunner(TestCase):
             def before_train_epoch(self, runner):
                 epoch_results.append(runner.epoch)
 
-            def before_train_iter(self, runner, databatch=None):
+            def before_train_iter(self, runner, data_batch=None):
                 global_iter_results.append(runner.global_iter)
                 inner_iter_results.append(runner.inner_iter)
 
@@ -325,3 +325,76 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(inner_iter_results, inner_iter_targets):
             self.assertEqual(result, target)
+
+    def test_custom_loop(self):
+        # test custom loop with additional hook
+        @LOOPS.register_module()
+        class CustomTrainLoop(EpochBasedTrainLoop):
+            """custom train loop with additional warmup stage."""
+
+            def __init__(self, runner, loader, max_epochs, warmup_loader,
+                         max_warmup_iters):
+                super().__init__(
+                    runner=runner, loader=loader, max_epochs=max_epochs)
+                self.warmup_loader = self.runner.build_dataloader(
+                    warmup_loader)
+                self.max_warmup_iters = max_warmup_iters
+
+            def run(self):
+                self.runner.call_hooks('before_run')
+                for idx, data_batch in enumerate(self.warmup_loader):
+                    self.warmup_iter(data_batch)
+                    if idx >= self.max_warmup_iters:
+                        break
+
+                self.runner.call_hooks('before_train_epoch')
+                while self.runner.global_iter < self._max_iter:
+                    data_batch = next(self.loader)
+                    self.run_iter(data_batch)
+                self.runner.call_hooks('after_train_epoch')
+                self.runner.call_hooks('after_run')
+
+            def warmup_iter(self, data_batch):
+                self.runner.call_hooks(
+                    'before_warmup_iter', args=dict(data_batch=data_batch))
+                outputs = self.runner.model.train_step(data_batch)
+                self.runner.call_hooks(
+                    'after_warmup_iter',
+                    args=dict(data_batch=data_batch, outputs=outputs))
+
+        before_warmup_iter_results = []
+        after_warmup_iter_results = []
+
+        @HOOKS.register_module()
+        class TestWarmupHook(Hook):
+            """test custom train loop."""
+
+            def before_warmup_iter(self, data_batch=None):
+                before_warmup_iter_results.append('before')
+
+            def after_warmup_iter(self, data_batch=None, outputs=None):
+                after_warmup_iter_results.append('after')
+
+        self.full_cfg.train_cfg = dict(
+            type='CustomTrainLoop',
+            max_epochs=3,
+            warmup_loader=dict(
+                dataset=dict(type='ToyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=1,
+                num_workers=0),
+            max_warmup_iters=5)
+        self.full_cfg.custom_hooks = [dict(type='TestWarmupHook', priority=50)]
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        assert isinstance(runner._train_loop, CustomTrainLoop)
+
+        runner.train()
+
+        # test custom hook triggered normally
+        self.assertEqual(len(before_warmup_iter_results), 5)
+        self.assertEqual(len(after_warmup_iter_results), 5)
+        for before, after in zip(before_warmup_iter_results,
+                                 after_warmup_iter_results):
+            self.assertEqual(before, 'before')
+            self.assertEqual(after, 'after')
