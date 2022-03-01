@@ -29,7 +29,7 @@ def _get_reduce_op(name: str) -> dist.ReduceOp:
         raise ValueError(
             f'reduce op should be one of {op_mappings.keys()}, bug got {name}')
 
-    return op_mappings.get(name.lower())
+    return op_mappings[name.lower()]
 
 
 def all_reduce(data: Tensor,
