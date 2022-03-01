@@ -8,8 +8,13 @@ import torch
 import torch.multiprocessing as mp
 from torch import distributed as dist
 
-IS_DIST = False
+_IS_DIST = False
 _LOCAL_PROCESS_GROUP = None
+
+
+def is_distributed() -> bool:
+    """Return True if distributed environment has been initialized."""
+    return _IS_DIST
 
 
 def init_dist(launcher, backend='nccl', **kwargs):
@@ -24,8 +29,8 @@ def init_dist(launcher, backend='nccl', **kwargs):
     else:
         raise ValueError(f'Invalid launcher type: {launcher}')
 
-    global IS_DIST
-    IS_DIST = True
+    global _IS_DIST
+    _IS_DIST = True
 
 
 def _init_dist_pytorch(backend, **kwargs):
@@ -104,7 +109,7 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
 
 def get_local_group() -> Optional[dist.ProcessGroup]:
     """Return local process group."""
-    if not IS_DIST:
+    if not _IS_DIST:
         return None
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -131,7 +136,7 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         str or None: Return the backend of the given process group as a lower
         case string if in distributed environment, otherwise None.
     """
-    return dist.get_backend(group) if IS_DIST else None
+    return dist.get_backend(group) if _IS_DIST else None
 
 
 def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
@@ -149,7 +154,7 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the number of processes of the given process group if in
         distributed environment, otherwise 1.
     """
-    return dist.get_world_size(group) if IS_DIST else 1
+    return dist.get_world_size(group) if _IS_DIST else 1
 
 
 def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
@@ -170,7 +175,7 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the rank of the process group if in distributed
         environment, otherwise 0.
     """
-    return dist.get_rank(group) if IS_DIST else 0
+    return dist.get_rank(group) if _IS_DIST else 0
 
 
 def get_local_size() -> int:
@@ -180,7 +185,7 @@ def get_local_size() -> int:
         int: Return the number of processes in the current node if in
         distributed environment, otherwise 1.
     """
-    if not IS_DIST:
+    if not _IS_DIST:
         return 1
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -197,7 +202,7 @@ def get_local_rank() -> int:
         int: Return the rank of current process in the current node if in
         distributed environment, otherwise 0
     """
-    if not IS_DIST:
+    if not _IS_DIST:
         return 0
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -273,5 +278,5 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
     """
-    if IS_DIST:
+    if _IS_DIST:
         dist.barrier(group)

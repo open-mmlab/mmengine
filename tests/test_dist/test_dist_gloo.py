@@ -2,6 +2,7 @@
 import os
 from unittest.mock import patch
 
+import pytest
 import torch
 import torch.multiprocessing as mp
 
@@ -20,15 +21,10 @@ def init_process(rank, world_size, functions, backend='gloo'):
 
 
 def main(functions, world_size=2):
-    processes = []
-    mp.set_start_method('spawn', force=True)
-    for rank in range(world_size):
-        p = mp.Process(target=init_process, args=(rank, world_size, functions))
-        p.start()
-        processes.append(p)
-
-    for p in processes:
-        p.join()
+    try:
+        mp.spawn(init_process, args=(world_size, functions), nprocs=world_size)
+    except mp.ProcessRaisedException:
+        pytest.fail('error')
 
 
 def _test_all_reduce():

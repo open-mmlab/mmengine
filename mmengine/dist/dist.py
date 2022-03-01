@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Dict
 import shutil
 import pickle
 import numpy as np
@@ -13,15 +13,23 @@ from .utils import get_world_size, get_rank, get_backend, get_dist_info
 from mmengine.utils import digit_version, TORCH_VERSION
 import mmengine
 
-REDUCE_OP_MAPPINGS = {
-    'sum': dist.ReduceOp.SUM,
-    'product': dist.ReduceOp.PRODUCT,
-    'min': dist.ReduceOp.MIN,
-    'max': dist.ReduceOp.MAX,
-    'band': dist.ReduceOp.BAND,
-    'bor': dist.ReduceOp.BOR,
-    'bxor': dist.ReduceOp.BXOR
-}
+
+def _get_reduce_op(name: str) -> dist.ReduceOp:
+    op_mappings = {
+        'sum': dist.ReduceOp.SUM,
+        'product': dist.ReduceOp.PRODUCT,
+        'min': dist.ReduceOp.MIN,
+        'max': dist.ReduceOp.MAX,
+        'band': dist.ReduceOp.BAND,
+        'bor': dist.ReduceOp.BOR,
+        'bxor': dist.ReduceOp.BXOR,
+    }
+
+    if name.lower() not in op_mappings:
+        raise ValueError(
+            f'reduce op should be one of {op_mappings.keys()}, bug got {name}')
+
+    return op_mappings.get(name.lower())
 
 
 def all_reduce(data: Tensor,
@@ -69,10 +77,10 @@ def all_reduce(data: Tensor,
         # pytorch does not support 'mean' operation so we fall back to support
         # it with 'sum' operation.
         if op == 'mean':
-            dist.all_reduce(data, REDUCE_OP_MAPPINGS['sum'], group)
+            dist.all_reduce(data, _get_reduce_op('sum'), group)
             data.div_(world_size)
         else:
-            dist.all_reduce(data, REDUCE_OP_MAPPINGS[op], group)
+            dist.all_reduce(data, _get_reduce_op(op), group)
 
 
 def all_gather(data: Tensor,
@@ -196,7 +204,7 @@ def broadcast(data: Tensor,
     Args:
         data (Tensor): Data to be sent if ``src`` is the rank of current
             process, and data to be used to save received data otherwise.
-        src (int): Source rank.
+        src (int): Source rank. Defaults to 0.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
@@ -218,7 +226,7 @@ def broadcast(data: Tensor,
         >>> data
         tensor([1, 2]) # Rank 0
         tensor([3, 4]) # Rank 1
-        >>> dist.gather(data)
+        >>> dist.broadcast(data)
         >>> data
         tensor([1, 2]) # Rank 0
         tensor([1, 2]) # Rank 1
@@ -410,7 +418,7 @@ def broadcast_object_list(data: List[Any],
             _broadcast_object_list(data, src, group)
 
 
-def all_reduce_dict(data: Tensor,
+def all_reduce_dict(data: Dict[str, Tensor],
                     op: str = 'sum',
                     group: Optional[dist.ProcessGroup] = None) -> None:
     """Reduces the dict across all machines in such a way that all get the
@@ -462,11 +470,10 @@ def all_reduce_dict(data: Tensor,
 
         if op == 'mean':
             dist.all_reduce(
-                flatten_tensor, op=REDUCE_OP_MAPPINGS['sum'], group=group)
+                flatten_tensor, op=_get_reduce_op('sum'), group=group)
             flatten_tensor.div_(world_size)
         else:
-            dist.all_reduce(
-                flatten_tensor, op=REDUCE_OP_MAPPINGS[op], group=group)
+            dist.all_reduce(flatten_tensor, op=_get_reduce_op(op), group=group)
 
         split_tensors = [
             x.reshape(shape) for x, shape in zip(
