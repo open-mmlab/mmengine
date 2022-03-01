@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # from mmengine.dist import get_dist_info, all_reduce
 from collections import OrderedDict
-from typing import List, Sequence
-from unittest.mock import MagicMock
+from typing import Generator, List, Sequence, Union
+from unittest.mock import MagicMock, Mock
 
 import torch
 from torch._utils import (_flatten_dense_tensors, _take_tensors,
@@ -11,6 +11,10 @@ from torch._utils import (_flatten_dense_tensors, _take_tensors,
 from mmengine.registry import HOOKS
 from .hook import Hook
 
+# TODO, replace with import mmengine.dist as dist
+dist = Mock()
+dist.IS_DIST = MagicMock(return_value=True)
+
 # TODO, replace with mmengine.dist.get_dist_info
 get_dist_info = MagicMock(return_value=(0, 1))
 # TODO, replace with mmengine.dist.all_reduce
@@ -18,7 +22,8 @@ all_reduce = MagicMock()
 
 
 # TODO, may need to move to dist.utils after implementing dist module
-def _allreduce_coalesced(tensors: Sequence[torch.Tensor],
+def _allreduce_coalesced(tensors: Union[Sequence[torch.Tensor],
+                                        Generator[torch.Tensor, None, None]],
                          world_size: int,
                          bucket_size_mb: int = -1) -> None:
     """All-reduce a sequence of tensors as a whole.
@@ -59,7 +64,7 @@ def allreduce_params(params: List[torch.Tensor],
     Args:
         params (List[torch.Tensor]): List of parameters or buffers of a
             model.
-        coalesce (bool, optional): Whether allreduce parameters as a whole.
+        coalesce (bool, optional): Whether to reduce parameters as a whole.
             Defaults to True.
         bucket_size_mb (int, optional): Size of bucket, the unit is MB.
             Defaults to -1.
@@ -78,15 +83,10 @@ def allreduce_params(params: List[torch.Tensor],
 @HOOKS.register_module()
 class SyncBuffersHook(Hook):
     """Synchronize model buffers such as running_mean and running_var in BN at
-    the end of each epoch.
+    the end of each epoch."""
 
-    Args:
-        distributed (bool): Whether distributed training is used. It is
-          effective only for distributed training. Defaults to True.
-    """
-
-    def __init__(self, distributed: bool = True) -> None:
-        self.distributed = distributed
+    def __init__(self) -> None:
+        self.distributed = dist.IS_DIST
 
     def after_epoch(self, runner: object) -> None:
         """All-reduce model buffers at the end of each epoch.
