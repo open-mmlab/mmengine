@@ -16,7 +16,7 @@ import mmengine
 REDUCE_OP_MAPPINGS = {
     'sum': dist.ReduceOp.SUM,
     'product': dist.ReduceOp.PRODUCT,
-    'mim': dist.ReduceOp.MIN,
+    'min': dist.ReduceOp.MIN,
     'max': dist.ReduceOp.MAX,
     'band': dist.ReduceOp.BAND,
     'bor': dist.ReduceOp.BOR,

@@ -9,6 +9,7 @@ import torch.multiprocessing as mp
 from torch import distributed as dist
 
 IS_DIST = False
+_LOCAL_PROCESS_GROUP = None
 
 
 def init_dist(launcher, backend='nccl', **kwargs):
@@ -78,6 +79,28 @@ def _init_dist_slurm(backend, port=None):
     dist.init_process_group(backend=backend)
 
 
+def _init_local_group(node_rank: int, num_gpus_per_node: int):
+    """Setup the local process group.
+
+    Setup a process group which only includes processes that on the same
+    machine as the current process.
+
+    The code is modified from
+    https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py
+
+    Args:
+        node_rank (int): Rank of machines used for training.
+        num_gpus_per_node (int): Number of gpus used for training in a single
+            machine.
+    """  # noqa: W501
+    global _LOCAL_PROCESS_GROUP
+    assert _LOCAL_PROCESS_GROUP is None
+
+    ranks = list(
+        range(node_rank * num_gpus_per_node, node_rank * num_gpus_per_node))
+    _LOCAL_PROCESS_GROUP = dist.new_group(ranks)
+
+
 def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
     """Return the backend of the given process group.
 
@@ -140,30 +163,35 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
 def get_local_size() -> int:
     """Return the number of the current node.
 
-    # TODO
-
     Returns:
         int: Return the number of processes in the current node if in
         distributed environment, otherwise 1.
     """
-    return torch.cuda.device_count()
+    if not IS_DIST:
+        return 1
+
+    if _LOCAL_PROCESS_GROUP is None:
+        raise RuntimeError('Local process group is not created, please use '
+                           '`_init_local_group` to setup local process group.')
+
+    return dist.get_world_size(_LOCAL_PROCESS_GROUP)
 
 
 def get_local_rank() -> int:
     """Return the rank of current process in the current node.
 
-    # TODO
-
     Returns:
         int: Return the rank of current process in the current node if in
         distributed environment, otherwise 0
     """
-    if 'LOCAL_RANK' in os.environ:
-        return int(os.environ['LOCAL_RANK'])
-    else:
-        rank = int(os.environ['RANK'])
-        num_gpus = torch.cuda.device_count()
-        return rank % num_gpus
+    if not IS_DIST:
+        return 0
+
+    if _LOCAL_PROCESS_GROUP is None:
+        raise RuntimeError('Local process group is not created, please use '
+                           '`_init_local_group` to setup local process group.')
+
+    return dist.get_rank(_LOCAL_PROCESS_GROUP)
 
 
 def get_dist_info(
