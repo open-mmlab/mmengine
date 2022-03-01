@@ -79,7 +79,7 @@ def _init_dist_slurm(backend, port=None):
     dist.init_process_group(backend=backend)
 
 
-def _init_local_group(node_rank: int, num_gpus_per_node: int):
+def init_local_group(node_rank: int, num_gpus_per_node: int):
     """Setup the local process group.
 
     Setup a process group which only includes processes that on the same
@@ -172,7 +172,7 @@ def get_local_size() -> int:
 
     if _LOCAL_PROCESS_GROUP is None:
         raise RuntimeError('Local process group is not created, please use '
-                           '`_init_local_group` to setup local process group.')
+                           '`init_local_group` to setup local process group.')
 
     return dist.get_world_size(_LOCAL_PROCESS_GROUP)
 
@@ -189,7 +189,7 @@ def get_local_rank() -> int:
 
     if _LOCAL_PROCESS_GROUP is None:
         raise RuntimeError('Local process group is not created, please use '
-                           '`_init_local_group` to setup local process group.')
+                           '`init_local_group` to setup local process group.')
 
     return dist.get_rank(_LOCAL_PROCESS_GROUP)
 
