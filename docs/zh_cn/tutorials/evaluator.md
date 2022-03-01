@@ -37,8 +37,8 @@ validation_cfg=dict(
 ```python
 validation_cfg=dict(
     evaluator=[
-        dict(type='accuracy', top_k=1),  # 使用分类正确率评测器
-        dict(type='f1_score')  # 使用 F1_score 评测器
+        dict(type='Accuracy', top_k=1),  # 使用分类正确率评测器
+        dict(type='F1Score')  # 使用 F1_score 评测器
     ],
     main_metric='accuracy'
     interval=10,
@@ -51,8 +51,8 @@ validation_cfg=dict(
 ```python
 validation_cfg=dict(
     evaluator=[
-        dict(type='accuracy', top_k=1, prefix='top1'),
-        dict(type='accuracy', top_k=5, prefix='top5')
+        dict(type='Accuracy', top_k=1, prefix='top1'),
+        dict(type='Accuracy', top_k=5, prefix='top5')
     ],
     main_metric='top1_accuracy',  # 前缀 'top1' 被自动添加进指标名称中，用以区分同名指标
     interval=10,
@@ -62,7 +62,7 @@ validation_cfg=dict(
 
 ## 增加自定义评测器
 
-在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测器。如 MMDetection 中提供了 COCO 评测器，MMClassification 中提供了 accuracy、f1_score 等评测器等。
+在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测器。如 MMDetection 中提供了 COCO 评测器，MMClassification 中提供了 Accuracy、F1Score 等评测器等。
 
 用户也可以根据自身需求，增加自定义的评测器。在实现自定义评测器时，用户需要继承 MMEngine 中提供的评测器基类 [BaseEvaluator](Todo:baseevaluator-doc-link)，并实现对应的抽象方法。
 
@@ -96,8 +96,8 @@ from mmengine.registry import EVALUATORS
 import numpy as np
 
 @EVALUATORS.register_module()
-class AccuracyEvaluator(BaseEvaluator):
-
+class Accuracy(BaseEvaluator):
+   
     def process(self, data_samples: Dict, predictions: Dict):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
