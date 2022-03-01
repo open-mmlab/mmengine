@@ -260,7 +260,7 @@ class ModuleB:
 if __name__ == '__main__':
     a1 = ModuleA('a1')
     a2 = ModuleA('a2')
-    a1.run_module()  # moduleB: a2 is called，a1 运行，却获取了 a2的实例
+    a1.run_module()  # moduleB: a2 is called，命名是 a1 运行，却获取了 a2的实例
 ```
 
 对于上述情况，建议用户将全局实例实例固化为类的属性，在初始化阶段完成对应实例的绑定。
