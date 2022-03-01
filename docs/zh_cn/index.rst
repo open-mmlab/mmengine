@@ -8,6 +8,7 @@
 
    tutorials/registry.md
    tutorials/config.md
+   tutorials/hook.md
 
 .. toctree::
    :maxdepth: 2
