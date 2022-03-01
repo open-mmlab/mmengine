@@ -14,13 +14,14 @@ from .hook import Hook
 @HOOKS.register_module()
 class OptimizerHook(Hook):
     """A hook contains custom operations for the optimizer.
+
     Args:
         grad_clip (dict, optional): A config dict to control the clip_grad.
             Defaults to None.
         detect_anomalous_params (bool): This option is only used for
             debugging which will slow down the training speed.
             Detect anomalous parameters that are not included in
-            the computational graph with `loss` as the root.
+            the computational graph with ``loss`` as the root.
             There are two cases
                 - Parameters were not used during
                   forward pass.
@@ -40,6 +41,10 @@ class OptimizerHook(Hook):
 
         Args:
             params (list[Parameter]): Model's parameters.
+
+        Returns:
+            Optional[torch.Tensor]: Total norm of the parameters if there is
+            at least one param requiring gradient, else None.
         """
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
@@ -57,18 +62,22 @@ class OptimizerHook(Hook):
         This function will finish following 3 operations:
 
         - Detect any anomalous parameters which are not included in the
-          training graph.
+          training graph. (optional)
 
-        - Clip the gradidents of each parameters.
+        - Compute the gradient of model parameters.
 
-        - Finish the backward propagation.
+        - Clip the gradidents of each parameters. (optional)
+
+        - Update model parameters with gradients.
 
         Args:
             runner (object): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+                dataloader. In order to keep this interface consistent with
+                other hooks, we keep ``data_batch`` here. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
-                Defaults to None.
+                In order to keep this interface consistent with other hooks,
+                we keep ``outputs`` here. Defaults to None.
         """
         runner.optimizer.zero_grad()  # type: ignore
         if self.detect_anomalous_params:
