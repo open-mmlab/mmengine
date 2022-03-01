@@ -8,7 +8,9 @@ from mmengine.hooks import EmptyCacheHook
 
 class TestEmptyCacheHook:
 
-    @pytest.mark.skipif(condition=not torch.cuda.is_available(), reason='requires CUDA support')
+    @pytest.mark.skipif(
+        condition=not torch.cuda.is_available(),
+        reason='requires CUDA support')
     def test_emtpy_cache_hook(self):
         Hook = EmptyCacheHook(True, True, True)
         Runner = Mock()
