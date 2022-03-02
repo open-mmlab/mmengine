@@ -67,6 +67,10 @@ class LoggerHook(Hook):
             Default: None.
             `New in version 1.3.16.`
     """
+    # eta will be calculated by time. `time` and `data_time` should not be
+    # overwritten.
+    fixed_smooth_keys = ('time', 'data_time')
+
     def __init__(self,
                  interval: int = 10,
                  custom_keys: Optional[dict] = None,
@@ -153,7 +157,7 @@ class LoggerHook(Hook):
                          '`self.keep_local=False`'))
 
     def log_train(self, runner: object):
-        tag = self._collect_info(runner)
+        tag = self._collect_info(runner, 'train')
         # `log_tag` will pop some keys and fill `log_str`.
         log_tag = copy.deepcopy(tag)
         if runner.meta is not None and 'exp_name' in runner.meta:
@@ -204,7 +208,7 @@ class LoggerHook(Hook):
             runner.composed_writers.add_scalar(name, val, runner.iter+1)
 
     def log_val(self, runner: object):
-        tag = self._collect_info(runner)
+        tag = self._collect_info(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader
         # by epoch: Epoch[val] [4][1000]
@@ -213,10 +217,17 @@ class LoggerHook(Hook):
             log_str = f'Epoch(val) [{runner.epoch}][{runner.inner_iter+1}]\t'
         else:
             log_str = f'Iter(val) [{runner.inner_iter+1}]\t'
+
+        log_items = []
+        for name, val in tag.items():
+            if isinstance(val, float):
+                val = f'{val:.4f}'
+            log_items.append(f'{name}: {val}')
+        log_str += ', '.join(log_items)
+        runner.logger.info(log_str)
         runner.logger.info(log_str)
         # Write tag.
-        for name, val in tag.items():
-            runner.composed_writers.add_scalar(name, val, runner.iter+1)
+        runner.composed_writers.add_scalars(tag, runner.iter+1)
 
     def _get_window_size(self, runner, window_size):
         if isinstance(window_size, int):
@@ -230,20 +241,19 @@ class LoggerHook(Hook):
             elif window_size == 'current':
                 return 1
 
-    def _collect_info(self, runner: object):
+    def _collect_info(self, runner: object, mode):
         tag = OrderedDict()
         log_buffers = runner.message_hub.log_buffers
-        # Ensure all metric and lr values are latest.
-        for key in log_buffers:
-            tag[key] = log_buffers[key].current()
-        # Update the latest learning rate and smoothed time logs.
         assert 'time' in log_buffers, 'Runner must contain IterTimerHook.'
-        tag['time'] = log_buffers['time'].mean(self.interval)
-        tag['data_time'] = log_buffers['data_time'].mean(self.interval)
-        # tag loss based on interval smoothing.
-        for key in log_buffers:
-            if key.startswith('loss'):
-                tag[key] = log_buffers[key].mean(self.interval)
+        # Ensure all metric and lr values are latest.
+        for prefix_key in log_buffers:
+            if prefix_key.startswith(mode):
+                key = prefix_key.strip('train/')
+                # Update the latest learning rate and smoothed time logs.
+                if key in self.fixed_smooth_keys or key.startswith('loss'):
+                    tag[key] = log_buffers[key].mean(self.interval)
+                else:
+                    tag[key] = log_buffers[key].current()
         # Update custom keys.
         self._parse_custom_keys(runner, log_buffers, tag,
                                 self.custom_keys)
@@ -267,13 +277,11 @@ class LoggerHook(Hook):
                                         tag)
 
     def _statistics_single_key(self, runner, key, cfg_dict, log_buffers, tag):
-        if key in ['data_time']:
-            assert 'log_name' in cfg_dict, 'time and data_time cannot be ' \
-                                           'overwritten by custom keys!'
+        assert key not in self.fixed_smooth_keys, \
+            f'{key} cannot be overwritten by custom keys!'
         if 'window_size' in cfg_dict:
-            cfg_dict['window_size'] = self._get_window_size(
-                                                    runner,
-                                                    cfg_dict['window_size'])
+            cfg_dict['window_size'] = \
+                self._get_window_size(runner, cfg_dict['window_size'])
         if 'log_name' in cfg_dict:
             name = cfg_dict.pop('log_name')
         else:
