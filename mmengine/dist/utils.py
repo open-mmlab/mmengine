@@ -142,12 +142,14 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         str or None: Return the backend of the given process group as a lower
         case string if in distributed environment, otherwise None.
     """
-    # handle low versions of torch like 1.5.0 which does not support passing in
-    # None for group argument
-    if group is None:
-        group = get_default_group()
-
-    return dist.get_backend(group) if _IS_DIST else None
+    if _IS_DIST:
+        # handle low versions of torch like 1.5.0 which does not support
+        # passing in None for group argument
+        if group is None:
+            group = get_default_group()
+        return dist.get_backend(group)
+    else:
+        return None
 
 
 def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
@@ -165,12 +167,14 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the number of processes of the given process group if in
         distributed environment, otherwise 1.
     """
-    # handle low versions of torch like 1.5.0 which does not support passing in
-    # None for group argument
-    if group is None:
-        group = get_default_group()
-
-    return dist.get_world_size(group) if _IS_DIST else 1
+    if _IS_DIST:
+        # handle low versions of torch like 1.5.0 which does not support
+        # passing in None for group argument
+        if group is None:
+            group = get_default_group()
+        return dist.get_world_size(group)
+    else:
+        return 1
 
 
 def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
@@ -191,12 +195,15 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the rank of the process group if in distributed
         environment, otherwise 0.
     """
-    # handle low versions of torch like 1.5.0 which does not support passing in
-    # None for group argument
-    if group is None:
-        group = get_default_group()
 
-    return dist.get_rank(group) if _IS_DIST else 0
+    if _IS_DIST:
+        # handle low versions of torch like 1.5.0 which does not support
+        # passing in None for group argument
+        if group is None:
+            group = get_default_group()
+        return dist.get_rank(group)
+    else:
+        return 0
 
 
 def get_local_size() -> int:
