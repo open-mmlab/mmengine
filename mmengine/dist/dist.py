@@ -582,9 +582,6 @@ def all_gather_object(data: Any,
         nothing and just returns a list containing :attr:`data` itself.
 
     Note:
-        ``NCCL`` backend does not support ``all_gather_object``.
-
-    Note:
         Unlike PyTorch ``torch.distributed.all_gather_object``,
         :meth:`all_gather_object` in
         MMEngine does not pass in a empty list ``gather_list`` but returns

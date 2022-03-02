@@ -161,7 +161,7 @@ def _test_broadcast(device):
     else:
         data = torch.tensor([1, 2]).to(device)
 
-    expected = torch.tensor([0, 1])
+    expected = torch.tensor([0, 1]).to(device)
     dist.broadcast(data, 0)
     assert torch.allclose(data, expected)
 
@@ -262,12 +262,10 @@ def test_nccl_backend():
     functions_to_test = [
         _test_all_reduce,
         _test_all_gather,
-        # _test_gather,
         _test_broadcast,
         _test_sync_random_seed,
         _test_broadcast_object_list,
         _test_all_reduce_dict,
         _test_all_gather_object,
-        _test_gather_object,
     ]
     main(functions_to_test, backend='nccl')
