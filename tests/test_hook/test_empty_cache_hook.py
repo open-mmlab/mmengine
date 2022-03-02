@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mock import Mock
+from unittest.mock import Mock
 
 from mmengine.hooks import EmptyCacheHook
 
