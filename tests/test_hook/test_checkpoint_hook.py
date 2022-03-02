@@ -78,10 +78,11 @@ class TestCheckpointHook:
 
         # by epoch is False
         runner.epoch = 9
+        runner.meta = dict()
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
-        assert (runner.epoch + 1) % 2 == 0
+        assert runner.meta.get('hook_msgs', None) is None
 
         # max_keep_ckpts > 0
         with TemporaryDirectory() as tempo_dir:
@@ -104,7 +105,7 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_iter(runner)
-        assert (runner.iter + 1) % 2 == 0
+        assert runner.meta.get('hook_msgs', None) is None
 
         # by epoch is False
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
