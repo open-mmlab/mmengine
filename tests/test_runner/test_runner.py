@@ -145,8 +145,9 @@ class TestRunner(TestCase):
             runner = Runner.build_from_cfg(cfg)
             runner.test()
 
-        # cannot run train without optimzier cfg
-        with self.assertRaisesRegex(AssertionError, 'optimizer does not exist'):
+        # cannot run train without optimizer cfg
+        with self.assertRaisesRegex(AssertionError,
+                                    'optimizer does not exist'):
             cfg = copy.deepcopy(self.full_cfg)
             cfg.pop('optimizer')
             runner = Runner.build_from_cfg(cfg)
