@@ -9,7 +9,8 @@ import os.path as osp
 from torch import Tensor
 from torch import distributed as dist
 
-from .utils import get_world_size, get_rank, get_backend, get_dist_info
+from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
+                    get_default_group)
 from mmengine.utils import digit_version, TORCH_VERSION
 import mmengine
 
@@ -74,6 +75,9 @@ def all_reduce(data: Tensor,
     """
     world_size = get_world_size(group)
     if world_size > 1:
+        if group is None:
+            group = get_default_group()
+
         # pytorch does not support 'mean' operation so we fall back to support
         # it with 'sum' operation.
         if op == 'mean':
@@ -127,6 +131,9 @@ def all_gather(data: Tensor,
     world_size = get_world_size(group)
     if world_size == 1:
         return [data]
+
+    if group is None:
+        group = get_default_group()
 
     gather_list = [torch.empty_like(data) for _ in range(world_size)]
     dist.all_gather(gather_list, data, group)
@@ -193,6 +200,9 @@ def gather(
     if world_size == 1:
         return [data]
 
+    if group is None:
+        group = get_default_group()
+
     if get_rank(group) == dst:
         gather_list = [torch.empty_like(data) for _ in range(world_size)]
         dist.gather(data, gather_list, dst, group)
@@ -243,6 +253,9 @@ def broadcast(data: Tensor,
         tensor([1, 2]) # Rank 1
     """
     if get_world_size(group) > 1:
+        if group is None:
+            group = get_default_group()
+
         dist.broadcast(data, src, group)
 
 
@@ -275,6 +288,9 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     seed = np.random.randint(2**31)
     if get_world_size(group) == 1:
         return seed
+
+    if group is None:
+        group = get_default_group()
 
     if get_rank(group) == 0:
         random_num = torch.tensor(seed, dtype=torch.int32)
@@ -423,6 +439,9 @@ def broadcast_object_list(data: List[Any],
     assert isinstance(data, list)
 
     if get_world_size(group) > 1:
+        if group is None:
+            group = get_default_group()
+
         if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
             dist.broadcast_object_list(data, src, group)
         else:
@@ -472,6 +491,10 @@ def all_reduce_dict(data: Dict[str, Tensor],
 
     world_size = get_world_size(group)
     if world_size > 1:
+
+        if group is None:
+            group = get_default_group()
+
         # ensure keys are consistent across processes
         keys = sorted(data.keys())
         tensor_shapes = [data[k].shape for k in keys]
@@ -610,6 +633,9 @@ def all_gather_object(data: Any,
     world_size = get_world_size(group)
     if world_size == 1:
         return [data]
+
+    if group is None:
+        group = get_default_group()
 
     gather_list = [None] * world_size
 
@@ -754,6 +780,9 @@ def gather_object(
     world_size = get_world_size(group)
     if world_size == 1:
         return [data]
+
+    if group is None:
+        group = get_default_group()
 
     gather_list = [None] * world_size if get_rank(group) == dst else None
 
