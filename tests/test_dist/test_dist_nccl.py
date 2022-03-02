@@ -147,6 +147,10 @@ def _test_collect_results_cpu():
 
 
 def test_all_functions():
+
+    if torch.cuda.device_count() < 2:
+        pytest.skip('need 2 gpu to test nccl')
+
     functions_to_test = [
         _test_all_reduce,
         _test_all_gather,
@@ -158,4 +162,4 @@ def test_all_functions():
         _test_all_gather_object,
         _test_gather_object,
     ]
-    main(functions_to_test)
+    main(functions_to_test, backend='nccl')
