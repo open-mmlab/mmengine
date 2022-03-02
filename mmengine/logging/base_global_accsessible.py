@@ -6,7 +6,7 @@ from typing import Any, Optional
 class MetaGlobalAccessible(type):
     """The metaclass for global accessible class.
 
-    The subclasses inherited from ``MetaGlobalAccessible`` will manage their
+    The subclasses inheriting from ``MetaGlobalAccessible`` will manage their
     own ``_instance_dict`` and root instances. The constructors of subclasses
     must contain an optional ``name`` argument and all other arguments must
     have default values.
@@ -43,7 +43,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
     """``BaseGlobalAccessible`` is the base class for classes that have global
     access requirements.
 
-    The subclasses inherited from ``BaseGlobalAccessible`` can get their
+    The subclasses inheriting from ``BaseGlobalAccessible`` can get their
     global instancees.
 
     Examples:
