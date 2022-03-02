@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import multiprocessing as mp
 import os
 import os.path as osp
 import platform
 import tempfile
 from unittest import TestCase
+from unittest.mock import patch
 
 import torch
 import torch.nn as nn
@@ -16,6 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 from mmengine.config import Config
 from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import Hook
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.model.wrappers import MMDataParallel, MMDistributedDataParallel
 from mmengine.optim.scheduler import MultiStepLR
 from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
@@ -220,7 +223,7 @@ class TestRunner(TestCase):
         runner.train()
 
     def test_setup_env(self):
-        # temp save system setting
+        # temporarily store system setting
         sys_start_mehod = mp.get_start_method(allow_none=True)
         # pop and temp save system env vars
         sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', default=None)
@@ -275,6 +278,26 @@ class TestRunner(TestCase):
         else:
             os.environ.pop('MKL_NUM_THREADS')
 
+    def test_logger(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+        assert isinstance(runner.logger, MMLogger)
+        # test latest logger and runner logger are the same
+        assert runner.logger.level == logging.INFO
+        assert MMLogger.get_instance(
+        ).instance_name == runner.logger.instance_name
+        # test latest message hub and runner message hub are the same
+        assert isinstance(runner.message_hub, MessageHub)
+        assert MessageHub.get_instance(
+        ).instance_name == runner.message_hub.instance_name
+
+        # test set log level in cfg
+        self.full_cfg.log_cfg.log_level = 'DEBUG'
+        runner = Runner.build_from_cfg(self.full_cfg)
+        assert runner.logger.level == logging.DEBUG
+
+    @patch('torch.distributed.get_rank', lambda: 0)
+    @patch('torch.distributed.is_initialized', lambda: True)
+    @patch('torch.distributed.is_available', lambda: True)
     def test_model_wrapper(self):
         # non-distributed model build from config
         runner = Runner.build_from_cfg(self.full_cfg)
@@ -287,14 +310,12 @@ class TestRunner(TestCase):
         assert isinstance(runner.model, MMDataParallel)
 
         # distributed model build from config
-        # TODO: mock
         cfg = copy.deepcopy(self.full_cfg)
         cfg.launcher = 'pytorch'
         runner = Runner.build_from_cfg(cfg)
         assert isinstance(runner.model, MMDistributedDataParallel)
 
         # distributed model build manually
-        # TODO: mock
         model = ToyModel()
         runner = Runner(
             model=model,
