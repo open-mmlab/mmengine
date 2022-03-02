@@ -12,17 +12,17 @@ class MetaGlobalAccessible(type):
     default values.
 
     Examples:
-        >>> class SubClass1(metaclass=GlobalMeta):
+        >>> class SubClass1(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, args, **kwargs):
         >>>         pass
         AssertionError: The arguments of the
         ``<class '__main__.subclass'>.__init__`` must contain name argument.
-        >>> class SubClass2(metaclass=GlobalMeta):
+        >>> class SubClass2(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, a, name=None, *args, **kwargs):
         >>>         pass
         AssertionError: The arguments of the
         ``<class '__main__.subclass'>.__init__`` must have default values.
-        >>> class SubClass3(metaclass=GlobalMeta):
+        >>> class SubClass3(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, a, name=None, *args, **kwargs):
         >>>         pass  # Right format
     """
