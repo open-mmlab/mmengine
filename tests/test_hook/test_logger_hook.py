@@ -65,10 +65,19 @@ class TestLoggerHook:
 
     def test_collect_info(self):
         runner = MagicMock()
+        runner.message_hub = MagicMock()
         logger_hook = LoggerHook()
+        # Collect with prefix.
+        runner.message_hub.log_buffers = {'train/time': MagicMock(),
+                                          'lr': MagicMock(),
+                                          'train/loss_cls': MagicMock()}
         logger_hook._collect_info(runner, mode='train')
+        runner.message_hub.log_buffers['train/time'].mean.assert_called()
+        runner.message_hub.log_buffers['lr'].current.assert_not_called()
+        runner.message_hub.log_buffers['train/loss_cls'].mean.assert_called()
 
-    def
+
+
 
 
 
