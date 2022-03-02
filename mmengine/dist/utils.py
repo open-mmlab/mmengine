@@ -12,6 +12,24 @@ _IS_DIST = False
 _LOCAL_PROCESS_GROUP = None
 
 
+def get_local_group() -> Optional[dist.ProcessGroup]:
+    """Return local process group."""
+    if not _IS_DIST:
+        return None
+
+    if _LOCAL_PROCESS_GROUP is None:
+        raise RuntimeError('Local process group is not created, please use '
+                           '`init_local_group` to setup local process group.')
+
+    return _LOCAL_PROCESS_GROUP
+
+
+def get_default_group() -> Optional[dist.ProcessGroup]:
+    """Return default process group."""
+
+    return dist.distributed_c10d._get_default_group()
+
+
 def is_distributed() -> bool:
     """Return True if distributed environment has been initialized."""
     return _IS_DIST
@@ -107,18 +125,6 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     _LOCAL_PROCESS_GROUP = dist.new_group(ranks)
 
 
-def get_local_group() -> Optional[dist.ProcessGroup]:
-    """Return local process group."""
-    if not _IS_DIST:
-        return None
-
-    if _LOCAL_PROCESS_GROUP is None:
-        raise RuntimeError('Local process group is not created, please use '
-                           '`init_local_group` to setup local process group.')
-
-    return _LOCAL_PROCESS_GROUP
-
-
 def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
     """Return the backend of the given process group.
 
@@ -136,6 +142,11 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         str or None: Return the backend of the given process group as a lower
         case string if in distributed environment, otherwise None.
     """
+    # handle low versions of torch like 1.5.0 which does not support passing in
+    # None for group argument
+    if group is None:
+        group = get_default_group()
+
     return dist.get_backend(group) if _IS_DIST else None
 
 
@@ -154,6 +165,11 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the number of processes of the given process group if in
         distributed environment, otherwise 1.
     """
+    # handle low versions of torch like 1.5.0 which does not support passing in
+    # None for group argument
+    if group is None:
+        group = get_default_group()
+
     return dist.get_world_size(group) if _IS_DIST else 1
 
 
@@ -175,6 +191,11 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the rank of the process group if in distributed
         environment, otherwise 0.
     """
+    # handle low versions of torch like 1.5.0 which does not support passing in
+    # None for group argument
+    if group is None:
+        group = get_default_group()
+
     return dist.get_rank(group) if _IS_DIST else 0
 
 
@@ -279,4 +300,8 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
             the default process group will be used. Defaults to None.
     """
     if _IS_DIST:
+        # handle low versions of torch like 1.5.0 which does not support
+        # passing in None for group argument
+        if group is None:
+            group = get_default_group()
         dist.barrier(group)
