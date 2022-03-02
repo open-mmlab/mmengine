@@ -1,21 +1,5 @@
 import copy
-from typing import Optional, Union, Tuple, Sequence, Dict
-from collections import OrderedDict
-import datetime
-import os.path as osp
-
-import torch
-import torch.distributed as dist
-
-from mmengine.data import BaseDataSample
-from mmengine.fileio import FileClient
-from mmengine.utils import is_tuple_of, scandir
-from .hook import Hook
-from mmengine.registry import HOOKS
-
-
-import copy
-from typing import Optional, Union, Tuple, Sequence, Dict
+from typing import Optional, Union, Tuple, Sequence
 from collections import OrderedDict
 import datetime
 import os.path as osp
@@ -39,57 +23,86 @@ class LoggerHook(Hook):
     saved in json file.
 
     Args:
-        by_epoch (bool, optional): Whether EpochBasedRunner is used.
-            Default: True.
-        interval (int, optional): Logging interval (every k iterations).
-            Default: 10.
-        ignore_last (bool, optional): Ignore the log of last iterations in each
-            epoch if less than :attr:`interval`. Default: True.
-        reset_flag (bool, optional): Whether to clear the output buffer after
-            logging. Default: False.
-        interval_exp_name (int, optional): Logging interval for experiment
-            name. This feature is to help users conveniently get the experiment
-            information from screen or log file. Default: 1000.
+        by_epoch (bool): Whether EpochBasedRunner is used.
+            Defaults to True.
+        interval (int): Logging interval (every k iterations).
+            Defaults to 10.
+        custom_keys (dict, optional): Using the specified method to statistics
+            the logs referred in custom_keys. Defaults to None.
+
+            - The key of customs_keys represent the name of log, such as loss,
+            lr. The value of customs_keys is a dict which contains the
+            statistics method and corresponding arguments. If ``log_name`` is
+            not defined in value, the old key will be overwritten by the
+            sepecified statistics method, otherwise a new log named with
+            ``log_name`` will be recorded.
+            - The key in ``LoggerHook.fixed_smooth_keys`` cannot be overwritten
+            because ``time`` and ``iter_time`` will be used to calulate
+            estimated time of arrival. If you want to recount the time, you
+            should set ``log_name`` in corresponding values.
+        ignore_last (bool): Ignore the log of last iterations in each epoch if
+            less than :attr:`interval`. Defaults to True.
+        interval_exp_name (int): Logging interval for experiment name. This
+            feature is to help users conveniently get the experiment
+            information from screen or log file. Defaults to 1000.
         out_dir (str, optional): Logs are saved in ``runner.work_dir`` default.
             If ``out_dir`` is specified, logs will be copied to a new directory
             which is the concatenation of ``out_dir`` and the last level
-            directory of ``runner.work_dir``. Default: None.
-        out_suffix (str or tuple[str], optional): Those filenames ending with
-            ``out_suffix`` will be copied to ``out_dir``.
-            Default: ('.log.json', '.log', '.py').
-            `New in version 1.3.16.`
-        keep_local (bool, optional): Whether to keep local log when
-            :attr:`out_dir` is specified. If False, the local log will be
-            removed. Default: True.
-            `New in version 1.3.16.`
+            directory of ``runner.work_dir``. Defaults to None.
+        out_suffix (Union[Tuple[str], str]): Those filenames ending with
+            ``out_suffix`` will be copied to ``out_dir``. Defaults to
+            ('.log.json', '.log', '.py').
+        keep_local (bool): Whether to keep local log when :attr:`out_dir` is
+            specified. If False, the local log will be removed. Defaults to
+            True.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Default: None.
-            `New in version 1.3.16.`
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Defaults to None.
+
+    Examples:
+        >>> from mmengine import HOOKS
+        >>> logger_hook_cfg = \
+        >>>        dict(by_epoch=True,
+        >>>                custom_keys=dict(
+        >>>                        loss=[dict(log_name='loss_mean_window',
+        >>>                                   method_name='mean',
+        >>>                                   window_size=10),
+        >>> # loss_mean_window will be additional records.
+        >>>                              dict(method_name='mean',
+        >>>                                   window_size='global')],
+        >>> # loss will be overwritten by global mean statistics.
+        >>>                        time=dict(log_name='global_time',
+        >>>                                  method='mean',
+        >>>                                  window_size='global'))
+        >>> # time cannot be overwritten, global time will be additional
+        >>> # records.
+        >>> logger_hook = HOOKS.build(logger_hook_cfg)
     """
     # eta will be calculated by time. `time` and `data_time` should not be
     # overwritten.
     fixed_smooth_keys = ('time', 'data_time')
 
     def __init__(self,
+                 by_epoch: bool = True,
                  interval: int = 10,
                  custom_keys: Optional[dict] = None,
                  ignore_last: bool = True,
                  interval_exp_name: int = 1000,
-                 by_epoch: bool = True,
                  out_dir: Optional[str] = None,
                  out_suffix: Optional[Union[Tuple[str], str]] =
                  ('.log.json', '.log', '.py'),
                  keep_local=True,
                  file_client_args=None,
                  ):
+        self.by_epoch = by_epoch
         self.interval = interval
         self.custom_keys = custom_keys
         self.composed_writers = None
         self.ignore_last = ignore_last
-        self.by_epoch = by_epoch
+
         self.time_sec_tot = 0
         self.interval_exp_name = interval_exp_name
+        self._check_custom_keys()
 
         if out_dir is None and file_client_args is not None:
             raise ValueError(
@@ -99,8 +112,8 @@ class LoggerHook(Hook):
 
         if not (out_dir is None or isinstance(out_dir, str)
                 or is_tuple_of(out_dir, str)):
-            raise TypeError('out_dir should be  "None" or string or tuple of '
-                            'string, but got {out_dir}')
+            raise TypeError('out_dir should be None or string or tuple of '
+                            f'string, but got {type(out_dir)}')
         self.out_suffix = out_suffix
 
         self.keep_local = keep_local
@@ -110,6 +123,11 @@ class LoggerHook(Hook):
                                                        self.out_dir)
 
     def before_run(self, runner: object) -> None:
+        """ Infer ``self.file_client`` from ``self.out_dir``. Initialize
+        the ``self.start_iter`` and record the meta information.
+        Args:
+            runner: The runner of the training process.
+        """
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(self.file_client_args,
                                                        self.out_dir)
@@ -130,13 +148,36 @@ class LoggerHook(Hook):
             runner: object,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
-        if self.every_n_iters(runner, self.interval):
+        """Record training logs.
+
+        Args:
+            runner (object): The runner of the training process.
+            data_batch (Sequence[BaseDataSample], optional): Data from
+                dataloader. Defaults to None.
+            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+                Defaults to None.
+        """
+        if self.by_epoch and self.every_n_inner_iters(runner, self.interval):
+            self.log_train(runner)
+        elif not self.by_epoch and self.every_n_iters(runner, self.interval):
+            self.log_train(runner)
+        elif self.end_of_epoch(runner) and not self.ignore_last:
+            # not precise but more stable
             self.log_train(runner)
 
     def after_val_epoch(self, runner: object) -> None:
+        """Record validation logs.
+        Args:
+            runner (object): The runner of the training process.
+        """
         self.log_val(runner)
 
-    def after_run(self, runner):
+    def after_run(self, runner: object) -> None:
+        """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
+
+        Args:
+            runner (object): The runner of the training process.
+        """
         # copy or upload logs to self.out_dir
         if self.out_dir is not None:
             for filename in scandir(runner.work_dir, self.out_suffix, True):
@@ -156,7 +197,12 @@ class LoggerHook(Hook):
                         (f'{local_filepath} was removed due to the '
                          '`self.keep_local=False`'))
 
-    def log_train(self, runner: object):
+    def log_train(self, runner: object) -> None:
+        """Collect and record training logs which start named with "train/*".
+
+        Args:
+            runner (object): The runner of the training process.
+        """
         tag = self._collect_info(runner, 'train')
         # `log_tag` will pop some keys and fill `log_str`.
         log_tag = copy.deepcopy(tag)
@@ -205,18 +251,23 @@ class LoggerHook(Hook):
         runner.logger.info(log_str)
         # Write tag.
         for name, val in tag.items():
-            runner.composed_writers.add_scalar(name, val, runner.iter+1)
+            runner.composed_writers.add_scalar(name, val, runner.iter + 1)
 
-    def log_val(self, runner: object):
+    def log_val(self, runner: object) -> None:
+        """Collect and record training logs which start named with "val/*".
+
+        Args:
+            runner (object): The runner of the training process.
+        """
         tag = self._collect_info(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader
         # by epoch: Epoch[val] [4][1000]
         # by iter: Iter[val] [1000]
         if self.by_epoch:
-            log_str = f'Epoch(val) [{runner.epoch}][{runner.inner_iter+1}]\t'
+            log_str = f'Epoch(val) [{runner.epoch}][{runner.inner_iter}]\t'
         else:
-            log_str = f'Iter(val) [{runner.inner_iter+1}]\t'
+            log_str = f'Iter(val) [{runner.inner_iter}]\t'
 
         log_items = []
         for name, val in tag.items():
@@ -225,11 +276,20 @@ class LoggerHook(Hook):
             log_items.append(f'{name}: {val}')
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
-        runner.logger.info(log_str)
         # Write tag.
-        runner.composed_writers.add_scalars(tag, runner.iter+1)
+        runner.composed_writers.add_scalars(tag, runner.iter)
 
-    def _get_window_size(self, runner, window_size):
+    def _get_window_size(self, runner: object, window_size: Union[int, str]) \
+            -> int:
+        """Parse window_size specified in ``self.custom_keys`` to int value.
+
+        Args:
+            runner (object): The runner of the training process.
+            window_size (Union[int, str]): Smoothing scale of logs.
+
+        Returns:
+            int: Smoothing window for statistical methods.
+        """
         if isinstance(window_size, int):
             assert window_size == self.interval
             return window_size
@@ -237,34 +297,52 @@ class LoggerHook(Hook):
             if window_size == 'epoch':
                 return runner.inner_iter + 1
             elif window_size == 'global':
-                return runner.iter
+                return runner.iter + 1
             elif window_size == 'current':
                 return 1
 
-    def _collect_info(self, runner: object, mode):
+    def _collect_info(self, runner: object, mode: str) -> dict:
+        """Collect log information to a dict according to mode.
+
+        Args:
+            runner (object): The runner of the training process.
+            mode (str): "train" or "val", which means the prefix attached by runner.
+
+        Returns:
+            dict: Statistical values of logs.
+        """
         tag = OrderedDict()
         log_buffers = runner.message_hub.log_buffers
-        assert 'time' in log_buffers, 'Runner must contain IterTimerHook.'
-        # Ensure all metric and lr values are latest.
-        for prefix_key in log_buffers:
+        mode_log_buffers = OrderedDict()
+        for prefix_key, log_buffer in log_buffers.items():
             if prefix_key.startswith(mode):
-                key = prefix_key.strip('train/')
-                # Update the latest learning rate and smoothed time logs.
-                if key in self.fixed_smooth_keys or key.startswith('loss'):
-                    tag[key] = log_buffers[key].mean(self.interval)
-                else:
-                    tag[key] = log_buffers[key].current()
+                key = prefix_key.split('/')[-1]
+                mode_log_buffers[key] = log_buffer
+        # Ensure all metric and lr values are latest.
+        for key in mode_log_buffers:
+            # Update the latest learning rate and smoothed time logs.
+            if key in self.fixed_smooth_keys or key.startswith('loss'):
+                tag[key] = mode_log_buffers[key].mean(self.interval)
+            else:
+                tag[key] = mode_log_buffers[key].current()
         # Update custom keys.
-        self._parse_custom_keys(runner, log_buffers, tag,
-                                self.custom_keys)
+        if mode == 'train':
+            self._parse_custom_keys(runner, mode_log_buffers, tag)
         return tag
 
     def _parse_custom_keys(self,
                           runner: object,
                           log_buffers: OrderedDict,
-                          tag: OrderedDict,
-                          cfg_dicts: Optional[OrderedDict]):
-        cfg_dicts = copy.deepcopy(cfg_dicts)
+                          tag: OrderedDict) -> None:
+        """Statistics logs in log_buffers according to custom_keys.
+
+        Args:
+            runner (object): The runner of the training process.
+            log_buffers (OrderedDict): All logs for the corresponding phase.
+            tag (OrderedDict): A dict which contains all statistic values of
+                logs.
+        """
+        cfg_dicts = copy.deepcopy(self.custom_keys)
         if not isinstance(cfg_dicts, dict):
             return
         for key, value in cfg_dicts.items():
@@ -276,9 +354,18 @@ class LoggerHook(Hook):
                 self._statistics_single_key(runner, key, value, log_buffers,
                                         tag)
 
-    def _statistics_single_key(self, runner, key, cfg_dict, log_buffers, tag):
-        assert key not in self.fixed_smooth_keys, \
-            f'{key} cannot be overwritten by custom keys!'
+    def _statistics_single_key(self, runner: object, key: str, cfg_dict: dict,
+                               log_buffers: OrderedDict, tag) -> None:
+        """Statistics single logs.
+
+        Args:
+            runner (object): The runner of the training process.
+            key (str): The name of log.
+            cfg_dict (dict): A copy of  the value of ``self.custom_keys``.
+            log_buffers (OrderedDict): All logs for the corresponding phase.
+            tag (OrderedDict): A dict which contains all statistic values of
+                logs.
+        """
         if 'window_size' in cfg_dict:
             cfg_dict['window_size'] = \
                 self._get_window_size(runner, cfg_dict['window_size'])
@@ -288,7 +375,17 @@ class LoggerHook(Hook):
             name = key
         tag[name] = log_buffers[key].statistics(**cfg_dict)
 
-    def _get_max_memory(self, runner: object):
+    def _get_max_memory(self, runner: object) -> int:
+        """Returns the maximum GPU memory occupied by tensors in bytes for a
+        given device.
+
+        Args:
+            runner (object): The runner of the training process.
+
+        Returns:
+            The maximum GPU memory occupied by tensors in bytes for a given
+            device.
+        """
         device = getattr(runner.model, 'output_device', None)
         mem = torch.cuda.max_memory_allocated(device=device)
         mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
@@ -297,3 +394,31 @@ class LoggerHook(Hook):
         if runner.world_size > 1:
             dist.reduce(mem_mb, 0, op=dist.ReduceOp.MAX)
         return mem_mb.item()
+
+    def _check_custom_keys(self) -> None:
+        """Check the legality of ``self.custom_keys``. If
+        ``self.by_epoch==False``, ``window_size`` should not be "epoch". The
+        key of ``self.fixed_smooth_keys`` cannot be overwritten.
+        """
+        if self.custom_keys is None:
+            return
+
+        def _check_window_size(item):
+            if not self.by_epoch:
+                assert item['window_size'] != 'epoch', \
+                    'window_size cannot be epoch if LoggerHook.by_epoch is ' \
+                    'False.'
+
+        def _check_fixed_keys(key, item):
+            if key in self.fixed_smooth_keys:
+                assert 'log_name' in item, f'{key} cannot be overwritten by ' \
+                                           'custom keys!'
+
+        for key, value in self.custom_keys.items():
+            if isinstance(value, Sequence):
+                [(_check_window_size(item), _check_fixed_keys(key, item))
+                    for item in value]
+
+            else:
+                _check_window_size(value)
+                _check_fixed_keys(key, value)
