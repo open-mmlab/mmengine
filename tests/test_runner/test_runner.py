@@ -287,17 +287,18 @@ class TestRunner(TestCase):
         # distributed model build from config
         # TODO: mock
         cfg = copy.deepcopy(self.full_cfg)
-        cfg.env_cfg.launcher = 'pytorch'
+        cfg.launcher = 'pytorch'
         runner = Runner.build_from_cfg(cfg)
         assert isinstance(runner.model, MMDistributedDataParallel)
 
-        # distributed model build from config
+        # distributed model build manually
         # TODO: mock
         model = ToyModel()
         runner = Runner(
             model=model,
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            env_cfg=dict(dist_params=dict(backend='nccl'), launcher='pytorch'))
+            env_cfg=dict(dist_params=dict(backend='nccl')),
+            launcher='pytorch')
         assert isinstance(runner.model, MMDistributedDataParallel)
 
         # custom model wrapper
