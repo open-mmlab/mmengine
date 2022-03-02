@@ -3,3 +3,4 @@ numpy
 pyyaml
 regex;sys_platform=='win32'
 yapf
+termcolor

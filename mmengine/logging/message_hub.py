@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 from collections import OrderedDict
 from typing import Any, Union
 
@@ -52,6 +53,11 @@ class MessageHub(BaseGlobalAccessible):
     def log_buffers(self) -> OrderedDict:
         """Get all ``LogBuffer`` instances.
 
+        Note:
+            Considering the large memory footprint of ``log_buffers`` in the
+            post-training, ``MessageHub.log_buffers`` will not return the
+            result of ``copy.deepcopy``.
+
         Returns:
             OrderedDict: All ``LogBuffer`` instances.
         """
@@ -62,12 +68,17 @@ class MessageHub(BaseGlobalAccessible):
         """Get all runtime information.
 
         Returns:
-            OrderedDict: All runtime information.
+            OrderedDict: A copy of all runtime information.
         """
-        return self._runtime
+        return copy.deepcopy(self._runtime)
 
     def get_log(self, key: str) -> LogBuffer:
         """Get ``LogBuffer`` instance by key.
+
+        Note:
+            Considering the large memory footprint of ``log_buffers`` in the
+            post-training, ``MessageHub.get_log`` will not return the
+            result of ``copy.deepcopy``.
 
         Args:
             key: The key of LogBuffer.
@@ -87,9 +98,9 @@ class MessageHub(BaseGlobalAccessible):
             key: The key of runtime information.
 
         Returns:
-            Any: Corresponding runtime information if the key exists.
+            Any: A copy of corresponding runtime information if the key exists.
         """
         if key not in self.runtime_info:
             raise KeyError(f'{key} is not found in Messagehub.log_buffers: '
                            f'instance name is: {MessageHub.instance_name}')
-        return self._runtime[key]
+        return copy.deepcopy(self._runtime[key])

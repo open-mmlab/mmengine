@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
 from functools import partial
 from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
@@ -12,8 +13,9 @@ class BaseLogBuffer:
     from ``BaseLogBuffer`` will implement the specific statistical methods.
 
     Args:
-        log_history (Sequence): The history logs.
-        count_history (Sequence): The counts of the history logs.
+        log_history (Sequence): The history logs. Defaults to [].
+        count_history (Sequence): The counts of the history logs. Defaults to
+            [].
         max_length (int): The max length of history logs. Defaults to 1000000.
     """
     _statistics_dict: dict = dict()
@@ -27,6 +29,9 @@ class BaseLogBuffer:
         assert len(log_history) == len(count_history), \
             'The lengths of log_history and count_histroy should be equal'
         if len(log_history) > max_length:
+            warnings.warn(f'The length of history buffer({len(log_history)}) '
+                          f'exceeds the max_length({max_length}), the first '
+                          'few elements will be ignored.')
             self._log_history = np.array(log_history[-max_length:])
             self._count_history = np.array(count_history[-max_length:])
         else:
@@ -114,6 +119,9 @@ class LogBuffer(BaseLogBuffer):
         Returns:
             np.ndarray: The mean value within the window.
         """
+        assert isinstance(window_size, int), \
+            'The type of window size should be int, but got ' \
+            f'{type(window_size)}'
         if not window_size:
             window_size = len(self._log_history)
         logs_sum = self._log_history[-window_size:].sum()

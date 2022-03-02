@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import os
 import platform
 import sys
 from logging import Logger, LogRecord
@@ -91,7 +92,7 @@ class MMLogger(Logger, BaseGlobalAccessible):
     Args:
         name (str): Logger name. Defaults to ''.
         log_file (str, optional): The log filename. If specified, a
-        ``FileHandler`` will be added to the logger.
+            ``FileHandler`` will be added to the logger. Defaults to None.
         log_level: The log level of the handler. Defaults to 'NOTSET'.
         file_mode (str): The file mode used in opening log file.
             Defaults to 'w'.
@@ -121,13 +122,9 @@ class MMLogger(Logger, BaseGlobalAccessible):
         if log_file is not None:
             if rank != 0:
                 # rename `log_file` with rank prefix.
-                if platform.system() == 'Windows':
-                    separator = '\\'
-                else:
-                    separator = '/'
-                path_split = log_file.split(separator)
+                path_split = log_file.split(os.sep)
                 path_split[-1] = f'rank{rank}_{path_split[-1]}'
-                log_file = separator.join(path_split)
+                log_file = os.sep.join(path_split)
             # Here, the default behaviour of the official logger is 'a'. Thus,
             # we provide an interface to change the file mode to the default
             # behaviour. `FileHandler` is not supported to have colors,
