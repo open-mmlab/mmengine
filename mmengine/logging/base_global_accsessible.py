@@ -6,10 +6,10 @@ from typing import Any, Optional
 class MetaGlobalAccessible(type):
     """The metaclass for global accessible class.
 
-    The subclasses inherited from ``GlobalMeta`` will manage their own
-    ``_instance_dict`` and root instances. The constructors of subclasses must
-    contain an optional ``name`` argument and all other arguments must have
-    default values.
+    The subclasses inherited from ``MetaGlobalAccessible`` will manage their
+    own ``_instance_dict`` and root instances. The constructors of subclasses
+    must contain an optional ``name`` argument and all other arguments must
+    have default values.
 
     Examples:
         >>> class SubClass1(metaclass=MetaGlobalAccessible):
