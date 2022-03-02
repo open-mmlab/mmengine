@@ -68,7 +68,7 @@ def main(functions, world_size=2, backend='gloo'):
             init_process,
             args=(world_size, functions, backend),
             nprocs=world_size)
-    except mp.Exception:
+    except Exception:
         pytest.fail('error')
 
 
