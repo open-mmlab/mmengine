@@ -8,7 +8,7 @@ import numpy as np
 class BaseLogBuffer:
     """Unified storage format for different log types.
 
-    ``Record the history of log for further statistics. The subclass inherited
+    Record the history of log for further statistics. The subclass inherited
     from ``BaseLogBuffer`` will implement the specific statistical methods.
 
     Args:
@@ -89,7 +89,7 @@ class BaseLogBuffer:
         Returns:
             Any: Depends on corresponding method.
         """
-        if name not in self._statistics_dict:
+        if method_name not in self._statistics_dict:
             raise KeyError(f'{method_name} has not been registered in '
                            f'BaseLogBuffer._statistics_dict')
         method = self._statistics_dict[method_name]
