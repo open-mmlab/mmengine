@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import os.path as osp
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -89,7 +91,7 @@ def test_gather_object():
 def init_process(rank, world_size, functions, backend='gloo'):
     """Initialize the distributed environment."""
     os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '29501'
+    os.environ['MASTER_PORT'] = '29505'
     os.environ['RANK'] = str(rank)
     dist.init_dist('pytorch', backend, rank=rank, world_size=world_size)
 
@@ -110,15 +112,20 @@ def main(functions, world_size=2, backend='gloo'):
 
 
 def _test_all_reduce(device):
-    if dist.get_rank() == 0:
-        data = torch.tensor([0, 1]).to(device)
-    else:
-        data = torch.tensor([1, 2]).to(device)
+    for tensor_type, reduce_op in zip([torch.int64, torch.float32],
+                                      ['sum', 'mean']):
+        if dist.get_rank() == 0:
+            data = torch.tensor([1, 2], dtype=tensor_type).to(device)
+        else:
+            data = torch.tensor([3, 4], dtype=tensor_type).to(device)
 
-    expected = torch.tensor([1, 3]).to(device)
+        if reduce_op == 'sum':
+            expected = torch.tensor([4, 6], dtype=tensor_type).to(device)
+        else:
+            expected = torch.tensor([2, 3], dtype=tensor_type).to(device)
 
-    dist.all_reduce(data)
-    assert torch.allclose(data, expected)
+        dist.all_reduce(data, reduce_op)
+        assert torch.allclose(data, expected)
 
 
 def _test_all_gather(device):
@@ -189,26 +196,34 @@ def _test_broadcast_object_list(device):
 
 
 def _test_all_reduce_dict(device):
-    if dist.get_rank() == 0:
-        data = {
-            'key1': torch.tensor([0, 1]).to(device),
-            'key2': torch.tensor([1, 2]).to(device)
-        }
-    else:
-        data = {
-            'key1': torch.tensor([2, 3]).to(device),
-            'key2': torch.tensor([3, 4]).to(device)
-        }
+    for tensor_type, reduce_op in zip([torch.int64, torch.float32],
+                                      ['sum', 'mean']):
+        if dist.get_rank() == 0:
+            data = {
+                'key1': torch.tensor([0, 1], dtype=tensor_type).to(device),
+                'key2': torch.tensor([1, 2], dtype=tensor_type).to(device)
+            }
+        else:
+            data = {
+                'key1': torch.tensor([2, 3], dtype=tensor_type).to(device),
+                'key2': torch.tensor([3, 4], dtype=tensor_type).to(device)
+            }
 
-    expected = {
-        'key1': torch.tensor([2, 4]).to(device),
-        'key2': torch.tensor([4, 6]).to(device)
-    }
+        if reduce_op == 'sum':
+            expected = {
+                'key1': torch.tensor([2, 4], dtype=tensor_type).to(device),
+                'key2': torch.tensor([4, 6], dtype=tensor_type).to(device)
+            }
+        else:
+            expected = {
+                'key1': torch.tensor([1, 2], dtype=tensor_type).to(device),
+                'key2': torch.tensor([2, 3], dtype=tensor_type).to(device)
+            }
 
-    dist.all_reduce_dict(data)
+        dist.all_reduce_dict(data, reduce_op)
 
-    for key in data:
-        assert torch.allclose(data[key], expected[key])
+        for key in data:
+            assert torch.allclose(data[key], expected[key])
 
 
 def _test_all_gather_object(device):
@@ -237,6 +252,32 @@ def _test_gather_object(device):
         assert output is None
 
 
+def _test_collect_results(device):
+    if dist.get_rank() == 0:
+        data = ['foo', 12, {1: 2}]
+        size = 3
+    else:
+        data = [24, {'a': 'b'}]
+        size = 2
+
+    expected = ['foo', 12, {1: 2}, 24, {'a': 'b'}]
+
+    # test `device=cpu`
+    output = dist.collect_results(data, size, device='cpu')
+    assert output == expected
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output = dist.collect_results(data, size, device='cpu', tmpdir=tmpdir)
+        assert output == expected
+
+        assert osp.isfile(osp.join(tmpdir, 'part_0.pkl'))
+        assert osp.isfile(osp.join(tmpdir, 'part_1.pkl'))
+
+    # test `device=gpu`
+    output = dist.collect_results(data, size, device='gpu')
+    assert output == expected
+
+
 def test_non_distributed_env():
     pass
 
@@ -245,7 +286,7 @@ def test_gloo_backend():
     functions_to_test = [
         _test_all_reduce,
         _test_all_gather,
-        # _test_gather,
+        _test_gather,
         _test_broadcast,
         _test_sync_random_seed,
         _test_broadcast_object_list,
@@ -267,5 +308,6 @@ def test_nccl_backend():
         _test_broadcast_object_list,
         _test_all_reduce_dict,
         _test_all_gather_object,
+        _test_collect_results,
     ]
     main(functions_to_test, backend='nccl')

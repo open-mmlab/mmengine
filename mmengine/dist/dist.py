@@ -205,10 +205,11 @@ def gather(
 
     if get_rank(group) == dst:
         gather_list = [torch.empty_like(data) for _ in range(world_size)]
-        dist.gather(data, gather_list, dst, group)
-        return gather_list
     else:
-        return []
+        gather_list = []
+
+    dist.gather(data, gather_list, dst, group)
+    return gather_list
 
 
 def broadcast(data: Tensor,
@@ -798,7 +799,7 @@ def collect_results(results: list,
     """Collected results in distributed environments.
 
     Args:
-        result_part (list): Result list containing result parts
+        result_part (list[object]): Result list containing result parts
             to be collected.
         size (int): Size of the results, commonly equal to length of
             the results.
@@ -830,13 +831,13 @@ def collect_results_cpu(result_part: list,
     ``tmpdir`` and collect them by the rank 0 worker.
 
     Args:
-        result_part (list): Result list containing result parts
+        result_part (list[object]): Result list containing result parts
             to be collected.
         size (int): Size of the results, commonly equal to length of
             the results.
-        tmpdir (str | None): temporal directory for collected results to
+        tmpdir (str | None): Temporal directory for collected results to
             store. If set to None, it will create a random temporal directory
-            for it.
+            for it. Defaults to None.
 
     Returns:
         list or None: The collected results.
@@ -893,7 +894,7 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
     communication for results collection.
 
     Args:
-        result_part (list): Result list containing result parts
+        result_part (list[object]): Result list containing result parts
             to be collected.
         size (int): Size of the results, commonly equal to length of
             the results.
