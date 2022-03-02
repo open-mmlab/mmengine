@@ -582,7 +582,7 @@ def all_gather_object(data: Any,
         nothing and just returns a list containing :attr:`data` itself.
 
     Note:
-        ``NCCL`` backend does not support ``gather``.
+        ``NCCL`` backend does not support ``all_gather_object``.
 
     Note:
         Unlike PyTorch ``torch.distributed.all_gather_object``,
