@@ -119,10 +119,11 @@ class LogBuffer(BaseLogBuffer):
         Returns:
             np.ndarray: The mean value within the window.
         """
-        assert isinstance(window_size, int), \
-            'The type of window size should be int, but got ' \
-            f'{type(window_size)}'
-        if not window_size:
+        if window_size is not None:
+            assert isinstance(window_size, int), \
+                'The type of window size should be int, but got ' \
+                f'{type(window_size)}'
+        else:
             window_size = len(self._log_history)
         logs_sum = self._log_history[-window_size:].sum()
         counts_sum = self._count_history[-window_size:].sum()
@@ -140,7 +141,11 @@ class LogBuffer(BaseLogBuffer):
         Returns:
             np.ndarray: The maximum value within the window.
         """
-        if not window_size:
+        if window_size is not None:
+            assert isinstance(window_size, int), \
+                'The type of window size should be int, but got ' \
+                f'{type(window_size)}'
+        else:
             window_size = len(self._log_history)
         return self._log_history[-window_size:].max()
 
@@ -156,7 +161,11 @@ class LogBuffer(BaseLogBuffer):
         Returns:
             np.ndarray: The minimum value within the window.
         """
-        if not window_size:
+        if window_size is not None:
+            assert isinstance(window_size, int), \
+                'The type of window size should be int, but got ' \
+                f'{type(window_size)}'
+        else:
             window_size = len(self._log_history)
         return self._log_history[-window_size:].min()
 
