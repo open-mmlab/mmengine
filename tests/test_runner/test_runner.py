@@ -146,9 +146,9 @@ class TestRunner(TestCase):
             runner.test()
 
         # cannot run train without optimzier cfg
-        with self.assertRaisesRegex(AssertionError, 'optimzer does not exist'):
+        with self.assertRaisesRegex(AssertionError, 'optimizer does not exist'):
             cfg = copy.deepcopy(self.full_cfg)
-            cfg.pop('optimzier')
+            cfg.pop('optimizer')
             runner = Runner.build_from_cfg(cfg)
             runner.train()
 
@@ -184,7 +184,7 @@ class TestRunner(TestCase):
 
         # cannot run train when optimizer is None
         with self.assertRaisesRegex(AssertionError,
-                                    'optimzier does not exist'):
+                                    'optimizer does not exist'):
             runner = Runner(
                 model=model,
                 train_dataloader=DataLoader(dataset=ToyDataset()),
@@ -197,7 +197,7 @@ class TestRunner(TestCase):
 
         # cannot run train when validation_cfg is set but val loader is None
         with self.assertRaisesRegex(AssertionError,
-                                    'optimzier does not exist'):
+                                    'optimizer does not exist'):
             runner = Runner(
                 model=model,
                 train_dataloader=DataLoader(dataset=ToyDataset()),
