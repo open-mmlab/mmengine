@@ -144,6 +144,9 @@ def gather(
         and just returns a list containing :attr:`data` itself.
 
     Note:
+        ``NCCL`` backend does not support ``gather``.
+
+    Note:
         Unlike PyTorch ``torch.distributed.gather``, :meth:`gather` in
         MMEngine does not pass in a empty list ``gather_list`` but returns
         the ``gather_list`` directly, which is convenient for the user.
@@ -152,7 +155,7 @@ def gather(
         - PyTorch: gather(data, gather_list, dst, group) -> None
 
     Args:
-        data (Tensor): Tensor to be gathered.
+        data (Tensor): Tensor to be gathered. CUDA tensor is not supported.
         dst (int): Destination rank. Defaults to 0.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
@@ -556,6 +559,9 @@ def all_gather_object(data: Any,
         nothing and just returns a list containing :attr:`data` itself.
 
     Note:
+        ``NCCL`` backend does not support ``gather``.
+
+    Note:
         Unlike PyTorch ``torch.distributed.all_gather_object``,
         :meth:`all_gather_object` in
         MMEngine does not pass in a empty list ``gather_list`` but returns
@@ -700,6 +706,9 @@ def gather_object(
     """Gathers picklable objects from the whole group in a single process.
     Similar to :func:`gather`, but Python objects can be passed in. Note that
     the object must be picklable in order to be gathered.
+
+    Note:
+        ``NCCL backend`` dost not support ``gather_object``.
 
     Note:
         Unlike PyTorch ``torch.distributed.gather_object``,
