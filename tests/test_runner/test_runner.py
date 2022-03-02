@@ -19,7 +19,8 @@ from mmengine.hooks import Hook
 from mmengine.model.wrappers import MMDataParallel, MMDistributedDataParallel
 from mmengine.optim.scheduler import MultiStepLR
 from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS)
+                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+                               Registry)
 from mmengine.runner import Runner
 from mmengine.runner.loop import EpochBasedTrainLoop, IterBasedTrainLoop
 
@@ -98,7 +99,7 @@ class TestRunner(TestCase):
                 timer=dict(type='IterTimerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
                 logger=dict(type='TextLoggerHook'),
-                optimizer=dict(type='OptimzierHook', grad_clip=False),
+                optimizer=dict(type='OptimizerHook', grad_clip=False),
                 param_scheduler=dict(type='ParamSchedulerHook')),
             env_cfg=dict(dist_params=dict(backend='nccl'), ),
             log_cfg=dict(log_level='INFO'),
@@ -316,6 +317,24 @@ class TestRunner(TestCase):
         cfg.model_wrapper = dict(type='CustomModelWrapper')
         runner = Runner.build_from_cfg(cfg)
         assert isinstance(runner.model, CustomModelWrapper)
+
+    def test_default_scope(self):
+        TOY_SCHEDULERS = Registry(
+            'parameter scheduler', parent=PARAM_SCHEDULERS, scope='toy')
+
+        @TOY_SCHEDULERS.register_module()
+        class ToyScheduler(MultiStepLR):
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+        self.full_cfg.param_scheduler = dict(
+            type='ToyScheduler', milestones=[1, 2])
+        self.full_cfg.default_scope = 'toy'
+
+        runner = Runner.build_from_cfg(self.full_cfg)
+        runner.train()
+        assert isinstance(runner.scheduler[0], ToyScheduler)
 
     def test_checkpoint(self):
         runner = Runner.build_from_cfg(self.full_cfg)
