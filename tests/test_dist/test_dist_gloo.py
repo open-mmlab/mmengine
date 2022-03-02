@@ -26,8 +26,8 @@ def main(functions, world_size=2, backend='gloo'):
             init_process,
             args=(world_size, functions, backend),
             nprocs=world_size)
-    except mp.ProcessRaisedException:
-        pytest.fail('error')
+    except Exception:
+        pytest.fail(f'{backend} failed')
 
 
 def _test_all_reduce():
