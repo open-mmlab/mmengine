@@ -26,15 +26,17 @@ class CheckpointHook(Hook):
         out_dir (str, optional | Path): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
-            and the last level directory of ``runner.work_dir``.
-            `Changed in version 1.3.16.`
-        max_keep_ckpts (int, optional): The maximum checkpoints to keep.
+            and the last level directory of ``runner.work_dir``. For example,
+            if your ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is 
+            ``./work_dir/cur_exp``, then the ``our_dir`` will be 
+            ``./tmp/cur_exp``.
+        max_keep_ckpts (int): The maximum checkpoints to keep.
             In some cases we want only the latest few checkpoints and would
             like to delete old ones to save the disk space.
             Default: -1, which means unlimited.
-        save_last (bool, optional): Whether to force the last checkpoint to be
+        save_last (bool): Whether to force the last checkpoint to be
             saved regardless of interval. Default: True.
-        sync_buffer (bool, optional): Whether to synchronize buffers in
+        sync_buffer (bool): Whether to synchronize buffers in
             different gpus. Default: False.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
