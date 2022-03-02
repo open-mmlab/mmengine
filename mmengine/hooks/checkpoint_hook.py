@@ -27,9 +27,9 @@ class CheckpointHook(Hook):
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
             and the last level directory of ``runner.work_dir``. For example,
-            if your ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is
-            ``./work_dir/cur_exp``, then the ``our_dir`` will be
-            ``./tmp/cur_exp``.
+            if the input ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is
+            ``./work_dir/cur_exp``, then the ckpt will be saved in
+            ``./tmp/cur_exp``. Deafule to None.
         max_keep_ckpts (int): The maximum checkpoints to keep.
             In some cases we want only the latest few checkpoints and would
             like to delete old ones to save the disk space.
