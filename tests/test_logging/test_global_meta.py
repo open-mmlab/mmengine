@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine.logging import BaseGlobalAccessible, GlobalMeta
+from mmengine.logging import BaseGlobalAccessible, MetaGlobalAccessible
 
 
 class SubClassA(BaseGlobalAccessible):
@@ -23,7 +23,7 @@ class TestGlobalMeta:
         # error.
         with pytest.raises(AssertionError):
 
-            class SubClassNoName(metaclass=GlobalMeta):
+            class SubClassNoName(metaclass=MetaGlobalAccessible):
 
                 def __init__(self, *args, **kwargs):
                     pass
@@ -32,12 +32,12 @@ class TestGlobalMeta:
         # raise an error.
         with pytest.raises(AssertionError):
 
-            class SubClassNoDefault(metaclass=GlobalMeta):
+            class SubClassNoDefault(metaclass=MetaGlobalAccessible):
 
                 def __init__(self, a, name='', *args, **kwargs):
                     pass
 
-        class GlobalAccessible(metaclass=GlobalMeta):
+        class GlobalAccessible(metaclass=MetaGlobalAccessible):
 
             def __init__(self, name=''):
                 self.name = name

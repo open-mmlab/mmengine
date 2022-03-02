@@ -1,6 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .base_global_accsessible import BaseGlobalAccessible, GlobalMeta
+from .base_global_accsessible import BaseGlobalAccessible, MetaGlobalAccessible
 
-__all__ = [
-    'GlobalMeta', 'BaseGlobalAccessible'
-]
+__all__ = ['MetaGlobalAccessible', 'BaseGlobalAccessible']

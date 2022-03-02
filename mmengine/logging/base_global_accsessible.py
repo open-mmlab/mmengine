@@ -3,11 +3,11 @@ import inspect
 from typing import Any, Optional
 
 
-class GlobalMeta(type):
+class MetaGlobalAccessible(type):
     """The metaclass for global accessible class.
 
-    Those subclasses inherited from ``GlobalMeta`` will manage their own
-    ``_instance_dict`` and root instance. Those constructors of subclasses must
+    The subclasses inherited from ``GlobalMeta`` will manage their own
+    ``_instance_dict`` and root instances. The constructors of subclasses must
     contain an optional ``name`` argument and all other arguments must have
     default values.
 
@@ -39,11 +39,11 @@ class GlobalMeta(type):
         super().__init__(*args)
 
 
-class BaseGlobalAccessible(metaclass=GlobalMeta):
+class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
     """``BaseGlobalAccessible`` is the base class for classes that have global
     access requirements.
 
-    Those subclasses inherited from ``BaseGlobalAccessible`` can get their
+    The subclasses inherited from ``BaseGlobalAccessible`` can get their
     global instancees.
 
     Examples:
@@ -65,8 +65,8 @@ class BaseGlobalAccessible(metaclass=GlobalMeta):
     @classmethod
     def create_instance(cls, name: str = None, *args, **kwargs) -> Any:
         """Create subclass instance by name, and subclass cannot create
-        instances with duplicate names. The created instance will be stored in
-        ``cls._instance_dict``, which will be accessed by ``get_instance``.
+        instances with duplicated names. The created instance will be stored in
+        ``cls._instance_dict``, and can be accessed by ``get_instance``.
 
         Examples:
             >>> instance_1 = GlobalAccessible.create_instance('name')
