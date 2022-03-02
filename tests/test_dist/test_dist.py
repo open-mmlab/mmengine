@@ -264,18 +264,26 @@ def _test_collect_results(device):
 
     # test `device=cpu`
     output = dist.collect_results(data, size, device='cpu')
-    assert output == expected
+    if dist.get_rank() == 0:
+        assert output == expected
+    else:
+        assert output is None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         output = dist.collect_results(data, size, device='cpu', tmpdir=tmpdir)
-        assert output == expected
-
+        if dist.get_rank() == 0:
+            assert output == expected
+        else:
+            assert output is None
         assert osp.isfile(osp.join(tmpdir, 'part_0.pkl'))
         assert osp.isfile(osp.join(tmpdir, 'part_1.pkl'))
 
     # test `device=gpu`
     output = dist.collect_results(data, size, device='gpu')
-    assert output == expected
+    if dist.get_rank() == 0:
+        assert output == expected
+    else:
+        assert output is None
 
 
 def test_non_distributed_env():

@@ -874,7 +874,7 @@ def collect_results_cpu(result_part: list,
         part_list = []
         for i in range(world_size):
             path = osp.join(tmpdir, f'part_{i}.pkl')  # type: ignore
-            with open(path, 'wb') as f:
+            with open(path, 'rb') as f:
                 part_list.append(pickle.load(f))
         # sort the results
         ordered_results = []
