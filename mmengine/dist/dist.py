@@ -328,7 +328,7 @@ def _broadcast_object_list(object_list: List[Any],
     that all objects in ``object_list`` must be picklable in order to be
     broadcasted.
     """
-    if dist._rank_not_in_group(group):
+    if dist.distributed_c10d._rank_not_in_group(group):
         return
 
     my_rank = get_rank()
@@ -527,7 +527,7 @@ def _all_gather_object(object_list: List[Any],
     :func:`all_gather`, but Python objects can be passed in. Note that the
     object must be picklable in order to be gathered.
     """
-    if dist._rank_not_in_group(group):
+    if dist.distributed_c10d._rank_not_in_group(group):
         return
 
     input_tensor, local_size = _object_to_tensor(obj)
@@ -669,7 +669,7 @@ def _gather_object(obj: Any,
     Similar to :func:`gather`, but Python objects can be passed in. Note that
     the object must be picklable in order to be gathered.
     """
-    if dist._rank_not_in_group(group):
+    if dist.distributed_c10d._rank_not_in_group(group):
         return
 
     # Ensure object_gather_list is specified appopriately.
