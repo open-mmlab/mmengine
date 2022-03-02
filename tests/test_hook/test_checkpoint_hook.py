@@ -39,8 +39,15 @@ class TestCheckpointHook:
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
+        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
+
+        # epoch can not be evenly divided by 2
+        runner.epoch = 10
+        checkpoint_hook.after_train_epoch(runner)
+        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
 
         # by epoch is False
+        runner.epoch = 9
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
