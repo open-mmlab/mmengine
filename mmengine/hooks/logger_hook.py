@@ -17,10 +17,8 @@ from mmengine.registry import HOOKS
 
 @HOOKS.register_module()
 class LoggerHook(Hook):
-    """Logger hook in text.
-
-    In this logger hook, the information will be printed on terminal and
-    saved in json file.
+    """In this logger hook, the information will be printed on the terminal
+    and saved in JSON file, tensorboard, wandb .etc.
 
     Args:
         by_epoch (bool): Whether EpochBasedRunner is used.
@@ -64,18 +62,20 @@ class LoggerHook(Hook):
         >>> logger_hook_cfg = \
         >>>        dict(by_epoch=True,
         >>>                custom_keys=dict(
+        >>> # `log_name` is defined, `loss_mean_window` will be an additional
+        >>> # record.
         >>>                        loss=[dict(log_name='loss_mean_window',
         >>>                                   method_name='mean',
         >>>                                   window_size=10),
-        >>> # loss_mean_window will be additional records.
+        >>> # `log_name` is defined. `loss` will be overwritten by
+        >>> # `global_mean` statistics.
         >>>                              dict(method_name='mean',
         >>>                                   window_size='global')],
-        >>> # loss will be overwritten by global mean statistics.
+        >>> # `time` cannot be overwritten, `global_time` will be an additional
+        >>> # record
         >>>                        time=dict(log_name='global_time',
         >>>                                  method='mean',
         >>>                                  window_size='global'))
-        >>> # time cannot be overwritten, global time will be additional
-        >>> # records.
         >>> logger_hook = HOOKS.build(logger_hook_cfg)
     """
     # eta will be calculated by time. `time` and `data_time` should not be
@@ -125,6 +125,7 @@ class LoggerHook(Hook):
     def before_run(self, runner: object) -> None:
         """ Infer ``self.file_client`` from ``self.out_dir``. Initialize
         the ``self.start_iter`` and record the meta information.
+
         Args:
             runner: The runner of the training process.
         """
@@ -157,20 +158,25 @@ class LoggerHook(Hook):
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
+        if runner.meta is not None and 'exp_name' in runner.meta:
+            if (self.every_n_iters(runner, self.interval_exp_name)) or (
+                    self.by_epoch and self.end_of_epoch(runner)):
+                exp_info = f'Exp name: {runner.meta["exp_name"]}'
+                runner.logger.info(exp_info)
         if self.by_epoch and self.every_n_inner_iters(runner, self.interval):
-            self.log_train(runner)
+            self._log_train(runner)
         elif not self.by_epoch and self.every_n_iters(runner, self.interval):
-            self.log_train(runner)
+            self._log_train(runner)
         elif self.end_of_epoch(runner) and not self.ignore_last:
             # not precise but more stable
-            self.log_train(runner)
+            self._log_train(runner)
 
     def after_val_epoch(self, runner: object) -> None:
         """Record validation logs.
         Args:
             runner (object): The runner of the training process.
         """
-        self.log_val(runner)
+        self._log_val(runner)
 
     def after_run(self, runner: object) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
@@ -197,23 +203,20 @@ class LoggerHook(Hook):
                         (f'{local_filepath} was removed due to the '
                          '`self.keep_local=False`'))
 
-    def log_train(self, runner: object) -> None:
+    def _log_train(self, runner: object) -> None:
         """Collect and record training logs which start named with "train/*".
 
         Args:
             runner (object): The runner of the training process.
         """
         tag = self._collect_info(runner, 'train')
-        # `log_tag` will pop some keys and fill `log_str`.
+        # The training log default contains `lr`, `momentum`, `time` and
+        # `data_time`. `log_tag` will pop these keys and loop other keys to
+        # `log_str`.
         log_tag = copy.deepcopy(tag)
-        cur_iter = self.get_iter(runner, inner_iter=True)
-        cur_epoch = self.get_epoch(runner, 'train')
+        cur_iter = self._get_iter(runner, inner_iter=True)
+        cur_epoch = self._get_epoch(runner, 'train')
 
-        if runner.meta is not None and 'exp_name' in runner.meta:
-            if (self.every_n_iters(runner, self.interval_exp_name)) or (
-                    self.by_epoch and self.end_of_epoch(runner)):
-                exp_info = f'Exp name: {runner.meta["exp_name"]}'
-                runner.logger.info(exp_info)
         # Record learning rate and momentum.
         lr_str = []
         momentum_str = []
@@ -236,7 +239,7 @@ class LoggerHook(Hook):
         else:
             log_str = f'Iter [{cur_iter}/{runner.max_iters}]\t'
         log_str += f'{lr_momentum_str}, '
-        # Calculate eta time
+        # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
         time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter + 1)
         eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
@@ -244,13 +247,13 @@ class LoggerHook(Hook):
         log_str += f'eta: {eta_str}, '
         log_str += f'time: {tag["time"]:.3f}, ' \
                    f'data_time: {tag["data_time"]:.3f}, '
-        # pop recorded keys
+        # Pop recorded keys
         log_tag.pop('time')
         log_tag.pop('data_time')
         # statistic memory
         if torch.cuda.is_available():
             log_str += f'memory: {self._get_max_memory(runner)}, '
-
+        # Loop left keys to fill `log_str`.
         log_items = []
         for name, val in log_tag.items():
             if isinstance(val, float):
@@ -258,12 +261,12 @@ class LoggerHook(Hook):
             log_items.append(f'{name}: {val}')
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
-        # Write tag.
+        # Write logs to local, tensorboad, and wandb.
         runner.composed_writer.add_scalars(self.json_log_path,
                                             tag,
                                             runner.iter+1)
 
-    def log_val(self, runner: object) -> None:
+    def _log_val(self, runner: object) -> None:
         """Collect and record training logs which start named with "val/*".
 
         Args:
@@ -272,8 +275,8 @@ class LoggerHook(Hook):
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
         eval_iter = len(runner.data_loader)
-        cur_iter = self.get_iter(runner)
-        cur_epoch = self.get_epoch(runner, 'val')
+        cur_iter = self._get_iter(runner)
+        cur_epoch = self._get_epoch(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader
         # by epoch: Epoch[val] [4][1000]
@@ -330,6 +333,7 @@ class LoggerHook(Hook):
         tag = OrderedDict()
         log_buffers = runner.message_hub.log_buffers
         mode_log_buffers = OrderedDict()
+        # Filter log_buffers which starts with `mode`.
         for prefix_key, log_buffer in log_buffers.items():
             if prefix_key.startswith(mode):
                 key = prefix_key.split('/')[-1]
@@ -404,9 +408,6 @@ class LoggerHook(Hook):
         ``self.by_epoch==False``, ``window_size`` should not be "epoch". The
         key of ``self.fixed_smooth_keys`` cannot be overwritten.
         """
-        if self.custom_keys is None:
-            return
-
         def _check_window_size(item):
             if not self.by_epoch:
                 assert item['window_size'] != 'epoch', \
@@ -427,7 +428,7 @@ class LoggerHook(Hook):
                 _check_window_size(value)
                 _check_fixed_keys(key, value)
 
-    def get_epoch(self, runner, mode):
+    def _get_epoch(self, runner, mode):
         if mode == 'train':
             epoch = runner.epoch + 1
         elif mode == 'val':
@@ -439,7 +440,7 @@ class LoggerHook(Hook):
                              f'but got {runner.mode}')
         return epoch
 
-    def get_iter(self, runner, inner_iter=False):
+    def _get_iter(self, runner, inner_iter=False):
         """Get the current training iteration step."""
         if self.by_epoch and inner_iter:
             current_iter = runner.inner_iter + 1

@@ -2,13 +2,14 @@ import logging
 import sys
 import datetime
 import pytest
+import os.path as osp
+from unittest.mock import MagicMock, patch
+from collections import OrderedDict
 
-import mmengine
+import torch
+
 from mmengine.hooks import LoggerHook
 from mmengine.fileio.file_client import HardDiskBackend
-from unittest.mock import MagicMock, patch
-
-from collections import OrderedDict
 
 
 class TestLoggerHook:
@@ -16,8 +17,7 @@ class TestLoggerHook:
         logger_hook = LoggerHook(out_dir='tmp.txt')
         assert logger_hook.by_epoch
         assert logger_hook.interval == 10
-        assert logger_hook.custom_keys is None
-        assert logger_hook.composed_writers is None
+        assert not logger_hook.custom_keys
         assert logger_hook.ignore_last
         assert logger_hook.time_sec_tot == 0
         assert logger_hook.interval_exp_name == 1000
@@ -31,14 +31,19 @@ class TestLoggerHook:
         # time cannot be overwritten.
         with pytest.raises(AssertionError):
             LoggerHook(custom_keys=dict(time=dict(method='max')))
-        LoggerHook(custom_keys=dict(time=dict(method='max',
-                                              log_name='time_max')))
+        LoggerHook(custom_keys=dict(time=[dict(method='max',
+                                              log_name='time_max'),
+                                          dict(method='min',
+                                               log_name='time_min')
+                                          ]))
         with pytest.raises(AssertionError):
             LoggerHook(by_epoch=False,
                        custom_keys=dict(
                            time=dict(method='max',
                                      log_name='time_max',
                                      window_size='epoch')))
+        with pytest.raises(ValueError):
+            LoggerHook(file_client_args=dict(enable_mc=True))
 
     def test_before_run(self):
         runner = MagicMock()
@@ -56,53 +61,73 @@ class TestLoggerHook:
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'
+        out_dir.mkdir()
         work_dir = tmp_path / 'work_dir'
-        work_dir_json = work_dir / 'log.json'
+        work_dir.mkdir()
+        work_dir_json = work_dir / 'tmp.log.json'
         json_f = open(work_dir_json, 'w')
-        work_dir_json.close()
+        json_f.close()
         runner = MagicMock()
         runner.work_dir = work_dir
-        runner.out_dir =
 
         logger_hook = LoggerHook(out_dir=str(tmp_path),
                                  keep_local=False)
+        logger_hook.out_dir = str(out_dir)
         logger_hook.logger = MagicMock()
         logger_hook.composed_writers = MagicMock()
         logger_hook.after_run(runner)
+        # Verify that the file has been moved to `out_dir`.
+        assert not osp.exists(str(work_dir_json))
+        assert osp.exists(str(out_dir / 'tmp.log.json'))
 
     def test_after_train_iter(self):
         # Test LoggerHook by iter.
         runner = MagicMock()
         runner.iter = 10
         logger_hook = LoggerHook(by_epoch=False)
-        logger_hook.log_train = MagicMock()
+        logger_hook._log_train = MagicMock()
         logger_hook.after_train_iter(runner)
         # `cur_iter=10+1`, which cannot be exact division by
         # `logger_hook.interval`
-        logger_hook.log_train.assert_not_called()
+        logger_hook._log_train.assert_not_called()
         runner.iter = 9
         logger_hook.after_train_iter(runner)
-        logger_hook.log_train.assert_called()
+        logger_hook._log_train.assert_called()
 
         # Test LoggerHook by epoch.
         logger_hook = LoggerHook(by_epoch=True)
-        logger_hook.log_train = MagicMock()
+        logger_hook._log_train = MagicMock()
         # Only `runner.inner_iter` will work.
         runner.iter = 9
         runner.inner_iter = 10
         logger_hook.after_train_iter(runner)
-        logger_hook.log_train.assert_not_called()
+        logger_hook._log_train.assert_not_called()
         runner.inner_iter = 9
         logger_hook.after_train_iter(runner)
-        logger_hook.log_train.assert_called()
+        logger_hook._log_train.assert_called()
 
         # Test end of the epoch.
         logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
-        logger_hook.log_train = MagicMock()
+        logger_hook._log_train = MagicMock()
         runner.data_loader = [0] * 5
         runner.inner_iter = 4
         logger_hook.after_train_iter(runner)
-        logger_hook.log_train.assert_called()
+        logger_hook._log_train.assert_called()
+
+        # Test print exp_name
+        runner.meta = dict(exp_name='retinanet')
+        logger_hook = LoggerHook()
+        runner.logger = MagicMock()
+        logger_hook._log_train = MagicMock()
+        logger_hook.after_train_iter(runner)
+        runner.logger.info.assert_called_with(f'Exp name: {runner.meta["exp_name"]}')
+
+    def test_after_val_epoch(self):
+        logger_hook = LoggerHook()
+        runner = MagicMock()
+        logger_hook._log_val = MagicMock()
+        logger_hook.after_val_epoch(runner)
+        logger_hook._log_val.assert_called()
 
     @pytest.mark.parametrize('by_epoch', [True, False])
     def test_log_train(self, by_epoch, capsys):
@@ -115,12 +140,12 @@ class TestLoggerHook:
         logger_hook.start_iter = 0
         logger_hook._get_max_memory = MagicMock(return_value='100')
         logger_hook.json_log_path = 'tmp.json'
-        logger_hook.log_train(runner)
 
         # Prepare training information.
         train_infos = dict(lr=0.1, momentum=0.9,
                            time=1.0, data_time=1.0, loss_cls=1.0)
         logger_hook._collect_info = MagicMock(return_value=train_infos)
+        logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
         runner.composed_writer.add_scalars.assert_called_with(
             'tmp.json',
@@ -161,9 +186,9 @@ class TestLoggerHook:
         # Prepare LoggerHook.
         logger_hook = LoggerHook(by_epoch=by_epoch)
         logger_hook.json_log_path = 'tmp.json'
-        logger_hook.log_val(runner)
         metric = dict(accuracy=0.9, data_time=1.0)
         logger_hook._collect_info = MagicMock(return_value=metric)
+        logger_hook._log_val(runner)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
         runner.composed_writer.add_scalars.assert_called_with('tmp.json',
@@ -180,7 +205,7 @@ class TestLoggerHook:
     def test_get_window_size(self):
         runner = self._setup_runner()
         logger_hook = LoggerHook()
-     # Test get window size by name.
+        # Test get window size by name.
         assert logger_hook._get_window_size(runner, 'epoch') == 2
         assert logger_hook._get_window_size(runner, 'global') == 11
         assert logger_hook._get_window_size(runner, 10) == 10
@@ -194,7 +219,7 @@ class TestLoggerHook:
         log_buffers = OrderedDict(lr=MagicMock(),
                                   loss=MagicMock())
         cfg_dict = dict(lr=dict(method='min'),
-                        loss=[dict(method='min'),
+                        loss=[dict(method='min', window_size='global'),
                               dict(method='max', log_name='loss_max')])
         logger_hook = LoggerHook()
         logger_hook.custom_keys = cfg_dict
@@ -209,7 +234,10 @@ class TestLoggerHook:
 
     def test_collect_info(self):
         runner = self._setup_runner()
-        logger_hook = LoggerHook()
+        logger_hook = LoggerHook(custom_keys=dict(time=
+                                                  dict(method='max',
+                                                       log_name='time_max')))
+        logger_hook._parse_custom_keys = MagicMock()
         # Collect with prefix.
         log_buffers = {'train/time': MagicMock(),
                        'lr': MagicMock(),
@@ -217,6 +245,8 @@ class TestLoggerHook:
                        'val/metric': MagicMock()}
         runner.message_hub.log_buffers = log_buffers
         tag = logger_hook._collect_info(runner, mode='train')
+        # Test parse custom_keys
+        logger_hook._parse_custom_keys.assert_called()
         # Test training key in tag.
         assert list(tag.keys()) == ['time', 'loss_cls']
         # Test statistics lr with `current`, loss and time with 'mean'
@@ -227,6 +257,42 @@ class TestLoggerHook:
         tag = logger_hook._collect_info(runner, mode='val')
         assert list(tag.keys()) == ['metric']
         log_buffers['val/metric'].current.assert_called()
+
+    @patch('torch.distributed.reduce', MagicMock())
+    def test_get_max_memory(self):
+        logger_hook = LoggerHook()
+        runner = MagicMock()
+        runner.world_size = 1
+        runner.model = torch.nn.Linear(1, 1)
+        logger_hook._get_max_memory(runner)
+        torch.distributed.reduce.assert_not_called()
+        runner.world_size = 2
+        logger_hook._get_max_memory(runner)
+        torch.distributed.reduce.assert_called()
+
+    def test_get_iter(self):
+        runner = self._setup_runner()
+        logger_hook = LoggerHook()
+        # Get global iter when `inner_iter=False`
+        iter = logger_hook._get_iter(runner)
+        assert iter == 11
+        # Get inner iter
+        iter = logger_hook._get_iter(runner, inner_iter=True)
+        assert iter == 2
+        # Still get global iter when `logger_hook.by_epoch==False`
+        logger_hook.by_epoch = False
+        iter = logger_hook._get_iter(runner, inner_iter=True)
+        assert iter == 11
+
+    def test_get_epoch(self):
+        runner = self._setup_runner()
+        logger_hook = LoggerHook()
+        epoch = logger_hook._get_epoch(runner, 'train')
+        assert epoch == 2
+        epoch = logger_hook._get_epoch(runner, 'val')
+        assert epoch == 1
+        with pytest.raises(ValueError):
+            logger_hook._get_epoch(runner, 'test')
 
     def _setup_runner(self):
         runner = MagicMock()
@@ -246,12 +312,3 @@ class TestLoggerHook:
         runner.message_hub = MagicMock()
         runner.composed_wirter = MagicMock()
         return runner
-
-
-
-
-
-
-
-
-
