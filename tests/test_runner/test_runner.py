@@ -9,6 +9,7 @@ import tempfile
 from unittest import TestCase
 from unittest.mock import patch
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,10 +50,13 @@ class ToyModel(nn.Module):
 @DATASETS.register_module()
 class ToyDataset(Dataset):
     META = dict()  # type: ignore
-    data = list(range(10))
+    data = np.zeros((10, 1, 1, 1))
+
+    def __len__(self):
+        return self.data.shape[0]
 
     def __getitem__(self, index):
-        return torch.Tensor(self.data[index]).reshape((1, 1, 1))
+        return torch.from_numpy(self.data[index])
 
 
 @EVALUATORS.register_module()
