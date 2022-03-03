@@ -88,15 +88,18 @@ class TestLoggerHook:
         logger_hook.log_train(runner)
 
     @pytest.mark.parametrize('by_epoch', [True, False])
-    def test_log_val(self, by_epoch,):
+    def test_log_val(self, by_epoch, capsys):
         runner = MagicMock()
+        runner.epoch = 1
 
         logger_hook = LoggerHook(by_epoch=by_epoch)
         logger_hook.logger = MagicMock()
         logger_hook.composed_writers = MagicMock()
-        logger_hook._collect_info = MagicMock(return_value=
-                                              dict(lr=1, time=1, data_time=1))
+        metric = {'val/accuracy': 0.9, 'val/data_time': 1}
+        logger_hook._collect_info = MagicMock(return_value=metric)
         logger_hook.log_val(runner)
+        out, _ = capsys.readouterr()
+        assert out == 'Epoch(val) [1]'
 
     @pytest.mark.parametrize('window_size', ['epoch', 'global',
                                              'current', 10, 20])

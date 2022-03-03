@@ -206,28 +206,29 @@ class LoggerHook(Hook):
         tag = self._collect_info(runner, 'train')
         # `log_tag` will pop some keys and fill `log_str`.
         log_tag = copy.deepcopy(tag)
+        cur_iter = self.get_iter(runner, inner_iter=True)
+        cur_epoch = self.get_epoch(runner, 'train')
+
         if runner.meta is not None and 'exp_name' in runner.meta:
             if (self.every_n_iters(runner, self.interval_exp_name)) or (
                     self.by_epoch and self.end_of_epoch(runner)):
                 exp_info = f'Exp name: {runner.meta["exp_name"]}'
                 runner.logger.info(exp_info)
-
-        lr_str = []
+        # Record learning rate and momentum.
+        lr_momentum_str = []
         for key, value in tag.items():
-            if key.startswith('lr'):
+            if key.startswith('lr') or key.startswith('momentum'):
                 log_tag.pop(key)
-                lr_str.append(f'{key}: {value:.3e}')
-        lr_str = ' '.join(lr_str)
-
+                lr_momentum_str.append(f'{key}: {value:.3e}')
+        lr_momentum_str = ' '.join(lr_momentum_str)
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
         if self.by_epoch:
-            # TODO remove len(data_loader)
-            log_str = f'Epoch [{runner.epoch + 1}]' \
-                      f'[{runner.inner_iter + 1}/{len(runner.data_loader)}]\t'
+            log_str = f'Epoch [{cur_epoch}]' \
+                      f'[{cur_iter}/{len(runner.data_loader)}]\t'
         else:
-            log_str = f'Iter [{runner.iter + 1}/{runner.max_iters}]\t'
-        log_str += f'{lr_str}, '
+            log_str = f'Iter [{cur_iter}/{runner.max_iters}]\t'
+        log_str += f'{lr_momentum_str}, '
         # Calculate eta time
         self.time_sec_tot += (tag['time'] * self.interval)
         time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter + 1)
@@ -261,14 +262,17 @@ class LoggerHook(Hook):
             runner (object): The runner of the training process.
         """
         tag = self._collect_info(runner, 'val')
+        cur_iter = self.get_iter(runner, inner_iter=True)
+        cur_epoch = self.get_epoch(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader
         # by epoch: Epoch[val] [4][1000]
         # by iter: Iter[val] [1000]
         if self.by_epoch:
-            log_str = f'Epoch(val) [{runner.epoch}][{runner.inner_iter}]\t'
+            # runner.epoch += 1 has been done before val workflow
+            log_str = f'Epoch(val) [{cur_epoch}][{cur_iter}]\t'
         else:
-            log_str = f'Iter(val) [{runner.inner_iter}]\t'
+            log_str = f'Iter(val) [{cur_iter}]\t'
 
         log_items = []
         for name, val in tag.items():
@@ -410,3 +414,23 @@ class LoggerHook(Hook):
             else:
                 _check_window_size(value)
                 _check_fixed_keys(key, value)
+
+    def get_epoch(self, runner, mode):
+        if mode == 'train':
+            epoch = runner.epoch + 1
+        elif mode == 'val':
+            # normal val mode
+            # runner.epoch += 1 has been done before val workflow
+            epoch = runner.epoch
+        else:
+            raise ValueError(f"runner mode should be 'train' or 'val', "
+                             f'but got {runner.mode}')
+        return epoch
+
+    def get_iter(self, runner, inner_iter=False):
+        """Get the current training iteration step."""
+        if self.by_epoch and inner_iter:
+            current_iter = runner.inner_iter + 1
+        else:
+            current_iter = runner.iter + 1
+        return current_iter
