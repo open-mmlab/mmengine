@@ -97,7 +97,7 @@ class LoggerHook(Hook):
         self.by_epoch = by_epoch
         self.interval = interval
         self.custom_keys = custom_keys if custom_keys is not None else dict()
-        self.composed_writers = None
+        self.composed_writer = None
         self.ignore_last = ignore_last
 
         self.time_sec_tot = 0
@@ -129,8 +129,6 @@ class LoggerHook(Hook):
             runner: The runner of the training process.
         """
         if self.out_dir is not None:
-            self.file_client = FileClient.infer_client(self.file_client_args,
-                                                       self.out_dir)
             # The final `self.out_dir` is the concatenation of `self.out_dir`
             # and the last level directory of `runner.work_dir`
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
@@ -139,9 +137,11 @@ class LoggerHook(Hook):
                 (f'Text logs will be saved to {self.out_dir} by '
                  f'{self.file_client.name} after the training process.'))
 
+        self.json_log_path = osp.join(runner.work_dir,
+                                      f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
         if runner.meta is not None:
-            self.composed_writers.add_text(runner.meta)
+            runner.composed_writer.add_scalars(runner.meta)
 
     def after_train_iter(
             self,
@@ -215,12 +215,19 @@ class LoggerHook(Hook):
                 exp_info = f'Exp name: {runner.meta["exp_name"]}'
                 runner.logger.info(exp_info)
         # Record learning rate and momentum.
-        lr_momentum_str = []
+        lr_str = []
+        momentum_str = []
         for key, value in tag.items():
-            if key.startswith('lr') or key.startswith('momentum'):
+            if key.startswith('lr'):
                 log_tag.pop(key)
-                lr_momentum_str.append(f'{key}: {value:.3e}')
-        lr_momentum_str = ' '.join(lr_momentum_str)
+                lr_str.append(f'{key}: {value:.3e}')
+        lr_str = ' '.join(lr_str)
+        for key, value in tag.items():
+            if key.startswith('momentum'):
+                log_tag.pop(key)
+                momentum_str.append(f'{key}: {value:.3e}')
+        momentum_str = ' '.join(momentum_str)
+        lr_momentum_str = f'{lr_str} {momentum_str}'
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
         if self.by_epoch:
@@ -252,8 +259,9 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        for name, val in tag.items():
-            runner.composed_writers.add_scalar(name, val, runner.iter + 1)
+        runner.composed_writer.add_scalars(self.json_log_path,
+                                            tag,
+                                            runner.iter+1)
 
     def log_val(self, runner: object) -> None:
         """Collect and record training logs which start named with "val/*".
@@ -262,7 +270,9 @@ class LoggerHook(Hook):
             runner (object): The runner of the training process.
         """
         tag = self._collect_info(runner, 'val')
-        cur_iter = len(runner.data_loader)
+        # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
+        eval_iter = len(runner.data_loader)
+        cur_iter = self.get_iter(runner)
         cur_epoch = self.get_epoch(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader
@@ -270,9 +280,9 @@ class LoggerHook(Hook):
         # by iter: Iter[val] [1000]
         if self.by_epoch:
             # runner.epoch += 1 has been done before val workflow
-            log_str = f'Epoch(val) [{cur_epoch}][{cur_iter}]\t'
+            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]\t'
         else:
-            log_str = f'Iter(val) [{cur_iter}]\t'
+            log_str = f'Iter(val) [{eval_iter}]\t'
 
         log_items = []
         for name, val in tag.items():
@@ -282,7 +292,9 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        runner.composed_writers.add_scalars(tag, runner.iter)
+        runner.composed_writer.add_scalars(self.json_log_path,
+                                            tag,
+                                            cur_iter)
 
     def _get_window_size(self, runner: object, window_size: Union[int, str]) \
             -> int:
