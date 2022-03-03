@@ -873,6 +873,9 @@ def collect_results_cpu(result_part: list,
         None  # rank 1
     """
     rank, world_size = get_dist_info()
+    if world_size == 1:
+        return result_part[:size]
+
     # create a tmp dir if it is not specified
     if tmpdir is None:
         MAX_LEN = 512
@@ -948,6 +951,9 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         None  # rank 1
     """
     rank, world_size = get_dist_info()
+    if world_size == 1:
+        return result_part[:size]
+
     # dump result part to tensor with pickle
     part_tensor = torch.tensor(
         bytearray(pickle.dumps(result_part)), dtype=torch.uint8, device='cuda')

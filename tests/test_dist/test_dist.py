@@ -88,6 +88,20 @@ def _test_gather_object_no_dist():
     assert gather_objects[0] == expected
 
 
+def _test_collect_results_non_dist():
+    data = ['foo', {1: 2}]
+    size = 2
+    expected = ['foo', {1: 2}]
+
+    # test `device=cpu`
+    output = dist.collect_results(data, size, device='cpu')
+    assert output == expected
+
+    # test `device=gpu`
+    output = dist.collect_results(data, size, device='cpu')
+    assert output == expected
+
+
 def init_process(rank, world_size, functions, backend='gloo'):
     """Initialize the distributed environment."""
     os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -269,14 +283,21 @@ def _test_collect_results_dist(device):
     else:
         assert output is None
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output = dist.collect_results(data, size, device='cpu', tmpdir=tmpdir)
-        if dist.get_rank() == 0:
-            assert output == expected
-        else:
-            assert output is None
-        assert osp.isfile(osp.join(tmpdir, 'part_0.pkl'))
-        assert osp.isfile(osp.join(tmpdir, 'part_1.pkl'))
+    # test `device=cpu` and `tmpdir is not None`
+    tmpdir = tempfile.mkdtemp()
+    # broadcast tmpdir to all ranks to make it consistent
+    object_list = [tmpdir]
+    dist.broadcast_object_list(object_list)
+    output = dist.collect_results(
+        data, size, device='cpu', tmpdir=object_list[0])
+    if dist.get_rank() == 0:
+        assert output == expected
+    else:
+        assert output is None
+
+    if dist.get_rank() == 0:
+        # object_list[0] will be removed by `dist.collect_results`
+        assert not osp.exists(object_list[0])
 
     # test `device=gpu`
     output = dist.collect_results(data, size, device='gpu')
@@ -296,6 +317,7 @@ def test_non_distributed_env():
     _test_all_reduce_dict_no_dist()
     _test_all_gather_object_no_dist()
     _test_gather_object_no_dist()
+    _test_collect_results_non_dist()
 
 
 def test_gloo_backend():
