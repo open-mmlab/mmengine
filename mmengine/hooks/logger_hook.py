@@ -262,7 +262,7 @@ class LoggerHook(Hook):
             runner (object): The runner of the training process.
         """
         tag = self._collect_info(runner, 'val')
-        cur_iter = self.get_iter(runner, inner_iter=True)
+        cur_iter = len(runner.data_loader)
         cur_epoch = self.get_epoch(runner, 'val')
         # val/test time
         # here 1000 is the length of the val dataloader

@@ -1,7 +1,11 @@
+import logging
+import sys
+import datetime
+
 from mmengine.hooks import LoggerHook
 import pytest
 from mmengine.fileio.file_client import HardDiskBackend
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from collections import OrderedDict
 
@@ -72,8 +76,8 @@ class TestLoggerHook:
         logger_hook._collect_info(runner, mode='train')
 
     @pytest.mark.parametrize('by_epoch', [True, False])
-    def test_log_train(self, by_epoch):
-        runner = MagicMock()
+    def test_log_train(self, by_epoch, capsys):
+        runner = self._setup_runner()
         runner.meta = dict(exp_name='retinanet')
 
         logger_hook = LoggerHook(by_epoch=by_epoch)
@@ -81,32 +85,43 @@ class TestLoggerHook:
         logger_hook.composed_writers = MagicMock()
         logger_hook.time_sec_tot = 1000
         logger_hook.start_iter = 0
-        logger_hook._collect_info = MagicMock(return_value=
-                                              dict(lr=1, time=1, data_time=1))
+        logger_hook._collect_info = \
+            MagicMock(return_value=dict(lr=0.1, momentum=0.9,
+                                        time=1.0, data_time=1.0))
         logger_hook._get_max_memory = MagicMock(return_value='100')
-
         logger_hook.log_train(runner)
+
+        out, _ = capsys.readouterr()
+        if by_epoch:
+            time_avg = 1000 / (10 + 1 - logger_hook.start_iter)
+            eta_second = time_avg * (runner.max_iters - runner.iter - 1)
+            assert out == 'Epoch(val) [1][1/5]\tlr: 0.100 momentum: 0.900, ' \
+                          f'eta: {(50-10)}\n'
+        else:
+            assert out == 'Iter(val) [5]\taccuracy: 0.9000, ' \
+                          'data_time: 1.0000\n'
+
 
     @pytest.mark.parametrize('by_epoch', [True, False])
     def test_log_val(self, by_epoch, capsys):
-        runner = MagicMock()
-        runner.epoch = 1
-
+        runner = self._setup_runner()
         logger_hook = LoggerHook(by_epoch=by_epoch)
-        logger_hook.logger = MagicMock()
         logger_hook.composed_writers = MagicMock()
-        metric = {'val/accuracy': 0.9, 'val/data_time': 1}
+        metric = {'accuracy': 0.9, 'data_time': 1.0}
         logger_hook._collect_info = MagicMock(return_value=metric)
         logger_hook.log_val(runner)
         out, _ = capsys.readouterr()
-        assert out == 'Epoch(val) [1]'
+        if by_epoch:
+            assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
+                          'data_time: 1.0000\n'
+        else:
+            assert out == 'Iter(val) [5]\taccuracy: 0.9000, ' \
+                          'data_time: 1.0000\n'
 
     @pytest.mark.parametrize('window_size', ['epoch', 'global',
                                              'current', 10, 20])
     def test_get_window_size(self, window_size):
-        runner = MagicMock()
-        runner.inner_iter = 1
-        runner.iter = 10
+        runner = self._setup_runner()
         logger_hook = LoggerHook()
         # Test get window size by name.
         if window_size == 'epoch':
@@ -122,7 +137,7 @@ class TestLoggerHook:
 
     def test_parse_custom_keys(self):
         tag = OrderedDict()
-        runner = MagicMock()
+        runner = self._setup_runner()
         log_buffers = OrderedDict(lr=MagicMock(),
                                   loss=MagicMock())
         cfg_dict = dict(lr=dict(method='min'),
@@ -130,7 +145,6 @@ class TestLoggerHook:
                               dict(method='max', log_name='loss_max')])
         logger_hook = LoggerHook()
         logger_hook.custom_keys = cfg_dict
-        logger_hook._statistics_single_key = MagicMock()
         for log_key, log_cfg in cfg_dict.items():
             logger_hook._parse_custom_keys(runner, log_key, log_cfg,
                                            log_buffers, tag)
@@ -141,8 +155,7 @@ class TestLoggerHook:
         assert log_buffers['loss'].mean.assert_called
 
     def test_collect_info(self):
-        runner = MagicMock()
-        runner.message_hub = MagicMock()
+        runner = self._setup_runner()
         logger_hook = LoggerHook()
         # Collect with prefix.
         log_buffers = {'train/time': MagicMock(),
@@ -162,7 +175,24 @@ class TestLoggerHook:
         assert list(tag.keys()) == ['metric']
         log_buffers['val/metric'].current.assert_called()
 
-
+    def _setup_runner(self):
+        runner = MagicMock()
+        runner.epoch = 1
+        runner.data_loader = [0] * 5
+        runner.inner_iter = 1
+        runner.iter = 10
+        runner.max_iter = 50
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        for handler in logger.handlers:
+            if not isinstance(handler, logging.StreamHandler):
+                continue
+        else:
+            logger.addHandler(logging.StreamHandler(stream=sys.stdout))
+        runner.logger = logger
+        runner.message_hub = MagicMock()
+        runner.composed_wirter = MagicMock()
+        return runner
 
 
 
