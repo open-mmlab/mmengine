@@ -10,6 +10,7 @@ import torch.multiprocessing as mp
 
 import mmengine.dist as dist
 from mmengine.dist.dist import sync_random_seed
+from mmengine.utils import TORCH_VERSION, digit_version
 
 
 def _test_all_reduce_non_dist():
@@ -235,6 +236,30 @@ def _test_all_reduce_dict_dist(device):
             }
 
         dist.all_reduce_dict(data, reduce_op)
+
+        for key in data:
+            assert torch.allclose(data[key], expected[key])
+
+    # `torch.cat` in torch1.5 can not concatenate different types so we
+    # fallback to convert them all to float type.
+    if digit_version(TORCH_VERSION) == digit_version('1.5.0'):
+        if dist.get_rank() == 0:
+            data = {
+                'key1': torch.tensor([0, 1], dtype=torch.float32).to(device),
+                'key2': torch.tensor([1, 2], dtype=torch.int32).to(device)
+            }
+        else:
+            data = {
+                'key1': torch.tensor([2, 3], dtype=torch.float32).to(device),
+                'key2': torch.tensor([3, 4], dtype=torch.int32).to(device)
+            }
+
+        expected = {
+            'key1': torch.tensor([2, 4], dtype=torch.float32).to(device),
+            'key2': torch.tensor([4, 6], dtype=torch.float32).to(device)
+        }
+
+        dist.all_reduce_dict(data, 'sum')
 
         for key in data:
             assert torch.allclose(data[key], expected[key])

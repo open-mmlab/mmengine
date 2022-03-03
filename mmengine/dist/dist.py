@@ -501,7 +501,13 @@ def all_reduce_dict(data: Dict[str, Tensor],
         tensor_shapes = [data[k].shape for k in keys]
         tensor_sizes = [data[k].numel() for k in keys]
 
-        flatten_tensor = torch.cat([data[k].flatten() for k in keys])
+        if digit_version(TORCH_VERSION) == digit_version('1.5.0'):
+            # `torch.cat` in torch1.5 can not concatenate different types so
+            # we fallback to convert them all to float type.
+            flatten_tensor = torch.cat(
+                [data[k].flatten().float() for k in keys])
+        else:
+            flatten_tensor = torch.cat([data[k].flatten() for k in keys])
 
         if op == 'mean':
             dist.all_reduce(
