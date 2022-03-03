@@ -95,6 +95,14 @@ def all_gather(data: Tensor,
         Calling ``all_gather`` in non-distributed environment does nothing
         and just returns a list containing :attr:`data` itself.
 
+    Note:
+        Unlike PyTorch ``torch.distributed.all_gather``, :meth:`all_gather` in
+        MMEngine does not pass in an empty list ``gather_list`` but returns
+        the ``gather_list`` directly, which is more convenient.
+
+        - MMEngine: all_gather(data, group) -> gather_list
+        - PyTorch: all_gather(gather_list, data, group) -> None
+
     Args:
         data (Tensor): Tensor to be gathered.
         group (ProcessGroup, optional): The process group to work on. If None,
@@ -155,8 +163,8 @@ def gather(
 
     Note:
         Unlike PyTorch ``torch.distributed.gather``, :meth:`gather` in
-        MMEngine does not pass in a empty list ``gather_list`` but returns
-        the ``gather_list`` directly, which is convenient for the user.
+        MMEngine does not pass in an empty list ``gather_list`` but returns
+        the ``gather_list`` directly, which is more convenient.
 
         - MMEngine: gather(data, dst, group) -> gather_list
         - PyTorch: gather(data, gather_list, dst, group) -> None
@@ -408,12 +416,12 @@ def broadcast_object_list(data: List[Any],
             ``device`` before broadcasting. Default is ``None``.
 
     Note:
-        For NCCL-based processed groups, internal tensor representations
-        of objects must be moved to the GPU device before communication takes
-        place. In this case, the device used is given by
+        For NCCL-based process groups, internal tensor representations of
+        objects must be moved to the GPU device before communication starts.
+        In this case, the device used is given by
         ``torch.cuda.current_device()`` and it is the user's responsibility to
-        ensure that this is set so that each rank has an individual GPU, via
-        ``torch.cuda.set_device()``.
+        ensure that this is correctly set so that each rank has an individual
+        GPU, via ``torch.cuda.set_device()``.
 
     Examples:
         >>> import torch
@@ -509,12 +517,7 @@ def all_reduce_dict(data: Dict[str, Tensor],
         else:
             flatten_tensor = torch.cat([data[k].flatten() for k in keys])
 
-        if op == 'mean':
-            dist.all_reduce(
-                flatten_tensor, op=_get_reduce_op('sum'), group=group)
-            flatten_tensor.div_(world_size)
-        else:
-            dist.all_reduce(flatten_tensor, op=_get_reduce_op(op), group=group)
+        all_reduce(flatten_tensor, op=op, group=group)
 
         split_tensors = [
             x.reshape(shape) for x, shape in zip(
@@ -590,9 +593,9 @@ def all_gather_object(data: Any,
 
     Note:
         Unlike PyTorch ``torch.distributed.all_gather_object``,
-        :meth:`all_gather_object` in
-        MMEngine does not pass in a empty list ``gather_list`` but returns
-        the ``gather_list`` directly, which is convenient for the user.
+        :meth:`all_gather_object` in MMEngine does not pass in an empty list
+        ``gather_list`` but returns the ``gather_list`` directly, which is
+        more convenient.
 
         - MMEngine: all_gather_object(data, group) -> gather_list
         - PyTorch: all_gather_object(gather_list, data, group) -> None
@@ -609,12 +612,12 @@ def all_gather_object(data: Any,
         :attr:`data` itself.
 
     Note:
-        For NCCL-based processed groups, internal tensor representations
-        of objects must be moved to the GPU device before communication takes
-        place. In this case, the device used is given by
+        For NCCL-based process groups, internal tensor representations
+        of objects must be moved to the GPU device before communication starts.
+        In this case, the device used is given by
         ``torch.cuda.current_device()`` and it is the user's responsibility to
-        ensure that this is set so that each rank has an individual GPU, via
-        ``torch.cuda.set_device()``.
+        ensure that this is correctly set so that each rank has an individual
+        GPU, via ``torch.cuda.set_device()``.
 
     Examples:
         >>> import torch
@@ -742,9 +745,9 @@ def gather_object(
 
     Note:
         Unlike PyTorch ``torch.distributed.gather_object``,
-        :meth:`gather_object` in
-        MMEngine does not pass in a empty list ``gather_list`` but returns
-        the ``gather_list`` directly, which is convenient for the user.
+        :meth:`gather_object` in MMEngine does not pass in an empty list
+        ``gather_list`` but returns the ``gather_list`` directly, which is
+        more convenient.
 
         - MMEngine: gather_object(data, dst, group) -> gather_list
         - PyTorch: gather_object(data, gather_list, data, group) -> None
