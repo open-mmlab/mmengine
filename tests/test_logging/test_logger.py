@@ -101,11 +101,38 @@ class TestLogger:
 
     def test_print_log(self, capsys, tmp_path):
         # caplog cannot record MMLogger's logs.
-        # test simple print.
+        # Test simple print.
         print_log('welcome', logger=None)
         out, _ = capsys.readouterr()
         assert out == 'welcome\n'
-        # test silent logger and skip print.
+        # Test silent logger and skip print.
         print_log('welcome', logger='silent')
         out, _ = capsys.readouterr()
         assert out == ''
+        logger = MMLogger.create_instance('test_print_log')
+        # Test using specified logger
+        print_log('welcome', logger=logger)
+        out, _ = capsys.readouterr()
+        match = re.fullmatch(
+            self.regex_time + ' - test_print_log - (.*)INFO(.*) - '
+            'welcome\n', out)
+        assert match is not None
+        # Test access logger by name.
+        print_log('welcome', logger='test_print_log')
+        out, _ = capsys.readouterr()
+        match = re.fullmatch(
+            self.regex_time + ' - test_print_log - (.*)INFO(.*) - '
+            'welcome\n', out)
+        assert match is not None
+        # Test access the latest created logger.
+        print_log('welcome', logger='current')
+        out, _ = capsys.readouterr()
+        match = re.fullmatch(
+            self.regex_time + ' - test_print_log - (.*)INFO(.*) - '
+            'welcome\n', out)
+        assert match is not None
+        # Test invalid logger type.
+        with pytest.raises(TypeError):
+            print_log('welcome', logger=dict)
+        with pytest.raises(ValueError):
+            print_log('welcome', logger='unknown')

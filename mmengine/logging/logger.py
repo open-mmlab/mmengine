@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
-import platform
 import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
@@ -146,7 +145,8 @@ def print_log(msg,
         logger (Logger, str, optional): The logger to be used.
             Some special loggers are:
             - "silent": no message will be printed.
-            - other str: the logger obtained with `get_root_logger(logger)`.
+            - "current": Log message via the latest created logger.
+            - other str: the logger obtained with `MMLogger.get_instance`.
             - None: The `print()` method will be used to print log messages.
         level (int): Logging level. Only available when `logger` is a Logger
             object or "root".
@@ -157,10 +157,16 @@ def print_log(msg,
         logger.log(level, msg)
     elif logger == 'silent':
         pass
+    elif logger == 'current':
+        logger_instance = MMLogger.get_instance(current=True)
+        logger_instance.log(level, msg)
     elif isinstance(logger, str):
-        _logger = MMLogger.get_instance(logger)
-        _logger.log(level, msg)
+        try:
+            _logger = MMLogger.get_instance(logger)
+            _logger.log(level, msg)
+        except AssertionError:
+            raise ValueError(f'MMLogger: {logger} has not been created!')
     else:
         raise TypeError(
             'logger should be either a logging.Logger object, str, '
-            f'"silent" or None, but got {type(logger)}')
+            f'"silent", "current" or None, but got {type(logger)}')
