@@ -123,7 +123,7 @@ class TestRunner(TestCase):
         assert runner.seed is not None
         assert runner.work_dir == self.temp_dir
 
-        # model should full init
+        # model should be full initialized
         assert isinstance(runner.model, (nn.Module, MMDataParallel))
         # lazy init
         assert isinstance(runner.optimzier, dict)
@@ -133,7 +133,7 @@ class TestRunner(TestCase):
         assert isinstance(runner.test_dataloader, dict)
         assert isinstance(runner.evaluator, dict)
 
-        # after run train, train and val loader should init
+        # after runner.train(), train and val loader should be initialized
         # test loader should still be config
         runner.train()
         assert isinstance(runner.test_dataloader, dict)
@@ -145,7 +145,7 @@ class TestRunner(TestCase):
         runner.test()
         assert isinstance(runner.test_dataloader, DataLoader)
 
-        # cannot run test without evaluator cfg
+        # cannot run runner.test() without evaluator cfg
         with self.assertRaisesRegex(AssertionError,
                                     'evaluator does not exist'):
             cfg = copy.deepcopy(self.full_cfg)
@@ -153,7 +153,7 @@ class TestRunner(TestCase):
             runner = Runner.build_from_cfg(cfg)
             runner.test()
 
-        # cannot run train without optimizer cfg
+        # cannot run runner.train() without optimizer cfg
         with self.assertRaisesRegex(AssertionError,
                                     'optimizer does not exist'):
             cfg = copy.deepcopy(self.full_cfg)
@@ -161,7 +161,7 @@ class TestRunner(TestCase):
             runner = Runner.build_from_cfg(cfg)
             runner.train()
 
-        # can run train without validation
+        # can run runner.train() without validation
         cfg = copy.deepcopy(self.full_cfg)
         cfg.validation_cfg = None
         cfg.pop('evaluator')
@@ -186,12 +186,12 @@ class TestRunner(TestCase):
             validation_cfg=dict(interval=1))
         runner.train()
 
-        # cannot run test when test_dataloader is None
+        # cannot run runner.test() when test_dataloader is None
         with self.assertRaisesRegex(AssertionError,
                                     'test dataloader does not exist'):
             runner.test()
 
-        # cannot run train when optimizer is None
+        # cannot run runner.train() when optimizer is None
         with self.assertRaisesRegex(AssertionError,
                                     'optimizer does not exist'):
             runner = Runner(
@@ -204,7 +204,8 @@ class TestRunner(TestCase):
                 validation_cfg=dict(interval=1))
             runner.train()
 
-        # cannot run train when validation_cfg is set but val loader is None
+        # cannot run runner.train() when validation_cfg is set
+        # but val loader is None
         with self.assertRaisesRegex(AssertionError,
                                     'optimizer does not exist'):
             runner = Runner(
@@ -216,7 +217,7 @@ class TestRunner(TestCase):
                 validation_cfg=dict(interval=1))
             runner.train()
 
-        # run train without validation
+        # run runner.train() without validation
         runner = Runner(
             model=model,
             train_dataloader=DataLoader(dataset=ToyDataset()),
