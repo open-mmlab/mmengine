@@ -110,9 +110,8 @@ class Visualizer:
     task_dict: dict = {}
 
     def __init__(self,
-                 metadata: Optional[dict] = None,
                  image: Optional[np.ndarray] = None,
-                 scale: float = 1.0) -> None:
+                 metadata: Optional[dict] = None) -> None:
         self._metadata = metadata
 
         if image is not None:
@@ -273,11 +272,12 @@ class Visualizer:
                 texts will have the same font size. Reference to
                 https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
                 for more details. Defaults to 0.
-            bboxes (Union[dict, List[dict]], optional): The font size of
-                texts. ``font_sizes`` can have the same length with texts or
-                just single value. If ``font_sizes`` is single value, all the
-                texts will have the same font size. Reference to
-                https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
+            bboxes (Union[dict, List[dict]], optional): The bounding box of the
+                texts. If bboxes is None, there are no bounding box around
+                texts. ``bboxes`` can have the same length with texts or
+                just single value. If ``bboxes`` is single value, all
+                the texts will have the same bbox. Reference to
+                https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
         """
 
@@ -297,19 +297,19 @@ class Visualizer:
 
         if isinstance(texts, str):
             texts = [texts]
-        assert isinstance(texts, list), ('`texts` should be str or list(str)'
+        assert isinstance(texts, list), ('`texts` should be str or list(str) '
                                          f' but got {type(texts)}')
         num_text = len(texts)
 
         assert isinstance(positions, (np.ndarray, torch.Tensor)), (
-            '`positions` should be np.ndarray or torch.Tensor'
+            '`positions` should be np.ndarray or torch.Tensor '
             f' but got {type(positions)}')
         if len(positions.shape) == 1:
             positions = positions[None]
         if isinstance(positions, torch.Tensor):
             positions = positions.detach().cpu().numpy()
         assert positions.shape == (num_text, 2), (
-            '`positions` should have the shape of'
+            '`positions` should have the shape of '
             f'({num_text}, 2), but got {positions.shape}')
         if not self._is_posion_valid(positions):
             warnings.warn(
@@ -330,9 +330,9 @@ class Visualizer:
         rotations = check_and_expand(rotations, int, num_text)
         font_families = check_and_expand(font_families, str, num_text)
         if bboxes is None:
-            bboxes = [dict(facecolor=color, alpha=0.6) for color in colors]
+            bboxes = [None for _ in range(num_text)]  # type: ignore
         else:
-            bboxes = check_and_expand(bboxes, dict, num_text)  # type: ignore
+            bboxes = check_and_expand(bboxes, dict, num_text)
 
         for i in range(num_text):
             self.ax.text(
@@ -375,7 +375,7 @@ class Visualizer:
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[int, List[int]]): The
+            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
                 linewidth of lines. ``linewidths`` can have
                 the same length with lines or just single value.
                 If ``linewidths`` is single value, all the lines will
@@ -383,11 +383,11 @@ class Visualizer:
         """
         assert isinstance(
             x_datas, (np.ndarray,
-                      torch.Tensor)), ('`x_datas` should be np.ndarray or'
+                      torch.Tensor)), ('`x_datas` should be np.ndarray or '
                                        f'torch.Tensor but got {type(x_datas)}')
         assert isinstance(
             y_datas, (np.ndarray,
-                      torch.Tensor)), ('`y_datas` should be np.ndarray or'
+                      torch.Tensor)), ('`y_datas` should be np.ndarray or '
                                        f'torch.Tensor but got {type(y_datas)}')
 
         if isinstance(x_datas, torch.Tensor):
@@ -419,7 +419,7 @@ class Visualizer:
         return self
 
     def draw_circles(self,
-                     circle_coord: Union[np.ndarray, torch.Tensor],
+                     center: Union[np.ndarray, torch.Tensor],
                      radius: Union[np.ndarray, torch.Tensor],
                      alpha: Union[float, int] = 0.8,
                      edgecolors: Union[str, List[str]] = 'g',
@@ -430,7 +430,7 @@ class Visualizer:
         """Draw single or multiple circles.
 
         Args:
-            circle_coord (Union[np.ndarray, torch.Tensor]): The x coordinate of
+            center (Union[np.ndarray, torch.Tensor]): The x coordinate of
             each line' start and end points.
             radius (Union[np.ndarray, torch.Tensor]): The y coordinate of
             each line' start and end points.
@@ -447,7 +447,7 @@ class Visualizer:
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[int, List[int]]): The
+            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
                 linewidth of lines. ``linewidths`` can have
                 the same length with lines or just single value.
                 If ``linewidths`` is single value, all the lines will
@@ -456,36 +456,35 @@ class Visualizer:
                 False.
         """
         assert isinstance(
-            circle_coord,
-            (np.ndarray,
-             torch.Tensor)), ('`circle_coord` should be np.ndarray or'
-                              f'torch.Tensor but got {type(circle_coord)}')
+            center, (np.ndarray,
+                     torch.Tensor)), ('`center` should be np.ndarray or '
+                                      f'torch.Tensor but got {type(center)}')
         assert isinstance(
             radius, (np.ndarray,
-                     torch.Tensor)), ('`radius` should be np.ndarray or'
+                     torch.Tensor)), ('`radius` should be np.ndarray or '
                                       f'torch.Tensor but got {type(radius)}')
-        if isinstance(circle_coord, torch.Tensor):
-            circle_coord = circle_coord.detach().cpu().numpy()
+        if isinstance(center, torch.Tensor):
+            center = center.detach().cpu().numpy()
         if isinstance(radius, torch.Tensor):
             radius = radius.detach().cpu().numpy()
-        if len(circle_coord.shape) == 1:
-            circle_coord = circle_coord[None]
-        assert circle_coord.shape == (radius.shape[0], 2), (
-            'The shape of `circle_coord` should be (radius.shape, 2),'
-            f'but got {circle_coord.shape}')
-        if not (self._is_posion_valid(circle_coord -
+        if len(center.shape) == 1:
+            center = center[None]
+        assert center.shape == (radius.shape[0], 2), (
+            'The shape of `center` should be (radius.shape, 2), '
+            f'but got {center.shape}')
+        if not (self._is_posion_valid(center -
                                       np.tile(radius.reshape((-1, 1)), (1, 2)))
                 and self._is_posion_valid(
-                    circle_coord + np.tile(radius.reshape((-1, 1)), (1, 2)))):
+                    center + np.tile(radius.reshape((-1, 1)), (1, 2)))):
             warnings.warn(
                 'Warning: The circle is out of bounds,'
                 ' the drawn circle may not be in the image', UserWarning)
 
-        circle_coord = circle_coord.tolist()
+        center = center.tolist()
         radius = radius.tolist()
         circles = []
-        for i in range(len(circle_coord)):
-            circles.append(Circle(tuple(circle_coord[i]), radius[i]))
+        for i in range(len(center)):
+            circles.append(Circle(tuple(center[i]), radius[i]))
         if is_filling:
             p = PatchCollection(circles, alpha=alpha, facecolor=edgecolors)
         else:
@@ -530,7 +529,7 @@ class Visualizer:
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[int, List[int]]): The
+            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
                 linewidth of lines. ``linewidths`` can have
                 the same length with lines or just single value.
                 If ``linewidths`` is single value, all the lines will
@@ -541,7 +540,7 @@ class Visualizer:
         assert isinstance(
             bboxes,
             (np.ndarray,
-             torch.Tensor)), ('`bboxes` should be np.ndarray or torch.Tensor,'
+             torch.Tensor)), ('`bboxes` should be np.ndarray or torch.Tensor, '
                               f'but got {type(bboxes)}')
         if isinstance(bboxes, torch.Tensor):
             bboxes = bboxes.detach().cpu().numpy()
@@ -596,7 +595,7 @@ class Visualizer:
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[int, List[int]]): The
+            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
                 linewidth of lines. ``linewidths`` can have
                 the same length with lines or just single value.
                 If ``linewidths`` is single value, all the lines will
@@ -605,7 +604,7 @@ class Visualizer:
                 False.
         """
         assert isinstance(polygons, (list, np.ndarray, torch.Tensor)), (
-            '`polygons` should be np.ndarray or torch.Tensor or list,'
+            '`polygons` should be np.ndarray or torch.Tensor or list, '
             f'but got {type(polygons)}')
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -613,7 +612,7 @@ class Visualizer:
             for polygon in polygons:
                 assert polygon.shape[1] == 2, (
                     'The shape of each polygon in `polygons` should be (M, 2),'
-                    f'but got {polygon.shape}')
+                    f' but got {polygon.shape}')
         polygons = [
             polygon.detach().cpu().numpy() if isinstance(
                 polygon, torch.Tensor) else polygon for polygon in polygons
@@ -665,11 +664,14 @@ class Visualizer:
                 Defaults to 0.5.
         """
         assert isinstance(binary_masks, (np.ndarray, torch.Tensor)), (
-            '`binary_masks` should be np.ndarray or torch.Tensor,'
+            '`binary_masks` should be np.ndarray or torch.Tensor, '
             f'but got {type(binary_masks)}')
-
         if isinstance(binary_masks, torch.Tensor):
             binary_masks = binary_masks.detach().cpu().numpy()
+        assert binary_masks.dtype == np.bool_, (
+            'The type of binary_masks should be np.bool_, '
+            f'but got {type(binary_masks)}')
+        binary_masks = binary_masks.astype('uint8') * 255
         img = self.get_image()
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
@@ -681,14 +683,15 @@ class Visualizer:
         assert colors.shape == (binary_masks.shape[0], 3)
         if isinstance(alphas, float):
             alphas = [alphas] * binary_masks.shape[0]
-        binary_masks = binary_masks.astype('uint8')
+
         for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
             binary_mask_complement = cv2.bitwise_not(binary_mask)
             rgb = np.zeros_like(img)
             rgb[...] = color
             rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
-            img = cv2.bitwise_and(img, img, mask=binary_mask_complement)
-            rgb = rgb + img
+            img_complement = cv2.bitwise_and(
+                img, img, mask=binary_mask_complement)
+            rgb = rgb + img_complement
             img = cv2.addWeighted(img, alpha, rgb, 1 - alpha, 0)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.ax.imshow(
@@ -735,7 +738,6 @@ class Visualizer:
                                      cv2.NORM_MINMAX)
             norm_img = np.asarray(norm_img, dtype=np.uint8)
             heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
-            heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
             if img is not None:
                 heat_img = cv2.addWeighted(img, alpha, heat_img, 1 - alpha, 0)
             return heat_img
@@ -768,14 +770,13 @@ class Visualizer:
                 ' mode parameter or set topk greater than 0 to solve '
                 'the error')
             if tensor_chw_channel == 1:
-                return concat_heatmap(tensor_chw, image, alpha)
+                return concat_heatmap(tensor_chw[0], image, alpha)
             else:
                 tensor_chw = tensor_chw.permute(1, 2, 0).numpy()
                 norm_img = np.zeros(tensor_chw.shape)
                 norm_img = cv2.normalize(tensor_chw, None, 0, 255,
                                          cv2.NORM_MINMAX)
-                norm_img = np.asarray(norm_img, dtype=np.uint8)
-                heat_img = cv2.cvtColor(norm_img, cv2.COLOR_BGR2RGB)
+                heat_img = np.asarray(norm_img, dtype=np.uint8)
                 if image is not None:
                     heat_img = cv2.addWeighted(image, alpha, heat_img,
                                                1 - alpha, 0)
@@ -804,4 +805,5 @@ class Visualizer:
             buffer = np.frombuffer(s, dtype='uint8')
             img_rgba = buffer.reshape(height, width, 4)
             rgb, alpha = np.split(img_rgba, [3], axis=2)
-            return rgb.astype('uint8')
+            bgr = cv2.cvtColor(rgb.astype('uint8'), cv2.COLOR_RGB2BGR)
+            return bgr

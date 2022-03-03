@@ -243,6 +243,9 @@ class TestVisualizer(TestCase):
         with pytest.raises(AssertionError):
             visualizer.draw_binary_masks(
                 binary_mask, colors=np.array([1, 22, 4, 45]))
+        binary_mask = np.random.randint(0, 2, size=(10, 10))
+        with pytest.raises(AssertionError):
+            visualizer.draw_binary_masks(binary_mask)
 
     def test_draw_featmap(self):
         visualizer = Visualizer()
