@@ -96,7 +96,7 @@ class LoggerHook(Hook):
                  ):
         self.by_epoch = by_epoch
         self.interval = interval
-        self.custom_keys = custom_keys
+        self.custom_keys = custom_keys if custom_keys is not None else dict()
         self.composed_writers = None
         self.ignore_last = ignore_last
 
@@ -327,53 +327,40 @@ class LoggerHook(Hook):
                 tag[key] = mode_log_buffers[key].current()
         # Update custom keys.
         if mode == 'train':
-            self._parse_custom_keys(runner, mode_log_buffers, tag)
+            for log_key, log_cfg in self.custom_keys.items():
+                self._parse_custom_keys(runner, log_key, log_cfg,
+                                        mode_log_buffers, tag)
         return tag
 
     def _parse_custom_keys(self,
-                          runner: object,
-                          log_buffers: OrderedDict,
-                          tag: OrderedDict) -> None:
+                           runner: object,
+                           log_key: str,
+                           log_cfg: dict,
+                           log_buffers: OrderedDict,
+                           tag: OrderedDict) -> None:
         """Statistics logs in log_buffers according to custom_keys.
 
         Args:
             runner (object): The runner of the training process.
+            log_key (str): log key specified in ``self.custom_keys``
+            log_cfg (dict): A config dict for describing the logging
+                statistics method.
             log_buffers (OrderedDict): All logs for the corresponding phase.
             tag (OrderedDict): A dict which contains all statistic values of
                 logs.
         """
-        cfg_dicts = copy.deepcopy(self.custom_keys)
-        if not isinstance(cfg_dicts, dict):
-            return
-        for key, value in cfg_dicts.items():
-            if isinstance(value, list):
-                for cfg_dict in value:
-                    self._statistics_single_key(runner, key, cfg_dict,
-                                                log_buffers, tag)
-            if isinstance(value, dict):
-                self._statistics_single_key(runner, key, value, log_buffers,
-                                        tag)
-
-    def _statistics_single_key(self, runner: object, key: str, cfg_dict: dict,
-                               log_buffers: OrderedDict, tag) -> None:
-        """Statistics single logs.
-
-        Args:
-            runner (object): The runner of the training process.
-            key (str): The name of log.
-            cfg_dict (dict): A copy of  the value of ``self.custom_keys``.
-            log_buffers (OrderedDict): All logs for the corresponding phase.
-            tag (OrderedDict): A dict which contains all statistic values of
-                logs.
-        """
-        if 'window_size' in cfg_dict:
-            cfg_dict['window_size'] = \
-                self._get_window_size(runner, cfg_dict['window_size'])
-        if 'log_name' in cfg_dict:
-            name = cfg_dict.pop('log_name')
-        else:
-            name = key
-        tag[name] = log_buffers[key].statistics(**cfg_dict)
+        if isinstance(log_cfg, list):
+            for cfg in log_cfg:
+                self._parse_custom_keys(runner, log_key, cfg, log_buffers, tag)
+        if isinstance(log_cfg, dict):
+            if 'window_size' in log_cfg:
+                log_cfg['window_size'] = \
+                    self._get_window_size(runner, log_cfg['window_size'])
+            if 'log_name' in log_cfg:
+                name = log_cfg.pop('log_name')
+            else:
+                name = log_key
+            tag[name] = log_buffers[log_key].statistics(**log_cfg)
 
     def _get_max_memory(self, runner: object) -> int:
         """Returns the maximum GPU memory occupied by tensors in bytes for a

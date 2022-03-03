@@ -116,29 +116,20 @@ class TestLoggerHook:
             with pytest.raises(AssertionError):
                 logger_hook._get_window_size(runner, window_size)
 
-    @pytest.mark.parametrize('cfg_dict', [dict(method='mean',
-                                               log_name='name')])
-    def test_statistics_single_key(self, cfg_dict):
-        tag = OrderedDict()
-        runner = MagicMock()
-        log_buffers = OrderedDict(lr=MagicMock())
-        key = 'lr'
-        logger_hook = LoggerHook()
-        logger_hook._get_window_size = MagicMock()
-        logger_hook._statistics_single_key(runner, key, cfg_dict,
-                                           log_buffers, tag)
-
     def test_parse_custom_keys(self):
         tag = OrderedDict()
         runner = MagicMock()
-        log_buffers = OrderedDict(lr=MagicMock())
+        log_buffers = OrderedDict(lr=MagicMock(),
+                                  loss=MagicMock())
         cfg_dict = dict(lr=dict(method='min'),
                         loss=[dict(method='min'),
                               dict(method='max', log_name='loss_max')])
         logger_hook = LoggerHook()
         logger_hook.custom_keys = cfg_dict
         logger_hook._statistics_single_key = MagicMock()
-        logger_hook._parse_custom_keys(runner, log_buffers, tag)
+        for log_key, log_cfg in cfg_dict.items():
+            logger_hook._parse_custom_keys(runner, log_key, log_cfg,
+                                           log_buffers, tag)
 
     def test_collect_info(self):
         runner = MagicMock()
