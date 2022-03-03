@@ -175,6 +175,19 @@ class TestRunner(TestCase):
             model.parameters(),
             lr=0.01,
         )
+
+        class ToyHook(Hook):
+
+            def before_train_epoch(self, runner):
+                pass
+
+        class ToyHook2(Hook):
+
+            def after_train_epoch(self, runner):
+                pass
+
+        toy_hook = ToyHook()
+        toy_hook2 = ToyHook2()
         runner = Runner(
             model=model,
             train_dataloader=DataLoader(dataset=ToyDataset()),
@@ -183,8 +196,17 @@ class TestRunner(TestCase):
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             evaluator=ToyEvaluator(),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            validation_cfg=dict(interval=1))
+            validation_cfg=dict(interval=1),
+            default_hooks=dict(param_scheduler=toy_hook),
+            custom_hooks=[toy_hook2])
         runner.train()
+        hook_names = [hook.__class__.__name__ for hook in runner.hooks]
+        # test custom hook registered in runner
+        assert 'ToyHook2' in hook_names
+        # test default hook is replaced
+        assert 'ToyHook' in hook_names
+        # test other default hooks
+        assert 'IterTimerHook' in hook_names
 
         # cannot run runner.test() when test_dataloader is None
         with self.assertRaisesRegex(AssertionError,
