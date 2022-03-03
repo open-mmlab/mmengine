@@ -70,8 +70,14 @@ def scandir(dir_path, suffix=None, recursive=False, case_sensitive=True):
             if not entry.name.startswith('.') and entry.is_file():
                 rel_path = osp.relpath(entry.path, root)
                 _rel_path = rel_path if case_sensitive else rel_path.lower()
-                if suffix is None or _rel_path.endswith(suffix):
-                    yield rel_path
+                if suffix is not None:
+                    if isinstance(suffix, tuple):
+                        for suffix_element in suffix:
+                            if entry.name.endswith(suffix_element):
+                                yield rel_path
+                    else:
+                        if entry.name.endswith(suffix):
+                            yield rel_path
             elif recursive and os.path.isdir(entry.path):
                 # scan recursively if entry.path is a directory
                 yield from _scandir(entry.path, suffix, recursive,
