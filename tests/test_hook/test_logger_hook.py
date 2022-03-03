@@ -3,10 +3,12 @@ import pytest
 from mmengine.fileio.file_client import HardDiskBackend
 from unittest.mock import MagicMock, patch
 
+from collections import OrderedDict
+
 
 class TestLoggerHook:
     def test_init(self):
-        logger_hook = LoggerHook()
+        logger_hook = LoggerHook(out_dir='tmp.txt')
         assert logger_hook.by_epoch
         assert logger_hook.interval == 10
         assert logger_hook.custom_keys is None
@@ -53,15 +55,90 @@ class TestLoggerHook:
         logger_hook.composed_writers = MagicMock()
         logger_hook.after_run(runner)
 
-    def test_after_train_iter(self):
+    @pytest.mark.parametrize('by_epoch', [True, False], )
+    def test_after_train_iter(self, by_epoch):
         runner = MagicMock()
-        logger_hook = LoggerHook()
-        logger_hook._collect_info(runner, mode='train')
+        runner.iter = 10
+        runner.inner_iter = 10
+        logger_hook = LoggerHook(ignore_last=False)
+        logger_hook.log_train = MagicMock()
+        logger_hook.after_train_iter(runner)
+        logger_hook.end_of_epoch = MagicMock(return_value=True)
+        logger_hook.after_train_iter(runner)
 
     def test_after_val_epoch(self):
         runner = MagicMock()
         logger_hook = LoggerHook()
         logger_hook._collect_info(runner, mode='train')
+
+    @pytest.mark.parametrize('by_epoch', [True, False])
+    def test_log_train(self, by_epoch):
+        runner = MagicMock()
+        runner.meta = dict(exp_name='retinanet')
+
+        logger_hook = LoggerHook(by_epoch=by_epoch)
+        logger_hook.logger = MagicMock()
+        logger_hook.composed_writers = MagicMock()
+        logger_hook.time_sec_tot = 1000
+        logger_hook.start_iter = 0
+        logger_hook._collect_info = MagicMock(return_value=
+                                              dict(lr=1, time=1, data_time=1))
+        logger_hook._get_max_memory = MagicMock(return_value='100')
+
+        logger_hook.log_train(runner)
+
+    @pytest.mark.parametrize('by_epoch', [True, False])
+    def test_log_val(self, by_epoch):
+        runner = MagicMock()
+
+        logger_hook = LoggerHook(by_epoch=by_epoch)
+        logger_hook.logger = MagicMock()
+        logger_hook.composed_writers = MagicMock()
+        logger_hook._collect_info = MagicMock(return_value=
+                                              dict(lr=1, time=1, data_time=1))
+
+        logger_hook.log_val(runner)
+
+    @pytest.mark.parametrize('window_size', ['epoch', 'global',
+                                             'current', 10, 20])
+    def test_get_window_size(self, window_size):
+        runner = MagicMock()
+        runner.inner_iter = 1
+        runner.iter = 10
+        logger_hook = LoggerHook()
+        if window_size == 'epoch':
+            assert logger_hook._get_window_size(runner, window_size) == 2
+        if window_size == 'global':
+            assert logger_hook._get_window_size(runner, window_size) == 11
+        if window_size == 10:
+            assert logger_hook._get_window_size(runner, window_size) == 10
+        if window_size == 20:
+            with pytest.raises(AssertionError):
+                logger_hook._get_window_size(runner, window_size)
+
+    @pytest.mark.parametrize('cfg_dict', [dict(method='mean',
+                                               log_name='name')])
+    def test_statistics_single_key(self, cfg_dict):
+        tag = OrderedDict()
+        runner = MagicMock()
+        log_buffers = OrderedDict(lr=MagicMock())
+        key = 'lr'
+        logger_hook = LoggerHook()
+        logger_hook._get_window_size = MagicMock()
+        logger_hook._statistics_single_key(runner, key, cfg_dict,
+                                           log_buffers, tag)
+
+    def test_parse_custom_keys(self):
+        tag = OrderedDict()
+        runner = MagicMock()
+        log_buffers = OrderedDict(lr=MagicMock())
+        cfg_dict = dict(lr=dict(method='min'),
+                        loss=[dict(method='min'),
+                              dict(method='max', log_name='loss_max')])
+        logger_hook = LoggerHook()
+        logger_hook.custom_keys = cfg_dict
+        logger_hook._statistics_single_key = MagicMock()
+        logger_hook._parse_custom_keys(runner, log_buffers, tag)
 
     def test_collect_info(self):
         runner = MagicMock()
@@ -75,6 +152,7 @@ class TestLoggerHook:
         runner.message_hub.log_buffers['train/time'].mean.assert_called()
         runner.message_hub.log_buffers['lr'].current.assert_not_called()
         runner.message_hub.log_buffers['train/loss_cls'].mean.assert_called()
+
 
 
 

@@ -222,6 +222,7 @@ class LoggerHook(Hook):
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
         if self.by_epoch:
+            # TODO remove len(data_loader)
             log_str = f'Epoch [{runner.epoch + 1}]' \
                       f'[{runner.inner_iter + 1}/{len(runner.data_loader)}]\t'
         else:
@@ -291,15 +292,14 @@ class LoggerHook(Hook):
             int: Smoothing window for statistical methods.
         """
         if isinstance(window_size, int):
-            assert window_size == self.interval
+            assert window_size == self.interval, \
+                'The value of windows size must equal to LoggerHook.interval'
             return window_size
         else:
             if window_size == 'epoch':
                 return runner.inner_iter + 1
             elif window_size == 'global':
                 return runner.iter + 1
-            elif window_size == 'current':
-                return 1
 
     def _collect_info(self, runner: object, mode: str) -> dict:
         """Collect log information to a dict according to mode.
