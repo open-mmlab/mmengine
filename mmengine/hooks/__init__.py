@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .empty_cache_hook import EmptyCacheHook
 from .checkpoint_hook import CheckpointHook
+from .empty_cache_hook import EmptyCacheHook
 from .hook import Hook
 from .iter_timer_hook import IterTimerHook
 from .optimizer_hook import OptimizerHook
