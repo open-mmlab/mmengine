@@ -800,7 +800,8 @@ def collect_results(results: list,
 
     Args:
         result_part (list[object]): Result list containing result parts
-            to be collected.
+            to be collected. Each item of ``result_part`` should be a picklable
+            object.
         size (int): Size of the results, commonly equal to length of
             the results.
         device (str): Device name. Optional values are 'cpu' and 'gpu'.
@@ -810,6 +811,20 @@ def collect_results(results: list,
 
     Returns:
         list or None: The collected results.
+
+    Examples:
+        >>> # distributed environment
+        >>> # We have 2 process groups, 2 ranks.
+        >>> import mmengine.dist as dist
+        >>> if dist.get_rank() == 0:
+                data = ['foo', {1: 2}]
+            else:
+                data = [24, {'a': 'b'}]
+        >>> size = 4
+        >>> output = dist.collect_results(data, size, device='cpu')
+        >>> output
+        ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
+        None  # rank 1
     """
     if device not in ['gpu', 'cpu']:
         raise NotImplementedError(
@@ -831,8 +846,9 @@ def collect_results_cpu(result_part: list,
     ``tmpdir`` and collect them by the rank 0 worker.
 
     Args:
-        result_part (list[object]): Result list containing result parts
-            to be collected.
+        result_part (list): Result list containing result parts
+            to be collected. Each item of ``result_part`` should be a picklable
+            object.
         size (int): Size of the results, commonly equal to length of
             the results.
         tmpdir (str | None): Temporal directory for collected results to
@@ -841,6 +857,20 @@ def collect_results_cpu(result_part: list,
 
     Returns:
         list or None: The collected results.
+
+    Examples:
+        >>> # distributed environment
+        >>> # We have 2 process groups, 2 ranks.
+        >>> import mmengine.dist as dist
+        >>> if dist.get_rank() == 0:
+                data = ['foo', {1: 2}]
+            else:
+                data = [24, {'a': 'b'}]
+        >>> size = 4
+        >>> output = dist.collect_results_cpu(data, size)
+        >>> output
+        ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
+        None  # rank 1
     """
     rank, world_size = get_dist_info()
     # create a tmp dir if it is not specified
@@ -895,12 +925,27 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
 
     Args:
         result_part (list[object]): Result list containing result parts
-            to be collected.
+            to be collected. Each item of ``result_part`` should be a picklable
+            object.
         size (int): Size of the results, commonly equal to length of
             the results.
 
     Returns:
         list or None: The collected results.
+
+    Examples:
+        >>> # distributed environment
+        >>> # We have 2 process groups, 2 ranks.
+        >>> import mmengine.dist as dist
+        >>> if dist.get_rank() == 0:
+                data = ['foo', {1: 2}]
+            else:
+                data = [24, {'a': 'b'}]
+        >>> size = 4
+        >>> output = dist.collect_results_gpu(data, size)
+        >>> output
+        ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
+        None  # rank 1
     """
     rank, world_size = get_dist_info()
     # dump result part to tensor with pickle
@@ -917,7 +962,8 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
     part_recv_list = [
         part_tensor.new_zeros(shape_max) for _ in range(world_size)
     ]
-    # gather all result part
+    # gather all result part. Note that NCCL does not support gather so use
+    # all_gather
     dist.all_gather(part_recv_list, part_send)
 
     if rank == 0:

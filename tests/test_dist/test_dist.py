@@ -12,28 +12,28 @@ import mmengine.dist as dist
 from mmengine.dist.dist import sync_random_seed
 
 
-def test_all_reduce():
+def _test_all_reduce_non_dist():
     data = torch.arange(2, dtype=torch.int64)
     expected = torch.arange(2, dtype=torch.int64)
     dist.all_reduce(data)
     assert torch.allclose(data, expected)
 
 
-def test_all_gather():
+def _test_all_gather_non_dist():
     data = torch.arange(2, dtype=torch.int64)
     expected = torch.arange(2, dtype=torch.int64)
     output = dist.all_gather(data)
     assert torch.allclose(output[0], expected)
 
 
-def test_gather():
+def _test_gather_non_dist():
     data = torch.arange(2, dtype=torch.int64)
     expected = torch.arange(2, dtype=torch.int64)
     output = dist.gather(data)
     assert torch.allclose(output[0], expected)
 
 
-def test_broadcast():
+def _test_broadcast_non_dist():
     data = torch.arange(2, dtype=torch.int64)
     expected = torch.arange(2, dtype=torch.int64)
     dist.broadcast(data)
@@ -41,11 +41,11 @@ def test_broadcast():
 
 
 @patch('numpy.random.randint', return_value=10)
-def test_sync_random_seed(mock):
+def _test_sync_random_seed_no_dist(mock):
     assert sync_random_seed() == 10
 
 
-def test_broadcast_object_list():
+def _test_broadcast_object_list_no_dist():
     with pytest.raises(AssertionError):
         # input should be list of object
         dist.broadcast_object_list('foo')
@@ -56,7 +56,7 @@ def test_broadcast_object_list():
     assert data == expected
 
 
-def test_all_reduce_dict():
+def _test_all_reduce_dict_no_dist():
     with pytest.raises(AssertionError):
         # input should be dict
         dist.all_reduce_dict('foo')
@@ -74,14 +74,14 @@ def test_all_reduce_dict():
         assert torch.allclose(data[key], expected[key])
 
 
-def test_all_gather_object():
+def _test_all_gather_object_no_dist():
     data = 'foo'
     expected = 'foo'
     gather_objects = dist.all_gather_object(data)
     assert gather_objects[0] == expected
 
 
-def test_gather_object():
+def _test_gather_object_no_dist():
     data = 'foo'
     expected = 'foo'
     gather_objects = dist.gather_object(data)
@@ -111,7 +111,7 @@ def main(functions, world_size=2, backend='gloo'):
         pytest.fail(f'{backend} failed')
 
 
-def _test_all_reduce(device):
+def _test_all_reduce_dist(device):
     for tensor_type, reduce_op in zip([torch.int64, torch.float32],
                                       ['sum', 'mean']):
         if dist.get_rank() == 0:
@@ -128,7 +128,7 @@ def _test_all_reduce(device):
         assert torch.allclose(data, expected)
 
 
-def _test_all_gather(device):
+def _test_all_gather_dist(device):
     if dist.get_rank() == 0:
         data = torch.tensor([0, 1]).to(device)
     else:
@@ -143,7 +143,7 @@ def _test_all_gather(device):
     assert torch.allclose(output[dist.get_rank()], expected[dist.get_rank()])
 
 
-def _test_gather(device):
+def _test_gather_dist(device):
     if dist.get_rank() == 0:
         data = torch.tensor([0, 1]).to(device)
     else:
@@ -162,7 +162,7 @@ def _test_gather(device):
         assert output == []
 
 
-def _test_broadcast(device):
+def _test_broadcast_dist(device):
     if dist.get_rank() == 0:
         data = torch.tensor([0, 1]).to(device)
     else:
@@ -173,7 +173,7 @@ def _test_broadcast(device):
     assert torch.allclose(data, expected)
 
 
-def _test_sync_random_seed(device):
+def _test_sync_random_seed_dist(device):
     with patch.object(
             torch, 'tensor',
             return_value=torch.tensor(1024).to(device)) as mock_tensor:
@@ -182,7 +182,7 @@ def _test_sync_random_seed(device):
     mock_tensor.assert_called()
 
 
-def _test_broadcast_object_list(device):
+def _test_broadcast_object_list_dist(device):
     if dist.get_rank() == 0:
         data = ['foo', 12, {1: 2}]
     else:
@@ -195,7 +195,7 @@ def _test_broadcast_object_list(device):
     assert data == expected
 
 
-def _test_all_reduce_dict(device):
+def _test_all_reduce_dict_dist(device):
     for tensor_type, reduce_op in zip([torch.int64, torch.float32],
                                       ['sum', 'mean']):
         if dist.get_rank() == 0:
@@ -226,7 +226,7 @@ def _test_all_reduce_dict(device):
             assert torch.allclose(data[key], expected[key])
 
 
-def _test_all_gather_object(device):
+def _test_all_gather_object_dist(device):
     if dist.get_rank() == 0:
         data = 'foo'
     else:
@@ -238,7 +238,7 @@ def _test_all_gather_object(device):
     assert output == expected
 
 
-def _test_gather_object(device):
+def _test_gather_object_dist(device):
     if dist.get_rank() == 0:
         data = 'foo'
     else:
@@ -252,15 +252,15 @@ def _test_gather_object(device):
         assert output is None
 
 
-def _test_collect_results(device):
+def _test_collect_results_dist(device):
     if dist.get_rank() == 0:
-        data = ['foo', 12, {1: 2}]
-        size = 3
+        data = ['foo', {1: 2}]
     else:
         data = [24, {'a': 'b'}]
-        size = 2
 
-    expected = ['foo', 12, {1: 2}, 24, {'a': 'b'}]
+    size = 4
+
+    expected = ['foo', 24, {1: 2}, {'a': 'b'}]
 
     # test `device=cpu`
     output = dist.collect_results(data, size, device='cpu')
@@ -287,20 +287,28 @@ def _test_collect_results(device):
 
 
 def test_non_distributed_env():
-    pass
+    _test_all_reduce_non_dist()
+    _test_all_gather_non_dist()
+    _test_gather_non_dist()
+    _test_broadcast_non_dist()
+    _test_sync_random_seed_no_dist()
+    _test_broadcast_object_list_no_dist()
+    _test_all_reduce_dict_no_dist()
+    _test_all_gather_object_no_dist()
+    _test_gather_object_no_dist()
 
 
 def test_gloo_backend():
     functions_to_test = [
-        _test_all_reduce,
-        _test_all_gather,
-        _test_gather,
-        _test_broadcast,
-        _test_sync_random_seed,
-        _test_broadcast_object_list,
-        _test_all_reduce_dict,
-        _test_all_gather_object,
-        _test_gather_object,
+        _test_all_reduce_dist,
+        _test_all_gather_dist,
+        _test_gather_dist,
+        _test_broadcast_dist,
+        _test_sync_random_seed_dist,
+        _test_broadcast_object_list_dist,
+        _test_all_reduce_dict_dist,
+        _test_all_gather_object_dist,
+        _test_gather_object_dist,
     ]
     main(functions_to_test, backend='gloo')
 
@@ -309,13 +317,13 @@ def test_gloo_backend():
     torch.cuda.device_count() < 2, reason='need 2 gpu to test nccl')
 def test_nccl_backend():
     functions_to_test = [
-        _test_all_reduce,
-        _test_all_gather,
-        _test_broadcast,
-        _test_sync_random_seed,
-        _test_broadcast_object_list,
-        _test_all_reduce_dict,
-        _test_all_gather_object,
-        _test_collect_results,
+        _test_all_reduce_dist,
+        _test_all_gather_dist,
+        _test_broadcast_dist,
+        _test_sync_random_seed_dist,
+        _test_broadcast_object_list_dist,
+        _test_all_reduce_dict_dist,
+        _test_all_gather_object_dist,
+        _test_collect_results_dist,
     ]
     main(functions_to_test, backend='nccl')
