@@ -81,7 +81,7 @@ class MessageHub(BaseGlobalAccessible):
             result of ``copy.deepcopy``.
 
         Args:
-            key: The key of LogBuffer.
+            key (str): The key of LogBuffer.
 
         Returns:
             LogBuffer: Corresponding ``LogBuffer`` instance if the key exists.
