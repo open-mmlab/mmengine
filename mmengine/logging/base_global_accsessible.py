@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+from collections import OrderedDict
 from typing import Any, Optional
 
 
@@ -28,14 +29,14 @@ class MetaGlobalAccessible(type):
     """
 
     def __init__(cls, *args):
-        cls._instance_dict = dict()
+        cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
         # Make sure `cls('root')` can be implemented.
         assert 'name' in params[0], \
             f'The arguments of the {cls}.__init__ must contain name argument'
         assert len(params[3]) == len(params[0]) - 1, \
             f'The arguments of the {cls}.__init__ must have default values'
-        cls.root = cls('root')
+        cls.root = cls(name='root')
         super().__init__(*args)
 
 
