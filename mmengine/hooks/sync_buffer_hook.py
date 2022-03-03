@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # from mmengine.dist import get_dist_info, all_reduce
 from collections import OrderedDict
-from typing import Generator, List, Sequence, Union
+from typing import Generator, List
 from unittest.mock import MagicMock, Mock
 
 import torch
@@ -22,14 +22,13 @@ all_reduce = MagicMock()
 
 
 # TODO, may need to move to dist.utils after implementing dist module
-def _allreduce_coalesced(tensors: Union[Sequence[torch.Tensor],
-                                        Generator[torch.Tensor, None, None]],
+def _allreduce_coalesced(tensors: List[torch.Tensor],
                          world_size: int,
                          bucket_size_mb: int = -1) -> None:
     """All-reduce a sequence of tensors as a whole.
 
     Args:
-        tensors (Sequence[torch.Tensor]): A sequence of tensors to be
+        tensors (List[torch.Tensor]): A sequence of tensors to be
             all-reduced.
         world_size (int): The world size of the process group.
         bucket_size_mb (int): The limit of each chunk in megabytes
@@ -56,14 +55,14 @@ def _allreduce_coalesced(tensors: Union[Sequence[torch.Tensor],
             tensor.copy_(synced)
 
 
-def allreduce_params(params: List[torch.Tensor],
+def allreduce_params(params: Generator[torch.Tensor, None, None],
                      coalesce: bool = True,
                      bucket_size_mb: int = -1) -> None:
     """All-reduce parameters.
 
     Args:
-        params (List[torch.Tensor]): List of parameters or buffers of a
-            model.
+        params (Generator[torch.Tensor, None, None]): List of parameters or
+            buffers of a model.
         coalesce (bool, optional): Whether to reduce parameters as a whole.
             Defaults to True.
         bucket_size_mb (int, optional): Size of bucket, the unit is MB.
@@ -72,11 +71,11 @@ def allreduce_params(params: List[torch.Tensor],
     _, world_size = get_dist_info()
     if world_size == 1:
         return
-    params = [param.data for param in params]
+    params_data = [param.data for param in params]
     if coalesce:
-        _allreduce_coalesced(params, world_size, bucket_size_mb)
+        _allreduce_coalesced(params_data, world_size, bucket_size_mb)
     else:
-        for tensor in params:
+        for tensor in params_data:
             all_reduce(tensor.div_(world_size))
 
 
