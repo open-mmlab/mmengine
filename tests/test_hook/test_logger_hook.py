@@ -88,7 +88,7 @@ class TestLoggerHook:
         logger_hook.log_train(runner)
 
     @pytest.mark.parametrize('by_epoch', [True, False])
-    def test_log_val(self, by_epoch):
+    def test_log_val(self, by_epoch,):
         runner = MagicMock()
 
         logger_hook = LoggerHook(by_epoch=by_epoch)
@@ -96,7 +96,6 @@ class TestLoggerHook:
         logger_hook.composed_writers = MagicMock()
         logger_hook._collect_info = MagicMock(return_value=
                                               dict(lr=1, time=1, data_time=1))
-
         logger_hook.log_val(runner)
 
     @pytest.mark.parametrize('window_size', ['epoch', 'global',
@@ -106,12 +105,14 @@ class TestLoggerHook:
         runner.inner_iter = 1
         runner.iter = 10
         logger_hook = LoggerHook()
+        # Test get window size by name.
         if window_size == 'epoch':
             assert logger_hook._get_window_size(runner, window_size) == 2
         if window_size == 'global':
             assert logger_hook._get_window_size(runner, window_size) == 11
         if window_size == 10:
             assert logger_hook._get_window_size(runner, window_size) == 10
+        # Window size must equal to `logger_hook.interval`.
         if window_size == 20:
             with pytest.raises(AssertionError):
                 logger_hook._get_window_size(runner, window_size)
@@ -130,19 +131,36 @@ class TestLoggerHook:
         for log_key, log_cfg in cfg_dict.items():
             logger_hook._parse_custom_keys(runner, log_key, log_cfg,
                                            log_buffers, tag)
+        assert list(tag) == ['lr', 'loss', 'loss_max']
+        assert log_buffers['lr'].min.assert_called
+        assert log_buffers['loss'].min.assert_called
+        assert log_buffers['loss'].max.assert_called
+        assert log_buffers['loss'].mean.assert_called
 
     def test_collect_info(self):
         runner = MagicMock()
         runner.message_hub = MagicMock()
         logger_hook = LoggerHook()
         # Collect with prefix.
-        runner.message_hub.log_buffers = {'train/time': MagicMock(),
-                                          'lr': MagicMock(),
-                                          'train/loss_cls': MagicMock()}
-        logger_hook._collect_info(runner, mode='train')
-        runner.message_hub.log_buffers['train/time'].mean.assert_called()
-        runner.message_hub.log_buffers['lr'].current.assert_not_called()
-        runner.message_hub.log_buffers['train/loss_cls'].mean.assert_called()
+        log_buffers = {'train/time': MagicMock(),
+                       'lr': MagicMock(),
+                       'train/loss_cls': MagicMock(),
+                       'val/metric': MagicMock()}
+        runner.message_hub.log_buffers = log_buffers
+        tag = logger_hook._collect_info(runner, mode='train')
+        # Test training key in tag.
+        assert list(tag.keys()) == ['time', 'loss_cls']
+        # Test statistics lr with `current`, loss and time with 'mean'
+        log_buffers['train/time'].mean.assert_called()
+        log_buffers['train/loss_cls'].mean.assert_called()
+        log_buffers['train/loss_cls'].current.assert_not_called()
+
+        tag = logger_hook._collect_info(runner, mode='val')
+        assert list(tag.keys()) == ['metric']
+        log_buffers['val/metric'].current.assert_called()
+
+
+
 
 
 

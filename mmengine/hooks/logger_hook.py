@@ -328,7 +328,8 @@ class LoggerHook(Hook):
         # Update custom keys.
         if mode == 'train':
             for log_key, log_cfg in self.custom_keys.items():
-                self._parse_custom_keys(runner, log_key, log_cfg,
+                self._parse_custom_keys(runner, log_key,
+                                        copy.deepcopy(log_cfg),
                                         mode_log_buffers, tag)
         return tag
 
