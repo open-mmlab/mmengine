@@ -74,10 +74,10 @@ def scandir(dir_path, suffix=None, recursive=False, case_sensitive=True):
                     if isinstance(suffix, tuple):
                         for suffix_element in suffix:
                             if entry.name.endswith(suffix_element):
-                                yield rel_path
+                                yield _rel_path
                     else:
                         if entry.name.endswith(suffix):
-                            yield rel_path
+                            yield _rel_path
             elif recursive and os.path.isdir(entry.path):
                 # scan recursively if entry.path is a directory
                 yield from _scandir(entry.path, suffix, recursive,
