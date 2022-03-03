@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import time
 from abc import ABCMeta, abstractmethod
 
 import cv2
@@ -47,16 +48,20 @@ class BaseWriter(metaclass=ABCMeta):
                   name,
                   image,
                   data_samples=None,
-                  step=0,
                   show_gt=True,
                   show_pred=True,
+                  step=0,
                   **kwargs):
         pass
 
     def add_scalar(self, name, value, step=0, **kwargs) -> None:
         pass
 
-    def add_scalars(self, name, value_dict, step=0, **kwargs) -> None:
+    def add_scalars(self,
+                    scalar_dict,
+                    step=0,
+                    file_name=None,
+                    **kwargs) -> None:
         pass
 
     def close(self):
@@ -70,13 +75,19 @@ class LocalWriter(BaseWriter):
                  visualizer,
                  save_dir=None,
                  save_img_folder='writer_image',
-                 save_hyperparams_name='hyperparams.txt',
-                 save_scaler_name='scaler.json',
+                 save_hyperparams_name='hyperparams.yaml',
+                 save_scalar_name='scalar.json',
                  img_show=False):
         assert save_dir is not None
+        assert save_hyperparams_name.split('.')[-1] == 'yaml'
+        assert save_scalar_name.split('.')[-1] == 'json'
         super(LocalWriter, self).__init__(visualizer, save_dir)
+        timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        self._save_dir = os.path.join(self._save_dir,
+                                      f'write_data_{timestamp}')
+        os.makedirs(self._save_dir, exist_ok=True)
         self._save_img_folder = os.path.join(self._save_dir, save_img_folder)
-        self._save_scaler_name = os.path.join(self._save_dir, save_scaler_name)
+        self._save_scalar_name = os.path.join(self._save_dir, save_scalar_name)
         self._save_hyperparams_name = os.path.join(self._save_dir,
                                                    save_hyperparams_name)
         self._img_show = img_show
@@ -87,15 +98,15 @@ class LocalWriter(BaseWriter):
 
     def add_hyperparams(self, name, params_dict, **kwargs):
         """Record hyperparameters."""
-        self._dump(self._save_hyperparams_name, 'txt', {name: params_dict})
+        self._dump(self._save_hyperparams_name, 'yaml', {name: params_dict})
 
     def add_image(self,
                   name,
                   image,
                   data_samples=None,
-                  step=0,
                   show_gt=True,
                   show_pred=True,
+                  step=0,
                   **kwargs):
         assert self.visualizer
         self.visualizer.draw(data_samples, image, show_gt, show_pred)
@@ -108,22 +119,27 @@ class LocalWriter(BaseWriter):
                 os.path.join(self._save_img_folder, save_file_name),
                 self.visualizer.get_image())
 
+    def add_scalar(self, name, value, step=0, **kwargs):
+        self._dump(self._save_scalar_name, 'json', {name: value, 'step': step})
+
+    def add_scalars(self,
+                    scalar_dict,
+                    step=0,
+                    file_name=None,
+                    **kwargs) -> None:
+        assert isinstance(scalar_dict, dict)
+        scalar_dict.setdefault('step', step)
+        if file_name is not None:
+            assert file_name.split('.')[-1] == 'json'
+            save_file_name = os.path.join(self._save_dir, file_name)
+        else:
+            save_file_name = self._save_scaler_name
+        self._dump(save_file_name, 'json', scalar_dict)
+
     def _dump(self, file_name, file_format, value_dict):
         with open(file_name, 'a+') as f:
-            if file_format == 'json':
-                dump(value_dict, f, file_format=file_format)
-            else:
-                f.write(value_dict)
+            dump(value_dict, f, file_format=file_format)
             f.write('\n')
-
-    def add_scaler(self, name, value, step=0):
-        self._dump(self._save_scaler_name, 'json', {name: value, 'step': step})
-
-    def add_scalars(self, name, value_dict, step=0, **kwargs) -> None:
-        self._dump(self._save_scaler_name, 'json', {
-            name: value_dict,
-            'step': step
-        })
 
 
 @WRITERS.register_module()
@@ -168,9 +184,9 @@ class WandbWriter(BaseWriter):
                   name,
                   image,
                   data_samples=None,
-                  step=0,
                   show_gt=True,
                   show_pred=True,
+                  step=0,
                   **kwargs):
         if self.visualizer:
             self.visualizer.draw(data_samples, image, show_gt, show_pred)
@@ -179,8 +195,8 @@ class WandbWriter(BaseWriter):
                             step=step,
                             sync=self._sync)
         else:
-            self.add_image_to_wandb(name, image, data_samples, step, show_gt,
-                                    show_pred, **kwargs)
+            self.add_image_to_wandb(name, image, data_samples, show_gt,
+                                    show_pred, step, **kwargs)
 
     def add_scalar(self, name, value, step=0, **kwargs) -> None:
         self._wandb.log({name: value},
@@ -188,19 +204,21 @@ class WandbWriter(BaseWriter):
                         step=step,
                         sync=self._sync)
 
-    def add_scalars(self, name, value_dict, step=0, **kwargs) -> None:
-        self._wandb.log({name: value_dict},
-                        commit=self._commit,
-                        step=step,
-                        sync=self._sync)
+    def add_scalars(self,
+                    scalar_dict,
+                    step=0,
+                    file_name=None,
+                    **kwargs) -> None:
+        self._wandb.log(
+            scalar_dict, commit=self._commit, step=step, sync=self._sync)
 
     def add_image_to_wandb(self,
                            name,
                            image,
                            data_samples,
-                           step,
                            show_gt=True,
                            show_pred=True,
+                           step=0,
                            **kwargs):
         raise NotImplementedError()
 
@@ -252,19 +270,27 @@ class TensorboardWriter(BaseWriter):
                   name,
                   image,
                   data_samples=None,
-                  step=0,
                   show_gt=True,
                   show_pred=True,
+                  step=0,
                   **kwargs):
         assert self.visualizer
         self.visualizer.draw(data_samples, image, show_gt, show_pred)
-        self._tensorboard.add_image(name, self.visualizer.get_image())
+        self._tensorboard.add_image(
+            name, self.visualizer.get_image(), step, dataformats='HWC')
 
     def add_scalar(self, name, value, step=0, **kwargs) -> None:
         self._tensorboard.add_scalar(name, value, step)
 
-    def add_scalars(self, name, value_dict, step=0, **kwargs) -> None:
-        self._tensorboard.add_scalars(name, value_dict, step)
+    def add_scalars(self,
+                    scalar_dict,
+                    step=0,
+                    file_name=None,
+                    **kwargs) -> None:
+        assert isinstance(scalar_dict, dict)
+        for key, value in scalar_dict.items():
+            if 'step' != key:
+                self.add_scalar(key, value, step)
 
     def close(self):
         if hasattr(self, '_tensorboard'):
@@ -273,18 +299,19 @@ class TensorboardWriter(BaseWriter):
 
 class ComposedWriter(BaseGlobalAccessible):
 
-    def __init__(self, writers, name='composed_writer'):
-        super(ComposedWriter, self).__init__(name)
-        assert isinstance(writers, list)
+    def __init__(self, name='composed_writer', writers=None):
+        super().__init__(name)
         self._writer = []
-        for writer in writers:
-            if isinstance(writer, dict):
-                self._writer.append(WRITERS.build(writer))
-            else:
-                assert isinstance(writer, BaseWriter), \
-                    f'writer should be an instance of a subclass of ' \
-                    f'BaseWriter, but got {type(writer)}'
-                self._writer.append(writer)
+        if writers is not None:
+            assert isinstance(writers, list)
+            for writer in writers:
+                if isinstance(writer, dict):
+                    self._writer.append(WRITERS.build(writer))
+                else:
+                    assert isinstance(writer, BaseWriter), \
+                        f'writer should be an instance of a subclass of ' \
+                        f'BaseWriter, but got {type(writer)}'
+                    self._writer.append(writer)
 
     def get_writer(self, index):
         return self._writer[index]
@@ -305,21 +332,25 @@ class ComposedWriter(BaseGlobalAccessible):
                   name,
                   image,
                   data_samples=None,
-                  step=0,
                   show_gt=True,
                   show_pred=True,
+                  step=0,
                   **kwargs):
         for writer in self._writer:
-            writer.add_image(name, image, data_samples, step, show_gt,
-                             show_pred, **kwargs)
+            writer.add_image(name, image, data_samples, show_gt, show_pred,
+                             step, **kwargs)
 
     def add_scalar(self, name, value, step=0, **kwargs) -> None:
         for writer in self._writer:
             writer.add_scalar(name, value, step, **kwargs)
 
-    def add_scalars(self, name, value_dict, step=0, **kwargs) -> None:
+    def add_scalars(self,
+                    scalar_dict,
+                    step=0,
+                    file_name=None,
+                    **kwargs) -> None:
         for writer in self._writer:
-            writer.add_scalars(name, value_dict, step, **kwargs)
+            writer.add_scalars(scalar_dict, step, file_name, **kwargs)
 
     def close(self):
         for writer in self._writer:
