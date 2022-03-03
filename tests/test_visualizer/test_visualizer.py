@@ -5,10 +5,10 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.visualizer import Visualizer
+from mmengine.visualization import Visualizer
 
 
-class TesVisualizer(TestCase):
+class TestVisualizer(TestCase):
 
     def setUp(self):
         """Setup the demo image in every test method.
@@ -16,38 +16,20 @@ class TesVisualizer(TestCase):
         TestCase calls functions in this order: setUp() -> testMethod() ->
         tearDown() -> cleanUp()
         """
-        self.image = np.random.randint(0, 256, size=(10, 10, 3))
-
-    def assert_img_equal(self, img, ref_img, ratio_thr=0.999):
-        assert img.shape == ref_img.shape
-        assert img.dtype == ref_img.dtype
-        area = ref_img.shape[0] * ref_img.shape[1]
-        diff = np.abs(img.astype('int32') - ref_img.astype('int32'))
-        assert np.sum(diff <= 1) / float(area) > ratio_thr
+        self.image = np.random.randint(
+            0, 256, size=(10, 10, 3)).astype('uint8')
 
     def test_init(self):
-        # test `scale` parameter
-        # `scale` must be greater than 0.
-        with pytest.raises(AssertionError):
-            Visualizer(scale=0)
-
-        visualizer = Visualizer(scale=2, image=self.image)
-        out_image = visualizer.get_image()
-        assert (20, 20, 3) == out_image.shape
+        visualizer = Visualizer(image=self.image)
+        visualizer.get_image()
 
     def test_set_image(self):
         visualizer = Visualizer()
         visualizer.set_image(self.image)
-        assert self.assert_img_equal(self.image, visualizer.get_image())
-        # test grayscale image
-        visualizer.set_image(self.image[..., 0])
-        assert self.assert_img_equal(self.image[..., 0],
-                                     visualizer.get_image())
 
     def test_get_image(self):
         visualizer = Visualizer(image=self.image)
-        out_image = visualizer.get_image()
-        assert self.assert_img_equal(self.image, out_image)
+        visualizer.get_image()
 
     def test_draw_bboxes(self):
         visualizer = Visualizer(image=self.image)
@@ -58,7 +40,7 @@ class TesVisualizer(TestCase):
         visualizer.draw_bboxes(torch.tensor([1, 1, 1, 2]))
         bboxes = torch.tensor([[1, 1, 2, 2], [1, 2, 2, 2.5]])
         visualizer.draw_bboxes(
-            bboxes, alpha=0.5, edge_color='b', line_style='-')
+            bboxes, alpha=0.5, edgecolors='b', linestyles='-')
         bboxes = bboxes.numpy()
         visualizer.draw_bboxes(bboxes)
 
@@ -82,31 +64,56 @@ class TesVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
 
         # only support tensor and numpy
-        visualizer.draw_texts('text1', position=torch.tensor([5, 5]))
+        visualizer.draw_texts('text1', positions=torch.tensor([5, 5]))
         visualizer.draw_texts(['text1', 'text2'],
-                              position=torch.tensor([[5, 5], [3, 3]]))
-        visualizer.draw_texts('text1', position=np.array([5, 5]))
+                              positions=torch.tensor([[5, 5], [3, 3]]))
+        visualizer.draw_texts('text1', positions=np.array([5, 5]))
         visualizer.draw_texts(['text1', 'text2'],
-                              position=np.array([[5, 5], [3, 3]]))
-
+                              positions=np.array([[5, 5], [3, 3]]))
+        visualizer.draw_texts(
+            'text1',
+            positions=torch.tensor([5, 5]),
+            bboxes=dict(facecolor='r', alpha=0.6))
         # test out of bounds
         with pytest.warns(
                 UserWarning,
                 match='Warning: The text is out of bounds,'
                 ' the drawn text may not be in the image'):
-            visualizer.draw_texts('text1', position=torch.tensor([15, 5]))
+            visualizer.draw_texts('text1', positions=torch.tensor([15, 5]))
 
         # test incorrect format
         with pytest.raises(AssertionError):
-            visualizer.draw_texts('text', position=[5, 5])
+            visualizer.draw_texts('text', positions=[5, 5])
 
         # test length mismatch
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'text2'],
-                                  position=torch.tensor([5, 5]))
-            visualizer.draw_texts('text1', position=torch.tensor([[5, 5]]))
+                                  positions=torch.tensor([5, 5]))
+        with pytest.raises(AssertionError):
             visualizer.draw_texts(
-                'text1', position=torch.tensor([[5, 5], [3, 3]]))
+                'text1', positions=torch.tensor([[5, 5], [3, 3]]))
+        with pytest.raises(AssertionError):
+            visualizer.draw_texts(['text1', 'test2'],
+                                  positions=torch.tensor([[5, 5], [3, 3]]),
+                                  colors=['r'])
+        with pytest.raises(AssertionError):
+            visualizer.draw_texts(['text1', 'test2'],
+                                  positions=torch.tensor([[5, 5], [3, 3]]),
+                                  verticalalignments=['top'])
+        with pytest.raises(AssertionError):
+            visualizer.draw_texts(['text1', 'test2'],
+                                  positions=torch.tensor([[5, 5], [3, 3]]),
+                                  horizontalalignments=['left'])
+        with pytest.raises(AssertionError):
+            visualizer.draw_texts(['text1', 'test2'],
+                                  positions=torch.tensor([[5, 5], [3, 3]]),
+                                  font_sizes=[1])
+
+        # test type valid
+        with pytest.raises(AssertionError):
+            visualizer.draw_texts(['text1', 'test2'],
+                                  positions=torch.tensor([[5, 5], [3, 3]]),
+                                  font_sizes='b')
 
     def test_draw_lines(self):
         visualizer = Visualizer(image=self.image)
@@ -115,8 +122,14 @@ class TesVisualizer(TestCase):
         visualizer.draw_lines(
             x_datas=torch.tensor([1, 5]), y_datas=torch.tensor([2, 6]))
         visualizer.draw_lines(
-            x_datas=np.array([1, 5, 4]), y_datas=np.array([2, 6, 6]))
-
+            x_datas=np.array([[1, 5], [2, 4]]),
+            y_datas=np.array([[2, 6], [4, 7]]))
+        visualizer.draw_lines(
+            x_datas=np.array([[1, 5], [2, 4]]),
+            y_datas=np.array([[2, 6], [4, 7]]),
+            colors='r',
+            linestyles=['-', '-.'],
+            linewidths=[1, 2])
         # test out of bounds
         with pytest.warns(
                 UserWarning,
@@ -127,33 +140,52 @@ class TesVisualizer(TestCase):
 
         # test incorrect format
         with pytest.raises(AssertionError):
-            visualizer.draw_texts('text', position=[5, 5])
+            visualizer.draw_lines(x_datas=[5, 5], y_datas=torch.tensor([2, 6]))
+            visualizer.draw_lines(y_datas=[5, 5], x_datas=torch.tensor([2, 6]))
 
         # test length mismatch
         with pytest.raises(AssertionError):
             visualizer.draw_lines(
-                x_datas=torch.tensor([1, 5]), y_datas=torch.tensor([2, 6, 7]))
+                x_datas=torch.tensor([1, 5]),
+                y_datas=torch.tensor([[2, 6], [4, 7]]))
 
     def test_draw_circles(self):
         visualizer = Visualizer(image=self.image)
 
         # only support tensor and numpy
-        visualizer.draw_circles(torch.tensor([1, 5]))
-        visualizer.draw_circles(np.array([1, 5]))
+        visualizer.draw_circles(torch.tensor([1, 5]), torch.tensor([1]))
+        visualizer.draw_circles(np.array([1, 5]), np.array([1]))
         visualizer.draw_circles(
             torch.tensor([[1, 5], [2, 6]]), radius=torch.tensor([1, 2]))
+
+        # test filling
+        visualizer.draw_circles(
+            torch.tensor([[1, 5], [2, 6]]),
+            radius=torch.tensor([1, 2]),
+            is_filling=True)
+
+        # test config
+        visualizer.draw_circles(
+            torch.tensor([[1, 5], [2, 6]]),
+            radius=torch.tensor([1, 2]),
+            edgecolors=['g', 'r'],
+            linestyles=['-', '-.'],
+            linewidths=[1, 2])
 
         # test out of bounds
         with pytest.warns(
                 UserWarning,
                 match='Warning: The circle is out of bounds,'
                 ' the drawn circle may not be in the image'):
-            visualizer.draw_circles(torch.tensor([12, 5]))
-            visualizer.draw_circles(torch.tensor([1, 5]), radius=10)
+            visualizer.draw_circles(
+                torch.tensor([12, 5]), radius=torch.tensor([1]))
+            visualizer.draw_circles(
+                torch.tensor([1, 5]), radius=torch.tensor([10]))
 
         # test incorrect format
         with pytest.raises(AssertionError):
-            visualizer.draw_circles([1, 5])
+            visualizer.draw_circles([1, 5], radius=torch.tensor([1]))
+            visualizer.draw_circles(np.array([1, 5]), radius=10)
 
         # test length mismatch
         with pytest.raises(AssertionError):
@@ -169,6 +201,20 @@ class TesVisualizer(TestCase):
             np.array([[1, 1], [2, 2], [3, 4]]),
             torch.tensor([[1, 1], [2, 2], [3, 4]])
         ])
+        visualizer.draw_polygons(
+            polygons=[
+                np.array([[1, 1], [2, 2], [3, 4]]),
+                torch.tensor([[1, 1], [2, 2], [3, 4]])
+            ],
+            is_filling=True)
+        visualizer.draw_polygons(
+            polygons=[
+                np.array([[1, 1], [2, 2], [3, 4]]),
+                torch.tensor([[1, 1], [2, 2], [3, 4]])
+            ],
+            edgecolors=['r', 'g'],
+            linestyles='-',
+            linewidths=[2, 1])
 
         # test out of bounds
         with pytest.warns(
@@ -193,22 +239,25 @@ class TesVisualizer(TestCase):
         with pytest.raises(AssertionError):
             visualizer.draw_binary_masks(binary_mask)
 
-        # test non bool error
-        binary_mask = np.random.randint(0, 2, size=(10, 10))
+        # test color dim
         with pytest.raises(AssertionError):
-            visualizer.draw_binary_masks(binary_mask)
+            visualizer.draw_binary_masks(
+                binary_mask, colors=np.array([1, 22, 4, 45]))
 
     def test_draw_featmap(self):
         visualizer = Visualizer()
-
+        image = np.random.randint(0, 256, size=(3, 3, 3), dtype='uint8')
         # test tensor format
         with pytest.raises(AssertionError, match='Input dimension must be 3'):
             visualizer.draw_featmap(torch.randn(1, 1, 3, 3))
 
         # test mode parameter
-        # mode only supports 'mean' and 'max'
+        # mode only supports 'mean' and 'max' and 'min
         with pytest.raises(AssertionError):
-            visualizer.draw_featmap(torch.randn(2, 3, 3), mode='min')
+            visualizer.draw_featmap(torch.randn(2, 3, 3), mode='xx')
+        # test tensor_chw and img have difference height and width
+        with pytest.raises(AssertionError):
+            visualizer.draw_featmap(torch.randn(2, 3, 3), mode='xx')
 
         # test topk parameter
         with pytest.raises(
@@ -223,11 +272,21 @@ class TesVisualizer(TestCase):
         visualizer.draw_featmap(torch.randn(6, 3, 3), mode='mean')
         visualizer.draw_featmap(torch.randn(1, 3, 3), mode='mean')
         visualizer.draw_featmap(torch.randn(6, 3, 3), mode='max')
+        visualizer.draw_featmap(torch.randn(6, 3, 3), mode='min')
         visualizer.draw_featmap(torch.randn(6, 3, 3), mode='max', topk=10)
         visualizer.draw_featmap(torch.randn(1, 3, 3), mode=None, topk=-1)
-        visualizer.draw_featmap(torch.randn(3, 3, 3), mode=None, topk=-1)
+        visualizer.draw_featmap(
+            torch.randn(3, 3, 3), image=image, mode=None, topk=-1)
         visualizer.draw_featmap(torch.randn(6, 3, 3), mode=None, topk=4)
-        visualizer.draw_featmap(torch.randn(6, 3, 3), mode=None, topk=8)
+        visualizer.draw_featmap(
+            torch.randn(6, 3, 3), image=image, mode=None, topk=8)
+
+        # test gray
+        visualizer.draw_featmap(
+            torch.randn(6, 3, 3),
+            image=np.random.randint(0, 256, size=(3, 3), dtype='uint8'),
+            mode=None,
+            topk=8)
 
     def test_chain_call(self):
         visualizer = Visualizer(image=self.image)
@@ -236,7 +295,7 @@ class TesVisualizer(TestCase):
             draw_texts('test', torch.tensor([5, 5])). \
             draw_lines(x_datas=torch.tensor([1, 5]),
                        y_datas=torch.tensor([2, 6])). \
-            draw_circles(torch.tensor([1, 5])). \
+            draw_circles(torch.tensor([1, 5]), radius=torch.tensor([2])). \
             draw_polygons(torch.tensor([[1, 1], [2, 2], [3, 4]])). \
             draw_binary_masks(binary_mask)
 
@@ -267,6 +326,8 @@ class TesVisualizer(TestCase):
                 def draw_instance2(self, instances, data_type):
                     pass
 
+        Visualizer.task_dict = dict()
+
         class DetVisualizer2(Visualizer):
 
             @Visualizer.register_task('instances')
@@ -277,7 +338,15 @@ class TesVisualizer(TestCase):
             def draw_instance2(self, instances, data_type):
                 pass
 
+            def draw(self,
+                     data_sample,
+                     image: np.ndarray = None,
+                     show_gt: bool = True,
+                     show_pred: bool = True) -> None:
+                return super().draw(data_sample, image, show_gt, show_pred)
+
         det_visualizer = DetVisualizer2()
+        det_visualizer.draw(data_sample={})
         assert len(det_visualizer.task_dict) == 1
         assert 'instances' in det_visualizer.task_dict
         assert det_visualizer.task_dict[
