@@ -44,7 +44,7 @@ class BaseLogBuffer:
         buffer.
 
         Args:
-            log_val (Union[int, float]): The value of log.
+            log_val (int, float): The value of log.
             count (int): The accumulation times of log, defaults to 1. count
                 will be used in smooth statistics.
         """

@@ -44,6 +44,7 @@ class MMFormatter(logging.Formatter):
 
     def _get_prefix(self, level: str, color: bool) -> str:
         """Get the prefix of the target log level.
+
         Args:
             level (str): log level.
             color (bool): Whether to get colorful prefix.
@@ -142,7 +143,7 @@ def print_log(msg,
 
     Args:
         msg (str): The message to be logged.
-        logger (Union[]): The logger to be used.
+        logger (Logger, str, optional): The logger to be used.
             Some special loggers are:
             - "silent": no message will be printed.
             - other str: the logger obtained with `get_root_logger(logger)`.

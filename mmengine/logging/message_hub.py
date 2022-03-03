@@ -31,7 +31,7 @@ class MessageHub(BaseGlobalAccessible):
 
         Args:
             key (str): The key of ``LogBuffer``.
-            value (Union[int, float]): The value of log.
+            value (int, float): The value of log.
             count (int): The accumulation times of log, defaults to 1. count
                 will be used in smooth statistics.
         """
@@ -91,11 +91,11 @@ class MessageHub(BaseGlobalAccessible):
                            f'instance name is: {MessageHub.instance_name}')
         return self._log_buffers[key]
 
-    def get_info(self, key) -> Any:
+    def get_info(self, key: str) -> Any:
         """Get runtime information by key.
 
         Args:
-            key: The key of runtime information.
+            key (str): The key of runtime information.
 
         Returns:
             Any: A copy of corresponding runtime information if the key exists.
