@@ -159,3 +159,4 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             str: The name of instance.
         """
         return self._name
+
