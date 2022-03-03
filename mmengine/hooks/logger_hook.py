@@ -1,24 +1,25 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Optional, Union, Tuple, Sequence
-from collections import OrderedDict
 import datetime
-import os.path as osp
 import os
+import os.path as osp
+from collections import OrderedDict
+from typing import Any, Optional, Sequence, Union
 
 import torch
 import torch.distributed as dist
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
-from mmengine.utils import is_tuple_of, scandir
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
+from mmengine.utils import is_tuple_of, scandir
 
 
 @HOOKS.register_module()
 class LoggerHook(Hook):
-    """In this logger hook, the information will be printed on the terminal
-    and saved in JSON file, tensorboard, wandb .etc.
+    """In this logger hook, the information will be printed on the terminal and
+    saved in JSON file, tensorboard, wandb .etc.
 
     Args:
         by_epoch (bool): Whether EpochBasedRunner is used.
@@ -32,10 +33,10 @@ class LoggerHook(Hook):
             lr. The value of customs_keys is a dict which contains the
             statistics method and corresponding arguments. If ``log_name`` is
             not defined in value, the old key will be overwritten by the
-            sepecified statistics method, otherwise a new log named with
+            specified statistics method, otherwise a new log named with
             ``log_name`` will be recorded.
             - The key in ``LoggerHook.fixed_smooth_keys`` cannot be overwritten
-            because ``time`` and ``iter_time`` will be used to calulate
+            because ``time`` and ``iter_time`` will be used to calculate
             estimated time of arrival. If you want to recount the time, you
             should set ``log_name`` in corresponding values.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
@@ -82,18 +83,18 @@ class LoggerHook(Hook):
     # overwritten.
     fixed_smooth_keys = ('time', 'data_time')
 
-    def __init__(self,
-                 by_epoch: bool = True,
-                 interval: int = 10,
-                 custom_keys: Optional[dict] = None,
-                 ignore_last: bool = True,
-                 interval_exp_name: int = 1000,
-                 out_dir: Optional[str] = None,
-                 out_suffix: Optional[Union[Tuple[str], str]] =
-                 ('.log.json', '.log', '.py'),
-                 keep_local=True,
-                 file_client_args=None,
-                 ):
+    def __init__(
+        self,
+        by_epoch: bool = True,
+        interval: int = 10,
+        custom_keys: Optional[dict] = None,
+        ignore_last: bool = True,
+        interval_exp_name: int = 1000,
+        out_dir: Optional[str] = None,
+        out_suffix: Union[Sequence[str], str] = ('.log.json', '.log', '.py'),
+        keep_local=True,
+        file_client_args=None,
+    ):
         self.by_epoch = by_epoch
         self.interval = interval
         self.custom_keys = custom_keys if custom_keys is not None else dict()
@@ -122,9 +123,9 @@ class LoggerHook(Hook):
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
 
-    def before_run(self, runner: object) -> None:
-        """ Infer ``self.file_client`` from ``self.out_dir``. Initialize
-        the ``self.start_iter`` and record the meta information.
+    def before_run(self, runner: Any) -> None:
+        """Infer ``self.file_client`` from ``self.out_dir``. Initialize the
+        ``self.start_iter`` and record the meta information.
 
         Args:
             runner: The runner of the training process.
@@ -146,13 +147,13 @@ class LoggerHook(Hook):
 
     def after_train_iter(
             self,
-            runner: object,
+            runner: Any,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Record training logs.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -171,18 +172,19 @@ class LoggerHook(Hook):
             # not precise but more stable
             self._log_train(runner)
 
-    def after_val_epoch(self, runner: object) -> None:
+    def after_val_epoch(self, runner: Any) -> None:
         """Record validation logs.
+
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
         """
         self._log_val(runner)
 
-    def after_run(self, runner: object) -> None:
+    def after_run(self, runner: Any) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
         """
         # copy or upload logs to self.out_dir
         if self.out_dir is not None:
@@ -203,11 +205,11 @@ class LoggerHook(Hook):
                         (f'{local_filepath} was removed due to the '
                          '`self.keep_local=False`'))
 
-    def _log_train(self, runner: object) -> None:
+    def _log_train(self, runner: Any) -> None:
         """Collect and record training logs which start named with "train/*".
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
         """
         tag = self._collect_info(runner, 'train')
         # The training log default contains `lr`, `momentum`, `time` and
@@ -218,18 +220,18 @@ class LoggerHook(Hook):
         cur_epoch = self._get_epoch(runner, 'train')
 
         # Record learning rate and momentum.
-        lr_str = []
-        momentum_str = []
+        lr_str_list = []
+        momentum_str_list = []
         for key, value in tag.items():
             if key.startswith('lr'):
                 log_tag.pop(key)
-                lr_str.append(f'{key}: {value:.3e}')
-        lr_str = ' '.join(lr_str)
+                lr_str_list.append(f'{key}: {value:.3e}')
+        lr_str = ' '.join(lr_str_list)
         for key, value in tag.items():
             if key.startswith('momentum'):
                 log_tag.pop(key)
-                momentum_str.append(f'{key}: {value:.3e}')
-        momentum_str = ' '.join(momentum_str)
+                momentum_str_list.append(f'{key}: {value:.3e}')
+        momentum_str = ' '.join(momentum_str_list)
         lr_momentum_str = f'{lr_str} {momentum_str}'
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
@@ -262,15 +264,14 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write logs to local, tensorboad, and wandb.
-        runner.composed_writer.add_scalars(self.json_log_path,
-                                            tag,
-                                            runner.iter+1)
+        runner.composed_writer.add_scalars(self.json_log_path, tag,
+                                           runner.iter + 1)
 
-    def _log_val(self, runner: object) -> None:
+    def _log_val(self, runner: Any) -> None:
         """Collect and record training logs which start named with "val/*".
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
@@ -295,16 +296,14 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        runner.composed_writer.add_scalars(self.json_log_path,
-                                            tag,
-                                            cur_iter)
+        runner.composed_writer.add_scalars(self.json_log_path, tag, cur_iter)
 
-    def _get_window_size(self, runner: object, window_size: Union[int, str]) \
+    def _get_window_size(self, runner: Any, window_size: Union[int, str]) \
             -> int:
         """Parse window_size specified in ``self.custom_keys`` to int value.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
             window_size (Union[int, str]): Smoothing scale of logs.
 
         Returns:
@@ -314,18 +313,21 @@ class LoggerHook(Hook):
             assert window_size == self.interval, \
                 'The value of windows size must equal to LoggerHook.interval'
             return window_size
+        elif window_size == 'epoch':
+            return runner.inner_iter + 1
+        elif window_size == 'global':
+            return runner.iter + 1
         else:
-            if window_size == 'epoch':
-                return runner.inner_iter + 1
-            elif window_size == 'global':
-                return runner.iter + 1
+            raise ValueError('window_size should be int, epoch or global, but '
+                             f'got invalid {window_size}')
 
-    def _collect_info(self, runner: object, mode: str) -> dict:
+    def _collect_info(self, runner: Any, mode: str) -> dict:
         """Collect log information to a dict according to mode.
 
         Args:
-            runner (object): The runner of the training process.
-            mode (str): "train" or "val", which means the prefix attached by runner.
+            runner (Any): The runner of the training process.
+            mode (str): "train" or "val", which means the prefix attached by
+                runner.
 
         Returns:
             dict: Statistical values of logs.
@@ -353,16 +355,12 @@ class LoggerHook(Hook):
                                         mode_log_buffers, tag)
         return tag
 
-    def _parse_custom_keys(self,
-                           runner: object,
-                           log_key: str,
-                           log_cfg: dict,
-                           log_buffers: OrderedDict,
-                           tag: OrderedDict) -> None:
+    def _parse_custom_keys(self, runner: Any, log_key: str, log_cfg: dict,
+                           log_buffers: OrderedDict, tag: OrderedDict) -> None:
         """Statistics logs in log_buffers according to custom_keys.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
             log_key (str): log key specified in ``self.custom_keys``
             log_cfg (dict): A config dict for describing the logging
                 statistics method.
@@ -383,12 +381,12 @@ class LoggerHook(Hook):
                 name = log_key
             tag[name] = log_buffers[log_key].statistics(**log_cfg)
 
-    def _get_max_memory(self, runner: object) -> int:
+    def _get_max_memory(self, runner: Any) -> int:
         """Returns the maximum GPU memory occupied by tensors in bytes for a
         given device.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Any): The runner of the training process.
 
         Returns:
             The maximum GPU memory occupied by tensors in bytes for a given
@@ -404,10 +402,12 @@ class LoggerHook(Hook):
         return mem_mb.item()
 
     def _check_custom_keys(self) -> None:
-        """Check the legality of ``self.custom_keys``. If
-        ``self.by_epoch==False``, ``window_size`` should not be "epoch". The
+        """Check the legality of ``self.custom_keys``.
+
+        If ``self.by_epoch==False``, ``window_size`` should not be "epoch". The
         key of ``self.fixed_smooth_keys`` cannot be overwritten.
         """
+
         def _check_window_size(item):
             if not self.by_epoch:
                 assert item['window_size'] != 'epoch', \
@@ -422,13 +422,22 @@ class LoggerHook(Hook):
         for key, value in self.custom_keys.items():
             if isinstance(value, Sequence):
                 [(_check_window_size(item), _check_fixed_keys(key, item))
-                    for item in value]
+                 for item in value]
 
             else:
                 _check_window_size(value)
                 _check_fixed_keys(key, value)
 
-    def _get_epoch(self, runner, mode):
+    def _get_epoch(self, runner: Any, mode: str) -> int:
+        """Get epoch according to mode.
+
+        Args:
+            runner (Any): The runner of the training process.
+            mode (str): Train or val.
+
+        Returns:
+            int: The current epoch.
+        """
         if mode == 'train':
             epoch = runner.epoch + 1
         elif mode == 'val':
@@ -440,8 +449,16 @@ class LoggerHook(Hook):
                              f'but got {runner.mode}')
         return epoch
 
-    def _get_iter(self, runner, inner_iter=False):
-        """Get the current training iteration step."""
+    def _get_iter(self, runner, inner_iter=False) -> int:
+        """Get the current training iteration step.
+        Args:
+            runner (Any): The runner of the training process.
+            inner_iter (bool): Whether to return the inner iter of an epoch.
+                Defaults to False.
+
+        Returns:
+            int: The current global iter or inner iter.
+        """
         if self.by_epoch and inner_iter:
             current_iter = runner.inner_iter + 1
         else:

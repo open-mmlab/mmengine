@@ -1,18 +1,20 @@
-import logging
-import sys
+# Copyright (c) OpenMMLab. All rights reserved.
 import datetime
-import pytest
+import logging
 import os.path as osp
-from unittest.mock import MagicMock, patch
+import sys
 from collections import OrderedDict
+from unittest.mock import MagicMock, patch
 
+import pytest
 import torch
 
-from mmengine.hooks import LoggerHook
 from mmengine.fileio.file_client import HardDiskBackend
+from mmengine.hooks import LoggerHook
 
 
 class TestLoggerHook:
+
     def test_init(self):
         logger_hook = LoggerHook(out_dir='tmp.txt')
         assert logger_hook.by_epoch
@@ -31,17 +33,19 @@ class TestLoggerHook:
         # time cannot be overwritten.
         with pytest.raises(AssertionError):
             LoggerHook(custom_keys=dict(time=dict(method='max')))
-        LoggerHook(custom_keys=dict(time=[dict(method='max',
-                                              log_name='time_max'),
-                                          dict(method='min',
-                                               log_name='time_min')
-                                          ]))
+        LoggerHook(
+            custom_keys=dict(time=[
+                dict(method='max', log_name='time_max'),
+                dict(method='min', log_name='time_min')
+            ]))
+        # Epoch window_size cannot be used when `LoggerHook.by_epoch=False`
         with pytest.raises(AssertionError):
-            LoggerHook(by_epoch=False,
-                       custom_keys=dict(
-                           time=dict(method='max',
-                                     log_name='time_max',
-                                     window_size='epoch')))
+            LoggerHook(
+                by_epoch=False,
+                custom_keys=dict(
+                    time=dict(
+                        method='max', log_name='time_max',
+                        window_size='epoch')))
         with pytest.raises(ValueError):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
@@ -70,8 +74,7 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.work_dir = work_dir
 
-        logger_hook = LoggerHook(out_dir=str(tmp_path),
-                                 keep_local=False)
+        logger_hook = LoggerHook(out_dir=str(tmp_path), keep_local=False)
         logger_hook.out_dir = str(out_dir)
         logger_hook.logger = MagicMock()
         logger_hook.composed_writers = MagicMock()
@@ -120,7 +123,8 @@ class TestLoggerHook:
         runner.logger = MagicMock()
         logger_hook._log_train = MagicMock()
         logger_hook.after_train_iter(runner)
-        runner.logger.info.assert_called_with(f'Exp name: {runner.meta["exp_name"]}')
+        runner.logger.info.assert_called_with(
+            f'Exp name: {runner.meta["exp_name"]}')
 
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
@@ -142,42 +146,38 @@ class TestLoggerHook:
         logger_hook.json_log_path = 'tmp.json'
 
         # Prepare training information.
-        train_infos = dict(lr=0.1, momentum=0.9,
-                           time=1.0, data_time=1.0, loss_cls=1.0)
+        train_infos = dict(
+            lr=0.1, momentum=0.9, time=1.0, data_time=1.0, loss_cls=1.0)
         logger_hook._collect_info = MagicMock(return_value=train_infos)
         logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
         runner.composed_writer.add_scalars.assert_called_with(
             'tmp.json',
-            dict(lr=0.1,
-                 momentum=0.9,
-                 time=1.0,
-                 data_time=1.0,
-                 loss_cls=1.0),
+            dict(lr=0.1, momentum=0.9, time=1.0, data_time=1.0, loss_cls=1.0),
             11)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
-        time_avg = logger_hook.time_sec_tot / \
-                   (runner.iter + 1 - logger_hook.start_iter)
+        time_avg = logger_hook.time_sec_tot / (
+            runner.iter + 1 - logger_hook.start_iter)
         eta_second = time_avg * (runner.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
             assert out == 'Epoch [2][2/5]\t' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
-                          f"eta: {eta_str}, " \
+                          f'eta: {eta_str}, ' \
                           f"time: {train_infos['time']:.3f}, " \
                           f"data_time: {train_infos['data_time']:.3f}, " \
-                          f"memory: 100, " \
+                          f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
         else:
             assert out == 'Iter [11/50]\t' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
-                          f"eta: {eta_str}, " \
+                          f'eta: {eta_str}, ' \
                           f"time: {train_infos['time']:.3f}, " \
                           f"data_time: {train_infos['data_time']:.3f}, " \
-                          f"memory: 100, " \
+                          f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
 
     @pytest.mark.parametrize('by_epoch', [True, False])
@@ -191,9 +191,8 @@ class TestLoggerHook:
         logger_hook._log_val(runner)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
-        runner.composed_writer.add_scalars.assert_called_with('tmp.json',
-                                                              metric,
-                                                              11)
+        runner.composed_writer.add_scalars.assert_called_with(
+            'tmp.json', metric, 11)
         if by_epoch:
             assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
@@ -213,14 +212,19 @@ class TestLoggerHook:
         with pytest.raises(AssertionError):
             logger_hook._get_window_size(runner, 20)
 
+        with pytest.raises(ValueError):
+            logger_hook._get_window_size(runner, 'unknwon')
+
     def test_parse_custom_keys(self):
         tag = OrderedDict()
         runner = self._setup_runner()
-        log_buffers = OrderedDict(lr=MagicMock(),
-                                  loss=MagicMock())
-        cfg_dict = dict(lr=dict(method='min'),
-                        loss=[dict(method='min', window_size='global'),
-                              dict(method='max', log_name='loss_max')])
+        log_buffers = OrderedDict(lr=MagicMock(), loss=MagicMock())
+        cfg_dict = dict(
+            lr=dict(method='min'),
+            loss=[
+                dict(method='min', window_size='global'),
+                dict(method='max', log_name='loss_max')
+            ])
         logger_hook = LoggerHook()
         logger_hook.custom_keys = cfg_dict
         for log_key, log_cfg in cfg_dict.items():
@@ -234,15 +238,16 @@ class TestLoggerHook:
 
     def test_collect_info(self):
         runner = self._setup_runner()
-        logger_hook = LoggerHook(custom_keys=dict(time=
-                                                  dict(method='max',
-                                                       log_name='time_max')))
+        logger_hook = LoggerHook(
+            custom_keys=dict(time=dict(method='max', log_name='time_max')))
         logger_hook._parse_custom_keys = MagicMock()
         # Collect with prefix.
-        log_buffers = {'train/time': MagicMock(),
-                       'lr': MagicMock(),
-                       'train/loss_cls': MagicMock(),
-                       'val/metric': MagicMock()}
+        log_buffers = {
+            'train/time': MagicMock(),
+            'lr': MagicMock(),
+            'train/loss_cls': MagicMock(),
+            'val/metric': MagicMock()
+        }
         runner.message_hub.log_buffers = log_buffers
         tag = logger_hook._collect_info(runner, mode='train')
         # Test parse custom_keys
