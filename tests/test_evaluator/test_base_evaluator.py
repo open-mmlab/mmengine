@@ -5,6 +5,7 @@ from unittest import TestCase
 
 import numpy as np
 
+from mmengine import evaluator
 from mmengine.evaluator import BaseEvaluator, ComposedEvaluator
 from mmengine.registry import EVALUATORS
 
@@ -14,8 +15,9 @@ class ToyEvaluator(BaseEvaluator):
 
     def __init__(self,
                  collect_device: str = 'cpu',
+                 prefix: str = 'Toy',
                  dummy_metrics: Optional[Dict] = None):
-        super().__init__(collect_device=collect_device)
+        super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
 
     def process(self, data_samples, predictions):
@@ -70,8 +72,8 @@ class TestBaseEvaluator(TestCase):
             evaluator.process(data_samples, predictions)
 
         metrics = evaluator.evaluate(size=size)
-        self.assertAlmostEqual(metrics['accuracy'], 1.0)
-        self.assertEqual(metrics['size'], size)
+        self.assertAlmostEqual(metrics['Toy.accuracy'], 1.0)
+        self.assertEqual(metrics['Toy.size'], size)
 
         # Test empty results
         cfg = dict(type='ToyEvaluator', dummy_metrics=dict(accuracy=1.0))
@@ -96,9 +98,9 @@ class TestBaseEvaluator(TestCase):
 
         metrics = evaluator.evaluate(size=size)
 
-        self.assertAlmostEqual(metrics['accuracy'], 1.0)
-        self.assertAlmostEqual(metrics['mAP'], 0.0)
-        self.assertEqual(metrics['size'], size)
+        self.assertAlmostEqual(metrics['Toy.accuracy'], 1.0)
+        self.assertAlmostEqual(metrics['Toy.mAP'], 0.0)
+        self.assertEqual(metrics['Toy.size'], size)
 
     def test_ambiguate_metric(self):
 
@@ -134,3 +136,8 @@ class TestBaseEvaluator(TestCase):
 
         for _evaluator in evaluator.evaluators:
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
+
+    def test_prefix(self):
+        cfg = dict(type='ToyEvaluator', prefix=None)
+        with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
+            evaluator = self.build_evaluator(cfg)

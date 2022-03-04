@@ -25,9 +25,15 @@ class BaseEvaluator(metaclass=ABCMeta):
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
+        prefix (str, optional): The prefix that will be added in the metric
+            names to disambiguate homonymous metrics of different evaluators.
+            A subclass's `__init__()` method should have the argument `prefix`
+            with a meaningful default value.
     """
 
-    def __init__(self, collect_device: str = 'cpu') -> None:
+    def __init__(self,
+                 collect_device: str = 'cpu',
+                 prefix: Optional[str] = None) -> None:
         self._dataset_meta: Union[None, dict] = None
         self.collect_device = collect_device
         self.results: List[Any] = []
@@ -35,6 +41,11 @@ class BaseEvaluator(metaclass=ABCMeta):
         rank, world_size = get_dist_info()
         self.rank = rank
         self.world_size = world_size
+
+        if prefix is None:
+            warnings.warn('The prefix is not set in evaluator class '
+                          f'{self.__class__.__name__}.')
+        self.prefix = prefix
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -96,9 +107,17 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         if self.rank == 0:
             # TODO: replace with mmengine.dist.master_only
-            metrics = [self.compute_metrics(results)]
+            metrics = self.compute_metrics(results)
+            # Add prefix to metric names
+            if self.prefix:
+                metrics = {
+                    '.'.join((self.prefix, k)): v
+                    for k, v in metrics.items()
+                }
+            metrics = [metrics]
         else:
             metrics = [None]  # type: ignore
+
         # TODO: replace with mmengine.dist.broadcast
         if self.world_size > 1:
             metrics = dist.broadcast_object_list(metrics)
