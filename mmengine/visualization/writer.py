@@ -2,7 +2,6 @@
 import os
 import time
 from abc import ABCMeta, abstractmethod
-from os import PathLike
 from typing import Any, List, Optional, Union
 
 import cv2
@@ -32,7 +31,7 @@ class BaseWriter(metaclass=ABCMeta):
 
     def __init__(self,
                  visualizer: Optional[Union[dict, 'Visualizer']] = None,
-                 save_dir: Optional[Union[str, PathLike[str]]] = None):
+                 save_dir: Optional[str] = None):
         self._save_dir = save_dir
         self._visualizer = visualizer
         if visualizer:
@@ -72,17 +71,15 @@ class BaseWriter(metaclass=ABCMeta):
         """
         pass
 
-    def add_graph(self,
-                  model: torch.nn.Module,
-                  input_array: Optional[Union[torch.Tensor,
-                                              List[torch.Tensor]]] = None,
-                  **kwargs) -> None:
+    def add_graph(self, model: torch.nn.Module,
+                  input_tensor: Union[torch.Tensor,
+                                      List[torch.Tensor]], **kwargs) -> None:
         """Record graph.
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed. Default: None.
+            input_tensor (torch.Tensor or list of torch.Tensor): A variable
+                or a tuple of variables to be fed.
         """
         pass
 
@@ -170,10 +167,10 @@ class LocalWriter(BaseWriter):
             local_writer.visualizer.get_image())
 
     Args:
-        visualizer (dict, :obj:`Visualizer`): Visualizer instance or
-            dictionary.
-        save_dir (str, optional): The root path of the save file
+        save_dir (str): The root path of the save file
             for write data.
+        visualizer (dict, :obj:`Visualizer`, optional): Visualizer
+            instance or dictionary. Default: None
         save_img_folder (str): The save image folder name.
             Default: 'writer_image'.
         save_hyperparams_name (str): The save hyperparam file name.
@@ -185,13 +182,12 @@ class LocalWriter(BaseWriter):
     """
 
     def __init__(self,
-                 visualizer: Optional[Union[dict, 'Visualizer']],
-                 save_dir: Union[str, PathLike[str]],
+                 save_dir: str,
+                 visualizer: Optional[Union[dict, 'Visualizer']] = None,
                  save_img_folder: str = 'writer_image',
                  save_hyperparams_name: str = 'hyperparams.yaml',
                  save_scalar_name: str = 'scalars.json',
                  img_show: bool = False):
-        assert save_dir is not None
         assert save_hyperparams_name.split('.')[-1] == 'yaml'
         assert save_scalar_name.split('.')[-1] == 'json'
         super(LocalWriter, self).__init__(visualizer, save_dir)
@@ -216,6 +212,7 @@ class LocalWriter(BaseWriter):
         Args:
             params_dict (dict): The dict of hyperparameters to save.
         """
+        assert isinstance(params_dict, dict)
         self._dump(self._save_hyperparams_name, 'yaml', params_dict)
 
     def add_image(self,
@@ -239,8 +236,8 @@ class LocalWriter(BaseWriter):
                 Default: True.
             step (int): Global step value to record. Default: 0.
         """
-
-        assert self.visualizer
+        assert self.visualizer, 'Please instantiate the visualizer ' \
+                                'object with initialization parameters.'
         self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
         if self._img_show:
             self.visualizer.show()
@@ -346,7 +343,7 @@ class WandbWriter(BaseWriter):
                  init_kwargs: Optional[dict] = None,
                  commit: Optional[bool] = True,
                  visualizer: Optional[Union[dict, 'Visualizer']] = None,
-                 save_dir: Optional[Union[str, PathLike[str]]] = None):
+                 save_dir: Optional[str] = None):
         super(WandbWriter, self).__init__(visualizer, save_dir)
         self._commit = commit
         self._wandb = self._setup_env(init_kwargs)
@@ -390,6 +387,7 @@ class WandbWriter(BaseWriter):
                 is the name of the hyper parameter and it's
                 corresponding value.
         """
+        assert isinstance(params_dict, dict)
         self._wandb.log(params_dict, commit=self._commit)
 
     def add_image(self,
@@ -504,18 +502,17 @@ class TensorboardWriter(BaseWriter):
             tensorboard_writer.visualizer.get_image())
 
     Args:
-        visualizer (dict, :obj:`Visualizer`): Visualizer instance
-            or dictionary.
-        save_dir (str, optional): The root path of the save file
+        save_dir (str): The root path of the save file
             for write data.
+        visualizer (dict, :obj:`Visualizer`, optional): Visualizer instance
+            or dictionary. Default: None.
         log_dir (str): Save directory location. Default: 'tf_writer'.
     """
 
     def __init__(self,
-                 visualizer: Optional[Union[dict, 'Visualizer']],
-                 save_dir: Union[str, PathLike[str]],
+                 save_dir: str,
+                 visualizer: Optional[Union[dict, 'Visualizer']] = None,
                  log_dir: str = 'tf_writer'):
-        assert save_dir is not None
         super(TensorboardWriter, self).__init__(visualizer, save_dir)
         self._tensorboard = self._setup_env(log_dir)
 
@@ -551,24 +548,24 @@ class TensorboardWriter(BaseWriter):
         """Return Tensorboard object."""
         return self._tensorboard
 
-    def add_graph(self,
-                  model: torch.nn.Module,
-                  input_array: Optional[Union[torch.Tensor,
-                                              List[torch.Tensor]]] = None,
-                  **kwargs) -> None:
+    def add_graph(self, model: torch.nn.Module,
+                  input_tensor: Union[torch.Tensor,
+                                      List[torch.Tensor]], **kwargs) -> None:
         """Record graph data to tensorboard.
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed. Default: None.
+            input_tensor (torch.Tensor or list of torch.Tensor): A variable
+                or a tuple of variables to be fed.
         """
-        if isinstance(input_array, list):
-            for array in input_array:
+        if isinstance(input_tensor, list):
+            for array in input_tensor:
                 assert array.ndim == 4
+                assert isinstance(array, torch.Tensor)
         else:
-            assert input_array and input_array.ndim == 4
-        self._tensorboard.add_graph(model, input_array)
+            assert isinstance(input_tensor,
+                              torch.Tensor) and input_tensor.ndim == 4
+        self._tensorboard.add_graph(model, input_tensor)
 
     def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
         """Record a set of hyperparameters to be compared in TensorBoard.
@@ -579,6 +576,7 @@ class TensorboardWriter(BaseWriter):
                   The type of the value can be one of `bool`, `string`,
                    `float`, `int`, or `None`.
         """
+        assert isinstance(params_dict, dict)
         self._tensorboard.add_hparams(params_dict, {})
 
     def add_image(self,
@@ -671,7 +669,7 @@ class ComposedWriter(BaseGlobalAccessible):
     def __init__(self,
                  name: str = 'composed_writer',
                  writers: Optional[List[Union[dict, 'BaseWriter']]] = None):
-        super(ComposedWriter, self).__init__(name)
+        super().__init__(name)
         self._writer = []
         if writers is not None:
             assert isinstance(writers, list)
