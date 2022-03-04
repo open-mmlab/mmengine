@@ -64,7 +64,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         self._name = name
 
     @classmethod
-    def create_instance(cls, name: str = None, *args, **kwargs) -> Any:
+    def create_instance(cls, name: str = '', *args, **kwargs) -> Any:
         """Create subclass instance by name, and subclass cannot create
         instances with duplicated names. The created instance will be stored in
         ``cls._instance_dict``, and can be accessed by ``get_instance``.
@@ -79,14 +79,14 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             root
 
         Args:
-            name (str, optional): The name of instance. Defaults to None.
+            name (str): The name of instance. Defaults to ''.
 
         Returns:
             object: The subclass instance.
         """
         instance_dict = cls._instance_dict
         # Create instance and fill the instance in the `instance_dict`.
-        if name is not None:
+        if name:
             assert name not in instance_dict, f'{cls} cannot be created by ' \
                                               f'{name} twice.'
             instance = cls(name, *args, **kwargs)
@@ -102,7 +102,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             return cls.root
 
     @classmethod
-    def get_instance(cls, name: str = None, current: bool = False) -> Any:
+    def get_instance(cls, name: str = '', current: bool = False) -> Any:
         """Get subclass instance by name if the name exists. if name is not
         specified, this method will return latest created instance of root
         instance.
@@ -124,10 +124,10 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             name: name3, please make sure you have created it
 
         Args:
-            name (str, optional): The name of instance. Defaults to None.
+            name (str): The name of instance. Defaults to None.
                 current(bool): Whether to return the latest created instance
                 or the root instance, if name is not spicified. Defaults to
-                None.
+                ''.
             current (bool): Whether to return the latest created instance.
                 Defaults to False.
         Returns:
@@ -136,7 +136,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         """
         instance_dict = cls._instance_dict
         # Get the instance by name.
-        if name is not None:
+        if name:
             assert name in instance_dict, \
                 f'Cannot get {cls} by name: {name}, please make sure you ' \
                 'have created it'
