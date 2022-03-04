@@ -700,17 +700,15 @@ class ComposedWriter(BaseGlobalAccessible):
         for writer in self._writer:
             writer.add_hyperparams(params_dict, **kwargs)
 
-    def add_graph(self,
-                  model: torch.nn.Module,
-                  input_array: Optional[Union[torch.Tensor,
-                                              List[torch.Tensor]]] = None,
-                  **kwargs) -> None:
+    def add_graph(self, model: torch.nn.Module,
+                  input_array: Union[torch.Tensor,
+                                     List[torch.Tensor]], **kwargs) -> None:
         """Record graph data.
 
         Args:
             model (torch.nn.Module): Model to draw.
             input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed. Default: None.
+                or a tuple of variables to be fed.
         """
         for writer in self._writer:
             writer.add_graph(model, input_array, **kwargs)

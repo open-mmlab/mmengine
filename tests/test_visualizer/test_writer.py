@@ -11,7 +11,8 @@ import torch.nn as nn
 
 from mmengine.fileio import load
 from mmengine.registry import VISUALIZERS, WRITERS
-from mmengine.visualization import LocalWriter, TensorboardWriter, WandbWriter
+from mmengine.visualization import (ComposedWriter, LocalWriter,
+                                    TensorboardWriter, WandbWriter)
 
 
 def draw(self, data_sample, image=None, show_gt=True, show_pred=True):
@@ -296,3 +297,154 @@ class TestWandbWriter:
         wandb_writer.add_scalars(input_dict)
         # test append mode
         wandb_writer.add_scalars({'map': 0.8, 'acc': 0.8}, step=1)
+
+
+class TestComposedWriter:
+    sys.modules['torch.utils.tensorboard'] = MagicMock()
+    sys.modules['tensorboardX'] = MagicMock()
+    sys.modules['wandb'] = MagicMock()
+
+    def test_init(self):
+
+        class A:
+            pass
+
+        # The writers inner element must be a dictionary or a
+        # subclass of Writer.
+        with pytest.raises(AssertionError):
+            ComposedWriter(writers=[A()])
+
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        assert len(composed_writer._writer) == 2
+
+    def test_get_writer(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        assert isinstance(composed_writer.get_writer(0), WandbWriter)
+        assert isinstance(composed_writer.get_writer(1), TensorboardWriter)
+
+    def test_get_experiment(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        assert composed_writer.get_experiment(
+            0) == composed_writer._writer[0].experiment
+        assert composed_writer.get_experiment(
+            1) == composed_writer._writer[1].experiment
+
+    def test_add_hyperparams(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+
+        # 'params_dict' must be dict
+        with pytest.raises(AssertionError):
+            composed_writer.add_hyperparams(['lr', 0])
+
+        params_dict = dict(lr=0.1, wd=0.2, mode='linear')
+        composed_writer.add_hyperparams(params_dict)
+
+    def test_add_graph(self):
+
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+
+        class Model(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.conv = nn.Conv2d(1, 2, 1)
+
+            def forward(self, x, y=None):
+                return self.conv(x)
+
+        # input must be tensor
+        with pytest.raises(AssertionError):
+            composed_writer.add_graph(Model(), np.zeros([1, 1, 3, 3]))
+
+        # input must be 4d tensor
+        with pytest.raises(AssertionError):
+            composed_writer.add_graph(Model(), torch.zeros([1, 3, 3]))
+
+        # If the input is a list, the inner element must be a 4d tensor
+        with pytest.raises(AssertionError):
+            composed_writer.add_graph(
+                Model(), [torch.zeros([1, 1, 3, 3]),
+                          torch.zeros([1, 3, 3])])
+
+        composed_writer.add_graph(Model(), torch.zeros([1, 1, 3, 3]))
+        composed_writer.add_graph(
+            Model(), [torch.zeros([1, 1, 3, 3]),
+                      torch.zeros([1, 1, 3, 3])])
+
+    @patch('mmengine.visualization.visualizer.Visualizer.draw', draw)
+    @patch('mmengine.visualization.writer.WandbWriter.add_image_to_wandb',
+           Mock)
+    def test_add_image(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        composed_writer.add_image('img', image)
+
+        bboxes = np.array([[1, 1, 2, 2], [1, 1.5, 1, 2.5]])
+        composed_writer.get_writer(1).visualizer.draw_bboxes(bboxes)
+        composed_writer.get_writer(1).add_image(
+            'img',
+            composed_writer.get_writer(1).visualizer.get_image(),
+            step=2)
+
+    def test_add_scalar(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        composed_writer.add_scalar('map', 0.9)
+        # test append mode
+        composed_writer.add_scalar('map', 0.9, step=0)
+        composed_writer.add_scalar('map', 0.95, step=1)
+
+    def test_add_scalars(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        composed_writer.add_scalars(input_dict)
+        # test append mode
+        composed_writer.add_scalars({'map': 0.8, 'acc': 0.8}, step=1)
