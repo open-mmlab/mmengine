@@ -23,7 +23,7 @@ class MessageHub(BaseGlobalAccessible):
 
     def __init__(self, name=''):
         self._log_buffers = OrderedDict()
-        self._runtime = OrderedDict()
+        self._runtime_info = OrderedDict()
         super().__init__(name)
 
     def update_log(self, key: str, value: Union[int, float], count=1) -> None:
@@ -47,7 +47,7 @@ class MessageHub(BaseGlobalAccessible):
             key (str): The key of runtime information.
             value (Any): The value of the runtime information.
         """
-        self._runtime[key] = value
+        self._runtime_info[key] = value
 
     @property
     def log_buffers(self) -> OrderedDict:
@@ -70,7 +70,7 @@ class MessageHub(BaseGlobalAccessible):
         Returns:
             OrderedDict: A copy of all runtime information.
         """
-        return copy.deepcopy(self._runtime)
+        return copy.deepcopy(self._runtime_info)
 
     def get_log(self, key: str) -> LogBuffer:
         """Get ``LogBuffer`` instance by key.
@@ -103,4 +103,4 @@ class MessageHub(BaseGlobalAccessible):
         if key not in self.runtime_info:
             raise KeyError(f'{key} is not found in Messagehub.log_buffers: '
                            f'instance name is: {MessageHub.instance_name}')
-        return copy.deepcopy(self._runtime[key])
+        return copy.deepcopy(self._runtime_info[key])

@@ -41,7 +41,7 @@ class TestGlobalMeta:
 
         # Valid subclass.
         class GlobalAccessible1(metaclass=MetaGlobalAccessible):
-            def __init__(self, name=''):
+            def __init__(self, name):
                 self.name = name
         # Allow name not to be the first arguments.
 

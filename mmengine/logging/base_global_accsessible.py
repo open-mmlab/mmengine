@@ -31,13 +31,15 @@ class MetaGlobalAccessible(type):
     def __init__(cls, *args):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
-        # Make sure `cls('root')` can be implemented.
-        assert 'name' in params[0], f'{cls}.__init__ must have name argument'
-        if len(params[3]) == len(params[0]) - 2:
+        # Make sure `cls(name='root')` can be implemented.
+        default_params = params[3] if params[3] else []
+        params_name = params[0] if params[0] else []
+        assert 'name' in params_name, f'{cls}.__init__ must have name argument'
+        if len(default_params) == len(params_name) - 2:
             assert 'name' == params[0][1], 'If name does not have default ' \
                                            'value, it must be the first ' \
                                            'argument'
-        elif len(params[3]) < len(params[0]) - 2:
+        elif len(default_params) < len(params_name) - 2:
             raise AssertionError('Besides name, the arguments of the '
                                  f'{cls}.__init__ must have default values')
         cls.root = cls(name='root')
