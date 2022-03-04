@@ -32,10 +32,14 @@ class MetaGlobalAccessible(type):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
         # Make sure `cls('root')` can be implemented.
-        assert 'name' in params[0], \
-            f'The arguments of the {cls}.__init__ must contain name argument'
-        assert len(params[3]) == len(params[0]) - 1, \
-            f'The arguments of the {cls}.__init__ must have default values'
+        assert 'name' in params[0], f'{cls}.__init__ must have name argument'
+        if len(params[3]) == len(params[0]) - 2:
+            assert 'name' == params[0][1], 'If name does not have default ' \
+                                           'value, it must be the first ' \
+                                           'argument'
+        elif len(params[3]) < len(params[0]) - 2:
+            raise AssertionError('Besides name, the arguments of the '
+                                 f'{cls}.__init__ must have default values')
         cls.root = cls(name='root')
         super().__init__(*args)
 
@@ -89,7 +93,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         if name:
             assert name not in instance_dict, f'{cls} cannot be created by ' \
                                               f'{name} twice.'
-            instance = cls(name, *args, **kwargs)
+            instance = cls(name=name, *args, **kwargs)
             instance_dict[name] = instance
             return instance
         # Get default root instance.
