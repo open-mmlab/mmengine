@@ -62,12 +62,12 @@ class BaseWriter(metaclass=ABCMeta):
         """
         pass
 
-    def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Record a set of hyperparameters.
+    def add_params(self, params_dict: dict, **kwargs) -> None:
+        """Record a set of parameters.
 
         Args:
             params_dict (dict): Each key-value pair in the dictionary is the
-                  name of the hyper parameter and it's corresponding value.
+                  name of the parameters and it's corresponding value.
         """
         pass
 
@@ -123,7 +123,7 @@ class BaseWriter(metaclass=ABCMeta):
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
-                    file_name: Optional[str] = None,
+                    file_path: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalars' data.
 
@@ -131,9 +131,9 @@ class BaseWriter(metaclass=ABCMeta):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Global step value to record. Default to 0.
-            file_name (str, optional): The scalar's data will be
-                saved to the `file_name` file at the same time
-                if the `file_name` parameter is specified.
+            file_path (str, optional): The scalar's data will be
+                saved to the `file_path` file at the same time
+                if the `file_path` parameter is specified.
                 Default to None.
         """
         pass
@@ -160,6 +160,7 @@ class LocalWriter(BaseWriter):
         >>> local_writer.add_image('img', img)
         >>> local_writer.add_scaler('mAP', 0.6)
         >>> local_writer.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
+        >>> local_writer.add_params(dict(lr=0.1, mode='linear'))
 
         >>> local_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
             edgecolors='g')
@@ -171,11 +172,11 @@ class LocalWriter(BaseWriter):
             for write data.
         visualizer (dict, :obj:`Visualizer`, optional): Visualizer
             instance or dictionary. Default to None
-        save_img_folder (str): The save image folder name.
+        img_save_dir (str): The save image folder dir.
             Default to 'writer_image'.
-        save_hyperparams_name (str): The save hyperparam file name.
-            Default to 'hyperparams.yaml'.
-        save_scalar_name (str):  The save scalar values file name.
+        params_save_file (str): The save parameters file name.
+            Default to 'parameters.yaml'.
+        scalar_save_file (str):  The save scalar values file name.
             Default to'scalars.json'.
         img_show (bool): Whether to show the image when calling add_image.
             Default to False.
@@ -184,21 +185,20 @@ class LocalWriter(BaseWriter):
     def __init__(self,
                  save_dir: str,
                  visualizer: Optional[Union[dict, 'Visualizer']] = None,
-                 save_img_folder: str = 'writer_image',
-                 save_hyperparams_name: str = 'hyperparams.yaml',
-                 save_scalar_name: str = 'scalars.json',
+                 img_save_dir: str = 'writer_image',
+                 params_save_file: str = 'parameters.yaml',
+                 scalar_save_file: str = 'scalars.json',
                  img_show: bool = False):
-        assert save_hyperparams_name.split('.')[-1] == 'yaml'
-        assert save_scalar_name.split('.')[-1] == 'json'
+        assert params_save_file.split('.')[-1] == 'yaml'
+        assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalWriter, self).__init__(visualizer, save_dir)
         timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         self._save_dir = os.path.join(
             self._save_dir, f'write_data_{timestamp}')  # type: ignore
         os.makedirs(self._save_dir, exist_ok=True)
-        self._save_img_folder = os.path.join(self._save_dir, save_img_folder)
-        self._save_scalar_name = os.path.join(self._save_dir, save_scalar_name)
-        self._save_hyperparams_name = os.path.join(self._save_dir,
-                                                   save_hyperparams_name)
+        self._img_save_dir = os.path.join(self._save_dir, img_save_dir)
+        self._scalar_save_file = os.path.join(self._save_dir, scalar_save_file)
+        self._params_save_file = os.path.join(self._save_dir, params_save_file)
         self._img_show = img_show
 
     @property
@@ -206,14 +206,14 @@ class LocalWriter(BaseWriter):
         """Return the experiment object associated with this writer."""
         return self
 
-    def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Record hyperparameters to disk.
+    def add_params(self, params_dict: dict, **kwargs) -> None:
+        """Record parameters to disk.
 
         Args:
-            params_dict (dict): The dict of hyperparameters to save.
+            params_dict (dict): The dict of parameters to save.
         """
         assert isinstance(params_dict, dict)
-        self._dump(self._save_hyperparams_name, 'yaml', params_dict)
+        self._dump(self._params_save_file, 'yaml', params_dict)
 
     def add_image(self,
                   name: str,
@@ -242,10 +242,10 @@ class LocalWriter(BaseWriter):
         if self._img_show:
             self.visualizer.show()
         else:
-            os.makedirs(self._save_img_folder, exist_ok=True)
+            os.makedirs(self._img_save_dir, exist_ok=True)
             save_file_name = f'{name}_{step}.png'
             cv2.imwrite(
-                os.path.join(self._save_img_folder, save_file_name),
+                os.path.join(self._img_save_dir, save_file_name),
                 self.visualizer.get_image())
 
     def add_scalar(self,
@@ -260,12 +260,12 @@ class LocalWriter(BaseWriter):
             value (float, int): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self._dump(self._save_scalar_name, 'json', {name: value, 'step': step})
+        self._dump(self._scalar_save_file, 'json', {name: value, 'step': step})
 
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
-                    file_name: Optional[str] = None,
+                    file_path: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalars. The scalar dict will be written to the default and
         specified files if ``file_name`` is specified.
@@ -274,31 +274,31 @@ class LocalWriter(BaseWriter):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Global step value to record. Default to 0.
-            file_name (str, optional): The scalar's data will be
-                saved to the ``file_name`` file at the same time
-                if the ``file_name`` parameter is specified.
+            file_path (str, optional): The scalar's data will be
+                saved to the ``file_path`` file at the same time
+                if the ``file_path`` parameter is specified.
                 Default to None.
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
-        if file_name is not None:
-            assert file_name.split('.')[-1] == 'json'
-            save_file_name = os.path.join(
+        if file_path is not None:
+            assert file_path.split('.')[-1] == 'json'
+            new_save_file_path = os.path.join(
                 self._save_dir,  # type: ignore
-                file_name)
-            self._dump(save_file_name, 'json', scalar_dict)
-        self._dump(self._save_scalar_name, 'json', scalar_dict)
+                file_path)
+            self._dump(new_save_file_path, 'json', scalar_dict)
+        self._dump(self._scalar_save_file, 'json', scalar_dict)
 
-    def _dump(self, file_name: str, file_format: str,
+    def _dump(self, file_path: str, file_format: str,
               value_dict: dict) -> None:
         """dump dict to file.
 
         Args:
-           file_name (str): The file name to save data.
+           file_path (str): The file path to save data.
            file_format (str): The file format to save data.
            value_dict (dict) : Save dict data.
         """
-        with open(file_name, 'a+') as f:
+        with open(file_path, 'a+') as f:
             dump(value_dict, f, file_format=file_format)
             f.write('\n')
 
@@ -315,6 +315,7 @@ class WandbWriter(BaseWriter):
         >>> wandb_writer.add_image('img', img)
         >>> wandb_writer.add_scaler('mAP', 0.6)
         >>> wandb_writer.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
+        >>> wandb_writer.add_params(dict(lr=0.1, mode='linear'))
 
         >>> wandb_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
             edgecolors='g')
@@ -379,12 +380,12 @@ class WandbWriter(BaseWriter):
 
         return wandb
 
-    def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Record a set of hyperparameters to be compared in wandb.
+    def add_params(self, params_dict: dict, **kwargs) -> None:
+        """Record a set of parameters to be compared in wandb.
 
         Args:
             params_dict (dict): Each key-value pair in the dictionary
-                is the name of the hyper parameter and it's
+                is the name of the parameters and it's
                 corresponding value.
         """
         assert isinstance(params_dict, dict)
@@ -437,7 +438,7 @@ class WandbWriter(BaseWriter):
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
-                    file_name: Optional[str] = None,
+                    file_path: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalar's data to wandb.
 
@@ -445,7 +446,7 @@ class WandbWriter(BaseWriter):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Global step value to record. Default to 0.
-            file_name (str, optional): Useless parameter. Just for
+            file_path (str, optional): Useless parameter. Just for
                 interface unification. Default to None.
         """
         self._wandb.log(scalar_dict, commit=self._commit, step=step)
@@ -495,6 +496,7 @@ class TensorboardWriter(BaseWriter):
         >>> tensorboard_writer.add_image('img', img)
         >>> tensorboard_writer.add_scaler('mAP', 0.6)
         >>> tensorboard_writer.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> tensorboard_writer.add_params(dict(lr=0.1, mode='linear'))
 
         >>> tensorboard_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
             edgecolors='g')
@@ -567,7 +569,7 @@ class TensorboardWriter(BaseWriter):
                               torch.Tensor) and input_tensor.ndim == 4
         self._tensorboard.add_graph(model, input_tensor)
 
-    def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
+    def add_params(self, params_dict: dict, **kwargs) -> None:
         """Record a set of hyperparameters to be compared in TensorBoard.
 
         Args:
@@ -623,7 +625,7 @@ class TensorboardWriter(BaseWriter):
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
-                    file_name: Optional[str] = None,
+                    file_path: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalar's data to summary.
 
@@ -631,7 +633,7 @@ class TensorboardWriter(BaseWriter):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Global step value to record. Default to 0.
-            file_name (str, optional): Useless parameter. Just for
+            file_path (str, optional): Useless parameter. Just for
                 interface unification. Default to None.
         """
         assert isinstance(scalar_dict, dict)
@@ -662,6 +664,7 @@ class ComposedWriter(BaseGlobalAccessible):
         >>> composed_writer.add_image('img', img)
         >>> composed_writer.add_scalar('mAP', 0.6)
         >>> composed_writer.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> composed_writer.add_params(dict(lr=0.1, mode='linear'))
 
     Args:
         name (str): The name of the instance. Defaults: 'composed_writer'.
@@ -693,14 +696,14 @@ class ComposedWriter(BaseGlobalAccessible):
         index."""
         return self._writers[index].experiment
 
-    def add_hyperparams(self, params_dict: dict, **kwargs):
-        """Record hyperparameters.
+    def add_params(self, params_dict: dict, **kwargs):
+        """Record parameters.
 
         Args:
-            params_dict (dict): The dictionary of hyperparameters to save.
+            params_dict (dict): The dictionary of parameters to save.
         """
         for writer in self._writers:
-            writer.add_hyperparams(params_dict, **kwargs)
+            writer.add_params(params_dict, **kwargs)
 
     def add_graph(self, model: torch.nn.Module,
                   input_array: Union[torch.Tensor,
@@ -758,7 +761,7 @@ class ComposedWriter(BaseGlobalAccessible):
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
-                    file_name: Optional[str] = None,
+                    file_path: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalars' data.
 
@@ -766,13 +769,13 @@ class ComposedWriter(BaseGlobalAccessible):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Global step value to record. Default to 0.
-            file_name (str, optional): The scalar's data will be
-                saved to the `file_name` file at the same time
-                if the `file_name` parameter is specified.
+            file_path (str, optional): The scalar's data will be
+                saved to the `file_path` file at the same time
+                if the `file_path` parameter is specified.
                 Default to None.
         """
         for writer in self._writers:
-            writer.add_scalars(scalar_dict, step, file_name, **kwargs)
+            writer.add_scalars(scalar_dict, step, file_path, **kwargs)
 
     def close(self) -> None:
         """close an opened object."""

@@ -27,13 +27,13 @@ class TestLocalWriter:
         with pytest.raises(AssertionError):
             LocalWriter('temp_dir', [dict(type='Visualizer')])
 
-        # 'save_hyperparams_name' format must be yaml
+        # 'params_save_file' format must be yaml
         with pytest.raises(AssertionError):
-            LocalWriter('temp_dir', save_hyperparams_name='a.txt')
+            LocalWriter('temp_dir', params_save_file='a.txt')
 
-        # 'save_scalar_name' format must be json
+        # 'scalar_save_file' format must be json
         with pytest.raises(AssertionError):
-            LocalWriter('temp_dir', save_scalar_name='a.yaml')
+            LocalWriter('temp_dir', scalar_save_file='a.yaml')
 
         local_writer = LocalWriter('temp_dir')
         assert os.path.exists(local_writer._save_dir)
@@ -52,16 +52,16 @@ class TestLocalWriter:
         assert local_writer.experiment == local_writer
         shutil.rmtree('temp_dir')
 
-    def test_add_hyperparams(self):
+    def test_add_params(self):
         local_writer = LocalWriter('temp_dir')
 
         # 'params_dict' must be dict
         with pytest.raises(AssertionError):
-            local_writer.add_hyperparams(['lr', 0])
+            local_writer.add_params(['lr', 0])
 
         params_dict = dict(lr=0.1, wd=[1.0, 0.1, 0.001], mode='linear')
-        local_writer.add_hyperparams(params_dict)
-        out_dict = load(local_writer._save_hyperparams_name, 'yaml')
+        local_writer.add_params(params_dict)
+        out_dict = load(local_writer._params_save_file, 'yaml')
         assert out_dict == params_dict
         shutil.rmtree('temp_dir')
 
@@ -79,27 +79,27 @@ class TestLocalWriter:
         local_writer = LocalWriter('temp_dir', dict(type='Visualizer'))
         local_writer.add_image('img', image)
         assert os.path.exists(
-            os.path.join(local_writer._save_img_folder, 'img_0.png'))
+            os.path.join(local_writer._img_save_dir, 'img_0.png'))
 
         bboxes = np.array([[1, 1, 2, 2], [1, 1.5, 1, 2.5]])
         local_writer.visualizer.draw_bboxes(bboxes)
         local_writer.add_image(
             'img', local_writer.visualizer.get_image(), step=2)
         assert os.path.exists(
-            os.path.join(local_writer._save_img_folder, 'img_2.png'))
+            os.path.join(local_writer._img_save_dir, 'img_2.png'))
 
         visuailzer = VISUALIZERS.build(dict(type='Visualizer'))
         local_writer = LocalWriter('temp_dir', visuailzer)
         local_writer.add_image('img', image)
         assert os.path.exists(
-            os.path.join(local_writer._save_img_folder, 'img_0.png'))
+            os.path.join(local_writer._img_save_dir, 'img_0.png'))
 
         shutil.rmtree('temp_dir')
 
     def test_add_scalar(self):
         local_writer = LocalWriter('temp_dir')
         local_writer.add_scalar('map', 0.9)
-        out_dict = load(local_writer._save_scalar_name, 'json')
+        out_dict = load(local_writer._scalar_save_file, 'json')
         assert out_dict == {'map': 0.9, 'step': 0}
         shutil.rmtree('temp_dir')
 
@@ -107,7 +107,7 @@ class TestLocalWriter:
         local_writer = LocalWriter('temp_dir')
         local_writer.add_scalar('map', 0.9, step=0)
         local_writer.add_scalar('map', 0.95, step=1)
-        with open(local_writer._save_scalar_name) as f:
+        with open(local_writer._scalar_save_file) as f:
             out_dict = f.read()
         assert out_dict == '{"map": 0.9, "step": 0}\n{"map": ' \
                            '0.95, "step": 1}\n'
@@ -117,20 +117,20 @@ class TestLocalWriter:
         local_writer = LocalWriter('temp_dir')
         input_dict = {'map': 0.7, 'acc': 0.9}
         local_writer.add_scalars(input_dict)
-        out_dict = load(local_writer._save_scalar_name, 'json')
+        out_dict = load(local_writer._scalar_save_file, 'json')
         assert out_dict == {'map': 0.7, 'acc': 0.9, 'step': 0}
 
         # test append mode
         local_writer.add_scalars({'map': 0.8, 'acc': 0.8}, step=1)
-        with open(local_writer._save_scalar_name) as f:
+        with open(local_writer._scalar_save_file) as f:
             out_dict = f.read()
         assert out_dict == '{"map": 0.7, "acc": 0.9, ' \
                            '"step": 0}\n{"map": 0.8, "acc": 0.8, "step": 1}\n'
 
-        # test file_name
+        # test file_path
         local_writer = LocalWriter('temp_dir')
-        local_writer.add_scalars(input_dict, file_name='temp.json')
-        assert os.path.exists(local_writer._save_scalar_name)
+        local_writer.add_scalars(input_dict, file_path='temp.json')
+        assert os.path.exists(local_writer._scalar_save_file)
         assert os.path.exists(
             os.path.join(local_writer._save_dir, 'temp.json'))
 
@@ -190,15 +190,15 @@ class TestTensorboardWriter:
             Model(), [torch.zeros([1, 1, 3, 3]),
                       torch.zeros([1, 1, 3, 3])])
 
-    def test_add_hyperparams(self):
+    def test_add_params(self):
         tensorboard_writer = TensorboardWriter('temp_dir')
 
         # 'params_dict' must be dict
         with pytest.raises(AssertionError):
-            tensorboard_writer.add_hyperparams(['lr', 0])
+            tensorboard_writer.add_params(['lr', 0])
 
         params_dict = dict(lr=0.1, wd=0.2, mode='linear')
-        tensorboard_writer.add_hyperparams(params_dict)
+        tensorboard_writer.add_params(params_dict)
 
     @patch('mmengine.visualization.visualizer.Visualizer.draw', draw)
     def test_add_image(self):
@@ -258,15 +258,15 @@ class TestWandbWriter:
         wandb_writer = WandbWriter()
         assert wandb_writer.experiment == wandb_writer._wandb
 
-    def test_add_hyperparams(self):
+    def test_add_params(self):
         wandb_writer = WandbWriter()
 
         # 'params_dict' must be dict
         with pytest.raises(AssertionError):
-            wandb_writer.add_hyperparams(['lr', 0])
+            wandb_writer.add_params(['lr', 0])
 
         params_dict = dict(lr=0.1, wd=0.2, mode='linear')
-        wandb_writer.add_hyperparams(params_dict)
+        wandb_writer.add_params(params_dict)
 
     @patch('mmengine.visualization.visualizer.Visualizer.draw', draw)
     @patch('mmengine.visualization.writer.WandbWriter.add_image_to_wandb',
@@ -365,7 +365,7 @@ class TestComposedWriter:
         assert composed_writer.get_experiment(
             1) == composed_writer._writers[1].experiment
 
-    def test_add_hyperparams(self):
+    def test_add_params(self):
         composed_writer = ComposedWriter(writers=[
             WandbWriter(),
             dict(
@@ -376,10 +376,10 @@ class TestComposedWriter:
 
         # 'params_dict' must be dict
         with pytest.raises(AssertionError):
-            composed_writer.add_hyperparams(['lr', 0])
+            composed_writer.add_params(['lr', 0])
 
         params_dict = dict(lr=0.1, wd=0.2, mode='linear')
-        composed_writer.add_hyperparams(params_dict)
+        composed_writer.add_params(params_dict)
 
     def test_add_graph(self):
         composed_writer = ComposedWriter(writers=[
