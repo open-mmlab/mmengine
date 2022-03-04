@@ -600,7 +600,8 @@ class TensorboardWriter(BaseWriter):
                 Default: True.
             step (int): Global step value to record. Default: 0.
         """
-        assert self.visualizer
+        assert self.visualizer, 'Please instantiate the visualizer ' \
+                                'object with initialization parameters.'
         self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
         self._tensorboard.add_image(
             name, self.visualizer.get_image(), step, dataformats='HWC')

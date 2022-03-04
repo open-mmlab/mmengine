@@ -327,6 +327,20 @@ class TestComposedWriter:
         ])
         assert len(composed_writer._writers) == 2
 
+        # test global
+        composed_writer = ComposedWriter.create_instance(
+            'composed_writer',
+            writers=[
+                WandbWriter(),
+                dict(
+                    type='TensorboardWriter',
+                    visualizer=dict(type='Visualizer'),
+                    save_dir='temp_dir')
+            ])
+        assert len(composed_writer._writers) == 2
+        composed_writer_any = ComposedWriter.get_instance('composed_writer')
+        assert composed_writer_any == composed_writer
+
     def test_get_writer(self):
         composed_writer = ComposedWriter(writers=[
             WandbWriter(),
@@ -368,7 +382,6 @@ class TestComposedWriter:
         composed_writer.add_hyperparams(params_dict)
 
     def test_add_graph(self):
-
         composed_writer = ComposedWriter(writers=[
             WandbWriter(),
             dict(
