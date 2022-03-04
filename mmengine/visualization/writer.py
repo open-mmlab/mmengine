@@ -78,7 +78,7 @@ class BaseWriter(metaclass=ABCMeta):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor or list of torch.Tensor): A variable
+            input_tensor (torch.Tensor, list of torch.Tensor): A variable
                 or a tuple of variables to be fed.
         """
         pass
@@ -97,7 +97,7 @@ class BaseWriter(metaclass=ABCMeta):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
@@ -115,7 +115,7 @@ class BaseWriter(metaclass=ABCMeta):
 
         Args:
             name (str): The unique identifier for the scalar to save.
-            value (float or int): Value to save.
+            value (float, int): Value to save.
             step (int): Global step value to record. Default 0.
         """
         pass
@@ -159,7 +159,7 @@ class LocalWriter(BaseWriter):
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
         >>> local_writer.add_image('img', img)
         >>> local_writer.add_scaler('mAP', 0.6)
-        >>> local_writer.add_scalars({'loss': [1, 2, 3],'acc':0.8})
+        >>> local_writer.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
 
         >>> local_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
             edgecolors='g')
@@ -229,7 +229,7 @@ class LocalWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
@@ -257,7 +257,7 @@ class LocalWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the scalar to save.
-            value (float or int): Value to save.
+            value (float, int): Value to save.
             step (int): Global step value to record. Default: 0.
         """
         self._dump(self._save_scalar_name, 'json', {name: value, 'step': step})
@@ -404,7 +404,7 @@ class WandbWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
@@ -429,7 +429,7 @@ class WandbWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the scalar to save.
-            value (float or int): Value to save.
+            value (float, int): Value to save.
             step (int): Global step value to record. Default: 0.
         """
         self._wandb.log({name: value}, commit=self._commit, step=step)
@@ -464,7 +464,7 @@ class WandbWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
@@ -555,7 +555,7 @@ class TensorboardWriter(BaseWriter):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor or list of torch.Tensor): A variable
+            input_tensor (torch.Tensor, list of torch.Tensor): A variable
                 or a tuple of variables to be fed.
         """
         if isinstance(input_tensor, list):
@@ -593,7 +593,7 @@ class TensorboardWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
@@ -614,7 +614,7 @@ class TensorboardWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the scalar to save.
-            value (float or int): Value to save.
+            value (float, int): Value to save.
             step (int): Global step value to record. Default: 0.
         """
         self._tensorboard.add_scalar(name, value, step)
@@ -634,9 +634,10 @@ class TensorboardWriter(BaseWriter):
                 interface unification. Default: None.
         """
         assert isinstance(scalar_dict, dict)
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                          'through the step parameter'
         for key, value in scalar_dict.items():
-            if 'step' != key:
-                self.add_scalar(key, value, step)
+            self.add_scalar(key, value, step)
 
     def close(self):
         """close an opened tensorboard object."""
@@ -670,26 +671,26 @@ class ComposedWriter(BaseGlobalAccessible):
                  name: str = 'composed_writer',
                  writers: Optional[List[Union[dict, 'BaseWriter']]] = None):
         super().__init__(name)
-        self._writer = []
+        self._writers = []
         if writers is not None:
             assert isinstance(writers, list)
             for writer in writers:
                 if isinstance(writer, dict):
-                    self._writer.append(WRITERS.build(writer))
+                    self._writers.append(WRITERS.build(writer))
                 else:
                     assert isinstance(writer, BaseWriter), \
                         f'writer should be an instance of a subclass of ' \
                         f'BaseWriter, but got {type(writer)}'
-                    self._writer.append(writer)
+                    self._writers.append(writer)
 
     def get_writer(self, index: int) -> 'BaseWriter':
         """Returns the writer object corresponding to the specified index."""
-        return self._writer[index]
+        return self._writers[index]
 
     def get_experiment(self, index: int) -> Any:
         """Returns the writer experiment object corresponding to the specified
         index."""
-        return self._writer[index].experiment
+        return self._writers[index].experiment
 
     def add_hyperparams(self, params_dict: dict, **kwargs):
         """Record hyperparameters.
@@ -697,7 +698,7 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             params_dict (dict): The dictionary of hyperparameters to save.
         """
-        for writer in self._writer:
+        for writer in self._writers:
             writer.add_hyperparams(params_dict, **kwargs)
 
     def add_graph(self, model: torch.nn.Module,
@@ -707,10 +708,10 @@ class ComposedWriter(BaseGlobalAccessible):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_array (torch.Tensor or list of torch.Tensor): A variable
+            input_array (torch.Tensor, list of torch.Tensor): A variable
                 or a tuple of variables to be fed.
         """
-        for writer in self._writer:
+        for writer in self._writers:
             writer.add_graph(model, input_array, **kwargs)
 
     def add_image(self,
@@ -727,14 +728,14 @@ class ComposedWriter(BaseGlobalAccessible):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            data_samples (:obj:`BaseDataSample`,optional): The data structure
+            data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default: None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default: True.
             step (int): Global step value to record. Default: 0.
         """
-        for writer in self._writer:
+        for writer in self._writers:
             writer.add_image(name, image, data_samples, draw_gt, draw_pred,
                              step, **kwargs)
 
@@ -747,10 +748,10 @@ class ComposedWriter(BaseGlobalAccessible):
 
         Args:
             name (str): The unique identifier for the scalar to save.
-            value (float or int): Value to save.
+            value (float, int): Value to save.
             step (int): Global step value to record. Default: 0.
         """
-        for writer in self._writer:
+        for writer in self._writers:
             writer.add_scalar(name, value, step, **kwargs)
 
     def add_scalars(self,
@@ -769,10 +770,10 @@ class ComposedWriter(BaseGlobalAccessible):
                 if the `file_name` parameter is specified.
                 Default: None.
         """
-        for writer in self._writer:
+        for writer in self._writers:
             writer.add_scalars(scalar_dict, step, file_name, **kwargs)
 
     def close(self) -> None:
         """close an opened object."""
-        for writer in self._writer:
+        for writer in self._writers:
             writer.close()

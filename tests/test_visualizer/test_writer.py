@@ -233,6 +233,10 @@ class TestTensorboardWriter:
 
     def test_add_scalars(self):
         tensorboard_writer = TensorboardWriter('temp_dir')
+        # The step value must be passed through the parameter
+        with pytest.raises(AssertionError):
+            tensorboard_writer.add_scalars({'map': 0.7, 'acc': 0.9, 'step': 1})
+
         input_dict = {'map': 0.7, 'acc': 0.9}
         tensorboard_writer.add_scalars(input_dict)
         # test append mode
@@ -321,7 +325,7 @@ class TestComposedWriter:
                 visualizer=dict(type='Visualizer'),
                 save_dir='temp_dir')
         ])
-        assert len(composed_writer._writer) == 2
+        assert len(composed_writer._writers) == 2
 
     def test_get_writer(self):
         composed_writer = ComposedWriter(writers=[
@@ -343,9 +347,9 @@ class TestComposedWriter:
                 save_dir='temp_dir')
         ])
         assert composed_writer.get_experiment(
-            0) == composed_writer._writer[0].experiment
+            0) == composed_writer._writers[0].experiment
         assert composed_writer.get_experiment(
-            1) == composed_writer._writer[1].experiment
+            1) == composed_writer._writers[1].experiment
 
     def test_add_hyperparams(self):
         composed_writer = ComposedWriter(writers=[
