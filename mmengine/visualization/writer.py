@@ -24,9 +24,9 @@ class BaseWriter(metaclass=ABCMeta):
 
     Args:
         visualizer (dict, :obj:`Visualizer`, optional):
-            Visualizer instance or dictionary. Default: None.
+            Visualizer instance or dictionary. Default to None.
         save_dir (str, optional): The root path of the save file
-            for write data. Default: None.
+            for write data. Default to None.
     """
 
     def __init__(self,
@@ -39,7 +39,7 @@ class BaseWriter(metaclass=ABCMeta):
                 self._visualizer = VISUALIZERS.build(visualizer)
             else:
                 assert isinstance(visualizer, Visualizer), \
-                    f'visualizer should be an instance of Visualizer, ' \
+                    'visualizer should be an instance of Visualizer, ' \
                     f'but got {type(visualizer)}'
 
     @property
@@ -78,7 +78,7 @@ class BaseWriter(metaclass=ABCMeta):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor, list of torch.Tensor): A variable
+            input_tensor (torch.Tensor, list[torch.Tensor]): A variable
                 or a tuple of variables to be fed.
         """
         pass
@@ -98,11 +98,11 @@ class BaseWriter(metaclass=ABCMeta):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
+                of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         pass
 
@@ -116,7 +116,7 @@ class BaseWriter(metaclass=ABCMeta):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default to 0.
         """
         pass
 
@@ -130,11 +130,11 @@ class BaseWriter(metaclass=ABCMeta):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
             file_name (str, optional): The scalar's data will be
                 saved to the `file_name` file at the same time
                 if the `file_name` parameter is specified.
-                Default: None.
+                Default to None.
         """
         pass
 
@@ -170,15 +170,15 @@ class LocalWriter(BaseWriter):
         save_dir (str): The root path of the save file
             for write data.
         visualizer (dict, :obj:`Visualizer`, optional): Visualizer
-            instance or dictionary. Default: None
+            instance or dictionary. Default to None
         save_img_folder (str): The save image folder name.
-            Default: 'writer_image'.
+            Default to 'writer_image'.
         save_hyperparams_name (str): The save hyperparam file name.
-            Default: 'hyperparams.yaml'.
+            Default to 'hyperparams.yaml'.
         save_scalar_name (str):  The save scalar values file name.
-            Default: 'scalars.json'.
+            Default to'scalars.json'.
         img_show (bool): Whether to show the image when calling add_image.
-            Default: False.
+            Default to False.
     """
 
     def __init__(self,
@@ -230,11 +230,11 @@ class LocalWriter(BaseWriter):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
-            draw_gt (bool): Whether to draw the ground truth. Default: True.
+                of OpenMMlab. Default to None.
+            draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         assert self.visualizer, 'Please instantiate the visualizer ' \
                                 'object with initialization parameters.'
@@ -258,7 +258,7 @@ class LocalWriter(BaseWriter):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
         """
         self._dump(self._save_scalar_name, 'json', {name: value, 'step': step})
 
@@ -268,16 +268,16 @@ class LocalWriter(BaseWriter):
                     file_name: Optional[str] = None,
                     **kwargs) -> None:
         """Record scalars. The scalar dict will be written to the default and
-        specified files if 'file_name' is specified.
+        specified files if ``file_name`` is specified.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
             file_name (str, optional): The scalar's data will be
-                saved to the `file_name` file at the same time
-                if the `file_name` parameter is specified.
-                Default: None.
+                saved to the ``file_name`` file at the same time
+                if the ``file_name`` parameter is specified.
+                Default to None.
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
@@ -314,7 +314,7 @@ class WandbWriter(BaseWriter):
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
         >>> wandb_writer.add_image('img', img)
         >>> wandb_writer.add_scaler('mAP', 0.6)
-        >>> wandb_writer.add_scalars({'loss': [1, 2, 3],'acc':0.8})
+        >>> wandb_writer.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
 
         >>> wandb_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
             edgecolors='g')
@@ -327,16 +327,16 @@ class WandbWriter(BaseWriter):
 
     Args:
         init_kwargs (dict, optional): wandb initialization
-            input parameters. Default: None.
+            input parameters. Default to None.
         commit: (bool, optional) Save the metrics dict to the wandb server
                 and increment the step.  If false `wandb.log` just
                 updates the current metrics dict with the row argument
                 and metrics won't be saved until `wandb.log` is called
-                with `commit=True`. Default: True.
+                with `commit=True`. Default to True.
         visualizer (dict, :obj:`Visualizer`, optional):
-            Visualizer instance or dictionary. Default: None.
+            Visualizer instance or dictionary. Default to None.
         save_dir (str, optional): The root path of the save file
-            for write data. Default: None.
+            for write data. Default to None.
     """
 
     def __init__(self,
@@ -405,11 +405,11 @@ class WandbWriter(BaseWriter):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
+                of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         if self.visualizer:
             self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
@@ -430,7 +430,7 @@ class WandbWriter(BaseWriter):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
         """
         self._wandb.log({name: value}, commit=self._commit, step=step)
 
@@ -444,9 +444,9 @@ class WandbWriter(BaseWriter):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
             file_name (str, optional): Useless parameter. Just for
-                interface unification. Default: None.
+                interface unification. Default to None.
         """
         self._wandb.log(scalar_dict, commit=self._commit, step=step)
 
@@ -465,11 +465,11 @@ class WandbWriter(BaseWriter):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
-            draw_gt (bool): Whether to draw the ground truth. Default: True.
+                of OpenMMlab. Default to None.
+            draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         raise NotImplementedError()
 
@@ -505,8 +505,8 @@ class TensorboardWriter(BaseWriter):
         save_dir (str): The root path of the save file
             for write data.
         visualizer (dict, :obj:`Visualizer`, optional): Visualizer instance
-            or dictionary. Default: None.
-        log_dir (str): Save directory location. Default: 'tf_writer'.
+            or dictionary. Default to None.
+        log_dir (str): Save directory location. Default to 'tf_writer'.
     """
 
     def __init__(self,
@@ -555,7 +555,7 @@ class TensorboardWriter(BaseWriter):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor, list of torch.Tensor): A variable
+            input_tensor (torch.Tensor, list[torch.Tensor]): A variable
                 or a tuple of variables to be fed.
         """
         if isinstance(input_tensor, list):
@@ -594,11 +594,11 @@ class TensorboardWriter(BaseWriter):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
-            draw_gt (bool): Whether to draw the ground truth. Default: True.
+                of OpenMMlab. Default to None.
+            draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         assert self.visualizer, 'Please instantiate the visualizer ' \
                                 'object with initialization parameters.'
@@ -616,7 +616,7 @@ class TensorboardWriter(BaseWriter):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
         """
         self._tensorboard.add_scalar(name, value, step)
 
@@ -630,9 +630,9 @@ class TensorboardWriter(BaseWriter):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
             file_name (str, optional): Useless parameter. Just for
-                interface unification. Default: None.
+                interface unification. Default to None.
         """
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
@@ -665,7 +665,7 @@ class ComposedWriter(BaseGlobalAccessible):
 
     Args:
         name (str): The name of the instance. Defaults: 'composed_writer'.
-        writers (list, optional): The writers to compose. Default: None
+        writers (list, optional): The writers to compose. Default to None
     """
 
     def __init__(self,
@@ -709,7 +709,7 @@ class ComposedWriter(BaseGlobalAccessible):
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_array (torch.Tensor, list of torch.Tensor): A variable
+            input_array (torch.Tensor, list[torch.Tensor]): A variable
                 or a tuple of variables to be fed.
         """
         for writer in self._writers:
@@ -730,11 +730,11 @@ class ComposedWriter(BaseGlobalAccessible):
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
-                of OpenMMlab. Default: None.
-            draw_gt (bool): Whether to draw the ground truth. Default: True.
+                of OpenMMlab. Default to None.
+            draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default: True.
-            step (int): Global step value to record. Default: 0.
+                Default to True.
+            step (int): Global step value to record. Default to 0.
         """
         for writer in self._writers:
             writer.add_image(name, image, data_samples, draw_gt, draw_pred,
@@ -750,7 +750,7 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
         """
         for writer in self._writers:
             writer.add_scalar(name, value, step, **kwargs)
@@ -765,11 +765,11 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default: 0.
+            step (int): Global step value to record. Default to 0.
             file_name (str, optional): The scalar's data will be
                 saved to the `file_name` file at the same time
                 if the `file_name` parameter is specified.
-                Default: None.
+                Default to None.
         """
         for writer in self._writers:
             writer.add_scalars(scalar_dict, step, file_name, **kwargs)
