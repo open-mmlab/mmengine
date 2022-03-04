@@ -222,6 +222,57 @@ cfg.work_dir  # "./work_dir/config_setting1"
 - `{{ fileBasenameNoExtension }}` - 当前文件不包含扩展名的文件名，例如 file
 - `{{ fileExtname }}` - 当前文件的扩展名，例如 `.py`
 
+### 跨项目继承配置文件
+
+为了避免基于已有算法库开发的新项目复制大量的配置文件，MMEngine 中的 config 支持配置文件的跨项目继承。
+假定 MMDetection 项目中存在如下配置文件
+
+```text
+configs/_base_/schedules/schedule_1x.py
+configs/_base_/datasets.coco_instance.py
+configs/_base_/default_runtime.py
+configs/_base_/models/faster_rcnn_r50_fpn.py
+```
+
+在 MMDetection 被安装进环境（如使用 `pip install mmdet`）以后，新的项目可以直接在自己的配置文件中继承 MMDetection 的配置文件而无需拷贝，使用方式如下所示
+
+```python
+_base_ = [
+    'mmdet::_base_/schedules/schedule_1x.py',
+    'mmdet::_base_/datasets.coco_instance.py',
+    'mmdet::_base_/default_runtime.py'
+    'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
+]
+```
+
+通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
+实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在算法库被正确安装进环境以后，新的项目都可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
+
+### 跨项目使用配置文件
+
+MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口即可根据 `config` 构建对应的算法模型，这两个接口都支持 `pretrained` 参数对预训练的模型权重进行加载。
+
+`get_model` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索对应的配置文件并构建和初始化相应模型。
+指定 `pretrained=True` 还可以使得对应的模型加载预训练权重。用户可以直接使用这样得到的模型进行推理。
+
+```python
+from mmengine import get_model
+model = get_model('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=True)
+```
+
+`get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。
+指定 `pretrained=True` 还可以得到对应模型预训练权重的路径。用户可以基于这样的到的配置文件进行推理修改并自定义自己的算法模型。
+
+```python
+from mmengine import get_config
+cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=True)
+model_path = cfg.model_path
+
+from mmdet.models import build_model
+model = build_model(cfg.model)
+load_checkpoint(model, model_path)
+```
+
 ### 导入自定义 Python 模块
 
 将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
