@@ -14,17 +14,17 @@ class MetaGlobalAccessible(type):
 
     Examples:
         >>> class SubClass1(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, args, **kwargs):
+        >>>     def __init__(self, *args, **kwargs):
         >>>         pass
         AssertionError: The arguments of the
         ``<class '__main__.subclass'>.__init__`` must contain name argument.
         >>> class SubClass2(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, a, name=None, *args, **kwargs):
+        >>>     def __init__(self, a, name=None, **kwargs):
         >>>         pass
         AssertionError: The arguments of the
         ``<class '__main__.subclass'>.__init__`` must have default values.
         >>> class SubClass3(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, a, name=None, *args, **kwargs):
+        >>>     def __init__(self, a, name=None, **kwargs):
         >>>         pass  # Right format
     """
 
@@ -66,11 +66,11 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         name (str): The name of the instance. Defaults to None.
     """
 
-    def __init__(self, name: str = '', *args, **kwargs):
+    def __init__(self, name: str = '', **kwargs):
         self._name = name
 
     @classmethod
-    def create_instance(cls, name: str = '', *args, **kwargs) -> Any:
+    def create_instance(cls, name: str = '', **kwargs) -> Any:
         """Create subclass instance by name, and subclass cannot create
         instances with duplicated names. The created instance will be stored in
         ``cls._instance_dict``, and can be accessed by ``get_instance``.
@@ -95,16 +95,15 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         if name:
             assert name not in instance_dict, f'{cls} cannot be created by ' \
                                               f'{name} twice.'
-            instance = cls(name=name, *args, **kwargs)
+            instance = cls(name=name, **kwargs)
             instance_dict[name] = instance
             return instance
         # Get default root instance.
         else:
-            if args or kwargs:
+            if kwargs:
                 raise ValueError('If name is not specified, create_instance '
                                  f'will return root {cls} and cannot accept '
-                                 f'any arguments, but got args: {args}, '
-                                 f'kwargs: {kwargs}')
+                                 f'any arguments, but got kwargs: {kwargs}')
             return cls.root
 
     @classmethod

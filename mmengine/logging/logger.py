@@ -22,9 +22,9 @@ class MMFormatter(logging.Formatter):
     _color_mapping: dict = dict(
         ERROR='red', WARNING='yellow', INFO='white', DEBUG='green')
 
-    def __init__(self, color: bool = True, *args, **kwargs):
+    def __init__(self, color: bool = True, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         # Get prefix format according to color.
         error_prefix = self._get_prefix('ERROR', color)
         warn_prefix = self._get_prefix('WARNING', color)
