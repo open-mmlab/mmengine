@@ -96,6 +96,8 @@ def _init_dist_slurm(backend, port=None) -> None:
     Args:
         backend (str): Backend of torch.distributed.
         port (int, optional): Master port. Defaults to None.
+
+    TODO: https://github.com/open-mmlab/mmcv/pull/1682
     """
     proc_id = int(os.environ['SLURM_PROCID'])
     ntasks = int(os.environ['SLURM_NTASKS'])

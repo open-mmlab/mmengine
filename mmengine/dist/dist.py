@@ -48,7 +48,9 @@ def all_reduce(data: Tensor,
     Args:
         data (Tensor): Input and output of the collective. The function
             operates in-place.
-        op (str): Operation to reduce data. Defaults to 'sum'.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
@@ -80,7 +82,7 @@ def all_reduce(data: Tensor,
 
         # pytorch does not support 'mean' operation so we fall back to support
         # it with 'sum' operation.
-        if op == 'mean':
+        if op.lower() == 'mean':
             dist.all_reduce(data, _get_reduce_op('sum'), group)
             data.div_(world_size)
         else:
@@ -97,8 +99,9 @@ def all_gather(data: Tensor,
 
     Note:
         Unlike PyTorch ``torch.distributed.all_gather``, :meth:`all_gather` in
-        MMEngine does not pass in an empty list ``gather_list`` but returns
-        the ``gather_list`` directly, which is more convenient.
+        MMEngine does not pass in an empty list ``gather_list`` and returns
+        the ``gather_list`` directly, which is more convenient. The difference
+        between their interfaces is as below:
 
         - MMEngine: all_gather(data, group) -> gather_list
         - PyTorch: all_gather(gather_list, data, group) -> None
@@ -163,8 +166,9 @@ def gather(
 
     Note:
         Unlike PyTorch ``torch.distributed.gather``, :meth:`gather` in
-        MMEngine does not pass in an empty list ``gather_list`` but returns
-        the ``gather_list`` directly, which is more convenient.
+        MMEngine does not pass in an empty list ``gather_list`` and returns
+        the ``gather_list`` directly, which is more convenient. The difference
+        between their interfaces is as below:
 
         - MMEngine: gather(data, dst, group) -> gather_list
         - PyTorch: gather(data, gather_list, dst, group) -> None
@@ -418,7 +422,7 @@ def broadcast_object_list(data: List[Any],
     Note:
         For NCCL-based process groups, internal tensor representations of
         objects must be moved to the GPU device before communication starts.
-        In this case, the device used is given by
+        In this case, the used device is given by
         ``torch.cuda.current_device()`` and it is the user's responsibility to
         ensure that this is correctly set so that each rank has an individual
         GPU, via ``torch.cuda.set_device()``.
@@ -468,7 +472,9 @@ def all_reduce_dict(data: Dict[str, Tensor],
 
     Args:
         data (dict[str, Tensor]): Data to be reduced.
-        op (str): Operation to reduce input. Defaults to 'sum'.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
@@ -608,8 +614,8 @@ def all_gather_object(data: Any,
     Note:
         Unlike PyTorch ``torch.distributed.all_gather_object``,
         :meth:`all_gather_object` in MMEngine does not pass in an empty list
-        ``gather_list`` but returns the ``gather_list`` directly, which is
-        more convenient.
+        ``gather_list`` and returns the ``gather_list`` directly, which is
+        more convenient. The difference between their interfaces is as below:
 
         - MMEngine: all_gather_object(data, group) -> gather_list
         - PyTorch: all_gather_object(gather_list, data, group) -> None
@@ -628,7 +634,7 @@ def all_gather_object(data: Any,
     Note:
         For NCCL-based process groups, internal tensor representations
         of objects must be moved to the GPU device before communication starts.
-        In this case, the device used is given by
+        In this case, the used device is given by
         ``torch.cuda.current_device()`` and it is the user's responsibility to
         ensure that this is correctly set so that each rank has an individual
         GPU, via ``torch.cuda.set_device()``.
@@ -770,8 +776,8 @@ def gather_object(
     Note:
         Unlike PyTorch ``torch.distributed.gather_object``,
         :meth:`gather_object` in MMEngine does not pass in an empty list
-        ``gather_list`` but returns the ``gather_list`` directly, which is
-        more convenient.
+        ``gather_list`` and returns the ``gather_list`` directly, which is
+        more convenient. The difference between their interfaces is as below:
 
         - MMEngine: gather_object(data, dst, group) -> gather_list
         - PyTorch: gather_object(data, gather_list, data, group) -> None
