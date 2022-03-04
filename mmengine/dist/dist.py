@@ -9,10 +9,10 @@ import os.path as osp
 from torch import Tensor
 from torch import distributed as dist
 
+import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_default_group)
 from mmengine.utils import digit_version, TORCH_VERSION
-import mmengine
 
 
 def _get_reduce_op(name: str) -> dist.ReduceOp:
@@ -324,7 +324,7 @@ def _object_to_tensor(obj: Any) -> Tuple[Tensor, Tensor]:
 
 def _tensor_to_object(tensor: Tensor, tensor_size: int) -> Any:
     """Deserialize tensor to picklable python object."""
-    buf = tensor.numpy().tobytes()[:tensor_size]
+    buf = tensor.cpu().numpy().tobytes()[:tensor_size]
     return pickle.loads(buf)
 
 
@@ -350,7 +350,7 @@ def _broadcast_object_list(object_list: List[Any],
         object_sizes_tensor = torch.empty(len(object_list), dtype=torch.long)
 
     # Current device selection.
-    # To preserve backwards compatibility, ``device`` is default to ``None``
+    # To preserve backwards compatibility, ``device`` is ``None`` by default.
     # in which case we run current logic of device selection, i.e.
     # ``current_device`` is CUDA if backend is NCCL otherwise CPU device. In
     # the case it is not ``None`` we move the size and object tensors to be
@@ -481,7 +481,7 @@ def all_reduce_dict(data: Dict[str, Tensor],
                 'key1': torch.arange(2, dtype=torch.int64),
                 'key2': torch.arange(3, dtype=torch.int64)
             }
-        >>> dist.broadcast_object_list(data)
+        >>> dist.all_reduce_dict(data)
         >>> data
             {'key1': tensor([0, 1]), 'key2': tensor([0, 1, 2])}
 
@@ -491,7 +491,7 @@ def all_reduce_dict(data: Dict[str, Tensor],
                 'key1': torch.arange(2, dtype=torch.int64),
                 'key2': torch.arange(3, dtype=torch.int64)
             }
-        >>> dist.broadcast_object_list(data)
+        >>> dist.all_reduce_dict(data)
         >>> data
         {'key1': tensor([0, 2]), 'key2': tensor([0, 2, 4])}  # Rank 0
         {'key1': tensor([0, 2]), 'key2': tensor([0, 2, 4])}  # Rank 1
@@ -533,9 +533,23 @@ def _all_gather_object(object_list: List[Any],
                        group: Optional[dist.ProcessGroup] = None) -> None:
     """Gather picklable objects from the whole group into a list.
 
-    Similar to
-    :func:`all_gather`, but Python objects can be passed in. Note that the
-    object must be picklable in order to be gathered.
+    Similar to :func:`all_gather`, but Python objects can be passed in.
+    Note that the object must be picklable in order to be gathered.
+
+    Args:
+        object_list (list[Any]): Output list. It should be correctly sized as
+            the size of the group for this collective and will contain the
+            output.
+        object (Any): Pickable Python object to be broadcast from current
+            process.
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
+
+    Returns:
+        None. If the calling rank is part of this group, the output of the
+        collective will be populated into the input ``object_list``. If the
+        calling rank is not part of the group, the passed in ``object_list``
+        will be unmodified.
     """
     if dist.distributed_c10d._rank_not_in_group(group):
         return
@@ -675,6 +689,16 @@ def _gather_object(obj: Any,
 
     Similar to :func:`gather`, but Python objects can be passed in. Note that
     the object must be picklable in order to be gathered.
+
+    Args:
+        obj (Any): Input object. Must be picklable.
+        object_gather_list (list[Any], optional): Output list. On the ``dst``
+            rank, it should be correctly sized as the size of the group for
+            this collective and will contain the output. Must be ``None`` on
+            non-dst ranks. Defaults to None.
+        dst (int): Destination rank. Defaults to 0.
+        group: (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
     """
     if dist.distributed_c10d._rank_not_in_group(group):
         return
@@ -754,17 +778,13 @@ def gather_object(
 
     Args:
         obj (Any): Input object. Must be picklable.
-        object_gather_list (list[Any]): Output list. On the ``dst`` rank, it
-            should be correctly sized as the size of the group for this
-            collective and will contain the output. Must be ``None`` on non-dst
-            ranks. (default is ``None``)
         dst (int): Destination rank. Defaults to 0.
         group: (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
 
     Returns:
-        list[Any]. On the ``dst`` rank, ``object_gather_list`` will contain the
-        output of the collective.
+        list[Any]. On the ``dst`` rank, return ``gather_list`` which contains
+        the output of the collective.
 
     Examples:
         >>> import torch

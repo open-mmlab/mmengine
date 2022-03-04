@@ -8,13 +8,17 @@ import torch
 import torch.multiprocessing as mp
 from torch import distributed as dist
 
-_IS_DIST = False
 _LOCAL_PROCESS_GROUP = None
+
+
+def is_distributed() -> bool:
+    """Return True if distributed environment has been initialized."""
+    return dist.is_available() and dist.is_initialized()
 
 
 def get_local_group() -> Optional[dist.ProcessGroup]:
     """Return local process group."""
-    if not _IS_DIST:
+    if not is_distributed():
         return None
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -30,12 +34,16 @@ def get_default_group() -> Optional[dist.ProcessGroup]:
     return dist.distributed_c10d._get_default_group()
 
 
-def is_distributed() -> bool:
-    """Return True if distributed environment has been initialized."""
-    return _IS_DIST
+def init_dist(launcher, backend='nccl', **kwargs) -> None:
+    """Initialize distributed environment.
 
-
-def init_dist(launcher, backend='nccl', **kwargs):
+    Args:
+        launcher (str): Way to launcher multi processes. Supported launcheres
+            are 'pytorch', 'mpi' and 'slurm'.
+        backend (str): Communication Backends. Supported backends are 'nccl',
+            'gloo' and 'mpi'. Defaults to 'nccl'.
+        **kwargs: keyword arguments are passed to ``init_process_group``.
+    """
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
     if launcher == 'pytorch':
@@ -47,11 +55,15 @@ def init_dist(launcher, backend='nccl', **kwargs):
     else:
         raise ValueError(f'Invalid launcher type: {launcher}')
 
-    global _IS_DIST
-    _IS_DIST = True
 
+def _init_dist_pytorch(backend, **kwargs) -> None:
+    """Initialize distributed environment with PyTorch launcher.
 
-def _init_dist_pytorch(backend, **kwargs):
+    Args:
+        backend (str): Backend of torch.distributed. Supported backends are
+            'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
+        **kwargs: keyword arguments are passed to ``init_process_group``.
+    """
     # TODO: use local_rank instead of rank % num_gpus
     rank = int(os.environ['RANK'])
     num_gpus = torch.cuda.device_count()
@@ -59,7 +71,14 @@ def _init_dist_pytorch(backend, **kwargs):
     dist.init_process_group(backend=backend, **kwargs)
 
 
-def _init_dist_mpi(backend, **kwargs):
+def _init_dist_mpi(backend, **kwargs) -> None:
+    """Initialize distributed environment with MPI launcher.
+
+    Args:
+        backend (str): Backend of torch.distributed. Supported backends are
+            'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
+        **kwargs: keyword arguments are passed to ``init_process_group``.
+    """
     # TODO: use local_rank instead of rank % num_gpus
     rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
     num_gpus = torch.cuda.device_count()
@@ -67,7 +86,7 @@ def _init_dist_mpi(backend, **kwargs):
     dist.init_process_group(backend=backend, **kwargs)
 
 
-def _init_dist_slurm(backend, port=None):
+def _init_dist_slurm(backend, port=None) -> None:
     """Initialize slurm distributed training environment.
 
     If argument ``port`` is not specified, then the master port will be system
@@ -142,7 +161,7 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         str or None: Return the backend of the given process group as a lower
         case string if in distributed environment, otherwise None.
     """
-    if _IS_DIST:
+    if is_distributed():
         # handle low versions of torch like 1.5.0 which does not support
         # passing in None for group argument
         if group is None:
@@ -167,7 +186,7 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         int: Return the number of processes of the given process group if in
         distributed environment, otherwise 1.
     """
-    if _IS_DIST:
+    if is_distributed():
         # handle low versions of torch like 1.5.0 which does not support
         # passing in None for group argument
         if group is None:
@@ -196,7 +215,7 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         environment, otherwise 0.
     """
 
-    if _IS_DIST:
+    if is_distributed():
         # handle low versions of torch like 1.5.0 which does not support
         # passing in None for group argument
         if group is None:
@@ -213,7 +232,7 @@ def get_local_size() -> int:
         int: Return the number of processes in the current node if in
         distributed environment, otherwise 1.
     """
-    if not _IS_DIST:
+    if not is_distributed():
         return 1
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -230,7 +249,7 @@ def get_local_rank() -> int:
         int: Return the rank of current process in the current node if in
         distributed environment, otherwise 0
     """
-    if not _IS_DIST:
+    if not is_distributed():
         return 0
 
     if _LOCAL_PROCESS_GROUP is None:
@@ -306,7 +325,7 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
     """
-    if _IS_DIST:
+    if is_distributed():
         # handle low versions of torch like 1.5.0 which does not support
         # passing in None for group argument
         if group is None:
