@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 import cv2
 import numpy as np
@@ -11,6 +11,7 @@ from matplotlib.collections import (LineCollection, PatchCollection,
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
+from mmengine.data import BaseDataSample
 from mmengine.registry import VISUALIZERS
 
 
@@ -19,93 +20,101 @@ class Visualizer:
     """MMEngine provides a Visualizer class that uses the ``Matplotlib``
     library as the backend. It has the following functions:
 
-    - Provide a series of basic methods that are not related to vision tasks,
-      such as draw_bboxes and draw_texts, etc.
-    - All the basic methods support chain calls, which is convenient for
-      overlaydrawing and display
-    - Provide the function of drawing feature maps
+    - Basic info methods
 
-    Each downstream algorithm library can inherit ``Visualizer`` and implement
-    the required visualization functions in the draw interface.
-    For example, ``DetVisualizer`` in MMDetection inherits from ``Visualizer``
-    and implements functions, such as visual detection boxes, instance masks,
-    and semantic segmentation maps in the draw interface.
+      - set_image: sets the original image data
+      - get_image: get the image data in Numpy format after drawing
+      - show: visualization.
+      - register_task: registers the drawing function.
 
-    Visualizer provides basic and general drawing functions. The main
-    interfaces are as follows:
+    - Basic drawing methods
 
-    (1) Draw unrelated functional interfaces
+      - draw_bboxes: draw single or multiple bounding boxes
+      - draw_texts: draw single or multiple text boxes
+      - draw_lines: draw single or multiple line segments
+      - draw_circles: draw single or multiple circles
+      - draw_polygons: draw single or multiple polygons
+      - draw_binary_masks: draw single or multiple binary masks
+      - draw: The abstract drawing interface used by the user
 
-    set_image: sets the original image data
-    get_image: get the image data in Numpy format after drawing
-    show: visualization.
-    register_task: registers the drawing function.
+    - Enhanced methods
 
-    (2) Draw related interfaces
+      - draw_featmap: draw feature map
 
-    draw: The abstract drawing interface used by the user
-    draw_featmap: draw feature map
-    draw_bboxes: draw single or multiple bounding boxes
-    draw_texts: draw single or multiple text boxes
-    draw_lines: draw single or multiple line segments
-    draw_circles: draw single or multiple circles
-    draw_polygons: draw single or multiple polygons
-    draw_binary_masks: draw single or multiple binary masks
+    All the basic drawing methods support chain calls, which is convenient for
+    overlaydrawing and display.Each downstream algorithm library can inherit
+    ``Visualizer`` and implement the required visualization functions in the
+    ``draw`` interface. For example, ``DetVisualizer`` in MMDetection inherits
+    from ``Visualizer`` and implements functions, such as visual detection
+    boxes, instance masks, and semantic segmentation maps in the draw
+    interface.
 
     Args:
         metadata (dict, optional): A dict contains the meta information
             of single image. such as ``dict(img_shape=(512, 512, 3),
             scale_factor=(1, 1, 1, 1))``. Defaults to None.
-        image (np.ndarray, optional): the origin image to draw. Defaults to
-            None.
-        scale (float, optional):  Defaults to 1.0.
+        image (np.ndarray, optional): the origin image to draw which channel is
+            bgr. Defaults to None.
 
     Examples:
-        >>> vis = Visualizer(metadata=metadata, image=image)
-
+        >>> # Basic info methods
         >>> vis = Visualizer()
         >>> vis.set_image(image)
         >>> vis.get_image()
         >>> vis.show()
 
+        >>> # Basic drawing methods
+        >>> vis = Visualizer(metadata=metadata, image=image)
         >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edgecolors='g')
         >>> vis.draw_bboxes(bbox=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
                             edgecolors=['g', 'r'], is_filling=True)
-
         >>> vis.draw_lines(x_datas=np.array([1, 3]),
-                           y_datas=np.array([1, 3]),
-                           colors='r', linewidths=1)
+                        y_datas=np.array([1, 3]),
+                        colors='r', linewidths=1)
         >>> vis.draw_lines(x_datas=np.array([[1, 3], [2, 4]]),
-                           y_datas=np.array([[1, 3], [2, 4]]),
-                           colors=['r', 'r'], linewidths=[1, 2])
-
+                        y_datas=np.array([[1, 3], [2, 4]]),
+                        colors=['r', 'r'], linewidths=[1, 2])
         >>> vis.draw_texts(text='MMEngine',
-                           position=np.array([2, 2]),
-                           colors='b')
+                        position=np.array([2, 2]),
+                        colors='b')
         >>> vis.draw_texts(text=['MMEngine','OpenMMLab']
-                           position=np.array([[2, 2], [5, 5]]),
-                           colors=['b', 'b'])
-
+                        position=np.array([[2, 2], [5, 5]]),
+                        colors=['b', 'b'])
         >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
         >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
-                             radius=np.array[1, 2], colors=['g', 'r'],
-                             is_filling=True)
-
+                            radius=np.array[1, 2], colors=['g', 'r'],
+                            is_filling=True)
         >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
-                              edgecolors='g')
+                            edgecolors='g')
         >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
                                     np.array([2, 2, 3, 2, 3, 3, 2, 3]]),
-                              edgecolors=['g', 'r'], is_filling=True)
-
+                            edgecolors=['g', 'r'], is_filling=True)
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
 
+        >>> # chain calls
+        >>> vis.draw_bboxes().draw_texts().draw_circle().draw_binary_masks()
+
+        >>> # Enhanced method
+        >>> vis = Visualizer(metadata=metadata, image=image)
         >>> heatmap = vis.draw_featmap(tensor_chw, img, mode='mean')
         >>> heatmap = vis.draw_featmap(tensor_chw, img, mode=None,
-                                       topk=8, arrangement=(4, 2))
+                                    topk=8, arrangement=(4, 2))
         >>> heatmap = vis.draw_featmap(tensor_chw, img, mode=None,
-                                       topk=-1)
+                                    topk=-1)
 
-        >>> vis.draw_bboxes().draw_texts().draw_circle().draw_binary_masks()
+        >>> # inherit
+        >>> class DetVisualizer2(Visualizer):
+        >>>     @Visualizer.register_task('instances')
+        >>>     def draw_instance(self,
+        >>>                      instances: 'BaseDataInstance',
+        >>>                      data_type: Type):
+        >>>         pass
+        >>>     def draw(self,
+        >>>             data_sample,
+        >>>             image: np.ndarray = None,
+        >>>             show_gt: bool = True,
+        >>>             show_pred: bool = True) -> None:
+        >>>         pass
     """
     task_dict: dict = {}
 
@@ -119,28 +128,40 @@ class Visualizer:
 
     def show(self,
              drawn_image: Optional[np.ndarray] = None,
-             winname: str = 'win',
+             window_name: str = 'image',
              wait_time: int = 0) -> None:
         """Show the drawn image. if ``drawn_image`` is None, show the inner
         image, which is obtained by ``self.get_image()``.
 
         Args:
-            drawn_image (np.ndarray, optional): The image to draw. Defaults to
-                None.
-            winname (str): Name of the window. Defaults to 'win'.
+            drawn_image (np.ndarray, optional): The image to draw which
+                channel is bgr. Defaults to None.
+            window_name (str): Name of the window. Defaults to 'image'.
             wait_time (int, optional): Delay in milliseconds. 0 is the special
                 value that means "forever". Defaults to 0.
         """
-        cv2.namedWindow(winname, 0)
-        cv2.imshow(winname,
+        cv2.namedWindow(window_name, 0)
+        cv2.imshow(window_name,
                    self.get_image() if drawn_image is None else drawn_image)
         cv2.waitKey(wait_time)
 
     @classmethod
     def register_task(cls, task_name: str, force: bool = False) -> Callable:
+        """Register a function.
+
+        A record will be added to ``task_dict``, whose key is the task_name
+        and value is the decorated function.
+
+        Args:
+            cls (type): Module class to be registered.
+            task_name (str or list of str, optional): The module name to be
+                registered.
+            force (bool): Whether to override an existing function with the
+                same name. Defaults to False.
+        """
 
         def _register(task_func):
-            print(task_func.__class__)
+
             if (task_name not in cls.task_dict) or force:
                 cls.task_dict[task_name] = task_func
             else:
@@ -157,10 +178,11 @@ class Visualizer:
         Args:
             image (np.ndarray): The image to draw.
         """
+        assert image is not None
         self._setup_fig(image)
 
     def get_image(self) -> np.ndarray:
-        """Get the drawn image which channel is rgb.
+        """Get the drawn image which channel is bgr.
 
         Returns:
             np.ndarray: the drawn image which channel is rgb.
@@ -178,7 +200,7 @@ class Visualizer:
         """Set the image to draw.
 
         Args:
-            image (np.ndarray): The image to draw.
+            image (np.ndarray): The image to draw which channel is bgr.
         """
         image = image.astype('uint8')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -205,13 +227,22 @@ class Visualizer:
             interpolation='nearest')
 
     def draw(self,
-             data_sample,
+             data_sample: 'BaseDataSample',
              image: np.ndarray = None,
              show_gt: bool = True,
              show_pred: bool = True) -> None:
         pass
 
-    def _is_posion_valid(self, position):
+    def _is_posion_valid(self, position: np.ndarray) -> bool:
+        """Judge whether the position is in image.
+
+        Args:
+            position (np.ndarray): The position to judge which last dim must
+                be two and the format is [x, y].
+
+        Returns:
+            bool: Whether the position is in image.
+        """
         flag = (position[..., 0] < self.width).all() and \
                (position[..., 0] >= 0).all() and \
                (position[..., 1] < self.height).all() and \
@@ -281,8 +312,21 @@ class Visualizer:
                 for more details. Defaults to None.
         """
 
-        def check_and_expand(value, legal_type, expand_dim):
+        def check_and_expand(value: Any, legal_type: Union[Type, Tuple[Type,
+                                                                       Type]],
+                             expand_dim: int) -> List[Any]:
+            """If type of the value is legal_type, convert the value to list
+            and expand to `expand_dim`. If the value is list, check whether its
+            length is equal with or bigger than `exp[and_dim`.
 
+            Args:
+                value (Any): value.
+                legal_type (Union[Type, Sequence[Type]): legal type.
+                expand_dim (int): legal expand dim.
+
+            Returns:
+                List[Any]: value.
+            """
             if isinstance(value, legal_type):
                 value = [value] * expand_dim
             else:
@@ -367,7 +411,7 @@ class Visualizer:
                 If ``colors`` is single value, all the lines will have the same
                 colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
-                for more details. Defaults to 'g.
+                for more details. Defaults to 'g'.
             linestyles (Union[str, List[str]]): The linestyle
                 of lines. ``linestyles`` can have the same length with
                 texts or just single value. If ``linestyles`` is single
@@ -521,7 +565,7 @@ class Visualizer:
                 ``colors`` can have the same length with lines or just single
                 value. If ``colors`` is single value, all the lines will have
                 the same colors. Refer to `matplotlib.colors` for full list of
-                formats that are accepted.. Defaults to 'g.
+                formats that are accepted.. Defaults to 'g'.
             linestyles (Union[str, List[str]]): The linestyle
                 of lines. ``linestyles`` can have the same length with
                 texts or just single value. If ``linestyles`` is single
@@ -713,10 +757,11 @@ class Visualizer:
         - if mode is not None, it will compress tensor_chw to single channel
           image and sum to image.
         - if mode is None.
-          - if topk is -1, tensor_chw is assert to be one or three channel and
-          treat as img and will be sum to ``img``.
-          - if topk > 0, it will select topk channel to show, according to sum
-          of each channel.
+
+          - if topk <= 0, tensor_chw is assert to be one or three
+          channel and treated as image and will be sum to ``image``.
+          - if topk > 0, it will select topk channel to show by the sum of
+          each channel.
 
         Args:
             tensor_chw (torch.Tensor): The featmap to draw which format is
@@ -726,13 +771,37 @@ class Visualizer:
                 single value. If ``colors`` is single value, all the
                 binary_masks will convert to the same colors. The colors format
                 is rgb. Defaults to np.array([0, 255, 0]).
+            mode (str): The mode to compress `tensor_chw` to single channel.
+                Defaults to 'mean'.
+            topk (int): If mode is not None and topk > 0, it will select topk
+                channel to show by the sum of each channel. if topk <= 0,
+                tensor_chw is assert to be one or three. Defaults to 10.
+            arrangement (Tuple[int, int]): The arrangement of featmaps when
+                mode is not None and topk > 0. Defaults to (5, 2).
             alphas (Union[int, List[int]]): The transparency of origin image.
                 Defaults to 0.5.
         Returns:
             np.ndarray: featmap.
         """
 
-        def concat_heatmap(feat_map, img=None, alpha=0.5):
+        def concat_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
+                           img: Optional[np.ndarray] = None,
+                           alpha: float = 0.5) -> np.ndarray:
+            """Convert feat_map to heatmap and sum to image, if image is not
+            None.
+
+            Args:
+                feat_map (np.ndarray, torch.Tensor): The feat_map to convert
+                    with of shape (H, W), where H is the image height and W is
+                    the image width.
+                img (np.ndarray, optional): The origin image. Defaults to None.
+                    is BGR. Defaults to np.array([0, 255, 0]).
+                alphas (Union[int, List[int]]): The transparency of origin
+                    image. Defaults to 0.5.
+
+            Returns:
+                np.ndarray: heatmap
+            """
             norm_img = np.zeros(feat_map.shape)
             norm_img = cv2.normalize(feat_map.numpy(), norm_img, 0, 255,
                                      cv2.NORM_MINMAX)

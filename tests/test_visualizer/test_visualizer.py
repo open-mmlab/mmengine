@@ -26,6 +26,8 @@ class TestVisualizer(TestCase):
     def test_set_image(self):
         visualizer = Visualizer()
         visualizer.set_image(self.image)
+        with pytest.raises(AssertionError):
+            visualizer.set_image(None)
 
     def test_get_image(self):
         visualizer = Visualizer(image=self.image)
@@ -290,6 +292,15 @@ class TestVisualizer(TestCase):
             image=np.random.randint(0, 256, size=(3, 3), dtype='uint8'),
             mode=None,
             topk=8)
+
+        # test arrangement
+        with pytest.raises(AssertionError):
+            visualizer.draw_featmap(
+                torch.randn(10, 3, 3),
+                image=image,
+                mode=None,
+                topk=8,
+                arrangement=(2, 2))
 
     def test_chain_call(self):
         visualizer = Visualizer(image=self.image)
