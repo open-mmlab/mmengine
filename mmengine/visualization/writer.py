@@ -20,11 +20,14 @@ from .visualizer import Visualizer
 class BaseWriter(metaclass=ABCMeta):
     """Base class for writer.
 
+    Each writer can inherit ``BaseWriter`` and implement
+    the required functions.
+
     Args:
         visualizer (dict, :obj:`Visualizer`, optional):
-            Visualizer instance or dictionary. Default None.
+            Visualizer instance or dictionary. Default: None.
         save_dir (str, optional): The root path of the save file
-            for write data. Default None.
+            for write data. Default: None.
     """
 
     def __init__(self,
@@ -42,23 +45,30 @@ class BaseWriter(metaclass=ABCMeta):
 
     @property
     def visualizer(self) -> 'Visualizer':
-        """Return the visualizer object."""
+        """Return the visualizer object.
+
+        You can get the drawing backend through the visualizer property for
+        custom drawing.
+        """
         return self._visualizer  # type: ignore
 
     @property
     @abstractmethod
     def experiment(self) -> Any:
-        """Return the experiment object associated with this writer."""
+        """Return the experiment object associated with this writer.
+
+        The experiment attribute can get the write backend, such as wandb,
+        tensorboard. If you want to write other data, such as writing a table,
+        you can directly get the write backend through experiment.
+        """
         pass
 
     def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Add a set of hyperparameters.
+        """Record a set of hyperparameters.
 
         Args:
             params_dict (dict): Each key-value pair in the dictionary is the
                   name of the hyper parameter and it's corresponding value.
-                  The type of the value can be one of `bool`, `string`,
-                   `float`, `int`, or `None`.
         """
         pass
 
@@ -72,13 +82,13 @@ class BaseWriter(metaclass=ABCMeta):
         Args:
             model (torch.nn.Module): Model to draw.
             input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed.
+                or a tuple of variables to be fed. Default: None.
         """
         pass
 
     def add_image(self,
                   name: str,
-                  image: Union[torch.Tensor, np.ndarray],
+                  image: np.ndarray,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -88,14 +98,14 @@ class BaseWriter(metaclass=ABCMeta):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (torch.Tensor, np.ndarray): The image to be saved in
-                CHW format.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
             data_samples (:obj:`BaseDataSample`,optional): The data structure
-                of OpenMMlab.
-            draw_gt (bool): Whether to draw the ground truth. Default True.
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default True.
-            step (int): Global step value to record. Default 0.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
         """
         pass
 
@@ -104,7 +114,7 @@ class BaseWriter(metaclass=ABCMeta):
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Record scalar data.
+        """Record scalar.
 
         Args:
             name (str): The unique identifier for the scalar to save.
@@ -123,9 +133,11 @@ class BaseWriter(metaclass=ABCMeta):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default 0.
-            file_name (str, optional): The filename where you want to
-                save the data additionally. Default None.
+            step (int): Global step value to record. Default: 0.
+            file_name (str, optional): The scalar's data will be
+                saved to the `file_name` file at the same time
+                if the `file_name` parameter is specified.
+                Default: None.
         """
         pass
 
@@ -136,18 +148,26 @@ class BaseWriter(metaclass=ABCMeta):
 
 @WRITERS.register_module()
 class LocalWriter(BaseWriter):
-    """Local write class. It can write images, hyperparameters, scalars, etc.
-    to the local hard disk.
+    """Local write class.
+
+    It can write image, hyperparameters, scalars, etc.
+    to the local hard disk. You can get the drawing backend
+    through the visualizer property for custom drawing.
 
     Examples:
         >>> from mmengine.visualization import LocalWriter
         >>> import numpy as np
-        >>> local_writer = LocalWriter(dict(type='Visualizer'),
-        save_dir='temp_dir')
+        >>> local_writer = LocalWriter(dict(type='DetVisualizer'),\
+            save_dir='temp_dir')
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
         >>> local_writer.add_image('img', img)
         >>> local_writer.add_scaler('mAP', 0.6)
         >>> local_writer.add_scalars({'loss': [1, 2, 3],'acc':0.8})
+
+        >>> local_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
+            edgecolors='g')
+        >>> local_writer.add_image('img', \
+            local_writer.visualizer.get_image())
 
     Args:
         visualizer (dict, :obj:`Visualizer`): Visualizer instance or
@@ -155,13 +175,13 @@ class LocalWriter(BaseWriter):
         save_dir (str, optional): The root path of the save file
             for write data.
         save_img_folder (str): The save image folder name.
-            Default 'writer_image'.
+            Default: 'writer_image'.
         save_hyperparams_name (str): The save hyperparam file name.
-            Default 'hyperparams.yaml'.
+            Default: 'hyperparams.yaml'.
         save_scalar_name (str):  The save scalar values file name.
-            Default 'scalars.json'.
+            Default: 'scalars.json'.
         img_show (bool): Whether to show the image when calling add_image.
-            Default False.
+            Default: False.
     """
 
     def __init__(self,
@@ -191,7 +211,7 @@ class LocalWriter(BaseWriter):
         return self
 
     def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Record hyperparameters.
+        """Record hyperparameters to disk.
 
         Args:
             params_dict (dict): The dict of hyperparameters to save.
@@ -200,24 +220,24 @@ class LocalWriter(BaseWriter):
 
     def add_image(self,
                   name: str,
-                  image: Union[torch.Tensor, np.ndarray],
+                  image: np.ndarray,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image.
+        """Record image to disk.
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (torch.Tensor, np.ndarray): The image to be saved
-                in CHW format.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
             data_samples (:obj:`BaseDataSample`,optional): The data structure
-                of OpenMMlab.
-            draw_gt (bool): Whether to draw the ground truth. Default True.
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default True.
-            step (int): Global step value to record. Default 0.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
         """
 
         assert self.visualizer
@@ -236,12 +256,12 @@ class LocalWriter(BaseWriter):
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Add scalar data to summary.
+        """Add scalar data to disk.
 
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float or int): Value to save.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default: 0.
         """
         self._dump(self._save_scalar_name, 'json', {name: value, 'step': step})
 
@@ -256,9 +276,11 @@ class LocalWriter(BaseWriter):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default 0.
-            file_name (str, optional): The filename where you want
-                to save the data additionally. Default None.
+            step (int): Global step value to record. Default: 0.
+            file_name (str, optional): The scalar's data will be
+                saved to the `file_name` file at the same time
+                if the `file_name` parameter is specified.
+                Default: None.
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
@@ -286,26 +308,60 @@ class LocalWriter(BaseWriter):
 
 @WRITERS.register_module()
 class WandbWriter(BaseWriter):
+    """Write various types of data to wandb.
+
+    Examples:
+        >>> from mmengine.visualization import WandbWriter
+        >>> import numpy as np
+        >>> wandb_writer = WandbWriter(dict(type='DetVisualizer'))
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> wandb_writer.add_image('img', img)
+        >>> wandb_writer.add_scaler('mAP', 0.6)
+        >>> wandb_writer.add_scalars({'loss': [1, 2, 3],'acc':0.8})
+
+        >>> wandb_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
+            edgecolors='g')
+        >>> wandb_writer.add_image('img', \
+            wandb_writer.visualizer.get_image())
+
+        >>> wandb_writer = WandbWriter()
+        >>> assert wandb_writer.visualizer is None
+        >>> wandb_writer.add_image('img', img)
+
+    Args:
+        init_kwargs (dict, optional): wandb initialization
+            input parameters. Default: None.
+        commit: (bool, optional) Save the metrics dict to the wandb server
+                and increment the step.  If false `wandb.log` just
+                updates the current metrics dict with the row argument
+                and metrics won't be saved until `wandb.log` is called
+                with `commit=True`. Default: True.
+        visualizer (dict, :obj:`Visualizer`, optional):
+            Visualizer instance or dictionary. Default: None.
+        save_dir (str, optional): The root path of the save file
+            for write data. Default: None.
+    """
 
     def __init__(self,
-                 init_kwargs=None,
-                 commit=True,
-                 with_step=False,
-                 sync=True,
-                 visualizer=None,
-                 save_dir=None):
+                 init_kwargs: Optional[dict] = None,
+                 commit: Optional[bool] = True,
+                 visualizer: Optional[Union[dict, 'Visualizer']] = None,
+                 save_dir: Optional[Union[str, PathLike[str]]] = None):
         super(WandbWriter, self).__init__(visualizer, save_dir)
         self._commit = commit
-        self._with_step = with_step
-        self._sync = sync
         self._wandb = self._setup_env(init_kwargs)
 
     @property
     def experiment(self):
-        """Return Wandb object."""
+        """Return wandb object.
+
+        The experiment attribute can get the wandb backend, If you want to
+        write other data, such as writing a table, you can directly get the
+        wandb backend through experiment.
+        """
         return self._wandb
 
-    def _setup_env(self, init_kwargs: dict):
+    def _setup_env(self, init_kwargs: Optional[dict] = None) -> Any:
         """Setup env.
 
         Args:
@@ -327,78 +383,96 @@ class WandbWriter(BaseWriter):
         return wandb
 
     def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Add a set of hyperparameters to be compared in Wandb.
+        """Record a set of hyperparameters to be compared in wandb.
 
         Args:
             params_dict (dict): Each key-value pair in the dictionary
                 is the name of the hyper parameter and it's
-                corresponding value. The type of the value can be
-                one of `bool`, `string`, `float`, `int`, or `None`.
+                corresponding value.
         """
-        self._wandb.log(params_dict, commit=self._commit, sync=self._sync)
+        self._wandb.log(params_dict, commit=self._commit)
 
     def add_image(self,
                   name: str,
-                  image: Union[torch.Tensor, np.ndarray],
+                  image: np.ndarray,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image to Wandb.
+        """Record image to wandb.
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (torch.Tensor, np.ndarray): The image to be saved in
-                CHW format.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
             data_samples (:obj:`BaseDataSample`,optional): The data structure
-                of OpenMMlab.
-            draw_gt (bool): Whether to draw the ground truth. Default True.
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default True.
-            step (int): Global step value to record. Default 0.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
         """
         if self.visualizer:
             self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
             self._wandb.log({name: self.visualizer.get_image()},
                             commit=self._commit,
-                            step=step,
-                            sync=self._sync)
+                            step=step)
         else:
             self.add_image_to_wandb(name, image, data_samples, draw_gt,
                                     draw_pred, step, **kwargs)
 
-    def add_scalar(self, name, value, step=0, **kwargs) -> None:
-        self._wandb.log({name: value},
-                        commit=self._commit,
-                        step=step,
-                        sync=self._sync)
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record scalar data to wandb.
+
+        Args:
+            name (str): The unique identifier for the scalar to save.
+            value (float or int): Value to save.
+            step (int): Global step value to record. Default: 0.
+        """
+        self._wandb.log({name: value}, commit=self._commit, step=step)
 
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
                     file_name: Optional[str] = None,
                     **kwargs) -> None:
-        """Add scalars data to wandb.
+        """Record scalar's data to wandb.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default: 0.
             file_name (str, optional): Useless parameter. Just for
-                interface unification. Default None.
+                interface unification. Default: None.
         """
-        self._wandb.log(
-            scalar_dict, commit=self._commit, step=step, sync=self._sync)
+        self._wandb.log(scalar_dict, commit=self._commit, step=step)
 
     def add_image_to_wandb(self,
-                           name,
-                           image,
-                           data_samples,
-                           show_gt=True,
-                           show_pred=True,
-                           step=0,
-                           **kwargs):
+                           name: str,
+                           image: np.ndarray,
+                           data_samples: Optional['BaseDataSample'] = None,
+                           draw_gt: bool = True,
+                           draw_pred: bool = True,
+                           step: int = 0,
+                           **kwargs) -> None:
+        """Record image to wandb.
+
+        Args:
+            name (str): The unique identifier for the image to save.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
+            data_samples (:obj:`BaseDataSample`,optional): The data structure
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
+            draw_pred (bool): Whether to draw the predicted result.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
+        """
         raise NotImplementedError()
 
     def close(self) -> None:
@@ -412,12 +486,29 @@ class TensorboardWriter(BaseWriter):
     """Tensorboard write class. It can write images, hyperparameters, scalars,
     etc. to a tensorboard file.
 
+    Its drawing function is provided by Visualizer.
+
+    Examples:
+        >>> from mmengine.visualization import TensorboardWriter
+        >>> import numpy as np
+        >>> tensorboard_writer = TensorboardWriter(dict(type='DetVisualizer'),\
+            save_dir='temp_dir')
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> tensorboard_writer.add_image('img', img)
+        >>> tensorboard_writer.add_scaler('mAP', 0.6)
+        >>> tensorboard_writer.add_scalars({'loss': 0.1,'acc':0.8})
+
+        >>> tensorboard_writer.visualizer.draw_bboxes(np.array([0, 0, 1, 1]), \
+            edgecolors='g')
+        >>> tensorboard_writer.add_image('img', \
+            tensorboard_writer.visualizer.get_image())
+
     Args:
         visualizer (dict, :obj:`Visualizer`): Visualizer instance
             or dictionary.
         save_dir (str, optional): The root path of the save file
             for write data.
-        log_dir (str): Save directory location. Default 'tf_writer'.
+        log_dir (str): Save directory location. Default: 'tf_writer'.
     """
 
     def __init__(self,
@@ -465,12 +556,12 @@ class TensorboardWriter(BaseWriter):
                   input_array: Optional[Union[torch.Tensor,
                                               List[torch.Tensor]]] = None,
                   **kwargs) -> None:
-        """Add graph data to tensorboard.
+        """Record graph data to tensorboard.
 
         Args:
             model (torch.nn.Module): Model to draw.
             input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed.
+                or a tuple of variables to be fed. Default: None.
         """
         if isinstance(input_array, list):
             for array in input_array:
@@ -480,7 +571,7 @@ class TensorboardWriter(BaseWriter):
         self._tensorboard.add_graph(model, input_array)
 
     def add_hyperparams(self, params_dict: dict, **kwargs) -> None:
-        """Add a set of hyperparameters to be compared in TensorBoard.
+        """Record a set of hyperparameters to be compared in TensorBoard.
 
         Args:
             params_dict (dict): Each key-value pair in the dictionary is the
@@ -492,7 +583,7 @@ class TensorboardWriter(BaseWriter):
 
     def add_image(self,
                   name: str,
-                  image: Union[torch.Tensor, np.ndarray],
+                  image: np.ndarray,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -502,14 +593,14 @@ class TensorboardWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (torch.Tensor, np.ndarray): The image to be saved in
-                CHW format.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
             data_samples (:obj:`BaseDataSample`,optional): The data structure
-                of OpenMMlab.
-            draw_gt (bool): Whether to draw the ground truth. Default True.
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default True.
-            step (int): Global step value to record. Default 0.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
         """
         assert self.visualizer
         self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
@@ -521,12 +612,12 @@ class TensorboardWriter(BaseWriter):
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Add scalar data to summary.
+        """Record scalar data to summary.
 
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float or int): Value to save.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default: 0.
         """
         self._tensorboard.add_scalar(name, value, step)
 
@@ -535,14 +626,14 @@ class TensorboardWriter(BaseWriter):
                     step: int = 0,
                     file_name: Optional[str] = None,
                     **kwargs) -> None:
-        """Add scalars data to summary.
+        """Record scalar's data to summary.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default: 0.
             file_name (str, optional): Useless parameter. Just for
-                interface unification. Default None.
+                interface unification. Default: None.
         """
         assert isinstance(scalar_dict, dict)
         for key, value in scalar_dict.items():
@@ -560,9 +651,21 @@ class ComposedWriter(BaseGlobalAccessible):
     instances. By inheriting BaseGlobalAccessible, it can be accessed anywhere
     once instantiated.
 
+    Examples:
+        >>> from mmengine.visualization import ComposedWriter
+        >>> import numpy as np
+        >>> composed_writer= ComposedWriter.create_instance('composed_writer',\
+            writers=[dict(type='LocalWriter', visualizer=dict( \
+            type='DetVisualizer'), save_dir='temp_dir'), \
+            dict(type='WandbWriter')])
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> composed_writer.add_image('img', img)
+        >>> composed_writer.add_scalar('mAP', 0.6)
+        >>> composed_writer.add_scalars({'loss': 0.1,'acc':0.8})
+
     Args:
-        name (str): The name of the instance. Defaults to 'composed_writer'.
-        writers (list, optional): The writers to compose.
+        name (str): The name of the instance. Defaults: 'composed_writer'.
+        writers (list, optional): The writers to compose. Default: None
     """
 
     def __init__(self,
@@ -609,31 +712,31 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             model (torch.nn.Module): Model to draw.
             input_array (torch.Tensor or list of torch.Tensor): A variable
-                or a tuple of variables to be fed.
+                or a tuple of variables to be fed. Default: None.
         """
         for writer in self._writer:
             writer.add_graph(model, input_array, **kwargs)
 
     def add_image(self,
                   name: str,
-                  image: Union[torch.Tensor, np.ndarray],
+                  image: np.ndarray,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image to tensorboard.
+        """Record image.
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (torch.Tensor, np.ndarray): The image to be saved
-                in CHW format.
+            image (np.ndarray): The image to be saved. The format
+                should be BGR.
             data_samples (:obj:`BaseDataSample`,optional): The data structure
-                of OpenMMlab.
-            draw_gt (bool): Whether to draw the ground truth. Default True.
+                of OpenMMlab. Default: None.
+            draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
-                Default True.
-            step (int): Global step value to record. Default 0.
+                Default: True.
+            step (int): Global step value to record. Default: 0.
         """
         for writer in self._writer:
             writer.add_image(name, image, data_samples, draw_gt, draw_pred,
@@ -649,7 +752,7 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             name (str): The unique identifier for the scalar to save.
             value (float or int): Value to save.
-            step (int): Global step value to record. Default 0.
+            step (int): Global step value to record. Default: 0.
         """
         for writer in self._writer:
             writer.add_scalar(name, value, step, **kwargs)
@@ -664,9 +767,11 @@ class ComposedWriter(BaseGlobalAccessible):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default 0.
-            file_name (str, optional): The filename where you want to
-                save the data additionally. Default None.
+            step (int): Global step value to record. Default: 0.
+            file_name (str, optional): The scalar's data will be
+                saved to the `file_name` file at the same time
+                if the `file_name` parameter is specified.
+                Default: None.
         """
         for writer in self._writer:
             writer.add_scalars(scalar_dict, step, file_name, **kwargs)
