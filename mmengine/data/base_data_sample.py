@@ -54,55 +54,52 @@ class BaseDataSample:
     Examples:
         >>> from mmengine.data import BaseDataElement, BaseDataSample
         >>> gt_instances = BaseDataSample()
-
         >>> bboxes = torch.rand((5, 4))
         >>> scores = torch.rand((5,))
         >>> img_id = 0
         >>> img_shape = (800, 1333)
         >>> gt_instances = BaseDataElement(
-                metainfo=dict(img_id=img_id, img_shape=img_shape),
-                data=dict(bboxes=bboxes, scores=scores))
+        ...     metainfo=dict(img_id=img_id, img_shape=img_shape),
+        ...     data=dict(bboxes=bboxes, scores=scores))
         >>> data = dict(gt_instances=gt_instances)
         >>> sample = BaseDataSample(
-                        metainfo=dict(img_id=img_id, img_shape=img_shape),
-                        data=data)
+        ...             metainfo=dict(img_id=img_id, img_shape=img_shape),
+        ...             data=data)
         >>> sample = BaseDataSample(dict(img_id=img_id,
-                                          img_shape=(H, W)))
-        # new
+        ...                               img_shape=(H, W)))
+
+        >>> # new
         >>> data1 = dict(bboxes=torch.rand((5, 4)),
                       scores=torch.rand((5,)))
         >>> metainfo1 = dict(img_id=1, img_shape=(640, 640)),
         >>> gt_instances1 = BaseDataElement(
-                metainfo=metainfo1,
-                data=data1)
+        ...     metainfo=metainfo1,
+        ...     data=data1)
         >>> sample1 = sample.new(
-                            metainfo=metainfo1
-                            data=dict(gt_instances1=gt_instances1)),
-
+        ...                 metainfo=metainfo1
+        ...                 data=dict(gt_instances1=gt_instances1)),
         >>> gt_instances2 = gt_instances1.new()
 
-        # property add and access
+        >>> # property add and access
         >>> sample = BaseDataSample()
         >>> gt_instances = BaseDataElement(
-                metainfo=dict(img_id=9, img_shape=(100, 100)),
-                data=dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5,)))
+        ...     metainfo=dict(img_id=9, img_shape=(100, 100)),
+        ...     data=dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5,)))
         >>> sample.set_metainfo(dict(img_id=9, img_shape=(100, 100))
         >>> assert 'img_shape' in sample.metainfo_keys()
         >>> assert 'img_shape' in sample
         >>> assert 'img_shape' not in sample.data_keys()
         >>> assert 'img_shape' in sample.keys()
         >>> print(sample.img_shape)
-
         >>> gt_instances.gt_instances = gt_instances
         >>> assert 'gt_instances' in sample.data_keys()
         >>> assert 'gt_instances' in sample
         >>> assert 'gt_instances' in sample.keys()
         >>> assert 'gt_instances' not in sample.metainfo_keys()
         >>> print(sample.gt_instances)
-
         >>> pred_instances = BaseDataElement(
-                metainfo=dict(img_id=9, img_shape=(100, 100)),
-                data=dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5,))
+        ...     metainfo=dict(img_id=9, img_shape=(100, 100)),
+        ...     data=dict(bboxes=torch.rand((5, 4)), scores=torch.rand((5,))
         >>> sample.pred_instances = pred_instances
         >>> assert 'pred_instances' in sample.data_keys()
         >>> assert 'pred_instances' in sample
@@ -110,17 +107,17 @@ class BaseDataSample:
         >>> assert 'pred_instances' not in sample.metainfo_keys()
         >>> print(sample.pred_instances)
 
-        # property delete and change
+        >>> # property delete and change
         >>> metainfo=dict(img_id=0, img_shape=(640, 640)
         >>> gt_instances = BaseDataElement(
-             metainfo=metainfo)，
-             data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        ...  metainfo=metainfo),
+        ...  data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
         >>> sample = BaseDataSample(metainfo=metainfo,
-                                    data=dict(gt_instances=gt_instances))
+        ...                         data=dict(gt_instances=gt_instances))
         >>> sample.img_shape = (1280, 1280)
         >>> sample.img_shape  # (1280, 1280)
         >>> sample.gt_instances = gt_instances
-        >>> sample.get('img_shape', None)  # (640， 640)
+        >>> sample.get('img_shape', None)  # (640, 640)
         >>> sample.get('gt_instances', None)
         >>> del sample.img_shape
         >>> del sample.gt_instances
@@ -129,23 +126,22 @@ class BaseDataSample:
         >>> sample.pop('img_shape', None)  # None
         >>> sample.pop('gt_instances', None)  # None
 
-        # Tensor-like
+        >>> # Tensor-like
         >>> cuda_sample = gt_instasamplences.cuda()
         >>> cuda_sample = gt_sample.to('cuda:0')
         >>> cpu_sample = cuda_sample.cpu()
         >>> cpu_sample = cuda_sample.to('cpu')
         >>> fp16_sample = cuda_sample.to(
-             device=None, dtype=torch.float16, non_blocking=False, copy=False,
-             memory_format=torch.preserve_format)
+        ...  device=None, dtype=torch.float16, non_blocking=False, copy=False,
+        ...  memory_format=torch.preserve_format)
         >>> cpu_sample = cuda_sample.detach()
         >>> np_sample = cpu_sample.numpy()
 
-        # print
+        >>> # print
         >>> metainfo = dict(img_shape=(800, 1196, 3))
         >>> gt_instances = BaseDataElement(
-             metainfo=metainfo,
-             data=dict(det_labels=torch.LongTensor([0, 1, 2, 3])))
-
+        ...  metainfo=metainfo,
+        ...  data=dict(det_labels=torch.LongTensor([0, 1, 2, 3])))
         >>> data = dict(gt_instances=gt_instances)
         >>> sample = BaseDataSample(metainfo=metainfo, data=data)
         >>> print(sample)
@@ -161,37 +157,36 @@ class BaseDataSample:
         ) at 0x7f9705daecd0>'
         ) at 0x7f981e41c550>'
 
-        # inheritance
+        >>> # inheritance
         >>> class DetDataSample(BaseDataSample):
-        >>>     proposals = property(
-        >>>         fget=partial(BaseDataSample.get_field, name='_proposals'),
-        >>>         fset=partial(
-        >>>             BaseDataSample.set_field,
-        >>>             name='_proposals',
-        >>>             dtype=BaseDataElement),
-        >>>         fdel=partial(BaseDataSample.del_field, name='_proposals'),
-        >>>         doc='Region proposals of an image')
-        >>>     gt_instances = property(
-        >>>         fget=partial(BaseDataSample.get_field,
-                                 name='_gt_instances'),
-        >>>         fset=partial(
-        >>>             BaseDataSample.set_field,
-        >>>             name='_gt_instances',
-        >>>             dtype=BaseDataElement),
-        >>>         fdel=partial(BaseDataSample.del_field,
-                                 name='_gt_instances'),
-        >>>         doc='Ground truth instances of an image')
-        >>>     pred_instances = property(
-        >>>         fget=partial(
-        >>>             BaseDataSample.get_field, name='_pred_instances'),
-        >>>         fset=partial(
-        >>>             BaseDataSample.set_field,
-        >>>             name='_pred_instances',
-        >>>             dtype=BaseDataElement),
-        >>>         fdel=partial(
-        >>>             BaseDataSample.del_field, name='_pred_instances'),
-        >>>         doc='Predicted instances of an image')
-
+        ...     proposals = property(
+        ...         fget=partial(BaseDataSample.get_field, name='_proposals'),
+        ...         fset=partial(
+        ...             BaseDataSample.set_field,
+        ...             name='_proposals',
+        ...             dtype=BaseDataElement),
+        ...         fdel=partial(BaseDataSample.del_field, name='_proposals'),
+        ...         doc='Region proposals of an image')
+        ...     gt_instances = property(
+        ...         fget=partial(BaseDataSample.get_field,
+        ...                      name='_gt_instances'),
+        ...         fset=partial(
+        ...             BaseDataSample.set_field,
+        ...             name='_gt_instances',
+        ...             dtype=BaseDataElement),
+        ...         fdel=partial(BaseDataSample.del_field,
+        ...                      name='_gt_instances'),
+        ...         doc='Ground truth instances of an image')
+        ...     pred_instances = property(
+        ...         fget=partial(
+        ...             BaseDataSample.get_field, name='_pred_instances'),
+        ...         fset=partial(
+        ...             BaseDataSample.set_field,
+        ...             name='_pred_instances',
+        ...             dtype=BaseDataElement),
+        ...         fdel=partial(
+        ...             BaseDataSample.del_field, name='_pred_instances'),
+        ...         doc='Predicted instances of an image')
         >>> det_sample = DetDataSample()
         >>> proposals = BaseDataElement(data=dict(bboxes=torch.rand((5, 4))))
         >>> det_sample.proposals = proposals
@@ -200,7 +195,7 @@ class BaseDataSample:
         >>> del det_sample.proposals
         >>> assert 'proposals' not in det_sample
         >>> with self.assertRaises(AssertionError):
-                det_sample.proposals = torch.rand((5, 4))
+        ...     det_sample.proposals = torch.rand((5, 4))
     """
 
     def __init__(self,

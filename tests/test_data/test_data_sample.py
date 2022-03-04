@@ -185,6 +185,14 @@ class TestBaseDataSample(TestCase):
         instances = BaseDataSample(metainfo, data)
 
         new_metainfo, new_data = self.setup_data()
+        # avoid generating same metainfo
+        while True:
+            if new_metainfo['img_id'] == metainfo['img_id'] or new_metainfo[
+                    'img_shape'] == metainfo['img_shape']:
+                new_metainfo, new_data = self.setup_data()
+            else:
+                break
+
         instances.gt_instances = new_data['gt_instances']
         instances.pred_instances = new_data['pred_instances']
 
