@@ -263,26 +263,6 @@ class Runner:
 
         return runner
 
-    def _set_random_seed(self) -> None:
-        """Set random seed to guarantee reproducible results.
-
-        Warning:
-            Results can not be guaranteed to resproducible if ``self.seed`` is
-            None because :meth:`_set_random_seed` will generate a random seed.
-
-        See https://pytorch.org/docs/stable/notes/randomness.html for details.
-        """
-        if self.seed is None:
-            self.seed = sync_random_seed()
-
-        random.seed(self.seed)
-        np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
-        torch.cuda.manual_seed_all(self.seed)
-        if self.deterministic:
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
@@ -366,6 +346,26 @@ class Runner:
                 'being overloaded, please further tune the variable for '
                 'optimal performance in your application as needed.')
             os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
+
+    def _set_random_seed(self) -> None:
+        """Set random seed to guarantee reproducible results.
+
+        Warning:
+            Results can not be guaranteed to resproducible if ``self.seed`` is
+            None because :meth:`_set_random_seed` will generate a random seed.
+
+        See https://pytorch.org/docs/stable/notes/randomness.html for details.
+        """
+        if self.seed is None:
+            self.seed = sync_random_seed()
+
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed_all(self.seed)
+        if self.deterministic:
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
     def build_model(self, model_cfg: Dict) -> nn.Module:
         """Build model.
