@@ -38,7 +38,7 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
     """Initialize distributed environment.
 
     Args:
-        launcher (str): Way to launcher multi processes. Supported launcheres
+        launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi' and 'slurm'.
         backend (str): Communication Backends. Supported backends are 'nccl',
             'gloo' and 'mpi'. Defaults to 'nccl'.

@@ -834,8 +834,8 @@ def collect_results(results: list,
     """Collected results in distributed environments.
 
     Args:
-        result_part (list[object]): Result list containing result parts
-            to be collected. Each item of ``result_part`` should be a picklable
+        results (list[object]): Result list containing result parts to be
+            collected. Each item of ``result_part`` should be a picklable
             object.
         size (int): Size of the results, commonly equal to length of
             the results.
