@@ -130,8 +130,8 @@ class Runner:
         # dump config
         self.cfg.dump(osp.join(self._work_dir, 'config.py'))
 
-        # need to recursively copy the cfg because `self.cfg` will be modified
-        # in runner.
+        # recursively copy the cfg because `self.cfg` will be modified
+        # everywhere.
         self.cfg = copy.deepcopy(cfg)
 
         # Used to reset registries location. See :meth:`Registry.build` for
