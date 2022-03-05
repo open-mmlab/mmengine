@@ -16,15 +16,19 @@ class MetaGlobalAccessible(type):
         >>> class SubClass1(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, *args, **kwargs):
         >>>         pass
-        AssertionError: The arguments of the
-        ``<class '__main__.subclass'>.__init__`` must contain name argument.
+        AssertionError: <class '__main__.SubClass1'>.__init__ must have the
+        name argument.
         >>> class SubClass2(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, a, name=None, **kwargs):
         >>>         pass
-        AssertionError: The arguments of the
-        ``<class '__main__.subclass'>.__init__`` must have default values.
+        AssertionError:
+        In <class '__main__.SubClass2'>.__init__, Only the name argument is
+        allowed to have no default values.
         >>> class SubClass3(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, a, name=None, **kwargs):
+        >>>     def __init__(self, name, **kwargs):
+        >>>         pass  # Right format
+        >>> class SubClass4(metaclass=MetaGlobalAccessible):
+        >>>     def __init__(self, a=1, name='', **kwargs):
         >>>         pass  # Right format
     """
 
@@ -34,11 +38,12 @@ class MetaGlobalAccessible(type):
         # Make sure `cls(name='root')` can be implemented.
         default_params = params[3] if params[3] else []
         params_name = params[0] if params[0] else []
-        assert 'name' in params_name, f'{cls}.__init__ must have name argument'
+        assert 'name' in params_name, f'{cls}.__init__ must have the name ' \
+                                      'argument'
         if len(default_params) == len(params_name) - 2:
-            assert 'name' == params[0][1], 'If name does not have default ' \
-                                           'value, it must be the first ' \
-                                           'argument'
+            assert 'name' == params[0][1], f'In {cls}.__init__, Only the ' \
+                                           'name argument is allowed to ' \
+                                           'have no default values.'
         elif len(default_params) < len(params_name) - 2:
             raise AssertionError('Besides name, the arguments of the '
                                  f'{cls}.__init__ must have default values')
@@ -58,6 +63,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, name=''):
         >>>         super().__init__(name)
         >>>
+        >>> GlobalAccessible.create_instance('name')
         >>> instance_1 = GlobalAccessible.get_instance('name')
         >>> instance_2 = GlobalAccessible.get_instance('name')
         >>> assert id(instance_1) == id(instance_2)
@@ -119,7 +125,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             name1
             >>> instance = GlobalAccessible.create_instance('name2')
             >>> instance = GlobalAccessible.get_instance(current=True)
-            >>> instance.instance_name  # the latest created instance is name2
+            >>> instance.instance_name
             name2
             >>> instance = GlobalAccessible.get_instance()
             >>> instance.instance_name  # get root instance
