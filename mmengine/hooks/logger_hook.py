@@ -142,8 +142,7 @@ class LoggerHook(Hook):
                                       f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
         if runner.meta is not None:
-            runner.composed_writer.add_params(runner.meta,
-                                               file_path=self.yaml_log_path)
+            runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
 
     def after_train_iter(
             self,
@@ -187,23 +186,22 @@ class LoggerHook(Hook):
             runner (Any): The runner of the training process.
         """
         # copy or upload logs to self.out_dir
-        if self.out_dir is not None:
-            for filename in scandir(runner.work_dir, self.out_suffix, True):
-                local_filepath = osp.join(runner.work_dir, filename)
-                out_filepath = self.file_client.join_path(
-                    self.out_dir, filename)
-                with open(local_filepath, 'r') as f:
-                    self.file_client.put_text(f.read(), out_filepath)
+        if self.out_dir is None:
+            return
+        for filename in scandir(runner.work_dir, self.out_suffix, True):
+            local_filepath = osp.join(runner.work_dir, filename)
+            out_filepath = self.file_client.join_path(self.out_dir, filename)
+            with open(local_filepath, 'r') as f:
+                self.file_client.put_text(f.read(), out_filepath)
 
-                runner.logger.info(
-                    (f'The file {local_filepath} has been uploaded to '
-                     f'{out_filepath}.'))
+            runner.logger.info(
+                (f'The file {local_filepath} has been uploaded to '
+                 f'{out_filepath}.'))
 
-                if not self.keep_local:
-                    os.remove(local_filepath)
-                    runner.logger.info(
-                        (f'{local_filepath} was removed due to the '
-                         '`self.keep_local=False`'))
+            if not self.keep_local:
+                os.remove(local_filepath)
+                runner.logger.info((f'{local_filepath} was removed due to the '
+                                    '`self.keep_local=False`'))
 
     def _log_train(self, runner: Any) -> None:
         """Collect and record training logs which start named with "train/*".
@@ -264,10 +262,8 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write logs to local, tensorboad, and wandb.
-        runner.composed_writer.add_scalars(tag,
-                                           step=runner.iter + 1,
-                                           file_path=self.json_log_path
-                                           )
+        runner.writer.add_scalars(
+            tag, step=runner.iter + 1, file_path=self.json_log_path)
 
     def _log_val(self, runner: Any) -> None:
         """Collect and record training logs which start named with "val/*".
@@ -298,8 +294,8 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        runner.composed_writer.add_scalars(tag, step=cur_iter,
-                                           file_path=self.json_log_path)
+        runner.writer.add_scalars(
+            tag, step=cur_iter, file_path=self.json_log_path)
 
     def _get_window_size(self, runner: Any, window_size: Union[int, str]) \
             -> int:
