@@ -7,6 +7,7 @@ from typing import Optional, Sequence, Union
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
+from mmengine.runner import Runner
 from .hook import Hook
 
 
@@ -22,6 +23,9 @@ class CheckpointHook(Hook):
             Default: True.
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
+            Default: True.
+        save_param_scheduler (bool): Whether to save param_scheduler state_dict
+            in the checkpoint. It is usually used for resuming experiments.
             Default: True.
         out_dir (str, optional | Path): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
@@ -42,6 +46,7 @@ class CheckpointHook(Hook):
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Default: None.
     """
+    out_dir: str
 
     priority = 'VERY_LOW'
 
@@ -49,7 +54,8 @@ class CheckpointHook(Hook):
                  interval: int = -1,
                  by_epoch: bool = True,
                  save_optimizer: bool = True,
-                 out_dir: Union[str, Path] = None,
+                 save_param_scheduler: bool = True,
+                 out_dir: Optional[Union[str, Path]] = None,
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
                  sync_buffer: bool = False,
@@ -58,21 +64,22 @@ class CheckpointHook(Hook):
         self.interval = interval
         self.by_epoch = by_epoch
         self.save_optimizer = save_optimizer
-        self.out_dir = out_dir
+        self.save_param_scheduler = save_param_scheduler
+        self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
         self.args = kwargs
         self.sync_buffer = sync_buffer
         self.file_client_args = file_client_args
 
-    def before_run(self, runner: object) -> None:
+    def before_run(self, runner: Runner) -> None:
         """Finish all operations, related to checkpoint.
 
         This function will get the appropriate file client, and the directory
         to save these checkpoints of the model.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if not self.out_dir:
             self.out_dir = runner.work_dir  # type: ignore
@@ -109,11 +116,11 @@ class CheckpointHook(Hook):
         else:
             self.args['create_symlink'] = self.file_client.allow_symlink
 
-    def after_train_epoch(self, runner: object) -> None:
+    def after_train_epoch(self, runner: Runner) -> None:
         """Save the checkpoint and synchronize buffers after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if not self.by_epoch:
             return
@@ -133,44 +140,47 @@ class CheckpointHook(Hook):
             self._save_checkpoint(runner)
 
     # TODO Add master_only decorator
-    def _save_checkpoint(self, runner: object) -> None:
+    def _save_checkpoint(self, runner: Runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
-        runner.save_checkpoint(  # type: ignore
+        if self.by_epoch:
+            cur_ckpt_filename = self.args.get(
+                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
+        else:
+            cur_ckpt_filename = self.args.get(
+                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
+
+        runner.save_checkpoint(
             self.out_dir,
+            filename_tmpl=cur_ckpt_filename,
             save_optimizer=self.save_optimizer,
+            save_param_scheduler=self.save_param_scheduler,
             **self.args)
-        if runner.meta is not None:  # type: ignore
-            if self.by_epoch:
-                cur_ckpt_filename = self.args.get(
-                    'filename_tmpl',
-                    'epoch_{}.pth').format(runner.epoch + 1)  # type: ignore
-            else:
-                cur_ckpt_filename = self.args.get(
-                    'filename_tmpl',
-                    'iter_{}.pth').format(runner.iter + 1)  # type: ignore
-            runner.meta.setdefault('hook_msgs', dict())  # type: ignore
-            runner.meta['hook_msgs'][  # type: ignore
+
+        if runner.meta_info is not None:
+            runner.meta_info.setdefault('hook_msgs', dict())
+            runner.meta_info['hook_msgs'][
                 'last_ckpt'] = self.file_client.join_path(
-                    self.out_dir, cur_ckpt_filename)  # type: ignore
+                    self.out_dir, cur_ckpt_filename)
+
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
                 name = 'epoch_{}.pth'
-                current_ckpt = runner.epoch + 1  # type: ignore
+                current_ckpt = runner.epoch + 1
             else:
                 name = 'iter_{}.pth'
-                current_ckpt = runner.iter + 1  # type: ignore
+                current_ckpt = runner.iter + 1
             redundant_ckpts = range(
                 current_ckpt - self.max_keep_ckpts * self.interval, 0,
                 -self.interval)
             filename_tmpl = self.args.get('filename_tmpl', name)
             for _step in redundant_ckpts:
                 ckpt_path = self.file_client.join_path(
-                    self.out_dir, filename_tmpl.format(_step))  # type: ignore
+                    self.out_dir, filename_tmpl.format(_step))
                 if self.file_client.isfile(ckpt_path):
                     self.file_client.remove(ckpt_path)
                 else:
@@ -178,13 +188,13 @@ class CheckpointHook(Hook):
 
     def after_train_iter(
             self,
-            runner: object,
+            runner: Runner,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[BaseDataSample]): Data from dataloader.
                 Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.

@@ -79,7 +79,7 @@ class Runner:
         custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
-        load_checkpoint (str or dict, optional): TODO
+        load_checkpoint (dict, optional):
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
             distributed training is disable.
@@ -117,7 +117,7 @@ class Runner:
         evaluator: Optional[Union[BaseEvaluator, Dict, List]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
-        load_checkpoint: Optional[Union[str, Dict]] = None,
+        load_checkpoint: Optional[Dict] = None,
         launcher: Optional[str] = None,
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         log_cfg: Optional[dict] = None,
@@ -141,11 +141,25 @@ class Runner:
 
         # TODO, custom_imports
 
+        self._epoch = 0
+        self._iter = 0
+        self._inner_iter = 0
+
         # build a model
         if isinstance(model, dict):
             self.model = self.build_model(model)
         else:
             self.model = model
+
+        # load model or resume training
+        self._load_checkpoint = load_checkpoint
+        if self._load_checkpoint is not None:
+            if self._load_checkpoint['resume']:
+                # self.resume(...)
+                pass
+            else:
+                # self.load_checkpoint()
+                pass
 
         if is_model_wrapper(
                 self.model) and self.cfg.get('model_wrapper_cfg') is not None:
@@ -172,8 +186,8 @@ class Runner:
                 f'param_scheduler={param_scheduler}.')
         self.train_dataloader = train_dataloader
         self._train_loop = train_cfg
-        self._optimizer = optimizer
-        self._param_scheduler = param_scheduler
+        self.optimizer = optimizer
+        self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg]
         if (not all(item is None for item in val_related)
@@ -205,15 +219,6 @@ class Runner:
         self._hooks: List[Hook] = []
         self.register_hooks(default_hooks, custom_hooks)
 
-        self._epoch = 0
-        self._iter = 0
-        self._inner_iter = 0
-
-        # TODO: self._exp_name
-        self._meta_info: dict = dict()
-
-        self._load_checkpoint = load_checkpoint
-
         self._launcher = launcher
         if self._launcher == 'none':
             self.distributed = False
@@ -226,6 +231,10 @@ class Runner:
         self.setup_env(env_cfg)
 
         self.log_cfg = log_cfg
+
+        # TODO: self._exp_name
+        # What type of information should added in _meta_info
+        self._meta_info: dict = dict()
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -263,6 +272,22 @@ class Runner:
         )
 
         return runner
+
+    @property
+    def epoch(self):
+        return self._epoch
+
+    @property
+    def iter(self):
+        return self._iter
+
+    @property
+    def inner_iter(self):
+        return self._inner_iter
+
+    @property
+    def meta_info(self):
+        return self._meta_info
 
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
@@ -457,7 +482,7 @@ class Runner:
             list[:obj:`_ParamScheduler`]: Parameter schedulers build from
             ``scheduler_cfg``.
         """
-        if not isinstance(self._optimizer, Optimizer):
+        if not isinstance(self.optimizer, Optimizer):
             raise RuntimeError(
                 'build_optimizer should be called early than '
                 'build_param_scheduler because the latter depends on the '
@@ -471,7 +496,7 @@ class Runner:
             schedulers.append(
                 PARAM_SCHEDULERS.build(
                     cfg,
-                    optimizer=self._optimizer,
+                    optimizer=self.optimizer,
                     default_scope=self.default_scope))
 
         return schedulers
@@ -546,13 +571,13 @@ class Runner:
 
         # `build_optimizer` should be called early than `build_param_scheduler`
         #  because the latter depends on the former
-        if self._optimizer is not None and isinstance(self._optimizer, dict):
-            self._optimizer = self.build_optimizer(self._optimizer)
+        if self.optimizer is not None and isinstance(self.optimizer, dict):
+            self.optimizer = self.build_optimizer(self.optimizer)
 
-        if (self._param_scheduler is not None
-                and not is_list_of(self._param_scheduler, _ParamScheduler)):
-            self._param_scheduler = self.build_param_scheduler(
-                self._param_scheduler)  # type: ignore
+        if (self.param_schedulers is not None
+                and not is_list_of(self.param_schedulers, _ParamScheduler)):
+            self.param_schedulers = self.build_param_scheduler(
+                self.param_schedulers)  # type: ignore
 
         return loop
 
@@ -752,6 +777,10 @@ class Runner:
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
 
+    def resume(self):
+        """Resume training."""
+        pass
+
     def load_checkpoint(self,
                         filename: str,
                         map_location: str = 'cpu',
@@ -820,8 +849,7 @@ class Runner:
             # More details in https://github.com/open-mmlab/mmcv/pull/1108
         meta.update(epoch=self._epoch + 1, iter=self._iter)
 
-        # TODO, filename is different for EpochBased and IterBased.
-        # filename = filename_tmpl.format(self.iter + 1)
+        # TODO, the filename passed by CheckpointHook
         filename = filename_tmpl.format(self._epoch + 1)
         filepath = osp.join(out_dir, filename)
 
@@ -840,22 +868,22 @@ class Runner:
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
-            if isinstance(self._optimizer, Optimizer):
-                checkpoint['optimizer'] = self._optimizer.state_dict()
-            elif isinstance(self._optimizer, dict):
-                # TODO, current self._optimizer will not be a dict
+            if isinstance(self.optimizer, Optimizer):
+                checkpoint['optimizer'] = self.optimizer.state_dict()
+            elif isinstance(self.optimizer, dict):
+                # TODO, current self.optimizer will not be a dict
                 checkpoint['optimizer'] = {}
-                for name, _optimizer in self._optimizer.items():
+                for name, _optimizer in self.optimizer.items():
                     checkpoint['optimizer'][name] = _optimizer.state_dict()
             else:  # TODO
                 raise TypeError(
-                    'self._optimizer should be Optimizer of dict, but got '
-                    f'{self._optimizer}')
+                    'self.optimizer should be Optimizer of dict, but got '
+                    f'{self.optimizer}')
 
         # save scheduler state dict
         if save_param_scheduler:
             checkpoint['scheduler'] = []
-            for _scheduler in self._param_scheduler:  # type: ignore
+            for _scheduler in self.param_schedulers:  # type: ignore
                 checkpoint['scheduler'].append(_scheduler.state_dict())
 
         self.call_hook('before_save_ckpt', checkpoint=checkpoint)
