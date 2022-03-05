@@ -14,6 +14,8 @@ class IterTimerHook(Hook):
     Eg. ``data_time`` for loading data and ``time`` for a model train step.
     """
 
+    priority = 'NORMAL'
+
     def before_epoch(self, runner: object) -> None:
         """Record time flag before start a epoch.
 

@@ -14,6 +14,7 @@ RUNNERS = Registry('runner')
 RUNNER_CONSTRUCTORS = Registry('runner constructor')
 # manage all kinds of hooks like `CheckpointHook`
 HOOKS = Registry('hook')
+LOOPS = Registry('loop')
 
 # manage data-related modules
 DATASETS = Registry('dataset')

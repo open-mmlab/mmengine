@@ -8,7 +8,7 @@ def is_model_wrapper(model):
     The following 4 model in MMEngine (and their subclasses) are regarded as
     model wrappers: DataParallel, DistributedDataParallel,
     MMDataParallel, MMDistributedDataParallel. You may add you own
-    model wrapper by registering it to mmengine.registry.MODEL_WRAPPERS.
+    model wrapper by registering it to ``mmengine.registry.MODEL_WRAPPERS``.
 
     Args:
         model (nn.Module): The model to be checked.
