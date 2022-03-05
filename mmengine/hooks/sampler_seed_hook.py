@@ -12,6 +12,8 @@ class DistSamplerSeedHook(Hook):
     purpose with :obj:`IterLoader`.
     """
 
+    priority = 'NORMAL'
+
     def before_epoch(self, runner: object) -> None:
         """Set the seed for sampler and batch_sampler.
 

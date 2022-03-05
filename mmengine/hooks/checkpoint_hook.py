@@ -43,6 +43,8 @@ class CheckpointHook(Hook):
             Default: None.
     """
 
+    priority = 'VERY_LOW'
+
     def __init__(self,
                  interval: int = -1,
                  by_epoch: bool = True,

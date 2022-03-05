@@ -10,6 +10,8 @@ class Hook:
     All hooks should inherit from this class.
     """
 
+    priority = 'NORMAL'
+
     def before_run(self, runner: object) -> None:
         """All subclasses should override this method, if they need any
         operations before the training process.
