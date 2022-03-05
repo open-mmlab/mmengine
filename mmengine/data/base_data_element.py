@@ -99,12 +99,12 @@ class BaseDataElement:
 
         # delete and change property
         >>> gt_instances = BaseDataElement(
-             metainfo=dict(img_id=0, img_shape=(640, 640))，
+             metainfo=dict(img_id=0, img_shape=(640, 640)),
              data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
         >>> gt_instances.img_shape = (1280, 1280)
         >>> gt_instances.img_shape  # (1280, 1280)
         >>> gt_instances.bboxes = gt_instances.bboxes * 2
-        >>> gt_instances.get('img_shape', None)  # (640， 640)
+        >>> gt_instances.get('img_shape', None)  # (640, 640)
         >>> gt_instances.get('bboxes', None)    # 6x4 tensor
         >>> del gt_instances.img_shape
         >>> del gt_instances.bboxes

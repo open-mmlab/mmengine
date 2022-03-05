@@ -24,10 +24,9 @@ from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import Hook
 from mmengine.model import (MMDataParallel, MMDistributedDataParallel,
                             is_model_wrapper)
-from mmengine.optim import _ParamScheduler
+from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, OPTIMIZER_CONSTRUCTORS,
-                               PARAM_SCHEDULERS)
+                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
 from mmengine.utils import is_list_of
 from .base_loop import BaseLoop
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
@@ -212,7 +211,7 @@ class Runner:
         """Build a runner from config dict.
 
         Args:
-            cfg (:obj:`Config`): A dict used for building runner. Keys of
+            cfg (:obj:`Config`): A config used for building runner. Keys of
                 ``cfg`` can see :meth:`__init__`.
 
         Returns:
@@ -239,6 +238,7 @@ class Runner:
             log_cfg=cfg.log_cfg,
             default_scope=cfg.default_scope,
             seed=cfg.seed,
+            deterministic=cfg.deterministic,
         )
 
         return runner
@@ -250,8 +250,7 @@ class Runner:
             Results can not be guaranteed to resproducible if ``self.seed`` is
             None because :meth:`_set_random_seed` will generate a random seed.
 
-        More details can be found at
-        https://pytorch.org/docs/stable/notes/randomness.html.
+        See https://pytorch.org/docs/stable/notes/randomness.html for details.
         """
         if self.seed is None:
             self.seed = sync_random_seed()
@@ -270,15 +269,18 @@ class Runner:
         Args:
             env_cfg (dict): Config for setting environment.
 
-        Examples:
-            >>> env_cfg = dict(
-            ...     cudnn_benchmark=True,
-            ...     mp_cfg=dict(
-            ...         mp_start_method='fork',
-            ...         opencv_num_threads=0
-            ...     ),
-            ...     dist_cfg=dict(backend='nccl'),
-            ... )
+        An example of ``env_cfg`` format:
+
+        .. code-block:: python
+
+            env_cfg = dict(
+                cudnn_benchmark=True,
+                mp_cfg=dict(
+                    mp_start_method='fork',
+                    opencv_num_threads=0
+                ),
+                dist_cfg=dict(backend='nccl'),
+            )
         """
         self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 
@@ -367,14 +369,26 @@ class Runner:
         return model
 
     def wrap_model(self, model_wrapper_cfg: Optional[Dict],
-                   model) -> nn.Module:
+                   model: nn.Module) -> nn.Module:
         """Wrap model.
 
         Args:
-            model_wrapper_cfg (dict, optional): Config to wrap model.
+            model_wrapper_cfg (dict, optional): Config to wrap model. If not
+                specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
+                will be used. Defaults to None.
 
         Returns:
             nn.Module: Wrapped model.
+
+        An example of ``model_wrapper_cfg``:
+
+        .. code-block:: python
+
+            model_wrapper=dict(
+                type='MMDistributedDataParallel',
+                broadcast_buffers=False,
+                find_unused_parameters=False
+            )
         """
         if model_wrapper_cfg is None:
             if self.distributed:
@@ -407,16 +421,8 @@ class Runner:
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
         """
-        optimizer_cfg = copy.deepcopy(optimizer_cfg)
-        constructor_type = optimizer_cfg.pop('constructor',
-                                             'DefaultOptimizerConstructor')
-        paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
-        optim_constructor = OPTIMIZER_CONSTRUCTORS.build(
-            dict(
-                type=constructor_type,
-                optimizer_cfg=optimizer_cfg,
-                paramwise_cfg=paramwise_cfg))
-        optimizer = optim_constructor(self.model)
+        # TODO, default scope
+        optimizer = build_optimizer(self.model, optimizer_cfg)
         return optimizer
 
     def build_param_scheduler(
@@ -432,6 +438,12 @@ class Runner:
             list[:obj:`_ParamScheduler`]: Parameter schedulers build from
             ``scheduler_cfg``.
         """
+        if not isinstance(self._optimizer, Optimizer):
+            raise RuntimeError(
+                'build_optimizer should be called early than '
+                'build_param_scheduler because the latter depends on the '
+                'former')
+
         if isinstance(scheduler_cfg, dict):
             scheduler_cfg = [scheduler_cfg]
 
@@ -513,8 +525,8 @@ class Runner:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, dataloader=self.train_dataloader)
 
-        # build optimizer should be called early than param_scheduler the
-        # latter depends on the former
+        # `build_optimizer`` should be called early than
+        # `build_param_scheduler` because the latter depends on the former
         if self._optimizer is not None and isinstance(self._optimizer, dict):
             self._optimizer = self.build_optimizer(self._optimizer)
 
