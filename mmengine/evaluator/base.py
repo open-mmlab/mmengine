@@ -10,6 +10,7 @@ from typing import Any, List, Optional, Union
 import torch
 import torch.distributed as dist
 
+from mmengine.data import BaseDataSample
 from mmengine.utils import mkdir_or_exist
 
 
@@ -45,13 +46,13 @@ class BaseEvaluator(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self, data_samples: dict, predictions: dict) -> None:
+    def process(self, data_samples: BaseDataSample, predictions: dict) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            data_samples (dict): The data samples from the dataset.
+            data_samples (BaseDataSample): The data samples from the dataset.
             predictions (dict): The output of the model.
         """
 
@@ -61,6 +62,7 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         Args:
             results (list): The processed results of each batch.
+
         Returns:
             dict: The computed metrics. The keys are the names of the metrics,
             and the values are corresponding results.
@@ -78,9 +80,8 @@ class BaseEvaluator(metaclass=ABCMeta):
                 this size.
 
         Returns:
-            metrics (dict): Evaluation metrics dict on the val dataset. The
-            keys are the names of the metrics, and the values are
-            corresponding results.
+            dict: Evaluation metrics dict on the val dataset. The keys are the
+            names of the metrics, and the values are corresponding results.
         """
         if len(self.results) == 0:
             warnings.warn(

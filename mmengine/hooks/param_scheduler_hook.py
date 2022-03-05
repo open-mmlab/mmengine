@@ -11,6 +11,8 @@ class ParamSchedulerHook(Hook):
     """A hook to update some hyper-parameters in optimizer, e.g learning rate
     and momentum."""
 
+    priority = 'LOW'
+
     def after_iter(self,
                    runner: object,
                    data_batch: Optional[Sequence[BaseDataSample]] = None,

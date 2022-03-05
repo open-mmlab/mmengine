@@ -22,6 +22,8 @@ class EmptyCacheHook(Hook):
             Defaults to False.
     """
 
+    priority = 'NORMAL'
+
     def __init__(self,
                  before_epoch: bool = False,
                  after_epoch: bool = True,

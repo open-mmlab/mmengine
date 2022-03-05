@@ -30,6 +30,8 @@ class OptimizerHook(Hook):
             Defaults to False.
     """
 
+    priority = 'HIGH'
+
     def __init__(self,
                  grad_clip: Optional[dict] = None,
                  detect_anomalous_params: bool = False) -> None:

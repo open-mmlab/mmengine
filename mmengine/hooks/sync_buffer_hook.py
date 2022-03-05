@@ -84,6 +84,8 @@ class SyncBuffersHook(Hook):
     """Synchronize model buffers such as running_mean and running_var in BN at
     the end of each epoch."""
 
+    priority = 'NORMAL'
+
     def __init__(self) -> None:
         self.distributed = dist.IS_DIST
 

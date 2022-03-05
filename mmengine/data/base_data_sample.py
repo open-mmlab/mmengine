@@ -500,7 +500,7 @@ class BaseDataSample:
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataSample':
-        """Convert all tensor　to np.narray in metainfo and data."""
+        """Convert all tensor to np.narray in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
