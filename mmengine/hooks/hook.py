@@ -9,7 +9,7 @@ class Hook:
 
     All hooks should inherit from this class.
     """
-    # TODO, comments
+
     priority = 'NORMAL'
 
     def before_run(self, runner: object) -> None:

@@ -62,6 +62,7 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         Args:
             results (list): The processed results of each batch.
+
         Returns:
             dict: The computed metrics. The keys are the names of the metrics,
             and the values are corresponding results.
