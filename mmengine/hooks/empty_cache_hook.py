@@ -21,6 +21,7 @@ class EmptyCacheHook(Hook):
         after_iter (bool): Whether to release cache after an iteration.
             Defaults to False.
     """
+
     priority = 'NORMAL'
 
     def __init__(self,
