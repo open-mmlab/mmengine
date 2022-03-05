@@ -55,9 +55,9 @@ class Runner:
         train_cfg (dict, optional): A dict to build a training loop which is a
             subclass of :obj:`BaseLoop`. If specified, :attr:`train_dataloader`
             should also be specified . Defaults to None.
-        validation_cfg (dict, optional): A dict to build a validation loop
-            which is a subclass of :obj:`BaseLoop`. If specified,
-            :attr:`val_dataloader` should also be specified . Defaults to None.
+        val_cfg (dict, optional): A dict to build a validation loop which is a
+            subclass of :obj:`BaseLoop`. If specified, :attr:`val_dataloader`
+            should also be specified . Defaults to None.
         test_cfg (dict, optional): A dict to build a test loop which is a
             subclass of :obj:`BaseLoop`. If specified, :attr:`test_dataloader`
             should also be specified. Defaults to None.
@@ -109,7 +109,7 @@ class Runner:
         val_dataloader: Optional[Union[DataLoader, Dict]] = None,
         test_dataloader: Optional[Union[DataLoader, Dict]] = None,
         train_cfg: Optional[Dict] = None,
-        validation_cfg: Optional[Dict] = None,
+        val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
         optimizer: Optional[Union[Optimizer, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
@@ -174,15 +174,15 @@ class Runner:
         self._optimizer = optimizer
         self._param_scheduler = param_scheduler
 
-        val_related = [val_dataloader, validation_cfg]
+        val_related = [val_dataloader, val_cfg]
         if (not all(item is None for item in val_related)
                 or not all(item is not None for item in val_related)):
             raise ValueError(
-                'val_dataloader and validation_cfg should be either all None '
+                'val_dataloader and val_cfg should be either all None '
                 f'or not None, but got val_dataloader={val_dataloader}, '
-                f'validation_cfg={validation_cfg}')
+                f'val_cfg={val_cfg}')
         self.val_dataloader = val_dataloader
-        self._val_loop = validation_cfg
+        self._val_loop = val_cfg
 
         test_related = [test_dataloader, test_cfg]
         if (not all(item is None for item in test_related)
@@ -245,7 +245,7 @@ class Runner:
             val_dataloader=cfg.val_dataloader,
             test_dataloader=cfg.test_dataloader,
             train_cfg=cfg.train_cfg,
-            validation_cfg=cfg.validation_cfg,
+            val_cfg=cfg.val_cfg,
             test_cfg=cfg.test_cfg,
             optimizer=cfg.optimizer,
             param_scheduler=cfg.param_scheduler,
