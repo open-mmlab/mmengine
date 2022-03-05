@@ -42,6 +42,7 @@ class CheckpointHook(Hook):
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Default: None.
     """
+
     priority = 'VERY_LOW'
 
     def __init__(self,
