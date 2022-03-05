@@ -35,7 +35,10 @@ class MetaGlobalAccessible(type):
     def __init__(cls, *args):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
-        # Make sure `cls(name='root')` can be implemented.
+        # `inspect.getfullargspec` will return a tuple includes `(args,
+        # varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations)`
+        # To make sure `cls(name='root')` can be implemented, the
+        # `args` and `defaults` should be checked.
         default_params = params[3] if params[3] else []
         params_name = params[0] if params[0] else []
         assert 'name' in params_name, f'{cls}.__init__ must have the name ' \

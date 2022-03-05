@@ -168,5 +168,5 @@ def print_log(msg,
             raise ValueError(f'MMLogger: {logger} has not been created!')
     else:
         raise TypeError(
-            'logger should be either a logging.Logger object, str, '
+            '`logger` should be either a logging.Logger object, str, '
             f'"silent", "current" or None, but got {type(logger)}')

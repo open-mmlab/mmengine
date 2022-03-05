@@ -18,7 +18,7 @@ class BaseLogBuffer:
             [].
         max_length (int): The max length of history logs. Defaults to 1000000.
     """
-    _statistics_dict: dict = dict()
+    _statistics_methods: dict = dict()
 
     def __init__(self,
                  log_history: Sequence = [],
@@ -60,18 +60,18 @@ class BaseLogBuffer:
             self._count_history = self._count_history[-self.max_length:]
 
     @property
-    def data(self) -> Tuple[Sequence, Sequence]:
+    def data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get the ``_log_history`` and ``_count_history``.
 
         Returns:
-            Tuple[Sequence, Sequence]: The history logs and the counts of the
-            history logs.
+            Tuple[np.ndarray, np.ndarray]: The history logs and the counts of
+                the history logs.
         """
         return self._log_history, self._count_history
 
     @classmethod
     def register_statistics(cls, method: Callable) -> Callable:
-        """Register custom statistics method to ``_statistics_dict``.
+        """Register custom statistics method to ``_statistics_methods``.
 
         Args:
             method (Callable): custom statistics method.
@@ -80,9 +80,9 @@ class BaseLogBuffer:
             Callable: Original custom statistics method.
         """
         method_name = method.__name__
-        assert method_name not in cls._statistics_dict, \
+        assert method_name not in cls._statistics_methods, \
             'method_name cannot be registered twice!'
-        cls._statistics_dict[method_name] = method
+        cls._statistics_methods[method_name] = method
         return method
 
     def statistics(self, method_name: str, *arg, **kwargs) -> Any:
@@ -94,10 +94,10 @@ class BaseLogBuffer:
         Returns:
             Any: Depends on corresponding method.
         """
-        if method_name not in self._statistics_dict:
+        if method_name not in self._statistics_methods:
             raise KeyError(f'{method_name} has not been registered in '
-                           f'BaseLogBuffer._statistics_dict')
-        method = self._statistics_dict[method_name]
+                           f'BaseLogBuffer._statistics_methods')
+        method = self._statistics_methods[method_name]
         # Provide self arguments for registered functions.
         method = partial(method, self)
         return method(*arg, **kwargs)
