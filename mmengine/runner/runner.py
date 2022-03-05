@@ -155,31 +155,48 @@ class Runner:
                 cfg.get('model_wrapper_cfg'), self.model)
 
         # lazy initialization
-        # TODO, add comments for lazy initialization
-        # TODO: self.train_dataloader, self._train_loop, self._optimizer and
-        # self._param_scheduler should all either be None or not be None
+        training_related = [
+            train_dataloader, train_cfg, optimizer, param_scheduler
+        ]
+        if (not all(item is None for item in training_related)
+                or not all(item is not None for item in training_related)):
+            raise ValueError(
+                'train_dataloader, train_cfg, optimizer, param_scheduler '
+                'should be either all None or not None, but got '
+                f'train_dataloader={train_dataloader}, '
+                f'train_cfg={train_cfg}, '
+                f'optimizer={optimizer}, '
+                f'param_scheduler={param_scheduler}.')
         self.train_dataloader = train_dataloader
         self._train_loop = train_cfg
         self._optimizer = optimizer
         self._param_scheduler = param_scheduler
 
-        if (val_dataloader is None and validation_cfg is not None
-                or val_dataloader is not None and validation_cfg is None):
+        val_related = [val_dataloader, validation_cfg]
+        if (not all(item is None for item in val_related)
+                or not all(item is not None for item in val_related)):
             raise ValueError(
-                'val_dataloader and validation_cfg should all be specified or '
-                f'be None, but got val_dataloader={val_dataloader}, '
+                'val_dataloader and validation_cfg should be either all None '
+                f'or not None, but got val_dataloader={val_dataloader}, '
                 f'validation_cfg={validation_cfg}')
-
-        # TODO, if val_dataloader is not None, whether evaluator can be None
         self.val_dataloader = val_dataloader
         self._val_loop = validation_cfg
 
-        # TODO: test_dataloader, test_cfg should all either be None or not be
-        # None
+        test_related = [test_dataloader, test_cfg]
+        if (not all(item is None for item in test_related)
+                or not all(item is not None for item in test_related)):
+            raise ValueError(
+                'test_dataloader and test_cfg should be either all None or not'
+                f' None, but got test_dataloader={test_dataloader}, '
+                f'test_cfg={test_cfg}')
         self.test_dataloader = test_dataloader
         self._test_loop = test_cfg
 
-        # TODO, perhaps validation and test are different?
+        if (self.val_dataloader is not None
+                or self.test_dataloader is not None) and evaluator is None:
+            raise ValueError(
+                'evaluator should not None when val_dataloader or '
+                'test_dataloader is not None.')
         self._evaluator = evaluator
 
         self._hooks: List[Hook] = []
@@ -200,6 +217,7 @@ class Runner:
         else:
             self.distributed = True
 
+        self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         self.deterministic = deterministic
         self.seed = seed
         self.setup_env(env_cfg)
@@ -282,8 +300,6 @@ class Runner:
                 dist_cfg=dict(backend='nccl'),
             )
         """
-        self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
@@ -525,8 +541,8 @@ class Runner:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, dataloader=self.train_dataloader)
 
-        # `build_optimizer`` should be called early than
-        # `build_param_scheduler` because the latter depends on the former
+        # `build_optimizer` should be called early than `build_param_scheduler`
+        #  because the latter depends on the former
         if self._optimizer is not None and isinstance(self._optimizer, dict):
             self._optimizer = self.build_optimizer(self._optimizer)
 
