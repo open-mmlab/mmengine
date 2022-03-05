@@ -7,3 +7,8 @@ Data
 --------
 .. automodule:: mmengine.data
     :members:
+
+Distributed
+-----------
+.. automodule:: mmengine.dist
+    :members:
