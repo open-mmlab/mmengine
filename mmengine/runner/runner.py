@@ -14,13 +14,13 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from mmegnine.dist import get_dist_info, init_dist, sync_random_seed
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config
 from mmengine.data import worker_init_fn
+from mmengine.dist import get_dist_info, init_dist, sync_random_seed
 from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import Hook
 from mmengine.model import (MMDataParallel, MMDistributedDataParallel,
@@ -289,7 +289,7 @@ class Runner:
 
         # init distributed env first, since logger depends on the dist info.
         if self.distributed:
-            init_dist(**env_cfg.get('dist_cfg'))
+            init_dist(**env_cfg.get('dist_cfg'))  # type: ignore
 
         # set random seeds
         self._set_random_seed()
