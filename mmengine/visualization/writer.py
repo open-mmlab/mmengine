@@ -33,6 +33,10 @@ class BaseWriter(metaclass=ABCMeta):
                  visualizer: Optional[Union[dict, 'Visualizer']] = None,
                  save_dir: Optional[str] = None):
         self._save_dir = save_dir
+        if self._save_dir:
+            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+            self._save_dir = os.path.join(
+                self._save_dir, f'write_data_{timestamp}')  # type: ignore
         self._visualizer = visualizer
         if visualizer:
             if isinstance(visualizer, dict):
@@ -176,8 +180,8 @@ class LocalWriter(BaseWriter):
             Default to 'writer_image'.
         params_save_file (str): The save parameters file name.
             Default to 'parameters.yaml'.
-        scalar_save_file (str):  The save scalar values file name.
-            Default to'scalars.json'.
+        scalar_save_file (str):  The file to save scalar values.
+            Default to 'scalars.json'.
         img_show (bool): Whether to show the image when calling add_image.
             Default to False.
     """
@@ -192,13 +196,16 @@ class LocalWriter(BaseWriter):
         assert params_save_file.split('.')[-1] == 'yaml'
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalWriter, self).__init__(visualizer, save_dir)
-        timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-        self._save_dir = os.path.join(
-            self._save_dir, f'write_data_{timestamp}')  # type: ignore
-        os.makedirs(self._save_dir, exist_ok=True)
-        self._img_save_dir = os.path.join(self._save_dir, img_save_dir)
-        self._scalar_save_file = os.path.join(self._save_dir, scalar_save_file)
-        self._params_save_file = os.path.join(self._save_dir, params_save_file)
+        os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+        self._img_save_dir = os.path.join(
+            self._save_dir,  # type: ignore
+            img_save_dir)
+        self._scalar_save_file = os.path.join(
+            self._save_dir,  # type: ignore
+            scalar_save_file)
+        self._params_save_file = os.path.join(
+            self._save_dir,  # type: ignore
+            params_save_file)
         self._img_show = img_show
 
     @property
@@ -286,6 +293,9 @@ class LocalWriter(BaseWriter):
             new_save_file_path = os.path.join(
                 self._save_dir,  # type: ignore
                 file_path)
+            assert new_save_file_path != self._scalar_save_file, \
+                '"file_path" and "scalar_save_file" have the same name, ' \
+                'please set "file_path" to another value'
             self._dump(new_save_file_path, 'json', scalar_dict)
         self._dump(self._scalar_save_file, 'json', scalar_dict)
 
@@ -656,10 +666,10 @@ class ComposedWriter(BaseGlobalAccessible):
     Examples:
         >>> from mmengine.visualization import ComposedWriter
         >>> import numpy as np
-        >>> composed_writer= ComposedWriter.create_instance('composed_writer',\
-            writers=[dict(type='LocalWriter', visualizer=dict( \
-            type='DetVisualizer'), save_dir='temp_dir'), \
-            dict(type='WandbWriter')])
+        >>> composed_writer= ComposedWriter.create_instance( \
+            'composed_writer', writers=[dict(type='LocalWriter', \
+            visualizer=dict(type='DetVisualizer'), \
+            save_dir='temp_dir'), dict(type='WandbWriter')])
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
         >>> composed_writer.add_image('img', img)
         >>> composed_writer.add_scalar('mAP', 0.6)

@@ -134,6 +134,10 @@ class TestLocalWriter:
         assert os.path.exists(
             os.path.join(local_writer._save_dir, 'temp.json'))
 
+        # file_path and scalar_save_file cannot be the same
+        with pytest.raises(AssertionError):
+            local_writer.add_scalars(input_dict, file_path='scalars.json')
+
         shutil.rmtree('temp_dir')
 
 
