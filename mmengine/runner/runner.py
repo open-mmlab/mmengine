@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import platform
 import random
+import shutil
 import time
 import warnings
 from functools import partial
@@ -27,8 +28,9 @@ from mmengine.model import (MMDataParallel, MMDistributedDataParallel,
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
-from mmengine.utils import is_list_of
+from mmengine.utils import is_list_of, symlink
 from .base_loop import BaseLoop
+from .checkpoint import get_state_dict, save_checkpoint, weights_to_cpu
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import get_priority
 
@@ -752,5 +754,93 @@ class Runner:
     def load_checkpoint(self):
         pass
 
-    def save_checkpoint(self):
-        pass
+    def save_checkpoint(self,
+                        out_dir: str,
+                        filename_tmpl: str = 'epoch_{}.pth',
+                        save_optimizer: bool = True,
+                        save_param_scheduler: bool = True,
+                        meta: dict = None,
+                        create_symlink: bool = True):
+        """Save checkpoints.
+
+        ``CheckpointHook`` will invoke this method to save checkpoints
+        periodically.
+
+        Args:
+            out_dir (str): The directory that checkpoints are saved.
+            filename_tmpl (str): The checkpoint filename template,
+                which contains a placeholder for the epoch number.
+                Defaults to 'epoch_{}.pth'.
+            save_optimizer (bool): Whether to save the optimizer to
+                the checkpoint. Defaults to True.
+            save_param_scheduler (bool): Whether to save the param_scheduler
+                to the checkpoint. Defaults to True.
+            meta (dict, optional): The meta information to be saved in the
+                checkpoint. Defaults to None.
+            create_symlink (bool): Whether to create a symlink
+                "latest.pth" to point to the latest checkpoint.
+                Defaults to True.
+        """
+        if meta is None:
+            meta = {}
+        elif not isinstance(meta, dict):
+            raise TypeError(
+                f'meta should be a dict or None, but got {type(meta)}')
+
+        if self._meta_info is not None:
+            meta.update(self._meta_info)
+            # Note: meta.update(self._meta_info) should be done before
+            # meta.update(epoch=self.epoch + 1, iter=self.iter) otherwise
+            # there will be problems with resumed checkpoints.
+            # More details in https://github.com/open-mmlab/mmcv/pull/1108
+        meta.update(epoch=self._epoch + 1, iter=self._iter)
+
+        # TODO, filename is different for EpochBased and IterBased.
+        # filename = filename_tmpl.format(self.iter + 1)
+        filename = filename_tmpl.format(self._epoch + 1)
+        filepath = osp.join(out_dir, filename)
+
+        if hasattr(self.model, 'CLASSES') and self.model.CLASSES is not None:
+            # save class name to the meta
+            meta.update(CLASSES=self.model.CLASSES)
+
+        if is_model_wrapper(self.model):
+            model = self.model.module
+        else:
+            model = self.model
+
+        checkpoint = {
+            'meta': meta,
+            'state_dict': weights_to_cpu(get_state_dict(model))
+        }
+        # save optimizer state dict to checkpoint
+        if save_optimizer:
+            if isinstance(self._optimizer, Optimizer):
+                checkpoint['optimizer'] = self._optimizer.state_dict()
+            elif isinstance(self._optimizer, dict):
+                # TODO, current self._optimizer will not be a dict
+                checkpoint['optimizer'] = {}
+                for name, _optimizer in self._optimizer.items():
+                    checkpoint['optimizer'][name] = _optimizer.state_dict()
+            else:  # TODO
+                raise TypeError(
+                    'self._optimizer should be Optimizer of dict, but got '
+                    f'{self._optimizer}')
+
+        # save scheduler state dict
+        if save_param_scheduler:
+            checkpoint['scheduler'] = []
+            for _scheduler in self._param_scheduler:  # type: ignore
+                checkpoint['scheduler'].append(_scheduler.state_dict())
+
+        self.call_hook('before_save_ckpt', checkpoint=checkpoint)
+
+        save_checkpoint(checkpoint, filepath)
+        # in some environments, `os.symlink` is not supported, you may need to
+        # set `create_symlink` to False
+        if create_symlink:
+            dst_file = osp.join(out_dir, 'latest.pth')
+            if platform.system() != 'Windows':
+                symlink(filename, dst_file)
+            else:
+                shutil.copy(filepath, dst_file)
