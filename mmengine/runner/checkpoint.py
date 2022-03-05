@@ -514,6 +514,32 @@ def _load_checkpoint_with_prefix(prefix, filename, map_location=None):
     return state_dict
 
 
+def _load_checkpoint_to_model(model,
+                              checkpoint,
+                              strict=False,
+                              logger=None,
+                              revise_keys=[(r'^module\.', '')]):
+
+    # get state_dict from checkpoint
+    if 'state_dict' in checkpoint:
+        state_dict = checkpoint['state_dict']
+    else:
+        state_dict = checkpoint
+
+    # strip prefix of state_dict
+    metadata = getattr(state_dict, '_metadata', OrderedDict())
+    for p, r in revise_keys:
+        state_dict = OrderedDict(
+            {re.sub(p, r, k): v
+             for k, v in state_dict.items()})
+    # Keep metadata in state_dict
+    state_dict._metadata = metadata
+
+    # load state_dict
+    load_state_dict(model, state_dict, strict, logger)
+    return checkpoint
+
+
 def load_checkpoint(model,
                     filename,
                     map_location=None,
@@ -544,24 +570,9 @@ def load_checkpoint(model,
     if not isinstance(checkpoint, dict):
         raise RuntimeError(
             f'No state_dict found in checkpoint file {filename}')
-    # get state_dict from checkpoint
-    if 'state_dict' in checkpoint:
-        state_dict = checkpoint['state_dict']
-    else:
-        state_dict = checkpoint
 
-    # strip prefix of state_dict
-    metadata = getattr(state_dict, '_metadata', OrderedDict())
-    for p, r in revise_keys:
-        state_dict = OrderedDict(
-            {re.sub(p, r, k): v
-             for k, v in state_dict.items()})
-    # Keep metadata in state_dict
-    state_dict._metadata = metadata
-
-    # load state_dict
-    load_state_dict(model, state_dict, strict, logger)
-    return checkpoint
+    return _load_checkpoint_to_model(model, checkpoint, strict, logger,
+                                     revise_keys)
 
 
 def weights_to_cpu(state_dict):

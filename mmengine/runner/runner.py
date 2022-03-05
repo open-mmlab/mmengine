@@ -30,7 +30,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
 from mmengine.utils import is_list_of, symlink
 from .base_loop import BaseLoop
-from .checkpoint import get_state_dict, save_checkpoint, weights_to_cpu
+from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
+                         get_state_dict, save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import get_priority
 
@@ -523,7 +524,7 @@ class Runner:
             loop_cfg (dict): Config to build training loop.
 
         Returns:
-            :obj:`BaseLoop`: Loop build from ``loop_cfg``.
+            :obj:`BaseLoop`: Training loop object build from ``loop_cfg``.
         """
         if 'type' in loop_cfg and 'by_epoch' in loop_cfg:
             raise RuntimeError(
@@ -562,7 +563,7 @@ class Runner:
             loop_cfg (dict): Config to build validating loop.
 
         Returns:
-            :obj:`BaseLoop`: Loop build from ``loop_cfg``.
+            :obj:`BaseLoop`: Validation loop object build from ``loop_cfg``.
         """
         if 'type' in loop_cfg:
             loop = LOOPS.build(
@@ -584,7 +585,7 @@ class Runner:
             loop_cfg (dict): Config to build test loop.
 
         Returns:
-            :obj:`BaseLoop`: Loop build from ``loop_cfg``.
+            :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """
         if 'type' in loop_cfg:
             loop = LOOPS.build(
@@ -751,8 +752,32 @@ class Runner:
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
 
-    def load_checkpoint(self):
-        pass
+    def load_checkpoint(self,
+                        filename: str,
+                        map_location: str = 'cpu',
+                        strict: bool = False,
+                        revise_keys: list = [(r'^module.', '')]):
+        """Load checkpoint from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+            map_location (str): A string specifying how to remap storage
+                locations. Defaults to 'cpu'
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Default: strip
+                the prefix 'module.' by [(r'^module\\.', '')].
+        """
+        checkpoint = _load_checkpoint(filename, map_location=map_location)
+
+        # Add comments to describe the usage of `after_load_ckpt`
+        self.call_hook('after_load_ckpt', checkpoint=checkpoint)
+
+        return _load_checkpoint_to_model(
+            self.model, checkpoint, strict, revise_keys=revise_keys)
 
     def save_checkpoint(self,
                         out_dir: str,
