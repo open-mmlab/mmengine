@@ -110,8 +110,8 @@ class BaseDataSample:
         >>> # property delete and change
         >>> metainfo=dict(img_id=0, img_shape=(640, 640)
         >>> gt_instances = BaseDataElement(
-        ...   metainfo=metainfo),
-        ...   data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        ...  metainfo=metainfo),
+        ...  data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
         >>> sample = BaseDataSample(metainfo=metainfo,
         ...                         data=dict(gt_instances=gt_instances))
         >>> sample.img_shape = (1280, 1280)
