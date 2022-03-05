@@ -49,7 +49,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.epoch += 1
 
     def run_iter(self, idx, data_batch: BaseDataSample) -> None:
-        """Iterate one batch.
+        """Iterate one min-batch.
 
         Args:
             data_batch (BaseDataSample): Batch of data from dataloader.
@@ -97,7 +97,7 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hooks('after_run')
 
     def run_iter(self, data_batch: BaseDataSample) -> None:
-        """Iterate one batch.
+        """Iterate one mini-batch.
 
         Args:
             data_batch (BaseDataSample): Batch of data from dataloader.
@@ -142,7 +142,7 @@ class ValLoop(BaseLoop):
         self.runner.call_hooks('after_val_epoch')
 
     def run_iter(self, idx, data_batch: BaseDataSample):
-        """Iterate one batch.
+        """Iterate one mini-batch.
 
         Args:
             data_batch (BaseDataSample): Batch of data from dataloader.
