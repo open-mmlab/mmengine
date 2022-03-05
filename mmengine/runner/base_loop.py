@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import weakref
 from abc import ABCMeta, abstractmethod
 from typing import Dict, Union
 
@@ -19,7 +18,7 @@ class BaseLoop(metaclass=ABCMeta):
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
-        self._runner = weakref.ref(runner)
+        self._runner = runner
 
         if isinstance(dataloader, dict):
             self.dataloader = runner.build_dataloader(dataloader)
