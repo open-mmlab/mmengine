@@ -246,14 +246,14 @@ _base_ = [
 ```
 
 通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
-实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在算法库被正确安装进环境以后，新的项目都可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
+实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
 
 ### 跨项目使用配置文件
 
-MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口即可根据 `config` 构建对应的算法模型，这两个接口都支持 `pretrained` 参数对预训练的模型权重进行加载。
+MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口可以获得构建好的模型。通过 `get_config` 接口可以获得配置文件。
 
-`get_model` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索对应的配置文件并构建和初始化相应模型。
-指定 `pretrained=True` 还可以使得对应的模型加载预训练权重。用户可以直接使用这样得到的模型进行推理。
+`get_model` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可在 mmdet 包中检索对应的配置文件并构建和初始化相应模型。
+用户可以通过指定 `pretrained=True` 获得已经加载预训练权重的模型以进行训练或者推理。
 
 ```python
 from mmengine import get_model
@@ -261,7 +261,8 @@ model = get_model('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=T
 ```
 
 `get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。
-指定 `pretrained=True` 还可以得到对应模型预训练权重的路径。用户可以基于这样的到的配置文件进行推理修改并自定义自己的算法模型。
+用户可以基于这样得到的配置文件进行推理修改并自定义自己的算法模型。
+同时，如果用户指定 `pretrained=True` ，得到的配置文件中会新增 `model_path` 字段，指定了对应模型预训练权重的路径。
 
 ```python
 from mmengine import get_config
