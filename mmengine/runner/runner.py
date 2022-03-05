@@ -585,8 +585,7 @@ class Runner:
         """Launch training."""
         assert self._train_loop is not None
         if not isinstance(self._train_loop, BaseLoop):
-            self._train_loop = self.build_train_loop(
-                self._train_loop)  # type: ignore
+            self._train_loop = self.build_train_loop(self._train_loop)
 
         self._train_loop.run()  # type: ignore
 
