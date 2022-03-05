@@ -25,27 +25,26 @@ class BaseDataElement:
     types of ground truth labels or predictions.
     They are used as interfaces between different commopenets.
 
-
     The attributes in ``BaseDataElement`` are divided into two parts,
     the ``metainfo`` and the ``data`` respectively.
 
-        - ``metainfo``: Usually contains the
-          information about the image such as filename,
-          image_shape, pad_shape, etc. The attributes can be accessed or
-          modified by dict-like or object-like operations, such as
-          ``.``(for data access and modification) , ``in``, ``del``,
-          ``pop(str)``, ``get(str)``, ``metainfo_keys()``,
-          ``metainfo_values()``, ``metainfo_items()``, ``set_metainfo()``(for
-          set or change key-value pairs in metainfo).
+      - ``metainfo``: Usually contains the
+        information about the image such as filename,
+        image_shape, pad_shape, etc. The attributes can be accessed or
+        modified by dict-like or object-like operations, such as
+        ``.``(for data access and modification) , ``in``, ``del``,
+        ``pop(str)``, ``get(str)``, ``metainfo_keys()``,
+        ``metainfo_values()``, ``metainfo_items()``, ``set_metainfo()``(for
+        set or change key-value pairs in metainfo).
 
-        - ``data``: Annotations or model predictions are
-          stored. The attributes can be accessed or modified by
-          dict-like or object-like operations, such as
-          ``.`` , ``in``, ``del``, ``pop(str)`` ``get(str)``, ``data_keys()``,
-          ``data_values()``, ``data_items()``. Users can also apply tensor-like
-          methods to all obj:``torch.Tensor`` in the ``data_fileds``,
-          such as ``.cuda()``, ``.cpu()``, ``.numpy()``, , ``.to()``
-          ``to_tensor()``, ``.detach()``, ``.numpy()``
+      - ``data``: Annotations or model predictions are
+        stored. The attributes can be accessed or modified by
+        dict-like or object-like operations, such as
+        ``.`` , ``in``, ``del``, ``pop(str)`` ``get(str)``, ``data_keys()``,
+        ``data_values()``, ``data_items()``. Users can also apply tensor-like
+        methods to all obj:``torch.Tensor`` in the ``data_fileds``,
+        such as ``.cuda()``, ``.cpu()``, ``.numpy()``, , ``.to()``
+        ``to_tensor()``, ``.detach()``, ``.numpy()``
 
     Args:
         meta_info (dict, optional): A dict contains the meta information
@@ -57,24 +56,24 @@ class BaseDataElement:
     Examples:
         >>> from mmengine.data import BaseDataElement
         >>> gt_instances = BaseDataElement()
-
         >>> bboxes = torch.rand((5, 4))
         >>> scores = torch.rand((5,))
         >>> img_id = 0
         >>> img_shape = (800, 1333)
         >>> gt_instances = BaseDataElement(
-                metainfo=dict(img_id=img_id, img_shape=img_shape),
-                data=dict(bboxes=bboxes, scores=scores))
+        ...     metainfo=dict(img_id=img_id, img_shape=img_shape),
+        ...     data=dict(bboxes=bboxes, scores=scores))
         >>> gt_instances = BaseDataElement(dict(img_id=img_id,
-                                                img_shape=(H, W)))
-        # new
+        ...                                     img_shape=(H, W)))
+
+        >>> # new
         >>> gt_instances1 = gt_instance.new(
-                                metainfo=dict(img_id=1, img_shape=(640, 640)),
-                                data=dict(bboxes=torch.rand((5, 4)),
-                                          scores=torch.rand((5,))))
+        ...                     metainfo=dict(img_id=1, img_shape=(640, 640)),
+        ...                     data=dict(bboxes=torch.rand((5, 4)),
+        ...                               scores=torch.rand((5,))))
         >>> gt_instances2 = gt_instances1.new()
 
-        # add and process property
+        >>> # add and process property
         >>> gt_instances = BaseDataElement()
         >>> gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
         >>> assert 'img_shape' in gt_instances.metainfo_keys()
@@ -82,14 +81,12 @@ class BaseDataElement:
         >>> assert 'img_shape' not in gt_instances.data_keys()
         >>> assert 'img_shape' in gt_instances.keys()
         >>> print(gt_instances.img_shape)
-
         >>> gt_instances.scores = torch.rand((5,))
         >>> assert 'scores' in gt_instances.data_keys()
         >>> assert 'scores' in gt_instances
         >>> assert 'scores' in gt_instances.keys()
         >>> assert 'scores' not in gt_instances.metainfo_keys()
         >>> print(gt_instances.scores)
-
         >>> gt_instances.bboxes = torch.rand((5, 4))
         >>> assert 'bboxes' in gt_instances.data_keys()
         >>> assert 'bboxes' in gt_instances
@@ -97,14 +94,14 @@ class BaseDataElement:
         >>> assert 'bboxes' not in gt_instances.metainfo_keys()
         >>> print(gt_instances.bboxes)
 
-        # delete and change property
+        >>> # delete and change property
         >>> gt_instances = BaseDataElement(
-             metainfo=dict(img_id=0, img_shape=(640, 640))，
-             data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        ...  metainfo=dict(img_id=0, img_shape=(640, 640)),
+        ...  data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
         >>> gt_instances.img_shape = (1280, 1280)
         >>> gt_instances.img_shape  # (1280, 1280)
         >>> gt_instances.bboxes = gt_instances.bboxes * 2
-        >>> gt_instances.get('img_shape', None)  # (640， 640)
+        >>> gt_instances.get('img_shape', None)  # (640, 640)
         >>> gt_instances.get('bboxes', None)    # 6x4 tensor
         >>> del gt_instances.img_shape
         >>> del gt_instances.bboxes
@@ -113,18 +110,18 @@ class BaseDataElement:
         >>> gt_instances.pop('img_shape', None)  # None
         >>> gt_instances.pop('bboxes', None)  # None
 
-        # Tensor-like
+        >>> # Tensor-like
         >>> cuda_instances = gt_instances.cuda()
         >>> cuda_instances = gt_instancess.to('cuda:0')
         >>> cpu_instances = cuda_instances.cpu()
         >>> cpu_instances = cuda_instances.to('cpu')
         >>> fp16_instances = cuda_instances.to(
-             device=None, dtype=torch.float16, non_blocking=False, copy=False,
-             memory_format=torch.preserve_format)
+        ...  device=None, dtype=torch.float16, non_blocking=False, copy=False,
+        ...  memory_format=torch.preserve_format)
         >>> cpu_instances = cuda_instances.detach()
         >>> np_instances = cpu_instances.numpy()
 
-        # print
+        >>> # print
         >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
         >>> instance_data = BaseDataElement(metainfo=img_meta)
         >>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
