@@ -60,9 +60,7 @@ class LoggerHook(Hook):
 
     Examples:
         >>> from mmengine import HOOKS
-        >>> logger_hook_cfg = \
-        >>>        dict(by_epoch=True,
-        >>>                custom_keys=dict(
+        >>> logger_hook_cfg = dict(by_epoch=True, custom_keys=dict(
         >>> # `log_name` is defined, `loss_mean_window` will be an additional
         >>> # record.
         >>>                        loss=[dict(log_name='loss_mean_window',
@@ -98,7 +96,6 @@ class LoggerHook(Hook):
         self.by_epoch = by_epoch
         self.interval = interval
         self.custom_keys = custom_keys if custom_keys is not None else dict()
-        self.composed_writer = None
         self.ignore_last = ignore_last
 
         self.time_sec_tot = 0
@@ -141,9 +138,12 @@ class LoggerHook(Hook):
 
         self.json_log_path = osp.join(runner.work_dir,
                                       f'{runner.timestamp}.log.json')
+        self.yaml_log_path = osp.join(runner.work_dir,
+                                      f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
         if runner.meta is not None:
-            runner.composed_writer.add_scalars(runner.meta)
+            runner.composed_writer.add_params(runner.meta,
+                                               file_path=self.yaml_log_path)
 
     def after_train_iter(
             self,
@@ -264,8 +264,10 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write logs to local, tensorboad, and wandb.
-        runner.composed_writer.add_scalars(self.json_log_path, tag,
-                                           runner.iter + 1)
+        runner.composed_writer.add_scalars(tag,
+                                           step=runner.iter + 1,
+                                           file_path=self.json_log_path
+                                           )
 
     def _log_val(self, runner: Any) -> None:
         """Collect and record training logs which start named with "val/*".
@@ -296,7 +298,8 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        runner.composed_writer.add_scalars(self.json_log_path, tag, cur_iter)
+        runner.composed_writer.add_scalars(tag, step=cur_iter,
+                                           file_path=self.json_log_path)
 
     def _get_window_size(self, runner: Any, window_size: Union[int, str]) \
             -> int:
