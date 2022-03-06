@@ -40,7 +40,7 @@ class Priority(Enum):
     LOWEST = 100
 
 
-def get_priority(priority: Union[int, str]) -> int:
+def get_priority(priority: Union[int, str, Priority]) -> int:
     """Get priority value.
 
     Args:
@@ -53,7 +53,7 @@ def get_priority(priority: Union[int, str]) -> int:
         if priority < 0 or priority > 100:
             raise ValueError('priority must be between 0 and 100')
         return priority
-    elif isinstance(priority, Priority):  # TODO
+    elif isinstance(priority, Priority):
         return priority.value
     elif isinstance(priority, str):
         return Priority[priority.upper()].value

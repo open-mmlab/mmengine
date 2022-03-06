@@ -33,7 +33,7 @@ from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
-from .priority import get_priority
+from .priority import Priority, get_priority
 
 
 class Runner:
@@ -95,6 +95,44 @@ class Runner:
         cfg (:obj:`Config`, optional): Complete config. Defaults to None.
         deterministic (bool): Whether cudnn to select deterministic algorithms.
             See https://pytorch.org/docs/stable/notes/randomness.html.
+
+    Examples:
+        >>> from mmengine import Runner
+        >>> cfg = dict(
+                model=dict(type='ToyModel'),
+                work_dir='path/of/work_dir',
+                train_dataloader=dict(
+                    dataset=dict(type='ToyDataset'),
+                    sampler=dict(type='DefaultSampler', shuffle=True),
+                    batch_size=1,
+                    num_workers=0),
+                val_dataloader=dict(
+                    dataset=dict(type='ToyDataset'),
+                    sampler=dict(type='DefaultSampler', shuffle=False),
+                    batch_size=1,
+                    num_workers=0),
+                test_dataloader=dict(
+                    dataset=dict(type='ToyDataset'),
+                    sampler=dict(type='DefaultSampler', shuffle=False),
+                    batch_size=1,
+                    num_workers=0),
+                optimizer=dict(type='SGD', lr=0.01),
+                param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
+                evaluator=dict(type='ToyEvaluator'),
+                train_cfg=dict(by_epoch=True, max_epochs=3),
+                val_cfg=dict(interval=1),
+                test_cfg=dict(),
+                custom_hooks=[],
+                default_hooks=dict(
+                    timer=dict(type='IterTimerHook'),
+                    checkpoint=dict(type='CheckpointHook', interval=1),
+                    logger=dict(type='TextLoggerHook'),
+                    optimizer=dict(type='OptimizerHook', grad_clip=False),
+                    param_scheduler=dict(type='ParamSchedulerHook')),
+                env_cfg=dict(dist_cfg=dict(backend='nccl'), ),
+                log_cfg=dict(log_level='INFO'),
+            )
+        >>> runner = Runner.build_from_cfg(cfg)
     """
     cfg: Config
     _train_loop: Optional[Union[BaseLoop, Dict]]
@@ -399,6 +437,12 @@ class Runner:
         Args:
             model_cfg (dict): Config to build model.
 
+        An example of ``model_cfg`` format:
+
+        .. code-block:: python
+
+            model_cfg = dict(type='ResNet')
+
         Returns:
             nn.Module: Model build from ``model_cfg``.
         """
@@ -421,18 +465,18 @@ class Runner:
                 specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
                 will be used. Defaults to None.
 
-        Returns:
-            nn.Module: Wrapped model.
-
         An example of ``model_wrapper_cfg``:
 
         .. code-block:: python
 
-            model_wrapper=dict(
+            model_wrapper = dict(
                 type='MMDistributedDataParallel',
                 broadcast_buffers=False,
                 find_unused_parameters=False
             )
+
+        Returns:
+            nn.Module: Wrapped model.
         """
         if model_wrapper_cfg is None:
             if self.distributed:
@@ -462,6 +506,12 @@ class Runner:
         Args:
             optimizer_cfg (dict): Config to build optimizer.
 
+        An example of ``optimizer_cfg``:
+
+        .. code-block:: python
+
+            optimizer_cfg = dict(type='SGD', lr=0.01)
+
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
         """
@@ -477,6 +527,12 @@ class Runner:
         Args:
             scheduler_cfg (dict or list[dict]): Config to build parameter
                 schedulers.
+
+        An example of ``scheduler_cfg``:
+
+        .. code-block:: python
+
+            scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2]),
 
         Returns:
             list[:obj:`_ParamScheduler`]: Parameter schedulers build from
@@ -506,6 +562,17 @@ class Runner:
 
         Args:
             dataloader_cfg (dict): A dict to build dataloader.
+
+        An example of ``scheduler_cfg``:
+
+        .. code-block:: python
+
+            dataloader_cfg = dict(
+                dataset=dict(type='ToyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=1,
+                num_workers=9
+            )
 
         Returns:
             Dataloader: Dataloader build from ``dataloader_cfg``.
@@ -548,6 +615,12 @@ class Runner:
         Args:
             loop_cfg (dict): Config to build training loop.
 
+        An example of ``loop_cfg``:
+
+        .. code-block:: python
+
+            loop_cfg = dict(by_epoch=True, max_epochs=3)
+
         Returns:
             :obj:`BaseLoop`: Training loop object build from ``loop_cfg``.
         """
@@ -586,6 +659,12 @@ class Runner:
 
         Args:
             loop_cfg (dict): Config to build validating loop.
+
+        An example of ``loop_cfg``:
+
+        .. code-block:: python
+
+            loop_cfg = dict(interval=1)
 
         Returns:
             :obj:`BaseLoop`: Validation loop object build from ``loop_cfg``.
@@ -660,9 +739,10 @@ class Runner:
         for hook in self._hooks:
             getattr(hook, fn_name)(self, **kwargs)
 
-    def register_hook(self,
-                      hook: Union[Hook, Dict],
-                      priority: Optional[Union[str, int]] = None) -> None:
+    def register_hook(
+            self,
+            hook: Union[Hook, Dict],
+            priority: Optional[Union[str, int, Priority]] = None) -> None:
         """Register a hook into the hook list.
 
         The hook will be inserted into a priority queue, with the specified
@@ -681,8 +761,8 @@ class Runner:
 
         Args:
             hook (:obj:`Hook` or dict): The hook to be registered.
-            priority (int or str, optional): Hook priority. Lower value means
-                higher priority.
+            priority (int or str or :obj:`Priority`, optional): Hook priority.
+                Lower value means higher priority.
         """
         if not isinstance(hook, (Hook, dict)):
             raise TypeError(
@@ -817,7 +897,7 @@ class Runner:
                         create_symlink: bool = True):
         """Save checkpoints.
 
-        ``CheckpointHook`` will invoke this method to save checkpoints
+        ``CheckpointHook`` invokes this method to save checkpoints
         periodically.
 
         Args:
