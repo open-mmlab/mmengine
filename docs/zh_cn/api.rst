@@ -23,12 +23,11 @@ Data
 .. automodule:: mmengine.data
     :members:
 
-Dataset
---------
-.. automodule:: mmengine.dataset
+Distributed
+-----------
+.. automodule:: mmengine.dist
     :members:
 
 Logging
 --------
 .. automodule:: mmengine.logging
-    :members:

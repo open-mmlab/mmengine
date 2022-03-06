@@ -1,9 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from typing import Union
+
 from ..registry import EVALUATORS
+from .base import BaseEvaluator
 from .composed_evaluator import ComposedEvaluator
 
 
-def build_evaluator(cfg: dict) -> object:
+def build_evaluator(
+        cfg: Union[dict, list]) -> Union[BaseEvaluator, ComposedEvaluator]:
     """Build function of evaluator.
 
     When the evaluator config is a list, it will automatically build composed

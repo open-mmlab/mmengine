@@ -406,7 +406,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataElement':
-        """Convert all tensor　to np.narray in metainfo and data."""
+        """Convert all tensor to np.narray in metainfo and data."""
         new_data = self.new()
         for k, v in self.data_items():
             if isinstance(v, torch.Tensor):

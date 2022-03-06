@@ -28,7 +28,11 @@ Dataset
 .. automodule:: mmengine.dataset
     :members:
 
+Distributed
+-----------
+.. automodule:: mmengine.dist
+    :members:
+
 Logging
 --------
 .. automodule:: mmengine.logging
-    :members:
