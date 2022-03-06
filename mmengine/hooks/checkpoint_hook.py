@@ -7,7 +7,6 @@ from typing import Optional, Sequence, Union
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
-from mmengine.runner import Runner
 from .hook import Hook
 
 
@@ -72,7 +71,7 @@ class CheckpointHook(Hook):
         self.sync_buffer = sync_buffer
         self.file_client_args = file_client_args
 
-    def before_run(self, runner: Runner) -> None:
+    def before_run(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
         This function will get the appropriate file client, and the directory
@@ -116,7 +115,7 @@ class CheckpointHook(Hook):
         else:
             self.args['create_symlink'] = self.file_client.allow_symlink
 
-    def after_train_epoch(self, runner: Runner) -> None:
+    def after_train_epoch(self, runner) -> None:
         """Save the checkpoint and synchronize buffers after each epoch.
 
         Args:
@@ -140,7 +139,7 @@ class CheckpointHook(Hook):
             self._save_checkpoint(runner)
 
     # TODO Add master_only decorator
-    def _save_checkpoint(self, runner: Runner) -> None:
+    def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
         Args:
@@ -187,7 +186,7 @@ class CheckpointHook(Hook):
 
     def after_train_iter(
             self,
-            runner: Runner,
+            runner,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
