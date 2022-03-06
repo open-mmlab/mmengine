@@ -181,6 +181,7 @@ class TestBaseDataSample(TestCase):
             instances.set_data(123)
 
     def test_delete_modify(self):
+        random.seed(10)
         metainfo, data = self.setup_data()
         instances = BaseDataSample(metainfo, data)
 

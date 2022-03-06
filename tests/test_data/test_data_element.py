@@ -161,10 +161,22 @@ class TestBaseDataElement(TestCase):
             instances.set_data(123)
 
     def test_delete_modify(self):
+        random.seed(10)
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo, data)
 
         new_metainfo, new_data = self.setup_data()
+        # avoid generating same metainfo, data
+        while True:
+            if new_metainfo['img_id'] == metainfo['img_id'] or new_metainfo[
+                    'img_shape'] == metainfo['img_shape']:
+                new_metainfo, new_data = self.setup_data()
+            elif self.is_equal(new_data['bboxes'],
+                               data['bboxes']) or self.is_equal(
+                                   new_data['scores'], data['scores']):
+                new_metainfo, new_data = self.setup_data()
+            else:
+                break
         instances.bboxes = new_data['bboxes']
         instances.scores = new_data['scores']
 

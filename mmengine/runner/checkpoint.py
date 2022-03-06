@@ -20,6 +20,12 @@ from mmengine.fileio import load as load_file
 from mmengine.model import is_model_wrapper
 from mmengine.utils import load_url, mkdir_or_exist
 
+# `MMENGINE_HOME` is the highest priority directory to save checkpoints
+# downloaded from Internet. If it is not set, as a workaround, using
+# `XDG_CACHE_HOME`` or `~/.cache` instead.
+# Note that `XDG_CACHE_HOME` defines the base directory relative to which
+# user-specific non-essential data files should be stored. If `XDG_CACHE_HOME`
+# is either not set or empty, a default equal to `~/.cache` should be used.
 ENV_MMENGINE_HOME = 'MMENGINE_HOME'
 ENV_XDG_CACHE_HOME = 'XDG_CACHE_HOME'
 DEFAULT_CACHE_DIR = '~/.cache'
@@ -118,8 +124,7 @@ def get_torchvision_models():
 
 def get_external_models():
     mmengine_home = _get_mmengine_home()
-    default_json_path = osp.join(mmengine.__path__[0],
-                                 'model_zoo/open_mmlab.json')
+    default_json_path = osp.join(mmengine.__path__[0], 'hub/openmmlab.json')
     default_urls = load_file(default_json_path)
     assert isinstance(default_urls, dict)
     external_json_path = osp.join(mmengine_home, 'open_mmlab.json')
@@ -132,15 +137,14 @@ def get_external_models():
 
 
 def get_mmcls_models():
-    mmcls_json_path = osp.join(mmengine.__path__[0], 'model_zoo/mmcls.json')
+    mmcls_json_path = osp.join(mmengine.__path__[0], 'hub/mmcls.json')
     mmcls_urls = load_file(mmcls_json_path)
 
     return mmcls_urls
 
 
 def get_deprecated_model_names():
-    deprecate_json_path = osp.join(mmengine.__path__[0],
-                                   'model_zoo/deprecated.json')
+    deprecate_json_path = osp.join(mmengine.__path__[0], 'hub/deprecated.json')
     deprecate_urls = load_file(deprecate_json_path)
     assert isinstance(deprecate_urls, dict)
 
@@ -247,7 +251,8 @@ class CheckpointLoader:
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
         mmengine.print_log(
-            f'load checkpoint from {class_name[10:]} path: {filename}', logger)
+            f'{class_name[10:]} loads checkpoint from path: {filename}',
+            logger)
         return checkpoint_loader(filename, map_location)
 
 
@@ -333,11 +338,6 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     """load checkpoint through the file path prefixed with s3.  In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
-
-    Note:
-        Since v1.4.1, the registered scheme prefixes have been enhanced to
-        support bucket names in the path prefix, e.g. 's3://xx.xx/xx.path',
-        'bucket1:s3://xx.xx/xx.path'.
 
     Args:
         filename (str): checkpoint file path with s3 prefix
@@ -475,8 +475,8 @@ def _load_checkpoint(filename, map_location=None, logger=None):
 
     Returns:
         dict or OrderedDict: The loaded checkpoint. It can be either an
-           OrderedDict storing model weights or a dict containing other
-           information, which depends on the checkpoint.
+        OrderedDict storing model weights or a dict containing other
+        information, which depends on the checkpoint.
     """
     return CheckpointLoader.load_checkpoint(filename, map_location, logger)
 
@@ -602,6 +602,8 @@ def _save_to_state_dict(module, destination, prefix, keep_vars):
         destination (dict): A dict where state will be stored.
         prefix (str): The prefix for parameters and buffers used in this
             module.
+        keep_vars (bool): Whether to keep the variable property of the
+            parameters.
     """
     for name, param in module._parameters.items():
         if param is not None:
@@ -617,7 +619,6 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
 
     Both parameters and persistent buffers (e.g. running averages) are
     included. Keys are corresponding parameter and buffer names.
-
     This method is modified from :meth:`torch.nn.Module.state_dict` to
     recursively check parallel module in case that the model has a complicated
     structure, e.g., nn.Module(nn.Module(DDP)).
@@ -662,6 +663,9 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
     Args:
         checkpoint (dict): Module whose params are to be saved.
         filename (str): Checkpoint filename.
+        file_client_args (dict, optional): Arguments to instantiate a
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Defaults to None.
     """
     if filename.startswith('pavi://'):
         if file_client_args is not None:

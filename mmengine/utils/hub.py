@@ -57,14 +57,11 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
                  check_hash=False,
                  file_name=None):
         r"""Loads the Torch serialized object at the given URL.
-
         If downloaded file is a zip file, it will be automatically decompressed
-
         If the object is already present in `model_dir`, it's deserialized and
         returned.
         The default value of ``model_dir`` is ``<hub_dir>/checkpoints`` where
         ``hub_dir`` is the directory returned by :func:`~torch.hub.get_dir`.
-
         Args:
             url (str): URL of the object to download
             model_dir (str, optional): directory in which to save the object
@@ -80,7 +77,6 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
                 Default: False
             file_name (str, optional): name for the downloaded file. Filename
                 from ``url`` will be used if not set. Default: None.
-
         Example:
             >>> url = ('https://s3.amazonaws.com/pytorch/models/resnet18-5c106'
             ...        'cde.pth')
