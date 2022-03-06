@@ -51,17 +51,17 @@ class TestLoggerHook:
 
     def test_before_run(self):
         runner = MagicMock()
-        runner.composed_writer = MagicMock()
         runner.iter = 10
         runner.timestamp = 'timestamp'
         runner.work_dir = 'work_dir'
         runner.logger = MagicMock()
         logger_hook = LoggerHook(out_dir='out_dir')
         logger_hook.before_run(runner)
-        assert logger_hook.out_dir == 'out_dir/work_dir'
-        assert logger_hook.json_log_path == 'work_dir/timestamp.log.json'
+        assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
+        assert logger_hook.json_log_path == osp.join('work_dir',
+                                                     'timestamp.log.json')
         assert logger_hook.start_iter == runner.iter
-        runner.composed_writer.add_scalars.assert_called()
+        runner.writer.add_params.assert_called()
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'
@@ -76,8 +76,6 @@ class TestLoggerHook:
 
         logger_hook = LoggerHook(out_dir=str(tmp_path), keep_local=False)
         logger_hook.out_dir = str(out_dir)
-        logger_hook.logger = MagicMock()
-        logger_hook.composed_writers = MagicMock()
         logger_hook.after_run(runner)
         # Verify that the file has been moved to `out_dir`.
         assert not osp.exists(str(work_dir_json))
@@ -139,7 +137,7 @@ class TestLoggerHook:
         runner.meta = dict(exp_name='retinanet')
         # Prepare LoggerHook
         logger_hook = LoggerHook(by_epoch=by_epoch)
-        logger_hook.composed_writers = MagicMock()
+        logger_hook.writer = MagicMock()
         logger_hook.time_sec_tot = 1000
         logger_hook.start_iter = 0
         logger_hook._get_max_memory = MagicMock(return_value='100')
@@ -151,10 +149,10 @@ class TestLoggerHook:
         logger_hook._collect_info = MagicMock(return_value=train_infos)
         logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
-        runner.composed_writer.add_scalars.assert_called_with(
-            'tmp.json',
-            dict(lr=0.1, momentum=0.9, time=1.0, data_time=1.0, loss_cls=1.0),
-            11)
+        runner.writer.add_scalars.assert_called_with(
+            train_infos,
+            step=11,
+            file_path='tmp.json')
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
         time_avg = logger_hook.time_sec_tot / (
@@ -162,7 +160,8 @@ class TestLoggerHook:
         eta_second = time_avg * (runner.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
-            assert out == 'Epoch [2][2/5]\t' \
+            if torch.cuda.is_available():
+                log_str = 'Epoch [2][2/5]\t' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -170,8 +169,18 @@ class TestLoggerHook:
                           f"data_time: {train_infos['data_time']:.3f}, " \
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+            else:
+                log_str = 'Epoch [2][2/5]\t' \
+                          f"lr: {train_infos['lr']:.3e} " \
+                          f"momentum: {train_infos['momentum']:.3e}, " \
+                          f'eta: {eta_str}, ' \
+                          f"time: {train_infos['time']:.3f}, " \
+                          f"data_time: {train_infos['data_time']:.3f}, " \
+                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+            assert out == log_str
         else:
-            assert out == 'Iter [11/50]\t' \
+            if torch.cuda.is_available():
+                log_str = 'Iter [11/50]\t' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -179,6 +188,15 @@ class TestLoggerHook:
                           f"data_time: {train_infos['data_time']:.3f}, " \
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+            else:
+                log_str = 'Iter [11/50]\t' \
+                          f"lr: {train_infos['lr']:.3e} " \
+                          f"momentum: {train_infos['momentum']:.3e}, " \
+                          f'eta: {eta_str}, ' \
+                          f"time: {train_infos['time']:.3f}, " \
+                          f"data_time: {train_infos['data_time']:.3f}, " \
+                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+            assert out == log_str
 
     @pytest.mark.parametrize('by_epoch', [True, False])
     def test_log_val(self, by_epoch, capsys):
@@ -191,8 +209,8 @@ class TestLoggerHook:
         logger_hook._log_val(runner)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
-        runner.composed_writer.add_scalars.assert_called_with(
-            'tmp.json', metric, 11)
+        runner.writer.add_scalars.assert_called_with(
+            metric, step=11, file_path='tmp.json')
         if by_epoch:
             assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
