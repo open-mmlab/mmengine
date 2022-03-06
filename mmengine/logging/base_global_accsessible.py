@@ -35,19 +35,19 @@ class MetaGlobalAccessible(type):
     def __init__(cls, *args):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
-        # `inspect.getfullargspec` will return a tuple includes `(args,
-        # varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations)`
+        # `inspect.getfullargspec` returns a tuple includes `(args, varargs,
+        # varkw, defaults, kwonlyargs, kwonlydefaults, annotations)`.
         # To make sure `cls(name='root')` can be implemented, the
         # `args` and `defaults` should be checked.
+        params_names = params[0] if params[0] else []
         default_params = params[3] if params[3] else []
-        params_name = params[0] if params[0] else []
-        assert 'name' in params_name, f'{cls}.__init__ must have the name ' \
-                                      'argument'
-        if len(default_params) == len(params_name) - 2:
-            assert 'name' == params[0][1], f'In {cls}.__init__, Only the ' \
-                                           'name argument is allowed to ' \
-                                           'have no default values.'
-        elif len(default_params) < len(params_name) - 2:
+        assert 'name' in params_names, f'{cls}.__init__ must have the name ' \
+                                       'argument'
+        if len(default_params) == len(params_names) - 2 and 'name' != \
+                params[0][1]:
+            raise AssertionError(f'In {cls}.__init__, Only the name argument '
+                                 'is allowed to have no default values.')
+        if len(default_params) < len(params_names) - 2:
             raise AssertionError('Besides name, the arguments of the '
                                  f'{cls}.__init__ must have default values')
         cls.root = cls(name='root')
@@ -72,7 +72,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         >>> assert id(instance_1) == id(instance_2)
 
     Args:
-        name (str): The name of the instance. Defaults to None.
+        name (str): Name of the instance. Defaults to ''.
     """
 
     def __init__(self, name: str = '', **kwargs):
@@ -94,10 +94,10 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             root
 
         Args:
-            name (str): The name of instance. Defaults to ''.
+            name (str): Name of instance. Defaults to ''.
 
         Returns:
-            object: The subclass instance.
+            object: Subclass instance.
         """
         instance_dict = cls._instance_dict
         # Create instance and fill the instance in the `instance_dict`.
@@ -138,12 +138,10 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             name: name3, please make sure you have created it
 
         Args:
-            name (str): The name of instance. Defaults to None.
-                current(bool): Whether to return the latest created instance
-                or the root instance, if name is not spicified. Defaults to
-                ''.
-            current (bool): Whether to return the latest created instance.
-                Defaults to False.
+            name (str): Name of instance. Defaults to ''.
+            current(bool): Whether to return the latest created instance or
+                the root instance, if name is not spicified. Defaults to False.
+
         Returns:
             object: Corresponding name instance, the latest instance, or root
             instance.
@@ -170,6 +168,6 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         """Get the name of instance.
 
         Returns:
-            str: The name of instance.
+            str: Name of instance.
         """
         return self._name

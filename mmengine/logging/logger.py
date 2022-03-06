@@ -142,7 +142,7 @@ def print_log(msg,
 
     Args:
         msg (str): The message to be logged.
-        logger (Logger, str, optional): The logger to be used.
+        logger (Logger or str, optional): The logger to be used.
             Some special loggers are:
             - "silent": no message will be printed.
             - "current": Log message via the latest created logger.

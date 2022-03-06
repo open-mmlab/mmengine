@@ -13,9 +13,8 @@ class BaseLogBuffer:
     from ``BaseLogBuffer`` will implement the specific statistical methods.
 
     Args:
-        log_history (Sequence): The history logs. Defaults to [].
-        count_history (Sequence): The counts of the history logs. Defaults to
-            [].
+        log_history (Sequence): History logs. Defaults to [].
+        count_history (Sequence): Counts of history logs. Defaults to [].
         max_length (int): The max length of history logs. Defaults to 1000000.
     """
     _statistics_methods: dict = dict()
@@ -44,12 +43,12 @@ class BaseLogBuffer:
         buffer.
 
         Args:
-            log_val (int, float): The value of log.
-            count (int): The accumulation times of log, defaults to 1. count
-                will be used in smooth statistics.
+            log_val (int or float): The value of log.
+            count (int): The accumulation times of log, defaults to 1.
+            ``count`` will be used in smooth statistics.
         """
-        if not isinstance(log_val, (int, float)) or \
-                not isinstance(count, (int, float)):
+        if (not isinstance(log_val, (int, float))
+                or not isinstance(count, (int, float))):
             raise TypeError(f'log_val must be int or float but got '
                             f'{type(log_val)}, count must be int but got '
                             f'{type(count)}')
@@ -64,8 +63,8 @@ class BaseLogBuffer:
         """Get the ``_log_history`` and ``_count_history``.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: The history logs and the counts of
-                the history logs.
+            Tuple[np.ndarray, np.ndarray]: History logs and the counts of
+            the history logs.
         """
         return self._log_history, self._count_history
 
@@ -74,7 +73,7 @@ class BaseLogBuffer:
         """Register custom statistics method to ``_statistics_methods``.
 
         Args:
-            method (Callable): custom statistics method.
+            method (Callable): Custom statistics method.
 
         Returns:
             Callable: Original custom statistics method.
@@ -89,14 +88,14 @@ class BaseLogBuffer:
         """Access statistics method by name.
 
         Args:
-            method_name (str): The name of method.
+            method_name (str): Name of method.
 
         Returns:
             Any: Depends on corresponding method.
         """
         if method_name not in self._statistics_methods:
             raise KeyError(f'{method_name} has not been registered in '
-                           f'BaseLogBuffer._statistics_methods')
+                           'BaseLogBuffer._statistics_methods')
         method = self._statistics_methods[method_name]
         # Provide self arguments for registered functions.
         method = partial(method, self)
@@ -104,8 +103,8 @@ class BaseLogBuffer:
 
 
 class LogBuffer(BaseLogBuffer):
-    """The subclass of ``BaseLogBuffer`` and provide basic statistics method,
-    such as ``min``, ``max``, ``current`` and ``mean``."""
+    """``LogBuffer`` inherits from ``BaseLogBuffer`` and provides some basic
+    statistics methods, such as ``min``, ``max``, ``current`` and ``mean``."""
 
     @BaseLogBuffer.register_statistics
     def mean(self, window_size: Optional[int] = None) -> np.ndarray:
@@ -114,10 +113,10 @@ class LogBuffer(BaseLogBuffer):
         history logs.
 
         Args:
-            window_size (int, optional): The size of statistics window.
+            window_size (int, optional): Size of statistics window.
 
         Returns:
-            np.ndarray: The mean value within the window.
+            np.ndarray: Mean value within the window.
         """
         if window_size is not None:
             assert isinstance(window_size, int), \
@@ -136,7 +135,7 @@ class LogBuffer(BaseLogBuffer):
         of history logs.
 
         Args:
-            window_size (int, optional): The size of statistics window.
+            window_size (int, optional): Size of statistics window.
 
         Returns:
             np.ndarray: The maximum value within the window.
@@ -156,7 +155,7 @@ class LogBuffer(BaseLogBuffer):
         of history logs.
 
         Args:
-            window_size (int, optional): The size of statistics window.
+            window_size (int, optional): Size of statistics window.
 
         Returns:
             np.ndarray: The minimum value within the window.
@@ -174,7 +173,7 @@ class LogBuffer(BaseLogBuffer):
         """Return the recently updated values in log histories.
 
         Returns:
-            np.ndarray: The recently updated values in log histories.
+            np.ndarray: Recently updated values in log histories.
         """
         if len(self._log_history) == 0:
             raise ValueError('LogBuffer._log_history is an empty array! '
