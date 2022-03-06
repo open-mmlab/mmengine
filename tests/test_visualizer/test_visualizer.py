@@ -1,10 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest import TestCase
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import torch
 
+from mmengine.data import BaseDataSample
 from mmengine.visualization import Visualizer
 
 
@@ -61,6 +63,13 @@ class TestVisualizer(TestCase):
         # test incorrect bbox format
         with pytest.raises(AssertionError):
             visualizer.draw_bboxes([1, 1, 2, 2])
+
+    def test_close(self):
+        visualizer = Visualizer(image=self.image)
+        fig_num = visualizer.fig.number
+        assert fig_num in plt.get_fignums()
+        visualizer.close()
+        assert fig_num not in plt.get_fignums()
 
     def test_draw_texts(self):
         visualizer = Visualizer(image=self.image)
@@ -353,11 +362,11 @@ class TestVisualizer(TestCase):
                 pass
 
             def draw(self,
-                     data_sample,
                      image: np.ndarray = None,
-                     show_gt: bool = True,
-                     show_pred: bool = True) -> None:
-                return super().draw(data_sample, image, show_gt, show_pred)
+                     data_sample: 'BaseDataSample' = None,
+                     draw_gt: bool = True,
+                     draw_pred: bool = True) -> None:
+                return super().draw(image, data_sample, draw_gt, draw_pred)
 
         det_visualizer = DetVisualizer2()
         det_visualizer.draw(data_sample={})

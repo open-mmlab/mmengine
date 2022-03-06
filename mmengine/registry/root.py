@@ -41,4 +41,4 @@ TASK_UTILS = Registry('task util')
 EVALUATORS = Registry('evaluator')
 
 # manage visualizer
-VISUALIZERS = Registry('visualizers')
+VISUALIZERS = Registry('visualizer')

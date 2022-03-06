@@ -3,6 +3,7 @@ import warnings
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -53,8 +54,8 @@ class Visualizer:
         metadata (dict, optional): A dict contains the meta information
             of single image. such as ``dict(img_shape=(512, 512, 3),
             scale_factor=(1, 1, 1, 1))``. Defaults to None.
-        image (np.ndarray, optional): the origin image to draw which channel is
-            bgr. Defaults to None.
+        image (np.ndarray, optional): the origin image to draw. The format
+            should be RGB. Defaults to None.
 
     Examples:
         >>> # Basic info methods
@@ -110,8 +111,8 @@ class Visualizer:
         >>>                      data_type: Type):
         >>>         pass
         >>>     def draw(self,
-        >>>             data_sample,
         >>>             image: np.ndarray = None,
+        >>>             data_sample: 'BaseDataSample' = None,
         >>>             show_gt: bool = True,
         >>>             show_pred: bool = True) -> None:
         >>>         pass
@@ -126,24 +127,23 @@ class Visualizer:
         if image is not None:
             self._setup_fig(image)
 
-    def show(self,
-             drawn_image: Optional[np.ndarray] = None,
-             window_name: str = 'image',
-             wait_time: int = 0) -> None:
+    def close(self) -> None:
+        """Close the figure."""
+        plt.close(self.fig)
+
+    def show(self, wait_time: int = 0) -> None:
         """Show the drawn image. if ``drawn_image`` is None, show the inner
         image, which is obtained by ``self.get_image()``.
 
         Args:
-            drawn_image (np.ndarray, optional): The image to draw which
-                channel is bgr. Defaults to None.
-            window_name (str): Name of the window. Defaults to 'image'.
             wait_time (int, optional): Delay in milliseconds. 0 is the special
                 value that means "forever". Defaults to 0.
         """
-        cv2.namedWindow(window_name, 0)
-        cv2.imshow(window_name,
-                   self.get_image() if drawn_image is None else drawn_image)
-        cv2.waitKey(wait_time)
+        if wait_time == 0:
+            plt.show()
+        else:
+            plt.show(block=False)
+            plt.pause(wait_time)
 
     @classmethod
     def register_task(cls, task_name: str, force: bool = False) -> Callable:
@@ -182,7 +182,7 @@ class Visualizer:
         self._setup_fig(image)
 
     def get_image(self) -> np.ndarray:
-        """Get the drawn image which channel is bgr.
+        """Get the drawn image. The format is RGB.
 
         Returns:
             np.ndarray: the drawn image which channel is rgb.
@@ -193,44 +193,44 @@ class Visualizer:
         buffer = np.frombuffer(s, dtype='uint8')
         img_rgba = buffer.reshape(height, width, 4)
         rgb, alpha = np.split(img_rgba, [3], axis=2)
-        image = cv2.cvtColor(rgb.astype('uint8'), cv2.COLOR_RGB2BGR)
-        return image
+        return rgb.astype('uint8')
 
     def _setup_fig(self, image: np.ndarray) -> None:
         """Set the image to draw.
 
         Args:
-            image (np.ndarray): The image to draw which channel is bgr.
+            image (np.ndarray): The image to draw.The format
+                should be RGB.
         """
         image = image.astype('uint8')
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self._image = image
         self.width, self.height = image.shape[1], image.shape[0]
         self._default_font_size = max(
             np.sqrt(self.height * self.width) // 90, 10)
-        fig = Figure(frameon=False)
+        fig = plt.figure(frameon=False)
 
         self.dpi = fig.get_dpi()
         # add a small 1e-2 to avoid precision lost due to matplotlib's
         # truncation (https://github.com/matplotlib/matplotlib/issues/15363)
         fig.set_size_inches((self.width + 1e-2) / self.dpi,
                             (self.height + 1e-2) / self.dpi)
-        self.canvas = FigureCanvasAgg(fig)
+        self.canvas = fig.canvas
         # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
-        ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
-        ax.axis('off')
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        plt.axis('off')
+        ax = plt.gca()
         self.fig = fig
         self.ax = ax
         self.ax.imshow(
             image,
             extent=(0, self.width, self.height, 0),
-            interpolation='nearest')
+            interpolation='none')
 
     def draw(self,
-             data_sample: 'BaseDataSample',
              image: np.ndarray = None,
-             show_gt: bool = True,
-             show_pred: bool = True) -> None:
+             data_sample: 'BaseDataSample' = None,
+             draw_gt: bool = True,
+             draw_pred: bool = True) -> None:
         pass
 
     def _is_posion_valid(self, position: np.ndarray) -> bool:
@@ -278,31 +278,34 @@ class Visualizer:
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
             verticalalignments (Union[str, List[str]]): The verticalalignment
-                of texts. ``verticalalignments`` can have the same length with
+                of texts. verticalalignment controls whether the y positional
+                argument for the text indicates the bottom, center or top side
+                of the text bounding box.
+                ``verticalalignments`` can have the same length with
                 texts or just single value. If ``verticalalignments`` is single
                 value, all the texts will have the same verticalalignment.
-                Reference to
-                https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
-                for more details. Defaults to 'top'.
+                verticalalignment can be 'center' or 'top', 'bottom' or
+                'baseline'. Defaults to 'top'.
             horizontalalignments (Union[str, List[str]]): The
-                horizontalalignment of texts. ``horizontalalignments`` can have
+                horizontalalignment of texts. Horizontalalignment controls
+                whether the x positional argument for the text indicates the
+                left, center or right side of the text bounding box.
+                ``horizontalalignments`` can have
                 the same length with texts or just single value.
                 If ``horizontalalignments`` is single value, all the texts will
-                have the same horizontalalignment. Reference to
-                https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
-                for more details. Defaults to 'left'.
+                have the same horizontalalignment. Horizontalalignment
+                can be 'center','right' or 'left'. Defaults to 'left'.
             font_families (Union[str, List[str]]): The font family of
                 texts. ``font_families`` can have the same length with texts or
                 just single value. If ``font_families`` is single value, all
-                the texts will have the same font family. Reference to
-                https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
-                for more details. Defaults to 'sans-serif'.
-            rotations (Union[int, List[int]]): The font size of
-                texts. ``font_sizes`` can have the same length with texts or
-                just single value. If ``font_sizes`` is single value, all the
-                texts will have the same font size. Reference to
-                https://matplotlib.org/stable/api/text_api.html?highlight=verticalalignment#module-matplotlib.text
-                for more details. Defaults to 0.
+                the texts will have the same font family.
+                font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
+                 or 'monospace'.  Defaults to 'sans-serif'.
+            rotations (Union[int, List[int]]): The rotation degrees of
+                texts. ``rotations`` can have the same length with texts or
+                just single value. If ``rotations`` is single value, all the
+                texts will have the same rotation. rotation can be angle
+                in degrees, 'vertical' or 'horizontal'. Defaults to 0.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -703,7 +706,7 @@ class Visualizer:
                 ``colors`` can have the same length with binary_masks or just
                 single value. If ``colors`` is single value, all the
                 binary_masks will convert to the same colors. The colors format
-                is BGR. Defaults to np.array([0, 255, 0]).
+                is RGB. Defaults to np.array([0, 255, 0]).
             alphas (Union[int, List[int]]): The transparency of origin image.
                 Defaults to 0.5.
         """
@@ -737,7 +740,6 @@ class Visualizer:
                 img, img, mask=binary_mask_complement)
             rgb = rgb + img_complement
             img = cv2.addWeighted(img, alpha, rgb, 1 - alpha, 0)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.ax.imshow(
             img,
             extent=(0, self.width, self.height, 0),
@@ -794,8 +796,8 @@ class Visualizer:
                 feat_map (np.ndarray, torch.Tensor): The feat_map to convert
                     with of shape (H, W), where H is the image height and W is
                     the image width.
-                img (np.ndarray, optional): The origin image. Defaults to None.
-                    is BGR. Defaults to np.array([0, 255, 0]).
+                img (np.ndarray, optional): The origin image. The format
+                    should be RGB. Defaults to None.
                 alphas (Union[int, List[int]]): The transparency of origin
                     image. Defaults to 0.5.
 
@@ -807,6 +809,7 @@ class Visualizer:
                                      cv2.NORM_MINMAX)
             norm_img = np.asarray(norm_img, dtype=np.uint8)
             heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
+            heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
             if img is not None:
                 heat_img = cv2.addWeighted(img, alpha, heat_img, 1 - alpha, 0)
             return heat_img
@@ -816,7 +819,7 @@ class Visualizer:
         if image is not None:
             assert image.shape[:2] == tensor_chw.shape[1:]
             if image.ndim == 2:
-                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         if mode is not None:
             assert mode in [
                 'mean', 'max', 'min'
@@ -859,6 +862,8 @@ class Visualizer:
             _, indices = torch.topk(sum_channel, topk)
             topk_tensor = tensor_chw[indices]
             fig = Figure(frameon=False)
+            fig.subplots_adjust(
+                left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
             dpi = fig.get_dpi()
             fig.set_size_inches((width * col + 1e-2) / dpi,
                                 (height * row + 1e-2) / dpi)
@@ -874,5 +879,4 @@ class Visualizer:
             buffer = np.frombuffer(s, dtype='uint8')
             img_rgba = buffer.reshape(height, width, 4)
             rgb, alpha = np.split(img_rgba, [3], axis=2)
-            bgr = cv2.cvtColor(rgb.astype('uint8'), cv2.COLOR_RGB2BGR)
-            return bgr
+            return rgb.astype('uint8')
