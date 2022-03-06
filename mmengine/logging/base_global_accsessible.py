@@ -14,28 +14,42 @@ class MetaGlobalAccessible(type):
 
     Examples:
         >>> class SubClass1(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, args, **kwargs):
+        >>>     def __init__(self, *args, **kwargs):
         >>>         pass
-        AssertionError: The arguments of the
-        ``<class '__main__.subclass'>.__init__`` must contain name argument.
+        AssertionError: <class '__main__.SubClass1'>.__init__ must have the
+        name argument.
         >>> class SubClass2(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, a, name=None, *args, **kwargs):
+        >>>     def __init__(self, a, name=None, **kwargs):
         >>>         pass
-        AssertionError: The arguments of the
-        ``<class '__main__.subclass'>.__init__`` must have default values.
+        AssertionError:
+        In <class '__main__.SubClass2'>.__init__, Only the name argument is
+        allowed to have no default values.
         >>> class SubClass3(metaclass=MetaGlobalAccessible):
-        >>>     def __init__(self, a, name=None, *args, **kwargs):
+        >>>     def __init__(self, name, **kwargs):
+        >>>         pass  # Right format
+        >>> class SubClass4(metaclass=MetaGlobalAccessible):
+        >>>     def __init__(self, a=1, name='', **kwargs):
         >>>         pass  # Right format
     """
 
     def __init__(cls, *args):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
-        # Make sure `cls('root')` can be implemented.
-        assert 'name' in params[0], \
-            f'The arguments of the {cls}.__init__ must contain name argument'
-        assert len(params[3]) == len(params[0]) - 1, \
-            f'The arguments of the {cls}.__init__ must have default values'
+        # `inspect.getfullargspec` returns a tuple includes `(args, varargs,
+        # varkw, defaults, kwonlyargs, kwonlydefaults, annotations)`.
+        # To make sure `cls(name='root')` can be implemented, the
+        # `args` and `defaults` should be checked.
+        params_names = params[0] if params[0] else []
+        default_params = params[3] if params[3] else []
+        assert 'name' in params_names, f'{cls}.__init__ must have the name ' \
+                                       'argument'
+        if len(default_params) == len(params_names) - 2 and 'name' != \
+                params[0][1]:
+            raise AssertionError(f'In {cls}.__init__, Only the name argument '
+                                 'is allowed to have no default values.')
+        if len(default_params) < len(params_names) - 2:
+            raise AssertionError('Besides name, the arguments of the '
+                                 f'{cls}.__init__ must have default values')
         cls.root = cls(name='root')
         super().__init__(*args)
 
@@ -52,19 +66,20 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         >>>     def __init__(self, name=''):
         >>>         super().__init__(name)
         >>>
+        >>> GlobalAccessible.create_instance('name')
         >>> instance_1 = GlobalAccessible.get_instance('name')
         >>> instance_2 = GlobalAccessible.get_instance('name')
         >>> assert id(instance_1) == id(instance_2)
 
     Args:
-        name (str): The name of the instance. Defaults to None.
+        name (str): Name of the instance. Defaults to ''.
     """
 
-    def __init__(self, name: str = '', *args, **kwargs):
+    def __init__(self, name: str = '', **kwargs):
         self._name = name
 
     @classmethod
-    def create_instance(cls, name: str = None, *args, **kwargs) -> Any:
+    def create_instance(cls, name: str = '', **kwargs) -> Any:
         """Create subclass instance by name, and subclass cannot create
         instances with duplicated names. The created instance will be stored in
         ``cls._instance_dict``, and can be accessed by ``get_instance``.
@@ -79,30 +94,29 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             root
 
         Args:
-            name (str, optional): The name of instance. Defaults to None.
+            name (str): Name of instance. Defaults to ''.
 
         Returns:
-            object: The subclass instance.
+            object: Subclass instance.
         """
         instance_dict = cls._instance_dict
         # Create instance and fill the instance in the `instance_dict`.
-        if name is not None:
+        if name:
             assert name not in instance_dict, f'{cls} cannot be created by ' \
                                               f'{name} twice.'
-            instance = cls(name, *args, **kwargs)
+            instance = cls(name=name, **kwargs)
             instance_dict[name] = instance
             return instance
         # Get default root instance.
         else:
-            if args or kwargs:
+            if kwargs:
                 raise ValueError('If name is not specified, create_instance '
                                  f'will return root {cls} and cannot accept '
-                                 f'any arguments, but got args: {args}, '
-                                 f'kwargs: {kwargs}')
+                                 f'any arguments, but got kwargs: {kwargs}')
             return cls.root
 
     @classmethod
-    def get_instance(cls, name: str = None, current: bool = False) -> Any:
+    def get_instance(cls, name: str = '', current: bool = False) -> Any:
         """Get subclass instance by name if the name exists. if name is not
         specified, this method will return latest created instance of root
         instance.
@@ -114,7 +128,7 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             name1
             >>> instance = GlobalAccessible.create_instance('name2')
             >>> instance = GlobalAccessible.get_instance(current=True)
-            >>> instance.instance_name  # the latest created instance is name2
+            >>> instance.instance_name
             name2
             >>> instance = GlobalAccessible.get_instance()
             >>> instance.instance_name  # get root instance
@@ -124,19 +138,17 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
             name: name3, please make sure you have created it
 
         Args:
-            name (str, optional): The name of instance. Defaults to None.
-                current(bool): Whether to return the latest created instance
-                or the root instance, if name is not spicified. Defaults to
-                None.
-            current (bool): Whether to return the latest created instance.
-                Defaults to False.
+            name (str): Name of instance. Defaults to ''.
+            current(bool): Whether to return the latest created instance or
+                the root instance, if name is not spicified. Defaults to False.
+
         Returns:
             object: Corresponding name instance, the latest instance, or root
             instance.
         """
         instance_dict = cls._instance_dict
         # Get the instance by name.
-        if name is not None:
+        if name:
             assert name in instance_dict, \
                 f'Cannot get {cls} by name: {name}, please make sure you ' \
                 'have created it'
@@ -156,6 +168,6 @@ class BaseGlobalAccessible(metaclass=MetaGlobalAccessible):
         """Get the name of instance.
 
         Returns:
-            str: The name of instance.
+            str: Name of instance.
         """
         return self._name
