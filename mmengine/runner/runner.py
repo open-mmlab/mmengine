@@ -9,7 +9,7 @@ import shutil
 import time
 import warnings
 from functools import partial
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -183,32 +183,6 @@ class Runner:
         self._iter = 0
         self._inner_iter = 0
 
-        # build a model
-        if isinstance(model, dict):
-            self.model = self.build_model(model)
-        else:
-            self.model = model
-
-        # load model or resume training
-        self._load_checkpoint = load_checkpoint
-        if self._load_checkpoint is not None:
-            if self._load_checkpoint['resume']:
-                # self.resume(...)
-                pass
-            else:
-                # self.load_checkpoint()
-                pass
-
-        if is_model_wrapper(
-                self.model) and self.cfg.get('model_wrapper_cfg') is not None:
-            raise TypeError(
-                'model has been wrapped and "model_wrapper_cfg" should be None'
-                f' but got {self.cfg.get("model_wrapper_cfg")}')
-
-        if cfg.get('model_wrapper_cfg') is not None:
-            self.model = self.wrap_model(
-                cfg.get('model_wrapper_cfg'), self.model)
-
         # lazy initialization
         training_related = [
             train_dataloader, train_cfg, optimizer, param_scheduler
@@ -254,6 +228,39 @@ class Runner:
                 'test_dataloader is not None.')
         self._evaluator = evaluator
 
+        # build a model
+        if isinstance(model, dict):
+            self.model = self.build_model(model)
+        elif isinstance(model, nn.Module):
+            self.model = model
+        else:
+            raise TypeError(
+                'model should be a dict to build model or a nn.Module, '
+                f'but got {model}')
+
+        # train from scratch or resume training
+        self._load_checkpoint = load_checkpoint
+        if self._load_checkpoint is not None:
+            path = self._load_checkpoint['path']
+            if self._load_checkpoint['resume']:
+                # TODO
+                # Should _load.checkpoint contain additional three arguments
+                # resume_optimizer, resume_param_scheduler and map_localtion.
+                self.resume(path)
+            else:
+                # self.load_checkpoint()
+                self.load_checkpoint(path)
+
+        if is_model_wrapper(
+                self.model) and self.cfg.get('model_wrapper_cfg') is not None:
+            raise TypeError(
+                'model has been wrapped and "model_wrapper_cfg" should be None'
+                f' but got {self.cfg.get("model_wrapper_cfg")}')
+
+        if cfg.get('model_wrapper_cfg') is not None:
+            self.model = self.wrap_model(
+                cfg.get('model_wrapper_cfg'), self.model)
+
         self._hooks: List[Hook] = []
         self.register_hooks(default_hooks, custom_hooks)
 
@@ -271,8 +278,10 @@ class Runner:
         self.log_cfg = log_cfg
 
         # TODO: self._exp_name
-        # What type of information should added in _meta_info
-        self._meta_info: dict = dict()
+        # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
+        # hook messages and so on. Those information will be saved to
+        # checkpoint for resuming.
+        self.meta: dict = dict()
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -323,25 +332,23 @@ class Runner:
     def inner_iter(self):
         return self._inner_iter
 
-    @property
-    def meta_info(self):
-        return self._meta_info
-
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
         Args:
             env_cfg (dict): Config for setting environment. An example of
-                ``env_cfg`` format::
+                ``env_cfg`` format:
 
-                env_cfg = dict(
-                    cudnn_benchmark=True,
-                    mp_cfg=dict(
-                        mp_start_method='fork',
-                        opencv_num_threads=0
-                    ),
-                    dist_cfg=dict(backend='nccl'),
-                )
+                .. code-block:: python
+
+                    env_cfg = dict(
+                        cudnn_benchmark=True,
+                        mp_cfg=dict(
+                            mp_start_method='fork',
+                            opencv_num_threads=0
+                        ),
+                        dist_cfg=dict(backend='nccl'),
+                    )
         """
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
@@ -433,9 +440,11 @@ class Runner:
 
         Args:
             model_cfg (dict): Config to build model. An example of
-                ``model_cfg`` format::
+                ``model_cfg`` format:
 
-                model_cfg = dict(type='ResNet')
+                .. code-block:: python
+
+                    model_cfg = dict(type='ResNet')
 
         Returns:
             nn.Module: Model build from ``model_cfg``.
@@ -458,13 +467,15 @@ class Runner:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
                 will be used. Defaults to None. An example of
-                ``model_wrapper_cfg``::
+                ``model_wrapper_cfg``:
 
-                model_wrapper = dict(
-                    type='MMDistributedDataParallel',
-                    broadcast_buffers=False,
-                    find_unused_parameters=False
-                )
+                .. code-block:: python
+
+                    model_wrapper = dict(
+                        type='MMDistributedDataParallel',
+                        broadcast_buffers=False,
+                        find_unused_parameters=False
+                    )
 
         Returns:
             nn.Module: Wrapped model.
@@ -496,9 +507,11 @@ class Runner:
 
         Args:
             optimizer_cfg (dict): Config to build optimizer. An example of
-                ``optimizer_cfg``::
+                ``optimizer_cfg``:
 
-                optimizer_cfg = dict(type='SGD', lr=0.01)
+                .. code-block:: python
+
+                    optimizer_cfg = dict(type='SGD', lr=0.01)
 
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
@@ -514,9 +527,11 @@ class Runner:
 
         Args:
             scheduler_cfg (dict or list[dict]): Config to build parameter
-                schedulers. An example of ``scheduler_cfg``::
+                schedulers. An example of ``scheduler_cfg``:
 
-                scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2])
+                .. code-block:: python
+
+                    scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2])
 
         Returns:
             list[:obj:`_ParamScheduler`]: Parameter schedulers build from
@@ -524,8 +539,8 @@ class Runner:
         """
         if not isinstance(self.optimizer, Optimizer):
             raise RuntimeError(
-                'build_optimizer should be called early than '
-                'build_param_scheduler because the latter depends on the '
+                '`build_optimizer` should be called before'
+                '`build_param_scheduler` because the latter depends on the '
                 'former')
 
         if isinstance(scheduler_cfg, dict):
@@ -544,20 +559,30 @@ class Runner:
     def build_dataloader(self, dataloader_cfg: Dict) -> DataLoader:
         """Build dataloader.
 
+        The method builds three components:
+
+        - Dataset
+        - Sampler
+        - Dataloader
+
         Args:
             dataloader_cfg (dict): A dict to build dataloader. An example of
-                ``dataloader_cfg``::
+                ``dataloader_cfg``:
 
-                dataloader_cfg = dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=True),
-                    batch_size=1,
-                    num_workers=9
-                )
+                .. code-block:: python
+
+                    dataloader_cfg = dict(
+                        dataset=dict(type='ToyDataset'),
+                        sampler=dict(type='DefaultSampler', shuffle=True),
+                        batch_size=1,
+                        num_workers=9
+                    )
 
         Returns:
             Dataloader: Dataloader build from ``dataloader_cfg``.
         """
+        dataloader_cfg = copy.deepcopy(dataloader_cfg)
+
         # build dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
         dataset = DATASETS.build(dataset_cfg)
@@ -580,6 +605,7 @@ class Runner:
         else:
             init_fn = None
 
+        # build dataloader
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler,
@@ -595,13 +621,17 @@ class Runner:
 
         Args:
             loop_cfg (dict): Config to build training loop. An example of
-                ``loop_cfg``::
+                ``loop_cfg``:
 
-                loop_cfg = dict(by_epoch=True, max_epochs=3)
+                .. code-block:: python
+
+                    loop_cfg = dict(by_epoch=True, max_epochs=3)
 
         Returns:
             :obj:`BaseLoop`: Training loop object build from ``loop_cfg``.
         """
+        loop_cfg = copy.deepcopy(loop_cfg)
+
         if 'type' in loop_cfg and 'by_epoch' in loop_cfg:
             raise RuntimeError(
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
@@ -620,7 +650,7 @@ class Runner:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, dataloader=self.train_dataloader)
 
-        # `build_optimizer` should be called early than `build_param_scheduler`
+        # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
         if self.optimizer is not None and isinstance(self.optimizer, dict):
             self.optimizer = self.build_optimizer(self.optimizer)
@@ -633,17 +663,21 @@ class Runner:
         return loop
 
     def build_val_loop(self, loop_cfg: Dict) -> BaseLoop:
-        """Build validating loop.
+        """Build validation loop.
 
         Args:
-            loop_cfg (dict): Config to build validating loop. An example of
-                ``loop_cfg``::
+            loop_cfg (dict): Config to build validation loop. An example of
+                ``loop_cfg``:
 
-                loop_cfg = dict(interval=1)
+                .. code-block:: python
+
+                    loop_cfg = dict(interval=1)
 
         Returns:
             :obj:`BaseLoop`: Validation loop object build from ``loop_cfg``.
         """
+        loop_cfg = copy.deepcopy(loop_cfg)
+
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
@@ -666,6 +700,8 @@ class Runner:
         Returns:
             :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """
+        loop_cfg = copy.deepcopy(loop_cfg)
+
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
@@ -688,7 +724,7 @@ class Runner:
         self._train_loop.run()  # type: ignore
 
     def val(self) -> None:
-        """Launch validating."""
+        """Launch validation."""
         assert self._val_loop is not None
         if not isinstance(self._val_loop, BaseLoop):
             self._val_loop = self.build_val_loop(self._val_loop)
@@ -818,29 +854,134 @@ class Runner:
             custom_hooks: Optional[List[Union[Hook, Dict]]] = None) -> None:
         """Register default hooks and custom hooks into hook list.
 
+        ``default_hooks`` will be registered into runner to execute some
+        default actions like updating model parameters or saving checkpoints.
+        Default hooks have :obj:`OptimizerHook`, :obj:`IterTimerHook`,
+        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+        If ``default_hooks`` is None, above hooks will be registered by
+        default::
+
+            _default_hooks = dict(
+                optimizer=dict(type='OptimizerHook', grad_clip=False),
+                timer=dict(type='IterTimerHook'),
+                logger=dict(type='TextLoggerHook'),
+                param_scheduler=dict(type='ParamSchedulerHook'),
+                checkpoint=dict(type='CheckpointHook', interval=1),
+            )
+
+        If not None, ``default_hooks`` will be merged into ``_default_hooks``.
+        If there are None value in default_hooks, the corresponding item will
+        be popped from ``_default_hooks``::
+
+            default_hooks = dict(timer=None)
+
+        The final registered default hooks will be :obj:`OptimizerHook`,
+        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+
         Args:
             default_hooks (dict[str, dict] or dict[str, Hook], optional): Hooks
                 to execute default actions like updating model parameters and
-                saving checkpoints. Default hooks have ``OptimizerHook``,
-                ``IterTimerHook``, ``LoggerHook``, ``ParamSchedulerHook``,
-                ``CheckpointHook``. Defaults to None.
+                saving checkpoints.  Defaults to None.
             custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
                 custom actions like visualizing images processed by pipeline.
                 Defaults to None.
         """
-        if default_hooks is not None:
-            self.register_default_hooks(**default_hooks)
+        _default_hooks: dict = dict(
+            optimizer=dict(type='OptimizerHook', grad_clip=False),
+            timer=dict(type='IterTimerHook'),
+            logger=dict(type='TextLoggerHook'),
+            param_scheduler=dict(type='ParamSchedulerHook'),
+            checkpoint=dict(type='CheckpointHook', interval=1),
+        )
+        if default_hooks is None:
+            self.register_default_hooks(**_default_hooks)
+        else:
+            for name, hook in default_hooks.items():
+                if name in _default_hooks and hook is None:
+                    # remove hook from _default_hooks
+                    _default_hooks.pop(name)
+                else:
+                    assert hook is not None
+                    _default_hooks[name] = hook
+
+            self.register_default_hooks(**_default_hooks)
 
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
 
-    def resume(self):
-        """Resume training."""
-        pass
+    def resume(self,
+               filename: str,
+               resume_optimizer: bool = True,
+               resume_param_scheduler: bool = True,
+               map_location: Union[str, Callable] = 'defulat') -> None:
+        """Resume model from checkpoint.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+            resume_optimizer (bool): Whether to resume optimizer state.
+                Defaults to True.
+            resume_param_scheduler (bool): Whether to resume param scheduler
+                state. Defaults to True.
+            map_location (str or callable):A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'default'.
+        """
+        if map_location == 'default':
+            if torch.cuda.is_available():
+                device_id = torch.cuda.current_device()
+                checkpoint = self.load_checkpoint(
+                    filename,
+                    map_location=lambda storage, loc: storage.cuda(device_id))
+            else:
+                checkpoint = self.load_checkpoint(filename)
+        else:
+            checkpoint = self.load_checkpoint(
+                filename, map_location=map_location)
+
+        self._epoch = checkpoint['meta']['epoch']
+        self._iter = checkpoint['meta']['iter']
+        # TODO: Can we get `by_epoch` by checking `EpochBasedLoop` or
+        # `IterBasedLoop`
+        # self._inner_iter = checkpoint['meta']['iter']
+
+        if self.meta is None:
+            self.meta = {}
+
+        self.meta.setdefault('hook_msgs', {})
+        # load `last_ckpt`, `best_score`, `best_ckpt`, etc. for hook messages
+        self.meta['hook_msgs'].update(checkpoint['meta'].get('hook_msgs', {}))
+
+        # TODO: check gpu_ids
+
+        # resume meta information meta
+        self.meta = checkpoint['meta']
+
+        # resume optimizer
+        if 'optimizer' in checkpoint and resume_optimizer:
+            if isinstance(self.optimizer, Optimizer):
+                self.optimizer.load_state_dict(checkpoint['optimizer'])
+            else:
+                raise TypeError('Optimizer should be torch.optim.Optimizer '
+                                f'but got {type(self.optimizer)}')
+
+        # resume param scheduler
+        if 'param_schedulers' in checkpoint and resume_param_scheduler:
+            assert isinstance(self.param_schedulers, list)
+
+            for cur_scheduler, ckpt_scheduler in zip(
+                    self.param_schedulers, checkpoint['param_schedulers']):
+                if isinstance(cur_scheduler, _ParamScheduler):
+                    cur_scheduler.load_state_dict(ckpt_scheduler)
+                else:
+                    raise TypeError('cur_scheduler should be _ParamScheduler '
+                                    f'but got {type(cur_scheduler)}')
+
+        # TODO: print log
 
     def load_checkpoint(self,
                         filename: str,
-                        map_location: str = 'cpu',
+                        map_location: Union[str, Callable] = 'cpu',
                         strict: bool = False,
                         revise_keys: list = [(r'^module.', '')]):
         """Load checkpoint from given ``filename``.
@@ -848,8 +989,9 @@ class Runner:
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
-            map_location (str): A string specifying how to remap storage
-                locations. Defaults to 'cpu'
+            map_location (str or callable): A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'cpu'.
             strict (bool): strict (bool): Whether to allow different params for
                 the model and checkpoint.
             revise_keys (list): A list of customized keywords to modify the
@@ -898,16 +1040,21 @@ class Runner:
             raise TypeError(
                 f'meta should be a dict or None, but got {type(meta)}')
 
-        if self._meta_info is not None:
-            meta.update(self._meta_info)
-            # Note: meta.update(self._meta_info) should be done before
+        if self.meta is not None:
+            meta.update(self.meta)
+            # Note: meta.update(self.meta) should be done before
             # meta.update(epoch=self.epoch + 1, iter=self.iter) otherwise
             # there will be problems with resumed checkpoints.
             # More details in https://github.com/open-mmlab/mmcv/pull/1108
+
+        # TODO
         meta.update(epoch=self._epoch + 1, iter=self._iter)
 
         # TODO, the filename passed by CheckpointHook
+        # TODO: Can we get `by_epoch` by checking `EpochBasedLoop` or
+        # `IterBasedLoop` to decide the filename
         filename = filename_tmpl.format(self._epoch + 1)
+        # filename = filename_tmpl.format(self.iter + 1)
         filepath = osp.join(out_dir, filename)
 
         if hasattr(self.model, 'CLASSES') and self.model.CLASSES is not None:
@@ -927,21 +1074,16 @@ class Runner:
         if save_optimizer:
             if isinstance(self.optimizer, Optimizer):
                 checkpoint['optimizer'] = self.optimizer.state_dict()
-            elif isinstance(self.optimizer, dict):
-                # TODO, current self.optimizer will not be a dict
-                checkpoint['optimizer'] = {}
-                for name, _optimizer in self.optimizer.items():
-                    checkpoint['optimizer'][name] = _optimizer.state_dict()
             else:  # TODO
                 raise TypeError(
-                    'self.optimizer should be Optimizer of dict, but got '
+                    'self.optimizer should be an optimizer, but got '
                     f'{self.optimizer}')
 
         # save scheduler state dict
         if save_param_scheduler:
-            checkpoint['scheduler'] = []
+            checkpoint['param_schedulers'] = []
             for _scheduler in self.param_schedulers:  # type: ignore
-                checkpoint['scheduler'].append(_scheduler.state_dict())
+                checkpoint['param_schedulers'].append(_scheduler.state_dict())
 
         self.call_hook('before_save_ckpt', checkpoint=checkpoint)
 

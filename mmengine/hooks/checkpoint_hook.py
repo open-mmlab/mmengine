@@ -160,11 +160,10 @@ class CheckpointHook(Hook):
             save_param_scheduler=self.save_param_scheduler,
             **self.args)
 
-        if runner.meta_info is not None:
-            runner.meta_info.setdefault('hook_msgs', dict())
-            runner.meta_info['hook_msgs'][
-                'last_ckpt'] = self.file_client.join_path(
-                    self.out_dir, cur_ckpt_filename)
+        if runner.meta is not None:
+            runner.meta.setdefault('hook_msgs', dict())
+            runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
+                self.out_dir, cur_ckpt_filename)
 
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
