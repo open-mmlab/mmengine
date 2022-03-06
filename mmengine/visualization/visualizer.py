@@ -111,8 +111,8 @@ class Visualizer:
         >>>                      data_type: Type):
         >>>         pass
         >>>     def draw(self,
-        >>>             image: np.ndarray = None,
-        >>>             data_sample: 'BaseDataSample' = None,
+        >>>             image: Optional[np.ndarray] = None,
+        >>>             data_sample: Optional['BaseDataSample'] = None,
         >>>             show_gt: bool = True,
         >>>             show_pred: bool = True) -> None:
         >>>         pass
@@ -227,8 +227,8 @@ class Visualizer:
             interpolation='none')
 
     def draw(self,
-             image: np.ndarray = None,
-             data_sample: 'BaseDataSample' = None,
+             image: Optional[np.ndarray] = None,
+             data_sample: Optional['BaseDataSample'] = None,
              draw_gt: bool = True,
              draw_pred: bool = True) -> None:
         pass

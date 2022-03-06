@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from typing import Optional
 from unittest import TestCase
 
 import matplotlib.pyplot as plt
@@ -362,8 +363,8 @@ class TestVisualizer(TestCase):
                 pass
 
             def draw(self,
-                     image: np.ndarray = None,
-                     data_sample: 'BaseDataSample' = None,
+                     image: Optional[np.ndarray] = None,
+                     data_sample: Optional['BaseDataSample'] = None,
                      draw_gt: bool = True,
                      draw_pred: bool = True) -> None:
                 return super().draw(image, data_sample, draw_gt, draw_pred)
