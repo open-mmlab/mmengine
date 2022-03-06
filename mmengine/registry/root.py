@@ -12,9 +12,10 @@ from .registry import Registry
 RUNNERS = Registry('runner')
 # manage runner constructors that define how to initialize runners
 RUNNER_CONSTRUCTORS = Registry('runner constructor')
+# manage all kinds of loops like `EpochBasedTrainLoop`
+LOOPS = Registry('loop')
 # manage all kinds of hooks like `CheckpointHook`
 HOOKS = Registry('hook')
-LOOPS = Registry('loop')
 
 # manage data-related modules
 DATASETS = Registry('dataset')
