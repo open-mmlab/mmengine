@@ -18,7 +18,10 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import check_file_exist, import_modules_from_strings
+from mmengine.utils import (check_file_exist, import_modules_from_strings,
+                            check_install_package, get_installed_path)
+from .collect_meta import (_parse_external_cfg_path, _parse_rel_cfg_path,
+                           _get_external_cfg_path, _get_external_cfg_base_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -405,22 +408,22 @@ class Config:
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                'in the future.'
+                          'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                    'instead.'
+                               'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                    f'{deprecation_info["reference"]}'
+                               f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
         with open(filename, 'r', encoding='utf-8') as f:
-            # Setting encoding explicitly to resolve coding issue on windows
+            # Setting encoding explicitly to resolve coding issue on windows.
             cfg_text += f.read()
 
         if BASE_KEY in cfg_dict:
-            cfg_dir = osp.dirname(filename)
+
             base_filename = cfg_dict.pop(BASE_KEY)
             base_filename = base_filename if isinstance(
                 base_filename, list) else [base_filename]
@@ -428,8 +431,8 @@ class Config:
             cfg_dict_list = list()
             cfg_text_list = list()
             for f in base_filename:
-                _cfg_dict, _cfg_text = Config._file2dict(
-                    osp.join(cfg_dir, str(f)))
+                cfg_path = Config._get_cfg_path(f, filename)
+                _cfg_dict, _cfg_text = Config._file2dict(cfg_path)
                 cfg_dict_list.append(_cfg_dict)
                 cfg_text_list.append(_cfg_text)
 
@@ -453,6 +456,33 @@ class Config:
             cfg_text = '\n'.join(cfg_text_list)
 
         return cfg_dict, cfg_text
+
+    @staticmethod
+    def _get_cfg_path(rel_cfg_path: str, filename: str) -> str:
+        """Get the config path from the current or external package.
+
+        Args:
+            rel_cfg_path (str): Relative path of config.
+            filename (str): The config file being parsed.
+
+        Returns:
+            bool: The absolute path of `rel_cfg_path`.
+        """
+        if '::' in rel_cfg_path:
+            package, rel_cfg_path = _parse_external_cfg_path(rel_cfg_path)
+            check_install_package(package)
+            package_path = get_installed_path(package)
+            if '_base_' in rel_cfg_path:
+                cfg_path = _get_external_cfg_base_path(package_path,
+                                                       rel_cfg_path)
+            else:
+                rel_cfg_dir, rel_cfg_file = _parse_rel_cfg_path(rel_cfg_path)
+                cfg_path = _get_external_cfg_path(package_path, rel_cfg_dir,
+                                                  rel_cfg_file)
+        else:
+            cfg_dir = osp.dirname(filename)
+            cfg_path = osp.join(cfg_dir, str(rel_cfg_path))
+        return cfg_path
 
     @staticmethod
     def _merge_a_into_b(a: dict,

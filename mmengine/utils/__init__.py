@@ -11,6 +11,8 @@ from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
                    scandir, symlink)
 from .version_utils import digit_version, get_git_hash
+from .package_utils import (is_installed, call_command, get_installed_path,
+                            check_install_package)
 
 __all__ = [
     'is_str', 'iter_cast', 'list_cast', 'tuple_cast', 'is_seq_of',
@@ -20,5 +22,7 @@ __all__ = [
     'scandir', 'deprecated_api_warning', 'import_modules_from_strings',
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
     'is_method_overridden', 'has_method', 'mmcv_full_available',
-    'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url'
+    'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
+    'is_installed', 'call_command', 'get_installed_path',
+    'check_install_package'
 ]
