@@ -792,11 +792,13 @@ class Runner:
         if not inserted:
             self._hooks.insert(0, hook_obj)
 
-    def register_default_hooks(self, optimizer: Union[Hook, Dict],
-                               timer: Union[Hook, Dict], logger: Union[Hook,
-                                                                       Dict],
-                               param_scheduler: Union[Hook, Dict],
-                               checkpoint: Union[Hook, Dict]) -> None:
+    def register_default_hooks(
+            self,
+            optimizer: Union[Hook, Dict],
+            timer: Union[Hook, Dict],
+            logger: Union[Hook, Dict],  # yapf: disable
+            param_scheduler: Union[Hook, Dict],
+            checkpoint: Union[Hook, Dict]) -> None:
         """Register default hooks into hook list.
 
         Args:
