@@ -20,6 +20,12 @@ from mmengine.fileio import load as load_file
 from mmengine.model import is_model_wrapper
 from mmengine.utils import load_url, mkdir_or_exist
 
+# `MMENGINE_HOME` is the highest priority directory to save checkpoints
+# downloading from Internet. If it is not set, as a workaround, using
+# `XDG_CACHE_HOME`` or `~/.cache` instead.
+# Note that `XDG_CACHE_HOME` defines the base directory relative to which
+# user-specific non-essential data files should be stored. If `XDG_CACHE_HOME`
+# is either not set or empty, a default equal to `~/.cache` should be used.
 ENV_MMENGINE_HOME = 'MMENGINE_HOME'
 ENV_XDG_CACHE_HOME = 'XDG_CACHE_HOME'
 DEFAULT_CACHE_DIR = '~/.cache'
@@ -42,6 +48,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
     This method is modified from :meth:`torch.nn.Module.load_state_dict`.
     Default value for ``strict`` is set to ``False`` and the message for
     param mismatch will be shown even if strict is False.
+
     Args:
         module (Module): Module that receives the state_dict.
         state_dict (OrderedDict): Weights.
@@ -189,6 +196,7 @@ class CheckpointLoader:
         """Register a loader to CheckpointLoader.
 
         This method can be used as a normal class method or a decorator.
+
         Args:
             prefixes (str or list[str] or tuple[str]):
             The prefix of the registered loader.
@@ -211,12 +219,12 @@ class CheckpointLoader:
 
     @classmethod
     def _get_checkpoint_loader(cls, path):
-        """Finds a loader that supports the given path.
-
-        Falls back to the local
+        """Finds a loader that supports the given path. Falls back to the local
         loader if no other loader is found.
+
         Args:
             path (str): checkpoint path
+
         Returns:
             callable: checkpoint loader
         """
@@ -237,6 +245,7 @@ class CheckpointLoader:
                 Default: None
             logger (:mod:`logging.Logger`, optional): The logger for message.
                 Default: None
+
         Returns:
             dict or OrderedDict: The loaded checkpoint.
         """
@@ -244,7 +253,8 @@ class CheckpointLoader:
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
         mmengine.print_log(
-            f'load checkpoint from {class_name[10:]} path: {filename}', logger)
+            f'{class_name[10:]} loads checkpoint from path: {filename}',
+            logger)
         return checkpoint_loader(filename, map_location)
 
 
@@ -255,6 +265,7 @@ def load_from_local(filename, map_location):
     Args:
         filename (str): local checkpoint file path
         map_location (str, optional): Same as :func:`torch.load`.
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -267,16 +278,16 @@ def load_from_local(filename, map_location):
 
 @CheckpointLoader.register_scheme(prefixes=('http://', 'https://'))
 def load_from_http(filename, map_location=None, model_dir=None):
-    """load checkpoint through HTTP or HTTPS scheme path.
-
-    In distributed
+    """load checkpoint through HTTP or HTTPS scheme path. In distributed
     setting, this function only download checkpoint at local rank 0.
+
     Args:
         filename (str): checkpoint file path with modelzoo or
             torchvision prefix
         map_location (str, optional): Same as :func:`torch.load`.
         model_dir (string, optional): directory in which to save the object,
             Default: None
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -294,15 +305,15 @@ def load_from_http(filename, map_location=None, model_dir=None):
 
 @CheckpointLoader.register_scheme(prefixes='pavi://')
 def load_from_pavi(filename, map_location=None):
-    """load checkpoint through the file path prefixed with pavi.
-
-    In distributed
+    """load checkpoint through the file path prefixed with pavi. In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
+
     Args:
         filename (str): checkpoint file path with pavi prefix
         map_location (str, optional): Same as :func:`torch.load`.
           Default: None
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -329,18 +340,17 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     """load checkpoint through the file path prefixed with s3.  In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
-    Note:
-        Since v1.4.1, the registered scheme prefixes have been enhanced to
-        support bucket names in the path prefix, e.g. 's3://xx.xx/xx.path',
-        'bucket1:s3://xx.xx/xx.path'.
+
     Args:
         filename (str): checkpoint file path with s3 prefix
         map_location (str, optional): Same as :func:`torch.load`.
         backend (str, optional): The storage backend type. Options are 'ceph',
             'petrel'. Default: 'petrel'.
+
     .. warning::
         :class:`mmengine.fileio.file_client.CephBackend` will be deprecated,
         please use :class:`mmengine.fileio.file_client.PetrelBackend` instead.
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -376,6 +386,7 @@ def load_from_torchvision(filename, map_location=None):
         filename (str): checkpoint file path with modelzoo or
             torchvision prefix
         map_location (str, optional): Same as :func:`torch.load`.
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -400,6 +411,7 @@ def load_from_openmmlab(filename, map_location=None):
         openmmlab prefix
         map_location (str, optional): Same as :func:`torch.load`.
           Default: None
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -438,6 +450,7 @@ def load_from_mmcls(filename, map_location=None):
     Args:
         filename (str): checkpoint file path with mmcls prefix
         map_location (str, optional): Same as :func:`torch.load`.
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -461,10 +474,11 @@ def _load_checkpoint(filename, map_location=None, logger=None):
            Default: None.
         logger (:mod:`logging.Logger`, optional): The logger for error message.
            Default: None
+
     Returns:
         dict or OrderedDict: The loaded checkpoint. It can be either an
-           OrderedDict storing model weights or a dict containing other
-           information, which depends on the checkpoint.
+        OrderedDict storing model weights or a dict containing other
+        information, which depends on the checkpoint.
     """
     return CheckpointLoader.load_checkpoint(filename, map_location, logger)
 
@@ -478,6 +492,7 @@ def _load_checkpoint_with_prefix(prefix, filename, map_location=None):
             ``open-mmlab://xxx``. Please refer to ``docs/model_zoo.md`` for
             details.
         map_location (str | None): Same as :func:`torch.load`. Default: None.
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -548,6 +563,7 @@ def load_checkpoint(model,
             state_dict in checkpoint. Each item is a (pattern, replacement)
             pair of the regular expression operations. Default: strip
             the prefix 'module.' by [(r'^module\\.', '')].
+
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
@@ -566,6 +582,7 @@ def weights_to_cpu(state_dict):
 
     Args:
         state_dict (OrderedDict): Model weights on GPU.
+
     Returns:
         OrderedDict: Model weights on GPU.
     """
@@ -581,6 +598,7 @@ def _save_to_state_dict(module, destination, prefix, keep_vars):
     """Saves module state to `destination` dictionary.
 
     This method is modified from :meth:`torch.nn.Module._save_to_state_dict`.
+
     Args:
         module (nn.Module): The module to generate state_dict.
         destination (dict): A dict where state will be stored.
@@ -604,6 +622,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
     This method is modified from :meth:`torch.nn.Module.state_dict` to
     recursively check parallel module in case that the model has a complicated
     structure, e.g., nn.Module(nn.Module(DDP)).
+
     Args:
         module (nn.Module): The module to generate state_dict.
         destination (OrderedDict): Returned dict for the state of the
@@ -611,6 +630,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
         prefix (str): Prefix of the key.
         keep_vars (bool): Whether to keep the variable property of the
             parameters. Default: False.
+
     Returns:
         dict: A dictionary containing a whole state of the module.
     """
