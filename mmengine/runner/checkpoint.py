@@ -21,7 +21,7 @@ from mmengine.model import is_model_wrapper
 from mmengine.utils import load_url, mkdir_or_exist
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
-# downloading from Internet. If it is not set, as a workaround, using
+# downloaded from Internet. If it is not set, as a workaround, using
 # `XDG_CACHE_HOME`` or `~/.cache` instead.
 # Note that `XDG_CACHE_HOME` defines the base directory relative to which
 # user-specific non-essential data files should be stored. If `XDG_CACHE_HOME`
@@ -602,6 +602,8 @@ def _save_to_state_dict(module, destination, prefix, keep_vars):
         destination (dict): A dict where state will be stored.
         prefix (str): The prefix for parameters and buffers used in this
             module.
+        keep_vars (bool): Whether to keep the variable property of the
+            parameters.
     """
     for name, param in module._parameters.items():
         if param is not None:
@@ -661,6 +663,9 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
     Args:
         checkpoint (dict): Module whose params are to be saved.
         filename (str): Checkpoint filename.
+        file_client_args (dict, optional): Arguments to instantiate a
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Defaults to None.
     """
     if filename.startswith('pavi://'):
         if file_client_args is not None:
