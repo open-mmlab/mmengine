@@ -4,6 +4,7 @@ import datetime
 import os
 import os.path as osp
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Optional, Sequence, Union
 
 import torch
@@ -39,16 +40,22 @@ class LoggerHook(Hook):
             because ``time`` and ``iter_time`` will be used to calculate
             estimated time of arrival. If you want to recount the time, you
             should set ``log_name`` in corresponding values.
+            - For those statistic methods with the ``window_size`` argument,
+            if ``by_epoch`` is set to False, the value of ``windows_size`` is
+            not allowed to be `epoch`.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
             less than :attr:`interval`. Defaults to True.
         interval_exp_name (int): Logging interval for experiment name. This
             feature is to help users conveniently get the experiment
             information from screen or log file. Defaults to 1000.
-        out_dir (str, optional): Logs are saved in ``runner.work_dir`` default.
-            If ``out_dir`` is specified, logs will be copied to a new directory
-            which is the concatenation of ``out_dir`` and the last level
-            directory of ``runner.work_dir``. Defaults to None.
-        out_suffix (Union[Tuple[str], str]): Those filenames ending with
+        out_dir (str or Path, optional): The root directory to save
+            checkpoints. If not specified, ``runner.work_dir`` will be used
+            by default. If specified, the ``out_dir`` will be the concatenation
+             of ``out_dir`` and the last level directory of
+            ``runner.work_dir``. For example, if the input ``our_dir`` is
+            ``./tmp`` and ``runner.work_dir`` is ``./work_dir/cur_exp``,
+            then the ckpt will be saved in ``./tmp/cur_exp``. Deafule to None.
+        out_suffix (Tuple[str] or str): Those filenames ending with
             ``out_suffix`` will be copied to ``out_dir``. Defaults to
             ('.log.json', '.log', '.py').
         keep_local (bool): Whether to keep local log when :attr:`out_dir` is
@@ -80,6 +87,7 @@ class LoggerHook(Hook):
     # eta will be calculated by time. `time` and `data_time` should not be
     # overwritten.
     fixed_smooth_keys = ('time', 'data_time')
+    priority = 'BELOW_NORMAL'
 
     def __init__(
         self,
@@ -88,7 +96,7 @@ class LoggerHook(Hook):
         custom_keys: Optional[dict] = None,
         ignore_last: bool = True,
         interval_exp_name: int = 1000,
-        out_dir: Optional[str] = None,
+        out_dir: Optional[Union[str, Path]] = None,
         out_suffix: Union[Sequence[str], str] = ('.log.json', '.log', '.py'),
         keep_local=True,
         file_client_args=None,
@@ -168,7 +176,10 @@ class LoggerHook(Hook):
         elif not self.by_epoch and self.every_n_iters(runner, self.interval):
             self._log_train(runner)
         elif self.end_of_epoch(runner) and not self.ignore_last:
-            # not precise but more stable
+            # `runner.max_iters` may not be divisible by `self.interval`. if
+            # `self.ignore_last==True`, the log of remaining iterations will
+            # be recorded (Epoch [4][1000/1007], the logs of 998-1007
+            # iterations will be recorded).
             self._log_train(runner)
 
     def after_val_epoch(self, runner: Any) -> None:
@@ -303,7 +314,7 @@ class LoggerHook(Hook):
 
         Args:
             runner (Any): The runner of the training process.
-            window_size (Union[int, str]): Smoothing scale of logs.
+            window_size (int or str): Smoothing scale of logs.
 
         Returns:
             int: Smoothing window for statistical methods.
@@ -325,7 +336,7 @@ class LoggerHook(Hook):
 
         Args:
             runner (Any): The runner of the training process.
-            mode (str): "train" or "val", which means the prefix attached by
+            mode (str): 'train' or 'val', which means the prefix attached by
                 runner.
 
         Returns:
@@ -381,8 +392,8 @@ class LoggerHook(Hook):
             tag[name] = log_buffers[log_key].statistics(**log_cfg)
 
     def _get_max_memory(self, runner: Any) -> int:
-        """Returns the maximum GPU memory occupied by tensors in bytes for a
-        given device.
+        """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
+        for a given device.
 
         Args:
             runner (Any): The runner of the training process.
@@ -398,7 +409,7 @@ class LoggerHook(Hook):
                               device=device)
         if runner.world_size > 1:
             dist.reduce(mem_mb, 0, op=dist.ReduceOp.MAX)
-        return mem_mb.item()
+        return int(mem_mb.item())
 
     def _check_custom_keys(self) -> None:
         """Check the legality of ``self.custom_keys``.
