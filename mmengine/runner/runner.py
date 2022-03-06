@@ -331,20 +331,17 @@ class Runner:
         """Setup environment.
 
         Args:
-            env_cfg (dict): Config for setting environment.
+            env_cfg (dict): Config for setting environment. An example of
+                ``env_cfg`` format::
 
-        An example of ``env_cfg`` format:
-
-        .. code-block:: python
-
-            env_cfg = dict(
-                cudnn_benchmark=True,
-                mp_cfg=dict(
-                    mp_start_method='fork',
-                    opencv_num_threads=0
-                ),
-                dist_cfg=dict(backend='nccl'),
-            )
+                env_cfg = dict(
+                    cudnn_benchmark=True,
+                    mp_cfg=dict(
+                        mp_start_method='fork',
+                        opencv_num_threads=0
+                    ),
+                    dist_cfg=dict(backend='nccl'),
+                )
         """
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
@@ -435,13 +432,10 @@ class Runner:
         """Build model.
 
         Args:
-            model_cfg (dict): Config to build model.
+            model_cfg (dict): Config to build model. An example of
+                ``model_cfg`` format::
 
-        An example of ``model_cfg`` format:
-
-        .. code-block:: python
-
-            model_cfg = dict(type='ResNet')
+                model_cfg = dict(type='ResNet')
 
         Returns:
             nn.Module: Model build from ``model_cfg``.
@@ -463,17 +457,14 @@ class Runner:
         Args:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
-                will be used. Defaults to None.
+                will be used. Defaults to None. An example of
+                ``model_wrapper_cfg``::
 
-        An example of ``model_wrapper_cfg``:
-
-        .. code-block:: python
-
-            model_wrapper = dict(
-                type='MMDistributedDataParallel',
-                broadcast_buffers=False,
-                find_unused_parameters=False
-            )
+                model_wrapper = dict(
+                    type='MMDistributedDataParallel',
+                    broadcast_buffers=False,
+                    find_unused_parameters=False
+                )
 
         Returns:
             nn.Module: Wrapped model.
@@ -504,13 +495,10 @@ class Runner:
         """Build optimizer.
 
         Args:
-            optimizer_cfg (dict): Config to build optimizer.
+            optimizer_cfg (dict): Config to build optimizer. An example of
+                ``optimizer_cfg``::
 
-        An example of ``optimizer_cfg``:
-
-        .. code-block:: python
-
-            optimizer_cfg = dict(type='SGD', lr=0.01)
+                optimizer_cfg = dict(type='SGD', lr=0.01)
 
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
@@ -526,13 +514,9 @@ class Runner:
 
         Args:
             scheduler_cfg (dict or list[dict]): Config to build parameter
-                schedulers.
+                schedulers. An example of ``scheduler_cfg``::
 
-        An example of ``scheduler_cfg``:
-
-        .. code-block:: python
-
-            scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2]),
+                scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2])
 
         Returns:
             list[:obj:`_ParamScheduler`]: Parameter schedulers build from
@@ -561,18 +545,15 @@ class Runner:
         """Build dataloader.
 
         Args:
-            dataloader_cfg (dict): A dict to build dataloader.
+            dataloader_cfg (dict): A dict to build dataloader. An example of
+                ``dataloader_cfg``::
 
-        An example of ``scheduler_cfg``:
-
-        .. code-block:: python
-
-            dataloader_cfg = dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=True),
-                batch_size=1,
-                num_workers=9
-            )
+                dataloader_cfg = dict(
+                    dataset=dict(type='ToyDataset'),
+                    sampler=dict(type='DefaultSampler', shuffle=True),
+                    batch_size=1,
+                    num_workers=9
+                )
 
         Returns:
             Dataloader: Dataloader build from ``dataloader_cfg``.
@@ -613,13 +594,10 @@ class Runner:
         """Build training loop.
 
         Args:
-            loop_cfg (dict): Config to build training loop.
+            loop_cfg (dict): Config to build training loop. An example of
+                ``loop_cfg``::
 
-        An example of ``loop_cfg``:
-
-        .. code-block:: python
-
-            loop_cfg = dict(by_epoch=True, max_epochs=3)
+                loop_cfg = dict(by_epoch=True, max_epochs=3)
 
         Returns:
             :obj:`BaseLoop`: Training loop object build from ``loop_cfg``.
@@ -658,13 +636,10 @@ class Runner:
         """Build validating loop.
 
         Args:
-            loop_cfg (dict): Config to build validating loop.
+            loop_cfg (dict): Config to build validating loop. An example of
+                ``loop_cfg``::
 
-        An example of ``loop_cfg``:
-
-        .. code-block:: python
-
-            loop_cfg = dict(interval=1)
+                loop_cfg = dict(interval=1)
 
         Returns:
             :obj:`BaseLoop`: Validation loop object build from ``loop_cfg``.
