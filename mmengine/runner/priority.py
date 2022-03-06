@@ -45,6 +45,7 @@ def get_priority(priority: Union[int, str, Priority]) -> int:
 
     Args:
         priority (int or str or :obj:`Priority`): Priority.
+
     Returns:
         int: The priority value.
     """

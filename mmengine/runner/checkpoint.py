@@ -124,8 +124,7 @@ def get_torchvision_models():
 
 def get_external_models():
     mmengine_home = _get_mmengine_home()
-    default_json_path = osp.join(mmengine.__path__[0],
-                                 'model_zoo/open_mmlab.json')
+    default_json_path = osp.join(mmengine.__path__[0], 'hub/openmmlab.json')
     default_urls = load_file(default_json_path)
     assert isinstance(default_urls, dict)
     external_json_path = osp.join(mmengine_home, 'open_mmlab.json')
@@ -138,15 +137,14 @@ def get_external_models():
 
 
 def get_mmcls_models():
-    mmcls_json_path = osp.join(mmengine.__path__[0], 'model_zoo/mmcls.json')
+    mmcls_json_path = osp.join(mmengine.__path__[0], 'hub/mmcls.json')
     mmcls_urls = load_file(mmcls_json_path)
 
     return mmcls_urls
 
 
 def get_deprecated_model_names():
-    deprecate_json_path = osp.join(mmengine.__path__[0],
-                                   'model_zoo/deprecated.json')
+    deprecate_json_path = osp.join(mmengine.__path__[0], 'hub/deprecated.json')
     deprecate_urls = load_file(deprecate_json_path)
     assert isinstance(deprecate_urls, dict)
 
