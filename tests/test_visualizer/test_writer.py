@@ -15,7 +15,7 @@ from mmengine.visualization import (ComposedWriter, LocalWriter,
                                     TensorboardWriter, WandbWriter)
 
 
-def draw(self, data_sample, image=None, show_gt=True, show_pred=True):
+def draw(self, image, data_sample, show_gt=True, show_pred=True):
     self.set_image(image)
 
 

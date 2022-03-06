@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import os.path as osp
 import time
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Union
@@ -25,8 +26,8 @@ class BaseWriter(metaclass=ABCMeta):
     Args:
         visualizer (dict, :obj:`Visualizer`, optional):
             Visualizer instance or dictionary. Default to None.
-        save_dir (str, optional): The root path of the save file
-            for write data. Default to None.
+        save_dir (str, optional): The root directory to save
+            the files produced by the writer. Default to None.
     """
 
     def __init__(self,
@@ -35,7 +36,7 @@ class BaseWriter(metaclass=ABCMeta):
         self._save_dir = save_dir
         if self._save_dir:
             timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            self._save_dir = os.path.join(
+            self._save_dir = osp.join(
                 self._save_dir, f'write_data_{timestamp}')  # type: ignore
         self._visualizer = visualizer
         if visualizer:
@@ -172,13 +173,13 @@ class LocalWriter(BaseWriter):
             local_writer.visualizer.get_image())
 
     Args:
-        save_dir (str): The root path of the save file
-            for write data.
+        save_dir (str): The root directory to save the files
+            produced by the writer.
         visualizer (dict, :obj:`Visualizer`, optional): Visualizer
             instance or dictionary. Default to None
-        img_save_dir (str): The save image folder dir.
+        img_save_dir (str): The directory to save images.
             Default to 'writer_image'.
-        params_save_file (str): The save parameters file name.
+        params_save_file (str): The file to save parameters.
             Default to 'parameters.yaml'.
         scalar_save_file (str):  The file to save scalar values.
             Default to 'scalars.json'.
@@ -197,13 +198,13 @@ class LocalWriter(BaseWriter):
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalWriter, self).__init__(visualizer, save_dir)
         os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-        self._img_save_dir = os.path.join(
+        self._img_save_dir = osp.join(
             self._save_dir,  # type: ignore
             img_save_dir)
-        self._scalar_save_file = os.path.join(
+        self._scalar_save_file = osp.join(
             self._save_dir,  # type: ignore
             scalar_save_file)
-        self._params_save_file = os.path.join(
+        self._params_save_file = osp.join(
             self._save_dir,  # type: ignore
             params_save_file)
         self._img_show = img_show
@@ -220,7 +221,7 @@ class LocalWriter(BaseWriter):
             params_dict (dict): The dict of parameters to save.
         """
         assert isinstance(params_dict, dict)
-        self._dump(self._params_save_file, 'yaml', params_dict)
+        self._dump(params_dict, self._params_save_file, 'yaml')
 
     def add_image(self,
                   name: str,
@@ -245,14 +246,14 @@ class LocalWriter(BaseWriter):
         """
         assert self.visualizer, 'Please instantiate the visualizer ' \
                                 'object with initialization parameters.'
-        self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
+        self.visualizer.draw(image, data_samples, draw_gt, draw_pred)
         if self._img_show:
             self.visualizer.show()
         else:
             os.makedirs(self._img_save_dir, exist_ok=True)
             save_file_name = f'{name}_{step}.png'
             cv2.imwrite(
-                os.path.join(self._img_save_dir, save_file_name),
+                osp.join(self._img_save_dir, save_file_name),
                 self.visualizer.get_image())
 
     def add_scalar(self,
@@ -267,7 +268,7 @@ class LocalWriter(BaseWriter):
             value (float, int): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self._dump(self._scalar_save_file, 'json', {name: value, 'step': step})
+        self._dump({name: value, 'step': step}, self._scalar_save_file, 'json')
 
     def add_scalars(self,
                     scalar_dict: dict,
@@ -290,23 +291,23 @@ class LocalWriter(BaseWriter):
         scalar_dict.setdefault('step', step)
         if file_path is not None:
             assert file_path.split('.')[-1] == 'json'
-            new_save_file_path = os.path.join(
+            new_save_file_path = osp.join(
                 self._save_dir,  # type: ignore
                 file_path)
             assert new_save_file_path != self._scalar_save_file, \
                 '"file_path" and "scalar_save_file" have the same name, ' \
                 'please set "file_path" to another value'
-            self._dump(new_save_file_path, 'json', scalar_dict)
-        self._dump(self._scalar_save_file, 'json', scalar_dict)
+            self._dump(scalar_dict, new_save_file_path, 'json')
+        self._dump(scalar_dict, self._scalar_save_file, 'json')
 
-    def _dump(self, file_path: str, file_format: str,
-              value_dict: dict) -> None:
+    def _dump(self, value_dict: dict, file_path: str,
+              file_format: str) -> None:
         """dump dict to file.
 
         Args:
+           value_dict (dict) : Save dict data.
            file_path (str): The file path to save data.
            file_format (str): The file format to save data.
-           value_dict (dict) : Save dict data.
         """
         with open(file_path, 'a+') as f:
             dump(value_dict, f, file_format=file_format)
@@ -346,8 +347,8 @@ class WandbWriter(BaseWriter):
                 with `commit=True`. Default to True.
         visualizer (dict, :obj:`Visualizer`, optional):
             Visualizer instance or dictionary. Default to None.
-        save_dir (str, optional): The root path of the save file
-            for write data. Default to None.
+        save_dir (str, optional): The root directory to save the files
+            produced by the writer. Default to None.
     """
 
     def __init__(self,
@@ -423,7 +424,7 @@ class WandbWriter(BaseWriter):
             step (int): Global step value to record. Default to 0.
         """
         if self.visualizer:
-            self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
+            self.visualizer.draw(image, data_samples, draw_gt, draw_pred)
             self._wandb.log({name: self.visualizer.get_image()},
                             commit=self._commit,
                             step=step)
@@ -514,8 +515,8 @@ class TensorboardWriter(BaseWriter):
             tensorboard_writer.visualizer.get_image())
 
     Args:
-        save_dir (str): The root path of the save file
-            for write data.
+        save_dir (str): The root directory to save the files
+            produced by the writer.
         visualizer (dict, :obj:`Visualizer`, optional): Visualizer instance
             or dictionary. Default to None.
         log_dir (str): Save directory location. Default to 'tf_writer'.
@@ -524,7 +525,7 @@ class TensorboardWriter(BaseWriter):
     def __init__(self,
                  save_dir: str,
                  visualizer: Optional[Union[dict, 'Visualizer']] = None,
-                 log_dir: str = 'tf_writer'):
+                 log_dir: str = 'tf_logs'):
         super(TensorboardWriter, self).__init__(visualizer, save_dir)
         self._tensorboard = self._setup_env(log_dir)
 
@@ -552,7 +553,7 @@ class TensorboardWriter(BaseWriter):
                     'the dependencies to use torch.utils.tensorboard '
                     '(applicable to PyTorch 1.1 or higher)')
 
-        self.log_dir = os.path.join(self._save_dir, log_dir)  # type: ignore
+        self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
         return SummaryWriter(self.log_dir)
 
     @property
@@ -614,7 +615,7 @@ class TensorboardWriter(BaseWriter):
         """
         assert self.visualizer, 'Please instantiate the visualizer ' \
                                 'object with initialization parameters.'
-        self.visualizer.draw(data_samples, image, draw_gt, draw_pred)
+        self.visualizer.draw(image, data_samples, draw_gt, draw_pred)
         self._tensorboard.add_image(
             name, self.visualizer.get_image(), step, dataformats='HWC')
 
