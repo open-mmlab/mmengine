@@ -39,3 +39,6 @@ TASK_UTILS = Registry('task util')
 
 # manage all kinds of evaluators for computing metrics
 EVALUATORS = Registry('evaluator')
+
+# manage visualizer
+VISUALIZERS = Registry('visualizer')
