@@ -54,7 +54,7 @@ class LoggerHook(Hook):
              of ``out_dir`` and the last level directory of
             ``runner.work_dir``. For example, if the input ``our_dir`` is
             ``./tmp`` and ``runner.work_dir`` is ``./work_dir/cur_exp``,
-            then the ckpt will be saved in ``./tmp/cur_exp``. Deafule to None.
+            then the log will be saved in ``./tmp/cur_exp``. Deafule to None.
         out_suffix (Tuple[str] or str): Those filenames ending with
             ``out_suffix`` will be copied to ``out_dir``. Defaults to
             ('.log.json', '.log', '.py').
@@ -66,23 +66,34 @@ class LoggerHook(Hook):
             Defaults to None.
 
     Examples:
-        >>> from mmengine import HOOKS
-        >>> logger_hook_cfg = dict(by_epoch=True, custom_keys=dict(
         >>> # `log_name` is defined, `loss_mean_window` will be an additional
         >>> # record.
-        >>>                        loss=[dict(log_name='loss_mean_window',
-        >>>                                   method_name='mean',
-        >>>                                   window_size=10),
-        >>> # `log_name` is defined. `loss` will be overwritten by
+        >>> logger_hook_cfg = dict(by_epoch=True,
+        >>>                        custom_keys=dict(
+        >>>                            loss=dict(log_name='loss_mean_window',
+        >>>                                      method_name='mean',
+        >>>                                      window_size=10)))
+        >>> # `log_name` is not defined. `loss` will be overwritten by
         >>> # `global_mean` statistics.
-        >>>                              dict(method_name='mean',
-        >>>                                   window_size='global')],
+        >>> logger_hook_cfg = dict(by_epoch=True,
+        >>>                        custom_keys=dict(
+        >>>                            loss=dict(method_name='mean',
+        >>>                                      window_size='global')))
         >>> # `time` cannot be overwritten, `global_time` will be an additional
-        >>> # record
-        >>>                        time=dict(log_name='global_time',
-        >>>                                  method='mean',
-        >>>                                  window_size='global'))
-        >>> logger_hook = HOOKS.build(logger_hook_cfg)
+        >>> # record.
+        >>> logger_hook_cfg = dict(by_epoch=True,
+        >>>                        custom_keys=dict(
+        >>>                            time=dict(log_name='global_time',
+        >>>                                      method='mean',
+        >>>                                      window_size='global')))
+        >>> # Record loss with different statistics methods.
+        >>> logger_hook_cfg = dict(by_epoch=True,
+        >>>                        custom_keys=dict(
+        >>>                            loss=[dict(log_name='loss_mean_window',
+        >>>                                       method_name='mean',
+        >>>                                       window_size=10),
+        >>>                                  dict(method_name='mean',
+        >>>                                       window_size='global')]))
     """
     # eta will be calculated by time. `time` and `data_time` should not be
     # overwritten.
