@@ -3,12 +3,21 @@
 您可以在页面左下角切换中英文文档。
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: 教程
 
    tutorials/registry.md
    tutorials/config.md
+   tutorials/runner.md
    tutorials/hook.md
+   tutorials/optimizer.md
+   tutorials/param_scheduler.md
+   tutorials/abstract_data_interface.md
+   tutorials/basedataset.md
+   tutorials/evaluator.md
+   tutorials/distributed.md
+   tutorials/logging.md
+   tutorials/visualizer.md
 
 .. toctree::
    :maxdepth: 2

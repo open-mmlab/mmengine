@@ -23,26 +23,43 @@ class TestGlobalMeta:
         # error.
         with pytest.raises(AssertionError):
 
-            class SubClassNoName(metaclass=MetaGlobalAccessible):
+            class SubClassNoName1(metaclass=MetaGlobalAccessible):
 
-                def __init__(self, *args, **kwargs):
+                def __init__(self, a, *args, **kwargs):
                     pass
 
-        # Subclass's constructor contains arguments without default value will
-        # raise an error.
+        # The constructor of subclasses must have default values for all
+        # arguments except name. Since `MetaGlobalAccessible` cannot tell which
+        # parameter does not have ha default value, we should test invalid
+        # subclasses separately.
         with pytest.raises(AssertionError):
 
-            class SubClassNoDefault(metaclass=MetaGlobalAccessible):
+            class SubClassNoDefault1(metaclass=MetaGlobalAccessible):
 
                 def __init__(self, a, name='', *args, **kwargs):
                     pass
 
-        class GlobalAccessible(metaclass=MetaGlobalAccessible):
+        with pytest.raises(AssertionError):
 
-            def __init__(self, name=''):
+            class SubClassNoDefault2(metaclass=MetaGlobalAccessible):
+
+                def __init__(self, a, b, name='', *args, **kwargs):
+                    pass
+
+        # Valid subclass.
+        class GlobalAccessible1(metaclass=MetaGlobalAccessible):
+
+            def __init__(self, name):
                 self.name = name
 
-        assert GlobalAccessible.root.name == 'root'
+        # Allow name not to be the first arguments.
+
+        class GlobalAccessible2(metaclass=MetaGlobalAccessible):
+
+            def __init__(self, a=1, name=''):
+                self.name = name
+
+        assert GlobalAccessible1.root.name == 'root'
 
 
 class TestBaseGlobalAccessible:

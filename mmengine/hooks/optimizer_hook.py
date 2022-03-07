@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple
 
 import torch
 from torch.nn.parameter import Parameter
@@ -9,6 +9,8 @@ from torch.nn.utils import clip_grad
 from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
 from .hook import Hook
+
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 
 @HOOKS.register_module()
@@ -29,6 +31,8 @@ class OptimizerHook(Hook):
                   loss.
             Defaults to False.
     """
+
+    priority = 'HIGH'
 
     def __init__(self,
                  grad_clip: Optional[dict] = None,
@@ -54,8 +58,8 @@ class OptimizerHook(Hook):
 
     def after_train_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All operations need to be finished after each training iteration.
 
@@ -71,40 +75,36 @@ class OptimizerHook(Hook):
         - Update model parameters with gradients.
 
         Args:
-            runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. In order to keep this interface consistent with
-                other hooks, we keep ``data_batch`` here. Defaults to None.
+            runner (Runner): The runner of the training process.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. In order to keep this interface consistent
+                with other hooks, we keep ``data_batch`` here.
+                Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 In order to keep this interface consistent with other hooks,
                 we keep ``outputs`` here. Defaults to None.
         """
-        runner.optimizer.zero_grad()  # type: ignore
+        runner.optimizer.zero_grad()
         if self.detect_anomalous_params:
-            self.detect_anomalous_parameters(
-                runner.outputs['loss'],  # type: ignore
-                runner)
-        runner.outputs['loss'].backward()  # type: ignore
+            self.detect_anomalous_parameters(runner.outputs['loss'], runner)
+        runner.outputs['loss'].backward()
 
         if self.grad_clip is not None:
-            grad_norm = self.clip_grads(
-                runner.model.parameters())  # type: ignore
+            grad_norm = self.clip_grads(runner.model.parameters())
             if grad_norm is not None:
                 # Add grad norm to the logger
-                runner.log_buffer.update(  # type: ignore
-                    {'grad_norm': float(grad_norm)},
-                    runner.outputs['num_samples'])  # type: ignore
-        runner.optimizer.step()  # type: ignore
+                runner.log_buffer.update({'grad_norm': float(grad_norm)},
+                                         runner.outputs['num_samples'])
+        runner.optimizer.step()
 
-    def detect_anomalous_parameters(self, loss: torch.Tensor,
-                                    runner: object) -> None:
+    def detect_anomalous_parameters(self, loss: torch.Tensor, runner) -> None:
         """Detect anomalous parameters that are not included in the graph.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
-        logger = runner.logger  # type: ignore
+        logger = runner.logger
         parameters_in_graph = set()
         visited = set()
 
@@ -122,7 +122,7 @@ class OptimizerHook(Hook):
                         traverse(grad_fn)
 
         traverse(loss.grad_fn)
-        for n, p in runner.model.named_parameters():  # type: ignore
+        for n, p in runner.model.named_parameters():
             if p not in parameters_in_graph and p.requires_grad:
                 logger.log(
                     level=logging.ERROR,
