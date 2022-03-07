@@ -11,10 +11,27 @@ from mmengine.registry import EVALUATORS
 
 @EVALUATORS.register_module()
 class ToyEvaluator(BaseEvaluator):
+    """Evaluaotr that calculates the metric `accuracy` from predictions and
+    labels. Alternatively, this evaluator can return arbitrary dummy metrics
+    set in the config.
+
+    Default prefix: Toy
+
+    Metrics:
+        - accuracy (float): The classification accuracy. Only when
+            `dummy_metrics` is None.
+        - size (int): The number of test samples. Only when `dummy_metrics`
+            is None.
+
+        If `dummy_metrics` is set as a dict in the config, it will be
+        returned as the metrics and override `accuracy` and `size`.
+    """
+
+    default_prefix = 'Toy'
 
     def __init__(self,
                  collect_device: str = 'cpu',
-                 prefix: str = 'Toy',
+                 prefix: Optional[str] = None,
                  dummy_metrics: Optional[Dict] = None):
         super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
@@ -38,6 +55,18 @@ class ToyEvaluator(BaseEvaluator):
         }
 
         return metrics
+
+
+@EVALUATORS.register_module()
+class UnprefixedEvaluator(BaseEvaluator):
+    """Evaluator with unassigned `default_prefix` to test the warning
+    information."""
+
+    def process(self, data_samples: dict, predictions: dict) -> None:
+        pass
+
+    def compute_metrics(self, results: list) -> dict:
+        return dict(dummy=0.0)
 
 
 def generate_test_results(size, batch_size, pred, label):
@@ -131,6 +160,6 @@ class TestBaseEvaluator(TestCase):
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
 
     def test_prefix(self):
-        cfg = dict(type='ToyEvaluator', prefix=None)
+        cfg = dict(type='UnprefixedEvaluator')
         with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
             _ = build_evaluator(cfg)

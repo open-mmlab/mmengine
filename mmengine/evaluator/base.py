@@ -21,15 +21,20 @@ class BaseEvaluator(metaclass=ABCMeta):
     Then it collects all results together from all ranks if distributed
     training is used. Finally, it computes the metrics of the entire dataset.
 
+    A subclass of class:`BaseEvaluator` should assign a meanful value to the
+    class attribute `default_prefix`. See the argument `prefix` for details.
+
     Args:
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
         prefix (str, optional): The prefix that will be added in the metric
             names to disambiguate homonymous metrics of different evaluators.
-            A subclass's `__init__()` method should have the argument `prefix`
-            with a meaningful default value.
+            If prefix is not provided in the argument, self.default_prefix
+            will be used instead. Default: None
     """
+
+    default_prefix: Optional[str] = None
 
     def __init__(self,
                  collect_device: str = 'cpu',
@@ -42,10 +47,10 @@ class BaseEvaluator(metaclass=ABCMeta):
         self.rank = rank
         self.world_size = world_size
 
-        if prefix is None:
+        self.prefix = prefix or self.default_prefix
+        if self.prefix is None:
             warnings.warn('The prefix is not set in evaluator class '
                           f'{self.__class__.__name__}.')
-        self.prefix = prefix
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -114,7 +119,7 @@ class BaseEvaluator(metaclass=ABCMeta):
                     '.'.join((self.prefix, k)): v
                     for k, v in metrics.items()
                 }
-            metrics = [metrics]
+            metrics = [metrics]  # type: ignore
         else:
             metrics = [None]  # type: ignore
 

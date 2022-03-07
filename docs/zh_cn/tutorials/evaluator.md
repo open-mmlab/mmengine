@@ -89,7 +89,7 @@ validation_cfg=dict(
 
 `compute_metrics()` 方法有 1 个输入参数 `results`，里面存放了所有批次测试数据经过 `process()` 方法处理后得到的结果。从中取出样本类别标签和分类预测结果，即可计算得到分类正确率 `acc`。最终，将计算得到的评测指标以字典的形式返回。
 
-此外，我们建议在子类的 `__init__()` 方法的参数中设置默认的 `prefix` 值，以避免与其他评测器出现同名指标。并且在 docstring 中，应说明该评测器的默认 prefix 以及所有评测指标。
+此外，我们建议在子类中为类属性 `default_prefix` 赋值。如果在初始化参数（即 config 中）没有指定 `prefix`，则会自动使用 `default_prefix` 作为评测指标名的前缀。同时，应在 docstring 中说明该评测器的 `default_prefix` 值以及所有的评测指标。
 
 具体的实现如下：
 
@@ -104,13 +104,12 @@ class Accuracy(BaseEvaluator):
     """ Accuracy Evaluator
 
     Default prefix: ACC
-    
+
     Metrics:
-        - accuracy: classification accuracy    
+        - accuracy: classification accuracy
     """
 
-    def __init__(self, collect_device: str = 'cpu', prefix: str = 'ACC'):
-        super().__init__(collect_device, prefix)
+    default_prefix = 'ACC'
 
     def process(self, data_samples: Dict, predictions: Dict):
         """Process one batch of data and predictions. The processed
