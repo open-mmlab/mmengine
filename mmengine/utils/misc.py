@@ -461,8 +461,6 @@ def tensor2imgs(tensor: torch.Tensor,
         list[np.ndarray]: A list that contains multiple images.
     """
 
-    if torch is None:
-        raise RuntimeError('pytorch is not installed')
     assert torch.is_tensor(tensor) and tensor.ndim == 4
     channels = tensor.size(1)
     assert channels in [1, 3]

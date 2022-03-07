@@ -12,7 +12,7 @@ from mmengine.utils.misc import tensor2imgs
 
 @HOOKS.register_module()
 class NaiveVisualizationHook(Hook):
-    """Show or Write the predicted results. during the process of testing.
+    """Show or Write the predicted results during the process of testing.
 
     Args:
         interval (int): Visualization interval. Default: 1.
@@ -22,7 +22,10 @@ class NaiveVisualizationHook(Hook):
     """
     priority = 'NORMAL'
 
-    def __init__(self, interval: int = 1, draw_gt=True, draw_pred=True):
+    def __init__(self,
+                 interval: int = 1,
+                 draw_gt: bool = True,
+                 draw_pred: bool = True):
         self.draw_gt = draw_gt
         self.draw_pred = draw_pred
         self._interval = interval
