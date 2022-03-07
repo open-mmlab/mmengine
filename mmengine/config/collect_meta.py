@@ -10,8 +10,8 @@ def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
 
     Args:
         package_path (str): Path of external package.
-        cfg_file (str): Name of experiment directory.
-        cfg_name (str): Name of experiment config.
+        cfg_dir (str): Name of experiment directory.
+        cfg_file (str): Name of experiment config.
 
     Returns:
         dict: Meta information of target experiment.
@@ -42,7 +42,7 @@ def _get_external_cfg_path(package_path: str, cfg_dir: str, cfg_file: str):
 
     Args:
         package_path (str): Path of external package.
-        cfg_file (str): Name of experiment directory.
+        cfg_dir (str): Name of experiment directory.
         cfg_file (str): Name of experiment config.
 
     Returns:
@@ -58,7 +58,7 @@ def _get_external_cfg_base_path(package_path: str, rel_cfg_path: str):
     """ Get base config path from external package.
     Args:
         package_path (str): Path of external package.
-        rel_cfg_path (str): Relative path of external package config file.
+        rel_cfg_path (str): External relative config path with 'package::'.
 
     Returns:
         str: Absolute config path from external package.
@@ -72,10 +72,10 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
     """
 
     Args:
-        rel_cfg_path (str): Relative path of external package config file.
+        rel_cfg_path (str): External relative config path with 'package::'.
 
     Returns:
-        Tuple(str, str): Package name and cleaned relative config path.
+        Tuple(str, str): Package name and relative config path.
     """
     if '::' not in rel_cfg_path:
         raise ValueError('`get_config` is used for loading config file cross '
@@ -94,13 +94,14 @@ def _parse_rel_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
     """Get the experiment dir and experiment config name.
 
     Args:
-        rel_cfg_path (str): Relative path of external package config file.
+        rel_cfg_path (str): External relative config path with prefix
+            'package::' and without suffix.
 
     Returns:
         Tuple(str, str): Experiment dir and experiment config name.
     """
     rel_cfg_path_list = rel_cfg_path.split('/')
-    assert len(rel_cfg_path_list) == 2, '`rel_cfg_path` should only contain ' \
-                                    'config file and config name.'
+    assert len(rel_cfg_path_list) == 2, \
+        '`rel_cfg_path` should only contain config file and config name.'
     rel_cfg_dir, rel_cfg_file = rel_cfg_path_list
     return rel_cfg_dir, rel_cfg_file

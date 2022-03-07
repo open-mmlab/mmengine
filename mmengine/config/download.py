@@ -12,8 +12,8 @@ def get_config(rel_cfg_path: str, suffix='.py') -> Config:
     """Get config from external package.
 
     Args:
-        rel_cfg_path(str): Relative config path without suffix of external
-            package.
+        rel_cfg_path (str): External relative config path with prefix
+            'package::' and without suffix.
         suffix (str): Suffix of ``rel_cfg_path``. If rel_cfg_path is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
@@ -49,8 +49,8 @@ def get_model(rel_cfg_path: str, suffix='.py',
     """Get built model from external package.
 
     Args:
-        rel_cfg_path (str): Relative config path without suffix of external
-            package.
+        rel_cfg_path (str): External relative config path with prefix
+            'package::' and without suffix.
         suffix (str): Suffix of ``rel_cfg_path``. If rel_cfg_path is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
