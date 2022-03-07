@@ -238,7 +238,7 @@ class Runner:
                 'model should be a dict to build model or a nn.Module, '
                 f'but got {model}')
 
-        # train from scratch or resume training
+        # train from scratch or resume from last checkpoint
         self._load_checkpoint = load_checkpoint
         if self._load_checkpoint is not None:
             path = self._load_checkpoint['path']
