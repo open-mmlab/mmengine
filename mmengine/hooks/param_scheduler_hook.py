@@ -13,15 +13,15 @@ class ParamSchedulerHook(Hook):
 
     priority = 'LOW'
 
-    def after_iter(self,
-                   runner: object,
-                   data_batch: Optional[Sequence[Tuple[
-                       Any, BaseDataSample]]] = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_train_iter(
+            self,
+            runner: object,
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
@@ -34,11 +34,11 @@ class ParamSchedulerHook(Hook):
             if not scheduler.by_epoch:
                 scheduler.step()
 
-    def after_epoch(self, runner: object) -> None:
+    def after_train_epoch(self, runner: object) -> None:
         """Call step function for each scheduler after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         for scheduler in runner.schedulers:  # type: ignore
             if scheduler.by_epoch:
