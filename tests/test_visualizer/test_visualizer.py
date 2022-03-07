@@ -366,13 +366,15 @@ class TestVisualizer(TestCase):
 
             def draw(self,
                      image: Optional[np.ndarray] = None,
-                     data_sample: Optional['BaseDataSample'] = None,
+                     gt_sample: Optional['BaseDataSample'] = None,
+                     pred_sample: Optional['BaseDataSample'] = None,
                      draw_gt: bool = True,
                      draw_pred: bool = True) -> None:
-                return super().draw(image, data_sample, draw_gt, draw_pred)
+                return super().draw(image, gt_sample, pred_sample, draw_gt,
+                                    draw_pred)
 
         det_visualizer = DetVisualizer2()
-        det_visualizer.draw(data_sample={})
+        det_visualizer.draw(gt_sample={}, pred_sample={})
         assert len(det_visualizer.task_dict) == 1
         assert 'instances' in det_visualizer.task_dict
         assert det_visualizer.task_dict[

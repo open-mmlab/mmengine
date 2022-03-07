@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import VISUALIZERS
+from .utils import check_type, check_type_and_length, tensor2numpy, value2list
 
 
 @VISUALIZERS.register_module()
@@ -111,7 +112,8 @@ class Visualizer:
         >>>         pass
         >>>     def draw(self,
         >>>             image: Optional[np.ndarray] = None,
-        >>>             data_sample: Optional['BaseDataSample'] = None,
+        >>>             gt_sample: Optional['BaseDataSample'] = None,
+        >>>             pred_sample: Optional['BaseDataSample'] = None,
         >>>             show_gt: bool = True,
         >>>             show_pred: bool = True) -> None:
         >>>         pass
@@ -128,7 +130,8 @@ class Visualizer:
 
     def draw(self,
              image: Optional[np.ndarray] = None,
-             data_sample: Optional['BaseDataSample'] = None,
+             gt_sample: Optional['BaseDataSample'] = None,
+             pred_sample: Optional['BaseDataSample'] = None,
              draw_gt: bool = True,
              draw_pred: bool = True) -> None:
         pass
@@ -231,38 +234,6 @@ class Visualizer:
             extent=(0, self.width, self.height, 0),
             interpolation='none')
 
-    def _convert_tensor_to_numpy(
-            self, value: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
-        """If the type of value is torch.Tensor, convert the value to
-        np.ndarray.
-
-        Args:
-            value (np.ndarray, torch.Tensor): value.
-
-        Returns:
-            Any: value.
-        """
-        if isinstance(value, torch.Tensor):
-            value = value.detach().cpu().numpy()
-        return value
-
-    def _to_list(self, value: Any, valid_type: Union[Type, Tuple[Type, ...]],
-                 expand_dim: int) -> List[Any]:
-        """If the type of ``value`` is ``valid_type``, convert the value to
-        list and expand to ``expand_dim``.
-
-        Args:
-            value (Any): value.
-            valid_type (Union[Type, Tuple[Type, ...]): valid type.
-            expand_dim (int): expand dim.
-
-        Returns:
-            List[Any]: value.
-        """
-        if isinstance(value, valid_type):
-            value = [value] * expand_dim
-        return value
-
     def _is_posion_valid(self, position: np.ndarray) -> bool:
         """Judge whether the position is in image.
 
@@ -278,53 +249,6 @@ class Visualizer:
                (position[..., 1] < self.height).all() and \
                (position[..., 1] >= 0).all()
         return flag
-
-    def _ensure_type_valid(self, name: str, value: Any,
-                           valid_type: Union[Type, Tuple[Type, ...]]) -> None:
-        """Check whether the type of value is in ``valid_type``.
-
-        Args:
-            name (str): value name.
-            value (Any): value.
-            valid_type (Type, Tuple[Type, ...]): expected type.
-        """
-        if not isinstance(value, valid_type):
-            raise TypeError(f'`{name}` should be {valid_type} '
-                            f' but got {type(value)}')
-
-    def _ensure_valid_length(self, name: str, value: Any,
-                             valid_length: int) -> None:
-        """If type of the ``value`` is list, check whether its length is equal
-        with or greater than ``valid_length``.
-
-        Args:
-            name (str): value name.
-            value (Any): value.
-            valid_length (int): expected length.
-        """
-        if isinstance(value, list):
-            if len(value) < valid_length:
-                raise AssertionError(
-                    f'The length of {name} must equal with or '
-                    f'greater than {valid_length}, but got {len(value)}')
-
-    def _ensure_type_length(self, name: str, value: Any,
-                            valid_type: Union[Type, Tuple[Type, ...]],
-                            valid_length: int) -> None:
-        """Check whether the type of value is in ``valid_type``. If type of the
-        ``value`` is list, check whether its length is equal with or greater
-        than ``valid_length``.
-
-        Args:
-            value (Any): value.
-            legal_type (Type, Tuple[Type, ...]): legal type.
-            valid_length (int): expected length.
-
-        Returns:
-            List[Any]: value.
-        """
-        self._ensure_type_valid(name, value, valid_type)
-        self._ensure_valid_length(name, value, valid_length)
 
     def draw_texts(
             self,
@@ -391,13 +315,12 @@ class Visualizer:
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
         """
-        self._ensure_type_valid('texts', texts, (str, list))
+        check_type('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
         num_text = len(texts)
-        self._ensure_type_valid('positions', positions,
-                                (np.ndarray, torch.Tensor))
-        positions = self._convert_tensor_to_numpy(positions)
+        check_type('positions', positions, (np.ndarray, torch.Tensor))
+        positions = tensor2numpy(positions)
         if len(positions.shape) == 1:
             positions = positions[None]
         assert positions.shape == (num_text, 2), (
@@ -411,34 +334,32 @@ class Visualizer:
 
         if font_sizes is None:
             font_sizes = self._default_font_size
-        self._ensure_type_length('font_sizes', font_sizes, (int, list),
-                                 num_text)
-        font_sizes = self._to_list(font_sizes, int, num_text)
+        check_type_and_length('font_sizes', font_sizes, (int, list), num_text)
+        font_sizes = value2list(font_sizes, int, num_text)
 
-        self._ensure_type_length('colors', colors, (str, list), num_text)
-        colors = self._to_list(colors, str, num_text)
+        check_type_and_length('colors', colors, (str, list), num_text)
+        colors = value2list(colors, str, num_text)
 
-        self._ensure_type_length('verticalalignments', verticalalignments,
-                                 (str, list), num_text)
-        verticalalignments = self._to_list(verticalalignments, str, num_text)
+        check_type_and_length('verticalalignments', verticalalignments,
+                              (str, list), num_text)
+        verticalalignments = value2list(verticalalignments, str, num_text)
 
-        self._ensure_type_length('horizontalalignments', horizontalalignments,
-                                 (str, list), num_text)
-        horizontalalignments = self._to_list(horizontalalignments, str,
-                                             num_text)
+        check_type_and_length('horizontalalignments', horizontalalignments,
+                              (str, list), num_text)
+        horizontalalignments = value2list(horizontalalignments, str, num_text)
 
-        self._ensure_type_length('rotations', rotations, (int, list), num_text)
-        rotations = self._to_list(rotations, int, num_text)
+        check_type_and_length('rotations', rotations, (int, list), num_text)
+        rotations = value2list(rotations, int, num_text)
 
-        self._ensure_type_length('font_families', font_families, (str, list),
-                                 num_text)
-        font_families = self._to_list(font_families, str, num_text)
+        check_type_and_length('font_families', font_families, (str, list),
+                              num_text)
+        font_families = value2list(font_families, str, num_text)
 
         if bboxes is None:
             bboxes = [None for _ in range(num_text)]  # type: ignore
         else:
-            self._ensure_type_length('bboxes', bboxes, (dict, list), num_text)
-            bboxes = self._to_list(bboxes, dict, num_text)
+            check_type_and_length('bboxes', bboxes, (dict, list), num_text)
+            bboxes = value2list(bboxes, dict, num_text)
 
         for i in range(num_text):
             self.ax.text(
@@ -487,10 +408,10 @@ class Visualizer:
                 If ``linewidths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
         """
-        self._ensure_type_valid('x_datas', x_datas, (np.ndarray, torch.Tensor))
-        x_datas = self._convert_tensor_to_numpy(x_datas)
-        self._ensure_type_valid('y_datas', y_datas, (np.ndarray, torch.Tensor))
-        y_datas = self._convert_tensor_to_numpy(y_datas)
+        check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
+        x_datas = tensor2numpy(x_datas)
+        check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
+        y_datas = tensor2numpy(y_datas)
         assert x_datas.shape == y_datas.shape, (
             '`x_datas` and `y_datas` should have the same shape')
         assert x_datas.shape[-1] == 2, (
@@ -552,10 +473,10 @@ class Visualizer:
             is_filling (bool): Whether to fill all the circles. Defaults to
                 False.
         """
-        self._ensure_type_valid('center', center, (np.ndarray, torch.Tensor))
-        center = self._convert_tensor_to_numpy(center)
-        self._ensure_type_valid('radius', radius, (np.ndarray, torch.Tensor))
-        radius = self._convert_tensor_to_numpy(radius)
+        check_type('center', center, (np.ndarray, torch.Tensor))
+        center = tensor2numpy(center)
+        check_type('radius', radius, (np.ndarray, torch.Tensor))
+        radius = tensor2numpy(radius)
         if len(center.shape) == 1:
             center = center[None]
         assert center.shape == (radius.shape[0], 2), (
@@ -626,8 +547,8 @@ class Visualizer:
             is_filling (bool): Whether to fill all the bboxes. Defaults to
                 False.
         """
-        self._ensure_type_valid('bboxes', bboxes, (np.ndarray, torch.Tensor))
-        bboxes = self._convert_tensor_to_numpy(bboxes)
+        check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
+        bboxes = tensor2numpy(bboxes)
 
         if len(bboxes.shape) == 1:
             bboxes = bboxes[None]
@@ -688,8 +609,7 @@ class Visualizer:
             is_filling (bool): Whether to fill all the polygons. Defaults to
                 False.
         """
-        self._ensure_type_valid('polygons', polygons,
-                                (list, np.ndarray, torch.Tensor))
+        check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
 
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -698,9 +618,7 @@ class Visualizer:
                 assert polygon.shape[1] == 2, (
                     'The shape of each polygon in `polygons` should be (M, 2),'
                     f' but got {polygon.shape}')
-        polygons = [
-            self._convert_tensor_to_numpy(polygon) for polygon in polygons
-        ]
+        polygons = [tensor2numpy(polygon) for polygon in polygons]
         for polygon in polygons:
             if not self._is_posion_valid(polygon):
                 warnings.warn(
@@ -747,9 +665,8 @@ class Visualizer:
             alphas (Union[int, List[int]]): The transparency of origin image.
                 Defaults to 0.5.
         """
-        self._ensure_type_valid('binary_masks', binary_masks,
-                                (np.ndarray, torch.Tensor))
-        binary_masks = self._convert_tensor_to_numpy(binary_masks)
+        check_type('binary_masks', binary_masks, (np.ndarray, torch.Tensor))
+        binary_masks = tensor2numpy(binary_masks)
         assert binary_masks.dtype == np.bool_, (
             'The dtype of binary_masks should be np.bool_, '
             f'but got {binary_masks.dtype}')
