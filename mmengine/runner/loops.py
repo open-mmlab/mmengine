@@ -26,7 +26,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
-        self.runner.call_hooks('before_run')
+        self.runner.call_hooks('before_run')  # TODO
         self.runner.call_hooks('before_train')
 
         while self.runner.epoch < self._max_epochs:

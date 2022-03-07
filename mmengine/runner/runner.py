@@ -270,6 +270,8 @@ class Runner:
         else:
             self.distributed = True
 
+        self._rank, self._world_size = get_dist_info()
+
         self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         self.deterministic = deterministic
         self.seed = seed
@@ -331,6 +333,18 @@ class Runner:
     @property
     def inner_iter(self):
         return self._inner_iter
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def world_size(self):
+        return self._world_size
+
+    @property
+    def hooks(self):
+        return self._hooks
 
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
@@ -805,16 +819,11 @@ class Runner:
 
     def register_default_hooks(
             self,
-            optimizer: Union[Hook, Dict],
-            timer: Union[Hook, Dict],
-            logger: Union[Hook, Dict],  # yapf: disable
-            param_scheduler: Union[Hook, Dict],
-            checkpoint: Union[Hook, Dict]) -> None:
+            hooks: Optional[Dict[str, Union[Hook, Dict]]] = None) -> None:
         """Register default hooks into hook list.
 
-        Args:
-            hooks (dict[str, Hook or dict]): Set of hooks or configs to be
-                registered.
+        ``hooks`` will be registered into runner to execute some default
+        actions like updating model parameters or saving checkpoints.
 
         Default hooks and their priorities:
 
@@ -831,12 +840,49 @@ class Runner:
         +----------------------+-------------------------+
         | CheckpointHook       | VERY_LOW (90)           |
         +----------------------+-------------------------+
+
+        If ``hooks`` is None, above hooks will be registered by
+        default::
+
+            default_hooks = dict(
+                optimizer=dict(type='OptimizerHook', grad_clip=False),
+                timer=dict(type='IterTimerHook'),
+                logger=dict(type='TextLoggerHook'),
+                param_scheduler=dict(type='ParamSchedulerHook'),
+                checkpoint=dict(type='CheckpointHook', interval=1),
+            )
+
+        If not None, ``hooks`` will be merged into ``default_hooks``.
+        If there are None value in default_hooks, the corresponding item will
+        be popped from ``default_hooks``::
+
+            hooks = dict(timer=None)
+
+        The final registered default hooks will be :obj:`OptimizerHook`,
+        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+
+        Args:
+            hooks (dict[str, Hook or dict], optional): Default hooks or configs
+                to be registered.
         """
-        self.register_hook(optimizer)
-        self.register_hook(timer)
-        self.register_hook(logger)
-        self.register_hook(param_scheduler)
-        self.register_hook(checkpoint)
+        default_hooks: dict = dict(
+            optimizer=dict(type='OptimizerHook', grad_clip=False),
+            timer=dict(type='IterTimerHook'),
+            logger=dict(type='TextLoggerHook'),
+            param_scheduler=dict(type='ParamSchedulerHook'),
+            checkpoint=dict(type='CheckpointHook', interval=1),
+        )
+        if hooks is not None:
+            for name, hook in hooks.items():
+                if name in default_hooks and hook is None:
+                    # remove hook from _default_hooks
+                    default_hooks.pop(name)
+                else:
+                    assert hook is not None
+                    default_hooks[name] = hook
+
+        for hook in default_hooks.values():
+            self.register_hook(hook)
 
     def register_custom_hooks(self, hooks: List[Union[Hook, Dict]]) -> None:
         """Register custom hooks into hook list.
@@ -854,31 +900,6 @@ class Runner:
             custom_hooks: Optional[List[Union[Hook, Dict]]] = None) -> None:
         """Register default hooks and custom hooks into hook list.
 
-        ``default_hooks`` will be registered into runner to execute some
-        default actions like updating model parameters or saving checkpoints.
-
-        Default hooks have :obj:`OptimizerHook`, :obj:`IterTimerHook`,
-        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
-        If ``default_hooks`` is None, above hooks will be registered by
-        default::
-
-            _default_hooks = dict(
-                optimizer=dict(type='OptimizerHook', grad_clip=False),
-                timer=dict(type='IterTimerHook'),
-                logger=dict(type='TextLoggerHook'),
-                param_scheduler=dict(type='ParamSchedulerHook'),
-                checkpoint=dict(type='CheckpointHook', interval=1),
-            )
-
-        If not None, ``default_hooks`` will be merged into ``_default_hooks``.
-        If there are None value in default_hooks, the corresponding item will
-        be popped from ``_default_hooks``::
-
-            default_hooks = dict(timer=None)
-
-        The final registered default hooks will be :obj:`OptimizerHook`,
-        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
-
         Args:
             default_hooks (dict[str, dict] or dict[str, Hook], optional): Hooks
                 to execute default actions like updating model parameters and
@@ -887,25 +908,7 @@ class Runner:
                 custom actions like visualizing images processed by pipeline.
                 Defaults to None.
         """
-        _default_hooks: dict = dict(
-            optimizer=dict(type='OptimizerHook', grad_clip=False),
-            timer=dict(type='IterTimerHook'),
-            logger=dict(type='TextLoggerHook'),
-            param_scheduler=dict(type='ParamSchedulerHook'),
-            checkpoint=dict(type='CheckpointHook', interval=1),
-        )
-        if default_hooks is None:
-            self.register_default_hooks(**_default_hooks)
-        else:
-            for name, hook in default_hooks.items():
-                if name in _default_hooks and hook is None:
-                    # remove hook from _default_hooks
-                    _default_hooks.pop(name)
-                else:
-                    assert hook is not None
-                    _default_hooks[name] = hook
-
-            self.register_default_hooks(**_default_hooks)
+        self.register_default_hooks(default_hooks)
 
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
@@ -951,7 +954,18 @@ class Runner:
         # load `last_ckpt`, `best_score`, `best_ckpt`, etc. for hook messages
         self.meta['hook_msgs'].update(checkpoint['meta'].get('hook_msgs', {}))
 
-        # TODO: check gpu_ids
+        # check whether the number of GPU used for current experiment
+        # is consistent with resuming from checkpoint
+        if 'config' in checkpoint['meta']:
+            config = mmengine.Config.fromstring(
+                checkpoint['meta']['config'], file_format='.py')
+            previous_gpu_ids = config.get('gpu_ids', None)
+            if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
+                    and len(previous_gpu_ids) != self._world_size):
+                # TODO, self.logger.info
+                # TODO, should we modify the iteration?
+                print('Number of GPU used for current experiment is not '
+                      'consistent with resuming from checkpoint')
 
         # resume meta information meta
         self.meta = checkpoint['meta']

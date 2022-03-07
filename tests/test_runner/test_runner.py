@@ -18,15 +18,17 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.evaluator import BaseEvaluator
-from mmengine.hooks import Hook
+from mmengine.hooks import (Hook, IterTimerHook, OptimizerHook,
+                            ParamSchedulerHook)
+from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.model.wrappers import MMDataParallel, MMDistributedDataParallel
 from mmengine.optim.scheduler import MultiStepLR
 from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                Registry)
-from mmengine.runner import Runner
-from mmengine.runner.loop import EpochBasedTrainLoop, IterBasedTrainLoop
+from mmengine.runner import EpochBasedTrainLoop, IterBasedTrainLoop, Runner
+from mmengine.runner.priority import get_priority
 
 
 @MODELS.register_module()
@@ -384,49 +386,140 @@ class TestRunner(TestCase):
         runner.train()
         assert isinstance(runner.scheduler[0], ToyScheduler)
 
-    def test_checkpoint(self):
+    def test_register_hook(self):
         runner = Runner.build_from_cfg(self.full_cfg)
-        runner.run()
-        path = osp.join(self.temp_dir, 'epoch_3.pth')
-        runner.save_checkpoint(path)
-        assert osp.exists(path)
-        ckpt = torch.load(path)
-        # scheduler should saved in the checkpoint
-        assert isinstance(ckpt['scheduler'], list)
+        runner._hooks = []
 
-        # load by a new runner but not resume
-        runner2 = Runner.build_from_cfg(self.full_cfg)
-        runner2.load_checkpoint(path, resume=False)
-        self.assertNotEqual(runner2.epoch, runner.epoch)
-        self.assertNotEqual(runner2.iter, runner.iter)
+        # `hook` should be either a Hook object or dict
+        # invalid `hook` type
+        with self.assertRaisesRegex(
+                TypeError, 'hook should be an instance of Hook or dict'):
+            runner.register_hook(['string'])
 
-        # load by a new runner and resume
-        runner3 = Runner.build_from_cfg(self.full_cfg)
-        runner3.load_checkpoint(path, resume=True)
-        self.assertEqual(runner3.epoch, runner.epoch)
-        self.assertEqual(runner3.iter, runner.iter)
+        # `hook` is a dict
+        timer_cfg = dict(type='IterTimerHook')
+        runner.register_hook(timer_cfg)
+        self.assertEqual(len(runner._hooks), 1)
+        self.assertTrue(isinstance(runner._hooks[0], IterTimerHook))
+        # default priority of `IterTimerHook` is 'NORMAL'
+        self.assertEqual(
+            get_priority(runner._hooks[0].priority), get_priority('NORMAL'))
+
+        runner._hooks = []
+        # `hook` is a dict and contains `priority` field
+        # set the priority of `IterTimerHook` as 'BELOW_NORMAL'
+        timer_cfg = dict(type='IterTimerHook', priority='BELOW_NORMAL')
+        runner.register_hook(timer_cfg)
+        self.assertEqual(len(runner._hooks), 1)
+        self.assertTrue(isinstance(runner._hooks[0], IterTimerHook))
+
+        self.assertEqual(
+            get_priority(runner._hooks[0].priority),
+            get_priority('BELOW_NORMAL'))
+
+        # `hook` is a hook object
+        optimizer_hook = OptimizerHook()
+        runner.register_hook(optimizer_hook)
+        self.assertEqual(len(runner._hooks), 2)
+        # The priority of `OptimizerHook` is `HIGH` which is greater than
+        # `IterTimerHook`, so the first item of `_hooks` should be
+        # `OptimizerHook`
+        self.assertTrue(isinstance(runner._hooks[0], OptimizerHook))
+        self.assertEqual(
+            get_priority(runner._hooks[0].priority), get_priority('HIGH'))
+
+        # `priority` argument is not None and it will be set as priority of
+        # hook
+        param_scheduler_cfg = dict(type='ParamSchedulerHook', priority='LOW')
+        runner.register_hook(param_scheduler_cfg, priority='VERY_LOW')
+        self.assertEqual(len(runner._hooks), 3)
+        self.assertTrue(isinstance(runner._hooks[2], ParamSchedulerHook))
+        self.assertEqual(
+            get_priority(runner._hooks[2].priority), get_priority('VERY_LOW'))
+
+        # TODO: `priority` is Priority
+
+    def test_default_hooks(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        # register five hooks by default
+        runner._hooks = []
+        runner.register_default_hooks()
+        self.assertEqual(len(runner._hooks), 5)
+        # the forth registered hook should be `ParamSchedulerHook`
+        self.assertTrue(isinstance(runner._hooks[3], ParamSchedulerHook))
+
+        # remove `ParamSchedulerHook` from default hooks
+        runner._hooks = []
+        runner.register_default_hooks(hooks=dict(timer=None))
+        self.assertEqual(len(runner._hooks), 4)
+        # `ParamSchedulerHook` was popped so the forth is `CheckpointHook`
+        self.assertTrue(isinstance(runner._hooks[3], CheckpointHook))
+
+        # add a new default hook
+        @HOOKS.register_module()
+        class ToyHook(Hook):
+            priority = 'Lowest'
+
+        runner._hooks = []
+        runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
+        self.assertEqual(len(runner._hooks), 6)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_hooks(self):
-        results = []
-        targets = [0, 1, 2]
 
         @HOOKS.register_module()
         class ToyHook(Hook):
+            priority = 'Lowest'
 
-            def before_train_epoch(self, runner):
-                results.append(runner.epoch)
-
-        self.full_cfg.custom_hooks = [dict(type='ToyHook', priority=50)]
         runner = Runner.build_from_cfg(self.full_cfg)
+        self.assertEqual(len(runner._hooks), 5)
+        custom_hooks = [dict(type='ToyHook')]
+        runner.register_custom_hooks(custom_hooks)
+        self.assertEqual(len(runner._hooks), 6)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
-        # test hook registered in runner
-        hook_names = [hook.__class__.__name__ for hook in runner.hooks]
-        assert 'ToyHook' in hook_names
+    def test_register_hooks(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+        runner._hooks = []
 
-        # test hook behavior
-        runner.train()
-        for result, target, in zip(results, targets):
-            self.assertEqual(result, target)
+        @HOOKS.register_module()
+        class ToyHook(Hook):
+            priority = 'Lowest'
+
+        custom_hooks = [dict(type='ToyHook')]
+        runner.register_hooks(custom_hooks=custom_hooks)
+        # five default hooks + custom hook (ToyHook)
+        self.assertEqual(len(runner._hooks), 6)
+
+    def test_checkpoint(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+        runner.run()
+
+        # test `save_checkpoint``
+        path = osp.join(self.temp_dir, 'epoch_3.pth')
+        runner.save_checkpoint(path)
+        assert osp.exists(path)
+        assert osp.exists(osp.join(self.temp_dir, 'latest.pth'))
+        ckpt = torch.load(path)
+        assert ckpt['meta']['epoch'] == 3
+        # assert ckpt['meta']['iter'] =
+        # assert ckpt['meta']['inner_iter'] =
+        assert isinstance(ckpt['optimizer'], dict)
+        assert isinstance(ckpt['param_schedulers'], list)
+
+        # test `load_checkpoint`
+        runner2 = Runner.build_from_cfg(self.full_cfg)
+        runner2.load_checkpoint(path)
+
+        self.assertEqual(runner2.epoch, 0)
+        self.assertEqual(runner2.iter, 0)
+
+        # test `resume`
+        runner3 = Runner.build_from_cfg(self.full_cfg)
+        runner3.resume(path)
+        self.assertEqual(runner3.epoch, runner.epoch)
+        self.assertEqual(runner3.iter, runner.iter)
 
     def test_iter_based(self):
         self.full_cfg.train_cfg = dict(by_epoch=False, max_iters=30)
