@@ -26,6 +26,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
+        self.runner.call_hooks('before_run')
         self.runner.call_hooks('before_train')
 
         while self.runner.epoch < self._max_epochs:
@@ -36,6 +37,7 @@ class EpochBasedTrainLoop(BaseLoop):
                 self.runner.val_loop.run()
 
         self.runner.call_hooks('after_train')
+        self.runner.call_hooks('after_run')
 
     def run_epoch(self) -> None:
         """Iterate one epoch."""
@@ -81,6 +83,7 @@ class IterBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
+        self.runner.call_hooks('before_run')
         self.runner.call_hooks('before_train')
         self.runner.call_hooks('before_train_epoch')
 
@@ -95,6 +98,7 @@ class IterBasedTrainLoop(BaseLoop):
 
         self.runner.call_hooks('after_train_epoch')
         self.runner.call_hooks('after_train')
+        self.runner.call_hooks('after_run')
 
     def run_iter(self, data_batch: BaseDataSample) -> None:
         """Iterate one mini-batch.
@@ -130,6 +134,7 @@ class ValLoop(BaseLoop):
 
     def run(self):
         """Launch validation."""
+        self.runner.call_hooks('before_run')
         self.runner.call_hooks('before_val')
 
         for idx, data_batch in enumerate(self.dataloader):
@@ -140,6 +145,7 @@ class ValLoop(BaseLoop):
         self.evaluator.evaluate(len(self.dataloader.dataset))
 
         self.runner.call_hooks('after_val')
+        self.runner.call_hooks('after_run')
 
     def run_iter(self, idx, data_batch: BaseDataSample):
         """Iterate one mini-batch.
@@ -176,6 +182,7 @@ class TestLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch test."""
+        self.runner.call_hooks('before_run')
         self.runner.call_hooks('before_test')
 
         for idx, data_batch in enumerate(self.dataloader):
@@ -186,6 +193,7 @@ class TestLoop(BaseLoop):
         self.evaluator.evaluate(len(self.dataloader.dataset))
 
         self.runner.call_hooks('after_test')
+        self.runner.call_hooks('after_run')
 
     def run_iter(self, idx, data_batch: BaseDataSample) -> None:
         """Iterate one mini-batch.

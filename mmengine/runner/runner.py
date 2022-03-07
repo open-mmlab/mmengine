@@ -454,7 +454,7 @@ class Runner:
         if not hasattr(model, 'train_step'):
             # TODO, fix the url
             raise RuntimeError(
-                'model contains at least `train_step` method. More details can'
+                'Model should implement `train_step` method. More details can'
                 ' be found at TODO')
 
         return model
@@ -492,9 +492,10 @@ class Runner:
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
             else:
-                model = MMDataParallel(
-                    model.cuda(self.cfg.gpu_ids[0]),
-                    device_ids=self.cfg.gpu_ids)
+                # TODO
+                # Note that set `export CUDA_VISIBLE_DEVICES=-1` will
+                # enable CPU training.
+                model = MMDataParallel(model, device_ids=self.cfg.gpu_ids)
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
