@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, Tuple
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
@@ -15,17 +15,19 @@ class ParamSchedulerHook(Hook):
 
     def after_iter(self,
                    runner: object,
-                   data_batch: Optional[Sequence[BaseDataSample]] = None,
+                   data_batch: Optional[Sequence[Tuple[
+                       Any, BaseDataSample]]] = None,
                    outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader. In
-                order to keep this interface consistent with other hooks, we
-                keep ``data_batch`` here. Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model. In
-                order to keep this interface consistent with other hooks, we
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. In order to keep this interface consistent
+                with other hooks, we keep ``data_batch`` here.
+                Defaults to None.
+            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+                In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
         for scheduler in runner.schedulers:  # type: ignore
