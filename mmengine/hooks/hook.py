@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, Tuple
 
 from mmengine.data import BaseDataSample
 
@@ -49,31 +49,33 @@ class Hook:
         pass
 
     def before_iter(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None) -> None:
+        self,
+        runner: object,
+        data_batch: Optional[Sequence[Tuple[Any,
+                                            BaseDataSample]]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each iter.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
         """
         pass
 
     def after_iter(self,
                    runner: object,
-                   data_batch: Optional[Sequence[BaseDataSample]] = None,
+                   data_batch: Optional[Sequence[Tuple[
+                       Any, BaseDataSample]]] = None,
                    outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
+            outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
         pass
@@ -153,59 +155,62 @@ class Hook:
         self.after_epoch(runner)
 
     def before_train_iter(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None) -> None:
+        self,
+        runner: object,
+        data_batch: Optional[Sequence[Tuple[Any,
+                                            BaseDataSample]]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each training iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
 
     def before_val_iter(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None) -> None:
+        self,
+        runner: object,
+        data_batch: Optional[Sequence[Tuple[Any,
+                                            BaseDataSample]]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each validation iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
 
     def before_test_iter(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None) -> None:
+        self,
+        runner: object,
+        data_batch: Optional[Sequence[Tuple[Any,
+                                            BaseDataSample]]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each test iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
         """
         self.before_iter(runner, data_batch=None)
 
     def after_train_iter(
             self,
             runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
@@ -214,15 +219,15 @@ class Hook:
     def after_val_iter(
             self,
             runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from
                 model. Defaults to None.
         """
@@ -231,15 +236,15 @@ class Hook:
     def after_test_iter(
             self,
             runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test iteration.
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+                Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """

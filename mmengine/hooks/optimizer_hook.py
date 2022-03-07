@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple
 
 import torch
 from torch.nn.parameter import Parameter
@@ -57,7 +57,7 @@ class OptimizerHook(Hook):
     def after_train_iter(
             self,
             runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All operations need to be finished after each training iteration.
 
@@ -74,9 +74,10 @@ class OptimizerHook(Hook):
 
         Args:
             runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample], optional): Data from
-                dataloader. In order to keep this interface consistent with
-                other hooks, we keep ``data_batch`` here. Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. In order to keep this interface consistent
+                with other hooks, we keep ``data_batch`` here.
+                Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 In order to keep this interface consistent with other hooks,
                 we keep ``outputs`` here. Defaults to None.
