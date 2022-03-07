@@ -18,10 +18,10 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import (check_file_exist, import_modules_from_strings,
-                            check_install_package, get_installed_path)
-from .collect_meta import (_parse_external_cfg_path, _parse_rel_cfg_path,
-                           _get_external_cfg_path, _get_external_cfg_base_path)
+from mmengine.utils import (check_file_exist, check_install_package,
+                            get_installed_path, import_modules_from_strings)
+from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
+                           _parse_external_cfg_path, _parse_rel_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -430,8 +430,8 @@ class Config:
 
             cfg_dict_list = list()
             cfg_text_list = list()
-            for f in base_filename:
-                cfg_path = Config._get_cfg_path(f, filename)
+            for base_file in base_filename:
+                cfg_path = Config._get_cfg_path(base_file, filename)
                 _cfg_dict, _cfg_text = Config._file2dict(cfg_path)
                 cfg_dict_list.append(_cfg_dict)
                 cfg_text_list.append(_cfg_text)

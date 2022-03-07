@@ -1,4 +1,6 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import os.path
+
 import pytest
 
 from mmengine.config.collect_meta import (_get_external_cfg_base_path,
@@ -49,9 +51,3 @@ def test_parse_rel_cfg_path():
     assert rel_cfg_file == 'cfg_file'
     with pytest.raises(AssertionError):
         _parse_rel_cfg_path('error/cfg_dir/cfg_file')
-
-
-
-
-
-

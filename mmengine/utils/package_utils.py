@@ -1,8 +1,10 @@
-from pkg_resources import get_distribution
-import pkg_resources
-import subprocess
-import os.path as osp
+# Copyright (c) OpenMMLab. All rights reserved.
 import importlib
+import os.path as osp
+import subprocess
+
+import pkg_resources
+from pkg_resources import get_distribution
 
 
 def is_installed(package: str) -> bool:
@@ -61,7 +63,7 @@ def call_command(cmd: list) -> None:
     try:
         subprocess.check_call(cmd)
     except Exception as e:
-        raise highlighted_error(e)  # type: ignore
+        raise e  # type: ignore
 
 
 def check_install_package(package: str):

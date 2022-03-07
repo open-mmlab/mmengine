@@ -1,9 +1,10 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+import re
 from typing import Tuple
 
-from mmengine.utils import check_file_exist
 from mmengine.fileio import load
-import re
+from mmengine.utils import check_file_exist
 
 
 def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
@@ -40,7 +41,7 @@ def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
 
 
 def _get_external_cfg_path(package_path: str, cfg_dir: str, cfg_file: str):
-    """ Get relative config path from 'metafile.yml' of external package.
+    """Get relative config path from 'metafile.yml' of external package.
 
     Args:
         package_path (str): Path of external package.
@@ -79,7 +80,7 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
     Returns:
         Tuple(str, str): Package name and relative config path.
     """
-    if re.match(r"\w*::\w*/\w*", rel_cfg_path) is None:
+    if re.match(r'\w*::\w*/\w*', rel_cfg_path) is None:
         raise ValueError('`_parse_external_cfg_path` is used for parse '
                          'external package, please specify the package name '
                          'and relative config path, just like '

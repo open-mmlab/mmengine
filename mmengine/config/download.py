@@ -1,15 +1,18 @@
-import os.path as osp
+# Copyright (c) OpenMMLab. All rights reserved.
 import importlib
+import os.path as osp
 
 import torch.nn as nn
 
+from mmengine.runner import load_checkpoint
+from mmengine.utils import check_install_package, get_installed_path
+from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
+                           _parse_external_cfg_path, _parse_rel_cfg_path)
 from .config import Config
-from mmengine.utils import get_installed_path, check_install_package
-from .collect_meta import (_parse_external_cfg_path, _parse_rel_cfg_path,
-                           _get_cfg_meta, _get_external_cfg_base_path)
 
 
-def get_config(rel_cfg_path: str, suffix='.py') -> Config:
+def get_config(rel_cfg_path: str, suffix='.py', pretrained: bool = False)\
+        -> Config:
     """Get config from external package.
 
     Args:
@@ -18,6 +21,8 @@ def get_config(rel_cfg_path: str, suffix='.py') -> Config:
         suffix (str): Suffix of ``rel_cfg_path``. If rel_cfg_path is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
+        pretrained (bool): Whether to save pretrained model path. Defaults to
+            False.
 
     Returns:
         Config: A `Config` parsed from external package.
@@ -38,15 +43,19 @@ def get_config(rel_cfg_path: str, suffix='.py') -> Config:
     cfg_meta = _get_cfg_meta(package_path, rel_cfg_dir, rel_cfg_file)
     cfg_path = osp.join(package_path, cfg_meta['Config'])
     cfg = Config.fromfile(cfg_path)
-    assert 'Weights' in cfg_meta, 'Cannot find `Weights` in ' \
-                                  'cfg_file.metafile.yml, please check the ' \
-                                  'metafile'
-    cfg.model_path = cfg_meta['Weights']
+    if pretrained:
+        assert 'Weights' in cfg_meta, 'Cannot find `Weights` in ' \
+                                      'cfg_file.metafile.yml, please check ' \
+                                      'the metafile'
+        cfg.model_path = cfg_meta['Weights']
     return cfg
 
 
-def get_model(rel_cfg_path: str, suffix='.py',
-              build_func_name: str = 'build_model', **kwargs) -> nn.Module:
+def get_model(rel_cfg_path: str,
+              suffix='.py',
+              build_func_name: str = 'build_model',
+              pretrained=False,
+              **kwargs) -> nn.Module:
     """Get built model from external package.
 
     Args:
@@ -55,13 +64,14 @@ def get_model(rel_cfg_path: str, suffix='.py',
         suffix (str): Suffix of ``rel_cfg_path``. If rel_cfg_path is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
-        build_func_name: Name of model build function. Defaults to
+        build_func_name (str): Name of model build function. Defaults to
             'build_model'
+        pretrained (bool): Whether to load pretrained model. Defaults to False.
 
     Returns:
         nn.Module: Built model.
     """
-    cfg = get_config(rel_cfg_path, suffix)
+    cfg = get_config(rel_cfg_path, suffix, pretrained)
     package = rel_cfg_path.split('::')[0]
 
     try:
@@ -74,4 +84,9 @@ def get_model(rel_cfg_path: str, suffix='.py',
         raise RuntimeError(f'`{build_func_name}` is not defined in '
                            f'`{package}.models`')
     model = build_func(cfg.model, **kwargs)
+    if pretrained:
+        assert hasattr(cfg, 'model_path'), 'Cannot find pretrained model. ' \
+                                           f'Please ensure {rel_cfg_path} ' \
+                                           'is not a base config.'
+        model = load_checkpoint(model, cfg.model_path)
     return model
