@@ -2,12 +2,14 @@
 import os.path as osp
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
 from .hook import Hook
+
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 
 @HOOKS.register_module()
@@ -81,7 +83,7 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if not self.out_dir:
-            self.out_dir = runner.work_dir  # type: ignore
+            self.out_dir = runner.work_dir
 
         self.file_client = FileClient.infer_client(self.file_client_args,
                                                    self.out_dir)
@@ -90,17 +92,13 @@ class CheckpointHook(Hook):
         # `self.out_dir` is set so the final `self.out_dir` is the
         # concatenation of `self.out_dir` and the last level directory of
         # `runner.work_dir`
-        if self.out_dir != runner.work_dir:  # type: ignore
-            basename = osp.basename(
-                runner.work_dir.rstrip(  # type: ignore
-                    osp.sep))
+        if self.out_dir != runner.work_dir:
+            basename = osp.basename(runner.work_dir.rstrip(osp.sep))
             self.out_dir = self.file_client.join_path(
-                self.out_dir,  # type: ignore
-                basename)
+                self.out_dir, basename)  # type: ignore  # noqa: E501
 
-        runner.logger.info((  # type: ignore
-            f'Checkpoints will be saved to {self.out_dir} by '
-            f'{self.file_client.name}.'))
+        runner.logger.info((f'Checkpoints will be saved to {self.out_dir} by '
+                            f'{self.file_client.name}.'))
 
         # disable the create_symlink option because some file backends do not
         # allow to create a symlink
@@ -130,9 +128,8 @@ class CheckpointHook(Hook):
         if self.every_n_epochs(
                 runner, self.interval) or (self.save_last
                                            and self.is_last_epoch(runner)):
-            runner.logger.info(  # type: ignore
-                f'Saving checkpoint at \
-                    {runner.epoch + 1} epochs')  # type: ignore
+            runner.logger.info(f'Saving checkpoint at \
+                    {runner.epoch + 1} epochs')
             if self.sync_buffer:
                 pass
                 # TODO
@@ -187,14 +184,14 @@ class CheckpointHook(Hook):
     def after_train_iter(
             self,
             runner,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
             runner (Runner): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
                 Defaults to None.
         """
@@ -207,9 +204,8 @@ class CheckpointHook(Hook):
         if self.every_n_iters(
                 runner, self.interval) or (self.save_last
                                            and self.is_last_iter(runner)):
-            runner.logger.info(  # type: ignore
-                f'Saving checkpoint at \
-                    {runner.iter + 1} iterations')  # type: ignore
+            runner.logger.info(f'Saving checkpoint at \
+                    {runner.iter + 1} iterations')
             if self.sync_buffer:
                 pass
                 # TODO
