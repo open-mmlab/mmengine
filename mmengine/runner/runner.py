@@ -611,6 +611,7 @@ class Runner:
             dataset=dataset,
             sampler=sampler,
             batch_sampler=None,
+            collate_fn=lambda data_batch: data_batch,
             worker_init_fn=init_fn,
             **dataloader_cfg)
         return data_loader
