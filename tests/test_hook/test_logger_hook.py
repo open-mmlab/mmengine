@@ -150,9 +150,7 @@ class TestLoggerHook:
         logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
         runner.writer.add_scalars.assert_called_with(
-            train_infos,
-            step=11,
-            file_path='tmp.json')
+            train_infos, step=11, file_path='tmp.json')
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
         time_avg = logger_hook.time_sec_tot / (
