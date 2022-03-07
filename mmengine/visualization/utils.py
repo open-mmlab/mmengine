@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 
-def tensor2numpy(value: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
+def tensor2ndarray(value: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
     """If the type of value is torch.Tensor, convert the value to np.ndarray.
 
     Args:

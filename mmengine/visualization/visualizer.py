@@ -14,7 +14,8 @@ from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import VISUALIZERS
-from .utils import check_type, check_type_and_length, tensor2numpy, value2list
+from .utils import (check_type, check_type_and_length, tensor2ndarray,
+                    value2list)
 
 
 @VISUALIZERS.register_module()
@@ -320,7 +321,7 @@ class Visualizer:
             texts = [texts]
         num_text = len(texts)
         check_type('positions', positions, (np.ndarray, torch.Tensor))
-        positions = tensor2numpy(positions)
+        positions = tensor2ndarray(positions)
         if len(positions.shape) == 1:
             positions = positions[None]
         assert positions.shape == (num_text, 2), (
@@ -409,9 +410,9 @@ class Visualizer:
                 have the same linewidth. Defaults to 1.
         """
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
-        x_datas = tensor2numpy(x_datas)
+        x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
-        y_datas = tensor2numpy(y_datas)
+        y_datas = tensor2ndarray(y_datas)
         assert x_datas.shape == y_datas.shape, (
             '`x_datas` and `y_datas` should have the same shape')
         assert x_datas.shape[-1] == 2, (
@@ -474,9 +475,9 @@ class Visualizer:
                 False.
         """
         check_type('center', center, (np.ndarray, torch.Tensor))
-        center = tensor2numpy(center)
+        center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
-        radius = tensor2numpy(radius)
+        radius = tensor2ndarray(radius)
         if len(center.shape) == 1:
             center = center[None]
         assert center.shape == (radius.shape[0], 2), (
@@ -548,7 +549,7 @@ class Visualizer:
                 False.
         """
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
-        bboxes = tensor2numpy(bboxes)
+        bboxes = tensor2ndarray(bboxes)
 
         if len(bboxes.shape) == 1:
             bboxes = bboxes[None]
@@ -618,7 +619,7 @@ class Visualizer:
                 assert polygon.shape[1] == 2, (
                     'The shape of each polygon in `polygons` should be (M, 2),'
                     f' but got {polygon.shape}')
-        polygons = [tensor2numpy(polygon) for polygon in polygons]
+        polygons = [tensor2ndarray(polygon) for polygon in polygons]
         for polygon in polygons:
             if not self._is_posion_valid(polygon):
                 warnings.warn(
@@ -666,7 +667,7 @@ class Visualizer:
                 Defaults to 0.5.
         """
         check_type('binary_masks', binary_masks, (np.ndarray, torch.Tensor))
-        binary_masks = tensor2numpy(binary_masks)
+        binary_masks = tensor2ndarray(binary_masks)
         assert binary_masks.dtype == np.bool_, (
             'The dtype of binary_masks should be np.bool_, '
             f'but got {binary_masks.dtype}')
