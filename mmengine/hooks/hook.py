@@ -17,7 +17,7 @@ class Hook:
         operations before the training process.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         pass
 
@@ -26,7 +26,7 @@ class Hook:
         operations after the training process.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         pass
 
@@ -35,7 +35,7 @@ class Hook:
         operations before each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         pass
 
@@ -44,7 +44,7 @@ class Hook:
         operations after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         pass
 
@@ -57,7 +57,7 @@ class Hook:
         operations before each iter.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -72,7 +72,7 @@ class Hook:
         operations after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -85,7 +85,7 @@ class Hook:
         operations before saving the checkpoint.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             checkpoints (dict): Model's checkpoint.
         """
         pass
@@ -95,7 +95,7 @@ class Hook:
         operations after loading the checkpoint.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             checkpoints (dict): Model's checkpoint.
         """
         pass
@@ -105,7 +105,7 @@ class Hook:
         operations before each training epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.before_epoch(runner)
 
@@ -114,7 +114,7 @@ class Hook:
         operations before each validation epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.before_epoch(runner)
 
@@ -123,7 +123,7 @@ class Hook:
         operations before each test epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.before_epoch(runner)
 
@@ -132,7 +132,7 @@ class Hook:
         operations after each training epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.after_epoch(runner)
 
@@ -141,7 +141,7 @@ class Hook:
         operations after each validation epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.after_epoch(runner)
 
@@ -150,7 +150,7 @@ class Hook:
         operations after each test epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.after_epoch(runner)
 
@@ -163,7 +163,7 @@ class Hook:
         operations before each training iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -178,7 +178,7 @@ class Hook:
         operations before each validation iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -193,7 +193,7 @@ class Hook:
         operations before each test iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -208,7 +208,7 @@ class Hook:
         operations after each training iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -225,7 +225,7 @@ class Hook:
         operations after each validation iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from
@@ -242,7 +242,7 @@ class Hook:
         operations after each test iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -254,7 +254,7 @@ class Hook:
         """Test whether or not current epoch can be evenly divided by n.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             n (int): Whether or not current epoch can be evenly divided by n.
 
         Returns:
@@ -267,7 +267,7 @@ class Hook:
         n.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             n (int): Whether or not current inner iteration can be evenly
                 divided by n.
 
@@ -282,7 +282,7 @@ class Hook:
         """Test whether or not current iteration can be evenly divided by n.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             n (int): Whether or not current iteration can be
                 evenly divided by n.
 
@@ -296,7 +296,7 @@ class Hook:
         """Check whether the current epoch reaches the `max_epochs` or not.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
 
         Returns:
             bool: whether the end of current epoch or not.
@@ -307,7 +307,7 @@ class Hook:
         """Test whether or not current epoch is the last epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
 
         Returns:
             bool: bool: Return True if the current epoch reaches the
@@ -319,7 +319,7 @@ class Hook:
         """Test whether or not current epoch is the last iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
 
         Returns:
             bool: whether or not current iteration is the last iteration.

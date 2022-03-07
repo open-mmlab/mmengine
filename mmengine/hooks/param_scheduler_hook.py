@@ -21,7 +21,7 @@ class ParamSchedulerHook(Hook):
         """Call step function for each scheduler after each iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
@@ -38,7 +38,7 @@ class ParamSchedulerHook(Hook):
         """Call step function for each scheduler after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         for scheduler in runner.schedulers:  # type: ignore
             if scheduler.by_epoch:

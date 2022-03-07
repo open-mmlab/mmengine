@@ -18,7 +18,7 @@ class DistSamplerSeedHook(Hook):
         """Set the seed for sampler and batch_sampler.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if hasattr(runner.data_loader.sampler, 'set_epoch'):  # type: ignore
             # in case the data loader uses `SequentialSampler` in Pytorch

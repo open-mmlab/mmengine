@@ -73,7 +73,7 @@ class OptimizerHook(Hook):
         - Update model parameters with gradients.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
@@ -105,7 +105,7 @@ class OptimizerHook(Hook):
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         logger = runner.logger  # type: ignore
         parameters_in_graph = set()

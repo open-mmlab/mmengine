@@ -72,7 +72,7 @@ class CheckpointHook(Hook):
         to save these checkpoints of the model.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if not self.out_dir:
             self.out_dir = runner.work_dir  # type: ignore
@@ -113,7 +113,7 @@ class CheckpointHook(Hook):
         """Save the checkpoint and synchronize buffers after each epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if not self.by_epoch:
             return
@@ -137,7 +137,7 @@ class CheckpointHook(Hook):
         """Save the current checkpoint and delete outdated checkpoint.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         runner.save_checkpoint(  # type: ignore
             self.out_dir,
@@ -184,7 +184,7 @@ class CheckpointHook(Hook):
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
