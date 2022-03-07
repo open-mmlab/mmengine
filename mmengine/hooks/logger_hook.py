@@ -399,7 +399,7 @@ class LoggerHook(Hook):
             runner (Any): The runner of the training process.
 
         Returns:
-            The maximum GPU memory occupied by tensors in bytes for a given
+            The maximum GPU memory occupied by tensors in megabytes for a given
             device.
         """
         device = getattr(runner.model, 'output_device', None)
