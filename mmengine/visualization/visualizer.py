@@ -43,12 +43,11 @@ class Visualizer:
       - draw_featmap: draw feature map
 
     All the basic drawing methods support chain calls, which is convenient for
-    overlaydrawing and display.Each downstream algorithm library can inherit
-    ``Visualizer`` and implement the required visualization functions in the
-    ``draw`` interface. For example, ``DetVisualizer`` in MMDetection inherits
-    from ``Visualizer`` and implements functions, such as visual detection
-    boxes, instance masks, and semantic segmentation maps in the draw
-    interface.
+    overlaydrawing and display. Each downstream algorithm library can inherit
+    ``Visualizer`` and implement the draw logic in the draw interface. For
+    example, ``DetVisualizer`` in MMDetection inherits from ``Visualizer``
+    and implements functions, such as visual detection boxes, instance masks,
+    and semantic segmentation maps in the draw interface.
 
     Args:
         metadata (dict, optional): A dict contains the meta information
@@ -127,13 +126,15 @@ class Visualizer:
         if image is not None:
             self._setup_fig(image)
 
-    def close(self) -> None:
-        """Close the figure."""
-        plt.close(self.fig)
+    def draw(self,
+             image: Optional[np.ndarray] = None,
+             data_sample: Optional['BaseDataSample'] = None,
+             draw_gt: bool = True,
+             draw_pred: bool = True) -> None:
+        pass
 
     def show(self, wait_time: int = 0) -> None:
-        """Show the drawn image. if ``drawn_image`` is None, show the inner
-        image, which is obtained by ``self.get_image()``.
+        """Show the drawn image.
 
         Args:
             wait_time (int, optional): Delay in milliseconds. 0 is the special
@@ -144,6 +145,10 @@ class Visualizer:
         else:
             plt.show(block=False)
             plt.pause(wait_time)
+
+    def close(self) -> None:
+        """Close the figure."""
+        plt.close(self.fig)
 
     @classmethod
     def register_task(cls, task_name: str, force: bool = False) -> Callable:
@@ -226,12 +231,37 @@ class Visualizer:
             extent=(0, self.width, self.height, 0),
             interpolation='none')
 
-    def draw(self,
-             image: Optional[np.ndarray] = None,
-             data_sample: Optional['BaseDataSample'] = None,
-             draw_gt: bool = True,
-             draw_pred: bool = True) -> None:
-        pass
+    def _convert_tensor_to_numpy(
+            self, value: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
+        """If the type of value is torch.Tensor, convert the value to
+        np.ndarray.
+
+        Args:
+            value (np.ndarray, torch.Tensor): value.
+
+        Returns:
+            Any: value.
+        """
+        if isinstance(value, torch.Tensor):
+            value = value.detach().cpu().numpy()
+        return value
+
+    def _to_list(self, value: Any, valid_type: Union[Type, Tuple[Type, ...]],
+                 expand_dim: int) -> List[Any]:
+        """If the type of ``value`` is ``valid_type``, convert the value to
+        list and expand to ``expand_dim``.
+
+        Args:
+            value (Any): value.
+            valid_type (Union[Type, Tuple[Type, ...]): valid type.
+            expand_dim (int): expand dim.
+
+        Returns:
+            List[Any]: value.
+        """
+        if isinstance(value, valid_type):
+            value = [value] * expand_dim
+        return value
 
     def _is_posion_valid(self, position: np.ndarray) -> bool:
         """Judge whether the position is in image.
@@ -248,6 +278,53 @@ class Visualizer:
                (position[..., 1] < self.height).all() and \
                (position[..., 1] >= 0).all()
         return flag
+
+    def _ensure_type_valid(self, name: str, value: Any,
+                           valid_type: Union[Type, Tuple[Type, ...]]) -> None:
+        """Check whether the type of value is in ``valid_type``.
+
+        Args:
+            name (str): value name.
+            value (Any): value.
+            valid_type (Type, Tuple[Type, ...]): expected type.
+        """
+        if not isinstance(value, valid_type):
+            raise TypeError(f'`{name}` should be {valid_type} '
+                            f' but got {type(value)}')
+
+    def _ensure_valid_length(self, name: str, value: Any,
+                             valid_length: int) -> None:
+        """If type of the ``value`` is list, check whether its length is equal
+        with or greater than ``valid_length``.
+
+        Args:
+            name (str): value name.
+            value (Any): value.
+            valid_length (int): expected length.
+        """
+        if isinstance(value, list):
+            if len(value) < valid_length:
+                raise AssertionError(
+                    f'The length of {name} must equal with or '
+                    f'greater than {valid_length}, but got {len(value)}')
+
+    def _ensure_type_length(self, name: str, value: Any,
+                            valid_type: Union[Type, Tuple[Type, ...]],
+                            valid_length: int) -> None:
+        """Check whether the type of value is in ``valid_type``. If type of the
+        ``value`` is list, check whether its length is equal with or greater
+        than ``valid_length``.
+
+        Args:
+            value (Any): value.
+            legal_type (Type, Tuple[Type, ...]): legal type.
+            valid_length (int): expected length.
+
+        Returns:
+            List[Any]: value.
+        """
+        self._ensure_type_valid(name, value, valid_type)
+        self._ensure_valid_length(name, value, valid_length)
 
     def draw_texts(
             self,
@@ -314,47 +391,15 @@ class Visualizer:
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
         """
-
-        def check_and_expand(value: Any, legal_type: Union[Type, Tuple[Type,
-                                                                       Type]],
-                             expand_dim: int) -> List[Any]:
-            """If type of the value is legal_type, convert the value to list
-            and expand to `expand_dim`. If the value is list, check whether its
-            length is equal with or bigger than `exp[and_dim`.
-
-            Args:
-                value (Any): value.
-                legal_type (Union[Type, Sequence[Type]): legal type.
-                expand_dim (int): legal expand dim.
-
-            Returns:
-                List[Any]: value.
-            """
-            if isinstance(value, legal_type):
-                value = [value] * expand_dim
-            else:
-                assert isinstance(
-                    value,
-                    list), (f'The type of expected should be {legal_type} or '
-                            f'list({legal_type}) but got {type(value)}')
-                assert len(value) >= expand_dim, (
-                    'The length of value must equal with or greater than texts'
-                )
-            return value
-
+        self._ensure_type_valid('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
-        assert isinstance(texts, list), ('`texts` should be str or list(str) '
-                                         f' but got {type(texts)}')
         num_text = len(texts)
-
-        assert isinstance(positions, (np.ndarray, torch.Tensor)), (
-            '`positions` should be np.ndarray or torch.Tensor '
-            f' but got {type(positions)}')
+        self._ensure_type_valid('positions', positions,
+                                (np.ndarray, torch.Tensor))
+        positions = self._convert_tensor_to_numpy(positions)
         if len(positions.shape) == 1:
             positions = positions[None]
-        if isinstance(positions, torch.Tensor):
-            positions = positions.detach().cpu().numpy()
         assert positions.shape == (num_text, 2), (
             '`positions` should have the shape of '
             f'({num_text}, 2), but got {positions.shape}')
@@ -366,20 +411,34 @@ class Visualizer:
 
         if font_sizes is None:
             font_sizes = self._default_font_size
-        font_sizes = check_and_expand(font_sizes, int,
-                                      num_text)  # type: ignore
+        self._ensure_type_length('font_sizes', font_sizes, (int, list),
+                                 num_text)
+        font_sizes = self._to_list(font_sizes, int, num_text)
 
-        colors = check_and_expand(colors, str, num_text)
-        verticalalignments = check_and_expand(verticalalignments, str,
-                                              num_text)
-        horizontalalignments = check_and_expand(horizontalalignments, str,
-                                                num_text)
-        rotations = check_and_expand(rotations, int, num_text)
-        font_families = check_and_expand(font_families, str, num_text)
+        self._ensure_type_length('colors', colors, (str, list), num_text)
+        colors = self._to_list(colors, str, num_text)
+
+        self._ensure_type_length('verticalalignments', verticalalignments,
+                                 (str, list), num_text)
+        verticalalignments = self._to_list(verticalalignments, str, num_text)
+
+        self._ensure_type_length('horizontalalignments', horizontalalignments,
+                                 (str, list), num_text)
+        horizontalalignments = self._to_list(horizontalalignments, str,
+                                             num_text)
+
+        self._ensure_type_length('rotations', rotations, (int, list), num_text)
+        rotations = self._to_list(rotations, int, num_text)
+
+        self._ensure_type_length('font_families', font_families, (str, list),
+                                 num_text)
+        font_families = self._to_list(font_families, str, num_text)
+
         if bboxes is None:
             bboxes = [None for _ in range(num_text)]  # type: ignore
         else:
-            bboxes = check_and_expand(bboxes, dict, num_text)
+            self._ensure_type_length('bboxes', bboxes, (dict, list), num_text)
+            bboxes = self._to_list(bboxes, dict, num_text)
 
         for i in range(num_text):
             self.ax.text(
@@ -406,9 +465,9 @@ class Visualizer:
 
         Args:
             x_datas (Union[np.ndarray, torch.Tensor]): The x coordinate of
-            each line' start and end points.
+                each line' start and end points.
             y_datas (Union[np.ndarray, torch.Tensor]): The y coordinate of
-            each line' start and end points.
+                each line' start and end points.
             colors (Union[str, List[str]]): The colors of lines. ``colors``
                 can have the same length with lines or just single value.
                 If ``colors`` is single value, all the lines will have the same
@@ -428,19 +487,10 @@ class Visualizer:
                 If ``linewidths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
         """
-        assert isinstance(
-            x_datas, (np.ndarray,
-                      torch.Tensor)), ('`x_datas` should be np.ndarray or '
-                                       f'torch.Tensor but got {type(x_datas)}')
-        assert isinstance(
-            y_datas, (np.ndarray,
-                      torch.Tensor)), ('`y_datas` should be np.ndarray or '
-                                       f'torch.Tensor but got {type(y_datas)}')
-
-        if isinstance(x_datas, torch.Tensor):
-            x_datas = x_datas.detach().cpu().numpy()
-        if isinstance(y_datas, torch.Tensor):
-            y_datas = y_datas.detach().cpu().numpy()
+        self._ensure_type_valid('x_datas', x_datas, (np.ndarray, torch.Tensor))
+        x_datas = self._convert_tensor_to_numpy(x_datas)
+        self._ensure_type_valid('y_datas', y_datas, (np.ndarray, torch.Tensor))
+        y_datas = self._convert_tensor_to_numpy(y_datas)
         assert x_datas.shape == y_datas.shape, (
             '`x_datas` and `y_datas` should have the same shape')
         assert x_datas.shape[-1] == 2, (
@@ -502,18 +552,10 @@ class Visualizer:
             is_filling (bool): Whether to fill all the circles. Defaults to
                 False.
         """
-        assert isinstance(
-            center, (np.ndarray,
-                     torch.Tensor)), ('`center` should be np.ndarray or '
-                                      f'torch.Tensor but got {type(center)}')
-        assert isinstance(
-            radius, (np.ndarray,
-                     torch.Tensor)), ('`radius` should be np.ndarray or '
-                                      f'torch.Tensor but got {type(radius)}')
-        if isinstance(center, torch.Tensor):
-            center = center.detach().cpu().numpy()
-        if isinstance(radius, torch.Tensor):
-            radius = radius.detach().cpu().numpy()
+        self._ensure_type_valid('center', center, (np.ndarray, torch.Tensor))
+        center = self._convert_tensor_to_numpy(center)
+        self._ensure_type_valid('radius', radius, (np.ndarray, torch.Tensor))
+        radius = self._convert_tensor_to_numpy(radius)
         if len(center.shape) == 1:
             center = center[None]
         assert center.shape == (radius.shape[0], 2), (
@@ -584,13 +626,9 @@ class Visualizer:
             is_filling (bool): Whether to fill all the bboxes. Defaults to
                 False.
         """
-        assert isinstance(
-            bboxes,
-            (np.ndarray,
-             torch.Tensor)), ('`bboxes` should be np.ndarray or torch.Tensor, '
-                              f'but got {type(bboxes)}')
-        if isinstance(bboxes, torch.Tensor):
-            bboxes = bboxes.detach().cpu().numpy()
+        self._ensure_type_valid('bboxes', bboxes, (np.ndarray, torch.Tensor))
+        bboxes = self._convert_tensor_to_numpy(bboxes)
+
         if len(bboxes.shape) == 1:
             bboxes = bboxes[None]
         assert bboxes.shape[-1] == 4, (
@@ -650,9 +688,9 @@ class Visualizer:
             is_filling (bool): Whether to fill all the polygons. Defaults to
                 False.
         """
-        assert isinstance(polygons, (list, np.ndarray, torch.Tensor)), (
-            '`polygons` should be np.ndarray or torch.Tensor or list, '
-            f'but got {type(polygons)}')
+        self._ensure_type_valid('polygons', polygons,
+                                (list, np.ndarray, torch.Tensor))
+
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
         if isinstance(polygons, list):
@@ -661,8 +699,7 @@ class Visualizer:
                     'The shape of each polygon in `polygons` should be (M, 2),'
                     f' but got {polygon.shape}')
         polygons = [
-            polygon.detach().cpu().numpy() if isinstance(
-                polygon, torch.Tensor) else polygon for polygon in polygons
+            self._convert_tensor_to_numpy(polygon) for polygon in polygons
         ]
         for polygon in polygons:
             if not self._is_posion_valid(polygon):
@@ -710,14 +747,12 @@ class Visualizer:
             alphas (Union[int, List[int]]): The transparency of origin image.
                 Defaults to 0.5.
         """
-        assert isinstance(binary_masks, (np.ndarray, torch.Tensor)), (
-            '`binary_masks` should be np.ndarray or torch.Tensor, '
-            f'but got {type(binary_masks)}')
-        if isinstance(binary_masks, torch.Tensor):
-            binary_masks = binary_masks.detach().cpu().numpy()
+        self._ensure_type_valid('binary_masks', binary_masks,
+                                (np.ndarray, torch.Tensor))
+        binary_masks = self._convert_tensor_to_numpy(binary_masks)
         assert binary_masks.dtype == np.bool_, (
-            'The type of binary_masks should be np.bool_, '
-            f'but got {type(binary_masks)}')
+            'The dtype of binary_masks should be np.bool_, '
+            f'but got {binary_masks.dtype}')
         binary_masks = binary_masks.astype('uint8') * 255
         img = self.get_image()
         if binary_masks.ndim == 2:
@@ -804,8 +839,10 @@ class Visualizer:
             Returns:
                 np.ndarray: heatmap
             """
+            if isinstance(feat_map, torch.Tensor):
+                feat_map = feat_map.detach().cpu().numpy()
             norm_img = np.zeros(feat_map.shape)
-            norm_img = cv2.normalize(feat_map.numpy(), norm_img, 0, 255,
+            norm_img = cv2.normalize(feat_map, norm_img, 0, 255,
                                      cv2.NORM_MINMAX)
             norm_img = np.asarray(norm_img, dtype=np.uint8)
             heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
@@ -814,6 +851,10 @@ class Visualizer:
                 heat_img = cv2.addWeighted(img, alpha, heat_img, 1 - alpha, 0)
             return heat_img
 
+        assert isinstance(
+            tensor_chw,
+            torch.Tensor), (f'`tensor_chw` should be {torch.Tensor} '
+                            f' but got {type(tensor_chw)}')
         tensor_chw = tensor_chw.detach().cpu()
         assert tensor_chw.ndim == 3, 'Input dimension must be 3'
         if image is not None:

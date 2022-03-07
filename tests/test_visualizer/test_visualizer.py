@@ -62,7 +62,7 @@ class TestVisualizer(TestCase):
             visualizer.draw_bboxes(torch.tensor([1, 1, 20, 2]))
 
         # test incorrect bbox format
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             visualizer.draw_bboxes([1, 1, 2, 2])
 
     def test_close(self):
@@ -94,7 +94,7 @@ class TestVisualizer(TestCase):
             visualizer.draw_texts('text1', positions=torch.tensor([15, 5]))
 
         # test incorrect format
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             visualizer.draw_texts('text', positions=[5, 5])
 
         # test length mismatch
@@ -122,7 +122,7 @@ class TestVisualizer(TestCase):
                                   font_sizes=[1])
 
         # test type valid
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
                                   font_sizes='b')
@@ -151,8 +151,9 @@ class TestVisualizer(TestCase):
                 x_datas=torch.tensor([12, 5]), y_datas=torch.tensor([2, 6]))
 
         # test incorrect format
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             visualizer.draw_lines(x_datas=[5, 5], y_datas=torch.tensor([2, 6]))
+        with pytest.raises(TypeError):
             visualizer.draw_lines(y_datas=[5, 5], x_datas=torch.tensor([2, 6]))
 
         # test length mismatch
@@ -195,8 +196,9 @@ class TestVisualizer(TestCase):
                 torch.tensor([1, 5]), radius=torch.tensor([10]))
 
         # test incorrect format
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             visualizer.draw_circles([1, 5], radius=torch.tensor([1]))
+        with pytest.raises(TypeError):
             visualizer.draw_circles(np.array([1, 5]), radius=10)
 
         # test length mismatch
