@@ -14,6 +14,14 @@ def build_evaluator(
 
     When the evaluator config is a list, it will automatically build composed
     evaluators.
+
+    Args:
+        cfg (dict | list): Config of evaluator. When the config is a list, it
+            will automatically build composed evaluators.
+        default_scope (str, optional): The ``default_scope`` is used to
+                reset the current registry. Defaults to None.
+    Returns:
+        (BaseEvaluator | ComposedEvaluator): The built evaluator.
     """
     if isinstance(cfg, list):
         evaluators = [
