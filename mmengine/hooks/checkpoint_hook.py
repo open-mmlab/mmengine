@@ -9,6 +9,8 @@ from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
 from .hook import Hook
 
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+
 
 @HOOKS.register_module()
 class CheckpointHook(Hook):
@@ -65,7 +67,7 @@ class CheckpointHook(Hook):
         self.sync_buffer = sync_buffer
         self.file_client_args = file_client_args
 
-    def before_run(self, runner: object) -> None:
+    def before_run(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
         This function will get the appropriate file client, and the directory
@@ -75,7 +77,7 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if not self.out_dir:
-            self.out_dir = runner.work_dir  # type: ignore
+            self.out_dir = runner.work_dir
 
         self.file_client = FileClient.infer_client(self.file_client_args,
                                                    self.out_dir)
@@ -84,17 +86,13 @@ class CheckpointHook(Hook):
         # `self.out_dir` is set so the final `self.out_dir` is the
         # concatenation of `self.out_dir` and the last level directory of
         # `runner.work_dir`
-        if self.out_dir != runner.work_dir:  # type: ignore
-            basename = osp.basename(
-                runner.work_dir.rstrip(  # type: ignore
-                    osp.sep))
+        if self.out_dir != runner.work_dir:
+            basename = osp.basename(runner.work_dir.rstrip(osp.sep))
             self.out_dir = self.file_client.join_path(
-                self.out_dir,  # type: ignore
-                basename)
+                self.out_dir, basename)  # type: ignore  # noqa: E501
 
-        runner.logger.info((  # type: ignore
-            f'Checkpoints will be saved to {self.out_dir} by '
-            f'{self.file_client.name}.'))
+        runner.logger.info((f'Checkpoints will be saved to {self.out_dir} by '
+                            f'{self.file_client.name}.'))
 
         # disable the create_symlink option because some file backends do not
         # allow to create a symlink
@@ -109,7 +107,7 @@ class CheckpointHook(Hook):
         else:
             self.args['create_symlink'] = self.file_client.allow_symlink
 
-    def after_train_epoch(self, runner: object) -> None:
+    def after_train_epoch(self, runner) -> None:
         """Save the checkpoint and synchronize buffers after each epoch.
 
         Args:
@@ -124,46 +122,40 @@ class CheckpointHook(Hook):
         if self.every_n_epochs(
                 runner, self.interval) or (self.save_last
                                            and self.is_last_epoch(runner)):
-            runner.logger.info(  # type: ignore
-                f'Saving checkpoint at \
-                    {runner.epoch + 1} epochs')  # type: ignore
+            runner.logger.info(f'Saving checkpoint at \
+                    {runner.epoch + 1} epochs')
             if self.sync_buffer:
                 pass
                 # TODO
             self._save_checkpoint(runner)
 
     # TODO Add master_only decorator
-    def _save_checkpoint(self, runner: object) -> None:
+    def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
         Args:
             runner (Runner): The runner of the training process.
         """
-        runner.save_checkpoint(  # type: ignore
-            self.out_dir,
-            save_optimizer=self.save_optimizer,
-            **self.args)
-        if runner.meta is not None:  # type: ignore
+        runner.save_checkpoint(
+            self.out_dir, save_optimizer=self.save_optimizer, **self.args)
+        if runner.meta is not None:
             if self.by_epoch:
                 cur_ckpt_filename = self.args.get(
-                    'filename_tmpl',
-                    'epoch_{}.pth').format(runner.epoch + 1)  # type: ignore
+                    'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
             else:
                 cur_ckpt_filename = self.args.get(
-                    'filename_tmpl',
-                    'iter_{}.pth').format(runner.iter + 1)  # type: ignore
-            runner.meta.setdefault('hook_msgs', dict())  # type: ignore
-            runner.meta['hook_msgs'][  # type: ignore
-                'last_ckpt'] = self.file_client.join_path(
-                    self.out_dir, cur_ckpt_filename)  # type: ignore
+                    'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
+            runner.meta.setdefault('hook_msgs', dict())
+            runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
+                self.out_dir, cur_ckpt_filename)  # type: ignore
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
                 name = 'epoch_{}.pth'
-                current_ckpt = runner.epoch + 1  # type: ignore
+                current_ckpt = runner.epoch + 1
             else:
                 name = 'iter_{}.pth'
-                current_ckpt = runner.iter + 1  # type: ignore
+                current_ckpt = runner.iter + 1
             redundant_ckpts = range(
                 current_ckpt - self.max_keep_ckpts * self.interval, 0,
                 -self.interval)
@@ -178,8 +170,8 @@ class CheckpointHook(Hook):
 
     def after_train_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
@@ -199,9 +191,8 @@ class CheckpointHook(Hook):
         if self.every_n_iters(
                 runner, self.interval) or (self.save_last
                                            and self.is_last_iter(runner)):
-            runner.logger.info(  # type: ignore
-                f'Saving checkpoint at \
-                    {runner.iter + 1} iterations')  # type: ignore
+            runner.logger.info(f'Saving checkpoint at \
+                    {runner.iter + 1} iterations')
             if self.sync_buffer:
                 pass
                 # TODO

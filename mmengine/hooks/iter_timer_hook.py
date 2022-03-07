@@ -1,10 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import time
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, Tuple
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
 from .hook import Hook
+
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 
 @HOOKS.register_module()
@@ -16,45 +18,38 @@ class IterTimerHook(Hook):
 
     priority = 'NORMAL'
 
-    def before_epoch(self, runner: object) -> None:
+    def before_epoch(self, runner) -> None:
         """Record time flag before start a epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self.t = time.time()
 
-    def before_iter(
-            self,
-            runner: object,
-            data_batch: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def before_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """Logging time for loading data and update the time flag.
 
         Args:
-            runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
+            runner (Runner): The runner of the training process.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. Defaults to None.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({  # type: ignore
-            'data_time': time.time() - self.t
-        })
+        runner.log_buffer.update({'data_time': time.time() - self.t})
 
     def after_iter(self,
-                   runner: object,
-                   data_batch: Optional[Sequence[BaseDataSample]] = None,
+                   runner,
+                   data_batch: DATA_BATCH = None,
                    outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Logging time for a iteration and update the time flag.
 
         Args:
-            runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
+            runner (Runner): The runner of the training process.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample]): Outputs from model.
                 Defaults to None.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({  # type: ignore
-            'time': time.time() - self.t
-        })
+        runner.log_buffer.update({'time': time.time() - self.t})
         self.t = time.time()
