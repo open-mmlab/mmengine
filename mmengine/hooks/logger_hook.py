@@ -23,7 +23,7 @@ class LoggerHook(Hook):
     saved in JSON file, tensorboard, wandb .etc.
 
     Args:
-        by_epoch (bool): Whether EpochBasedRunner is used.
+        by_epoch (bool): Whether ``EpochBasedLoop`` is used.
             Defaults to True.
         interval (int): Logging interval (every k iterations).
             Defaults to 10.
