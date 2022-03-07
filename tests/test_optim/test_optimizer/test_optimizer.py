@@ -7,8 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.optim import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
-                            DefaultOptimizerConstructor, build_optimizer,
-                            build_optimizer_constructor)
+                            DefaultOptimizerConstructor, build_optimizer)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
 from mmengine.utils import mmcv_full_available
@@ -236,7 +235,7 @@ class TestBuilder(TestCase):
             type='DefaultOptimizerConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = build_optimizer_constructor(optim_constructor_cfg)
+        optim_constructor = OPTIMIZER_CONSTRUCTORS.build(optim_constructor_cfg)
         optimizer = optim_constructor(self.model)
         self._check_sgd_optimizer(optimizer, self.model, **paramwise_cfg)
 
@@ -271,7 +270,7 @@ class TestBuilder(TestCase):
             type='MyOptimizerConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = build_optimizer_constructor(optim_constructor_cfg)
+        optim_constructor = OPTIMIZER_CONSTRUCTORS.build(optim_constructor_cfg)
         optimizer = optim_constructor(self.model)
 
         param_groups = optimizer.param_groups

@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
-from typing import Callable, List
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
@@ -25,19 +25,19 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def build_optimizer_constructor(cfg: dict) -> Callable:
-    return OPTIMIZER_CONSTRUCTORS.build(cfg)
-
-
-def build_optimizer(model: nn.Module, cfg: dict) -> torch.optim.Optimizer:
+def build_optimizer(
+        model: nn.Module,
+        cfg: dict,
+        default_scope: Optional[str] = None) -> torch.optim.Optimizer:
     optimizer_cfg = copy.deepcopy(cfg)
     constructor_type = optimizer_cfg.pop('constructor',
                                          'DefaultOptimizerConstructor')
     paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
-    optim_constructor = build_optimizer_constructor(
+    optim_constructor = OPTIMIZER_CONSTRUCTORS.build(
         dict(
             type=constructor_type,
             optimizer_cfg=optimizer_cfg,
-            paramwise_cfg=paramwise_cfg))
-    optimizer = optim_constructor(model)
+            paramwise_cfg=paramwise_cfg),
+        default_scope=default_scope)
+    optimizer = optim_constructor(model, default_scope=default_scope)
     return optimizer
