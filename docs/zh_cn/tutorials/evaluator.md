@@ -46,15 +46,17 @@ validation_cfg=dict(
 )
 ```
 
-在使用多个评测器时，可能会出现评测指标同名的情况。比如，在下面的例子中使用了 2 个参数不同的分类正确率评测器，它们对应的评测指标都是 accuracy。此时，为了避免歧义，需要给评测器设置 `prefix` 参数。评测器的 `prefix` 会自动添加在评测指标名称的开头，从而使同名的评测指标可以区分。
+使用多个评测器时，可能出现评测指标同名的情况。比如，在下面的例子中使用了 2 个 `COCOEvaluator` 分别对检测框和关键点的预测结果进行评测，它们的评测指标都包括 `AP`，`AR` 等。为了避免同名评测指标引发歧义，`Evaluator` 中支持通过 `prefix` 参数为评测指标名增加前缀。通常，一个 `Evaluator` 会有默认的前缀，用户也可以在配置文件中进行指定。
 
 ```python
 validation_cfg=dict(
     evaluator=[
-        dict(type='Accuracy', top_k=1, prefix='top1'),
-        dict(type='Accuracy', top_k=5, prefix='top5')
+        dict(type='COCO', iou_type='bbox'),  # 使用默认前缀 `COCO`
+        dict(type='COCO', iou_type='keypoints', prefix='COCOKpts')  # 自定义前缀 `COCOKpts`
     ],
-    main_metric='top1_accuracy',  # 前缀 'top1' 被自动添加进指标名称中，用以区分同名指标
+    # 指定使用前缀为 COCO 的 AP 为主要评测指标
+    # 在没有重名指标歧义的情况下，此处可以不写前缀，只写评测指标名
+    main_metric='COCO.AP',
     interval=10,
     by_epoch=True,
 )
@@ -85,7 +87,9 @@ validation_cfg=dict(
 
  `process()` 方法有 2 个输入参数，分别是测试数据样本`data_samples`和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 
-`compute_metrics()`方法有 1 个输入参数 `results`，里面存放了所有批次测试数据经过 `process()` 方法处理后得到的结果。从中取出样本类别标签和分类预测结果，即可计算得到分类正确率 `acc`。最终，将计算得到的评测指标以字典的形式返回。
+`compute_metrics()` 方法有 1 个输入参数 `results`，里面存放了所有批次测试数据经过 `process()` 方法处理后得到的结果。从中取出样本类别标签和分类预测结果，即可计算得到分类正确率 `acc`。最终，将计算得到的评测指标以字典的形式返回。
+
+此外，我们建议在子类的 `__init__()` 方法的参数中设置默认的 `prefix` 值，以避免与其他评测器出现同名指标。并且在 docstring 中，应说明该评测器的默认 prefix 以及所有评测指标。
 
 具体的实现如下：
 
@@ -97,6 +101,16 @@ import numpy as np
 
 @EVALUATORS.register_module()
 class Accuracy(BaseEvaluator):
+    """ Accuracy Evaluator
+
+    Default prefix: ACC
+    
+    Metrics:
+        - accuracy: classification accuracy    
+    """
+
+    def __init__(self, collect_device: str = 'cpu', prefix: str = 'ACC'):
+        super().__init__(collect_device, prefix)
 
     def process(self, data_samples: Dict, predictions: Dict):
         """Process one batch of data and predictions. The processed

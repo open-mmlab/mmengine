@@ -5,8 +5,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from mmengine import evaluator
-from mmengine.evaluator import BaseEvaluator, ComposedEvaluator
+from mmengine.evaluator import BaseEvaluator, build_evaluator
 from mmengine.registry import EVALUATORS
 
 
@@ -53,16 +52,9 @@ def generate_test_results(size, batch_size, pred, label):
 
 class TestBaseEvaluator(TestCase):
 
-    def build_evaluator(self, cfg):
-        if isinstance(cfg, (list, tuple)):
-            evaluators = [EVALUATORS.build(_cfg) for _cfg in cfg]
-            return ComposedEvaluator(evaluators=evaluators)
-        else:
-            return EVALUATORS.build(cfg)
-
     def test_single_evaluator(self):
         cfg = dict(type='ToyEvaluator')
-        evaluator = self.build_evaluator(cfg)
+        evaluator = build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -77,7 +69,7 @@ class TestBaseEvaluator(TestCase):
 
         # Test empty results
         cfg = dict(type='ToyEvaluator', dummy_metrics=dict(accuracy=1.0))
-        evaluator = self.build_evaluator(cfg)
+        evaluator = build_evaluator(cfg)
         with self.assertWarnsRegex(UserWarning, 'got empty `self._results`.'):
             evaluator.evaluate(0)
 
@@ -87,7 +79,7 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator(cfg)
+        evaluator = build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -109,7 +101,7 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator(cfg)
+        evaluator = build_evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -131,13 +123,14 @@ class TestBaseEvaluator(TestCase):
             dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = self.build_evaluator(cfg)
+        evaluator = build_evaluator(cfg)
         evaluator.dataset_meta = dataset_meta
 
+        self.assertDictEqual(evaluator.dataset_meta, dataset_meta)
         for _evaluator in evaluator.evaluators:
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
 
     def test_prefix(self):
         cfg = dict(type='ToyEvaluator', prefix=None)
         with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
-            evaluator = self.build_evaluator(cfg)
+            _ = build_evaluator(cfg)
