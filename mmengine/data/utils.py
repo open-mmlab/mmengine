@@ -1,11 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
-from typing import List
 
 import numpy as np
 import torch
-
-from .base_data_sample import BaseDataElement
 
 
 def worker_init_fn(worker_id: int, num_workers: int, rank: int,
@@ -26,9 +23,3 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     torch.manual_seed(worker_seed)
-
-
-def collate(batch: List[BaseDataElement]):
-    """Merge a list of data samples to form a mini-batch of Tensor."""
-    # TODO
-    pass

@@ -238,17 +238,17 @@ class Runner:
                 'model should be a dict to build model or a nn.Module, '
                 f'but got {model}')
 
-        # train from scratch or resume from last checkpoint
         self._load_checkpoint = load_checkpoint
         if self._load_checkpoint is not None:
             path = self._load_checkpoint['path']
             if self._load_checkpoint['resume']:
-                # TODO
-                # Should _load.checkpoint contain additional three arguments
-                # resume_optimizer, resume_param_scheduler and map_localtion.
+                # resume training
+                # TODO: Should _load.checkpoint contain additional three
+                # arguments resume_optimizer, resume_param_scheduler and
+                # map_localtion.
                 self.resume(path)
             else:
-                # self.load_checkpoint()
+                # load checkpoint but train from scratch
                 self.load_checkpoint(path)
 
         if is_model_wrapper(
@@ -610,8 +610,6 @@ class Runner:
             dataset=dataset,
             sampler=sampler,
             batch_sampler=None,
-            # TODO
-            # collate_fn=partial(collate, samples_per_gpu=dataloader_cfg.samples_per_gpu),  # noqa: E501
             worker_init_fn=init_fn,
             **dataloader_cfg)
         return data_loader
@@ -856,6 +854,7 @@ class Runner:
 
         ``default_hooks`` will be registered into runner to execute some
         default actions like updating model parameters or saving checkpoints.
+
         Default hooks have :obj:`OptimizerHook`, :obj:`IterTimerHook`,
         :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
         If ``default_hooks`` is None, above hooks will be registered by
@@ -913,7 +912,7 @@ class Runner:
                filename: str,
                resume_optimizer: bool = True,
                resume_param_scheduler: bool = True,
-               map_location: Union[str, Callable] = 'defulat') -> None:
+               map_location: Union[str, Callable] = 'default') -> None:
         """Resume model from checkpoint.
 
         Args:
@@ -941,8 +940,6 @@ class Runner:
 
         self._epoch = checkpoint['meta']['epoch']
         self._iter = checkpoint['meta']['iter']
-        # TODO: Can we get `by_epoch` by checking `EpochBasedLoop` or
-        # `IterBasedLoop`
         # self._inner_iter = checkpoint['meta']['iter']
 
         if self.meta is None:
@@ -1009,7 +1006,7 @@ class Runner:
 
     def save_checkpoint(self,
                         out_dir: str,
-                        filename_tmpl: str = 'epoch_{}.pth',
+                        filename: str,
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
@@ -1021,9 +1018,7 @@ class Runner:
 
         Args:
             out_dir (str): The directory that checkpoints are saved.
-            filename_tmpl (str): The checkpoint filename template,
-                which contains a placeholder for the epoch number.
-                Defaults to 'epoch_{}.pth'.
+            filename (str): The checkpoint filename.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -1048,13 +1043,11 @@ class Runner:
             # More details in https://github.com/open-mmlab/mmcv/pull/1108
 
         # TODO
-        meta.update(epoch=self._epoch + 1, iter=self._iter)
+        meta.update(
+            epoch=self._epoch + 1,
+            iter=self._iter,
+            inner_iter=self._inner_iter)
 
-        # TODO, the filename passed by CheckpointHook
-        # TODO: Can we get `by_epoch` by checking `EpochBasedLoop` or
-        # `IterBasedLoop` to decide the filename
-        filename = filename_tmpl.format(self._epoch + 1)
-        # filename = filename_tmpl.format(self.iter + 1)
         filepath = osp.join(out_dir, filename)
 
         if hasattr(self.model, 'CLASSES') and self.model.CLASSES is not None:
@@ -1079,7 +1072,7 @@ class Runner:
                     'self.optimizer should be an optimizer, but got '
                     f'{self.optimizer}')
 
-        # save scheduler state dict
+        # save param scheduler state dict
         if save_param_scheduler:
             checkpoint['param_schedulers'] = []
             for _scheduler in self.param_schedulers:  # type: ignore
