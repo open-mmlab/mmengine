@@ -70,30 +70,33 @@ class LoggerHook(Hook):
         >>> # record.
         >>> logger_hook_cfg = dict(by_epoch=True,
         >>>                        custom_keys=dict(
-        >>>                            loss=dict(log_name='loss_mean_window',
-        >>>                                      method_name='mean',
-        >>>                                      window_size=10)))
+        >>>                            loss=dict(
+        >>>                                log_name='loss_mean_window',
+        >>>                                method_name='mean',
+        >>>                                window_size=10)))
         >>> # `log_name` is not defined. `loss` will be overwritten by
         >>> # `global_mean` statistics.
         >>> logger_hook_cfg = dict(by_epoch=True,
         >>>                        custom_keys=dict(
-        >>>                            loss=dict(method_name='mean',
-        >>>                                      window_size='global')))
+        >>>                            loss=dict(
+        >>>                                method_name='mean',
+        >>>                                window_size='global')))
         >>> # `time` cannot be overwritten, `global_time` will be an additional
         >>> # record.
         >>> logger_hook_cfg = dict(by_epoch=True,
         >>>                        custom_keys=dict(
-        >>>                            time=dict(log_name='global_time',
-        >>>                                      method='mean',
-        >>>                                      window_size='global')))
+        >>>                            time=dict(
+        >>>                                 log_name='global_time',
+        >>>                                 method='mean',
+        >>>                                 window_size='global')))
         >>> # Record loss with different statistics methods.
         >>> logger_hook_cfg = dict(by_epoch=True,
-        >>>                        custom_keys=dict(
-        >>>                            loss=[dict(log_name='loss_mean_window',
-        >>>                                       method_name='mean',
-        >>>                                       window_size=10),
-        >>>                                  dict(method_name='mean',
-        >>>                                       window_size='global')]))
+        >>>                        custom_keys=dict(loss=[
+        >>>                            dict(log_name='loss_mean_window',
+        >>>                                 method_name='mean',
+        >>>                                 window_size=10),
+        >>>                            dict(method_name='mean',
+        >>>                                 window_size='global')]))
     """
     # eta will be calculated by time. `time` and `data_time` should not be
     # overwritten.
