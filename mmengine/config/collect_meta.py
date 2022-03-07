@@ -3,6 +3,7 @@ from typing import Tuple
 
 from mmengine.utils import check_file_exist
 from mmengine.fileio import load
+import re
 
 
 def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
@@ -16,12 +17,13 @@ def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
     Returns:
         dict: Meta information of target experiment.
     """
-    meta_index_path = osp.join(package_path, 'model-index.yml')
+    meta_index_path = osp.join(package_path, '.mmengine', 'model-index.yml')
     meta_index = load(meta_index_path)
     for meta_path in meta_index['Import']:
         # `meta_path` endswith `metafile.yml`
-        meta_path = osp.join(package_path, meta_path)
-        if cfg_dir in meta_path and osp.isfile(meta_path):
+        meta_path = osp.join(package_path, '.mmengine', meta_path)
+        if cfg_dir in meta_path:
+            check_file_exist(meta_path)
             cfg_meta = load(meta_path)
             break
     else:
@@ -38,7 +40,7 @@ def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
 
 
 def _get_external_cfg_path(package_path: str, cfg_dir: str, cfg_file: str):
-    """ Get config path from 'metafile.yml' of external package.
+    """ Get relative config path from 'metafile.yml' of external package.
 
     Args:
         package_path (str): Path of external package.
@@ -63,13 +65,13 @@ def _get_external_cfg_base_path(package_path: str, rel_cfg_path: str):
     Returns:
         str: Absolute config path from external package.
     """
-    cfg_path = osp.join(package_path, 'configs', rel_cfg_path)
+    cfg_path = osp.join(package_path, '.mmengine', 'configs', rel_cfg_path)
     check_file_exist(cfg_path)
     return cfg_path
 
 
 def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
-    """
+    """Get package name and relative config path.
 
     Args:
         rel_cfg_path (str): External relative config path with 'package::'.
@@ -77,10 +79,11 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
     Returns:
         Tuple(str, str): Package name and relative config path.
     """
-    if '::' not in rel_cfg_path:
-        raise ValueError('`get_config` is used for loading config file cross '
-                         'package, please specify the name of target package, '
-                         'just like `mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco` ') # noqa E301
+    if re.match(r"\w*::\w*/\w*", rel_cfg_path) is None:
+        raise ValueError('`_parse_external_cfg_path` is used for parse '
+                         'external package, please specify the package name '
+                         'and relative config path, just like '
+                         '`mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco` ')
     package_cfg = rel_cfg_path.split('::')
     if len(package_cfg) > 2:
         raise ValueError('`::` should only be used to separate package and '
@@ -91,11 +94,12 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
 
 
 def _parse_rel_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
-    """Get the experiment dir and experiment config name.
+    """Get the experiment dir and experiment config name. This function is only
+    used for get non-base config from external package.
 
     Args:
         rel_cfg_path (str): External relative config path with prefix
-            'package::' and without suffix.
+            'package::'.
 
     Returns:
         Tuple(str, str): Experiment dir and experiment config name.

@@ -3,7 +3,8 @@ import importlib
 
 import torch.nn as nn
 
-from mmengine import (Config, get_installed_path, check_install_package)
+from .config import Config
+from mmengine.utils import get_installed_path, check_install_package
 from .collect_meta import (_parse_external_cfg_path, _parse_rel_cfg_path,
                            _get_cfg_meta, _get_external_cfg_base_path)
 
