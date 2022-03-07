@@ -3,6 +3,8 @@ from typing import Any, Optional, Sequence, Tuple
 
 from mmengine.data import BaseDataSample
 
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+
 
 class Hook:
     """Base hook class.
@@ -12,7 +14,7 @@ class Hook:
 
     priority = 'NORMAL'
 
-    def before_run(self, runner: object) -> None:
+    def before_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations before the training process.
 
@@ -21,7 +23,7 @@ class Hook:
         """
         pass
 
-    def after_run(self, runner: object) -> None:
+    def after_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations after the training process.
 
@@ -30,7 +32,7 @@ class Hook:
         """
         pass
 
-    def before_epoch(self, runner: object) -> None:
+    def before_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations before each epoch.
 
@@ -39,7 +41,7 @@ class Hook:
         """
         pass
 
-    def after_epoch(self, runner: object) -> None:
+    def after_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
 
@@ -48,11 +50,7 @@ class Hook:
         """
         pass
 
-    def before_iter(
-        self,
-        runner: object,
-        data_batch: Optional[Sequence[Tuple[Any,
-                                            BaseDataSample]]] = None) -> None:
+    def before_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each iter.
 
@@ -64,9 +62,8 @@ class Hook:
         pass
 
     def after_iter(self,
-                   runner: object,
-                   data_batch: Optional[Sequence[Tuple[
-                       Any, BaseDataSample]]] = None,
+                   runner,
+                   data_batch: DATA_BATCH = None,
                    outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
@@ -80,7 +77,7 @@ class Hook:
         """
         pass
 
-    def before_save_checkpoint(self, runner: object, checkpoint: dict) -> None:
+    def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """All subclasses should override this method, if they need any
         operations before saving the checkpoint.
 
@@ -90,7 +87,7 @@ class Hook:
         """
         pass
 
-    def after_load_checkpoint(self, runner: object, checkpoint: dict) -> None:
+    def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """All subclasses should override this method, if they need any
         operations after loading the checkpoint.
 
@@ -100,7 +97,7 @@ class Hook:
         """
         pass
 
-    def before_train_epoch(self, runner: object) -> None:
+    def before_train_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations before each training epoch.
 
@@ -109,7 +106,7 @@ class Hook:
         """
         self.before_epoch(runner)
 
-    def before_val_epoch(self, runner: object) -> None:
+    def before_val_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations before each validation epoch.
 
@@ -118,7 +115,7 @@ class Hook:
         """
         self.before_epoch(runner)
 
-    def before_test_epoch(self, runner: object) -> None:
+    def before_test_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations before each test epoch.
 
@@ -127,7 +124,7 @@ class Hook:
         """
         self.before_epoch(runner)
 
-    def after_train_epoch(self, runner: object) -> None:
+    def after_train_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations after each training epoch.
 
@@ -136,7 +133,7 @@ class Hook:
         """
         self.after_epoch(runner)
 
-    def after_val_epoch(self, runner: object) -> None:
+    def after_val_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation epoch.
 
@@ -145,7 +142,7 @@ class Hook:
         """
         self.after_epoch(runner)
 
-    def after_test_epoch(self, runner: object) -> None:
+    def after_test_epoch(self, runner) -> None:
         """All subclasses should override this method, if they need any
         operations after each test epoch.
 
@@ -154,11 +151,7 @@ class Hook:
         """
         self.after_epoch(runner)
 
-    def before_train_iter(
-        self,
-        runner: object,
-        data_batch: Optional[Sequence[Tuple[Any,
-                                            BaseDataSample]]] = None) -> None:
+    def before_train_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each training iteration.
 
@@ -169,11 +162,7 @@ class Hook:
         """
         self.before_iter(runner, data_batch=None)
 
-    def before_val_iter(
-        self,
-        runner: object,
-        data_batch: Optional[Sequence[Tuple[Any,
-                                            BaseDataSample]]] = None) -> None:
+    def before_val_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each validation iteration.
 
@@ -184,11 +173,7 @@ class Hook:
         """
         self.before_iter(runner, data_batch=None)
 
-    def before_test_iter(
-        self,
-        runner: object,
-        data_batch: Optional[Sequence[Tuple[Any,
-                                            BaseDataSample]]] = None) -> None:
+    def before_test_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each test iteration.
 
@@ -201,8 +186,8 @@ class Hook:
 
     def after_train_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each training iteration.
@@ -218,8 +203,8 @@ class Hook:
 
     def after_val_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
@@ -235,8 +220,8 @@ class Hook:
 
     def after_test_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test iteration.
@@ -250,7 +235,7 @@ class Hook:
         """
         self.after_iter(runner, data_batch=None, outputs=None)
 
-    def every_n_epochs(self, runner: object, n: int) -> bool:
+    def every_n_epochs(self, runner, n: int) -> bool:
         """Test whether or not current epoch can be evenly divided by n.
 
         Args:
@@ -260,9 +245,9 @@ class Hook:
         Returns:
             bool: whether or not current epoch can be evenly divided by n.
         """
-        return (runner.epoch + 1) % n == 0 if n > 0 else False  # type: ignore
+        return (runner.epoch + 1) % n == 0 if n > 0 else False
 
-    def every_n_inner_iters(self, runner: object, n: int) -> bool:
+    def every_n_inner_iters(self, runner, n: int) -> bool:
         """Test whether or not current inner iteration can be evenly divided by
         n.
 
@@ -275,10 +260,9 @@ class Hook:
             bool: whether or not current inner iteration can be evenly
             divided by n.
         """
-        return (runner.inner_iter +  # type: ignore
-                1) % n == 0 if n > 0 else False
+        return (runner.inner_iter + 1) % n == 0 if n > 0 else False
 
-    def every_n_iters(self, runner: object, n: int) -> bool:
+    def every_n_iters(self, runner, n: int) -> bool:
         """Test whether or not current iteration can be evenly divided by n.
 
         Args:
@@ -290,9 +274,9 @@ class Hook:
             bool: Return True if the current iteration can be evenly divided
             by n, otherwise False.
         """
-        return (runner.iter + 1) % n == 0 if n > 0 else False  # type: ignore
+        return (runner.iter + 1) % n == 0 if n > 0 else False
 
-    def end_of_epoch(self, runner: object) -> bool:
+    def end_of_epoch(self, runner) -> bool:
         """Check whether the current epoch reaches the `max_epochs` or not.
 
         Args:
@@ -301,9 +285,9 @@ class Hook:
         Returns:
             bool: whether the end of current epoch or not.
         """
-        return runner.inner_iter + 1 == len(runner.data_loader)  # type: ignore
+        return runner.inner_iter + 1 == len(runner.data_loader)
 
-    def is_last_epoch(self, runner: object) -> bool:
+    def is_last_epoch(self, runner) -> bool:
         """Test whether or not current epoch is the last epoch.
 
         Args:
@@ -313,9 +297,9 @@ class Hook:
             bool: bool: Return True if the current epoch reaches the
             `max_epochs`, otherwise False.
         """
-        return runner.epoch + 1 == runner._max_epochs  # type: ignore
+        return runner.epoch + 1 == runner._max_epochs
 
-    def is_last_iter(self, runner: object) -> bool:
+    def is_last_iter(self, runner) -> bool:
         """Test whether or not current epoch is the last iteration.
 
         Args:
@@ -324,4 +308,4 @@ class Hook:
         Returns:
             bool: whether or not current iteration is the last iteration.
         """
-        return runner.iter + 1 == runner._max_iters  # type: ignore
+        return runner.iter + 1 == runner._max_iters

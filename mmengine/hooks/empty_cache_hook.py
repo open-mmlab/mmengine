@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, Tuple
 
 import torch
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
 from .hook import Hook
+
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 
 @HOOKS.register_module()
@@ -33,35 +35,35 @@ class EmptyCacheHook(Hook):
         self._after_iter = after_iter
 
     def after_iter(self,
-                   runner: object,
-                   data_batch: Optional[Sequence[BaseDataSample]] = None,
+                   runner,
+                   data_batch: DATA_BATCH = None,
                    outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Empty cache after an iteration.
 
         Args:
-            runner (object): The runner of the training process.
-            data_batch (Sequence[BaseDataSample]): Data from dataloader.
-                Defaults to None.
+            runner (Runner): The runner of the training process.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+                from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample]): Outputs from model.
                 Defaults to None.
         """
         if self._after_iter:
             torch.cuda.empty_cache()
 
-    def before_epoch(self, runner: object) -> None:
+    def before_epoch(self, runner) -> None:
         """Empty cache before an epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if self._before_epoch:
             torch.cuda.empty_cache()
 
-    def after_epoch(self, runner: object) -> None:
+    def after_epoch(self, runner) -> None:
         """Empty cache after an epoch.
 
         Args:
-            runner (object): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if self._after_epoch:
             torch.cuda.empty_cache()

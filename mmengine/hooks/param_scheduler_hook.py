@@ -5,6 +5,8 @@ from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
 from .hook import Hook
 
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+
 
 @HOOKS.register_module()
 class ParamSchedulerHook(Hook):
@@ -15,8 +17,8 @@ class ParamSchedulerHook(Hook):
 
     def after_train_iter(
             self,
-            runner: object,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
+            runner,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
@@ -30,16 +32,16 @@ class ParamSchedulerHook(Hook):
                 In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
-        for scheduler in runner.schedulers:  # type: ignore
+        for scheduler in runner.schedulers:
             if not scheduler.by_epoch:
                 scheduler.step()
 
-    def after_train_epoch(self, runner: object) -> None:
+    def after_train_epoch(self, runner) -> None:
         """Call step function for each scheduler after each epoch.
 
         Args:
             runner (Runner): The runner of the training process.
         """
-        for scheduler in runner.schedulers:  # type: ignore
+        for scheduler in runner.schedulers:
             if scheduler.by_epoch:
                 scheduler.step()
