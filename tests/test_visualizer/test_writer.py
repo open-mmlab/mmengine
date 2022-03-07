@@ -369,6 +369,19 @@ class TestComposedWriter:
         assert composed_writer.get_experiment(
             1) == composed_writer._writers[1].experiment
 
+    def test_get_visualizer(self):
+        composed_writer = ComposedWriter(writers=[
+            WandbWriter(),
+            dict(
+                type='TensorboardWriter',
+                visualizer=dict(type='Visualizer'),
+                save_dir='temp_dir')
+        ])
+        assert composed_writer.get_visualizer(
+            0) == composed_writer._writers[0].visualizer
+        assert composed_writer.get_visualizer(
+            1) == composed_writer._writers[1].visualizer
+
     def test_add_params(self):
         composed_writer = ComposedWriter(writers=[
             WandbWriter(),

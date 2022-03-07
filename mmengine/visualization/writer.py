@@ -90,7 +90,7 @@ class BaseWriter(metaclass=ABCMeta):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: Optional[np.ndarray] = None,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -100,8 +100,8 @@ class BaseWriter(metaclass=ABCMeta):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (np.ndarray): The image to be saved. The format
-                should be BGR.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
@@ -225,7 +225,7 @@ class LocalWriter(BaseWriter):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: Optional[np.ndarray] = None,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -235,8 +235,8 @@ class LocalWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (np.ndarray): The image to be saved. The format
-                should be BGR.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
@@ -250,11 +250,12 @@ class LocalWriter(BaseWriter):
         if self._img_show:
             self.visualizer.show()
         else:
+            drawn_image = cv2.cvtColor(self.visualizer.get_image(),
+                                       cv2.COLOR_RGB2BGR)
             os.makedirs(self._img_save_dir, exist_ok=True)
             save_file_name = f'{name}_{step}.png'
             cv2.imwrite(
-                osp.join(self._img_save_dir, save_file_name),
-                self.visualizer.get_image())
+                osp.join(self._img_save_dir, save_file_name), drawn_image)
 
     def add_scalar(self,
                    name: str,
@@ -404,7 +405,7 @@ class WandbWriter(BaseWriter):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: Optional[np.ndarray] = None,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -414,8 +415,8 @@ class WandbWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (np.ndarray): The image to be saved. The format
-                should be BGR.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
@@ -594,7 +595,7 @@ class TensorboardWriter(BaseWriter):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: Optional[np.ndarray] = None,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -604,8 +605,8 @@ class TensorboardWriter(BaseWriter):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (np.ndarray): The image to be saved. The format
-                should be BGR.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
@@ -698,14 +699,22 @@ class ComposedWriter(BaseGlobalAccessible):
                         f'BaseWriter, but got {type(writer)}'
                     self._writers.append(writer)
 
+    def __len__(self):
+        return len(self._writers)
+
     def get_writer(self, index: int) -> 'BaseWriter':
         """Returns the writer object corresponding to the specified index."""
         return self._writers[index]
 
     def get_experiment(self, index: int) -> Any:
-        """Returns the writer experiment object corresponding to the specified
-        index."""
+        """Returns the writer's experiment object corresponding to the
+        specified index."""
         return self._writers[index].experiment
+
+    def get_visualizer(self, index: int) -> 'Visualizer':
+        """Returns the writer's visualizer object corresponding to the
+        specified index."""
+        return self._writers[index].visualizer
 
     def add_params(self, params_dict: dict, **kwargs):
         """Record parameters.
@@ -731,7 +740,7 @@ class ComposedWriter(BaseGlobalAccessible):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: Optional[np.ndarray] = None,
                   data_samples: Optional['BaseDataSample'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
@@ -741,8 +750,8 @@ class ComposedWriter(BaseGlobalAccessible):
 
         Args:
             name (str): The unique identifier for the image to save.
-            image (np.ndarray): The image to be saved. The format
-                should be BGR.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
             data_samples (:obj:`BaseDataSample`, optional): The data structure
                 of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
