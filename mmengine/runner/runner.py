@@ -79,7 +79,8 @@ class Runner:
         custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
-        load_checkpoint (dict, optional):
+        load_checkpoint (dict, optional): A dict containing path of
+            checkpoint and a flag whether to resume training.
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
             distributed training is disable.
@@ -282,7 +283,8 @@ class Runner:
 
         self.log_cfg = log_cfg
 
-        # TODO: self._exp_name
+        self._experiment_name = osp.splitext(osp.basename(cfg.filename))[0]
+
         # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
         # hook messages and so on. Those information will be saved to
         # checkpoint for resuming.
@@ -290,8 +292,7 @@ class Runner:
 
         # dump config
         if self._rank == 0:
-            # TODO: how to get the config name rather than `config.py`
-            self.cfg.dump(osp.join(self._work_dir, 'config.py'))
+            self.cfg.dump(osp.join(self._work_dir, osp.basename(cfg.filename)))
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -330,6 +331,11 @@ class Runner:
         )
 
         return runner
+
+    @property
+    def experiment_name(self):
+        """str: Name of experiment, usually the name of config."""
+        return self._experiment_name
 
     @property
     def model_name(self):

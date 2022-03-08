@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Sequence, Tuple, Union
 
 from torch.utils.data import DataLoader
 
@@ -47,11 +47,13 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train_epoch')
         self.runner.epoch += 1
 
-    def run_iter(self, idx, data_batch: BaseDataSample) -> None:
+    def run_iter(self, idx,
+                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
         """Iterate one min-batch.
 
         Args:
-            data_batch (BaseDataSample): Batch of data from dataloader.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+                from dataloader.
         """
         self.runner.inner_iter = idx
 
@@ -94,11 +96,13 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
 
-    def run_iter(self, data_batch: BaseDataSample) -> None:
+    def run_iter(self, data_batch: Sequence[Tuple[Any,
+                                                  BaseDataSample]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (BaseDataSample): Batch of data from dataloader.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+                from dataloader.
         """
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
         outputs = self.runner.model.train_step(data_batch)
@@ -138,11 +142,12 @@ class ValLoop(BaseLoop):
 
         self.runner.call_hook('after_val')
 
-    def run_iter(self, idx, data_batch: BaseDataSample):
+    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataSample]]):
         """Iterate one mini-batch.
 
         Args:
-            data_batch (BaseDataSample): Batch of data from dataloader.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+                from dataloader.
         """
         self.runner.inner_iter = idx
         self.runner.call_hook('before_val_iter', data_batch=data_batch)
@@ -183,11 +188,13 @@ class TestLoop(BaseLoop):
 
         self.runner.call_hook('after_test')
 
-    def run_iter(self, idx, data_batch: BaseDataSample) -> None:
+    def run_iter(self, idx,
+                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (BaseDataSample): Batch of data from dataloader.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+                from dataloader.
         """
         self.runner.inner_iter = idx
         self.runner.call_hook('before_test_iter', data_batch=data_batch)
