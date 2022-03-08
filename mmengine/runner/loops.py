@@ -42,7 +42,6 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook('before_train_epoch')
 
         for idx, data_batch in enumerate(self.dataloader):
-            # data_batch is a tuple containing input and data_samples
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
@@ -86,7 +85,6 @@ class IterBasedTrainLoop(BaseLoop):
 
         while self.runner._iter < self._max_iters:
             data_batch = next(self.dataloader)
-            # data_batch is a tuple containing input and data_samples
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None and
@@ -133,7 +131,6 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('before_val')
 
         for idx, data_batch in enumerate(self.dataloader):
-            # data_batch is a tuple containing input and data_samples
             self.run_iter(idx, data_batch)
 
         # compute metrics
@@ -179,7 +176,6 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('before_test')
 
         for idx, data_batch in enumerate(self.dataloader):
-            # data_batch is a tuple containing input and data_samples
             self.run_iter(idx, data_batch)
 
         # compute metrics

@@ -166,10 +166,7 @@ class Runner:
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
 
-        # dump config
-        self.cfg.dump(osp.join(self._work_dir, 'config.py'))
-
-        # recursively copy the cfg because `self.cfg` will be modified
+        # recursively copy the ``cfg`` because `self.cfg` will be modified
         # everywhere.
         self.cfg = copy.deepcopy(cfg)
 
@@ -261,6 +258,12 @@ class Runner:
             self.model = self.wrap_model(
                 cfg.get('model_wrapper_cfg'), self.model)
 
+        # get model name from the model class
+        if hasattr(self.model, 'module'):
+            self._model_name = self.model.module.__class__.__name__
+        else:
+            self._model_name = self.model.__class__.__name__
+
         self._hooks: List[Hook] = []
         self.register_hooks(default_hooks, custom_hooks)
 
@@ -284,6 +287,11 @@ class Runner:
         # hook messages and so on. Those information will be saved to
         # checkpoint for resuming.
         self.meta: dict = dict()
+
+        # dump config
+        if self._rank == 0:
+            # TODO: how to get the config name rather than `config.py`
+            self.cfg.dump(osp.join(self._work_dir, 'config.py'))
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -324,27 +332,39 @@ class Runner:
         return runner
 
     @property
+    def model_name(self):
+        """str: Name of the model, usually the module class name."""
+        return self._model_name
+
+    @property
     def epoch(self):
+        """int: Current epoch."""
         return self._epoch
 
     @property
     def iter(self):
+        """int: Current epoch."""
         return self._iter
 
     @property
     def inner_iter(self):
+        """int: Current iteration."""
         return self._inner_iter
 
     @property
     def rank(self):
+        """int: Rank of current process. (distributed training)"""
         return self._rank
 
     @property
     def world_size(self):
+        """int: Number of processes participating in the job.
+        (distributed training)"""
         return self._world_size
 
     @property
     def hooks(self):
+        """list[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
 
     def setup_env(self, env_cfg: Dict) -> None:
@@ -611,6 +631,7 @@ class Runner:
             default_args=dict(
                 dataset=dataset, world_size=world_size, rank=rank))
 
+        # build dataloader
         init_fn: Optional[partial]
         if self.seed is not None:
             init_fn = partial(
@@ -621,7 +642,11 @@ class Runner:
         else:
             init_fn = None
 
-        # build dataloader
+        # The default behavior of `collat_fn` in dataloader is to
+        # merge a list of samples to form a mini-batch of Tensor(s).
+        # However, to make this more flexible, collate_fn in MMengine does
+        # nothing. The action to merge a list of samples will be handled
+        # in model.
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler,
