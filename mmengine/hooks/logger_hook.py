@@ -27,15 +27,18 @@ class LoggerHook(Hook):
             Defaults to True.
         interval (int): Logging interval (every k iterations).
             Defaults to 10.
-        custom_keys (dict, optional): Using the specified method to statistics
-            the logs referred in custom_keys. Defaults to None.
+        custom_keys (dict, optional): Defines the keys in the log and which
+            kinds of statistic methods should be used to log them.
 
-            - The key of customs_keys represent the name of log, such as loss,
-            lr. The value of customs_keys is a dict which contains the
-            statistics method and corresponding arguments. If ``log_name`` is
-            not defined in value, the old key will be overwritten by the
-            specified statistics method, otherwise a new log named with
-            ``log_name`` will be recorded.
+            - ``custom_keys`` contains multiple string-dict pairs. In each
+            string-dict pair, the string defines a key name in the log and the
+            dict is a config defines the statistic methods and corresponding
+            arguments used to log the value. For example,
+            ``dict(loss=dict(method_name='mean', log_name='global_loss',
+            window_size='global'))`` which means the log key ``loss`` will be
+            counted as global mean and additionaly logged as ``global_loss``.
+            If ``log_name`` is not defined in config dict, the original logged
+            key will be overwritten.
             - The key in ``LoggerHook.fixed_smooth_keys`` cannot be overwritten
             because ``time`` and ``iter_time`` will be used to calculate
             estimated time of arrival. If you want to recount the time, you
@@ -44,7 +47,8 @@ class LoggerHook(Hook):
             if ``by_epoch`` is set to False, the value of ``windows_size`` is
             not allowed to be `epoch`.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
-            less than :attr:`interval`. Defaults to True.
+            the number of remaining iterations is less than :attr:`interval`.
+            Defaults to True.
         interval_exp_name (int): Logging interval for experiment name. This
             feature is to help users conveniently get the experiment
             information from screen or log file. Defaults to 1000.
@@ -235,7 +239,7 @@ class LoggerHook(Hook):
             runner (Runner): The runner of the training process.
         """
         tag = self._collect_info(runner, 'train')
-        # The training log default contains `lr`, `momentum`, `time` and
+        # The training log default defines `lr`, `momentum`, `time` and
         # `data_time`. `log_tag` will pop these keys and loop other keys to
         # `log_str`.
         log_tag = copy.deepcopy(tag)
@@ -389,7 +393,7 @@ class LoggerHook(Hook):
             log_cfg (dict): A config dict for describing the logging
                 statistics method.
             log_buffers (OrderedDict): All logs for the corresponding phase.
-            tag (OrderedDict): A dict which contains all statistic values of
+            tag (OrderedDict): A dict which defines all statistic values of
                 logs.
         """
         if isinstance(log_cfg, list):
