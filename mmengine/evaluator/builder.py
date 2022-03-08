@@ -20,6 +20,7 @@ def build_evaluator(
             will automatically build composed evaluators.
         default_scope (str, optional): The ``default_scope`` is used to
             reset the current registry. Defaults to None.
+
     Returns:
         BaseEvaluator or ComposedEvaluator: The built evaluator.
     """

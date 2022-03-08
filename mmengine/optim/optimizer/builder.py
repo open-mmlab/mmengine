@@ -13,7 +13,7 @@ def register_torch_optimizers() -> List[str]:
     """Register optimizers in ``torch.optim`` to the ``OPTIMIZERS`` registry.
 
     Returns:
-    List[str]: A list of registered optimizers' name.
+        List[str]: A list of registered optimizers' name.
     """
     torch_optimizers = []
     for module_name in dir(torch.optim):
@@ -46,6 +46,7 @@ def build_optimizer(
         cfg (dict): Config of optimizer and optimizer constructor.
         default_scope (str, optional): The ``default_scope`` is used to
             reset the current registry. Defaults to None.
+
     Returns:
         torch.optim.Optimizer: The built optimizer.
     """
