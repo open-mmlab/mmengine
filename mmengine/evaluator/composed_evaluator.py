@@ -6,7 +6,7 @@ from .base import BaseEvaluator
 
 
 class ComposedEvaluator:
-    """Wrapper class to compose multiple :class:`DatasetEvaluator` instances.
+    """Wrapper class to compose multiple :class:`BaseEvaluator` instances.
 
     Args:
         evaluators (Sequence[BaseEvaluator]): The evaluators to compose.

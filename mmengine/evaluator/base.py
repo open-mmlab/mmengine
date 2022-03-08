@@ -22,13 +22,24 @@ class BaseEvaluator(metaclass=ABCMeta):
     Then it collects all results together from all ranks if distributed
     training is used. Finally, it computes the metrics of the entire dataset.
 
+    A subclass of class:`BaseEvaluator` should assign a meanful value to the
+    class attribute `default_prefix`. See the argument `prefix` for details.
+
     Args:
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
+        prefix (str, optional): The prefix that will be added in the metric
+            names to disambiguate homonymous metrics of different evaluators.
+            If prefix is not provided in the argument, self.default_prefix
+            will be used instead. Default: None
     """
 
-    def __init__(self, collect_device: str = 'cpu') -> None:
+    default_prefix: Optional[str] = None
+
+    def __init__(self,
+                 collect_device: str = 'cpu',
+                 prefix: Optional[str] = None) -> None:
         self._dataset_meta: Union[None, dict] = None
         self.collect_device = collect_device
         self.results: List[Any] = []
@@ -36,6 +47,11 @@ class BaseEvaluator(metaclass=ABCMeta):
         rank, world_size = get_dist_info()
         self.rank = rank
         self.world_size = world_size
+
+        self.prefix = prefix or self.default_prefix
+        if self.prefix is None:
+            warnings.warn('The prefix is not set in evaluator class '
+                          f'{self.__class__.__name__}.')
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -97,9 +113,17 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         if self.rank == 0:
             # TODO: replace with mmengine.dist.master_only
-            metrics = [self.compute_metrics(results)]
+            metrics = self.compute_metrics(results)
+            # Add prefix to metric names
+            if self.prefix:
+                metrics = {
+                    '.'.join((self.prefix, k)): v
+                    for k, v in metrics.items()
+                }
+            metrics = [metrics]  # type: ignore
         else:
             metrics = [None]  # type: ignore
+
         # TODO: replace with mmengine.dist.broadcast
         if self.world_size > 1:
             metrics = dist.broadcast_object_list(metrics)
