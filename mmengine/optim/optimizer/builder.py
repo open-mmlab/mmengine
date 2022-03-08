@@ -13,7 +13,7 @@ def register_torch_optimizers() -> List[str]:
     """Register optimizers in ``torch.optim`` to the ``OPTIMIZERS`` registry.
 
     Returns:
-    torch_optimizers (List[str]): A list of registered optimizers' name.
+    List[str]: A list of registered optimizers' name.
     """
     torch_optimizers = []
     for module_name in dir(torch.optim):
@@ -36,18 +36,18 @@ def build_optimizer(
         default_scope: Optional[str] = None) -> torch.optim.Optimizer:
     """Build function of optimizer.
 
-    If ``constructor`` is set in the cfg, it will build the optimizer
-    constructor, and use optimizer constructor to build the optimizer.
-    If `constructor`` is not set, the ``DefaultOptimizerConstructor`` will be
-    used.
+    If ``constructor`` is set in the ``cfg``, this method will build an
+    optimizer constructor, and use optimizer constructor to build the
+    optimizer. If ``constructor`` is not set, the
+    ``DefaultOptimizerConstructor`` will be used by default.
 
     Args:
         model (nn.Module): Model to be optimized.
         cfg (dict): Config of optimizer and optimizer constructor.
         default_scope (str, optional): The ``default_scope`` is used to
-                reset the current registry. Defaults to None.
+            reset the current registry. Defaults to None.
     Returns:
-        optimizer (torch.optim.Optimizer): The built optimizer.
+        torch.optim.Optimizer: The built optimizer.
     """
     optimizer_cfg = copy.deepcopy(cfg)
     constructor_type = optimizer_cfg.pop('constructor',
