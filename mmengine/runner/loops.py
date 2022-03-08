@@ -83,6 +83,8 @@ class IterBasedTrainLoop(BaseLoop):
     def run(self) -> None:
         """Launch training."""
         self.runner.call_hook('before_train')
+        # In iteration-based training loop, we treat the whole training process
+        # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
 
         while self.runner._iter < self._max_iters:
