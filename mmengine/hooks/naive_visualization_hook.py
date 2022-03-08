@@ -51,9 +51,13 @@ class NaiveVisualizationHook(Hook):
                     inputs,
                     data_samples,  # type: ignore
                     outputs):  # type: ignore
-
-                input = cv2.resize(
-                    input, (data_sample.ori_width, data_sample.ori_height))
+                # TODO We will implement a function to revert the augmentation
+                # in the future.
+                unpad_width, unpad_height = data_sample.scale
+                unpad_image = input[:unpad_height, :unpad_width]
+                origin_image = cv2.resize(
+                    unpad_image,
+                    (data_sample.ori_width, data_sample.ori_height))
                 name = osp.basename(data_sample.img_path)
-                runner.writer.add_image(name, input, data_sample, output,
-                                        self.draw_gt, self.draw_pred)
+                runner.writer.add_image(name, origin_image, data_sample,
+                                        output, self.draw_gt, self.draw_pred)

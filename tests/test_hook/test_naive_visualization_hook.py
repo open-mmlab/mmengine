@@ -13,12 +13,14 @@ class TestNaiveVisualizationHook:
         Hook = NaiveVisualizationHook()
         Runner = Mock(iter=1)
         Runner.writer.add_image = Mock()
-        inputs = torch.randn(2, 3, 5, 5)
+        inputs = torch.randn(2, 3, 15, 15)
         gt_datasamples = [
             BaseDataSample(
                 metainfo=dict(
                     img_norm_cfg=dict(
                         mean=(0, 0, 0), std=(0.5, 0.5, 0.5), to_rgb=True),
+                    scale=(10, 10),
+                    pad_shape=(15, 15, 3),
                     ori_height=5,
                     ori_width=5,
                     img_path='tmp.jpg')),
@@ -26,6 +28,8 @@ class TestNaiveVisualizationHook:
                 metainfo=dict(
                     img_norm_cfg=dict(
                         mean=(0, 0, 0), std=(0.5, 0.5, 0.5), to_rgb=True),
+                    scale=(10, 10),
+                    pad_shape=(15, 15, 3),
                     ori_height=5,
                     ori_width=5,
                     img_path='tmp.jpg'))
