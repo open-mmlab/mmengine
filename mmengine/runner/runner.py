@@ -224,7 +224,7 @@ class Runner:
         if (self.val_dataloader is not None
                 or self.test_dataloader is not None) and evaluator is None:
             raise ValueError(
-                'evaluator should not None when val_dataloader or '
+                'evaluator should not be None when val_dataloader or '
                 'test_dataloader is not None.')
         self._evaluator = evaluator
 
@@ -296,6 +296,7 @@ class Runner:
         Returns:
             Runner: A runner build from ``cfg``.
         """
+        cfg = copy.deepcopy(cfg)
         runner = cls(
             model=cfg.model,
             work_dir=cfg.work_dir,
@@ -768,7 +769,9 @@ class Runner:
             **kwargs: Keyword arguments are passed to hook.
         """
         for hook in self._hooks:
-            getattr(hook, fn_name)(self, **kwargs)
+            # support adding additional custom hook methods
+            if hasattr(hook, fn_name):
+                getattr(hook, fn_name)(self, **kwargs)
 
     def register_hook(
             self,
