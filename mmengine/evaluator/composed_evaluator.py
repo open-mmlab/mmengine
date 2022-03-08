@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Optional, Sequence, Union
 
+from mmengine.data import BaseDataSample
 from .base import BaseEvaluator
 
 
@@ -31,11 +32,11 @@ class ComposedEvaluator:
         for evaluator in self.evaluators:
             evaluator.dataset_meta = dataset_meta
 
-    def process(self, data_samples: dict, predictions: dict):
+    def process(self, data_samples: BaseDataSample, predictions: dict):
         """Invoke process method of each wrapped evaluator.
 
         Args:
-            data_samples (dict): The data samples from the dataset.
+            data_samples (BaseDataSample): The data samples from the dataset.
             predictions (dict): The output of the model.
         """
 
@@ -54,9 +55,8 @@ class ComposedEvaluator:
                 this size.
 
         Returns:
-            metrics (dict): Evaluation metrics of all wrapped evaluators. The
-            keys are the names of the metrics, and the values are
-            corresponding results.
+            dict: Evaluation metrics of all wrapped evaluators. The keys are
+            the names of the metrics, and the values are corresponding results.
         """
         metrics = {}
         for evaluator in self.evaluators:
