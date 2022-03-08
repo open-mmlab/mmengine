@@ -5,16 +5,17 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
-import torch.distributed as dist
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
+
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 
 @HOOKS.register_module()
@@ -36,7 +37,7 @@ class LoggerHook(Hook):
             arguments used to log the value. For example,
             ``dict(loss=dict(method_name='mean', log_name='global_loss',
             window_size='global'))`` which means the log key ``loss`` will be
-            counted as global mean and additionaly logged as ``global_loss``.
+            counted as global mean and additionally logged as ``global_loss``.
             If ``log_name`` is not defined in config dict, the original logged
             key will be overwritten.
             - The key in ``LoggerHook.fixed_smooth_keys`` cannot be overwritten
@@ -44,8 +45,8 @@ class LoggerHook(Hook):
             estimated time of arrival. If you want to recount the time, you
             should set ``log_name`` in corresponding values.
             - For those statistic methods with the ``window_size`` argument,
-            if ``by_epoch`` is set to False, the value of ``windows_size`` is
-            not allowed to be `epoch`.
+            if ``by_epoch`` is set to False, ``windows_size`` should not be
+            `epoch` to statistics log value by epoch.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
             the number of remaining iterations is less than :attr:`interval`.
             Defaults to True.
@@ -62,9 +63,9 @@ class LoggerHook(Hook):
         out_suffix (Tuple[str] or str): Those filenames ending with
             ``out_suffix`` will be copied to ``out_dir``. Defaults to
             ('.log.json', '.log', '.py').
-        keep_local (bool): Whether to keep local log when :attr:`out_dir` is
-            specified. If False, the local log will be removed. Defaults to
-            True.
+        keep_local (bool): Whether to keep local logs in the local machien
+            when :attr:`out_dir` is specified. If False, the local log will be
+            removed. Defaults to True.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Defaults to None.
@@ -173,7 +174,7 @@ class LoggerHook(Hook):
     def after_train_iter(
             self,
             runner,
-            data_batch: Optional[Sequence[BaseDataSample]] = None,
+            data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Record training logs.
 
@@ -434,13 +435,13 @@ class LoggerHook(Hook):
             The maximum GPU memory occupied by tensors in megabytes for a given
             device.
         """
+        # TODO use `mmengine.dist.max_memory_allocated` to count mem_mb
         device = getattr(runner.model, 'output_device', None)
         mem = torch.cuda.max_memory_allocated(device=device)
         mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
                               dtype=torch.int,
                               device=device)
-        if runner.world_size > 1:
-            dist.reduce(mem_mb, 0, op=dist.ReduceOp.MAX)
+        torch.cuda.reset_peak_memory_stats()
         return int(mem_mb.item())
 
     def _check_custom_keys(self) -> None:
