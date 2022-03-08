@@ -768,7 +768,7 @@ class Runner:
         return loop
 
     def _load_or_resume(self):
-        # resume checkpoint
+        # load or resume checkpoint
         if self._load_checkpoint is not None and not self._has_loaded:
             # `self._has_loaded` will be set as True
             if self._load_checkpoint['resume']:
