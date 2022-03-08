@@ -47,7 +47,7 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
-        self.runner.epoch += 1
+        self.runner._epoch += 1
 
     def run_iter(self, idx,
                  data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
@@ -57,7 +57,7 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner.inner_iter = idx
+        self.runner._inner_iter = idx
 
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
         outputs = self.runner.model.train_step(data_batch)

@@ -30,6 +30,7 @@ from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
 from mmengine.utils import is_list_of, symlink
+from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
@@ -87,6 +88,7 @@ class Runner:
             dict(dist_cfg=dict(backend='nccl')).
         log_cfg (dict, optional): A dict to build logger object. Defaults to
             None.
+        writer_cfg (dict, optional): TODO
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
         seed (int, optional): A number to guarantee reproducible results.
@@ -134,6 +136,9 @@ class Runner:
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
                 log_cfg=dict(log_level='INFO'),
+                writer_cfg=dict(
+                    name='composed_writer',
+                    writers=[dict(type='LocalWriter', save_dir='temp_dir')])
             )
         >>> runner = Runner.build_from_cfg(cfg)
     """
@@ -161,6 +166,7 @@ class Runner:
         launcher: Optional[str] = None,
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         log_cfg: Optional[dict] = None,
+        writer_cfg: Optional[Dict] = None,
         default_scope: Optional[str] = None,
         seed: Optional[int] = None,
         deterministic: bool = False,
@@ -181,11 +187,17 @@ class Runner:
         # more details.
         self.default_scope = default_scope
 
-        # TODO, custom_imports
-
         self._epoch = 0
         self._iter = 0
         self._inner_iter = 0
+
+        self._launcher = launcher
+        if self._launcher == 'none':
+            self.distributed = False
+        else:
+            self.distributed = True
+
+        self._rank, self._world_size = get_dist_info()
 
         # lazy initialization
         training_related = [
@@ -240,20 +252,19 @@ class Runner:
             self.model = model
         else:
             raise TypeError(
-                'model should be a dict to build model or a nn.Module, '
-                f'but got {model}')
+                'model should be a dict to build model or an instance of '
+                f'torch.nn.Module, but got {model}')
 
         self._load_checkpoint = load_checkpoint
         # flag to mark whether has loaded or resumed checkpoint
         self._has_loaded = False
 
-        if (is_model_wrapper(self.model)
-                and self.cfg.get('model_wrapper_cfg') is not None):
-            raise TypeError(
-                'model has been wrapped and "model_wrapper_cfg" should be None'
-                f' but got {self.cfg.get("model_wrapper_cfg")}')
-
-        if self.cfg.get('model_wrapper_cfg') is not None:
+        if is_model_wrapper(self.model):
+            if self.cfg.get('model_wrapper_cfg') is not None:
+                raise TypeError(
+                    'model has been wrapped and "model_wrapper_cfg" should be '
+                    f'None, but got {self.cfg.get("model_wrapper_cfg")}')
+        else:
             self.model = self.wrap_model(
                 self.cfg.get('model_wrapper_cfg'), self.model)
 
@@ -265,14 +276,6 @@ class Runner:
 
         self._hooks: List[Hook] = []
         self.register_hooks(default_hooks, custom_hooks)
-
-        self._launcher = launcher
-        if self._launcher == 'none':
-            self.distributed = False
-        else:
-            self.distributed = True
-
-        self._rank, self._world_size = get_dist_info()
 
         self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         self.deterministic = deterministic
@@ -287,11 +290,17 @@ class Runner:
         else:
             self._experiment_name = self.timestamp
 
+        self.message_hub = MessageHub(self._experiment_name)
+
         if log_cfg is None:
             log_cfg = dict()
         self.logger = MMLogger(**log_cfg)
 
-        self.message_hub = MessageHub(self._experiment_name)
+        if writer_cfg is None:
+            writer_cfg = dict(
+                name='composed_writer',
+                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
+        self.writer = ComposedWriter.create_instance(**writer_cfg)
 
         # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
         # hook messages and so on. Those information will be saved to
@@ -334,6 +343,7 @@ class Runner:
             launcher=cfg.get('launcher'),
             env_cfg=cfg.get('env_cfg'),
             log_cfg=cfg.get('log_cfg'),
+            writer_cfg=cfg.get('writer_cfg'),
             default_scope=cfg.get('default_scope'),
             seed=cfg.get('seed'),
             deterministic=cfg.get('deterministic'),
@@ -538,6 +548,7 @@ class Runner:
         """
         if model_wrapper_cfg is None:
             if self.distributed:
+                # TODO
                 find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                       False)
                 # Sets the `find_unused_parameters` parameter in
@@ -551,7 +562,8 @@ class Runner:
                 # TODO
                 # Note that set `export CUDA_VISIBLE_DEVICES=-1` will
                 # enable CPU training.
-                model = MMDataParallel(model, device_ids=self.cfg.gpu_ids)
+                model = MMDataParallel(
+                    model, device_ids=self.cfg.get('gpu_ids'))
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
