@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import torch
 import torch.distributed as dist
@@ -62,14 +62,17 @@ class BaseEvaluator(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self, data_samples: BaseDataSample, predictions: dict) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
+                predictions: Sequence[BaseDataSample]) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            data_samples (BaseDataSample): The data samples from the dataset.
-            predictions (dict): The output of the model.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+                from the dataloader.
+            predictions (Sequence[BaseDataSample]): A batch of outputs from
+                the model.
         """
 
     @abstractmethod

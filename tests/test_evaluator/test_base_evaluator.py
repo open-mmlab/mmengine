@@ -5,6 +5,7 @@ from unittest import TestCase
 
 import numpy as np
 
+from mmengine.data import BaseDataSample
 from mmengine.evaluator import BaseEvaluator, build_evaluator
 from mmengine.registry import EVALUATORS
 
@@ -36,17 +37,20 @@ class ToyEvaluator(BaseEvaluator):
         super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_samples, predictions):
-        result = {'pred': predictions['pred'], 'label': data_samples['label']}
-        self.results.append(result)
+    def process(self, data_batch, predictions):
+        results = [{
+            'pred': pred.pred,
+            'label': data[1].label
+        } for pred, data in zip(predictions, data_batch)]
+        self.results.extend(results)
 
     def compute_metrics(self, results: List):
         if self.dummy_metrics is not None:
             assert isinstance(self.dummy_metrics, dict)
             return self.dummy_metrics.copy()
 
-        pred = np.concatenate([result['pred'] for result in results])
-        label = np.concatenate([result['label'] for result in results])
+        pred = np.array([result['pred'] for result in results])
+        label = np.array([result['label'] for result in results])
         acc = (pred == label).sum() / pred.size
 
         metrics = {
@@ -74,9 +78,11 @@ def generate_test_results(size, batch_size, pred, label):
     bs_residual = size % batch_size
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
-        data_samples = {'label': np.full(bs, label)}
-        predictions = {'pred': np.full(bs, pred)}
-        yield (data_samples, predictions)
+        data_batch = [(np.zeros(
+            (3, 10, 10)), BaseDataSample(data={'label': label}))
+                      for _ in range(bs)]
+        predictions = [BaseDataSample(data={'pred': pred}) for _ in range(bs)]
+        yield (data_batch, predictions)
 
 
 class TestBaseEvaluator(TestCase):
