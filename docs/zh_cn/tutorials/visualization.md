@@ -59,9 +59,9 @@ class WandbWriter:
     def visualizer(self):
         return self._visualizer
 
-    def add_image(self, name, image, datasample=None, step=0, **kwargs):
+    def add_image(self, name, image, gt_sample=None, pred_sample=None, draw_gt=True, draw_pred=True, step=0, **kwargs):
         if self._visualize:
-           self._visualize.draw(image, datasample)
+           self._visualize.draw(image, gt_sample, pred_sample, draw_gt, draw_pred)
            # 调用 Writer API 写图片到后端
            self.wandb.log({name: self.visualizer.get_image()}, ...)
            ...
@@ -139,27 +139,24 @@ featmap=visualizer.draw_featmap(tensor_chw,image)
 
 自定义的 Visualizer 中大部分情况下只需要实现 `get_image` 和 `draw` 接口。`draw` 是最高层的用户调用接口，`draw` 接口负责所有绘制功能，例如绘制检测框、检测掩码 mask 和 检测语义分割图等等。依据任务的不同，`draw` 接口实现的复杂度也不同。
 
-以目标检测可视化需求为例，可能需要同时绘制边界框 bbox、掩码 mask 和语义分割图 seg_map，如果如此多功能全部写到 `draw` 方法中会难以理解和维护。为了解决该问题，`Visualizer` 基于 OpenMMLab 2.0 抽象数据接口规范支持了 `register_task` 函数。假设 MMDetection 中需要同时绘制预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 `DetVisualizer` 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@Visualizer.register_task` 装饰器。
+以目标检测可视化需求为例，可能需要同时绘制边界框 bbox、掩码 mask 和语义分割图 seg_map，如果如此多功能全部写到 `draw` 方法中会难以理解和维护。为了解决该问题，`Visualizer` 基于 OpenMMLab 2.0 抽象数据接口规范支持了 `register_task` 函数。假设 MMDetection 中需要同时绘制预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 `DetVisualizer` 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@Visualizer.register_task` 装饰器。一个简略的实现如下所示
 
 ```python
 class DetVisualizer(Visualizer):
 
-    def get_image(self):
-        ...
-
-    def draw(self, data_sample, image=None, show_gt=True, show_pred=True):
-        if show_gt:
+    def draw(self, image, gt_sample=None, pred_sample=None, draw_gt=True, draw_pred=True):
+        if draw_gt:
             for task in self.task_dict:
                 task_attr = 'gt_' + task
-                if task_attr in data_sample:
+                if task_attr in gt_sample:
                     # DataType.GT 表示当前绘制标注数据
-                    self.task_dict[task](self, data_sample[task_attr], DataType.GT)
-        if show_pred:
+                    self.task_dict[task](self, gt_sample[task_attr], DataType.GT)
+        if draw_pred:
             for task in self.task_dict:
                 task_attr = 'pred_' + task
-                if task_attr in data_sample:
+                if task_attr in pred_sample:
                     # DataType.PRED 表示当前绘制预测结果
-                    self.task_dict[task](self, data_sample[task_attr], DataType.PRED)
+                    self.task_dict[task](self, pred_sample[task_attr], DataType.PRED)
 
     @Visualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
@@ -255,8 +252,7 @@ local_writer.add_image('featmap', featmap_image)
 
 ```python
 # 创建实例
-writers =[dict(type='LocalWriter', save_dir='temp_dir', visualizer=dict(type='DetVisualizer')),
-        dict(type='WandbWriter')]
+writers=[dict(type='LocalWriter', save_dir='temp_dir', visualizer=dict(type='DetVisualizer')), dict(type='WandbWriter')]
 
 ComposedWriter.create_instance('composed_writer', writers=writers)
 ```
