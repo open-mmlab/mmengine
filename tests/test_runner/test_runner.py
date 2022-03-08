@@ -17,17 +17,19 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
+from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import (Hook, IterTimerHook, OptimizerHook,
                             ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.model.wrappers import MMDataParallel, MMDistributedDataParallel
-from mmengine.optim.scheduler import MultiStepLR
+from mmengine.optim.scheduler import MultiStepLR, StepLR
 from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                Registry)
-from mmengine.runner import EpochBasedTrainLoop, IterBasedTrainLoop, Runner
+from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
+                             Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import get_priority
 
 
@@ -82,6 +84,7 @@ class TestRunner(TestCase):
         self.temp_dir = tempfile.gettempdir()
         full_cfg = dict(
             model=dict(type='ToyModel'),
+            work_dir=self.temp_dir,
             train_dataloader=dict(
                 dataset=dict(type='ToyDataset'),
                 sampler=dict(type='DefaultSampler', shuffle=True),
@@ -112,7 +115,7 @@ class TestRunner(TestCase):
                 param_scheduler=dict(type='ParamSchedulerHook')),
             env_cfg=dict(dist_params=dict(backend='nccl'), ),
             log_cfg=dict(log_level='INFO'),
-            work_dir=self.temp_dir)
+        )
         self.full_cfg = Config(full_cfg)
 
     def tearDown(self):
@@ -128,12 +131,12 @@ class TestRunner(TestCase):
         # model should be full initialized
         assert isinstance(runner.model, (nn.Module, MMDataParallel))
         # lazy init
-        assert isinstance(runner.optimzier, dict)
-        assert isinstance(runner.scheduler, list)
+        assert isinstance(runner.optimizer, dict)
+        assert isinstance(runner.param_schedulers, list)
         assert isinstance(runner.train_dataloader, dict)
         assert isinstance(runner.val_dataloader, dict)
         assert isinstance(runner.test_dataloader, dict)
-        assert isinstance(runner.evaluator, dict)
+        assert isinstance(runner._evaluator, dict)
 
         # after runner.train(), train and val loader should be initialized
         # test loader should still be config
@@ -141,8 +144,8 @@ class TestRunner(TestCase):
         assert isinstance(runner.test_dataloader, dict)
         assert isinstance(runner.train_dataloader, DataLoader)
         assert isinstance(runner.val_dataloader, DataLoader)
-        assert isinstance(runner.optimzier, SGD)
-        assert isinstance(runner.evaluator, ToyEvaluator)
+        assert isinstance(runner.optimizer, SGD)
+        assert isinstance(runner._evaluator, ToyEvaluator)
 
         runner.test()
         assert isinstance(runner.test_dataloader, DataLoader)
@@ -194,7 +197,7 @@ class TestRunner(TestCase):
             model=model,
             train_dataloader=DataLoader(dataset=ToyDataset()),
             val_dataloader=DataLoader(dataset=ToyDataset()),
-            optimzier=optimizer,
+            optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             evaluator=ToyEvaluator(),
             train_cfg=dict(by_epoch=True, max_epochs=3),
@@ -210,11 +213,13 @@ class TestRunner(TestCase):
         # test other default hooks
         assert 'IterTimerHook' in hook_names
 
+        # TODO
         # cannot run runner.test() when test_dataloader is None
         with self.assertRaisesRegex(AssertionError,
                                     'test dataloader does not exist'):
             runner.test()
 
+        # TODO
         # cannot run runner.train() when optimizer is None
         with self.assertRaisesRegex(AssertionError,
                                     'optimizer does not exist'):
@@ -385,6 +390,134 @@ class TestRunner(TestCase):
         runner = Runner.build_from_cfg(self.full_cfg)
         runner.train()
         assert isinstance(runner.scheduler[0], ToyScheduler)
+
+    def test_build_model(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        model_cfg = dict(type='ToyModel')
+        model = runner.build_model(model_cfg)
+        assert isinstance(model, ToyModel)
+
+        # Model does not implement `train_step` method
+        @MODELS.register_module()
+        class ToyModelv1(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+
+        runner.model = None
+        with self.assertRaisesRegex(RuntimeError, 'Model should implement'):
+            runner.build_model(model_cfg)
+
+    def test_build_optimizer(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+        cfg = dict(type='SGD', lr=0.01)
+        optimizer = runner.build_optimizer(cfg)
+        assert isinstance(optimizer, SGD)
+
+    def test_build_param_scheduler(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+        cfg = dict(type='MultiStepLR', milestones=[1, 2])
+
+        # Optimizer should be built before ParamScheduler
+        runner.optimizer = None
+        with self.assertRaisesRegex(RuntimeError):
+            param_schedulers = runner.build_param_scheduler(cfg)
+
+        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+
+        # cfg is a dict
+        param_schedulers = runner.build_param_scheduler(cfg)
+        assert isinstance(param_schedulers[0], MultiStepLR)
+
+        # cfg is a list of dict
+        cfg = [
+            dict(type='MultiStepLR', milestones=[1, 2]),
+            dict(type='Step', step_size=1)
+        ]
+        param_schedulers = runner.build_param_scheduler(cfg)
+        assert len(param_schedulers) == 2
+        assert isinstance(param_schedulers[0], MultiStepLR)
+        assert isinstance(param_schedulers[1], StepLR)
+
+    def test_build_dataloader(self):
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            batch_size=1,
+            num_workers=0)
+        runner = Runner.build_from_cfg(self.full_cfg)
+        dataloader = runner.build_dataloader(cfg)
+        assert isinstance(dataloader, DataLoader)
+        assert isinstance(dataloader.dataset, ToyDataset)
+        assert isinstance(dataloader.sampler, DefaultSampler)
+
+    def test_build_train_loop(self):
+        # Only one of type or by_epoch can exist in cfg
+        runner = Runner.build_from_cfg(self.full_cfg)
+        cfg = dict(type='EpochBasedTrainLoop', by_epoch=True, max_epochs=3)
+        with self.assertRaisesRegex(RuntimeError, 'Only one'):
+            runner.build_train_loop(cfg)
+
+        # type in cfg
+        cfg = dict(type='EpochBasedTrainLoop', max_epochs=3)
+        loop = runner.build_train_loop(cfg)
+        assert isinstance(loop, EpochBasedTrainLoop)
+
+        cfg = dict(type='IterBasedTrainLoop', max_epochs=3)
+        loop = runner.build_train_loop(cfg)
+        assert isinstance(loop, IterBasedTrainLoop)
+
+        # by_epoch in cfg
+        cfg = dict(by_epoch=True, max_epochs=3)
+        loop = runner.build_train_loop(cfg)
+        assert isinstance(loop, EpochBasedTrainLoop)
+
+        cfg = dict(by_epoch=False, max_epochs=3)
+        loop = runner.build_train_loop(cfg)
+        assert isinstance(loop, IterBasedTrainLoop)
+
+    def test_build_val_loop(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        @LOOPS.register_module()
+        class CustomValLoop(BaseLoop):
+            pass
+
+        # type in cfg
+        cfg = dict(type='CustomValLoop', interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, CustomValLoop)
+
+        cfg = dict(type='ValLoop', interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, ValLoop)
+
+        # type not in cfg
+        cfg = dict(interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, ValLoop)
+
+    def test_build_test_loop(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+
+        @LOOPS.register_module()
+        class CustomTestLoop(BaseLoop):
+            pass
+
+        # type in cfg
+        cfg = dict(type='CustomTestLoop', interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, CustomTestLoop)
+
+        cfg = dict(type='TestLoop', interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, TestLoop)
+
+        # type not in cfg
+        cfg = dict(interval=1)
+        loop = runner.build_val_loop(cfg)
+        assert isinstance(loop, ValLoop)
 
     def test_register_hook(self):
         runner = Runner.build_from_cfg(self.full_cfg)

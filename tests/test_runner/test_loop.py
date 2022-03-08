@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from mmengine.runner.loop import (EpochBasedTrainLoop, IterBasedTrainLoop,
-                                  TestLoop, ValLoop)
+from mmengine.runner import (EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop,
+                             ValLoop)
 
 
 class ToyDataset(Dataset):

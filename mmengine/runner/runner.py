@@ -131,7 +131,7 @@ class Runner:
                     logger=dict(type='TextLoggerHook'),
                     optimizer=dict(type='OptimizerHook', grad_clip=False),
                     param_scheduler=dict(type='ParamSchedulerHook')),
-                env_cfg=dict(dist_cfg=dict(backend='nccl'), ),
+                env_cfg=dict(dist_cfg=dict(backend='nccl')),
                 log_cfg=dict(log_level='INFO'),
             )
         >>> runner = Runner.build_from_cfg(cfg)
