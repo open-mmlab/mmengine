@@ -11,7 +11,6 @@ from inspect import getfullargspec
 from itertools import repeat
 from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
 
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -470,19 +469,11 @@ def tensor2imgs(tensor: torch.Tensor,
         std = (1, ) * channels
     assert (channels == len(mean) == len(std) == 3) or \
         (channels == len(mean) == len(std) == 1 and not to_rgb)
-
-    num_imgs = tensor.size(0)
-    mean = np.array(mean, dtype=np.float32)
-    std = np.array(std, dtype=np.float32)
-    imgs = []
-    for img_id in range(num_imgs):
-        img = tensor[img_id, ...].cpu().numpy().transpose(1, 2, 0)
-        assert img.dtype != np.uint8
-        mean = mean.reshape(1, -1).astype(np.float64)  # type: ignore
-        std = std.reshape(1, -1).astype(np.float64)  # type: ignore
-        img = cv2.multiply(img, std)  # make a copy
-        cv2.add(img, mean, img)  # inplace
-        if to_rgb:
-            cv2.cvtColor(img, cv2.COLOR_RGB2BGR, img)  # inplace
-        imgs.append(np.ascontiguousarray(img))
+    mean = np.array(mean, dtype=np.float32).reshape((1, 1, 1, -1))
+    std = np.array(std, dtype=np.float32).reshape((1, 1, 1, -1))
+    imgs = tensor.cpu().numpy().transpose(0, 2, 3, 1)
+    imgs = imgs * std + mean
+    if to_rgb and channels == 3:
+        imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
+    imgs = [np.ascontiguousarray(img) for img in imgs]
     return imgs

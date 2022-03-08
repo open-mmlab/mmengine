@@ -10,7 +10,7 @@ from mmengine.hooks import NaiveVisualizationHook
 class TestNaiveVisualizationHook:
 
     def test_after_train_iter(self):
-        Hook = NaiveVisualizationHook()
+        naive_visualization_hook = NaiveVisualizationHook()
         Runner = Mock(iter=1)
         Runner.writer.add_image = Mock()
         inputs = torch.randn(2, 3, 15, 15)
@@ -36,4 +36,5 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample(), BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        Hook.after_test_iter(Runner, data_batch, pred_datasamples)
+        naive_visualization_hook.after_test_iter(Runner, data_batch,
+                                                 pred_datasamples)
