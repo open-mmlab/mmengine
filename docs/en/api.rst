@@ -41,3 +41,9 @@ Distributed
 Logging
 --------
 .. automodule:: mmengine.logging
+    :members:
+
+Visualization
+--------
+.. automodule:: mmengine.visualization
+    :members:

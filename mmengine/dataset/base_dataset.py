@@ -350,10 +350,10 @@ class BaseDataset(Dataset):
             self.full_init()
 
         if self.test_mode:
-            return self._prepare_data(idx)
+            return self.prepare_data(idx)
 
         for _ in range(self.max_refetch):
-            data_sample = self._prepare_data(idx)
+            data_sample = self.prepare_data(idx)
             if data_sample is None:
                 idx = self._rand_another()
                 continue
@@ -527,7 +527,7 @@ class BaseDataset(Dataset):
         """
         return np.random.randint(0, len(self))
 
-    def _prepare_data(self, idx) -> Any:
+    def prepare_data(self, idx) -> Any:
         """Get data processed by ``self.pipeline``.
 
         Args:
