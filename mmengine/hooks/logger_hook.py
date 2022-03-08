@@ -63,7 +63,7 @@ class LoggerHook(Hook):
         out_suffix (Tuple[str] or str): Those filenames ending with
             ``out_suffix`` will be copied to ``out_dir``. Defaults to
             ('.log.json', '.log', '.py').
-        keep_local (bool): Whether to keep local logs in the local machien
+        keep_local (bool): Whether to keep local logs in the local machine
             when :attr:`out_dir` is specified. If False, the local log will be
             removed. Defaults to True.
         file_client_args (dict, optional): Arguments to instantiate a
