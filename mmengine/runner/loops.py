@@ -26,8 +26,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
-        self.runner.call_hooks('before_run')  # TODO
-        self.runner.call_hooks('before_train')
+        self.runner.call_hook('before_train')
 
         while self.runner.epoch < self._max_epochs:
             self.run_epoch()
@@ -36,18 +35,17 @@ class EpochBasedTrainLoop(BaseLoop):
                     self.runner.epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
-        self.runner.call_hooks('after_train')
-        self.runner.call_hooks('after_run')
+        self.runner.call_hook('after_train')
 
     def run_epoch(self) -> None:
         """Iterate one epoch."""
-        self.runner.call_hooks('before_train_epoch')
+        self.runner.call_hook('before_train_epoch')
 
         for idx, data_batch in enumerate(self.dataloader):
             # data_batch is a tuple containing input and data_samples
             self.run_iter(idx, data_batch)
 
-        self.runner.call_hooks('after_train_epoch')
+        self.runner.call_hook('after_train_epoch')
         self.runner.epoch += 1
 
     def run_iter(self, idx, data_batch: BaseDataSample) -> None:
@@ -58,9 +56,9 @@ class EpochBasedTrainLoop(BaseLoop):
         """
         self.runner.inner_iter = idx
 
-        self.runner.call_hooks('before_train_iter', data_batch=data_batch)
+        self.runner.call_hook('before_train_iter', data_batch=data_batch)
         outputs = self.runner.model.train_step(data_batch)
-        self.runner.call_hooks(
+        self.runner.call_hook(
             'after_train_iter', data_batch=data_batch, outputs=outputs)
 
         self.runner._iter += 1
@@ -83,9 +81,8 @@ class IterBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
-        self.runner.call_hooks('before_run')
-        self.runner.call_hooks('before_train')
-        self.runner.call_hooks('before_train_epoch')
+        self.runner.call_hook('before_train')
+        self.runner.call_hook('before_train_epoch')
 
         while self.runner._iter < self._max_iters:
             data_batch = next(self.dataloader)
@@ -96,9 +93,8 @@ class IterBasedTrainLoop(BaseLoop):
                     self.runner._iter % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
-        self.runner.call_hooks('after_train_epoch')
-        self.runner.call_hooks('after_train')
-        self.runner.call_hooks('after_run')
+        self.runner.call_hook('after_train_epoch')
+        self.runner.call_hook('after_train')
 
     def run_iter(self, data_batch: BaseDataSample) -> None:
         """Iterate one mini-batch.
@@ -106,9 +102,9 @@ class IterBasedTrainLoop(BaseLoop):
         Args:
             data_batch (BaseDataSample): Batch of data from dataloader.
         """
-        self.runner.call_hooks('before_train_iter', data_batch=data_batch)
+        self.runner.call_hook('before_train_iter', data_batch=data_batch)
         outputs = self.runner.model.train_step(data_batch)
-        self.runner.call_hooks(
+        self.runner.call_hook(
             'after_train_iter', data_batch=data_batch, outputs=outputs)
         self.runner._iter += 1
 
@@ -134,8 +130,7 @@ class ValLoop(BaseLoop):
 
     def run(self):
         """Launch validation."""
-        self.runner.call_hooks('before_run')
-        self.runner.call_hooks('before_val')
+        self.runner.call_hook('before_val')
 
         for idx, data_batch in enumerate(self.dataloader):
             # data_batch is a tuple containing input and data_samples
@@ -144,8 +139,7 @@ class ValLoop(BaseLoop):
         # compute metrics
         self.evaluator.evaluate(len(self.dataloader.dataset))
 
-        self.runner.call_hooks('after_val')
-        self.runner.call_hooks('after_run')
+        self.runner.call_hook('after_val')
 
     def run_iter(self, idx, data_batch: BaseDataSample):
         """Iterate one mini-batch.
@@ -154,10 +148,10 @@ class ValLoop(BaseLoop):
             data_batch (BaseDataSample): Batch of data from dataloader.
         """
         self.runner.inner_iter = idx
-        self.runner.call_hooks('before_val_iter', data_batch=data_batch)
+        self.runner.call_hook('before_val_iter', data_batch=data_batch)
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
-        self.runner.call_hooks(
+        self.runner.call_hook(
             'after_val_iter', data_batch=data_batch, outputs=outputs)
 
 
@@ -182,8 +176,7 @@ class TestLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch test."""
-        self.runner.call_hooks('before_run')
-        self.runner.call_hooks('before_test')
+        self.runner.call_hook('before_test')
 
         for idx, data_batch in enumerate(self.dataloader):
             # data_batch is a tuple containing input and data_samples
@@ -192,8 +185,7 @@ class TestLoop(BaseLoop):
         # compute metrics
         self.evaluator.evaluate(len(self.dataloader.dataset))
 
-        self.runner.call_hooks('after_test')
-        self.runner.call_hooks('after_run')
+        self.runner.call_hook('after_test')
 
     def run_iter(self, idx, data_batch: BaseDataSample) -> None:
         """Iterate one mini-batch.
@@ -202,8 +194,8 @@ class TestLoop(BaseLoop):
             data_batch (BaseDataSample): Batch of data from dataloader.
         """
         self.runner.inner_iter = idx
-        self.runner.call_hooks('before_test_iter', data_batch=data_batch)
+        self.runner.call_hook('before_test_iter', data_batch=data_batch)
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
-        self.runner.call_hooks(
+        self.runner.call_hook(
             'after_test_iter', databatch=data_batch, outputs=outputs)

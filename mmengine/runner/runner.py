@@ -735,7 +735,9 @@ class Runner:
         if not isinstance(self._train_loop, BaseLoop):
             self._train_loop = self.build_train_loop(self._train_loop)
 
+        self.call_hook('before_run')
         self._train_loop.run()  # type: ignore
+        self.call_hook('after_run')
 
     def val(self) -> None:
         """Launch validation."""
@@ -743,7 +745,9 @@ class Runner:
         if not isinstance(self._val_loop, BaseLoop):
             self._val_loop = self.build_val_loop(self._val_loop)
 
+        self.call_hook('before_run')
         self._val_loop.run()  # type: ignore
+        self.call_hook('after_run')
 
     def test(self) -> None:
         """Launch test."""
@@ -751,7 +755,9 @@ class Runner:
         if not isinstance(self._test_loop, BaseLoop):
             self._test_loop = self.build_test_loop(self._test_loop)
 
+        self.call_hook('before_run')
         self._test_loop.run()  # type: ignore
+        self.call_hook('after_run')
 
     def call_hook(self, fn_name: str, **kwargs) -> None:
         """Call all hooks.
