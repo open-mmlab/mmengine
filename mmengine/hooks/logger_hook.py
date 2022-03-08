@@ -5,7 +5,7 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 import torch
 import torch.distributed as dist
@@ -142,12 +142,12 @@ class LoggerHook(Hook):
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
 
-    def before_run(self, runner: Any) -> None:
+    def before_run(self, runner) -> None:
         """Infer ``self.file_client`` from ``self.out_dir``. Initialize the
         ``self.start_iter`` and record the meta information.
 
         Args:
-            runner: The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         if self.out_dir is not None:
             # The final `self.out_dir` is the concatenation of `self.out_dir`
@@ -168,13 +168,13 @@ class LoggerHook(Hook):
 
     def after_train_iter(
             self,
-            runner: Any,
+            runner,
             data_batch: Optional[Sequence[BaseDataSample]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Record training logs.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -196,19 +196,19 @@ class LoggerHook(Hook):
             # iterations will be recorded).
             self._log_train(runner)
 
-    def after_val_epoch(self, runner: Any) -> None:
+    def after_val_epoch(self, runner) -> None:
         """Record validation logs.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         self._log_val(runner)
 
-    def after_run(self, runner: Any) -> None:
+    def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
@@ -228,11 +228,11 @@ class LoggerHook(Hook):
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
 
-    def _log_train(self, runner: Any) -> None:
+    def _log_train(self, runner) -> None:
         """Collect and record training logs which start named with "train/*".
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         tag = self._collect_info(runner, 'train')
         # The training log default contains `lr`, `momentum`, `time` and
@@ -290,11 +290,11 @@ class LoggerHook(Hook):
         runner.writer.add_scalars(
             tag, step=runner.iter + 1, file_path=self.json_log_path)
 
-    def _log_val(self, runner: Any) -> None:
+    def _log_val(self, runner) -> None:
         """Collect and record training logs which start named with "val/*".
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
@@ -322,12 +322,12 @@ class LoggerHook(Hook):
         runner.writer.add_scalars(
             tag, step=cur_iter, file_path=self.json_log_path)
 
-    def _get_window_size(self, runner: Any, window_size: Union[int, str]) \
+    def _get_window_size(self, runner, window_size: Union[int, str]) \
             -> int:
         """Parse window_size specified in ``self.custom_keys`` to int value.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             window_size (int or str): Smoothing scale of logs.
 
         Returns:
@@ -345,11 +345,11 @@ class LoggerHook(Hook):
             raise ValueError('window_size should be int, epoch or global, but '
                              f'got invalid {window_size}')
 
-    def _collect_info(self, runner: Any, mode: str) -> dict:
+    def _collect_info(self, runner, mode: str) -> dict:
         """Collect log information to a dict according to mode.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             mode (str): 'train' or 'val', which means the prefix attached by
                 runner.
 
@@ -379,12 +379,12 @@ class LoggerHook(Hook):
                                         mode_log_buffers, tag)
         return tag
 
-    def _parse_custom_keys(self, runner: Any, log_key: str, log_cfg: dict,
+    def _parse_custom_keys(self, runner, log_key: str, log_cfg: dict,
                            log_buffers: OrderedDict, tag: OrderedDict) -> None:
         """Statistics logs in log_buffers according to custom_keys.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             log_key (str): log key specified in ``self.custom_keys``
             log_cfg (dict): A config dict for describing the logging
                 statistics method.
@@ -405,12 +405,12 @@ class LoggerHook(Hook):
                 name = log_key
             tag[name] = log_buffers[log_key].statistics(**log_cfg)
 
-    def _get_max_memory(self, runner: Any) -> int:
+    def _get_max_memory(self, runner) -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
         for a given device.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
 
         Returns:
             The maximum GPU memory occupied by tensors in megabytes for a given
@@ -452,11 +452,11 @@ class LoggerHook(Hook):
                 _check_window_size(value)
                 _check_fixed_keys(key, value)
 
-    def _get_epoch(self, runner: Any, mode: str) -> int:
+    def _get_epoch(self, runner, mode: str) -> int:
         """Get epoch according to mode.
 
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             mode (str): Train or val.
 
         Returns:
@@ -476,7 +476,7 @@ class LoggerHook(Hook):
     def _get_iter(self, runner, inner_iter=False) -> int:
         """Get the current training iteration step.
         Args:
-            runner (Any): The runner of the training process.
+            runner (Runner): The runner of the training process.
             inner_iter (bool): Whether to return the inner iter of an epoch.
                 Defaults to False.
 
