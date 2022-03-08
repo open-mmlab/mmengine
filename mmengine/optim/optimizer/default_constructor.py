@@ -6,8 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
-from mmengine.registry import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
-                               build_from_cfg)
+from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 
@@ -242,7 +241,9 @@ class DefaultOptimizerConstructor:
                 prefix=child_prefix,
                 is_dcn_module=is_dcn_module)
 
-    def __call__(self, model: nn.Module) -> torch.optim.Optimizer:
+    def __call__(self,
+                 model: nn.Module,
+                 default_scope: Optional[str] = None) -> torch.optim.Optimizer:
         if hasattr(model, 'module'):
             model = model.module
 
@@ -250,11 +251,11 @@ class DefaultOptimizerConstructor:
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()
-            return build_from_cfg(optimizer_cfg, OPTIMIZERS)
+            return OPTIMIZERS.build(optimizer_cfg, default_scope=default_scope)
 
         # set param-wise lr and weight decay recursively
         params: List = []
         self.add_params(params, model)
         optimizer_cfg['params'] = params
 
-        return build_from_cfg(optimizer_cfg, OPTIMIZERS)
+        return OPTIMIZERS.build(optimizer_cfg, default_scope=default_scope)

@@ -6,7 +6,7 @@ from .base import BaseEvaluator
 
 
 class ComposedEvaluator:
-    """Wrapper class to compose multiple :class:`DatasetEvaluator` instances.
+    """Wrapper class to compose multiple :class:`BaseEvaluator` instances.
 
     Args:
         evaluators (Sequence[BaseEvaluator]): The evaluators to compose.
@@ -33,13 +33,14 @@ class ComposedEvaluator:
             evaluator.dataset_meta = dataset_meta
 
     def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: dict):
+                predictions: Sequence[BaseDataSample]):
         """Invoke process method of each wrapped evaluator.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): The data samples
-                from the dataset.
-            predictions (dict): The output of the model.
+            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+                from the dataloader.
+            predictions (Sequence[BaseDataSample]): A batch of outputs from
+                the model.
         """
 
         for evalutor in self.evaluators:
