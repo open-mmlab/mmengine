@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from unittest import TestCase
 
 import numpy as np
@@ -66,7 +66,8 @@ class UnprefixedEvaluator(BaseEvaluator):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_samples: dict, predictions: dict) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
+                predictions: Sequence[BaseDataSample]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
