@@ -242,7 +242,6 @@ class TestLoggerHook:
                 dict(method='max', log_name='loss_max')
             ])
         logger_hook = LoggerHook()
-        logger_hook.custom_keys = cfg_dict
         for log_key, log_cfg in cfg_dict.items():
             logger_hook._parse_custom_keys(runner, log_key, log_cfg,
                                            log_buffers, tag)
@@ -251,6 +250,27 @@ class TestLoggerHook:
         assert log_buffers['loss'].min.assert_called
         assert log_buffers['loss'].max.assert_called
         assert log_buffers['loss'].mean.assert_called
+        # `log_name` Cannot be repeated.
+        with pytest.raises(KeyError):
+            cfg_dict = dict(loss=[
+                dict(method='min', window_size='global'),
+                dict(method='max', log_name='loss_max'),
+                dict(method='mean', log_name='loss_max')
+            ])
+            logger_hook.custom_keys = cfg_dict
+            for log_key, log_cfg in cfg_dict.items():
+                logger_hook._parse_custom_keys(runner, log_key, log_cfg,
+                                               log_buffers, tag)
+        # `log_key` cannot be overwritten multiple times.
+        with pytest.raises(AssertionError):
+            cfg_dict = dict(loss=[
+                dict(method='min', window_size='global'),
+                dict(method='max'),
+            ])
+            logger_hook.custom_keys = cfg_dict
+            for log_key, log_cfg in cfg_dict.items():
+                logger_hook._parse_custom_keys(runner, log_key, log_cfg,
+                                               log_buffers, tag)
 
     def test_collect_info(self):
         runner = self._setup_runner()

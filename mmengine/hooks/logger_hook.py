@@ -393,9 +393,19 @@ class LoggerHook(Hook):
                 logs.
         """
         if isinstance(log_cfg, list):
+            log_names = set()
             for cfg in log_cfg:
+                log_name = cfg.get('log_name', None)
+                if log_name in log_names:
+                    raise KeyError(f'{cfg["log_name"]} cannot be Redefined in '
+                                   'log_key')
+                if log_name is not None:
+                    log_names.add(log_name)
                 self._parse_custom_keys(runner, log_key, cfg, log_buffers, tag)
-        if isinstance(log_cfg, dict):
+            assert len(log_names) == len(log_cfg) - 1, \
+                f'{log_key} cannot be overwritten multiple times, please ' \
+                f'check only one key does not contain `log_name` in {log_cfg}.'
+        elif isinstance(log_cfg, dict):
             if 'window_size' in log_cfg:
                 log_cfg['window_size'] = \
                     self._get_window_size(runner, log_cfg['window_size'])
@@ -404,6 +414,10 @@ class LoggerHook(Hook):
             else:
                 name = log_key
             tag[name] = log_buffers[log_key].statistics(**log_cfg)
+        else:
+            raise ValueError('The structure of `LoggerHook.custom key` is '
+                             'wrong, please make sure the type of each key is '
+                             'dict or list.')
 
     def _get_max_memory(self, runner) -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
