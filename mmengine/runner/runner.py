@@ -23,6 +23,7 @@ from mmengine.data import worker_init_fn
 from mmengine.dist import get_dist_info, init_dist, sync_random_seed
 from mmengine.evaluator import BaseEvaluator
 from mmengine.hooks import Hook
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import (MMDataParallel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import _ParamScheduler, build_optimizer
@@ -38,8 +39,6 @@ from .priority import Priority, get_priority
 
 class Runner:
     """A training helper for PyTorch.
-
-    TODO: Log related.
 
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run.
@@ -87,15 +86,17 @@ class Runner:
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
         log_cfg (dict, optional): A dict to build logger object. Defaults to
-            None. TODO
+            None.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
         seed (int, optional): A number to guarantee reproducible results.
             If not specified, a random number will be set as seed. Defaults to
             None.
-        cfg (:obj:`Config`, optional): Complete config. Defaults to None.
         deterministic (bool): Whether cudnn to select deterministic algorithms.
             See https://pytorch.org/docs/stable/notes/randomness.html.
+        experiment_name (str, optional): Name of current experiment.
+            Defaults to None.
+        cfg (:obj:`Config`, optional): Complete config. Defaults to None.
 
     Examples:
         >>> from mmengine import Runner
@@ -144,7 +145,6 @@ class Runner:
         self,
         model: Union[nn.Module, Dict],
         work_dir: str,
-        cfg: Config,
         train_dataloader: Optional[Union[DataLoader, Dict]] = None,
         val_dataloader: Optional[Union[DataLoader, Dict]] = None,
         test_dataloader: Optional[Union[DataLoader, Dict]] = None,
@@ -163,13 +163,18 @@ class Runner:
         default_scope: Optional[str] = None,
         seed: Optional[int] = None,
         deterministic: bool = False,
+        experiment_name: Optional[str] = None,
+        cfg: Optional[Config] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
 
         # recursively copy the ``cfg`` because `self.cfg` will be modified
         # everywhere.
-        self.cfg = copy.deepcopy(cfg)
+        if cfg is not None:
+            self.cfg = copy.deepcopy(cfg)
+        else:
+            self.cfg = Config()
 
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
@@ -237,27 +242,18 @@ class Runner:
                 f'but got {model}')
 
         self._load_checkpoint = load_checkpoint
-        if self._load_checkpoint is not None:
-            path = self._load_checkpoint['path']
-            if self._load_checkpoint['resume']:
-                # resume training
-                # TODO: Should _load.checkpoint contain additional three
-                # arguments resume_optimizer, resume_param_scheduler and
-                # map_localtion.
-                self.resume(path)
-            else:
-                # load checkpoint but train from scratch
-                self.load_checkpoint(path)
+        # flag to mark whether has loaded or resumed checkpoint
+        self._has_loaded = False
 
-        if is_model_wrapper(
-                self.model) and self.cfg.get('model_wrapper_cfg') is not None:
+        if (is_model_wrapper(self.model)
+                and self.cfg.get('model_wrapper_cfg') is not None):
             raise TypeError(
                 'model has been wrapped and "model_wrapper_cfg" should be None'
                 f' but got {self.cfg.get("model_wrapper_cfg")}')
 
-        if cfg.get('model_wrapper_cfg') is not None:
+        if self.cfg.get('model_wrapper_cfg') is not None:
             self.model = self.wrap_model(
-                cfg.get('model_wrapper_cfg'), self.model)
+                self.cfg.get('model_wrapper_cfg'), self.model)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
@@ -281,18 +277,28 @@ class Runner:
         self.seed = seed
         self.setup_env(env_cfg)
 
-        self.log_cfg = log_cfg
+        if experiment_name is not None:
+            self._experiment_name = experiment_name
+        elif cfg is not None:
+            self._experiment_name = osp.splitext(osp.basename(cfg.filename))[0]
+        else:
+            self._experiment_name = self.timestamp
 
-        self._experiment_name = osp.splitext(osp.basename(cfg.filename))[0]
+        if log_cfg is None:
+            log_cfg = dict()
+        self.logger = MMLogger(**log_cfg)
+
+        self.message_hub = MessageHub(self._experiment_name)
 
         # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
         # hook messages and so on. Those information will be saved to
         # checkpoint for resuming.
-        self.meta: dict = dict()
+        self.meta: dict = dict()  # TODO
 
         # dump config
-        if self._rank == 0:
-            self.cfg.dump(osp.join(self._work_dir, osp.basename(cfg.filename)))
+        if self._rank == 0 and self.cfg is not None:
+            self.cfg.dump(
+                osp.join(self._work_dir, osp.basename(self.cfg.filename)))
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -309,7 +315,6 @@ class Runner:
         runner = cls(
             model=cfg.model,
             work_dir=cfg.work_dir,
-            cfg=cfg,
             train_dataloader=cfg.train_dataloader,
             val_dataloader=cfg.val_dataloader,
             test_dataloader=cfg.test_dataloader,
@@ -328,6 +333,7 @@ class Runner:
             default_scope=cfg.default_scope,
             seed=cfg.seed,
             deterministic=cfg.deterministic,
+            cfg=cfg,
         )
 
         return runner
@@ -761,11 +767,22 @@ class Runner:
 
         return loop
 
+    def _load_or_resume(self):
+        # resume checkpoint
+        if self._load_checkpoint is not None and not self._has_loaded:
+            # `self._has_loaded` will be set as True
+            if self._load_checkpoint['resume']:
+                self.resume(self._load_checkpoint['path'])
+            else:
+                self.load_checkpoint(self._load_checkpoint['path'])
+
     def train(self) -> None:
         """Launch training."""
         assert self._train_loop is not None
         if not isinstance(self._train_loop, BaseLoop):
             self._train_loop = self.build_train_loop(self._train_loop)
+
+        self._load_or_resume()
 
         self.call_hook('before_run')
         self._train_loop.run()  # type: ignore
@@ -777,6 +794,8 @@ class Runner:
         if not isinstance(self._val_loop, BaseLoop):
             self._val_loop = self.build_val_loop(self._val_loop)
 
+        self._load_or_resume()
+
         self.call_hook('before_run')
         self._val_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -786,6 +805,8 @@ class Runner:
         assert self._test_loop is not None
         if not isinstance(self._test_loop, BaseLoop):
             self._test_loop = self.build_test_loop(self._test_loop)
+
+        self._load_or_resume()
 
         self.call_hook('before_run')
         self._test_loop.run()  # type: ignore
@@ -797,7 +818,7 @@ class Runner:
         Args:
             fn_name (str): The function name in each hook to be called, such as
                 "before_train_epoch".
-            **kwargs: Keyword arguments are passed to hook.
+            **kwargs: Keyword arguments passed to hook.
         """
         for hook in self._hooks:
             # support adding additional custom hook methods
@@ -985,7 +1006,7 @@ class Runner:
 
         self._epoch = checkpoint['meta']['epoch']
         self._iter = checkpoint['meta']['iter']
-        # self._inner_iter = checkpoint['meta']['iter']
+        self._inner_iter = checkpoint['meta']['inner_iter']
 
         if self.meta is None:
             self.meta = {}
@@ -1002,10 +1023,10 @@ class Runner:
             previous_gpu_ids = config.get('gpu_ids', None)
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self._world_size):
-                # TODO, self.logger.info
                 # TODO, should we modify the iteration?
-                print('Number of GPU used for current experiment is not '
-                      'consistent with resuming from checkpoint')
+                self.logger.info(
+                    'Number of GPU used for current experiment is not '
+                    'consistent with resuming from checkpoint')
 
         # resume meta information meta
         self.meta = checkpoint['meta']
@@ -1030,7 +1051,9 @@ class Runner:
                     raise TypeError('cur_scheduler should be _ParamScheduler '
                                     f'but got {type(cur_scheduler)}')
 
-        # TODO: print log
+        self._has_loaded = True
+
+        self.logger.info(f'resumed epoch: {self._epoch}, iter: {self._iter}')
 
     def load_checkpoint(self,
                         filename: str,
@@ -1057,8 +1080,14 @@ class Runner:
         # Add comments to describe the usage of `after_load_ckpt`
         self.call_hook('after_load_ckpt', checkpoint=checkpoint)
 
-        return _load_checkpoint_to_model(
+        checkpoint = _load_checkpoint_to_model(
             self.model, checkpoint, strict, revise_keys=revise_keys)
+
+        self._has_loaded = True
+
+        self.logger.info(f'Load checkpoint from {filename}')
+
+        return checkpoint
 
     def save_checkpoint(self,
                         out_dir: str,
@@ -1066,7 +1095,8 @@ class Runner:
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
-                        create_symlink: bool = True):
+                        create_symlink: bool = True,
+                        by_epoch: bool = True):
         """Save checkpoints.
 
         ``CheckpointHook`` invokes this method to save checkpoints
@@ -1084,6 +1114,7 @@ class Runner:
             create_symlink (bool): Whether to create a symlink
                 "latest.pth" to point to the latest checkpoint.
                 Defaults to True.
+            by_epoch (bool):
         """
         if meta is None:
             meta = {}
@@ -1093,16 +1124,21 @@ class Runner:
 
         if self.meta is not None:
             meta.update(self.meta)
-            # Note: meta.update(self.meta) should be done before
-            # meta.update(epoch=self.epoch + 1, iter=self.iter) otherwise
-            # there will be problems with resumed checkpoints.
-            # More details in https://github.com/open-mmlab/mmcv/pull/1108
 
-        # TODO
-        meta.update(
-            epoch=self._epoch + 1,
-            iter=self._iter,
-            inner_iter=self._inner_iter)
+        if by_epoch:
+            # self._epoch increments 1 after
+            # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
+            # called by `after_train_epoch`` method of `CheckpointHook` so
+            # `epoch` should be `self_epoch + 1`
+            meta.update(
+                epoch=self._epoch + 1,
+                iter=self._iter,
+                inner_iter=self._inner_iter)
+        else:
+            meta.update(
+                epoch=self._epoch,
+                iter=self._iter + 1,
+                inner_iter=self._inner_iter)
 
         filepath = osp.join(out_dir, filename)
 
