@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
-from mmengine.evaluator import BaseEvaluator
+from mmengine.evaluator import BaseEvaluator, build_evaluator
 from mmengine.hooks import (Hook, IterTimerHook, OptimizerHook,
                             ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
@@ -31,6 +31,7 @@ from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import get_priority
+from mmengine.utils import is_list_of
 
 
 @MODELS.register_module()
@@ -81,7 +82,7 @@ class ToyEvaluator(BaseEvaluator):
 class TestRunner(TestCase):
 
     def setUp(self):
-        self.temp_dir = tempfile.gettempdir()
+        self.temp_dir = tempfile.mkdtemp()
         full_cfg = dict(
             model=dict(type='ToyModel'),
             work_dir=self.temp_dir,
@@ -104,16 +105,17 @@ class TestRunner(TestCase):
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
             evaluator=dict(type='ToyEvaluator'),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            validation_cfg=dict(interval=1),
+            val_cfg=dict(interval=1),
             test_cfg=dict(),
             custom_hooks=[],
             default_hooks=dict(
                 timer=dict(type='IterTimerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
-                logger=dict(type='TextLoggerHook'),
+                logger=dict(type='LoggerHook'),
                 optimizer=dict(type='OptimizerHook', grad_clip=False),
                 param_scheduler=dict(type='ParamSchedulerHook')),
-            env_cfg=dict(dist_params=dict(backend='nccl'), ),
+            launcher='none',
+            env_cfg=dict(dist_cfg=dict(backend='nccl')),
             log_cfg=dict(log_level='INFO'),
         )
         self.full_cfg = Config(full_cfg)
@@ -132,7 +134,7 @@ class TestRunner(TestCase):
         assert isinstance(runner.model, (nn.Module, MMDataParallel))
         # lazy init
         assert isinstance(runner.optimizer, dict)
-        assert isinstance(runner.param_schedulers, list)
+        assert isinstance(runner.param_schedulers, dict)
         assert isinstance(runner.train_dataloader, dict)
         assert isinstance(runner.val_dataloader, dict)
         assert isinstance(runner.test_dataloader, dict)
@@ -195,13 +197,14 @@ class TestRunner(TestCase):
         toy_hook2 = ToyHook2()
         runner = Runner(
             model=model,
+            work_dir=self.temp_dir,
             train_dataloader=DataLoader(dataset=ToyDataset()),
             val_dataloader=DataLoader(dataset=ToyDataset()),
             optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             evaluator=ToyEvaluator(),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            validation_cfg=dict(interval=1),
+            val_cfg=dict(interval=1),
             default_hooks=dict(param_scheduler=toy_hook),
             custom_hooks=[toy_hook2])
         runner.train()
@@ -240,7 +243,7 @@ class TestRunner(TestCase):
             runner = Runner(
                 model=model,
                 train_dataloader=DataLoader(dataset=ToyDataset()),
-                optimzier=optimizer,
+                optimizer=optimizer,
                 param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
                 train_cfg=dict(by_epoch=True, max_epochs=3),
                 validation_cfg=dict(interval=1))
@@ -250,7 +253,7 @@ class TestRunner(TestCase):
         runner = Runner(
             model=model,
             train_dataloader=DataLoader(dataset=ToyDataset()),
-            optimzier=optimizer,
+            optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             train_cfg=dict(by_epoch=True, max_epochs=3),
             validation_cfg=None)
@@ -258,7 +261,7 @@ class TestRunner(TestCase):
 
     def test_setup_env(self):
         # temporarily store system setting
-        sys_start_mehod = mp.get_start_method(allow_none=True)
+        sys_start_method = mp.get_start_method(allow_none=True)
         # pop and temp save system env vars
         sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', default=None)
         sys_mkl_threads = os.environ.pop('MKL_NUM_THREADS', default=None)
@@ -301,8 +304,8 @@ class TestRunner(TestCase):
         assert mp.get_start_method() == 'spawn'
 
         # revert setting to avoid affecting other programs
-        if sys_start_mehod:
-            mp.set_start_method(sys_start_mehod, force=True)
+        if sys_start_method:
+            mp.set_start_method(sys_start_method, force=True)
         if sys_omp_threads:
             os.environ['OMP_NUM_THREADS'] = sys_omp_threads
         else:
@@ -405,6 +408,7 @@ class TestRunner(TestCase):
             def __init__(self):
                 super().__init__()
 
+        model_cfg = dict(type='ToyModelv1')
         runner.model = None
         with self.assertRaisesRegex(RuntimeError, 'Model should implement'):
             runner.build_model(model_cfg)
@@ -421,7 +425,7 @@ class TestRunner(TestCase):
 
         # Optimizer should be built before ParamScheduler
         runner.optimizer = None
-        with self.assertRaisesRegex(RuntimeError):
+        with self.assertRaises(RuntimeError):
             param_schedulers = runner.build_param_scheduler(cfg)
 
         runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
@@ -433,7 +437,7 @@ class TestRunner(TestCase):
         # cfg is a list of dict
         cfg = [
             dict(type='MultiStepLR', milestones=[1, 2]),
-            dict(type='Step', step_size=1)
+            dict(type='StepLR', step_size=1)
         ]
         param_schedulers = runner.build_param_scheduler(cfg)
         assert len(param_schedulers) == 2
@@ -441,12 +445,13 @@ class TestRunner(TestCase):
         assert isinstance(param_schedulers[1], StepLR)
 
     def test_build_dataloader(self):
+        runner = Runner.build_from_cfg(self.full_cfg)
+
         cfg = dict(
             dataset=dict(type='ToyDataset'),
             sampler=dict(type='DefaultSampler', shuffle=True),
             batch_size=1,
             num_workers=0)
-        runner = Runner.build_from_cfg(self.full_cfg)
         dataloader = runner.build_dataloader(cfg)
         assert isinstance(dataloader, DataLoader)
         assert isinstance(dataloader.dataset, ToyDataset)
@@ -464,7 +469,7 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         assert isinstance(loop, EpochBasedTrainLoop)
 
-        cfg = dict(type='IterBasedTrainLoop', max_epochs=3)
+        cfg = dict(type='IterBasedTrainLoop', max_iters=3)
         loop = runner.build_train_loop(cfg)
         assert isinstance(loop, IterBasedTrainLoop)
 
@@ -473,7 +478,7 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         assert isinstance(loop, EpochBasedTrainLoop)
 
-        cfg = dict(by_epoch=False, max_epochs=3)
+        cfg = dict(by_epoch=False, max_iters=3)
         loop = runner.build_train_loop(cfg)
         assert isinstance(loop, IterBasedTrainLoop)
 
@@ -482,7 +487,18 @@ class TestRunner(TestCase):
 
         @LOOPS.register_module()
         class CustomValLoop(BaseLoop):
-            pass
+
+            def __init__(self, runner, dataloader, evaluator, interval=1):
+                super().__init__(runner, dataloader)
+                self._runner = runner
+
+                if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+                    self.evaluator = build_evaluator(evaluator)  # type: ignore
+                else:
+                    self.evaluator = evaluator
+
+            def run(self) -> None:
+                pass
 
         # type in cfg
         cfg = dict(type='CustomValLoop', interval=1)
@@ -503,21 +519,32 @@ class TestRunner(TestCase):
 
         @LOOPS.register_module()
         class CustomTestLoop(BaseLoop):
-            pass
+
+            def __init__(self, runner, dataloader, evaluator):
+                super().__init__(runner, dataloader)
+                self._runner = runner
+
+                if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+                    self.evaluator = build_evaluator(evaluator)  # type: ignore
+                else:
+                    self.evaluator = evaluator
+
+            def run(self) -> None:
+                pass
 
         # type in cfg
-        cfg = dict(type='CustomTestLoop', interval=1)
-        loop = runner.build_val_loop(cfg)
+        cfg = dict(type='CustomTestLoop')
+        loop = runner.build_test_loop(cfg)
         assert isinstance(loop, CustomTestLoop)
 
-        cfg = dict(type='TestLoop', interval=1)
-        loop = runner.build_val_loop(cfg)
+        cfg = dict(type='TestLoop')
+        loop = runner.build_test_loop(cfg)
         assert isinstance(loop, TestLoop)
 
         # type not in cfg
-        cfg = dict(interval=1)
-        loop = runner.build_val_loop(cfg)
-        assert isinstance(loop, ValLoop)
+        cfg = dict()
+        loop = runner.build_test_loop(cfg)
+        assert isinstance(loop, TestLoop)
 
     def test_register_hook(self):
         runner = Runner.build_from_cfg(self.full_cfg)
@@ -627,7 +654,7 @@ class TestRunner(TestCase):
 
     def test_checkpoint(self):
         runner = Runner.build_from_cfg(self.full_cfg)
-        runner.run()
+        runner.train()
 
         # test `save_checkpoint``
         path = osp.join(self.temp_dir, 'epoch_3.pth')

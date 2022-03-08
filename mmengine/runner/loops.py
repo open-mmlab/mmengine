@@ -5,10 +5,12 @@ from torch.utils.data import DataLoader
 
 from mmengine.data import BaseDataSample
 from mmengine.evaluator import BaseEvaluator, build_evaluator
+from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
 from .base_loop import BaseLoop
 
 
+@LOOPS.register_module()
 class EpochBasedTrainLoop(BaseLoop):
     """Loop for epoch-based training.
 
@@ -65,6 +67,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._iter += 1
 
 
+@LOOPS.register_module()
 class IterBasedTrainLoop(BaseLoop):
     """Loop for iter-based training.
 
@@ -113,6 +116,7 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner._iter += 1
 
 
+@LOOPS.register_module()
 class ValLoop(BaseLoop):
     """Loop for validation.
 
@@ -121,16 +125,22 @@ class ValLoop(BaseLoop):
         dataloader (Dataloader or dict):  An iterator to generate one batch of
             validation dataset each iteration.
         evaluator (BaseEvaluator or dict or list): Used for computing metrics.
+        interval (int): Validation interval. Defaults to 1.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[BaseEvaluator, Dict, List]) -> None:
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 evaluator: Union[BaseEvaluator, Dict, List],
+                 interval: int = 1) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
             self.evaluator = build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator  # type: ignore
+
+        self.interval = interval
 
     def run(self):
         """Launch validation."""
@@ -159,6 +169,7 @@ class ValLoop(BaseLoop):
             'after_val_iter', data_batch=data_batch, outputs=outputs)
 
 
+@LOOPS.register_module()
 class TestLoop(BaseLoop):
     """Loop for test.
 

@@ -128,9 +128,10 @@ class Runner:
                 default_hooks=dict(
                     timer=dict(type='IterTimerHook'),
                     checkpoint=dict(type='CheckpointHook', interval=1),
-                    logger=dict(type='TextLoggerHook'),
+                    logger=dict(type='LoggerHook'),
                     optimizer=dict(type='OptimizerHook', grad_clip=False),
                     param_scheduler=dict(type='ParamSchedulerHook')),
+                launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
                 log_cfg=dict(log_level='INFO'),
             )
@@ -190,8 +191,8 @@ class Runner:
         training_related = [
             train_dataloader, train_cfg, optimizer, param_scheduler
         ]
-        if (not all(item is None for item in training_related)
-                or not all(item is not None for item in training_related)):
+        if not (all(item is None for item in training_related)
+                or all(item is not None for item in training_related)):
             raise ValueError(
                 'train_dataloader, train_cfg, optimizer, param_scheduler '
                 'should be either all None or not None, but got '
@@ -205,8 +206,9 @@ class Runner:
         self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg]
-        if (not all(item is None for item in val_related)
-                or not all(item is not None for item in val_related)):
+        if not (all(item is None
+                    for item in val_related) or all(item is not None
+                                                    for item in val_related)):
             raise ValueError(
                 'val_dataloader and val_cfg should be either all None '
                 f'or not None, but got val_dataloader={val_dataloader}, '
@@ -215,8 +217,8 @@ class Runner:
         self._val_loop = val_cfg
 
         test_related = [test_dataloader, test_cfg]
-        if (not all(item is None for item in test_related)
-                or not all(item is not None for item in test_related)):
+        if not (all(item is None for item in test_related)
+                or all(item is not None for item in test_related)):
             raise ValueError(
                 'test_dataloader and test_cfg should be either all None or not'
                 f' None, but got test_dataloader={test_dataloader}, '
@@ -279,8 +281,9 @@ class Runner:
 
         if experiment_name is not None:
             self._experiment_name = experiment_name
-        elif cfg is not None:
-            self._experiment_name = osp.splitext(osp.basename(cfg.filename))[0]
+        elif self.cfg is not None and self.cfg.get('filename') is not None:
+            self._experiment_name = osp.splitext(
+                osp.basename(self.cfg.filename))[0]
         else:
             self._experiment_name = self.timestamp
 
@@ -296,7 +299,8 @@ class Runner:
         self.meta: dict = dict()  # TODO
 
         # dump config
-        if self._rank == 0 and self.cfg is not None:
+        if self._rank == 0 and self.cfg is not None and self.cfg.get(
+                'filename') is not None:
             self.cfg.dump(
                 osp.join(self._work_dir, osp.basename(self.cfg.filename)))
 
@@ -315,24 +319,24 @@ class Runner:
         runner = cls(
             model=cfg.model,
             work_dir=cfg.work_dir,
-            train_dataloader=cfg.train_dataloader,
-            val_dataloader=cfg.val_dataloader,
-            test_dataloader=cfg.test_dataloader,
-            train_cfg=cfg.train_cfg,
-            val_cfg=cfg.val_cfg,
-            test_cfg=cfg.test_cfg,
-            optimizer=cfg.optimizer,
-            param_scheduler=cfg.param_scheduler,
-            evaluator=cfg.evaluator,
-            default_hooks=cfg.default_hooks,
-            custom_hooks=cfg.custom_hooks,
-            load_checkpoint=cfg.load_checkpoint,
-            launcher=cfg.launcher,
-            env_cfg=cfg.env_cfg,
-            log_cfg=cfg.log_cfg,
-            default_scope=cfg.default_scope,
-            seed=cfg.seed,
-            deterministic=cfg.deterministic,
+            train_dataloader=cfg.get('train_dataloader'),
+            val_dataloader=cfg.get('val_dataloader'),
+            test_dataloader=cfg.get('test_dataloader'),
+            train_cfg=cfg.get('train_cfg'),
+            val_cfg=cfg.get('val_cfg'),
+            test_cfg=cfg.get('test_cfg'),
+            optimizer=cfg.get('optimizer'),
+            param_scheduler=cfg.get('param_scheduler'),
+            evaluator=cfg.get('evaluator'),
+            default_hooks=cfg.get('default_hooks'),
+            custom_hooks=cfg.get('custom_hooks'),
+            load_checkpoint=cfg.get('load_checkpoint'),
+            launcher=cfg.get('launcher'),
+            env_cfg=cfg.get('env_cfg'),
+            log_cfg=cfg.get('log_cfg'),
+            default_scope=cfg.get('default_scope'),
+            seed=cfg.get('seed'),
+            deterministic=cfg.get('deterministic'),
             cfg=cfg,
         )
 
@@ -347,6 +351,10 @@ class Runner:
     def model_name(self):
         """str: Name of the model, usually the module class name."""
         return self._model_name
+
+    @property
+    def work_dir(self):
+        return self._work_dir
 
     @property
     def epoch(self):
@@ -400,10 +408,11 @@ class Runner:
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
-        self._set_multi_processing(**env_cfg.get('mp_cfg'))  # type: ignore
+        if env_cfg.get('mp_cfg') is not None:
+            self._set_multi_processing(**env_cfg.get('mp_cfg'))  # type: ignore
 
         # init distributed env first, since logger depends on the dist info.
-        if self.distributed:
+        if self.distributed and env_cfg.get('dist_cfg') is not None:
             init_dist(**env_cfg.get('dist_cfg'))  # type: ignore
 
         # set random seeds
@@ -564,8 +573,8 @@ class Runner:
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
         """
-        # TODO, default scope
-        optimizer = build_optimizer(self.model, optimizer_cfg)
+        optimizer = build_optimizer(
+            self.model, optimizer_cfg, default_scope=self.default_scope)
         return optimizer
 
     def build_param_scheduler(
@@ -599,8 +608,8 @@ class Runner:
             schedulers.append(
                 PARAM_SCHEDULERS.build(
                     cfg,
-                    optimizer=self.optimizer,
-                    default_scope=self.default_scope))
+                    default_scope=self.default_scope,
+                    default_args=dict(optimizer=self.optimizer)))
 
         return schedulers
 
@@ -636,12 +645,9 @@ class Runner:
         dataset = DATASETS.build(dataset_cfg)
 
         # build sampler
-        rank, world_size = get_dist_info()
         sampler_cfg = dataloader_cfg.pop('sampler')
         sampler = DATA_SAMPLERS.build(
-            sampler_cfg,
-            default_args=dict(
-                dataset=dataset, world_size=world_size, rank=rank))
+            sampler_cfg, default_args=dict(dataset=dataset))
 
         # build dataloader
         init_fn: Optional[partial]
@@ -649,7 +655,7 @@ class Runner:
             init_fn = partial(
                 worker_init_fn,
                 num_workers=dataloader_cfg.get('num_workers'),
-                rank=rank,
+                rank=self._rank,
                 seed=self.seed)
         else:
             init_fn = None
@@ -692,15 +698,16 @@ class Runner:
             loop = LOOPS.build(
                 loop_cfg,
                 default_scope=self.default_scope,
-                dataloader=self.train_dataloader)
+                default_args=dict(
+                    runner=self, dataloader=self.train_dataloader))
         else:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
                 loop = EpochBasedTrainLoop(
-                    **loop_cfg, dataloader=self.train_dataloader)
+                    **loop_cfg, runner=self, dataloader=self.train_dataloader)
             else:
                 loop = IterBasedTrainLoop(
-                    **loop_cfg, dataloader=self.train_dataloader)
+                    **loop_cfg, runner=self, dataloader=self.train_dataloader)
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
@@ -709,7 +716,7 @@ class Runner:
 
         if (self.param_schedulers is not None
                 and not is_list_of(self.param_schedulers, _ParamScheduler)):
-            self.param_schedulers = self.build_param_scheduler(
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
 
         return loop
@@ -734,12 +741,17 @@ class Runner:
             loop = LOOPS.build(
                 loop_cfg,
                 default_scope=self.default_scope,
-                dataloader=self.val_dataloader)
+                default_args=dict(
+                    runner=self,
+                    dataloader=self.val_dataloader,
+                    evaluator=self._evaluator))
         else:
             loop = ValLoop(
-                **loop_cfg,
+                runner=self,
                 dataloader=self.val_dataloader,
-                evaluator=self._evaluator)  # type: ignore
+                evaluator=self._evaluator,  # type: ignore
+                **loop_cfg,
+            )  # type: ignore
 
         return loop
 
@@ -758,10 +770,13 @@ class Runner:
             loop = LOOPS.build(
                 loop_cfg,
                 default_scope=self.default_scope,
-                dataloader=self.test_dataloader)
+                default_args=dict(
+                    runner=self,
+                    dataloader=self.test_dataloader,
+                    evaluator=self._evaluator))
         else:
             loop = TestLoop(
-                **loop_cfg,
+                runner=self,
                 dataloader=self.test_dataloader,
                 evaluator=self._evaluator)  # type: ignore
 
@@ -908,7 +923,7 @@ class Runner:
             default_hooks = dict(
                 optimizer=dict(type='OptimizerHook', grad_clip=False),
                 timer=dict(type='IterTimerHook'),
-                logger=dict(type='TextLoggerHook'),
+                logger=dict(type='LoggerHook'),
                 param_scheduler=dict(type='ParamSchedulerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
             )
@@ -929,7 +944,7 @@ class Runner:
         default_hooks: dict = dict(
             optimizer=dict(type='OptimizerHook', grad_clip=False),
             timer=dict(type='IterTimerHook'),
-            logger=dict(type='TextLoggerHook'),
+            logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
         )
