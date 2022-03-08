@@ -85,7 +85,7 @@ validation_cfg=dict(
 
 首先，自定义评测器类应继承自 `BaseEvaluator`，并应加入注册器 `EVALUATORS` (关于注册器的说明请参考[相关文档](docs\zh_cn\tutorials\registry.md))。
 
- `process()` 方法有 2 个输入参数，分别是一个批次的测试数据样本`data_batch`和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
+ `process()` 方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 
 `compute_metrics()` 方法有 1 个输入参数 `results`，里面存放了所有批次测试数据经过 `process()` 方法处理后得到的结果。从中取出样本类别标签和分类预测结果，即可计算得到分类正确率 `acc`。最终，将计算得到的评测指标以字典的形式返回。
 
