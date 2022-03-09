@@ -19,7 +19,7 @@
 
   - 提供了一系列和视觉任务无关的基础方法，例如 `draw_bboxes` 和 `draw_texts` 等
   - 各个基础方法支持链式调用，方便叠加绘制显示
-  - 通过 `draw_featmap`  提供绘制特征图功能
+  - 通过 `draw_featmap` 提供绘制特征图功能
 
   各个下游算法库可以继承 `Visualizer` 并在 `draw` 接口中实现所需的可视化功能，例如 MMDetection 中的 `DetVisualizer` 继承自 `Visualizer` 并在 `draw` 接口中实现可视化检测框、实例掩码和语义分割图等功能。Visualizer 类的 UML 关系图如下
 
@@ -169,7 +169,7 @@ class DetVisualizer(Visualizer):
         ...
 ```
 
-注意：是否使用 `register_task` 装饰器函数不是必须的，如果用户自定义 Visualizer，并且 `draw  `实现非常简单，则无需考虑 `register_task`。
+注意：是否使用 `register_task` 装饰器函数不是必须的，如果用户自定义 Visualizer，并且 `draw` 实现非常简单，则无需考虑 `register_task`。
 
 在使用 Jupyter notebook 或者其他地方不需要写数据到指定后端的情形下，用户可以自己实例化 visualizer。一个简单的例子如下
 
@@ -234,7 +234,7 @@ local_writer.add_image('featmap', featmap_image)
 
 `TensorboardWriter` 提供了将各类数据写入到 Tensorboard 功能，其用法和 LocalWriter 非常类似。 注意如果用户需要写图片到 Tensorboard，则**必须要通过初始化参数提供 Visualizer对象**。
 
-`WandbWriter`  提供了将各类数据写入到 Wandb 功能。考虑到 Wandb 本身具备强大的图片功能，在调用 `WandbWriter` 的 `add_image` 方法时 Visualizer 对象是可选的，如果用户指定了 Visualizer 对象，则会调用  Visualizer 对象的绘制方法，否则直接调用 Wandb 自带的图片处理功能。
+`WandbWriter` 提供了将各类数据写入到 Wandb 功能。考虑到 Wandb 本身具备强大的图片功能，在调用 `WandbWriter` 的 `add_image` 方法时 Visualizer 对象是可选的，如果用户指定了 Visualizer 对象，则会调用  Visualizer 对象的绘制方法，否则直接调用 Wandb 自带的图片处理功能。
 
 ## 组合写端 ComposedWriter
 
