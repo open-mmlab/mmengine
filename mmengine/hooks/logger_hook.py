@@ -175,14 +175,14 @@ class LoggerHook(Hook):
             self,
             runner,
             data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+            outputs: Optional[dict] = None) -> None:
         """Record training logs.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         if runner.meta is not None and 'exp_name' in runner.meta:

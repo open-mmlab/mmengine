@@ -37,14 +37,14 @@ class EmptyCacheHook(Hook):
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+                   outputs: Optional[dict] = None) -> None:
         """Empty cache after an iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
+            outputs (dict, Optional): Outputs from model.
                 Defaults to None.
         """
         if self._after_iter:

@@ -40,14 +40,14 @@ class IterTimerHook(Hook):
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+                   outputs: Optional[dict] = None) -> None:
         """Logging time for a iteration and update the time flag.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         # TODO: update for new logging system

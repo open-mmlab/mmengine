@@ -19,7 +19,7 @@ class ParamSchedulerHook(Hook):
             self,
             runner,
             data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+            outputs: Optional[dict] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
         Args:
@@ -28,7 +28,7 @@ class ParamSchedulerHook(Hook):
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
                 Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
