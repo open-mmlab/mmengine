@@ -238,11 +238,10 @@ class Hook:
         """
         self.before_iter(runner, data_batch=None)
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[dict] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
@@ -255,11 +254,10 @@ class Hook:
         """
         self.after_iter(runner, data_batch=None, outputs=None)
 
-    def after_val_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[dict] = None) -> None:
+    def after_val_iter(self,
+                       runner,
+                       data_batch: DATA_BATCH = None,
+                       outputs: Optional[dict] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 

@@ -15,11 +15,10 @@ class ParamSchedulerHook(Hook):
 
     priority = 'LOW'
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[dict] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
         Args:

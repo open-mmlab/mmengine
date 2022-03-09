@@ -2,7 +2,7 @@
 import os.path as osp
 import warnings
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union, Dict
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import FileClient
@@ -168,11 +168,10 @@ class CheckpointHook(Hook):
                 else:
                     break
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs=Optional[dict]) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs=Optional[dict]) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:

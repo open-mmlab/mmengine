@@ -56,11 +56,10 @@ class OptimizerHook(Hook):
             return clip_grad.clip_grad_norm_(params, **self.grad_clip)
         return None
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[dict] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """All operations need to be finished after each training iteration.
 
         This function will finish following 3 operations:
