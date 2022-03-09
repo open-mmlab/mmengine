@@ -127,7 +127,7 @@ def draw_featmap(tensor_chw: torch.Tensor, # 输入格式要求为 CHW
 
 特征图可视化功能较多，目前不支持 Batch 输入
 
-- mode 不是 None，topk 无效，会将多个通道输出采用 mode 模式函数压缩为单通道，变成单张图片显示，目前 mode 仅支持 None、mean、max 和 min 参数
+- mode 不是 None，topk 无效，会将多个通道输出采用 mode 模式函数压缩为单通道，变成单张图片显示，目前 mode 仅支持 None、`mean`、`max` 和 `min` 参数输入
 - mode 是 None，topk 有效，如果 topk 不是 -1，则会按照激活度排序选择 topk 个通道显示，此时可以通过 arrangement 参数指定显示的布局
 - mode 是 None，topk 有效，如果 `topk = -1`，此时通道 C 必须是 1 或者 3 表示输入数据是图片，可以直接显示，否则报错提示用户应该设置 mode 来压缩通道
 
@@ -151,14 +151,12 @@ class DetVisualizer(Visualizer):
             for task in self.task_dict:
                 task_attr = 'gt_' + task
                 if task_attr in gt_sample:
-                    # DataType.GT 表示当前绘制标注数据
-                    self.task_dict[task](self, gt_sample[task_attr], DataType.GT)
+                    self.task_dict[task](self, gt_sample[task_attr], 'gt')
         if draw_pred:
             for task in self.task_dict:
                 task_attr = 'pred_' + task
                 if task_attr in pred_sample:
-                    # DataType.PRED 表示当前绘制预测结果
-                    self.task_dict[task](self, pred_sample[task_attr], DataType.PRED)
+                    self.task_dict[task](self, pred_sample[task_attr], 'pred')
 
     @Visualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
