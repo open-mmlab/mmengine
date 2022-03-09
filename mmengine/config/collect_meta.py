@@ -96,7 +96,7 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
 
 def _parse_rel_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
     """Get the experiment dir and experiment config name. This function is only
-    used for get non-base config from external package.
+    used for getting non-base config from external packages.
 
     Args:
         rel_cfg_path (str): External relative config path with prefix

@@ -466,7 +466,7 @@ class Config:
             filename (str): The config file being parsed.
 
         Returns:
-            bool: The absolute path of `rel_cfg_path`.
+            str: The absolute path of `rel_cfg_path`.
         """
         if '::' in rel_cfg_path:
             package, rel_cfg_path = _parse_external_cfg_path(rel_cfg_path)
