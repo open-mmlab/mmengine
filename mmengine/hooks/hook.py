@@ -270,7 +270,7 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (dict, optional): Outputs from
+            outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
