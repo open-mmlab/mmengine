@@ -84,23 +84,23 @@ class WandbWriter:
 
 **(1) 绘制无关的功能性接口**
 
-- set_image 设置原始图片数据，默认输入图片格式为 RGB
-- get_image 获取绘制后的 Numpy 格式图片数据，默认输出格式为 RGB
-- show 可视化
-- register_task 注册绘制函数(其作用在 *自定义 Visualizer* 小节描述)
+- [set_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.set_image) 设置原始图片数据，默认输入图片格式为 RGB
+- [get_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.get_image) 获取绘制后的 Numpy 格式图片数据，默认输出格式为 RGB
+- [show](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.show) 可视化
+- [register_task](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.register_task) 注册绘制函数(其作用在 *自定义 Visualizer* 小节描述)
 
 **(2) 绘制相关接口**
 
-- draw 用户使用的抽象绘制接口
-- draw_featmap 绘制特征图
-- draw_bboxes 绘制单个或者多个边界框
-- draw_texts 绘制单个或者多个文本框
-- draw_lines 绘制单个或者多个线段
-- draw_circles 绘制单个或者多个圆
-- draw_polygons 绘制单个或者多个多边形
-- draw_binary_masks 绘制单个或者多个二值掩码
+- [draw](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw) 用户使用的抽象绘制接口
+- [draw_featmap](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_featmap) 绘制特征图
+- [draw_bboxes](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_bboxes) 绘制单个或者多个边界框
+- [draw_texts](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_texts) 绘制单个或者多个文本框
+- [draw_lines](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.lines) 绘制单个或者多个线段
+- [draw_circles](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_circles) 绘制单个或者多个圆
+- [draw_polygons](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_polygons) 绘制单个或者多个多边形
+- [draw_binary_masks](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_binary_mask) 绘制单个或者多个二值掩码
 
-用户除了可以单独调用 `Visualizer` 中基础绘制接口，同时也提供了链式调用功能和特征图可视化功能。
+用户除了可以单独调用 `Visualizer` 中基础绘制接口，同时也提供了链式调用功能和特征图可视化功能。`draw` 函数是抽象接口，内部没有任何实现，继承了 Visualizer 的类可以实现该接口，从而对外提供统一的绘制功能，而 `draw_xxx` 等目的是提供最基础的绘制功能，用户一般无需重写。
 
 **(1) 链式调用**
 
@@ -119,7 +119,7 @@ visualizer.draw_bboxes(...).draw_texts(...).draw_lines(...)
 @staticmethod
 def draw_featmap(tensor_chw: torch.Tensor, # 输入格式要求为 CHW
                  image: Optional[np.ndarray] = None, # 如果同时输入了 image 数据，则特征图会叠加到 image 上绘制
-                 mode: str = 'mean', # 多个通道压缩为单通道的策略
+                 mode: Optional[str] = 'mean', # 多个通道压缩为单通道的策略
                  topk: int = 10, # 可选择激活度最高的 topk 个特征图显示
                  arrangement: Tuple[int, int] = (5, 2), # 多通道展开为多张图时候布局
                  alpha: float = 0.3) -> np.ndarray: # 图片和特征图绘制的叠加比例
@@ -127,7 +127,7 @@ def draw_featmap(tensor_chw: torch.Tensor, # 输入格式要求为 CHW
 
 特征图可视化功能较多，目前不支持 Batch 输入
 
-- mode 不是 None，topk 无效，会将多个通道输出采用 mode 模式函数压缩为单通道，变成单张图片显示
+- mode 不是 None，topk 无效，会将多个通道输出采用 mode 模式函数压缩为单通道，变成单张图片显示，目前 mode 仅支持 None、mean、max 和 min 参数
 - mode 是 None，topk 有效，如果 topk 不是 -1，则会按照激活度排序选择 topk 个通道显示，此时可以通过 arrangement 参数指定显示的布局
 - mode 是 None，topk 有效，如果 `topk = -1`，此时通道 C 必须是 1 或者 3 表示输入数据是图片，可以直接显示，否则报错提示用户应该设置 mode 来压缩通道
 
@@ -139,13 +139,15 @@ featmap=visualizer.draw_featmap(tensor_chw,image)
 
 自定义的 Visualizer 中大部分情况下只需要实现 `get_image` 和 `draw` 接口。`draw` 是最高层的用户调用接口，`draw` 接口负责所有绘制功能，例如绘制检测框、检测掩码 mask 和 检测语义分割图等等。依据任务的不同，`draw` 接口实现的复杂度也不同。
 
-以目标检测可视化需求为例，可能需要同时绘制边界框 bbox、掩码 mask 和语义分割图 seg_map，如果如此多功能全部写到 `draw` 方法中会难以理解和维护。为了解决该问题，`Visualizer` 基于 OpenMMLab 2.0 抽象数据接口规范支持了 `register_task` 函数。假设 MMDetection 中需要同时绘制预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 `DetVisualizer` 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@Visualizer.register_task` 装饰器。一个简略的实现如下所示
+以目标检测可视化需求为例，可能需要同时绘制边界框 bbox、掩码 mask 和语义分割图 seg_map，如果如此多功能全部写到 `draw` 方法中会难以理解和维护。为了解决该问题，`Visualizer` 基于 OpenMMLab 2.0 抽象数据接口规范支持了 `register_task` 函数。假设 MMDetection 中需要同时绘制预测结果中的 instances 和 sem_seg，可以在 MMDetection 的 `DetVisualizer` 中实现 `draw_instances` 和 `draw_sem_seg` 两个方法，用于绘制预测实例和预测语义分割图， 我们希望只要输入数据中存在 instances 或 sem_seg 时候，对应的两个绘制函数  `draw_instances` 和 `draw_sem_seg` 能够自动被调用，而用户不需要手动调用。为了实现上述功能，可以通过在 `draw_instances` 和 `draw_sem_seg` 两个函数加上 `@Visualizer.register_task` 装饰器，此时 `task_dict` 中就会存储字符串和函数的映射关系，在调用 `draw` 方法时候就可以通过 `self.task_dict`获取到已经被注册的函数。一个简略的实现如下所示
 
 ```python
 class DetVisualizer(Visualizer):
 
     def draw(self, image, gt_sample=None, pred_sample=None, draw_gt=True, draw_pred=True):
         if draw_gt:
+            # self.task_dict 内部存储如下信息：
+            # dict(instances=draw_instance 方法,sem_seg=draw_sem_seg 方法)
             for task in self.task_dict:
                 task_attr = 'gt_' + task
                 if task_attr in gt_sample:
@@ -186,13 +188,13 @@ Visualizer 只实现了单张图片的绘制功能，但是在训练或者测试
 
 BaseWriter 定义了对外调用的接口规范，主要接口和属性如下：
 
-- add_params 写超参到特定后端，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
-- add_graph 写模型图到特定后端
-- add_image 写图片到特定后端
-- add_scalar 写标量到特定后端
-- add_scalars 一次性写多个标量到特定后端
-- visualizer 绘制对象
-- experiment 写后端对象，例如 Wandb 对象和 Tensorboard 对象
+- [add_params](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_params) 写超参到特定后端，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_graph) 写模型图到特定后端
+- [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_image) 写图片到特定后端
+- [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_scalar) 写标量到特定后端
+- [add_scalars](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_scalars) 一次性写多个标量到特定后端
+- [visualizer](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.visualizer) 绘制对象
+- [experiment](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.experiment) 写后端对象，例如 Wandb 对象和 Tensorboard 对象
 
 `BaseWriter` 定义了 5 个常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。
 
@@ -238,15 +240,15 @@ local_writer.add_image('featmap', featmap_image)
 
 考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 `ComposedWriter` 类，在训练或者测试过程中 `ComposedWriter` 会依次调用各个 Writer 的接口，其接口和 `BaseWriter` 一致，主要接口如下：
 
-- add_params 写超参到所有已经加入的后端中，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
-- add_graph 写模型图到所有已经加入的后端中
-- add_image 写图片到所有已经加入的后端中
-- add_scalar 写标量到所有已经加入的后端中
-- add_scalars 一次性写多个标量到所有已经加入的后端中
-- get_writer 获取指定索引的 Writer
-- get_experiment 获取指定索引的 experiment
-- get_visualizer 获取指定索引的 visualizer
-- close 调用所有 Writer 的 close 方法
+- [add_params](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_params) 写超参到所有已经加入的后端中，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_graph) 写模型图到所有已经加入的后端中
+- [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_image) 写图片到所有已经加入的后端中
+- [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_scalar) 写标量到所有已经加入的后端中
+- [add_scalars](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_scalars) 一次性写多个标量到所有已经加入的后端中
+- [get_writer](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.get_writer) 获取指定索引的 Writer，任何一个 Writer 中包括了 experiment 和 visualizer 属性
+- [get_experiment](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.get_experiment) 获取指定索引的 experiment
+- [get_visualizer](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.get_visualizer) 获取指定索引的 visualizer
+- [close](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.close) 调用所有 Writer 的 close 方法
 
 为了让用户可以在代码的任意位置进行数据可视化，`ComposedWriter` 类继承至 [全局可访问基类 BaseGlobalAccessible](./logging.md/#全局可访问基类baseglobalaccessible)。一旦继承了全局可访问基类, 用户就可以通过调用 `ComposedWriter` 对象的 `get_instance` 来获取全局对象。其基本用法如下
 
@@ -271,4 +273,20 @@ composed_writer.add_params(dict(lr=0.1, mode='linear'))
 composed_writer.add_image('demo_image', image, datasample)
 # 写模型图
 composed_writer.add_graph(model, input_array)
+```
+
+对于一些用户需要的自定义绘制需求或者上述接口无法满足的需求，用户可以通过 `get_xxx` 方法获取具体对象来实现特定需求
+
+```python
+composed_writer=ComposedWriter.get_instance('composed_writer')
+
+# 绘制特征图，获取 LocalWriter 中的 visualizer
+visualizer=composed_writer.get_visualizer(0)
+featmap_image=visualizer.draw_featmap(tensor_chw)
+composed_writer.add_image('featmap', featmap_image)
+
+# 扩展 add 功能，例如利用 Wandb 对象绘制表格
+wandb=composed_writer.get_experiment(1)
+val_table = wandb.Table(data=my_data, columns=column_names)
+wandb.log({'my_val_table': val_table})
 ```
