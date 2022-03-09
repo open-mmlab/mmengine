@@ -1,7 +1,6 @@
 addict
 matplotlib
 numpy
-opencv-python
 pyyaml
 regex;sys_platform=='win32'
 termcolor
