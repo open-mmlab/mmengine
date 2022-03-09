@@ -121,7 +121,7 @@ class Hook:
                    runner,
                    data_batch: DATA_BATCH = None,
                    outputs:
-                   Optional[Union[dict, Sequence[BaseDataSample]]] = None)\
+                   Optional[Union[dict, Sequence[BaseDataSample]]] = None) \
             -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
@@ -130,8 +130,8 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (dict, optional): Outputs from model.
-                Defaults to None.
+            outputs (dict or sequence, optional): Outputs from model. Defaults
+                to None.
         """
         pass
 
