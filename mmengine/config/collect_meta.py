@@ -4,7 +4,27 @@ import re
 from typing import Tuple
 
 from mmengine.fileio import load
-from mmengine.utils import check_file_exist
+from mmengine.utils import check_file_exist, is_installed
+
+
+PKG2PROJECT = {
+    'mmcls': 'mmcls',
+    'mmdet': 'mmdet',
+    'mmdet3d': 'mmdet3d',
+    'mmseg': 'mmsegmentation',
+    'mmaction2': 'mmaction2',
+    'mmtrack': 'mmtrack',
+    'mmpose': 'mmpose',
+    'mmedit': 'mmedit',
+    'mmocr': 'mmocr',
+    'mmgen': 'mmgen',
+    'mmfewshot': 'mmfewshot',
+    'mmrazor': 'mmrazor',
+    'mmflow': 'mmflow',
+    'mmhuman3d': 'mmhuman3d',
+    'mmrotate': 'mmrotate',
+    'mmselfsup': 'mmselfsup',
+}
 
 
 def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
@@ -18,11 +38,11 @@ def _get_cfg_meta(package_path: str, cfg_dir: str, cfg_file: str) -> dict:
     Returns:
         dict: Meta information of target experiment.
     """
-    meta_index_path = osp.join(package_path, '.mmengine', 'model-index.yml')
+    meta_index_path = osp.join(package_path, '.mim', 'model-index.yml')
     meta_index = load(meta_index_path)
     for meta_path in meta_index['Import']:
         # `meta_path` endswith `metafile.yml`
-        meta_path = osp.join(package_path, '.mmengine', meta_path)
+        meta_path = osp.join(package_path, '.mim', meta_path)
         if cfg_dir in meta_path:
             check_file_exist(meta_path)
             cfg_meta = load(meta_path)
@@ -91,6 +111,9 @@ def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
                          'config name, but found multiple `::` in '
                          f'{rel_cfg_path}')
     package, rel_cfg_path = package_cfg
+    assert package in PKG2PROJECT, 'mmengine does not support to load ' \
+                                   f'{package} config.'
+    package = PKG2PROJECT[package]
     return package, rel_cfg_path
 
 
@@ -106,7 +129,6 @@ def _parse_rel_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
         Tuple(str, str): Experiment dir and experiment config name.
     """
     rel_cfg_path_list = rel_cfg_path.split('/')
-    assert len(rel_cfg_path_list) == 2, \
-        '`rel_cfg_path` should only contain config file and config name.'
-    rel_cfg_dir, rel_cfg_file = rel_cfg_path_list
+    rel_cfg_file = rel_cfg_path_list.pop()
+    rel_cfg_dir = "/".join(rel_cfg_path_list)
     return rel_cfg_dir, rel_cfg_file
