@@ -145,6 +145,9 @@ featmap=visualizer.draw_featmap(tensor_chw,image)
 class DetVisualizer(Visualizer):
 
     def draw(self, image, gt_sample=None, pred_sample=None, draw_gt=True, draw_pred=True):
+        # 将图片和 matplotlib 布局关联
+        self.set_image(image)
+
         if draw_gt:
             # self.task_dict 内部存储如下信息：
             # dict(instances=draw_instance 方法,sem_seg=draw_sem_seg 方法)
@@ -158,10 +161,12 @@ class DetVisualizer(Visualizer):
                 if task_attr in pred_sample:
                     self.task_dict[task](self, pred_sample[task_attr], 'pred')
 
+    # data_type 用于区分当前绘制的内容是标注还是预测结果
     @Visualizer.register_task('instances')
     def draw_instance(self, instances, data_type):
         ...
 
+    # data_type 用于区分当前绘制的内容是标注还是预测结果
     @Visualizer.register_task('sem_seg')
     def draw_sem_seg(self, pixel_data, data_type):
         ...
