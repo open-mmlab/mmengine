@@ -440,21 +440,22 @@ def is_norm(layer: nn.Module,
 def tensor2imgs(tensor: torch.Tensor,
                 mean: Optional[Tuple[float, float, float]] = None,
                 std: Optional[Tuple[float, float, float]] = None,
-                to_rgb: bool = True):
+                to_bgr: bool = True):
     """Convert tensor to 3-channel images or 1-channel gray images.
 
     Args:
         tensor (torch.Tensor): Tensor that contains multiple images, shape (
-            N, C, H, W). :math:`C` can be either 3 or 1.
+            N, C, H, W). :math:`C` can be either 3 or 1. If C is 3, the format
+            should be RGB.
         mean (tuple[float], optional): Mean of images. If None,
             (0, 0, 0) will be used for tensor with 3-channel,
             while (0, ) for tensor with 1-channel. Defaults to None.
         std (tuple[float], optional): Standard deviation of images. If None,
             (1, 1, 1) will be used for tensor with 3-channel,
             while (1, ) for tensor with 1-channel. Defaults to None.
-        to_rgb (bool, optional): Whether the tensor was converted to RGB
-            format in the first place. If so, convert it back to BGR.
-            For the tensor with 1 channel, it must be False. Defaults to True.
+        to_bgr (bool): For the tensor with 3 channel, convert its format to
+            BGR. For the tensor with 1 channel, it must be False. Defaults to
+            True.
 
     Returns:
         list[np.ndarray]: A list that contains multiple images.
@@ -468,12 +469,12 @@ def tensor2imgs(tensor: torch.Tensor,
     if std is None:
         std = (1, ) * channels
     assert (channels == len(mean) == len(std) == 3) or \
-        (channels == len(mean) == len(std) == 1 and not to_rgb)
-    mean = np.array(mean, dtype=np.float32).reshape((1, 1, 1, -1))
-    std = np.array(std, dtype=np.float32).reshape((1, 1, 1, -1))
-    imgs = tensor.cpu().numpy().transpose(0, 2, 3, 1)
-    imgs = imgs * std + mean
-    if to_rgb and channels == 3:
+        (channels == len(mean) == len(std) == 1 and not to_bgr)
+    mean = tensor.new_tensor(mean).view(1, -1)
+    std = tensor.new_tensor(std).view(1, -1)
+    tensor = tensor.permute(0, 2, 3, 1) * std + mean
+    imgs = tensor.detach().cpu().numpy()
+    if to_bgr and channels == 3:
         imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
     imgs = [np.ascontiguousarray(img) for img in imgs]
     return imgs

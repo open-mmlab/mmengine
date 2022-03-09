@@ -3,6 +3,7 @@ import os.path as osp
 from typing import Any, Optional, Sequence, Tuple
 
 import cv2
+import numpy as np
 
 from mmengine.data import BaseDataSample
 from mmengine.hooks import Hook
@@ -30,6 +31,12 @@ class NaiveVisualizationHook(Hook):
         self.draw_pred = draw_pred
         self._interval = interval
 
+    def _unpad(self, input: np.ndarray, unpad_shape: Tuple[int,
+                                                           int]) -> np.ndarray:
+        unpad_width, unpad_height = unpad_shape
+        unpad_image = input[:unpad_height, :unpad_width]
+        return unpad_image
+
     def after_test_iter(
             self,
             runner,
@@ -46,18 +53,21 @@ class NaiveVisualizationHook(Hook):
         """
         if self.every_n_iters(runner, self._interval):
             inputs, data_samples = data_batch  # type: ignore
-            inputs = tensor2imgs(inputs, **data_samples[0].img_norm_cfg)
+            if 'img_norm_cfg' in data_samples[0]:
+                inputs = tensor2imgs(inputs, **data_samples[0].img_norm_cfg)
+            else:
+                inputs = tensor2imgs(inputs)
             for input, data_sample, output in zip(
                     inputs,
                     data_samples,  # type: ignore
                     outputs):  # type: ignore
                 # TODO We will implement a function to revert the augmentation
                 # in the future.
-                unpad_width, unpad_height = data_sample.scale
-                unpad_image = input[:unpad_height, :unpad_width]
-                origin_image = cv2.resize(
-                    unpad_image,
-                    (data_sample.ori_width, data_sample.ori_height))
+                ori_shape = (data_sample.ori_width, data_sample.ori_height)
+                if 'pad_shape' in data_sample:
+                    input = self._unpad(input,
+                                        data_sample.get('scale', ori_shape))
+                origin_image = cv2.resize(input, ori_shape)
                 name = osp.basename(data_sample.img_path)
                 runner.writer.add_image(name, origin_image, data_sample,
                                         output, self.draw_gt, self.draw_pred)
