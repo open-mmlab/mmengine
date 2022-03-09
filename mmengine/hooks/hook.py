@@ -19,7 +19,8 @@ class Hook:
         operations before the training process.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/validation/testing
+                process.
         """
         pass
 
@@ -28,7 +29,8 @@ class Hook:
         operations after the training process.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/validation/testing
+                process.
         """
         pass
 
@@ -55,7 +57,7 @@ class Hook:
         operations before val.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         pass
 
@@ -64,7 +66,7 @@ class Hook:
         operations after val.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         pass
 
@@ -73,7 +75,7 @@ class Hook:
         operations before test.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
         pass
 
@@ -82,7 +84,7 @@ class Hook:
         operations after test.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
         pass
 
