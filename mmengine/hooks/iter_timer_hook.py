@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import time
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 from mmengine.registry import HOOKS
@@ -40,15 +40,17 @@ class IterTimerHook(Hook):
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+                   outputs:
+                   Optional[Union[dict, Sequence[BaseDataSample]]] = None) \
+            -> None:
         """Logging time for a iteration and update the time flag.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
-                Defaults to None.
+            outputs (dict or sequence, optional): Outputs from model. Defaults
+                to None.
         """
         # TODO: update for new logging system
         runner.log_buffer.update({'time': time.time() - self.t})

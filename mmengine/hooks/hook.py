@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 
@@ -19,7 +19,8 @@ class Hook:
         operations before the training process.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/validation/testing
+                process.
         """
         pass
 
@@ -28,7 +29,62 @@ class Hook:
         operations after the training process.
 
         Args:
+            runner (Runner): The runner of the training/validation/testing
+                process.
+        """
+        pass
+
+    def before_train(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations before train.
+
+        Args:
             runner (Runner): The runner of the training process.
+        """
+        pass
+
+    def after_train(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations after train.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        pass
+
+    def before_val(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations before val.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+        """
+        pass
+
+    def after_val(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations after val.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+        """
+        pass
+
+    def before_test(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations before test.
+
+        Args:
+            runner (Runner): The runner of the testing process.
+        """
+        pass
+
+    def after_test(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations after test.
+
+        Args:
+            runner (Runner): The runner of the testing process.
         """
         pass
 
@@ -64,7 +120,9 @@ class Hook:
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+                   outputs:
+                   Optional[Union[dict, Sequence[BaseDataSample]]] = None) \
+            -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
 
@@ -72,8 +130,8 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
-                Defaults to None.
+            outputs (dict or sequence, optional): Outputs from model. Defaults
+                to None.
         """
         pass
 
@@ -184,11 +242,10 @@ class Hook:
         """
         self.before_iter(runner, data_batch=None)
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
@@ -196,16 +253,16 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
 
-    def after_val_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_val_iter(self,
+                       runner,
+                       data_batch: DATA_BATCH = None,
+                       outputs: Optional[Sequence[BaseDataSample]] = None) \
+            -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 
@@ -213,7 +270,7 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from
+            outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)
@@ -230,7 +287,7 @@ class Hook:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         self.after_iter(runner, data_batch=None, outputs=None)

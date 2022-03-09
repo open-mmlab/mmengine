@@ -168,18 +168,17 @@ class CheckpointHook(Hook):
                 else:
                     break
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs=Optional[dict]) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         if self.by_epoch:
