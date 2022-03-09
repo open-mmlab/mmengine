@@ -187,11 +187,11 @@ class TestBaseEvaluator(TestCase):
         indicator = 'prefix_1/metric_0'  # correct indicator
         self.assertEqual(get_metric_value(indicator, metrics), 1)
 
-        indicator = 'prefix_0/metric_1'  # with wrong metric name
+        indicator = 'prefix_0/metric_1'  # unmatched indicator (wrong metric)
         with self.assertRaisesRegex(ValueError, 'can not match any metric'):
             _ = get_metric_value(indicator, metrics)
 
-        indicator = 'prefix_2/metric'  # with wrong prefix
+        indicator = 'prefix_2/metric'  # unmatched indicator (wrong prefix)
         with self.assertRaisesRegex(ValueError, 'can not match any metric'):
             _ = get_metric_value(indicator, metrics)
 
