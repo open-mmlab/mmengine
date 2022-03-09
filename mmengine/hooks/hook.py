@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 
@@ -120,7 +120,9 @@ class Hook:
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[dict] = None) -> None:
+                   outputs:
+                   Optional[Union[dict, Sequence[BaseDataSample]]] = None)\
+            -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
 
@@ -259,7 +261,8 @@ class Hook:
     def after_val_iter(self,
                        runner,
                        data_batch: DATA_BATCH = None,
-                       outputs: Optional[dict] = None) -> None:
+                       outputs: Optional[Sequence[BaseDataSample]] = None) \
+            -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 
