@@ -191,14 +191,6 @@ class Runner:
         self._iter = 0
         self._inner_iter = 0
 
-        self._launcher = launcher
-        if self._launcher == 'none':
-            self.distributed = False
-        else:
-            self.distributed = True
-
-        self._rank, self._world_size = get_dist_info()
-
         # lazy initialization
         training_related = [
             train_dataloader, train_cfg, optimizer, param_scheduler
@@ -245,6 +237,39 @@ class Runner:
                 'test_dataloader is not None.')
         self._evaluator = evaluator
 
+        self._launcher = launcher
+        if self._launcher == 'none':
+            self.distributed = False
+        else:
+            self.distributed = True
+
+        self._rank, self._world_size = get_dist_info()
+
+        self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        self.deterministic = deterministic
+        self.seed = seed
+        self.setup_env(env_cfg)
+
+        if experiment_name is not None:
+            self._experiment_name = experiment_name
+        elif self.cfg is not None and self.cfg.get('filename') is not None:
+            self._experiment_name = osp.splitext(
+                osp.basename(self.cfg.filename))[0]
+        else:
+            self._experiment_name = self.timestamp
+
+        self.message_hub = MessageHub(self._experiment_name)
+
+        if log_cfg is None:
+            log_cfg = dict()
+        self.logger = MMLogger(**log_cfg)
+
+        if writer_cfg is None:
+            writer_cfg = dict(
+                name='composed_writer',
+                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
+        self.writer = ComposedWriter.create_instance(**writer_cfg)
+
         # build a model
         if isinstance(model, dict):
             self.model = self.build_model(model)
@@ -276,31 +301,6 @@ class Runner:
 
         self._hooks: List[Hook] = []
         self.register_hooks(default_hooks, custom_hooks)
-
-        self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-        self.deterministic = deterministic
-        self.seed = seed
-        self.setup_env(env_cfg)
-
-        if experiment_name is not None:
-            self._experiment_name = experiment_name
-        elif self.cfg is not None and self.cfg.get('filename') is not None:
-            self._experiment_name = osp.splitext(
-                osp.basename(self.cfg.filename))[0]
-        else:
-            self._experiment_name = self.timestamp
-
-        self.message_hub = MessageHub(self._experiment_name)
-
-        if log_cfg is None:
-            log_cfg = dict()
-        self.logger = MMLogger(**log_cfg)
-
-        if writer_cfg is None:
-            writer_cfg = dict(
-                name='composed_writer',
-                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
-        self.writer = ComposedWriter.create_instance(**writer_cfg)
 
         # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
         # hook messages and so on. Those information will be saved to
