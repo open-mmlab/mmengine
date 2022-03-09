@@ -106,7 +106,7 @@ class Accuracy(BaseEvaluator):
     Default prefix: ACC
 
     Metrics:
-        - accuracy: classification accuracy
+        - accuracy (float): classification accuracy
     """
 
     default_prefix = 'ACC'
