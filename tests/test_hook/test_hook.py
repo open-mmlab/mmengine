@@ -161,8 +161,8 @@ class TestHook:
 
         # last inner iter
         runner.inner_iter = 1
-        runner.train_dataloader.__len__ = Mock(return_value=2)
-        runner.val_dataloader.__len__ = Mock(return_value=2)
+        runner.cur_dataloader.__len__ = Mock(return_value=2)
+        runner.cur_dataloader.__len__ = Mock(return_value=2)
         return_val = hook.end_of_epoch(runner)
         assert return_val
 
@@ -192,11 +192,11 @@ class TestHook:
 
         # last iter
         runner.iter = 1
-        runner.train_loop._max_iters = 2
+        runner.train_loop.max_iters = 2
         return_val = hook.is_last_iter(runner)
         assert return_val
 
         # not the last iter
-        runner.train_loop._max_iters = 0
+        runner.train_loop.max_iters = 0
         return_val = hook.is_last_iter(runner)
         assert not return_val

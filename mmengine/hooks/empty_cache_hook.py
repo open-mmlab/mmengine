@@ -30,9 +30,9 @@ class EmptyCacheHook(Hook):
                  before_epoch: bool = False,
                  after_epoch: bool = True,
                  after_iter: bool = False) -> None:
-        self._is_before_epoch = before_epoch
-        self._is_after_epoch = after_epoch
-        self._is_after_iter = after_iter
+        self._do_before_epoch = before_epoch
+        self._do_after_epoch = after_epoch
+        self._do_after_iter = after_iter
 
     def _after_iter(self,
                     runner,
@@ -50,7 +50,7 @@ class EmptyCacheHook(Hook):
                 Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._is_after_iter:
+        if self._do_after_iter:
             torch.cuda.empty_cache()
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
@@ -60,7 +60,7 @@ class EmptyCacheHook(Hook):
             runner (Runner): The runner of the training process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._is_before_epoch:
+        if self._do_before_epoch:
             torch.cuda.empty_cache()
 
     def _after_epoch(self, runner, mode: str = 'train') -> None:
@@ -70,5 +70,5 @@ class EmptyCacheHook(Hook):
             runner (Runner): The runner of the training process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._is_after_epoch:
+        if self._do_after_epoch:
             torch.cuda.empty_cache()

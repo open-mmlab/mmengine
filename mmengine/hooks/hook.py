@@ -262,7 +262,7 @@ class Hook:
         """
         pass
 
-    def every_n_epochs(self, runner, n: int, mode: str = 'train') -> bool:
+    def every_n_epochs(self, runner, n: int) -> bool:
         """Test whether or not current epoch can be evenly divided by n.
 
         Args:
@@ -272,10 +272,9 @@ class Hook:
         Returns:
             bool: whether or not current epoch can be evenly divided by n.
         """
-        # TODO check train_loop type
         return (runner.epoch + 1) % n == 0 if n > 0 else False
 
-    def every_n_inner_iters(self, runner, n: int, mode: str = 'train') -> bool:
+    def every_n_inner_iters(self, runner, n: int) -> bool:
         """Test whether or not current inner iteration can be evenly divided by
         n.
 
@@ -289,10 +288,9 @@ class Hook:
             bool: whether or not current inner iteration can be evenly
             divided by n.
         """
-        # TODO check train_loop type
         return (runner.inner_iter + 1) % n == 0 if n > 0 else False
 
-    def every_n_iters(self, runner, n: int, mode: str = 'train') -> bool:
+    def every_n_iters(self, runner, n: int) -> bool:
         """Test whether or not current iteration can be evenly divided by n.
 
         Args:
@@ -305,10 +303,9 @@ class Hook:
             bool: Return True if the current iteration can be evenly divided
             by n, otherwise False.
         """
-        # TODO check train_loop type
         return (runner.iter + 1) % n == 0 if n > 0 else False
 
-    def end_of_epoch(self, runner, mode: str = 'train') -> bool:
+    def end_of_epoch(self, runner) -> bool:
         """Check whether the current epoch reaches the `max_epochs` or not.
 
         Args:
@@ -318,13 +315,10 @@ class Hook:
         Returns:
             bool: whether the end of current epoch or not.
         """
-        if mode == 'train':
-            data_loader = runner.train_dataloader
-        else:
-            data_loader = runner.val_dataloader
-        return runner.inner_iter + 1 == len(data_loader)
+        # TODO compatible with val_loop
+        return runner.inner_iter + 1 == len(runner.cur_dataloader)
 
-    def is_last_epoch(self, runner, mode: str = 'train') -> bool:
+    def is_last_epoch(self, runner) -> bool:
         """Test whether or not current epoch is the last epoch.
 
         Args:
@@ -335,10 +329,9 @@ class Hook:
             bool: bool: Return True if the current epoch reaches the
             `max_epochs`, otherwise False.
         """
-        # TODO check train_loop type
         return runner.epoch + 1 == runner.train_loop._max_epochs
 
-    def is_last_iter(self, runner, mode: str = 'train') -> bool:
+    def is_last_iter(self, runner) -> bool:
         """Test whether or not current epoch is the last iteration.
 
         Args:
@@ -348,13 +341,5 @@ class Hook:
         Returns:
             bool: whether or not current iteration is the last iteration.
         """
-        # TODO check train_loop type
-        if mode == 'train':
-            _max_iters = runner.train_loop._max_iters
-        elif mode == 'val':
-            _max_iters = runner.val_loop._max_iters
-        elif mode == 'test':
-            _max_iters = runner.test_loop._max_iters
-        else:
-            raise ValueError('mode should be train, val or test')
-        return runner.iter + 1 == _max_iters
+        # TODO compatible with val_loop
+        return runner.iter + 1 == runner.train_loop.max_iters
