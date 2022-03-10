@@ -352,4 +352,8 @@ class Hook:
             _max_iters = runner.train_loop._max_iters
         elif mode == 'val':
             _max_iters = runner.val_loop._max_iters
+        elif mode == 'test':
+            _max_iters = runner.test_loop._max_iters
+        else:
+            raise ValueError('mode should be train, val or test')
         return runner.iter + 1 == _max_iters
