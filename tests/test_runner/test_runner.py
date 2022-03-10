@@ -31,6 +31,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import get_priority
 from mmengine.utils import is_list_of
+from mmengine.visualization.writer import ComposedWriter
 
 
 @MODELS.register_module()
@@ -120,7 +121,6 @@ class TestRunner(TestCase):
                 param_scheduler=dict(type='ParamSchedulerHook')),
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
-            logger=dict(log_level='INFO'),
         )
         self.full_cfg = Config(full_cfg)
 
@@ -190,6 +190,29 @@ class TestRunner(TestCase):
         # test env params
         cfg = copy.deepcopy(self.full_cfg)
         runner = Runner(**cfg)
+        self.assertFalse(self._distributed)
+        self.assertFalse(self.deterministic)
+
+        # test parameters: message_hub, logger and writer
+        # they are all not specified
+        cfg = copy.deepcopy(self.full_cfg)
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner.logger, MMLogger)
+        self.assertIsInstance(runner.message_hub, MessageHub)
+        self.assertIsInstance(runner.writer, ComposedWriter)
+
+        # they are all specified
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.logger = dict(name='test_logger')
+        cfg.message_hub = dict(name='test_message_hub')
+        cfg.writer = dict(name='test_writer')
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner.logger, MMLogger)
+        self.assertEqual(runner.logger.name, 'test_logger')
+        self.assertIsInstance(runner.message_hub, MessageHub)
+        self.assertEqual(runner.message_hub.name, 'test_message_hub')
+        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertEqual(runner.writer.name, 'test_writer')
 
         assert runner.distributed is False
         assert runner.seed is not None
@@ -197,8 +220,9 @@ class TestRunner(TestCase):
 
         # model should be initialized
         self.assertIsInstance(runner.model, (nn.Module, MMDataParallel))
+        self.assertEqual(runner.model_name, 'ToyModel')
 
-        # lazy initialization
+        # test lazy initialization
         self.assertIsInstance(runner.train_dataloader, dict)
         self.assertIsInstance(runner.val_dataloader, dict)
         self.assertIsInstance(runner.test_dataloader, dict)
@@ -225,6 +249,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner, Runner)
 
     def test_manually_init(self):
+        # TODO
         model = ToyModel()
         optimizer = SGD(
             model.parameters(),
@@ -311,8 +336,8 @@ class TestRunner(TestCase):
         # temporarily store system setting
         sys_start_method = mp.get_start_method(allow_none=True)
         # pop and temp save system env vars
-        sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', default=None)
-        sys_mkl_threads = os.environ.pop('MKL_NUM_THREADS', default=None)
+        sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', None)
+        sys_mkl_threads = os.environ.pop('MKL_NUM_THREADS', None)
 
         # test default multi-processing setting when workers > 1
         cfg = copy.deepcopy(self.full_cfg)

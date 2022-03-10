@@ -143,24 +143,23 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if self.by_epoch:
-            cur_ckpt_filename = self.args.get(
+            ckpt_filename = self.args.get(
                 'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
         else:
-            cur_ckpt_filename = self.args.get(
+            ckpt_filename = self.args.get(
                 'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
 
         runner.save_checkpoint(
             self.out_dir,
-            filename=cur_ckpt_filename,
+            filename=ckpt_filename,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
-            by_epoch=self.by_epoch,
             **self.args)
 
         if runner.meta is not None:
             runner.meta.setdefault('hook_msgs', dict())
             runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
-                self.out_dir, cur_ckpt_filename)
+                self.out_dir, ckpt_filename)
 
         # remove other checkpoints
         if self.max_keep_ckpts > 0:

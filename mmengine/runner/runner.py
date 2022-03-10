@@ -30,7 +30,7 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
-from mmengine.utils import is_list_of, symlink
+from mmengine.utils import find_latest_checkpoint, is_list_of, symlink
 from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -61,7 +61,7 @@ class Runner:
             should also be specified . Defaults to None.
         val_cfg (dict, optional): A dict to build a validation loop which is a
             subclass of :obj:`BaseLoop`. If specified, :attr:`val_dataloader`
-            should also be specified . Defaults to None.
+            should also be specified. Defaults to None.
         test_cfg (dict, optional): A dict to build a test loop which is a
             subclass of :obj:`BaseLoop`. If specified, :attr:`test_dataloader`
             should also be specified. Defaults to None.
@@ -72,8 +72,12 @@ class Runner:
             Parameter scheduler for updating optimizer parameters. If
             specified, :attr:`optimizer` should also be specified.
             Defaults to None.
-        evaluator (:obj:`Evaluator` or dict or list, optional): Used for
-            computing metrics. Defaults to None.
+        val_evaluator (:obj:`Evaluator` or dict or list, optional): Used for
+            computing metrics for validation. If specified,
+            :attr:`val_dataloader` should also be specified. Defaults to None.
+        test_evaluator (:obj:`Evaluator` or dict or list, optional): Used for
+            computing metrics for test steps. If specified,
+            :attr:`test_dataloader` should also be specified. Defaults to None.
         default_hooks (dict[str, dict] or dict[str, Hook], optional): Hooks to
             execute default actions like updating model parameters and saving
             checkpoints. Default hooks have ``OptimizerHook``,
@@ -82,23 +86,30 @@ class Runner:
         custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
-        load_checkpoint (dict, optional): A dict containing path of
-            checkpoint and a flag whether to resume training.
+        load_from (str, optional): The checkpoint file to load from.
+            Defaults to None.
+        resume_from (str, optional): The checkpoint file to resume from.
+            Defaults to None.
+        auto_resume (bool): Whether to resume from the latest checkpoint
+            automatically. Defaults to False.
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
             distributed training is disable.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
-        log_cfg (dict, optional): A dict to build logger object. Defaults to
-            None.
-        writer_cfg (ComposedWriter or dict, optional): Used for writing
-            logs. TODO
+        logger (MMLogger or dict, optional): A dict to build logger object.
+            Defaults to None.
+        message_hub (MessageHub or dict, optional): A dict to build
+            MessageHub object. Defaults to None.
+        writer (ComposedWriter or dict, optional): Used for writing
+            logs. Defaults to None.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
         seed (int, optional): A number to guarantee reproducible results.
             If not specified, a random number will be set as seed. Defaults to
             None.
         deterministic (bool): Whether cudnn to select deterministic algorithms.
+            Defaults to False.
             See https://pytorch.org/docs/stable/notes/randomness.html.
         experiment_name (str, optional): Name of current experiment.
             Defaults to None.
@@ -126,7 +137,8 @@ class Runner:
                     num_workers=0),
                 optimizer=dict(type='SGD', lr=0.01),
                 param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
-                evaluator=dict(type='ToyEvaluator'),
+                val_evaluator=dict(type='ToyEvaluator'),
+                test_evaluator=dict(type='ToyEvaluator'),
                 train_cfg=dict(by_epoch=True, max_epochs=3),
                 val_cfg=dict(interval=1),
                 test_cfg=dict(),
@@ -139,8 +151,9 @@ class Runner:
                     param_scheduler=dict(type='ParamSchedulerHook')),
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                log_cfg=dict(log_level='INFO'),
-                writer_cfg=dict(
+                logger=dict(log_level='INFO'),
+                message=None,
+                writer=dict(
                     name='composed_writer',
                     writers=[dict(type='LocalWriter', save_dir='temp_dir')])
             )
@@ -165,10 +178,13 @@ class Runner:
         test_cfg: Optional[Dict] = None,
         optimizer: Optional[Union[Optimizer, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        evaluator: Optional[Union[EvaluatorType, Dict, List[Dict]]] = None,
+        val_evaluator: Optional[Union[EvaluatorType, Dict, List]] = None,
+        test_evaluator: Optional[Union[EvaluatorType, Dict, List]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
-        load_checkpoint: Optional[Dict] = None,
+        load_from: Optional[str] = None,
+        resume_from: Optional[str] = None,
+        auto_resume: bool = False,
         launcher: Optional[str] = None,
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         logger: Optional[Union[MMLogger, Dict]] = None,
@@ -219,35 +235,28 @@ class Runner:
         else:
             self.param_schedulers = param_scheduler
 
-        val_related = [val_dataloader, val_cfg]
+        val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
                     for item in val_related) or all(item is not None
                                                     for item in val_related)):
             raise ValueError(
-                'val_dataloader and val_cfg should be either all None '
-                f'or not None, but got val_dataloader={val_dataloader}, '
-                f'val_cfg={val_cfg}')
+                'val_dataloader, val_cfg and val_evaluator should be either '
+                'all None or not None, but got '
+                f'val_dataloader={val_dataloader}, val_cfg={val_cfg}')
         self.val_dataloader = val_dataloader
         self.val_loop = val_cfg
+        self.val_evaluator = val_evaluator
 
-        test_related = [test_dataloader, test_cfg]
+        test_related = [test_dataloader, test_cfg, test_evaluator]
         if not (all(item is None for item in test_related)
                 or all(item is not None for item in test_related)):
             raise ValueError(
-                'test_dataloader and test_cfg should be either all None or not'
-                f' None, but got test_dataloader={test_dataloader}, '
-                f'test_cfg={test_cfg}')
+                'test_dataloader, test_cfg and test_evaluator should be either'
+                ' all None or not None, but got '
+                'test_dataloader={test_dataloader}, test_cfg={test_cfg}')
         self.test_dataloader = test_dataloader
         self.test_loop = test_cfg
-
-        if ((self.val_dataloader is not None
-             or self.test_dataloader is not None) and evaluator is None or
-            (self.val_dataloader is None and self.test_dataloader is None
-             and evaluator is not None)):
-            raise ValueError(
-                'evaluator should not be None when val_dataloader or '
-                'test_dataloader is not None.')
-        self.evaluator = evaluator
+        self.test_evaluator = test_evaluator
 
         self._launcher = launcher
         if self._launcher == 'none':
@@ -255,53 +264,28 @@ class Runner:
         else:
             self._distributed = True
 
-        self.deterministic = deterministic
-        self.seed = seed
-        self.setup_env(env_cfg)
-        self._rank, self._world_size = get_dist_info()
-
-        timestamp = torch.tensor(time.time(), dtype=torch.float64)
-        broadcast(timestamp)
-        self.timestamp = str(timestamp.item())
+        # self._deterministic, self._seed and self._timestamp will be set in
+        # the `setup_env`` method. Besides, it also will initialize
+        # multi-process and (or) distributed environment.
+        self.setup_env(env_cfg, seed, deterministic)
 
         if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self.timestamp}'
+            self._experiment_name = f'{experiment_name}_{self._timestamp}'
         elif self.cfg.get('filename') is not None:
             filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self.timestamp}'
+            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
 
-        if message_hub is None:
-            message_hub = dict(name=self._experiment_name)
-        if isinstance(message_hub, MessageHub):
-            self.message_hub = message_hub
-        else:
-            # message_hub must contain name
-            message_hub.setdefault('name', self._experiment_name)
-            self.message_hub = MessageHub.create_instance(**message_hub)
+        self.logger = self.build_logger(logger)
+        # message hub used for component interaction
+        self.message_hub = self.build_message_hub(message_hub)
+        # writer used for writing log or visualizing all kinds of data
+        self.writer = self.build_writer(writer)
 
-        if logger is None:
-            logger = dict(name=self._experiment_name, log_level='INFO')
-        if isinstance(logger, MMLogger):
-            self.logger = logger
-        else:
-            # logger must contain name
-            logger.setdefault('name', self._experiment_name)
-            self.logger = MMLogger.create_instance(**logger)
-
-        if writer is None:
-            writer = dict(
-                name=self._experiment_name,
-                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
-        if isinstance(writer, ComposedWriter):
-            self.writer = writer
-        else:
-            # writer must contain name
-            writer.setdefault('name', self._experiment_name)
-            self.writer = ComposedWriter.create_instance(**writer)
-
-        self._load_checkpoint = load_checkpoint
+        self._load_from = load_from
+        self._resume_from = resume_from
+        self._auto_resume = auto_resume
         # flag to mark whether checkpoint has been loaded or resumed
         self._has_loaded = False
 
@@ -321,10 +305,7 @@ class Runner:
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
 
-        # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
-        # hook messages and so on. `self.meta` will be saved to checkpoint for
-        # resuming.
-        self.meta: dict = dict()  # TODO
+        self.meta: dict = dict()
 
         # dump config  TODO
         # if self._rank == 0:
@@ -354,10 +335,13 @@ class Runner:
             test_cfg=cfg.get('test_cfg'),
             optimizer=cfg.get('optimizer'),
             param_scheduler=cfg.get('param_scheduler'),
-            evaluator=cfg.get('evaluator'),
+            val_evaluator=cfg.get('val_evaluator'),
+            test_evaluator=cfg.get('test_evaluator'),
             default_hooks=cfg.get('default_hooks'),
             custom_hooks=cfg.get('custom_hooks'),
-            load_checkpoint=cfg.get('load_checkpoint'),
+            load_from=cfg.get('load_from'),
+            resume_from=cfg.get('resume_from'),
+            auto_resume=cfg.get('auto_resume'),
             launcher=cfg.get('launcher'),
             env_cfg=cfg.get('env_cfg'),
             logger=cfg.get('log_cfg'),
@@ -418,11 +402,29 @@ class Runner:
         return self._world_size
 
     @property
+    def deterministic(self):
+        """int:  Whether cudnn to select deterministic algorithms."""
+        return self._deterministic
+
+    @property
+    def seed(self):
+        """int: A number to guarantee reproducible results."""
+        return self._seed
+
+    @property
+    def timestamp(self):
+        """str: Timestamp when create experiment."""
+        return self._timestamp
+
+    @property
     def hooks(self):
         """list[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
 
-    def setup_env(self, env_cfg: Dict) -> None:
+    def setup_env(self,
+                  env_cfg: Dict,
+                  seed: Optional[int],
+                  deterministic: bool = False) -> None:
         """Setup environment.
 
         An example of ``env_cfg``::
@@ -438,7 +440,16 @@ class Runner:
 
         Args:
             env_cfg (dict): Config for setting environment.
+            seed (int, optional): A number to guarantee reproducible results.
+                If not specified, a random number will be set as seed.
+                Defaults to None.
+            deterministic (bool): Whether cudnn to select deterministic
+                algorithms. Defaults to False.
+                See https://pytorch.org/docs/stable/notes/randomness.html.
         """
+        self._deterministic = deterministic
+        self._seed = seed
+
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
@@ -448,6 +459,14 @@ class Runner:
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and env_cfg.get('dist_cfg') is not None:
             init_dist(**env_cfg.get('dist_cfg'))  # type: ignore
+
+        self._rank, self._world_size = get_dist_info()
+
+        timestamp = torch.tensor(time.time(), dtype=torch.float64)
+        # broadcast timestamp from 0 process to other processes
+        broadcast(timestamp)
+        self._timestamp = time.strftime('%Y%m%d_%H%M%S',
+                                        time.localtime(timestamp.item()))
 
         # set random seeds
         self._set_random_seed()
@@ -515,16 +534,97 @@ class Runner:
 
         See https://pytorch.org/docs/stable/notes/randomness.html for details.
         """
-        if self.seed is None:
-            self.seed = sync_random_seed()
+        if self._seed is None:
+            self._seed = sync_random_seed()
 
-        random.seed(self.seed)
-        np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
-        torch.cuda.manual_seed_all(self.seed)
-        if self.deterministic:
+        random.seed(self._seed)
+        np.random.seed(self._seed)
+        torch.manual_seed(self._seed)
+        torch.cuda.manual_seed_all(self._seed)
+        if self._deterministic:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
+
+    def build_logger(self,
+                     logger: Optional[Union[MMLogger,
+                                            Dict]] = None) -> MMLogger:
+        """Build a global asscessable MMLogger.
+
+        Args:
+            logger (MMLogger or dict, optional): Config to build logger.
+
+        Returns:
+            MMLogger: A MMLogger object build from ``logger``.
+        """
+        if isinstance(logger, MMLogger):
+            return logger
+        elif logger is None:
+            logger = dict(name=self._experiment_name, log_level='INFO')
+        elif isinstance(logger, dict):
+            # ensure logger containing name key
+            logger.setdefault('name', self._experiment_name)
+        else:
+            raise TypeError(
+                'logger should be MMLogger object, a dict or None, '
+                f'but got {logger}')
+
+        return MMLogger.create_instance(**logger)
+
+    def build_message_hub(
+            self,
+            message_hub: Optional[Union[MessageHub,
+                                        Dict]] = None) -> MessageHub:
+        """Build a global asscessable MessageHub.
+
+        Args:
+            message_hub (MessageHub or dict, optional): Config to build
+                a MessageHub object.
+
+        Returns:
+            MessageHub: A MessageHub object build from ``message_hub``.
+        """
+        if isinstance(message_hub, MessageHub):
+            return message_hub
+        elif message_hub is None:
+            message_hub = dict(name=self._experiment_name)
+        elif isinstance(message_hub, dict):
+            # ensure message_hub containing name key
+            message_hub.setdefault('name', self._experiment_name)
+        else:
+            raise TypeError(
+                'message_hub should be MessageHub object, a dict or None, '
+                f'but got {message_hub}')
+
+        return MessageHub.create_instance(**message_hub)
+
+    def build_writer(
+        self,
+        writer: Optional[Union[ComposedWriter,
+                               Dict]] = None) -> ComposedWriter:
+        """Build a global asscessable ComposedWriter.
+
+        Args:
+            writer (ComposedWriter or dict, optional): Config to build
+                a ComposedWriter object.
+
+        Returns:
+            ComposedWriter: A ComposedWriter object build from ``writer``.
+        """
+        if isinstance(writer, ComposedWriter):
+            return writer
+        elif writer is None:
+            writer = dict(
+                name=self._experiment_name,
+                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
+        elif isinstance(writer, dict):
+            # ensure writer containing name key
+            writer.setdefault('name', self._experiment_name)
+        else:
+            raise TypeError(
+                'writer should be ComposedWriter object, a dict or None, '
+                f'but got {writer}')
+
+        return ComposedWriter.create_instance(**writer)
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
@@ -784,8 +884,6 @@ class Runner:
             raise RuntimeError(
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
 
-        self.train_dataloader = self.build_dataloader(self.train_dataloader)
-
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
@@ -831,7 +929,6 @@ class Runner:
 
         loop_cfg = copy.deepcopy(loop)
 
-        self.val_dataloader = self.build_dataloader(self.val_dataloader)
         self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
 
         if 'type' in loop_cfg:
@@ -869,7 +966,6 @@ class Runner:
 
         loop_cfg = copy.deepcopy(loop)  # type: ignore
 
-        self.test_dataloader = self.build_dataloader(self.test_dataloader)
         self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
 
         if 'type' in loop_cfg:
@@ -888,14 +984,26 @@ class Runner:
 
         return loop  # type: ignore
 
-    def _load_or_resume(self) -> None:
+    def load_or_resume(self) -> None:
         """load or resume checkpoint."""
-        if self._load_checkpoint is not None and not self._has_loaded:
-            # `self._has_loaded` will be set as True
-            if self._load_checkpoint['resume']:
-                self.resume(self._load_checkpoint['path'])
-            else:
-                self.load_checkpoint(self._load_checkpoint['path'])
+        if self._has_loaded:
+            return None
+
+        # decide to load from checkpoint or resume from checkpoint
+        if self._resume_from is None and self._auto_resume:
+            self._resume_from = find_latest_checkpoint(self.work_dir)
+
+        if self._resume_from is not None and self._load_from is not None:
+            raise ValueError(
+                'resume_from and self._load_from is not all None, '
+                'Can not decide which one to load')
+
+        if self._resume_from:
+            self.resume(self._resume_from)
+            self._has_loaded = True
+        elif self._load_from:
+            self.load_checkpoint(self._load_from)
+            self._has_loaded = True
 
     def train(self) -> None:
         """Launch training."""
@@ -906,7 +1014,7 @@ class Runner:
         if self.val_loop is not None:
             self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
-        self._load_or_resume()
+        self.load_or_resume()
 
         self.call_hook('before_run')
         self.train_loop.run()  # type: ignore
@@ -917,7 +1025,7 @@ class Runner:
         assert self.val_loop is not None
         self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
-        self._load_or_resume()
+        self.load_or_resume()
 
         self.call_hook('before_run')
         self.val_loop.run()  # type: ignore
@@ -928,7 +1036,7 @@ class Runner:
         assert self.test_loop is not None
         self.test_loop = self.build_test_loop(self.test_loop)  # type: ignore
 
-        self._load_or_resume()
+        self.load_or_resume()
 
         self.call_hook('before_run')
         self.test_loop.run()  # type: ignore

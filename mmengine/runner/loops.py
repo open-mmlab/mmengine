@@ -165,7 +165,9 @@ class ValLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        for key, value in metrics.items():
+            self.runner.message_hub.update_log(f'val/{key}', value)
 
         self.runner.call_hook('after_val')
 
