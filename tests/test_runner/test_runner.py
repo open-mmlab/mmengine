@@ -38,7 +38,7 @@ class ToyModel(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(2, 3)
+        self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
         input, label = zip(*data_batch)
