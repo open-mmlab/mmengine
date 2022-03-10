@@ -15,7 +15,7 @@ class TestDistSamplerSeedHook:
         runner.data_loader = Mock()
         runner.data_loader.sampler = Mock()
         runner.data_loader.sampler.set_epoch = Mock()
-        hook.before_epoch(runner)
+        hook._before_epoch(runner)
         runner.data_loader.sampler.set_epoch.assert_called()
         # Test batch sampler
         runner = Mock()
@@ -24,5 +24,5 @@ class TestDistSamplerSeedHook:
         runner.data_loader.batch_sampler = Mock()
         runner.data_loader.batch_sampler.sampler = Mock()
         runner.data_loader.batch_sampler.sampler.set_epoch = Mock()
-        hook.before_epoch(runner)
+        hook._before_epoch(runner)
         runner.data_loader.batch_sampler.sampler.set_epoch.assert_called()

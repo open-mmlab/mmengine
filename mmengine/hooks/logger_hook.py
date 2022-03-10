@@ -193,7 +193,7 @@ class LoggerHook(Hook):
             self._log_train(runner)
         elif not self.by_epoch and self.every_n_iters(runner, self.interval):
             self._log_train(runner)
-        elif self.end_of_epoch(runner) and not self.ignore_last:
+        elif self.end_of_epoch(runner, 'train') and not self.ignore_last:
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
@@ -264,7 +264,7 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.data_loader)}]\t'
+                      f'[{cur_iter}/{len(runner.train_dataloader)}]\t'
         else:
             log_str = f'Iter [{cur_iter}/{runner.max_iters}]\t'
         log_str += f'{lr_momentum_str}, '
@@ -302,7 +302,7 @@ class LoggerHook(Hook):
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
-        eval_iter = len(runner.data_loader)
+        eval_iter = len(runner.val_dataloader)
         cur_iter = self._get_iter(runner)
         cur_epoch = self._get_epoch(runner, 'val')
         # val/test time

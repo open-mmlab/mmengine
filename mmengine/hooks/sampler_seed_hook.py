@@ -14,11 +14,12 @@ class DistSamplerSeedHook(Hook):
 
     priority = 'NORMAL'
 
-    def before_epoch(self, runner) -> None:
+    def _before_epoch(self, runner, mode: str = 'train') -> None:
         """Set the seed for sampler and batch_sampler.
 
         Args:
             runner (Runner): The runner of the training process.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
         if hasattr(runner.data_loader.sampler, 'set_epoch'):
             # in case the data loader uses `SequentialSampler` in Pytorch
