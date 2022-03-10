@@ -40,7 +40,8 @@ class IterTimerHook(Hook):
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({f'{mode}/data_time': time.time() - self.t})
+        runner.message_hub.update_log(
+            {f'{mode}/data_time': time.time() - self.t})
 
     def _after_iter(self,
                     runner,
@@ -61,5 +62,5 @@ class IterTimerHook(Hook):
         """
         # TODO: update for new logging system
 
-        runner.log_buffer.update({f'{mode}/time': time.time() - self.t})
+        runner.message_hub.update_log({f'{mode}/time': time.time() - self.t})
         self.t = time.time()
