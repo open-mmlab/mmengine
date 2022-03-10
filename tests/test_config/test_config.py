@@ -48,7 +48,7 @@ class TestConfig:
         # reserved keys cannot be set in config
         with pytest.raises(
                 KeyError, match='filename is reserved for config '
-                'file'):
+                                'file'):
             Config.fromfile(cfg_file)
 
     def test_fromfile(self):
@@ -247,7 +247,7 @@ class TestConfig:
             print(cfg, file=f)
         with open(tmp_txt, 'r') as f:
             assert f.read().strip() == f'Config (path: {cfg.filename}): ' \
-                               f'{cfg._cfg_dict.__repr__()}'
+                                       f'{cfg._cfg_dict.__repr__()}'
 
     def test_dict_action(self):
         parser = argparse.ArgumentParser(description='Train a detector')
@@ -399,6 +399,19 @@ class TestConfig:
         self._merge_recursive_bases()
         self._deprecation()
 
+    def test_get_cfg_path(self):
+        filename = 'py_config/simple_config.py'
+        filename = osp.join(self.data_path, 'config', filename)
+        cfg_name = './base.py'
+        cfg_path = Config._get_cfg_path(cfg_name, filename)
+        osp.isfile(cfg_path)
+        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco'
+        cfg_path = Config._get_cfg_path(cfg_name, filename)
+        osp.isfile(cfg_path)
+        cfg_name = 'mmdet::_base_/models/cascade_mask_rcnn_r50_fpn.py'
+        cfg_path = Config._get_cfg_path(cfg_name, filename)
+        osp.isfile(cfg_path)
+
     def _simple_load(self):
         # test load simple config
         for file_format in ['py', 'json', 'yaml']:
@@ -501,8 +514,8 @@ class TestConfig:
 
     def _base_variables(self):
         for file in [
-                'py_config/test_base_variables.py',
-                'json_config/test_base.json', 'yaml_config/test_base.yaml'
+            'py_config/test_base_variables.py',
+            'json_config/test_base.json', 'yaml_config/test_base.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -521,9 +534,9 @@ class TestConfig:
 
         # test nested base
         for file in [
-                'py_config/test_base_variables_nested.py',
-                'json_config/test_base_variables_nested.json',
-                'yaml_config/test_base_variables_nested.yaml'
+            'py_config/test_base_variables_nested.py',
+            'json_config/test_base_variables_nested.json',
+            'yaml_config/test_base_variables_nested.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -652,6 +665,7 @@ class TestConfig:
         assert new_cfg._cfg_dict is not cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
+
 
 
 

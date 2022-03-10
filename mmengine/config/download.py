@@ -7,23 +7,23 @@ import torch.nn as nn
 from mmengine.runner import load_checkpoint
 from mmengine.utils import check_install_package, get_installed_path
 from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
-                           _parse_external_cfg_path, _parse_rel_cfg_path)
+                           _parse_external_cfg_path, _parse_cfg_name)
 from .config import Config
 
 
-def get_config(cfg_name: str, suffix='.py', pretrained: bool = False)\
+def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
         -> Config:
     """Get config from external package.
 
     Args:
         cfg_name (str): External relative config path with prefix
             'package::' and without suffix.
-        suffix (str): Suffix of ``cfg_name``. If cfg_name is a base
-            cfg, the `suffix` will be used to get the absolute config path.
-            Defaults to '.py'.
         pretrained (bool): Whether to save pretrained model path. If
             ``pretrained==True``, the url of pretrained model can be accessed
             by ``cfg.model_path``. Defaults to False.
+        suffix (str): Suffix of ``cfg_name``. If cfg_name is a base
+            cfg, the `suffix` will be used to get the absolute config path.
+            Defaults to '.py'.
 
     Examples:
         >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco',
@@ -41,22 +41,22 @@ def get_config(cfg_name: str, suffix='.py', pretrained: bool = False)\
     # Check package is installed.
     check_install_package(package)
     package_path = get_installed_path(package)
-    # Since the base config does not contain a metafile, the absolute config
-    # is `osp.join(package_path, cfg_path_prefix, cfg_name)`
-    if '__base__' in cfg_name:
-        cfg_path = _get_external_cfg_base_path(package_path, cfg_name)
-        return Config.fromfile(cfg_path + suffix)
-    # Use `rel_cfg_dir` to search `model-index.yml`, `rel_cfg_file` to search
-    # specific metafile.yml.
-    rel_cfg_dir, rel_cfg_file = _parse_rel_cfg_path(cfg_name)
-    cfg_meta = _get_cfg_meta(package_path, rel_cfg_dir, rel_cfg_file)
-    cfg_path = osp.join(package_path, cfg_meta['Config'])
-    cfg = Config.fromfile(cfg_path)
-    if pretrained:
-        assert 'Weights' in cfg_meta, 'Cannot find `Weights` in ' \
-                                      'cfg_file.metafile.yml, please check ' \
-                                      'the metafile'
+    try:
+        # Use `cfg_name` to search target config file.
+        rel_cfg_file = _parse_cfg_name(cfg_name)
+        cfg_meta = _get_cfg_meta(package_path, rel_cfg_file)
+        cfg_path = osp.join(package_path, '.mim', cfg_meta['Config'])
+        cfg = Config.fromfile(cfg_path)
         cfg.model_path = cfg_meta['Weights']
+        if pretrained:
+            assert 'Weights' in cfg_meta, 'Cannot find `Weights` in ' \
+                                          'cfg_file.metafile.yml, please check ' \
+                                          'the metafile'
+    except ValueError:
+        # Since the base config does not contain a metafile, the absolute
+        # config is `osp.join(package_path, cfg_path_prefix, cfg_name)`
+        cfg_path = _get_external_cfg_base_path(package_path, cfg_name + suffix)
+        cfg = Config.fromfile(cfg_path)
     return cfg
 
 
@@ -70,32 +70,24 @@ def get_model(cfg_name: str,
     Args:
         cfg_name (str): External relative config path with prefix
             'package::' and without suffix.
+        pretrained (bool): Whether to load pretrained model. Defaults to False.
+        build_func_name (str): Name of model build function. Defaults to
+            'build_model'
         suffix (str): Suffix of ``cfg_name``. If cfg_name is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
-        build_func_name (str): Name of model build function. Defaults to
-            'build_model'
-        pretrained (bool): Whether to load pretrained model. Defaults to False.
 
     Returns:
         nn.Module: Built model.
     """
-    cfg = get_config(cfg_name, suffix, pretrained)
+    cfg = get_config(cfg_name, pretrained, suffix)
     package = cfg_name.split('::')[0]
 
-    try:
-        models_module = importlib.import_module(f'{package}.models')
-    except ModuleNotFoundError as e:
-        raise ModuleNotFoundError('Cannot find `models` moduls in package '
-                                  f'`{package}`: {e}')
+    models_module = importlib.import_module(f'{package}.models')
     build_func = getattr(models_module, build_func_name, None)
     if build_func is None:
         raise RuntimeError(f'`{build_func_name}` is not defined in '
                            f'`{package}.models`')
     model = build_func(cfg.model, **kwargs)
-    if pretrained:
-        assert hasattr(cfg, 'model_path'), 'Cannot find pretrained model. ' \
-                                           f'Please ensure {cfg_name} ' \
-                                           'is not a base config.'
-        model = load_checkpoint(model, cfg.model_path)
+    model = load_checkpoint(model, cfg.model_path)
     return model

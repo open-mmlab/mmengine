@@ -21,7 +21,7 @@ from mmengine.fileio import dump, load
 from mmengine.utils import (check_file_exist, check_install_package,
                             get_installed_path, import_modules_from_strings)
 from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
-                           _parse_external_cfg_path, _parse_rel_cfg_path)
+                           _parse_external_cfg_path, _parse_cfg_name)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -122,6 +122,7 @@ class Config:
         :"
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
     """
+    _valid_format = ('.py', '.json', '.yaml', '.yml')
 
     def __init__(self,
                  cfg_dict: dict = None,
@@ -367,7 +368,7 @@ class Config:
         filename = osp.abspath(osp.expanduser(filename))
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
-        if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
+        if fileExtname not in Config._valid_format:
             raise IOError('Only py/yml/yaml/json type are supported now!')
 
         with tempfile.TemporaryDirectory() as temp_config_dir:
@@ -458,30 +459,29 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _get_cfg_path(rel_cfg_path: str, filename: str) -> str:
+    def _get_cfg_path(cfg_path: str, filename: str) -> str:
         """Get the config path from the current or external package.
 
         Args:
-            rel_cfg_path (str): Relative path of config.
+            cfg_name (str): Relative path of config.
             filename (str): The config file being parsed.
 
         Returns:
-            str: The absolute path of `rel_cfg_path`.
+            str: The absolute path of `cfg_name`.
         """
-        if '::' in rel_cfg_path:
-            package, rel_cfg_path = _parse_external_cfg_path(rel_cfg_path)
+        if '::' in cfg_path:
+            package, cfg_path = _parse_external_cfg_path(cfg_path)
             check_install_package(package)
             package_path = get_installed_path(package)
-            if '_base_' in rel_cfg_path:
+            try:
+                cfg_name = _parse_cfg_name(cfg_path)
+                cfg_path = _get_external_cfg_path(package_path, cfg_name)
+            except ValueError:
                 cfg_path = _get_external_cfg_base_path(package_path,
-                                                       rel_cfg_path)
-            else:
-                rel_cfg_dir, rel_cfg_file = _parse_rel_cfg_path(rel_cfg_path)
-                cfg_path = _get_external_cfg_path(package_path, rel_cfg_dir,
-                                                  rel_cfg_file)
+                                                       cfg_path)
         else:
             cfg_dir = osp.dirname(filename)
-            cfg_path = osp.join(cfg_dir, str(rel_cfg_path))
+            cfg_path = osp.join(cfg_dir, cfg_path)
         return cfg_path
 
     @staticmethod
