@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import copy
 import os
 import os.path as osp
 import platform
 import sys
 from importlib import import_module
 from pathlib import Path
-import copy
 
 import pytest
 
