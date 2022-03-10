@@ -84,30 +84,30 @@ def _get_external_cfg_base_path(package_path: str, cfg_name: str):
     return cfg_path
 
 
-def _parse_external_cfg_path(rel_cfg_path: str) -> Tuple[str, str]:
+def _parse_external_cfg_path(cfg_name: str) -> Tuple[str, str]:
     """Get package name and relative config path.
 
     Args:
-        rel_cfg_path (str): External relative config path with 'package::'.
+        cfg_name (str): External relative config path with 'package::'.
 
     Returns:
         Tuple(str, str): Package name and relative config path.
     """
-    if re.match(r'\w*::\w*/\w*', rel_cfg_path) is None:
+    if re.match(r'\w*::\w*/\w*', cfg_name) is None:
         raise ValueError('`_parse_external_cfg_path` is used for parse '
                          'external package, please specify the package name '
                          'and relative config path, just like '
                          '`mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco` ')
-    package_cfg = rel_cfg_path.split('::')
+    package_cfg = cfg_name.split('::')
     if len(package_cfg) > 2:
         raise ValueError('`::` should only be used to separate package and '
                          'config name, but found multiple `::` in '
-                         f'{rel_cfg_path}')
-    package, rel_cfg_path = package_cfg
+                         f'{cfg_name}')
+    package, cfg_name = package_cfg
     assert package in PKG2PROJECT, 'mmengine does not support to load ' \
                                    f'{package} config.'
     package = PKG2PROJECT[package]
-    return package, rel_cfg_path
+    return package, cfg_name
 
 
 def _parse_cfg_name(cfg_name: str) -> str:
