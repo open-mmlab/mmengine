@@ -56,7 +56,7 @@ validation_cfg=dict(
     ],
     # 指定使用前缀为 COCO 的 AP 为主要评测指标
     # 在没有重名指标歧义的情况下，此处可以不写前缀，只写评测指标名
-    main_metric='COCO.AP',
+    main_metric='COCO/AP',
     interval=10,
     by_epoch=True,
 )
@@ -106,7 +106,7 @@ class Accuracy(BaseEvaluator):
     Default prefix: ACC
 
     Metrics:
-        - accuracy: classification accuracy
+        - accuracy (float): classification accuracy
     """
 
     default_prefix = 'ACC'
