@@ -53,10 +53,8 @@ class NaiveVisualizationHook(Hook):
         """
         if self.every_n_iters(runner, self._interval):
             inputs, data_samples = data_batch  # type: ignore
-            if 'img_norm_cfg' in data_samples[0]:
-                inputs = tensor2imgs(inputs, **data_samples[0].img_norm_cfg)
-            else:
-                inputs = tensor2imgs(inputs)
+            inputs = tensor2imgs(inputs,
+                                 **data_samples[0].get('img_norm_cfg', dict()))
             for input, data_sample, output in zip(
                     inputs,
                     data_samples,  # type: ignore
