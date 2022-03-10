@@ -271,8 +271,8 @@ class LoggerHook(Hook):
         # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
         time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter + 1)
-        eta_sec = time_sec_avg * \
-                  (runner.train_loop.max_iters - runner.iter - 1)
+        eta_sec = time_sec_avg * (
+            runner.train_loop.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
         log_str += f'eta: {eta_str}, '
         log_str += f'time: {tag["time"]:.3f}, ' \
