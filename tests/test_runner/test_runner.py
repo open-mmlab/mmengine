@@ -5,14 +5,13 @@ import multiprocessing as mp
 import os
 import os.path as osp
 import platform
+import shutil
 import tempfile
 from unittest import TestCase
 from unittest.mock import patch
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.optim import SGD
 from torch.utils.data import DataLoader, Dataset
 
@@ -39,29 +38,34 @@ class ToyModel(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 1, 1)
-        self.conv2 = nn.Conv2d(1, 1, 1)
+        self.linear = nn.Linear(2, 3)
 
-    def forward(self, x):
-        return self.conv2(F.relu(self.conv1(x)))
-
-    def train_step(self, *inputs, **kwargs):
-        pass
-
-    def val_step(self, *inputs, **kwargs):
-        pass
+    def forward(self, data_batch, return_loss=False):
+        input, label = zip(*data_batch)
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        input = torch.stack(input).to(device)
+        label = torch.stack(label).to(device)
+        output = self.linear(input)
+        if return_loss:
+            loss = (label - output).sum()
+            outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
+            return outputs
+        else:
+            outputs = dict(log_vars=dict(a=1, b=0.5))
+            return outputs
 
 
 @DATASETS.register_module()
 class ToyDataset(Dataset):
     META = dict()  # type: ignore
-    data = np.zeros((10, 1, 1, 1))
+    data = torch.randn(12, 2)
+    label = torch.ones(12)
 
     def __len__(self):
-        return self.data.shape[0]
+        return self.data.size(0)
 
     def __getitem__(self, index):
-        return torch.from_numpy(self.data[index])
+        return self.data[index], self.label[index]
 
 
 @EVALUATORS.register_module()
@@ -89,17 +93,17 @@ class TestRunner(TestCase):
             train_dataloader=dict(
                 dataset=dict(type='ToyDataset'),
                 sampler=dict(type='DefaultSampler', shuffle=True),
-                batch_size=1,
+                batch_size=3,
                 num_workers=0),
             val_dataloader=dict(
                 dataset=dict(type='ToyDataset'),
                 sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=1,
+                batch_size=3,
                 num_workers=0),
             test_dataloader=dict(
                 dataset=dict(type='ToyDataset'),
                 sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=1,
+                batch_size=3,
                 num_workers=0),
             optimizer=dict(type='SGD', lr=0.01),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -112,69 +116,113 @@ class TestRunner(TestCase):
                 timer=dict(type='IterTimerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
                 logger=dict(type='LoggerHook'),
-                optimizer=dict(type='OptimizerHook', grad_clip=False),
+                optimizer=dict(type='OptimizerHook', grad_clip=None),
                 param_scheduler=dict(type='ParamSchedulerHook')),
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
-            log_cfg=dict(log_level='INFO'),
+            logger=dict(log_level='INFO'),
         )
         self.full_cfg = Config(full_cfg)
 
     def tearDown(self):
-        os.removedirs(self.temp_dir)
+        shutil.rmtree(self.temp_dir)
 
-    def test_build_from_cfg(self):
-        runner = Runner.build_from_cfg(cfg=self.full_cfg)
+    def test_init(self):
+        # test arguments: train_dataloader, train_cfg, optimizer and
+        # param_scheduler
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.pop('train_cfg')
+        with self.assertRaisesRegex(ValueError, 'either all None or not None'):
+            Runner(**cfg)
+
+        # all of training related configs are None
+        cfg.pop('train_dataloader')
+        cfg.pop('optimizer')
+        cfg.pop('param_scheduler')
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        # all of training related configs are not None
+        cfg = copy.deepcopy(self.full_cfg)
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        # test argument: val_dataloader and val_cfg
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.pop('val_cfg')
+        with self.assertRaisesRegex(ValueError, 'either all None or not None'):
+            Runner(**cfg)
+
+        cfg.pop('val_dataloader')
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        cfg = copy.deepcopy(self.full_cfg)
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        # test arguments: test_dataloader and test_cfg
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.pop('test_cfg')
+        with self.assertRaisesRegex(ValueError, 'either all None or not None'):
+            runner = Runner(**cfg)
+
+        cfg.pop('test_dataloader')
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        # test argument: evaluator
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.pop('evaluator')
+        with self.assertRaisesRegex(ValueError,
+                                    'evaluator should not be None'):
+            Runner(**cfg)
+
+        cfg = copy.deepcopy(self.full_cfg)
+        cfg.pop('val_dataloader')
+        cfg.pop('val_cfg')
+        cfg.pop('test_dataloader')
+        cfg.pop('test_cfg')
+        with self.assertRaisesRegex(ValueError,
+                                    'evaluator should not be None'):
+            Runner(**cfg)
+
         # test env params
+        cfg = copy.deepcopy(self.full_cfg)
+        runner = Runner(**cfg)
+
         assert runner.distributed is False
         assert runner.seed is not None
         assert runner.work_dir == self.temp_dir
 
-        # model should be full initialized
-        assert isinstance(runner.model, (nn.Module, MMDataParallel))
-        # lazy init
-        assert isinstance(runner.optimizer, dict)
-        assert isinstance(runner.param_schedulers, dict)
-        assert isinstance(runner.train_dataloader, dict)
-        assert isinstance(runner.val_dataloader, dict)
-        assert isinstance(runner.test_dataloader, dict)
-        assert isinstance(runner._evaluator, dict)
+        # model should be initialized
+        self.assertIsInstance(runner.model, (nn.Module, MMDataParallel))
 
-        # after runner.train(), train and val loader should be initialized
-        # test loader should still be config
+        # lazy initialization
+        self.assertIsInstance(runner.train_dataloader, dict)
+        self.assertIsInstance(runner.val_dataloader, dict)
+        self.assertIsInstance(runner.test_dataloader, dict)
+        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner.param_schedulers[0], dict)
+        self.assertIsInstance(runner.evaluator, dict)
+
+        # After calling runner.train(),
+        # train_dataloader and val_loader should be initialized but
+        # test_dataloader should also be dict
         runner.train()
-        assert isinstance(runner.test_dataloader, dict)
-        assert isinstance(runner.train_dataloader, DataLoader)
-        assert isinstance(runner.val_dataloader, DataLoader)
-        assert isinstance(runner.optimizer, SGD)
-        assert isinstance(runner._evaluator, ToyEvaluator)
+        self.assertIsInstance(runner.train_dataloader, DataLoader)
+        self.assertIsInstance(runner.val_dataloader, DataLoader)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.evaluator, ToyEvaluator)
+        self.assertIsInstance(runner.test_dataloader, dict)
 
+        # After calling runner.test(), test_dataloader should be initialized
         runner.test()
-        assert isinstance(runner.test_dataloader, DataLoader)
+        self.assertIsInstance(runner.test_dataloader, DataLoader)
 
-        # cannot run runner.test() without evaluator cfg
-        with self.assertRaisesRegex(AssertionError,
-                                    'evaluator does not exist'):
-            cfg = copy.deepcopy(self.full_cfg)
-            cfg.pop('evaluator')
-            runner = Runner.build_from_cfg(cfg)
-            runner.test()
-
-        # cannot run runner.train() without optimizer cfg
-        with self.assertRaisesRegex(AssertionError,
-                                    'optimizer does not exist'):
-            cfg = copy.deepcopy(self.full_cfg)
-            cfg.pop('optimizer')
-            runner = Runner.build_from_cfg(cfg)
-            runner.train()
-
-        # can run runner.train() without validation
-        cfg = copy.deepcopy(self.full_cfg)
-        cfg.validation_cfg = None
-        cfg.pop('evaluator')
-        cfg.pop('val_dataloader')
-        runner = Runner.build_from_cfg(cfg)
-        runner.train()
+    def test_build_from_cfg(self):
+        runner = Runner.build_from_cfg(cfg=self.full_cfg)
+        self.assertIsInstance(runner, Runner)
 
     def test_manually_init(self):
         model = ToyModel()
@@ -545,6 +593,15 @@ class TestRunner(TestCase):
         cfg = dict()
         loop = runner.build_test_loop(cfg)
         assert isinstance(loop, TestLoop)
+
+    def test_train(self):
+        pass
+
+    def test_val(self):
+        pass
+
+    def test_test(self):
+        pass
 
     def test_register_hook(self):
         runner = Runner.build_from_cfg(self.full_cfg)

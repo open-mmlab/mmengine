@@ -665,6 +665,16 @@ class Config:
         super().__setattr__('_filename', _filename)
         super().__setattr__('_text', _text)
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        other = cls.__new__(cls)
+        memo[id(self)] = other
+
+        for key, value in self.__dict__.items():
+            super(Config, other).__setattr__(key, copy.deepcopy(value, memo))
+
+        return other
+
     def dump(self, file: Optional[str] = None):
         """Dump config to file or return config text.
 

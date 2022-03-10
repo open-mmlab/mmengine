@@ -35,7 +35,7 @@ class IterTimerHook(Hook):
                 from dataloader. Defaults to None.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({'data_time': time.time() - self.t})
+        runner.message_hub.update_log('data_time', time.time() - self.t)
 
     def after_iter(self,
                    runner,
@@ -51,5 +51,5 @@ class IterTimerHook(Hook):
                 Defaults to None.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({'time': time.time() - self.t})
+        runner.message_hub.update_log('time', time.time() - self.t)
         self.t = time.time()

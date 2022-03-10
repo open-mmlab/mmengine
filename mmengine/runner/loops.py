@@ -60,9 +60,17 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._inner_iter = idx
 
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
-        outputs = self.runner.model.train_step(data_batch)
+        # outputs should be a dict
+        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+
+        # TODO, should move to LoggerHook
+        for key, value in self.runner.outputs['log_vars'].items():
+            self.runner.message_hub.update_log(f'train/{key}', value)
+
         self.runner.call_hook(
-            'after_train_iter', data_batch=data_batch, outputs=outputs)
+            'after_train_iter',
+            data_batch=data_batch,
+            outputs=self.runner.outputs)
 
         self.runner._iter += 1
 
@@ -110,9 +118,16 @@ class IterBasedTrainLoop(BaseLoop):
                 from dataloader.
         """
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
-        outputs = self.runner.model.train_step(data_batch)
+        # outputs should be a dict
+        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+
+        for key, value in self.runner.outputs['log_vars'].items():
+            self.runner.message_hub.update_log(f'train/{key}', value)
+
         self.runner.call_hook(
-            'after_train_iter', data_batch=data_batch, outputs=outputs)
+            'after_train_iter',
+            data_batch=data_batch,
+            outputs=self.runner.outputs)
         self.runner._iter += 1
 
 
@@ -161,12 +176,19 @@ class ValLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner.inner_iter = idx
+        self.runner._inner_iter = idx
         self.runner.call_hook('before_val_iter', data_batch=data_batch)
-        outputs = self.runner.model(data_batch)
-        self.evaluator.process(data_batch, outputs)
+        # outputs should be a dict
+        self.runner.outputs = self.runner.model(data_batch)
+
+        for key, value in self.runner.outputs['log_vars'].items():
+            self.runner.message_hub.update_log(f'val/{key}', value)
+
+        self.evaluator.process(data_batch, self.runner.outputs)
         self.runner.call_hook(
-            'after_val_iter', data_batch=data_batch, outputs=outputs)
+            'after_val_iter',
+            data_batch=data_batch,
+            outputs=self.runner.outputs)
 
 
 @LOOPS.register_module()
@@ -197,7 +219,9 @@ class TestLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        for key, value in metrics.items():
+            self.runner.message_hub.update_log(f'test/{key}', value)
 
         self.runner.call_hook('after_test')
 
@@ -209,9 +233,9 @@ class TestLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner.inner_iter = idx
+        self.runner._inner_iter = idx
         self.runner.call_hook('before_test_iter', data_batch=data_batch)
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
-            'after_test_iter', databatch=data_batch, outputs=outputs)
+            'after_test_iter', data_batch=data_batch, outputs=outputs)

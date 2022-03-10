@@ -9,23 +9,24 @@ import shutil
 import time
 import warnings
 from functools import partial
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config
 from mmengine.data import worker_init_fn
-from mmengine.dist import get_dist_info, init_dist, sync_random_seed
-from mmengine.evaluator import BaseEvaluator
+from mmengine.dist import broadcast, get_dist_info, init_dist, sync_random_seed
+from mmengine.evaluator import (BaseEvaluator, ComposedEvaluator,
+                                build_evaluator)
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.model import (MMDataParallel, MMDistributedDataParallel,
-                            is_model_wrapper)
+from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
@@ -36,6 +37,8 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
+
+EvaluatorType = Union[BaseEvaluator, ComposedEvaluator]
 
 
 class Runner:
@@ -88,7 +91,8 @@ class Runner:
             dict(dist_cfg=dict(backend='nccl')).
         log_cfg (dict, optional): A dict to build logger object. Defaults to
             None.
-        writer_cfg (dict, optional): TODO
+        writer_cfg (ComposedWriter or dict, optional): Used for writing
+            logs. TODO
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
         seed (int, optional): A number to guarantee reproducible results.
@@ -141,11 +145,13 @@ class Runner:
                     writers=[dict(type='LocalWriter', save_dir='temp_dir')])
             )
         >>> runner = Runner.build_from_cfg(cfg)
+        >>> runner.train()
+        >>> runner.test()
     """
     cfg: Config
-    _train_loop: Optional[Union[BaseLoop, Dict]]
-    _val_loop: Optional[Union[BaseLoop, Dict]]
-    _test_loop: Optional[Union[BaseLoop, Dict]]
+    train_loop: Optional[Union[BaseLoop, Dict]]
+    val_loop: Optional[Union[BaseLoop, Dict]]
+    test_loop: Optional[Union[BaseLoop, Dict]]
 
     def __init__(
         self,
@@ -159,14 +165,15 @@ class Runner:
         test_cfg: Optional[Dict] = None,
         optimizer: Optional[Union[Optimizer, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        evaluator: Optional[Union[BaseEvaluator, Dict, List]] = None,
+        evaluator: Optional[Union[EvaluatorType, Dict, List[Dict]]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
         load_checkpoint: Optional[Dict] = None,
         launcher: Optional[str] = None,
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
-        log_cfg: Optional[dict] = None,
-        writer_cfg: Optional[Dict] = None,
+        logger: Optional[Union[MMLogger, Dict]] = None,
+        message_hub: Optional[Union[MessageHub, Dict]] = None,
+        writer: Optional[Union[ComposedWriter, Dict]] = None,
         default_scope: Optional[str] = None,
         seed: Optional[int] = None,
         deterministic: bool = False,
@@ -198,16 +205,19 @@ class Runner:
         if not (all(item is None for item in training_related)
                 or all(item is not None for item in training_related)):
             raise ValueError(
-                'train_dataloader, train_cfg, optimizer, param_scheduler '
+                'train_dataloader, train_cfg, optimizer and param_scheduler '
                 'should be either all None or not None, but got '
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optimizer={optimizer}, '
                 f'param_scheduler={param_scheduler}.')
         self.train_dataloader = train_dataloader
-        self._train_loop = train_cfg
+        self.train_loop = train_cfg
         self.optimizer = optimizer
-        self.param_schedulers = param_scheduler
+        if not isinstance(param_scheduler, Sequence):
+            self.param_schedulers = [param_scheduler]
+        else:
+            self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg]
         if not (all(item is None
@@ -218,7 +228,7 @@ class Runner:
                 f'or not None, but got val_dataloader={val_dataloader}, '
                 f'val_cfg={val_cfg}')
         self.val_dataloader = val_dataloader
-        self._val_loop = val_cfg
+        self.val_loop = val_cfg
 
         test_related = [test_dataloader, test_cfg]
         if not (all(item is None for item in test_related)
@@ -228,70 +238,78 @@ class Runner:
                 f' None, but got test_dataloader={test_dataloader}, '
                 f'test_cfg={test_cfg}')
         self.test_dataloader = test_dataloader
-        self._test_loop = test_cfg
+        self.test_loop = test_cfg
 
-        if (self.val_dataloader is not None
-                or self.test_dataloader is not None) and evaluator is None:
+        if ((self.val_dataloader is not None
+             or self.test_dataloader is not None) and evaluator is None or
+            (self.val_dataloader is None and self.test_dataloader is None
+             and evaluator is not None)):
             raise ValueError(
                 'evaluator should not be None when val_dataloader or '
                 'test_dataloader is not None.')
-        self._evaluator = evaluator
+        self.evaluator = evaluator
 
         self._launcher = launcher
         if self._launcher == 'none':
-            self.distributed = False
+            self._distributed = False
         else:
-            self.distributed = True
+            self._distributed = True
 
-        self._rank, self._world_size = get_dist_info()
-
-        self.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         self.deterministic = deterministic
         self.seed = seed
         self.setup_env(env_cfg)
+        self._rank, self._world_size = get_dist_info()
+
+        timestamp = torch.tensor(time.time(), dtype=torch.float64)
+        broadcast(timestamp)
+        self.timestamp = str(timestamp.item())
 
         if experiment_name is not None:
-            self._experiment_name = experiment_name
-        elif self.cfg is not None and self.cfg.get('filename') is not None:
-            self._experiment_name = osp.splitext(
-                osp.basename(self.cfg.filename))[0]
+            self._experiment_name = f'{experiment_name}_{self.timestamp}'
+        elif self.cfg.get('filename') is not None:
+            filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
+            self._experiment_name = f'{filename_no_ext}_{self.timestamp}'
         else:
             self._experiment_name = self.timestamp
 
-        self.message_hub = MessageHub(self._experiment_name)
-
-        if log_cfg is None:
-            log_cfg = dict()
-        self.logger = MMLogger(**log_cfg)
-
-        if writer_cfg is None:
-            writer_cfg = dict(
-                name='composed_writer',
-                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
-        self.writer = ComposedWriter.create_instance(**writer_cfg)
-
-        # build a model
-        if isinstance(model, dict):
-            self.model = self.build_model(model)
-        elif isinstance(model, nn.Module):
-            self.model = model
+        if message_hub is None:
+            message_hub = dict(name=self._experiment_name)
+        if isinstance(message_hub, MessageHub):
+            self.message_hub = message_hub
         else:
-            raise TypeError(
-                'model should be a dict to build model or an instance of '
-                f'torch.nn.Module, but got {model}')
+            # message_hub must contain name
+            message_hub.setdefault('name', self._experiment_name)
+            self.message_hub = MessageHub.create_instance(**message_hub)
+
+        if logger is None:
+            logger = dict(name=self._experiment_name, log_level='INFO')
+        if isinstance(logger, MMLogger):
+            self.logger = logger
+        else:
+            # logger must contain name
+            logger.setdefault('name', self._experiment_name)
+            self.logger = MMLogger.create_instance(**logger)
+
+        if writer is None:
+            writer = dict(
+                name=self._experiment_name,
+                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
+        if isinstance(writer, ComposedWriter):
+            self.writer = writer
+        else:
+            # writer must contain name
+            writer.setdefault('name', self._experiment_name)
+            self.writer = ComposedWriter.create_instance(**writer)
 
         self._load_checkpoint = load_checkpoint
-        # flag to mark whether has loaded or resumed checkpoint
+        # flag to mark whether checkpoint has been loaded or resumed
         self._has_loaded = False
 
-        if is_model_wrapper(self.model):
-            if self.cfg.get('model_wrapper_cfg') is not None:
-                raise TypeError(
-                    'model has been wrapped and "model_wrapper_cfg" should be '
-                    f'None, but got {self.cfg.get("model_wrapper_cfg")}')
-        else:
-            self.model = self.wrap_model(
-                self.cfg.get('model_wrapper_cfg'), self.model)
+        # build a model
+        self.model = self.build_model(model)
+        # wrap model
+        self.model = self.wrap_model(
+            self.cfg.get('model_wrapper_cfg'), self.model)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
@@ -300,18 +318,18 @@ class Runner:
             self._model_name = self.model.__class__.__name__
 
         self._hooks: List[Hook] = []
+        # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
 
         # `self.meta` keeps some runtime information like `_epoch`, `_iter`,
-        # hook messages and so on. Those information will be saved to
-        # checkpoint for resuming.
+        # hook messages and so on. `self.meta` will be saved to checkpoint for
+        # resuming.
         self.meta: dict = dict()  # TODO
 
-        # dump config
-        if self._rank == 0 and self.cfg is not None and self.cfg.get(
-                'filename') is not None:
-            self.cfg.dump(
-                osp.join(self._work_dir, osp.basename(self.cfg.filename)))
+        # dump config  TODO
+        # if self._rank == 0:
+        #     filename = osp.basename(self.cfg.get('filename', 'config.py'))
+        #     self.cfg.dump(osp.join(self._work_dir, filename))
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -342,8 +360,9 @@ class Runner:
             load_checkpoint=cfg.get('load_checkpoint'),
             launcher=cfg.get('launcher'),
             env_cfg=cfg.get('env_cfg'),
-            log_cfg=cfg.get('log_cfg'),
-            writer_cfg=cfg.get('writer_cfg'),
+            logger=cfg.get('log_cfg'),
+            message_hub=cfg.get('message_hub'),
+            writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),
             seed=cfg.get('seed'),
             deterministic=cfg.get('deterministic'),
@@ -354,7 +373,7 @@ class Runner:
 
     @property
     def experiment_name(self):
-        """str: Name of experiment, usually the name of config."""
+        """str: Name of experiment, usually the name of config + timestamp."""
         return self._experiment_name
 
     @property
@@ -364,6 +383,7 @@ class Runner:
 
     @property
     def work_dir(self):
+        """str: The working directory to save checkpoints and logs."""
         return self._work_dir
 
     @property
@@ -380,6 +400,11 @@ class Runner:
     def inner_iter(self):
         """int: Current iteration."""
         return self._inner_iter
+
+    @property
+    def distributed(self):
+        """bool: Whether current environment is distributed."""
+        return self._distributed
 
     @property
     def rank(self):
@@ -400,20 +425,19 @@ class Runner:
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
+        An example of ``env_cfg``::
+
+            env_cfg = dict(
+                cudnn_benchmark=True,
+                mp_cfg=dict(
+                    mp_start_method='fork',
+                    opencv_num_threads=0
+                ),
+                dist_cfg=dict(backend='nccl'),
+            )
+
         Args:
-            env_cfg (dict): Config for setting environment. An example of
-                ``env_cfg`` format:
-
-                .. code-block:: python
-
-                    env_cfg = dict(
-                        cudnn_benchmark=True,
-                        mp_cfg=dict(
-                            mp_start_method='fork',
-                            opencv_num_threads=0
-                        ),
-                        dist_cfg=dict(backend='nccl'),
-                    )
+            env_cfg (dict): Config for setting environment.
         """
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
@@ -486,7 +510,8 @@ class Runner:
 
         Warning:
             Results can not be guaranteed to resproducible if ``self.seed`` is
-            None because :meth:`_set_random_seed` will generate a random seed.
+            None because :meth:`_set_random_seed` will generate a random seed
+            when launching a new experiment.
 
         See https://pytorch.org/docs/stable/notes/randomness.html for details.
         """
@@ -501,110 +526,117 @@ class Runner:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-    def build_model(self, model_cfg: Dict) -> nn.Module:
+    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
+        An example of ``model``::
+
+            model = dict(type='ResNet')
+
         Args:
-            model_cfg (dict): Config to build model. An example of
-                ``model_cfg`` format:
-
-                .. code-block:: python
-
-                    model_cfg = dict(type='ResNet')
+            model (nn.Module or dict): Config to build model.
 
         Returns:
-            nn.Module: Model build from ``model_cfg``.
+            nn.Module: Model build from ``model``.
         """
-        model = MODELS.build(model_cfg, default_scope=self.default_scope)
-
-        if not hasattr(model, 'train_step'):
-            # TODO, fix the url
-            raise RuntimeError(
-                'Model should implement `train_step` method. More details can'
-                ' be found at TODO')
-
-        return model
+        if isinstance(model, nn.Module):
+            return model
+        elif isinstance(model, dict):
+            return MODELS.build(model, default_scope=self.default_scope)
+        else:
+            raise TypeError('model should be a nn.Module object or dict, '
+                            f'but got {model}')
 
     def wrap_model(self, model_wrapper_cfg: Optional[Dict],
                    model: nn.Module) -> nn.Module:
         """Wrap model.
 
+        An example of ``model_wrapper_cfg``::
+
+            model_wrapper_cfg = dict(
+                broadcast_buffers=False,
+                find_unused_parameters=False
+            )
+
         Args:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
-                will be used. Defaults to None. An example of
-                ``model_wrapper_cfg``:
-
-                .. code-block:: python
-
-                    model_wrapper = dict(
-                        type='MMDistributedDataParallel',
-                        broadcast_buffers=False,
-                        find_unused_parameters=False
-                    )
+                will be used. Defaults to None.
+            model (nn.Module): Model to be wrapped.
 
         Returns:
             nn.Module: Wrapped model.
         """
+        if is_model_wrapper(model):
+            if model_wrapper_cfg is not None:
+                raise TypeError(
+                    'model has been wrapped and "model_wrapper_cfg" should be '
+                    f'None, but got {model_wrapper_cfg}')
+
+            return model
+
         if model_wrapper_cfg is None:
             if self.distributed:
-                # TODO
                 find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                       False)
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
-                model = MMDistributedDataParallel(
+                model = DistributedDataParallel(
                     self.model.cuda(),
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
             else:
-                # TODO
-                # Note that set `export CUDA_VISIBLE_DEVICES=-1` will
-                # enable CPU training.
-                model = MMDataParallel(
-                    model, device_ids=self.cfg.get('gpu_ids'))
+                # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
+                if torch.cuda.is_available():
+                    model = model.to('cuda:0')
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
-                model=self.model,
-                default_scope=self.default_scope)
+                default_scope=self.default_scope,
+                default_args=dict(model=self.model))
+
         return model
 
-    def build_optimizer(self, optimizer_cfg: Dict) -> Optimizer:
+    def build_optimizer(self, optimizer: Union[Optimizer, Dict]) -> Optimizer:
         """Build optimizer.
 
+        An example of ``optimizer``::
+
+            optimizer = dict(type='SGD', lr=0.01)
+
         Args:
-            optimizer_cfg (dict): Config to build optimizer. An example of
-                ``optimizer_cfg``:
-
-                .. code-block:: python
-
-                    optimizer_cfg = dict(type='SGD', lr=0.01)
+            optimizer (Optimizer or dict): Config to build optimizer.
 
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
         """
-        optimizer = build_optimizer(
-            self.model, optimizer_cfg, default_scope=self.default_scope)
-        return optimizer
+        if isinstance(optimizer, Optimizer):
+            return optimizer
+        elif isinstance(optimizer, dict):
+            optimizer = build_optimizer(
+                self.model, optimizer, default_scope=self.default_scope)
+            return optimizer
+        else:
+            raise TypeError('optimizer should be an Optimizer object or dict, '
+                            f'but got {optimizer}')
 
     def build_param_scheduler(
-            self, scheduler_cfg: Union[Dict,
-                                       List[Dict]]) -> List[_ParamScheduler]:
+        self, scheduler: Union[_ParamScheduler, Dict,
+                               List]) -> List[_ParamScheduler]:
         """Build parameter schedulers.
 
+        An example of ``scheduler``::
+
+            scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+
         Args:
-            scheduler_cfg (dict or list[dict]): Config to build parameter
-                schedulers. An example of ``scheduler_cfg``:
-
-                .. code-block:: python
-
-                    scheduler_cfg=dict(type='MultiStepLR', milestones=[1, 2])
+            scheduler (_ParamScheduler or dict or list): Config to build
+                parameter schedulers.
 
         Returns:
-            list[:obj:`_ParamScheduler`]: Parameter schedulers build from
-            ``scheduler_cfg``.
+            list[:obj:`_ParamScheduler`]: List of parameter schedulers build
+            from ``scheduler``.
         """
         if not isinstance(self.optimizer, Optimizer):
             raise RuntimeError(
@@ -612,20 +644,57 @@ class Runner:
                 '`build_param_scheduler` because the latter depends on the '
                 'former')
 
-        if isinstance(scheduler_cfg, dict):
-            scheduler_cfg = [scheduler_cfg]
+        if not isinstance(scheduler, Sequence):
+            schedulers = [scheduler]
+        else:
+            schedulers = scheduler
 
-        schedulers = []
-        for cfg in scheduler_cfg:
-            schedulers.append(
-                PARAM_SCHEDULERS.build(
-                    cfg,
-                    default_scope=self.default_scope,
-                    default_args=dict(optimizer=self.optimizer)))
+        param_schedulers = []
+        for _scheduler in schedulers:
+            if isinstance(_scheduler, _ParamScheduler):
+                param_schedulers.append(_scheduler)
+            elif isinstance(_scheduler, dict):
+                param_schedulers.append(
+                    PARAM_SCHEDULERS.build(
+                        _scheduler,
+                        default_scope=self.default_scope,
+                        default_args=dict(optimizer=self.optimizer)))
+            else:
+                raise TypeError(
+                    '_scheduler should be a _ParamScheduler object or dict, '
+                    f'but got {_scheduler}')
 
-        return schedulers
+        return param_schedulers
 
-    def build_dataloader(self, dataloader_cfg: Dict) -> DataLoader:
+    def build_evaluator(
+            self, evaluator: Union[Dict, List[Dict],
+                                   EvaluatorType]) -> EvaluatorType:
+        """Build evaluator.
+
+        An example of ``evaluator``::
+
+            evaluator = dict(type='ToyEvaluator')
+
+        Args:
+            evaluator (BaseEvaluator or ComposedEvaluator or dict or list):
+                Config to build evaluators.
+
+        Returns:
+            BaseEvaluator or ComposedEvaluator: Evaluators build from
+            ``evaluator``.
+        """
+        if isinstance(evaluator, (BaseEvaluator, ComposedEvaluator)):
+            return evaluator
+        elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+            return build_evaluator(
+                evaluator, default_scope=self.default_scope)  # type: ignore
+        else:
+            raise TypeError(
+                'evaluator should be one of dict, list of dict, BaseEvaluator '
+                f'and ComposedEvaluator, but got {evaluator}')
+
+    def build_dataloader(self, dataloader: Union[DataLoader,
+                                                 Dict]) -> DataLoader:
         """Build dataloader.
 
         The method builds three components:
@@ -634,32 +703,36 @@ class Runner:
         - Sampler
         - Dataloader
 
+        An example of ``dataloader``::
+
+            dataloader = dict(
+                dataset=dict(type='ToyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=1,
+                num_workers=9
+            )
+
         Args:
-            dataloader_cfg (dict): A dict to build dataloader. An example of
-                ``dataloader_cfg``:
-
-                .. code-block:: python
-
-                    dataloader_cfg = dict(
-                        dataset=dict(type='ToyDataset'),
-                        sampler=dict(type='DefaultSampler', shuffle=True),
-                        batch_size=1,
-                        num_workers=9
-                    )
+            dataloader (DataLoader or dict): A dict to build dataloader.
 
         Returns:
-            Dataloader: Dataloader build from ``dataloader_cfg``.
+            Dataloader: DataLoader build from ``dataloader_cfg``.
         """
-        dataloader_cfg = copy.deepcopy(dataloader_cfg)
+        if isinstance(dataloader, DataLoader):
+            return dataloader
+
+        dataloader_cfg = copy.deepcopy(dataloader)
 
         # build dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
-        dataset = DATASETS.build(dataset_cfg)
+        dataset = DATASETS.build(dataset_cfg, default_scope=self.default_scope)
 
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
         sampler = DATA_SAMPLERS.build(
-            sampler_cfg, default_args=dict(dataset=dataset))
+            sampler_cfg,
+            default_scope=self.default_scope,
+            default_args=dict(dataset=dataset))
 
         # build dataloader
         init_fn: Optional[partial]
@@ -667,7 +740,7 @@ class Runner:
             init_fn = partial(
                 worker_init_fn,
                 num_workers=dataloader_cfg.get('num_workers'),
-                rank=self._rank,
+                rank=self.rank,
                 seed=self.seed)
         else:
             init_fn = None
@@ -686,25 +759,32 @@ class Runner:
             **dataloader_cfg)
         return data_loader
 
-    def build_train_loop(self, loop_cfg: Dict) -> BaseLoop:
+    def build_train_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build training loop.
 
+        An example of ``loop``::
+
+            loop = dict(by_epoch=True, max_epochs=3)
+
         Args:
-            loop_cfg (dict): Config to build training loop. An example of
-                ``loop_cfg``:
-
-                .. code-block:: python
-
-                    loop_cfg = dict(by_epoch=True, max_epochs=3)
+            loop (BaseLoop or dict): Config to build training loop.
 
         Returns:
-            :obj:`BaseLoop`: Training loop object build from ``loop_cfg``.
+            :obj:`BaseLoop`: Training loop object build from ``loop``.
         """
-        loop_cfg = copy.deepcopy(loop_cfg)
+        if isinstance(loop, BaseLoop):
+            return loop
+        elif not isinstance(loop, dict):
+            raise TypeError(
+                f'loop should be a Loop object or dict, but got {loop}')
+
+        loop_cfg = copy.deepcopy(loop)
 
         if 'type' in loop_cfg and 'by_epoch' in loop_cfg:
             raise RuntimeError(
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
+
+        self.train_dataloader = self.build_dataloader(self.train_dataloader)
 
         if 'type' in loop_cfg:
             loop = LOOPS.build(
@@ -723,31 +803,36 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
-        if self.optimizer is not None and isinstance(self.optimizer, dict):
-            self.optimizer = self.build_optimizer(self.optimizer)
+        self.optimizer = self.build_optimizer(self.optimizer)
 
-        if (self.param_schedulers is not None
-                and not is_list_of(self.param_schedulers, _ParamScheduler)):
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
+        self.param_schedulers = self.build_param_scheduler(  # type: ignore
+            self.param_schedulers)  # type: ignore
 
-        return loop
+        return loop  # type: ignore
 
-    def build_val_loop(self, loop_cfg: Dict) -> BaseLoop:
+    def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build validation loop.
 
+        An example of ``loop``:
+
+            loop= dict(interval=1)
+
         Args:
-            loop_cfg (dict): Config to build validation loop. An example of
-                ``loop_cfg``:
-
-                .. code-block:: python
-
-                    loop_cfg = dict(interval=1)
+            loop (dict): Config to build validation loop.
 
         Returns:
-            :obj:`BaseLoop`: Validation loop object build from ``loop_cfg``.
+            :obj:`BaseLoop`: Validation loop object build from ``loop``.
         """
-        loop_cfg = copy.deepcopy(loop_cfg)
+        if isinstance(loop, BaseLoop):
+            return loop
+        elif not isinstance(loop, dict):
+            raise TypeError(
+                f'train_loop should be a Loop object or dict, but got {loop}')
+
+        loop_cfg = copy.deepcopy(loop)
+
+        self.val_dataloader = self.build_dataloader(self.val_dataloader)
+        self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
 
         if 'type' in loop_cfg:
             loop = LOOPS.build(
@@ -756,18 +841,18 @@ class Runner:
                 default_args=dict(
                     runner=self,
                     dataloader=self.val_dataloader,
-                    evaluator=self._evaluator))
+                    evaluator=self.evaluator))
         else:
             loop = ValLoop(
                 runner=self,
                 dataloader=self.val_dataloader,
-                evaluator=self._evaluator,  # type: ignore
+                evaluator=self.evaluator,  # type: ignore
                 **loop_cfg,
             )  # type: ignore
 
-        return loop
+        return loop  # type: ignore
 
-    def build_test_loop(self, loop_cfg: Dict) -> BaseLoop:
+    def build_test_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build test loop.
 
         Args:
@@ -776,7 +861,16 @@ class Runner:
         Returns:
             :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """
-        loop_cfg = copy.deepcopy(loop_cfg)
+        if isinstance(loop, BaseLoop):
+            return loop
+        elif not isinstance(loop, dict):
+            raise TypeError(
+                f'train_loop should be a Loop object or dict, but got {loop}')
+
+        loop_cfg = copy.deepcopy(loop)  # type: ignore
+
+        self.test_dataloader = self.build_dataloader(self.test_dataloader)
+        self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
 
         if 'type' in loop_cfg:
             loop = LOOPS.build(
@@ -785,17 +879,17 @@ class Runner:
                 default_args=dict(
                     runner=self,
                     dataloader=self.test_dataloader,
-                    evaluator=self._evaluator))
+                    evaluator=self.evaluator))
         else:
             loop = TestLoop(
                 runner=self,
                 dataloader=self.test_dataloader,
-                evaluator=self._evaluator)  # type: ignore
+                evaluator=self.evaluator)  # type: ignore
 
-        return loop
+        return loop  # type: ignore
 
-    def _load_or_resume(self):
-        # load or resume checkpoint
+    def _load_or_resume(self) -> None:
+        """load or resume checkpoint."""
         if self._load_checkpoint is not None and not self._has_loaded:
             # `self._has_loaded` will be set as True
             if self._load_checkpoint['resume']:
@@ -805,38 +899,39 @@ class Runner:
 
     def train(self) -> None:
         """Launch training."""
-        assert self._train_loop is not None
-        if not isinstance(self._train_loop, BaseLoop):
-            self._train_loop = self.build_train_loop(self._train_loop)
+        assert self.train_loop is not None
+        self.train_loop = self.build_train_loop(
+            self.train_loop)  # type: ignore
+
+        if self.val_loop is not None:
+            self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
         self._load_or_resume()
 
         self.call_hook('before_run')
-        self._train_loop.run()  # type: ignore
+        self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
 
     def val(self) -> None:
         """Launch validation."""
-        assert self._val_loop is not None
-        if not isinstance(self._val_loop, BaseLoop):
-            self._val_loop = self.build_val_loop(self._val_loop)
+        assert self.val_loop is not None
+        self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
         self._load_or_resume()
 
         self.call_hook('before_run')
-        self._val_loop.run()  # type: ignore
+        self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
 
     def test(self) -> None:
         """Launch test."""
-        assert self._test_loop is not None
-        if not isinstance(self._test_loop, BaseLoop):
-            self._test_loop = self.build_test_loop(self._test_loop)
+        assert self.test_loop is not None
+        self.test_loop = self.build_test_loop(self.test_loop)  # type: ignore
 
         self._load_or_resume()
 
         self.call_hook('before_run')
-        self._test_loop.run()  # type: ignore
+        self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
 
     def call_hook(self, fn_name: str, **kwargs) -> None:
@@ -933,7 +1028,7 @@ class Runner:
         default::
 
             default_hooks = dict(
-                optimizer=dict(type='OptimizerHook', grad_clip=False),
+                optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
                 logger=dict(type='LoggerHook'),
                 param_scheduler=dict(type='ParamSchedulerHook'),
@@ -954,7 +1049,7 @@ class Runner:
                 to be registered.
         """
         default_hooks: dict = dict(
-            optimizer=dict(type='OptimizerHook', grad_clip=False),
+            optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
@@ -1194,8 +1289,9 @@ class Runner:
         # save param scheduler state dict
         if save_param_scheduler:
             checkpoint['param_schedulers'] = []
-            for _scheduler in self.param_schedulers:  # type: ignore
-                checkpoint['param_schedulers'].append(_scheduler.state_dict())
+            for _scheduler in self.param_schedulers:
+                state_dict = _scheduler.state_dict()  # type: ignore
+                checkpoint['param_schedulers'].append(state_dict)
 
         self.call_hook('before_save_ckpt', checkpoint=checkpoint)
 

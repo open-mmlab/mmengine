@@ -25,6 +25,9 @@ class BaseLoop(metaclass=ABCMeta):
         else:
             self.dataloader = dataloader
 
+        # TODO, used by `end_of_epoch` of `Hook`
+        self._runner.data_loader = self.dataloader
+
     @property
     def runner(self):
         return self._runner
