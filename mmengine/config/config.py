@@ -659,12 +659,6 @@ class Config:
     def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
         return (self._cfg_dict, self._filename, self._text)
 
-    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
-        _cfg_dict, _filename, _text = state
-        super().__setattr__('_cfg_dict', _cfg_dict)
-        super().__setattr__('_filename', _filename)
-        super().__setattr__('_text', _text)
-
     def __deepcopy__(self, memo):
         cls = self.__class__
         other = cls.__new__(cls)
@@ -674,6 +668,12 @@ class Config:
             super(Config, other).__setattr__(key, copy.deepcopy(value, memo))
 
         return other
+
+    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
+        _cfg_dict, _filename, _text = state
+        super().__setattr__('_cfg_dict', _cfg_dict)
+        super().__setattr__('_filename', _filename)
+        super().__setattr__('_text', _text)
 
     def dump(self, file: Optional[str] = None):
         """Dump config to file or return config text.
