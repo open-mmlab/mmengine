@@ -171,18 +171,17 @@ class LoggerHook(Hook):
         if runner.meta is not None:
             runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """Record training logs.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         if runner.meta is not None and 'exp_name' in runner.meta:

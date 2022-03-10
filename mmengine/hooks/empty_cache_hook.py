@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -37,14 +37,16 @@ class EmptyCacheHook(Hook):
     def after_iter(self,
                    runner,
                    data_batch: DATA_BATCH = None,
-                   outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+                   outputs:
+                   Optional[Union[dict, Sequence[BaseDataSample]]] = None)\
+            -> None:
         """Empty cache after an iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample]): Outputs from model.
+            outputs (dict or sequence, optional): Outputs from model.
                 Defaults to None.
         """
         if self._after_iter:

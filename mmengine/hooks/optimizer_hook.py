@@ -56,11 +56,10 @@ class OptimizerHook(Hook):
             return clip_grad.clip_grad_norm_(params, **self.grad_clip)
         return None
 
-    def after_train_iter(
-            self,
-            runner,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+    def after_train_iter(self,
+                         runner,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         """All operations need to be finished after each training iteration.
 
         This function will finish following 3 operations:
@@ -80,7 +79,7 @@ class OptimizerHook(Hook):
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
                 Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (dict, optional): Outputs from model.
                 In order to keep this interface consistent with other hooks,
                 we keep ``outputs`` here. Defaults to None.
         """

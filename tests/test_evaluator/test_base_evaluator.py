@@ -6,7 +6,7 @@ from unittest import TestCase
 import numpy as np
 
 from mmengine.data import BaseDataSample
-from mmengine.evaluator import BaseEvaluator, build_evaluator
+from mmengine.evaluator import BaseEvaluator, build_evaluator, get_metric_value
 from mmengine.registry import EVALUATORS
 
 
@@ -62,7 +62,7 @@ class ToyEvaluator(BaseEvaluator):
 
 
 @EVALUATORS.register_module()
-class UnprefixedEvaluator(BaseEvaluator):
+class NonPrefixedEvaluator(BaseEvaluator):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
@@ -100,8 +100,8 @@ class TestBaseEvaluator(TestCase):
             evaluator.process(data_samples, predictions)
 
         metrics = evaluator.evaluate(size=size)
-        self.assertAlmostEqual(metrics['Toy.accuracy'], 1.0)
-        self.assertEqual(metrics['Toy.size'], size)
+        self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
+        self.assertEqual(metrics['Toy/size'], size)
 
         # Test empty results
         cfg = dict(type='ToyEvaluator', dummy_metrics=dict(accuracy=1.0))
@@ -126,9 +126,9 @@ class TestBaseEvaluator(TestCase):
 
         metrics = evaluator.evaluate(size=size)
 
-        self.assertAlmostEqual(metrics['Toy.accuracy'], 1.0)
-        self.assertAlmostEqual(metrics['Toy.mAP'], 0.0)
-        self.assertEqual(metrics['Toy.size'], size)
+        self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
+        self.assertAlmostEqual(metrics['Toy/mAP'], 0.0)
+        self.assertEqual(metrics['Toy/size'], size)
 
     def test_ambiguate_metric(self):
 
@@ -167,6 +167,45 @@ class TestBaseEvaluator(TestCase):
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
 
     def test_prefix(self):
-        cfg = dict(type='UnprefixedEvaluator')
+        cfg = dict(type='NonPrefixedEvaluator')
         with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
             _ = build_evaluator(cfg)
+
+    def test_get_metric_value(self):
+
+        metrics = {
+            'prefix_0/metric_0': 0,
+            'prefix_1/metric_0': 1,
+            'prefix_1/metric_1': 2,
+            'nonprefixed': 3,
+        }
+
+        # Test indicator with prefix
+        indicator = 'prefix_0/metric_0'  # correct indicator
+        self.assertEqual(get_metric_value(indicator, metrics), 0)
+
+        indicator = 'prefix_1/metric_0'  # correct indicator
+        self.assertEqual(get_metric_value(indicator, metrics), 1)
+
+        indicator = 'prefix_0/metric_1'  # unmatched indicator (wrong metric)
+        with self.assertRaisesRegex(ValueError, 'can not match any metric'):
+            _ = get_metric_value(indicator, metrics)
+
+        indicator = 'prefix_2/metric'  # unmatched indicator (wrong prefix)
+        with self.assertRaisesRegex(ValueError, 'can not match any metric'):
+            _ = get_metric_value(indicator, metrics)
+
+        # Test indicator without prefix
+        indicator = 'metric_1'  # correct indicator (prefixed metric)
+        self.assertEqual(get_metric_value(indicator, metrics), 2)
+
+        indicator = 'nonprefixed'  # correct indicator (non-prefixed metric)
+        self.assertEqual(get_metric_value(indicator, metrics), 3)
+
+        indicator = 'metric_0'  # ambiguous indicator
+        with self.assertRaisesRegex(ValueError, 'matches multiple metrics'):
+            _ = get_metric_value(indicator, metrics)
+
+        indicator = 'metric_2'  # unmatched indicator
+        with self.assertRaisesRegex(ValueError, 'can not match any metric'):
+            _ = get_metric_value(indicator, metrics)

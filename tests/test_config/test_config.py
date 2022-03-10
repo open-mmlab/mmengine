@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import copy
 import os
 import os.path as osp
 import platform
@@ -639,3 +640,15 @@ class TestConfig:
             with pytest.warns(DeprecationWarning):
                 cfg = Config.fromfile(cfg_file)
             assert cfg.item1 == [1, 2]
+
+    def test_deepcopy(self):
+        cfg_file = osp.join(self.data_path, 'config',
+                            'py_config/test_dump_pickle_support.py')
+        cfg = Config.fromfile(cfg_file)
+        new_cfg = copy.deepcopy(cfg)
+
+        assert isinstance(new_cfg, Config)
+        assert new_cfg._cfg_dict == cfg._cfg_dict
+        assert new_cfg._cfg_dict is not cfg._cfg_dict
+        assert new_cfg._filename == cfg._filename
+        assert new_cfg._text == cfg._text

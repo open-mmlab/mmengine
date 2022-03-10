@@ -120,7 +120,7 @@ class BaseEvaluator(metaclass=ABCMeta):
             # Add prefix to metric names
             if self.prefix:
                 metrics = {
-                    '.'.join((self.prefix, k)): v
+                    '/'.join((self.prefix, k)): v
                     for k, v in metrics.items()
                 }
             metrics = [metrics]  # type: ignore
