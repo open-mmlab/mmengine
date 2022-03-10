@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple
 
 from mmengine.data import BaseDataSample
 
@@ -229,7 +229,8 @@ class Hook:
         """
         pass
 
-    def _before_iter(self, runner,
+    def _before_iter(self,
+                     runner,
                      data_batch: DATA_BATCH = None,
                      mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any

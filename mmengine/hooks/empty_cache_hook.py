@@ -37,8 +37,8 @@ class EmptyCacheHook(Hook):
     def _after_iter(self,
                     runner,
                     data_batch: DATA_BATCH = None,
-                    outputs:
-                    Optional[Union[dict, Sequence[BaseDataSample]]] = None,
+                    outputs: Optional[Union[dict,
+                                            Sequence[BaseDataSample]]] = None,
                     mode: str = 'train') -> None:
         """Empty cache after an iteration.
 

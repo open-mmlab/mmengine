@@ -27,8 +27,10 @@ class IterTimerHook(Hook):
         """
         self.t = time.time()
 
-    def _before_iter(self, runner, data_batch: DATA_BATCH = None,
-                    mode: str = 'train') -> None:
+    def _before_iter(self,
+                     runner,
+                     data_batch: DATA_BATCH = None,
+                     mode: str = 'train') -> None:
         """Logging time for loading data and update the time flag.
 
         Args:
@@ -41,11 +43,11 @@ class IterTimerHook(Hook):
         runner.log_buffer.update({'data_time': time.time() - self.t})
 
     def _after_iter(self,
-                   runner,
-                   data_batch: DATA_BATCH = None,
-                   outputs:
-                   Optional[Union[dict, Sequence[BaseDataSample]]] = None,
-                   mode: str = 'train') \
+                    runner,
+                    data_batch: DATA_BATCH = None,
+                    outputs:
+                    Optional[Union[dict, Sequence[BaseDataSample]]] = None,
+                    mode: str = 'train') \
             -> None:
         """Logging time for a iteration and update the time flag.
 
