@@ -224,7 +224,7 @@ class Hook:
         operations after each epoch.
 
         Args:
-            runner (Runner, ): The runner of the training process.
+            runner (Runner): The runner of the training process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -268,7 +268,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             n (int): Whether or not current epoch can be evenly divided by n.
-            mode (str): Current mode of runner. Defaults to 'train'.
+
         Returns:
             bool: whether or not current epoch can be evenly divided by n.
         """
@@ -332,7 +332,6 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the training process.
-            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: whether or not current iteration is the last iteration.
