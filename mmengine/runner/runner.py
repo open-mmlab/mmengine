@@ -388,6 +388,11 @@ class Runner:
         return self._inner_iter
 
     @property
+    def launcher(self):
+        """str: Way to launcher multi processes."""
+        return self._launcher
+
+    @property
     def distributed(self):
         """bool: Whether current environment is distributed."""
         return self._distributed
@@ -460,9 +465,7 @@ class Runner:
 
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and env_cfg.get('dist_cfg') is not None:
-            init_dist(  # type: ignore
-                launcher=self._launcher,
-                **env_cfg.get('dist_cfg'))  # type: ignore
+            init_dist(self.launcher, **env_cfg.get('dist_cfg'))  # type: ignore
 
         self._rank, self._world_size = get_dist_info()
 
