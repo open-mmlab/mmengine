@@ -31,7 +31,7 @@ class ParamSchedulerHook(Hook):
                 In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
-        for scheduler in runner.schedulers:
+        for scheduler in runner.param_schedulers:  # type: ignore
             if not scheduler.by_epoch:
                 scheduler.step()
 
@@ -41,6 +41,6 @@ class ParamSchedulerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        for scheduler in runner.schedulers:
+        for scheduler in runner.param_schedulers:  # type: ignore
             if scheduler.by_epoch:
                 scheduler.step()
