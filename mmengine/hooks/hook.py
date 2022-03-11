@@ -282,7 +282,6 @@ class Hook:
             runner (Runner): The runner of the training process.
             n (int): Whether or not current inner iteration can be evenly
                 divided by n.
-            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: whether or not current inner iteration can be evenly
@@ -297,7 +296,6 @@ class Hook:
             runner (Runner): The runner of the training process.
             n (int): Whether or not current iteration can be
                 evenly divided by n.
-            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: Return True if the current iteration can be evenly divided
@@ -310,7 +308,6 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the training process.
-            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: whether the end of current epoch or not.
@@ -323,10 +320,9 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the training process.
-            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
-            bool: bool: Return True if the current epoch reaches the
+            bool: Return True if the current epoch reaches the
             `max_epochs`, otherwise False.
         """
         return runner.epoch + 1 == runner.train_loop._max_epochs
