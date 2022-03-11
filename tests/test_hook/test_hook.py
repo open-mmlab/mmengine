@@ -177,12 +177,12 @@ class TestHook:
 
         # last epoch
         runner.epoch = 1
-        runner.train_loop._max_epochs = 2
+        runner.train_loop.max_epochs = 2
         return_val = hook.is_last_epoch(runner)
         assert return_val
 
         # not the last epoch
-        runner.train_loop._max_epochs = 0
+        runner.train_loop.max_epochs = 0
         return_val = hook.is_last_epoch(runner)
         assert not return_val
 

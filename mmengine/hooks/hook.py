@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
 
@@ -173,8 +173,8 @@ class Hook:
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
-                         mode='train')
+        self._after_iter(
+            runner, data_batch=data_batch, outputs=outputs, mode='train')
 
     def after_val_iter(self,
                        runner,
@@ -191,8 +191,8 @@ class Hook:
             outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
-        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
-                         mode='val')
+        self._after_iter(
+            runner, data_batch=data_batch, outputs=outputs, mode='val')
 
     def after_test_iter(
             self,
@@ -209,8 +209,8 @@ class Hook:
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
-                         mode='test')
+        self._after_iter(
+            runner, data_batch=data_batch, outputs=outputs, mode='test')
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
@@ -250,7 +250,8 @@ class Hook:
     def _after_iter(self,
                     runner,
                     data_batch: DATA_BATCH = None,
-                    outputs: Optional[Sequence[BaseDataSample]] = None,
+                    outputs: Optional[Union[Sequence[BaseDataSample],
+                                            dict]] = None,
                     mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
