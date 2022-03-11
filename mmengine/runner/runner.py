@@ -242,7 +242,8 @@ class Runner:
             raise ValueError(
                 'val_dataloader, val_cfg and val_evaluator should be either '
                 'all None or not None, but got '
-                f'val_dataloader={val_dataloader}, val_cfg={val_cfg}')
+                f'val_dataloader={val_dataloader}, val_cfg={val_cfg}, '
+                f'val_evaluator={val_evaluator}')
         self.val_dataloader = val_dataloader
         self.val_loop = val_cfg
         self.val_evaluator = val_evaluator
@@ -253,7 +254,8 @@ class Runner:
             raise ValueError(
                 'test_dataloader, test_cfg and test_evaluator should be either'
                 ' all None or not None, but got '
-                'test_dataloader={test_dataloader}, test_cfg={test_cfg}')
+                f'test_dataloader={test_dataloader}, test_cfg={test_cfg}, '
+                f'test_evaluator={test_evaluator}')
         self.test_dataloader = test_dataloader
         self.test_loop = test_cfg
         self.test_evaluator = test_evaluator
@@ -929,8 +931,6 @@ class Runner:
 
         loop_cfg = copy.deepcopy(loop)
 
-        self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
-
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
@@ -938,12 +938,12 @@ class Runner:
                 default_args=dict(
                     runner=self,
                     dataloader=self.val_dataloader,
-                    evaluator=self.evaluator))
+                    evaluator=self.val_evaluator))
         else:
             loop = ValLoop(
                 runner=self,
                 dataloader=self.val_dataloader,
-                evaluator=self.evaluator,  # type: ignore
+                evaluator=self.val_evaluator,  # type: ignore
                 **loop_cfg,
             )  # type: ignore
 
@@ -966,8 +966,6 @@ class Runner:
 
         loop_cfg = copy.deepcopy(loop)  # type: ignore
 
-        self.evaluator = self.build_evaluator(self.evaluator)  # type: ignore
-
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
@@ -975,12 +973,12 @@ class Runner:
                 default_args=dict(
                     runner=self,
                     dataloader=self.test_dataloader,
-                    evaluator=self.evaluator))
+                    evaluator=self.test_evaluator))
         else:
             loop = TestLoop(
                 runner=self,
                 dataloader=self.test_dataloader,
-                evaluator=self.evaluator)  # type: ignore
+                evaluator=self.test_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1263,23 +1261,17 @@ class Runner:
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
-            if isinstance(self.optimizer, Optimizer):
-                self.optimizer.load_state_dict(checkpoint['optimizer'])
-            else:
-                raise TypeError('Optimizer should be torch.optim.Optimizer '
-                                f'but got {type(self.optimizer)}')
+            self.optimizer = self.build_optimizer(self.optimizer)
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
 
         # resume param scheduler
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
-            assert isinstance(self.param_schedulers, list)
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
+                self.param_schedulers)
 
             for cur_scheduler, ckpt_scheduler in zip(
                     self.param_schedulers, checkpoint['param_schedulers']):
-                if isinstance(cur_scheduler, _ParamScheduler):
-                    cur_scheduler.load_state_dict(ckpt_scheduler)
-                else:
-                    raise TypeError('cur_scheduler should be _ParamScheduler '
-                                    f'but got {type(cur_scheduler)}')
+                cur_scheduler.load_state_dict(ckpt_scheduler)  # type: ignore
 
         self._has_loaded = True
 
@@ -1344,7 +1336,6 @@ class Runner:
             create_symlink (bool): Whether to create a symlink
                 "latest.pth" to point to the latest checkpoint.
                 Defaults to True.
-            by_epoch (bool):
         """
         if meta is None:
             meta = {}
@@ -1355,6 +1346,7 @@ class Runner:
         if self.meta is not None:
             meta.update(self.meta)
 
+        # TODO
         if by_epoch:
             # self._epoch increments 1 after
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is

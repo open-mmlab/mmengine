@@ -342,7 +342,7 @@ class Hook:
         Returns:
             bool: whether the end of current epoch or not.
         """
-        return runner.inner_iter + 1 == len(runner.data_loader)
+        return runner.inner_iter + 1 == len(runner.train_loop.dataloader)
 
     def is_last_epoch(self, runner) -> bool:
         """Test whether or not current epoch is the last epoch.
@@ -354,7 +354,7 @@ class Hook:
             bool: bool: Return True if the current epoch reaches the
             `max_epochs`, otherwise False.
         """
-        return runner.epoch + 1 == runner._max_epochs
+        return runner.epoch + 1 == runner.train_loop._max_epochs
 
     def is_last_iter(self, runner) -> bool:
         """Test whether or not current epoch is the last iteration.
@@ -365,4 +365,4 @@ class Hook:
         Returns:
             bool: whether or not current iteration is the last iteration.
         """
-        return runner.iter + 1 == runner._max_iters
+        return runner.iter + 1 == runner.train_loop._max_iters

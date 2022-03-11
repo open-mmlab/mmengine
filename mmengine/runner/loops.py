@@ -25,16 +25,25 @@ class EpochBasedTrainLoop(BaseLoop):
                  max_epochs: int) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
+        self._max_iters = max_epochs * len(self.dataloader)
+
+    @property
+    def max_epochs(self):
+        return self._max_epochs
+
+    @property
+    def max_iters(self):
+        return self._max_iters
 
     def run(self) -> None:
         """Launch training."""
         self.runner.call_hook('before_train')
 
-        while self.runner.epoch < self._max_epochs:
+        while self.runner._epoch < self._max_epochs:
             self.run_epoch()
 
             if (self.runner.val_loop is not None and
-                    self.runner.epoch % self.runner.val_loop.interval == 0):
+                    self.runner._epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -90,6 +99,12 @@ class IterBasedTrainLoop(BaseLoop):
                  max_iters: int) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
+        # TODO, when resume training, what the dataloader should does
+        self.dataloader = iter(self.dataloader)
+
+    @property
+    def max_iters(self):
+        return self._max_iters
 
     def run(self) -> None:
         """Launch training."""
@@ -180,17 +195,11 @@ class ValLoop(BaseLoop):
         """
         self.runner._inner_iter = idx
         self.runner.call_hook('before_val_iter', data_batch=data_batch)
-        # outputs should be a dict
-        self.runner.outputs = self.runner.model(data_batch)
-
-        for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_log(f'val/{key}', value)
-
-        self.evaluator.process(data_batch, self.runner.outputs)
+        # outputs should be sequence of BaseDataSample
+        outputs = self.runner.model(data_batch)
+        self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
-            'after_val_iter',
-            data_batch=data_batch,
-            outputs=self.runner.outputs)
+            'after_val_iter', data_batch=data_batch, outputs=outputs)
 
 
 @LOOPS.register_module()
@@ -237,7 +246,8 @@ class TestLoop(BaseLoop):
         """
         self.runner._inner_iter = idx
         self.runner.call_hook('before_test_iter', data_batch=data_batch)
-        outputs = self.runner.model(data_batch)
-        self.evaluator.process(data_batch, outputs)
+        # predictions should be sequence of BaseDataSample
+        predictions = self.runner.model(data_batch)
+        self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
-            'after_test_iter', data_batch=data_batch, outputs=outputs)
+            'after_test_iter', data_batch=data_batch, outputs=predictions)
