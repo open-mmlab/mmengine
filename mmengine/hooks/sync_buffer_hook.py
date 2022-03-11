@@ -89,12 +89,11 @@ class SyncBuffersHook(Hook):
     def __init__(self) -> None:
         self.distributed = dist.IS_DIST
 
-    def _after_epoch(self, runner, mode: str = 'train') -> None:
+    def after_train_epoch(self, runner) -> None:
         """All-reduce model buffers at the end of each epoch.
 
         Args:
             runner (Runner): The runner of the training process.
-            mode (str): Current mode of runner. Defaults to 'train'.
         """
         if self.distributed:
             allreduce_params(runner.model.buffers())
