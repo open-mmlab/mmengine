@@ -9,6 +9,7 @@ import torch.distributed as dist
 from termcolor import colored
 
 from .base_global_accsessible import BaseGlobalAccessible
+from mmengine.dist import master_only
 
 
 class MMFormatter(logging.Formatter):
@@ -87,7 +88,8 @@ class MMFormatter(logging.Formatter):
 class MMLogger(Logger, BaseGlobalAccessible):
     """The Logger manager which can create formatted logger and get specified
     logger globally. MMLogger is created and accessed in the same way as
-    BaseGlobalAccessible.
+    BaseGlobalAccessible. The instance of MMLogger does not have inheritance
+    feature.
 
     Args:
         name (str): Logger name. Defaults to ''.
@@ -105,6 +107,7 @@ class MMLogger(Logger, BaseGlobalAccessible):
                  file_mode: str = 'w'):
         Logger.__init__(self, name)
         BaseGlobalAccessible.__init__(self, name)
+        self.setLevel(log_level)
         # Get rank in DDP mode.
         if dist.is_available() and dist.is_initialized():
             rank = dist.get_rank()
@@ -133,6 +136,18 @@ class MMLogger(Logger, BaseGlobalAccessible):
             file_handler.setFormatter(MMFormatter(color=False))
             file_handler.setLevel(log_level)
             self.handlers.append(file_handler)
+
+    def callHandlers(self, record):
+        """Overridden ``callHandlers`` method in logging.Logger to prevent
+        the logger from multiple warning message in ddp mode.
+
+        Loop through all handlers for this logger and its parents in the
+        logger hierarchy. If no handler was found, the record will not be
+        output.
+        """
+        for handler in self.handlers:
+            if record.levelno >= handler.level:
+                handler.handle(record)
 
 
 def print_log(msg,

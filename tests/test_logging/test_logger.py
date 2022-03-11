@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -13,10 +13,10 @@ from mmengine import MMLogger, print_log
 class TestLogger:
     regex_time = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
 
-    @patch('torch.distributed.get_rank', lambda: 0)
+    @patch('torch.distributed.get_rank', MagicMock(return_value=0))
     @patch('torch.distributed.is_initialized', lambda: True)
     @patch('torch.distributed.is_available', lambda: True)
-    def test_init_rank0(self, tmp_path):
+    def test_init_rank0(self, tmp_path, capsys):
         logger = MMLogger.create_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'rank0.pkg1'
         assert logger.instance_name == 'rank0.pkg1'
@@ -25,7 +25,7 @@ class TestLogger:
         assert logger.parent is None
         assert len(logger.handlers) == 1
         assert isinstance(logger.handlers[0], logging.StreamHandler)
-        assert logger.level == logging.NOTSET
+        assert logger.level == logging.INFO
         assert logger.handlers[0].level == logging.INFO
         # If `rank=0`, the `log_level` of stream_handler and file_handler
         # depends on the given arguments.
@@ -38,12 +38,19 @@ class TestLogger:
         assert isinstance(logger.handlers[1], logging.FileHandler)
         logger_pkg3 = MMLogger.get_instance('rank0.pkg2')
         assert id(logger_pkg3) == id(logger)
+        logger.warning('no message')
+        out, _ = capsys.readouterr()
+        assert out
+        logger.error('no message')
+        out, _ = capsys.readouterr()
+        assert out
         logging.shutdown()
 
-    @patch('torch.distributed.get_rank', lambda: 1)
+
+    @patch('torch.distributed.get_rank', MagicMock(return_value=1))
     @patch('torch.distributed.is_initialized', lambda: True)
     @patch('torch.distributed.is_available', lambda: True)
-    def test_init_rank1(self, tmp_path):
+    def test_init_rank1(self, tmp_path, capsys):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
         log_path = tmp_path / 'rank1_tmp_file.log'
@@ -53,6 +60,9 @@ class TestLogger:
         assert logger.handlers[0].level == logging.ERROR
         assert logger.handlers[1].level == logging.INFO
         assert os.path.exists(log_path)
+        logger.warning('no message')
+        out, _ = capsys.readouterr()
+        assert not out
         logging.shutdown()
 
     @pytest.mark.parametrize('log_level',
@@ -89,12 +99,11 @@ class TestLogger:
         # line number
         logger = MMLogger.create_instance('test_error', log_level='INFO')
         logger.error('welcome')
-        lineno = sys._getframe().f_lineno - 1
         file_path = __file__
         function_name = sys._getframe().f_code.co_name
         pattern = self.regex_time + r' - test_error - (.*)ERROR(.*) - '\
                                     f'{file_path} - {function_name} - ' \
-                                    f'{lineno} - welcome\n'
+                                    '\d+ - welcome\n'
         out, _ = capsys.readouterr()
         match = re.fullmatch(pattern, out)
         assert match is not None
