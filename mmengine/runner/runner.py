@@ -94,7 +94,7 @@ class Runner:
             automatically. Defaults to False.
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
-            distributed training is disable.
+            non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
         logger (MMLogger or dict, optional): A dict to build logger object.
@@ -185,7 +185,7 @@ class Runner:
         load_from: Optional[str] = None,
         resume_from: Optional[str] = None,
         auto_resume: bool = False,
-        launcher: Optional[str] = None,
+        launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         logger: Optional[Union[MMLogger, Dict]] = None,
         message_hub: Optional[Union[MessageHub, Dict]] = None,
@@ -460,7 +460,9 @@ class Runner:
 
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and env_cfg.get('dist_cfg') is not None:
-            init_dist(**env_cfg.get('dist_cfg'))  # type: ignore
+            init_dist(  # type: ignore
+                launcher=self._launcher,
+                **env_cfg.get('dist_cfg'))  # type: ignore
 
         self._rank, self._world_size = get_dist_info()
 

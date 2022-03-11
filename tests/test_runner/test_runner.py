@@ -8,7 +8,6 @@ import shutil
 import tempfile
 import time
 from unittest import TestCase
-from unittest.mock import patch
 
 import torch
 import torch.nn as nn
@@ -23,7 +22,6 @@ from mmengine.hooks import (Hook, IterTimerHook, LoggerHook, OptimizerHook,
                             ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.model.wrappers import MMDataParallel, MMDistributedDataParallel
 from mmengine.optim.scheduler import MultiStepLR, StepLR
 from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
@@ -43,13 +41,13 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        input, label = zip(*data_batch)
+        inputs, labels = zip(*data_batch)
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        input = torch.stack(input).to(device)
-        label = torch.stack(label).to(device)
-        output = self.linear(input)
+        inputs = torch.stack(inputs).to(device)
+        labels = torch.stack(labels).to(device)
+        outputs = self.linear(inputs)
         if return_loss:
-            loss = (label - output).sum()
+            loss = (labels - outputs).sum()
             outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
             return outputs
         else:
@@ -58,10 +56,18 @@ class ToyModel(nn.Module):
 
 
 @MODELS.register_module()
-class ToyModel1(nn.Module):
+class ToyModel1(ToyModel):
 
     def __init__(self):
         super().__init__()
+
+
+@MODEL_WRAPPERS.register_module()
+class CustomModelWrapper(nn.Module):
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
 
 @DATASETS.register_module()
@@ -106,6 +112,53 @@ class ToyHook2(Hook):
 
     def after_train_epoch(self, runner):
         pass
+
+
+@LOOPS.register_module()
+class CustomTrainLoop(BaseLoop):
+
+    def __init__(self, runner, dataloader, max_epochs):
+        super().__init__(runner, dataloader)
+        self._max_epochs = max_epochs
+
+    def run(self) -> None:
+        pass
+
+
+@LOOPS.register_module()
+class CustomValLoop(BaseLoop):
+
+    def __init__(self, runner, dataloader, evaluator, interval=1):
+        super().__init__(runner, dataloader)
+        self._runner = runner
+
+        if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+            self.evaluator = build_evaluator(evaluator)  # type: ignore
+        else:
+            self.evaluator = evaluator
+
+    def run(self) -> None:
+        pass
+
+
+@LOOPS.register_module()
+class CustomTestLoop(BaseLoop):
+
+    def __init__(self, runner, dataloader, evaluator):
+        super().__init__(runner, dataloader)
+        self._runner = runner
+
+        if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+            self.evaluator = build_evaluator(evaluator)  # type: ignore
+        else:
+            self.evaluator = evaluator
+
+    def run(self) -> None:
+        pass
+
+
+def collate_fn(data_batch):
+    return data_batch
 
 
 class TestRunner(TestCase):
@@ -300,18 +353,22 @@ class TestRunner(TestCase):
         )
         toy_hook = ToyHook()
         toy_hook2 = ToyHook2()
+
+        train_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
+        val_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
+        test_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
         runner = Runner(
             model=model,
             work_dir=self.temp_dir,
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            train_dataloader=DataLoader(dataset=ToyDataset()),
+            train_dataloader=train_dataloader,
             optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             val_cfg=dict(interval=1),
-            val_dataloader=DataLoader(dataset=ToyDataset()),
+            val_dataloader=val_dataloader,
             val_evaluator=ToyEvaluator(),
             test_cfg=dict(),
-            test_dataloader=DataLoader(dataset=ToyDataset()),
+            test_dataloader=test_dataloader,
             test_evaluator=ToyEvaluator(),
             default_hooks=dict(param_scheduler=toy_hook),
             custom_hooks=[toy_hook2])
@@ -398,6 +455,7 @@ class TestRunner(TestCase):
         pass
 
     def test_default_scope(self):
+        # TODO
         TOY_SCHEDULERS = Registry(
             'parameter scheduler', parent=PARAM_SCHEDULERS, scope='toy')
 
@@ -413,7 +471,7 @@ class TestRunner(TestCase):
 
         runner = Runner.build_from_cfg(self.epoch_based_cfg)
         runner.train()
-        assert isinstance(runner.scheduler[0], ToyScheduler)
+        self.assertIsInstance(runner.param_schedulers[0], ToyScheduler)
 
     def test_build_model(self):
         runner = Runner.build_from_cfg(self.epoch_based_cfg)
@@ -432,47 +490,11 @@ class TestRunner(TestCase):
         model = runner.build_model(dict(type='ToyModel1'))
         self.assertIsInstance(model, ToyModel1)
 
-    @patch('torch.distributed.get_rank', lambda: 0)
-    @patch('torch.distributed.is_initialized', lambda: True)
-    @patch('torch.distributed.is_available', lambda: True)
-    def test_model_wrapper(self):
-        # non-distributed model build from config
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
-        assert isinstance(runner.model, MMDataParallel)
-
-        # non-distributed model build manually
-        model = ToyModel()
-        runner = Runner(
-            model=model, train_cfg=dict(by_epoch=True, max_epochs=3))
-        assert isinstance(runner.model, MMDataParallel)
-
-        # distributed model build from config
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.launcher = 'pytorch'
-        runner = Runner.build_from_cfg(cfg)
-        assert isinstance(runner.model, MMDistributedDataParallel)
-
-        # distributed model build manually
-        model = ToyModel()
-        runner = Runner(
-            model=model,
-            train_cfg=dict(by_epoch=True, max_epochs=3),
-            env_cfg=dict(dist_params=dict(backend='nccl')),
-            launcher='pytorch')
-        assert isinstance(runner.model, MMDistributedDataParallel)
-
+    def test_wrap_model(self):
+        # TODO: test on distributed environment
         # custom model wrapper
-        @MODEL_WRAPPERS.register_module()
-        class CustomModelWrapper:
-
-            def train_step(self, *inputs, **kwargs):
-                pass
-
-            def val_step(self, *inputs, **kwargs):
-                pass
-
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.model_wrapper = dict(type='CustomModelWrapper')
+        cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.build_from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
@@ -575,16 +597,6 @@ class TestRunner(TestCase):
         self.assertEqual(id(runner.build_train_loop(loop)), id(loop))
 
         # test custom training loop
-        @LOOPS.register_module()
-        class CustomTrainLoop(BaseLoop):
-
-            def __init__(self, runner, dataloader, max_epochs):
-                super().__init__(runner, dataloader)
-                self._max_epochs = max_epochs
-
-            def run(self) -> None:
-                pass
-
         cfg = dict(type='CustomTrainLoop', max_epochs=3)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, CustomTrainLoop)
@@ -599,7 +611,7 @@ class TestRunner(TestCase):
         # input is a dict and contains type key
         cfg = dict(type='ValLoop', interval=1)
         loop = runner.build_test_loop(cfg)
-        self.assertIsInstance(loop, EpochBasedTrainLoop)
+        self.assertIsInstance(loop, ValLoop)
 
         # input is a dict but does not contain type key
         cfg = dict(interval=1)
@@ -608,21 +620,6 @@ class TestRunner(TestCase):
 
         # input is a Loop object
         self.assertEqual(id(runner.build_val_loop(loop)), id(loop))
-
-        @LOOPS.register_module()
-        class CustomValLoop(BaseLoop):
-
-            def __init__(self, runner, dataloader, evaluator, interval=1):
-                super().__init__(runner, dataloader)
-                self._runner = runner
-
-                if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-                    self.evaluator = build_evaluator(evaluator)  # type: ignore
-                else:
-                    self.evaluator = evaluator
-
-            def run(self) -> None:
-                pass
 
         # test custom validation loop
         cfg = dict(type='CustomValLoop', interval=1)
@@ -649,28 +646,78 @@ class TestRunner(TestCase):
         # input is a Loop object
         self.assertEqual(id(runner.build_test_loop(loop)), id(loop))
 
-        @LOOPS.register_module()
-        class CustomTestLoop(BaseLoop):
-
-            def __init__(self, runner, dataloader, evaluator):
-                super().__init__(runner, dataloader)
-                self._runner = runner
-
-                if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-                    self.evaluator = build_evaluator(evaluator)  # type: ignore
-                else:
-                    self.evaluator = evaluator
-
-            def run(self) -> None:
-                pass
-
         # test custom validation loop
         cfg = dict(type='CustomTestLoop')
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, CustomTestLoop)
 
     def test_train(self):
-        pass
+        # 1. test iter and epoch counter of EpochBasedTrainLoop
+        epoch_results = []
+        epoch_targets = [i for i in range(3)]
+        iter_results = []
+        iter_targets = [i for i in range(4 * 3)]
+        inner_iter_results = []
+        inner_iter_targets = [i for i in range(4)] * 3  # train and val
+
+        @HOOKS.register_module()
+        class TestEpochHook(Hook):
+
+            def before_train_epoch(self, runner):
+                epoch_results.append(runner.epoch)
+
+            def before_train_iter(self, runner, data_batch=None):
+                iter_results.append(runner.iter)
+                inner_iter_results.append(runner.inner_iter)
+
+        self.epoch_based_cfg.custom_hooks = [
+            dict(type='TestEpochHook', priority=50)
+        ]
+        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+
+        runner.train()
+
+        assert isinstance(runner.train_loop, EpochBasedTrainLoop)
+
+        for result, target, in zip(epoch_results, epoch_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(inner_iter_results, inner_iter_targets):
+            self.assertEqual(result, target)
+
+        time.sleep(1)
+
+        # 2. test iter and epoch counter of IterBasedTrainLoop
+        epoch_results = []
+        iter_results = []
+        inner_iter_results = []
+        iter_targets = [i for i in range(12)]
+
+        @HOOKS.register_module()
+        class TestIterHook(Hook):
+
+            def before_train_epoch(self, runner):
+                epoch_results.append(runner.epoch)
+
+            def before_train_iter(self, runner, data_batch=None):
+                iter_results.append(runner.iter)
+                inner_iter_results.append(runner.inner_iter)
+
+        self.epoch_based_cfg.custom_hooks = [
+            dict(type='TestIterHook', priority=50)
+        ]
+        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner.train()
+
+        assert isinstance(runner.train_loop, IterBasedTrainLoop)
+
+        self.assertEqual(len(epoch_results), 1)
+        self.assertEqual(epoch_results[0], 0)
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(inner_iter_results, iter_targets):
+            self.assertEqual(result, target)
 
     def test_val(self):
         pass
@@ -777,113 +824,45 @@ class TestRunner(TestCase):
         self.assertEqual(len(runner._hooks), 6)
         self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
-    def test_iter_based(self):
-        self.epoch_based_cfg.train_cfg = dict(by_epoch=False, max_iters=30)
-
-        # test iter and epoch counter of IterBasedTrainLoop
-        epoch_results = []
-        iter_results = []
-        inner_iter_results = []
-        iter_targets = [i for i in range(30)]
-
-        @HOOKS.register_module()
-        class TestIterHook(Hook):
-
-            def before_train_epoch(self, runner):
-                epoch_results.append(runner.epoch)
-
-            def before_train_iter(self, runner):
-                iter_results.append(runner.iter)
-                inner_iter_results.append(runner.inner_iter)
-
-        self.epoch_based_cfg.custom_hooks = [
-            dict(type='TestIterHook', priority=50)
-        ]
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
-
-        assert isinstance(runner._train_loop, IterBasedTrainLoop)
-
-        runner.train()
-
-        self.assertEqual(len(epoch_results), 1)
-        self.assertEqual(epoch_results[0], 0)
-        for result, target, in zip(iter_results, iter_targets):
-            self.assertEqual(result, target)
-        for result, target, in zip(inner_iter_results, iter_targets):
-            self.assertEqual(result, target)
-
-    def test_epoch_based(self):
-        self.epoch_based_cfg.train_cfg = dict(by_epoch=True, max_epochs=3)
-
-        # test iter and epoch counter of EpochBasedTrainLoop
-        epoch_results = []
-        epoch_targets = [i for i in range(3)]
-        iter_results = []
-        iter_targets = [i for i in range(10 * 3)]
-        inner_iter_results = []
-        inner_iter_targets = [i for i in range(10)] * 3  # train and val
-
-        @HOOKS.register_module()
-        class TestEpochHook(Hook):
-
-            def before_train_epoch(self, runner):
-                epoch_results.append(runner.epoch)
-
-            def before_train_iter(self, runner, data_batch=None):
-                iter_results.append(runner.iter)
-                inner_iter_results.append(runner.inner_iter)
-
-        self.epoch_based_cfg.custom_hooks = [
-            dict(type='TestEpochHook', priority=50)
-        ]
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
-
-        assert isinstance(runner._train_loop, EpochBasedTrainLoop)
-
-        runner.train()
-
-        for result, target, in zip(epoch_results, epoch_targets):
-            self.assertEqual(result, target)
-        for result, target, in zip(iter_results, iter_targets):
-            self.assertEqual(result, target)
-        for result, target, in zip(inner_iter_results, inner_iter_targets):
-            self.assertEqual(result, target)
-
     def test_custom_loop(self):
         # test custom loop with additional hook
         @LOOPS.register_module()
-        class CustomTrainLoop(EpochBasedTrainLoop):
-            """custom train loop with additional warmup stage."""
+        class CustomTrainLoop2(IterBasedTrainLoop):
+            """Custom train loop with additional warmup stage."""
 
-            def __init__(self, runner, loader, max_epochs, warmup_loader,
+            def __init__(self, runner, dataloader, max_iters, warmup_loader,
                          max_warmup_iters):
                 super().__init__(
-                    runner=runner, loader=loader, max_epochs=max_epochs)
+                    runner=runner, dataloader=dataloader, max_iters=max_iters)
                 self.warmup_loader = self.runner.build_dataloader(
                     warmup_loader)
                 self.max_warmup_iters = max_warmup_iters
 
             def run(self):
-                self.runner.call_hooks('before_run')
+                self.runner.call_hook('before_train')
+
                 for idx, data_batch in enumerate(self.warmup_loader):
                     self.warmup_iter(data_batch)
                     if idx >= self.max_warmup_iters:
                         break
 
-                self.runner.call_hooks('before_train_epoch')
-                while self.runner.iter < self._max_iter:
-                    data_batch = next(self.loader)
+                self.runner.call_hook('before_train_epoch')
+                while self.runner.iter < self._max_iters:
+                    data_batch = next(self.dataloader)
                     self.run_iter(data_batch)
-                self.runner.call_hooks('after_train_epoch')
-                self.runner.call_hooks('after_run')
+                self.runner.call_hook('after_train_epoch')
+
+                self.runner.call_hook('after_train')
 
             def warmup_iter(self, data_batch):
-                self.runner.call_hooks(
-                    'before_warmup_iter', args=dict(data_batch=data_batch))
-                outputs = self.runner.model.train_step(data_batch)
-                self.runner.call_hooks(
+                self.runner.call_hook(
+                    'before_warmup_iter', data_batch=data_batch)
+                self.runner.outputs = self.runner.model(
+                    data_batch, return_loss=True)
+                self.runner.call_hook(
                     'after_warmup_iter',
-                    args=dict(data_batch=data_batch, outputs=outputs))
+                    data_batch=data_batch,
+                    outputs=self.runner.outputs)
 
         before_warmup_iter_results = []
         after_warmup_iter_results = []
@@ -892,31 +871,30 @@ class TestRunner(TestCase):
         class TestWarmupHook(Hook):
             """test custom train loop."""
 
-            def before_warmup_iter(self, data_batch=None):
+            def before_warmup_iter(self, runner, data_batch=None):
                 before_warmup_iter_results.append('before')
 
-            def after_warmup_iter(self, data_batch=None, outputs=None):
+            def after_warmup_iter(self, runner, data_batch=None, outputs=None):
                 after_warmup_iter_results.append('after')
 
-        self.epoch_based_cfg.train_cfg = dict(
-            type='CustomTrainLoop',
-            max_epochs=3,
+        self.iter_based_cfg.train_cfg = dict(
+            type='CustomTrainLoop2',
+            max_iters=10,
             warmup_loader=dict(
                 dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=True),
+                sampler=dict(type='InfiniteSampler', shuffle=True),
                 batch_size=1,
                 num_workers=0),
             max_warmup_iters=5)
-        self.epoch_based_cfg.custom_hooks = [
+        self.iter_based_cfg.custom_hooks = [
             dict(type='TestWarmupHook', priority=50)
         ]
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
-
-        assert isinstance(runner._train_loop, CustomTrainLoop)
-
+        runner = Runner.build_from_cfg(self.iter_based_cfg)
         runner.train()
 
-        # test custom hook triggered normally
+        self.assertIsInstance(runner.train_loop, CustomTrainLoop2)
+
+        # test custom hook triggered as expected
         self.assertEqual(len(before_warmup_iter_results), 5)
         self.assertEqual(len(after_warmup_iter_results), 5)
         for before, after in zip(before_warmup_iter_results,
