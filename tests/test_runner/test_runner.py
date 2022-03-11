@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import multiprocessing as mp
 import os
 import os.path as osp
@@ -436,23 +437,91 @@ class TestRunner(TestCase):
             os.environ.pop('MKL_NUM_THREADS')
 
     def test_logger(self):
-        # TODO
-        # runner = Runner.build_from_cfg(self.epoch_based_cfg)
-        # assert isinstance(runner.logger, MMLogger)
-        # # test latest logger and runner logger are the same
-        # assert runner.logger.level == logging.INFO
-        # assert MMLogger.get_instance(
-        # ).instance_name == runner.logger.instance_name
-        # # test latest message hub and runner message hub are the same
-        # assert isinstance(runner.message_hub, MessageHub)
-        # assert MessageHub.get_instance(
-        # ).instance_name == runner.message_hub.instance_name
+        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        self.assertIsInstance(runner.logger, MMLogger)
+        self.assertEqual(runner.experiment_name, runner.logger.instance_name)
+        self.assertEqual(runner.logger.level, logging.NOTSET)
 
-        # # test set log level in cfg
-        # self.epoch_based_cfg.log_cfg.log_level = 'DEBUG'
-        # runner = Runner.build_from_cfg(self.epoch_based_cfg)
-        # assert runner.logger.level == logging.DEBUG
-        pass
+        # input is a MMLogger object
+        self.assertEqual(
+            id(runner.build_logger(runner.logger)), id(runner.logger))
+
+        # input is None
+        runner._experiment_name = 'logger_name1'
+        logger = runner.build_logger(None)
+        self.assertIsInstance(logger, MMLogger)
+        self.assertEqual(logger.instance_name, 'logger_name1')
+
+        # input is a dict
+        log_cfg = dict(name='logger_name2')
+        logger = runner.build_logger(log_cfg)
+        self.assertIsInstance(logger, MMLogger)
+        self.assertEqual(logger.instance_name, 'logger_name2')
+
+        # input is a dict but does not contain name key
+        runner._experiment_name = 'logger_name3'
+        log_cfg = dict()
+        logger = runner.build_logger(log_cfg)
+        self.assertIsInstance(logger, MMLogger)
+        self.assertEqual(logger.instance_name, 'logger_name3')
+
+        # input is not a valid type
+        with self.assertRaisesRegex(TypeError, 'logger should be'):
+            runner.build_logger('invalid-type')
+
+    def test_build_message_hub(self):
+        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        self.assertIsInstance(runner.message_hub, MessageHub)
+        self.assertEqual(runner.message_hub.instance_name,
+                         runner.experiment_name)
+
+        # input is a MessageHub object
+        self.assertEqual(
+            id(runner.build_message_hub(runner.message_hub)),
+            id(runner.message_hub))
+
+        # input is a dict
+        message_hub_cfg = dict(name='message_hub_name1')
+        message_hub = runner.build_message_hub(message_hub_cfg)
+        self.assertIsInstance(message_hub, MessageHub)
+        self.assertEqual(message_hub.instance_name, 'message_hub_name1')
+
+        # input is a dict but does not contain name key
+        runner._experiment_name = 'message_hub_name2'
+        message_hub_cfg = dict()
+        message_hub = runner.build_message_hub(message_hub_cfg)
+        self.assertIsInstance(message_hub, MessageHub)
+        self.assertEqual(message_hub.instance_name, 'message_hub_name2')
+
+        # input is not a valid type
+        with self.assertRaisesRegex(TypeError, 'message_hub should be'):
+            runner.build_message_hub('invalid-type')
+
+    def test_build_writer(self):
+        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertEqual(runner.experiment_name, runner.writer.instance_name)
+
+        # input is a ComposedWriter object
+        self.assertEqual(
+            id(runner.build_writer(runner.writer)), id(runner.writer))
+
+        # input is a dict
+        writer_cfg = dict(name='writer_name1')
+        writer = runner.build_writer(writer_cfg)
+        self.assertIsInstance(writer, ComposedWriter)
+        self.assertEqual(writer.instance_name, 'writer_name1')
+
+        # input is a dict but does not contain name key
+        runner._experiment_name = 'writer_name2'
+        writer_cfg = dict()
+        writer = runner.build_writer(writer_cfg)
+        self.assertIsInstance(writer, ComposedWriter)
+        self.assertEqual(writer.instance_name, 'writer_name2')
+
+        # input is not a valid type
+        with self.assertRaisesRegex(TypeError, 'writer should be'):
+            runner.build_writer('invalid-type')
 
     def test_default_scope(self):
         # TODO
