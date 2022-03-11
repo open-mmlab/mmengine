@@ -135,7 +135,7 @@ class Hook:
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=None, mode='train')
+        self._before_iter(runner, data_batch=data_batch, mode='train')
 
     def before_val_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
@@ -146,7 +146,7 @@ class Hook:
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=None, mode='val')
+        self._before_iter(runner, data_batch=data_batch, mode='val')
 
     def before_test_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
@@ -157,7 +157,7 @@ class Hook:
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=None, mode='test')
+        self._before_iter(runner, data_batch=data_batch, mode='test')
 
     def after_train_iter(self,
                          runner,
@@ -173,7 +173,8 @@ class Hook:
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        self._after_iter(runner, data_batch=None, outputs=None, mode='train')
+        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
+                         mode='train')
 
     def after_val_iter(self,
                        runner,
@@ -190,7 +191,8 @@ class Hook:
             outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
-        self._after_iter(runner, data_batch=None, outputs=None, mode='val')
+        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
+                         mode='val')
 
     def after_test_iter(
             self,
@@ -207,7 +209,8 @@ class Hook:
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        self._after_iter(runner, data_batch=None, outputs=None, mode='test')
+        self._after_iter(runner, data_batch=data_batch, outputs=outputs,
+                         mode='test')
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
@@ -325,7 +328,7 @@ class Hook:
             bool: Return True if the current epoch reaches the
             `max_epochs`, otherwise False.
         """
-        return runner.epoch + 1 == runner.train_loop._max_epochs
+        return runner.epoch + 1 == runner.train_loop.max_epochs
 
     def is_last_iter(self, runner) -> bool:
         """Test whether or not current epoch is the last iteration.
