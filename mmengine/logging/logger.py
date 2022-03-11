@@ -9,7 +9,6 @@ import torch.distributed as dist
 from termcolor import colored
 
 from .base_global_accsessible import BaseGlobalAccessible
-from mmengine.dist import master_only
 
 
 class MMFormatter(logging.Formatter):
@@ -138,12 +137,11 @@ class MMLogger(Logger, BaseGlobalAccessible):
             self.handlers.append(file_handler)
 
     def callHandlers(self, record):
-        """Overridden ``callHandlers`` method in logging.Logger to prevent
-        the logger from multiple warning message in ddp mode.
+        """Overridden ``callHandlers`` method in logging.Logger to prevent the
+        logger from multiple warning message in ddp mode.
 
-        Loop through all handlers for this logger and its parents in the
-        logger hierarchy. If no handler was found, the record will not be
-        output.
+        Loop through all handlers for this logger and its parents in the logger
+        hierarchy. If no handler was found, the record will not be output.
         """
         for handler in self.handlers:
             if record.levelno >= handler.level:

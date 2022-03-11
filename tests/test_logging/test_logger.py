@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -45,7 +45,6 @@ class TestLogger:
         out, _ = capsys.readouterr()
         assert out
         logging.shutdown()
-
 
     @patch('torch.distributed.get_rank', MagicMock(return_value=1))
     @patch('torch.distributed.is_initialized', lambda: True)
@@ -101,9 +100,9 @@ class TestLogger:
         logger.error('welcome')
         file_path = __file__
         function_name = sys._getframe().f_code.co_name
-        pattern = self.regex_time + r' - test_error - (.*)ERROR(.*) - '\
+        pattern = self.regex_time + ' - test_error - (.*)ERROR(.*) - ' \
                                     f'{file_path} - {function_name} - ' \
-                                    '\d+ - welcome\n'
+                                    r'\d+ - welcome\n'
         out, _ = capsys.readouterr()
         match = re.fullmatch(pattern, out)
         assert match is not None
