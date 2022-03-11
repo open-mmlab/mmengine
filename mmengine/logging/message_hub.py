@@ -2,11 +2,11 @@
 import copy
 from collections import OrderedDict
 from typing import Any, Union
-from mmengine.visualization.utils import check_type
 
 import numpy as np
 import torch
 
+from mmengine.visualization.utils import check_type
 from .base_global_accsessible import BaseGlobalAccessible
 from .log_buffer import LogBuffer
 
@@ -46,7 +46,7 @@ class MessageHub(BaseGlobalAccessible):
             self._log_buffers[key] = LogBuffer([value], [count])
 
     def update_log_vars(self, log_dict: dict) -> None:
-        """ Update :attr:`_log_buffers` with a dict.
+        """Update :attr:`_log_buffers` with a dict.
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_buffers`.
@@ -63,7 +63,8 @@ class MessageHub(BaseGlobalAccessible):
         assert isinstance(log_dict, dict), '`log_dict` must be a dict!'
         for log_name, log_val in log_dict.items():
             if isinstance(log_val, dict):
-                assert 'value' in log_val, f'value must be defined in {log_val}'
+                assert 'value' in log_val, \
+                    f'value must be defined in {log_val}'
                 count = log_val.get('count', 1)
                 value = self._get_valid_value(log_name, log_val['value'])
             else:
@@ -138,7 +139,7 @@ class MessageHub(BaseGlobalAccessible):
 
     def _get_valid_value(self, key: str,
                          value: Union[torch.Tensor, np.ndarray, int, float])\
-            -> None:
+            -> Union[int, float]:
         """Convert value to python built-in type.
 
         Args:

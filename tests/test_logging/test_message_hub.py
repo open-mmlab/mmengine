@@ -59,8 +59,11 @@ class TestMessageHub:
 
     def test_get_log_vars(self):
         message_hub = MessageHub.create_instance()
-        log_dict = dict(loss=1, loss_cls=torch.tensor(2),
-                        loss_bbox=np.array(3), loss_iou=dict(value=1, count=2))
+        log_dict = dict(
+            loss=1,
+            loss_cls=torch.tensor(2),
+            loss_bbox=np.array(3),
+            loss_iou=dict(value=1, count=2))
         message_hub.update_log_vars(log_dict)
         loss = message_hub.get_log('loss')
         loss_cls = message_hub.get_log('loss_cls')
