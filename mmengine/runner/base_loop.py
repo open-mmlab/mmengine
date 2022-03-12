@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 
 class BaseLoop(metaclass=ABCMeta):
-    """Base class.
+    """Base loop class.
 
     All subclasses inherited from ``BaseLoop`` should overwrite the
     :meth:`run` method.
