@@ -153,7 +153,7 @@ class Runner:
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
                 logger=dict(log_level='INFO'),
-                message=None,
+                message_hub=None,
                 writer=dict(
                     name='composed_writer',
                     writers=[dict(type='LocalWriter', save_dir='temp_dir')])
@@ -184,8 +184,7 @@ class Runner:
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
         load_from: Optional[str] = None,
-        resume_from: Optional[str] = None,
-        auto_resume: bool = False,
+        resume: bool = False,
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         logger: Optional[Union[MMLogger, Dict]] = None,
@@ -287,8 +286,7 @@ class Runner:
         self.writer = self.build_writer(writer)
 
         self._load_from = load_from
-        self._resume_from = resume_from
-        self._auto_resume = auto_resume
+        self._resume = resume
         # flag to mark whether checkpoint has been loaded or resumed
         self._has_loaded = False
 
@@ -343,8 +341,7 @@ class Runner:
             default_hooks=cfg.get('default_hooks'),
             custom_hooks=cfg.get('custom_hooks'),
             load_from=cfg.get('load_from'),
-            resume_from=cfg.get('resume_from'),
-            auto_resume=cfg.get('auto_resume'),
+            resume=cfg.get('resume'),
             launcher=cfg.get('launcher'),
             env_cfg=cfg.get('env_cfg'),
             logger=cfg.get('log_cfg'),
@@ -994,18 +991,14 @@ class Runner:
             return None
 
         # decide to load from checkpoint or resume from checkpoint
-        if self._resume_from is None and self._auto_resume:
-            self._resume_from = find_latest_checkpoint(self.work_dir)
+        resume_from = None
+        if self._resume and self._load_from is None:
+            resume_from = find_latest_checkpoint(self.work_dir)
 
-        if self._resume_from is not None and self._load_from is not None:
-            raise ValueError(
-                'resume_from and self._load_from is not all None, '
-                'Can not decide which one to load')
-
-        if self._resume_from:
-            self.resume(self._resume_from)
+        if resume_from is not None:
+            self.resume(resume_from)
             self._has_loaded = True
-        elif self._load_from:
+        elif self._load_from is not None:
             self.load_checkpoint(self._load_from)
             self._has_loaded = True
 
