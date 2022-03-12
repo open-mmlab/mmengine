@@ -21,7 +21,8 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine.config import Config
 from mmengine.data import worker_init_fn
-from mmengine.dist import broadcast, get_dist_info, init_dist, sync_random_seed
+from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
+                           sync_random_seed)
 from mmengine.evaluator import (BaseEvaluator, ComposedEvaluator,
                                 build_evaluator)
 from mmengine.hooks import Hook
@@ -1315,6 +1316,7 @@ class Runner:
 
         return checkpoint
 
+    @master_only
     def save_checkpoint(self,
                         out_dir: str,
                         filename: str,
