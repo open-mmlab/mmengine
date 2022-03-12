@@ -2,9 +2,9 @@
 from .base_data_element import BaseDataElement
 from .base_data_sample import BaseDataSample
 from .sampler import DefaultSampler, InfiniteSampler
-from .utils import worker_init_fn
+from .utils import collate_fn, worker_init_fn
 
 __all__ = [
     'BaseDataElement', 'BaseDataSample', 'DefaultSampler', 'InfiniteSampler',
-    'worker_init_fn'
+    'worker_init_fn', 'collate_fn'
 ]

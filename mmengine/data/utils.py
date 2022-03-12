@@ -1,8 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
+from typing import Any, Sequence, Tuple
 
 import numpy as np
 import torch
+
+from .base_data_sample import BaseDataSample
+
+DATA_BATCH = Sequence[Tuple[Any, BaseDataSample]]
 
 
 def worker_init_fn(worker_id: int, num_workers: int, rank: int,
@@ -23,3 +28,18 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     torch.manual_seed(worker_seed)
+
+
+def collate_fn(data_batch: DATA_BATCH) -> DATA_BATCH:
+    """The default behavior of dataloader is to merge a list of samples to form
+    a mini-batch of Tensor(s). However, in MMEngine, `collate_fn` does nothing
+    just to return input.
+
+    Args:
+        data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of Data from
+            dataloader.
+
+    Returns:
+        Sequence[Tuple[Any, BaseDataSample]]: Return input ``data_batch``.
+    """
+    return data_batch
