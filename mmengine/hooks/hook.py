@@ -352,7 +352,8 @@ class Hook:
         return (runner.iter + 1) % n == 0 if n > 0 else False
 
     def end_of_epoch(self, runner) -> bool:
-        """Check whether the current epoch reaches the `max_epochs` or not.
+        """Check whether the current iteration reaches the last iteration of
+        current dataloader.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
@@ -377,7 +378,7 @@ class Hook:
         return runner.epoch + 1 == runner.train_loop.max_epochs
 
     def is_last_iter(self, runner, mode='train') -> bool:
-        """Test whether current epoch is the last iteration.
+        """Test whether current iteration is the last iteration.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
