@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Dict, List, Sequence, Tuple, Union
 
+import torch
 from torch.utils.data import DataLoader
 
 from mmengine.data import BaseDataSample
@@ -52,7 +53,7 @@ class EpochBasedTrainLoop(BaseLoop):
     def run_epoch(self) -> None:
         """Iterate one epoch."""
         self.runner.call_hook('before_train_epoch')
-
+        self.runner.model.train()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
@@ -114,6 +115,8 @@ class IterBasedTrainLoop(BaseLoop):
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
         while self.runner._iter < self._max_iters:
+            self.runner.model.train()
+
             data_batch = next(self.dataloader)
             self.run_iter(data_batch)
 
@@ -178,6 +181,7 @@ class ValLoop(BaseLoop):
         self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_val')
 
+        self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
@@ -188,6 +192,7 @@ class ValLoop(BaseLoop):
 
         self.runner.call_hook('after_val')
 
+    @torch.no_grad()
     def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataSample]]):
         """Iterate one mini-batch.
 
@@ -228,7 +233,7 @@ class TestLoop(BaseLoop):
         """Launch test."""
         self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_test')
-
+        self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
@@ -239,6 +244,7 @@ class TestLoop(BaseLoop):
 
         self.runner.call_hook('after_test')
 
+    @torch.no_grad()
     def run_iter(self, idx,
                  data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
         """Iterate one mini-batch.
