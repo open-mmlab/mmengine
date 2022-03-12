@@ -362,7 +362,6 @@ class Hook:
         Returns:
             bool: whether the end of current epoch or not.
         """
-        # TODO compatible with val_loop
         return runner.inner_iter + 1 == len(runner.cur_dataloader)
 
     def is_last_train_epoch(self, runner) -> bool:
