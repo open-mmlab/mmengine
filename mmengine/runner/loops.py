@@ -100,7 +100,7 @@ class IterBasedTrainLoop(BaseLoop):
                  max_iters: int) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
-        # TODO, when resume training, what the dataloader should does
+        self.dataloader = iter(self.dataloader)
 
     @property
     def max_iters(self):
@@ -113,8 +113,6 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-
-        self.dataloader = iter(self.dataloader)
         while self.runner._iter < self._max_iters:
             data_batch = next(self.dataloader)
             self.run_iter(data_batch)
