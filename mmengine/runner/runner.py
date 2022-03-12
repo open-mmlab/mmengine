@@ -89,10 +89,7 @@ class Runner:
             Defaults to None.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
-        resume_from (str, optional): The checkpoint file to resume from.
-            Defaults to None.
-        auto_resume (bool): Whether to resume from the latest checkpoint
-            automatically. Defaults to False.
+        resume (bool): Whether to resume training. Defaults to False.
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
             non-distributed environment will be launched.
