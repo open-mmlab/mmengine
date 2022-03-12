@@ -827,14 +827,25 @@ class Runner:
 
         # build dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
-        dataset = DATASETS.build(dataset_cfg, default_scope=self.default_scope)
+        if isinstance(dataset_cfg, dict):
+            dataset = DATASETS.build(
+                dataset_cfg, default_scope=self.default_scope)
+        else:
+            # fallback to raise error in dataloader
+            # if `dataset_cfg` is not a valid type
+            dataset = dataset_cfg
 
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
-        sampler = DATA_SAMPLERS.build(
-            sampler_cfg,
-            default_scope=self.default_scope,
-            default_args=dict(dataset=dataset))
+        if isinstance(sampler_cfg, dict):
+            sampler = DATA_SAMPLERS.build(
+                sampler_cfg,
+                default_scope=self.default_scope,
+                default_args=dict(dataset=dataset))
+        else:
+            # fallback to raise error in dataloader
+            # if `sampler_cfg` is not a valid type
+            sampler = sampler_cfg
 
         # build dataloader
         init_fn: Optional[partial]
