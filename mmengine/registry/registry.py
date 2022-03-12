@@ -382,8 +382,8 @@ class Registry:
             root = self._get_root_registry()
             registry = root._search_child(default_scope)
             if registry is None:
-                raise KeyError(
-                    f'{default_scope} does not exist in the registry tree.')
+                # if `default_scope` can not be found, fallback to use self
+                registry = self
         else:
             registry = self
 
