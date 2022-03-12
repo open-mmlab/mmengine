@@ -180,7 +180,7 @@ class ValLoop(BaseLoop):
         """Launch validation."""
         self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_val')
-
+        self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
@@ -190,6 +190,7 @@ class ValLoop(BaseLoop):
         for key, value in metrics.items():
             self.runner.message_hub.update_log(f'val/{key}', value)
 
+        self.runner.call_hook('after_val_epoch')
         self.runner.call_hook('after_val')
 
     @torch.no_grad()
@@ -233,6 +234,7 @@ class TestLoop(BaseLoop):
         """Launch test."""
         self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_test')
+        self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
@@ -242,6 +244,7 @@ class TestLoop(BaseLoop):
         for key, value in metrics.items():
             self.runner.message_hub.update_log(f'test/{key}', value)
 
+        self.runner.call_hook('after_test_epoch')
         self.runner.call_hook('after_test')
 
     @torch.no_grad()
