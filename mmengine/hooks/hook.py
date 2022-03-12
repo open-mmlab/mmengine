@@ -16,7 +16,7 @@ class Hook:
 
     def before_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations before the training process.
+        operations before the training validation or testing process.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
@@ -26,7 +26,7 @@ class Hook:
 
     def after_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations after the training process.
+        operations before the training validation or testing process.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
@@ -54,7 +54,7 @@ class Hook:
 
     def before_val(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations before val.
+        operations before validation.
 
         Args:
             runner (Runner): The runner of the validation process.
@@ -63,7 +63,7 @@ class Hook:
 
     def after_val(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations after val.
+        operations after validation.
 
         Args:
             runner (Runner): The runner of the validation process.
@@ -72,7 +72,7 @@ class Hook:
 
     def before_test(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations before test.
+        operations before testing.
 
         Args:
             runner (Runner): The runner of the testing process.
@@ -81,7 +81,7 @@ class Hook:
 
     def after_test(self, runner) -> None:
         """All subclasses should override this method, if they need any
-        operations after test.
+        operations after testing.
 
         Args:
             runner (Runner): The runner of the testing process.
@@ -317,7 +317,7 @@ class Hook:
             n (int): Whether current epoch can be evenly divided by n.
 
         Returns:
-            bool: whether current epoch can be evenly divided by n.
+            bool: Whether current epoch can be evenly divided by n.
         """
         return (runner.epoch + 1) % n == 0 if n > 0 else False
 
@@ -331,7 +331,7 @@ class Hook:
                 divided by n.
 
         Returns:
-            bool: whether current inner iteration can be evenly
+            bool: Whether current inner iteration can be evenly
             divided by n.
         """
         return (runner.inner_iter + 1) % n == 0 if n > 0 else False
@@ -342,8 +342,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
-            n (int): Whether current iteration can be
-                evenly divided by n.
+            n (int): Whether current iteration can be evenly divided by n.
 
         Returns:
             bool: Return True if the current iteration can be evenly divided
@@ -360,7 +359,7 @@ class Hook:
                 process.
 
         Returns:
-            bool: whether the end of current epoch or not.
+            bool: Whether reaches the end of current epoch or not.
         """
         return runner.inner_iter + 1 == len(runner.cur_dataloader)
 
@@ -371,8 +370,7 @@ class Hook:
             runner (Runner): The runner of the training process.
 
         Returns:
-            bool: Return True if the current epoch reaches the
-            `max_epochs`, otherwise False.
+            bool: Whether reaches the end of training epoch.
         """
         return runner.epoch + 1 == runner.train_loop.max_epochs
 
@@ -384,7 +382,7 @@ class Hook:
                 process.
 
         Returns:
-            bool: whether current iteration is the last iteration.
+            bool: Whether current iteration is the last iteration.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         if mode == 'train':
