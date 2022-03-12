@@ -19,7 +19,7 @@ class Hook:
         operations before the training process.
 
         Args:
-            runner (Runner): The runner of the training/validation/testing
+            runner (Runner): The runner of the training, validation or testing
                 process.
         """
         pass
@@ -29,7 +29,7 @@ class Hook:
         operations after the training process.
 
         Args:
-            runner (Runner): The runner of the training/validation/testing
+            runner (Runner): The runner of the training, validation or testing
                 process.
         """
         pass
@@ -52,13 +52,50 @@ class Hook:
         """
         pass
 
+    def before_val(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations before val.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+        """
+        pass
+
+    def after_val(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations after val.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+        """
+        pass
+
+    def before_test(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations before test.
+
+        Args:
+            runner (Runner): The runner of the testing process.
+        """
+        pass
+
+    def after_test(self, runner) -> None:
+        """All subclasses should override this method, if they need any
+        operations after test.
+
+        Args:
+            runner (Runner): The runner of the testing process.
+        """
+        pass
+
     def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """All subclasses should override this method, if they need any
         operations before saving the checkpoint.
 
         Args:
-            runner (Runner): The runner of the training process.
-            checkpoints (dict): Model's checkpoint.
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            checkpoint (dict): Model's checkpoint.
         """
         pass
 
@@ -67,8 +104,9 @@ class Hook:
         operations after loading the checkpoint.
 
         Args:
-            runner (Runner): The runner of the training process.
-            checkpoints (dict): Model's checkpoint.
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            checkpoint (dict): Model's checkpoint.
         """
         pass
 
@@ -86,7 +124,7 @@ class Hook:
         operations before each validation epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         self._before_epoch(runner, mode='val')
 
@@ -95,7 +133,7 @@ class Hook:
         operations before each test epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
         self._before_epoch(runner, mode='test')
 
@@ -113,7 +151,7 @@ class Hook:
         operations after each validation epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         self._after_epoch(runner, mode='val')
 
@@ -122,7 +160,7 @@ class Hook:
         operations after each test epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
         self._after_epoch(runner, mode='test')
 
@@ -142,7 +180,7 @@ class Hook:
         operations before each validation iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -153,7 +191,7 @@ class Hook:
         operations before each test iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
@@ -185,7 +223,7 @@ class Hook:
         operations after each validation iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from
@@ -203,7 +241,7 @@ class Hook:
         operations after each test iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training  process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
@@ -217,7 +255,8 @@ class Hook:
         operations before each epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -227,7 +266,8 @@ class Hook:
         operations after each epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -240,7 +280,8 @@ class Hook:
         operations before each iter.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
@@ -257,7 +298,8 @@ class Hook:
         operations after each epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -267,38 +309,40 @@ class Hook:
         pass
 
     def every_n_epochs(self, runner, n: int) -> bool:
-        """Test whether or not current epoch can be evenly divided by n.
+        """Test whether current epoch can be evenly divided by n.
 
         Args:
-            runner (Runner): The runner of the training process.
-            n (int): Whether or not current epoch can be evenly divided by n.
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            n (int): Whether current epoch can be evenly divided by n.
 
         Returns:
-            bool: whether or not current epoch can be evenly divided by n.
+            bool: whether current epoch can be evenly divided by n.
         """
         return (runner.epoch + 1) % n == 0 if n > 0 else False
 
     def every_n_inner_iters(self, runner, n: int) -> bool:
-        """Test whether or not current inner iteration can be evenly divided by
-        n.
+        """Test whether current inner iteration can be evenly divided by n.
 
         Args:
-            runner (Runner): The runner of the training process.
-            n (int): Whether or not current inner iteration can be evenly
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            n (int): Whether current inner iteration can be evenly
                 divided by n.
 
         Returns:
-            bool: whether or not current inner iteration can be evenly
+            bool: whether current inner iteration can be evenly
             divided by n.
         """
         return (runner.inner_iter + 1) % n == 0 if n > 0 else False
 
     def every_n_iters(self, runner, n: int) -> bool:
-        """Test whether or not current iteration can be evenly divided by n.
+        """Test whether current iteration can be evenly divided by n.
 
         Args:
-            runner (Runner): The runner of the training process.
-            n (int): Whether or not current iteration can be
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            n (int): Whether current iteration can be
                 evenly divided by n.
 
         Returns:
@@ -311,7 +355,8 @@ class Hook:
         """Check whether the current epoch reaches the `max_epochs` or not.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
 
         Returns:
             bool: whether the end of current epoch or not.
@@ -319,8 +364,8 @@ class Hook:
         # TODO compatible with val_loop
         return runner.inner_iter + 1 == len(runner.cur_dataloader)
 
-    def is_last_epoch(self, runner) -> bool:
-        """Test whether or not current epoch is the last epoch.
+    def is_last_train_epoch(self, runner) -> bool:
+        """Test whether current epoch is the last train epoch.
 
         Args:
             runner (Runner): The runner of the training process.
@@ -331,14 +376,23 @@ class Hook:
         """
         return runner.epoch + 1 == runner.train_loop.max_epochs
 
-    def is_last_iter(self, runner) -> bool:
-        """Test whether or not current epoch is the last iteration.
+    def is_last_iter(self, runner, mode='train') -> bool:
+        """Test whether current epoch is the last iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation or testing
+                process.
 
         Returns:
-            bool: whether or not current iteration is the last iteration.
+            bool: whether current iteration is the last iteration.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
-        # TODO compatible with val_loop
-        return runner.iter + 1 == runner.train_loop.max_iters
+        if mode == 'train':
+            return runner.iter + 1 == runner.train_loop.max_iters
+        elif mode == 'val':
+            return runner.iter + 1 == runner.val_loop.max_iters
+        elif mode == 'test':
+            return runner.iter + 1 == runner.test_loop.max_iters
+        else:
+            raise ValueError('mode should be train, val or test but got'
+                             f'{mode}')
