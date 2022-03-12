@@ -376,6 +376,9 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
+        # 5. test `dump_config`
+        # TODO
+
     def test_build_from_cfg(self):
         runner = Runner.build_from_cfg(cfg=self.epoch_based_cfg)
         self.assertIsInstance(runner, Runner)

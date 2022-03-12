@@ -19,7 +19,7 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
-from mmengine.config import Config
+from mmengine.config import Config, ConfigDict
 from mmengine.data import worker_init_fn
 from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
                            sync_random_seed)
@@ -111,7 +111,8 @@ class Runner:
             See https://pytorch.org/docs/stable/notes/randomness.html.
         experiment_name (str, optional): Name of current experiment.
             Defaults to None.
-        cfg (:obj:`Config`, optional): Complete config. Defaults to None.
+        cfg (dict or Configdict or :obj:`Config`, optional): Full config.
+            Defaults to None.
 
     Examples:
         >>> from mmengine import Runner
@@ -159,7 +160,7 @@ class Runner:
         >>> runner.train()
         >>> runner.test()
     """
-    cfg: Config
+    cfg: Union[Dict, Config, ConfigDict]
     train_loop: Optional[Union[BaseLoop, Dict]]
     val_loop: Optional[Union[BaseLoop, Dict]]
     test_loop: Optional[Union[BaseLoop, Dict]]
@@ -191,7 +192,7 @@ class Runner:
         seed: Optional[int] = None,
         deterministic: bool = False,
         experiment_name: Optional[str] = None,
-        cfg: Optional[Config] = None,
+        cfg: Optional[Union[Dict, Config, ConfigDict]] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -201,7 +202,7 @@ class Runner:
         if cfg is not None:
             self.cfg = copy.deepcopy(cfg)
         else:
-            self.cfg = Config()
+            self.cfg = dict()
 
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
@@ -271,7 +272,8 @@ class Runner:
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
         elif self.cfg.get('filename') is not None:
-            filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
+            filename_no_ext = osp.splitext(osp.basename(
+                self.cfg['filename']))[0]
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
@@ -305,10 +307,8 @@ class Runner:
 
         self.meta: dict = dict()
 
-        # dump config  TODO
-        # if self._rank == 0:
-        #     filename = osp.basename(self.cfg.get('filename', 'config.py'))
-        #     self.cfg.dump(osp.join(self._work_dir, filename))
+        # dump `cfg` to `work_dir`
+        self.dump_config()
 
     @classmethod
     def build_from_cfg(cls, cfg: Config) -> 'Runner':
@@ -323,8 +323,8 @@ class Runner:
         """
         cfg = copy.deepcopy(cfg)
         runner = cls(
-            model=cfg.model,
-            work_dir=cfg.work_dir,
+            model=cfg.get('model'),
+            work_dir=cfg.get('work_dir'),
             train_dataloader=cfg.get('train_dataloader'),
             val_dataloader=cfg.get('val_dataloader'),
             test_dataloader=cfg.get('test_dataloader'),
@@ -1404,3 +1404,14 @@ class Runner:
                 symlink(filename, dst_file)
             else:
                 shutil.copy(filepath, dst_file)
+
+    @master_only
+    def dump_config(self) -> None:
+        """Dump config to `work_dir`."""
+        if isinstance(self.cfg,
+                      Config) and self.cfg.get('filename') is not None:
+            self.cfg.dump(
+                osp.join(self.work_dir, osp.basename(self.cfg.filename)))
+        elif self.cfg:
+            # TODO
+            pass
