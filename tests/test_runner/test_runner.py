@@ -211,7 +211,7 @@ class TestRunner(TestCase):
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
             timer=dict(type='IterTimerHook'),
-            checkpoint=dict(type='CheckpointHook', interval=2, by_epoch=False),
+            checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
             logger=dict(type='LoggerHook', by_epoch=False),
             optimizer=dict(type='OptimizerHook', grad_clip=None),
             param_scheduler=dict(type='ParamSchedulerHook'))
@@ -985,7 +985,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        self.assertEqual(ckpt['meta']['inner_iter'], 3)
         # self.assertEqual(ckpt['meta']['hook_msgs']['last_ckpt'], path)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
@@ -995,7 +994,6 @@ class TestRunner(TestCase):
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 0)
-        self.assertEqual(runner.inner_iter, 0)
         self.assertTrue(runner._has_loaded)
 
         time.sleep(1)
@@ -1004,7 +1002,6 @@ class TestRunner(TestCase):
         runner.resume(path)
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
-        self.assertEqual(runner.inner_iter, 3)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
@@ -1015,7 +1012,7 @@ class TestRunner(TestCase):
         runner.train()
 
         # 2.1 test `save_checkpoint` which called by `CheckpointHook`
-        path = osp.join(self.temp_dir, 'epoch_12.pth')
+        path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
         self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
@@ -1023,7 +1020,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 0)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        self.assertEqual(ckpt['meta']['inner_iter'], 0)
         # self.assertEqual(ckpt['meta']['hook_msgs']['last_ckpt'], path)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
@@ -1033,12 +1029,11 @@ class TestRunner(TestCase):
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 0)
-        self.assertEqual(runner.inner_iter, 0)
         self.assertTrue(runner._has_loaded)
 
         time.sleep(1)
         # 2.3 test `resume`
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.build_from_cfg(self.iter_based_cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)

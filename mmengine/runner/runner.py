@@ -1239,7 +1239,6 @@ class Runner:
 
         self._epoch = checkpoint['meta']['epoch']
         self._iter = checkpoint['meta']['iter']
-        self._inner_iter = checkpoint['meta']['inner_iter']
 
         if self.meta is None:
             self.meta = {}
@@ -1351,21 +1350,14 @@ class Runner:
         if self.meta is not None:
             meta.update(self.meta)
 
-        # TODO
         if by_epoch:
             # self._epoch increments 1 after
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self_epoch + 1`
-            meta.update(
-                epoch=self._epoch + 1,
-                iter=self._iter,
-                inner_iter=self._inner_iter)
+            meta.update(epoch=self._epoch + 1, iter=self._iter)
         else:
-            meta.update(
-                epoch=self._epoch,
-                iter=self._iter + 1,
-                inner_iter=self._inner_iter)
+            meta.update(epoch=self._epoch, iter=self._iter + 1)
 
         filepath = osp.join(out_dir, filename)
 
