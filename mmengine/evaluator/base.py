@@ -100,7 +100,6 @@ class BaseEvaluator(metaclass=ABCMeta):
         results = collect_results(self.results, size, self.collect_device)
 
         if is_main_process():
-            # TODO: replace with mmengine.dist.master_only
             _metrics = self.compute_metrics(results)  # type: ignore
             # Add prefix to metric names
             if self.prefix:
