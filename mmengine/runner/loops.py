@@ -73,7 +73,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._inner_iter = idx
 
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
-        # outputs should be a dict containing loss tensor
+        # outputs should be a dict containing one or multiple loss tensors
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
         # TODO, should move to LoggerHook
