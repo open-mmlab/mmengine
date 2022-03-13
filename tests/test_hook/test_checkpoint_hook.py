@@ -4,6 +4,8 @@ import sys
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
+import pytest
+
 from mmengine.hooks import CheckpointHook
 from mmengine.logging import MessageHub
 
@@ -71,14 +73,14 @@ class TestCheckpointHook:
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
-        assert runner.message_hub.get_info('meta')['hook_msgs']['last_ckpt']\
-               == './tmp/epoch_10.pth'
+        assert runner.message_hub.get_info('last_ckpt') \
+               == f'./tmp{os.sep}epoch_10.pth'
 
         # epoch can not be evenly divided by 2
         runner.epoch = 10
         checkpoint_hook.after_train_epoch(runner)
-        assert runner.message_hub.get_info('meta')['hook_msgs']['last_ckpt'] \
-               == './tmp/epoch_10.pth'
+        assert runner.message_hub.get_info('last_ckpt') \
+               == f'./tmp{os.sep}epoch_10.pth'
 
         # by epoch is False
         runner.epoch = 9
@@ -87,7 +89,9 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
-        assert runner.message_hub.get_info('meta').get('hook_msgs', None) is None
+
+        with pytest.raises(KeyError):
+            runner.message_hub.get_info('hook_msgs')
 
         # max_keep_ckpts > 0
         with TemporaryDirectory() as tempo_dir:
@@ -104,25 +108,28 @@ class TestCheckpointHook:
         runner = Mock()
         runner.work_dir = './tmp'
         runner.iter = 9
-        runner.meta = dict()
+        runner.message_hub = MessageHub()
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_iter(runner)
-        assert runner.meta.get('hook_msgs', None) is None
+        with pytest.raises(KeyError):
+            runner.message_hub.get_info('last_ckpt')
 
         # by epoch is False
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_iter(runner)
         assert (runner.iter + 1) % 2 == 0
-        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/iter_10.pth'
+        assert runner.message_hub.get_info('last_ckpt') == \
+               f'./tmp{os.sep}iter_10.pth'
 
         # epoch can not be evenly divided by 2
         runner.iter = 10
         checkpoint_hook.after_train_epoch(runner)
-        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/iter_10.pth'
+        assert runner.message_hub.get_info('last_ckpt') == \
+               f'./tmp{os.sep}iter_10.pth'
 
         # max_keep_ckpts > 0
         runner.iter = 9

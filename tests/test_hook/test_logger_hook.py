@@ -11,6 +11,7 @@ import torch
 
 from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
+from mmengine.logging import MessageHub
 
 
 class TestLoggerHook:
@@ -116,13 +117,13 @@ class TestLoggerHook:
         logger_hook._log_train.assert_called()
 
         # Test print exp_name
-        runner.meta = dict(exp_name='retinanet')
+        runner.message_hub = MessageHub()
+        runner.message_hub.update_info('meta', dict(exp_name='retinanet'))
         logger_hook = LoggerHook()
         runner.logger = MagicMock()
         logger_hook._log_train = MagicMock()
         logger_hook.after_train_iter(runner)
-        runner.logger.info.assert_called_with(
-            f'Exp name: {runner.meta["exp_name"]}')
+        runner.logger.info.assert_called_with('Exp name: retinanet')
 
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
@@ -134,7 +135,6 @@ class TestLoggerHook:
     @pytest.mark.parametrize('by_epoch', [True, False])
     def test_log_train(self, by_epoch, capsys):
         runner = self._setup_runner()
-        runner.meta = dict(exp_name='retinanet')
         # Prepare LoggerHook
         logger_hook = LoggerHook(by_epoch=by_epoch)
         logger_hook.writer = MagicMock()
