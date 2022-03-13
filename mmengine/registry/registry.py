@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
 import sys
+import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -383,6 +384,12 @@ class Registry:
             registry = root._search_child(default_scope)
             if registry is None:
                 # if `default_scope` can not be found, fallback to use self
+                warnings.warn(
+                    f'Failed to search "{default_scope}" corresponding '
+                    'registry. As a workaround, using current registry to '
+                    'build instance instead but it may causes unexpected '
+                    f'behavior. Please ensure whether "{default_scope}" is a '
+                    'correct scope.')
                 registry = self
         else:
             registry = self
