@@ -129,7 +129,7 @@ class BaseEvaluator(metaclass=ABCMeta):
 
         # TODO: replace with mmengine.dist.broadcast
         if self.world_size > 1:
-            metrics = dist.broadcast_object_list(metrics)
+            dist.broadcast_object_list(metrics, src=0)
 
         # reset the results list
         self.results.clear()
@@ -191,7 +191,7 @@ def collect_results_cpu(result_part, size, tmpdir=None):
         # load results of all parts from tmp dir
         part_list = []
         for i in range(world_size):
-            with open(osp.join(tmpdir, f'part_{i}.pkl'), 'wb') as f:
+            with open(osp.join(tmpdir, f'part_{i}.pkl'), 'rb') as f:
                 part_list.append(pickle.load(f))
         # sort the results
         ordered_results = []
