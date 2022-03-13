@@ -264,14 +264,15 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.data_loader)}]\t'
+                      f'[{cur_iter}/{len(runner.cur_dataloader)}]\t'
         else:
-            log_str = f'Iter [{cur_iter}/{runner.max_iters}]\t'
+            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
         log_str += f'{lr_momentum_str}, '
         # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
         time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter + 1)
-        eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
+        eta_sec = time_sec_avg * (
+            runner.train_loop.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
         log_str += f'eta: {eta_str}, '
         log_str += f'time: {tag["time"]:.3f}, ' \
@@ -302,7 +303,7 @@ class LoggerHook(Hook):
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
-        eval_iter = len(runner.data_loader)
+        eval_iter = len(runner.cur_dataloader)
         cur_iter = self._get_iter(runner)
         cur_epoch = self._get_epoch(runner, 'val')
         # val/test time
