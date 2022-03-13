@@ -1095,7 +1095,13 @@ class Runner:
 
     def train(self) -> None:
         """Launch training."""
-        assert self.train_loop is not None
+        if self.train_loop is None:
+            raise RuntimeError(
+                '`self.train_loop` should not be None when calling train '
+                'method. Please provide `train_dataloader`, `train_cfg`, '
+                '`optimizer` and `param_scheduler` arguments when '
+                'initializing runner.')
+
         self.train_loop = self.build_train_loop(
             self.train_loop)  # type: ignore
 
@@ -1110,7 +1116,12 @@ class Runner:
 
     def val(self) -> None:
         """Launch validation."""
-        assert self.val_loop is not None
+        if self.val_loop is None:
+            raise RuntimeError(
+                '`self.val_loop` should not be None when calling val method.'
+                'Please provide `val_dataloader`, `val_cfg` and '
+                '`val_evaluator` arguments when initializing runner.')
+
         self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
         self.load_or_resume()
@@ -1121,7 +1132,12 @@ class Runner:
 
     def test(self) -> None:
         """Launch test."""
-        assert self.test_loop is not None
+        if self.test_loop is None:
+            raise RuntimeError(
+                '`self.test_loop` should not be None when calling test method.'
+                'Please provide `test_dataloader`, `test_cfg` and '
+                '`test_evaluator` arguments when initializing runner.')
+
         self.test_loop = self.build_test_loop(self.test_loop)  # type: ignore
 
         self.load_or_resume()

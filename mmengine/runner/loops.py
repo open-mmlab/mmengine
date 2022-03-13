@@ -73,7 +73,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._inner_iter = idx
 
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
-        # outputs should be a dict
+        # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
         # TODO, should move to LoggerHook
@@ -126,6 +126,9 @@ class IterBasedTrainLoop(BaseLoop):
             if (self.runner.val_loop is not None and
                     self.runner._iter % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
+                # reset inner_iter to 0 to ensure it counts as expected in
+                # train loop
+                self.runner._inner_iter = 0
 
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
@@ -139,9 +142,10 @@ class IterBasedTrainLoop(BaseLoop):
                 from dataloader.
         """
         self.runner.call_hook('before_train_iter', data_batch=data_batch)
-        # outputs should be a dict
+        # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
+        # TODO
         for key, value in self.runner.outputs['log_vars'].items():
             self.runner.message_hub.update_log(f'train/{key}', value)
 
@@ -150,7 +154,7 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=self.runner.outputs)
         self.runner._iter += 1
-        self.runner._inner_iter = self.runner._iter
+        self.runner._inner_iter += 1
 
 
 @LOOPS.register_module()

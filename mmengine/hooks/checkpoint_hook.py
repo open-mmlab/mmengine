@@ -153,6 +153,7 @@ class CheckpointHook(Hook):
             filename=ckpt_filename,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
+            by_epoch=self.by_epoch,
             **self.args)
 
         if runner.meta is not None:
