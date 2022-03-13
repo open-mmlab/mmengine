@@ -404,7 +404,7 @@ class LoggerHook(Hook):
             for cfg in log_cfg:
                 log_name = cfg.get('log_name', None)
                 if log_name in log_names:
-                    raise KeyError(f'{cfg["log_name"]} cannot be Redefined in '
+                    raise KeyError(f'{cfg["log_name"]} cannot be redefined in '
                                    'log_key')
                 if log_name is not None:
                     log_names.add(log_name)
