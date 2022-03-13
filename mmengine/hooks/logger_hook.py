@@ -420,7 +420,7 @@ class LoggerHook(Hook):
                 name = log_cfg.pop('log_name')
             else:
                 name = log_key
-            tag[name] = log_buffers[log_key].statistics(**log_cfg)
+            tag[name] = log_buffers[log_key].statistics(**log_cfg).item()
         else:
             raise ValueError('The structure of `LoggerHook.custom key` is '
                              'wrong, please make sure the type of each key is '
