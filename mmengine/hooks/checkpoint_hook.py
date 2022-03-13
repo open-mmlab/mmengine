@@ -153,6 +153,7 @@ class CheckpointHook(Hook):
             filename=ckpt_filename,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
+            by_epoch=self.by_epoch,
             **self.args)
 
         if runner.meta is not None:
@@ -201,8 +202,8 @@ class CheckpointHook(Hook):
         # 2. reach the last iteration of training
         if self.every_n_iters(runner, self.interval) or \
                 (self.save_last and self.is_last_iter(runner, mode='train')):
-            runner.logger.info(f'Saving checkpoint at \
-                    {runner.iter + 1} iterations')
+            runner.logger.info(
+                f'Saving checkpoint at {runner.iter + 1} iterations')
             if self.sync_buffer:
                 pass
                 # TODO
