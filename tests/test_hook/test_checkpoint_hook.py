@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
 from mmengine.hooks import CheckpointHook
+from mmengine.logging import MessageHub
 
 sys.modules['file_client'] = sys.modules['mmengine.fileio.file_client']
 
@@ -62,27 +63,31 @@ class TestCheckpointHook:
         runner = Mock()
         runner.work_dir = './tmp'
         runner.epoch = 9
-        runner.meta = dict()
+        runner.message_hub = MessageHub()
+        runner.message_hub.update_info('meta', dict())
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
-        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
+        assert runner.message_hub.get_info('meta')['hook_msgs']['last_ckpt']\
+               == './tmp/epoch_10.pth'
 
         # epoch can not be evenly divided by 2
         runner.epoch = 10
         checkpoint_hook.after_train_epoch(runner)
-        assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
+        assert runner.message_hub.get_info('meta')['hook_msgs']['last_ckpt'] \
+               == './tmp/epoch_10.pth'
 
         # by epoch is False
         runner.epoch = 9
-        runner.meta = dict()
+        runner.message_hub = MessageHub()
+        runner.message_hub.update_info('meta', dict())
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
-        assert runner.meta.get('hook_msgs', None) is None
+        assert runner.message_hub.get_info('meta').get('hook_msgs', None) is None
 
         # max_keep_ckpts > 0
         with TemporaryDirectory() as tempo_dir:

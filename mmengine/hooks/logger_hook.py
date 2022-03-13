@@ -169,8 +169,9 @@ class LoggerHook(Hook):
         self.yaml_log_path = osp.join(runner.work_dir,
                                       f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
-        if runner.meta is not None:
-            runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
+        meta = runner.message_hub.runtime_info.get('meta', None)
+        if meta is not None:
+            runner.writer.add_params(meta, file_path=self.yaml_log_path)
 
     def after_train_iter(self,
                          runner,
@@ -185,10 +186,11 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        if runner.meta is not None and 'exp_name' in runner.meta:
+        meta = runner.message_hub.runtime_info.get('meta', None)
+        if meta is not None and 'exp_name' in meta:
             if (self.every_n_iters(runner, self.interval_exp_name)) or (
                     self.by_epoch and self.end_of_epoch(runner)):
-                exp_info = f'Exp name: {runner.meta["exp_name"]}'
+                exp_info = f'Exp name: {meta["exp_name"]}'
                 runner.logger.info(exp_info)
         if self.by_epoch and self.every_n_inner_iters(runner, self.interval):
             self._log_train(runner)

@@ -137,15 +137,16 @@ class CheckpointHook(Hook):
         """
         runner.save_checkpoint(
             self.out_dir, save_optimizer=self.save_optimizer, **self.args)
-        if runner.meta is not None:
+        meta = runner.message_hub.runtime_info.get('meta', None)
+        if meta is not None:
             if self.by_epoch:
                 cur_ckpt_filename = self.args.get(
                     'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
             else:
                 cur_ckpt_filename = self.args.get(
                     'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-            runner.meta.setdefault('hook_msgs', dict())
-            runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
+            meta.setdefault('hook_msgs', dict())
+            meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
                 self.out_dir, cur_ckpt_filename)  # type: ignore
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
