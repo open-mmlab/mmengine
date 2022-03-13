@@ -16,7 +16,7 @@ class BaseEvaluator(metaclass=ABCMeta):
     Then it collects all results together from all ranks if distributed
     training is used. Finally, it computes the metrics of the entire dataset.
 
-    A subclass of class:`BaseEvaluator` should assign a meanful value to the
+    A subclass of class:`BaseEvaluator` should assign a meaningful value to the
     class attribute `default_prefix`. See the argument `prefix` for details.
 
     Args:
