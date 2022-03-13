@@ -10,11 +10,11 @@ from typing import Any, Optional, Sequence, Tuple, Union
 import torch
 
 from mmengine.data import BaseDataSample
+from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
-from mmengine.dist import master_only
 
 DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
@@ -437,7 +437,6 @@ class LoggerHook(Hook):
             The maximum GPU memory occupied by tensors in megabytes for a given
             device.
         """
-        # TODO use `mmengine.dist.max_memory_allocated` to count mem_mb
         device = getattr(runner.model, 'output_device', None)
         mem = torch.cuda.max_memory_allocated(device=device)
         mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
