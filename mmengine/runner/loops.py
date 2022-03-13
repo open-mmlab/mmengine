@@ -17,8 +17,8 @@ class EpochBasedTrainLoop(BaseLoop):
 
     Args:
         runner (Runner): A reference of runner.
-        dataloader (Dataloader or dict): An iterator to generate one batch of
-            training dataset each iteration.
+        dataloader (Dataloader or dict): A dataloader object or a dict to
+            build a dataloader.
         max_epoch (int): Total training epochs.
     """
 
@@ -30,10 +30,12 @@ class EpochBasedTrainLoop(BaseLoop):
 
     @property
     def max_epochs(self):
+        """int: Total epochs to train model."""
         return self._max_epochs
 
     @property
     def max_iters(self):
+        """int: Total iterations to train model."""
         return self._max_iters
 
     def run(self) -> None:
@@ -92,8 +94,8 @@ class IterBasedTrainLoop(BaseLoop):
 
     Args:
         runner (Runner): A reference of runner.
-        dataloader (Dataloader or dict): An iterator to generate one batch of
-            training dataset each iteration.
+        dataloader (Dataloader or dict): A dataloader object or a dict to
+            build a dataloader.
         max_iter (int): Total training iterations.
     """
 
@@ -105,6 +107,7 @@ class IterBasedTrainLoop(BaseLoop):
 
     @property
     def max_iters(self):
+        """int: Total iterations to train model."""
         return self._max_iters
 
     def run(self) -> None:
@@ -156,8 +159,8 @@ class ValLoop(BaseLoop):
 
     Args:
         runner (Runner): A reference of runner.
-        dataloader (Dataloader or dict):  An iterator to generate one batch of
-            validation dataset each iteration.
+        dataloader (Dataloader or dict): A dataloader object or a dict to
+            build a dataloader.
         evaluator (BaseEvaluator or dict or list): Used for computing metrics.
         interval (int): Validation interval. Defaults to 1.
     """
@@ -216,8 +219,8 @@ class TestLoop(BaseLoop):
 
     Args:
         runner (Runner): A reference of runner.
-        dataloader (Dataloader or dict):  An iterator to generate one batch of
-            test dataset each iteration.
+        dataloader (Dataloader or dict): A dataloader object or a dict to
+            build a dataloader.
         evaluator (BaseEvaluator or dict or list): Used for computing metrics.
     """
 

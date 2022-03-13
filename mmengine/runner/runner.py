@@ -40,76 +40,98 @@ from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
 EvaluatorType = Union[BaseEvaluator, ComposedEvaluator]
+ConfigType = Union[Dict, Config, ConfigDict]
 
 
 class Runner:
     """A training helper for PyTorch.
 
     Args:
-        model (:obj:`torch.nn.Module` or dict): The model to be run.
+        model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
+            a dict used for build a model.
         work_dir (str): The working directory to save checkpoints and logs.
-        train_dataloader (Dataloader or dict, optional): An iterator to
-            generate one batch of training dataset each iteration. If ``None``
-            is given, it means skipping training steps. Defaults to None.
-        val_dataloader (Dataloader or dict, optional): An iterator to generate
-            one batch of validation dataset each iteration. If ``None`` is
-            given, it means skipping validation steps. Defaults to None.
-        test_dataloader (Dataloader or dict, optional): An iterator to generate
-            one batch of test dataset each iteration. If ``None`` is
-            given, it means skipping test steps. Defaults to None.
-        train_cfg (dict, optional): A dict to build a training loop which is a
-            subclass of :obj:`BaseLoop`. If specified, :attr:`train_dataloader`
-            should also be specified . Defaults to None.
-        val_cfg (dict, optional): A dict to build a validation loop which is a
-            subclass of :obj:`BaseLoop`. If specified, :attr:`val_dataloader`
-            should also be specified. Defaults to None.
-        test_cfg (dict, optional): A dict to build a test loop which is a
-            subclass of :obj:`BaseLoop`. If specified, :attr:`test_dataloader`
-            should also be specified. Defaults to None.
-        optimizer (Optimizer or dict, optional): Computing gradient of model
-            parameters. If specified, :attr`train_dataloader` should also be
+        train_dataloader (Dataloader or dict, optional): A dataloader object or
+            a dict to build a dataloader. If ``None`` is given, it means
+            skipping training steps. Defaults to None.
+            See :meth:`build_dataloader` for more details.
+        val_dataloader (Dataloader or dict, optional): A dataloader object or
+            a dict to build a dataloader. If ``None`` is given, it means
+            skipping validation steps. Defaults to None.
+            See :meth:`build_dataloader` for more details.
+        test_dataloader (Dataloader or dict, optional): A dataloader object or
+            a dict to build a dataloader. If ``None`` is given, it means
+            skipping test steps. Defaults to None.
+            See :meth:`build_dataloader` for more details.
+        train_cfg (dict, optional): A dict to build a training loop. If it does
+            not provide "type" key, it should contain "by_epoch" to decide
+            which type of training loop :class:`EpochBasedTrainLoop` or
+            :class:`IterBasedTrainLoop` should be used. If ``train_cfg``
+            specified, :attr:`train_dataloader` should also be specified.
+            Defaults to None. See :meth:`build_train_loop` for more details.
+        val_cfg (dict, optional): A dict to build a validation loop. If it does
+            not provide "type" key, :class:`ValLoop` will be used by default.
+            If ``val_cfg`` specified, :attr:`val_dataloader` should also be
             specified. Defaults to None.
-        param_scheduler (:obj:`_ParamScheduler` or dict or list, optional):
+            See :meth:`build_val_loop` for more etails.
+        test_cfg (dict, optional): A dict to build a test loop. If it does
+            not provide "type" key, :class:`TestLoop` will be used by default.
+            If ``test_cfg`` specified, :attr:`test_dataloader` should also be
+            specified. Defaults to None.
+            See :meth:`build_test_loop` for more etails.
+        optimizer (Optimizer or dict, optional): Computing gradient of model
+            parameters. If specified, :attr:`train_dataloader` should also be
+            specified. Defaults to None.
+        param_scheduler (_ParamScheduler or dict or list, optional):
             Parameter scheduler for updating optimizer parameters. If
             specified, :attr:`optimizer` should also be specified.
             Defaults to None.
-        val_evaluator (:obj:`Evaluator` or dict or list, optional): Used for
-            computing metrics for validation. If specified,
+        val_evaluator (Evaluator or dict or list, optional): A evaluator object
+            used for computing metrics for validation. It can be a dict or a
+            list of dict to build a evaluator. If specified,
             :attr:`val_dataloader` should also be specified. Defaults to None.
-        test_evaluator (:obj:`Evaluator` or dict or list, optional): Used for
-            computing metrics for test steps. If specified,
+        test_evaluator (Evaluator or dict or list, optional): A evaluator
+            object used for computing metrics for test steps. It can be a dict
+            or a list of dict to build a evaluator. If specified,
             :attr:`test_dataloader` should also be specified. Defaults to None.
         default_hooks (dict[str, dict] or dict[str, Hook], optional): Hooks to
             execute default actions like updating model parameters and saving
-            checkpoints. Default hooks have ``OptimizerHook``,
-            ``IterTimerHook``, ``LoggerHook``, ``ParamSchedulerHook``,
+            checkpoints. Default hooks are ``OptimizerHook``,
+            ``IterTimerHook``, ``LoggerHook``, ``ParamSchedulerHook`` and
             ``CheckpointHook``. Defaults to None.
+            See :meth:`register_default_hooks` for more details.
         custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
-        resume (bool): Whether to resume training. Defaults to False.
-        launcher (str): Way to launcher multi processes. Supported launchers
+        resume (bool): Whether to resume training. Defaults to False. If
+            ``resume`` is True and ``load_from`` is None, automatically to
+            find latest checkpoint from ``work_dir``. If not found, resuming
+            does nothing.
+        launcher (str): Way to launcher multi-process. Supported launchers
             are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
-        logger (MMLogger or dict, optional): A dict to build logger object.
-            Defaults to None.
-        message_hub (MessageHub or dict, optional): A dict to build
-            MessageHub object. Defaults to None.
-        writer (ComposedWriter or dict, optional): Used for writing
-            logs. Defaults to None.
+        logger (MMLogger or dict, optional): A MMLogger object or a dict to
+            build MMLogger object. Defaults to None. If not specified, default
+            config will be used.
+        message_hub (MessageHub or dict, optional): A Messagehub object or a
+            dict to build MessageHub object. Defaults to None. If not
+            specified, default config will be used.
+        writer (ComposedWriter or dict, optional): A ComposedWriter object or a
+            dict build ComposedWriter object. Defaults to None. If not
+            specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
-        seed (int, optional): A number to guarantee reproducible results.
-            If not specified, a random number will be set as seed. Defaults to
-            None.
+        seed (int, optional): A number to set random modules. If not specified,
+            a random number will be set as seed. Defaults to None.
         deterministic (bool): Whether cudnn to select deterministic algorithms.
             Defaults to False.
-            See https://pytorch.org/docs/stable/notes/randomness.html.
-        experiment_name (str, optional): Name of current experiment.
+            See https://pytorch.org/docs/stable/notes/randomness.html for
+            more details.
+        experiment_name (str, optional): Name of current experiment. If not
+            specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
@@ -160,7 +182,7 @@ class Runner:
         >>> runner.train()
         >>> runner.test()
     """
-    cfg: Union[Dict, Config, ConfigDict]
+    cfg: ConfigType
     train_loop: Optional[Union[BaseLoop, Dict]]
     val_loop: Optional[Union[BaseLoop, Dict]]
     test_loop: Optional[Union[BaseLoop, Dict]]
@@ -192,7 +214,7 @@ class Runner:
         seed: Optional[int] = None,
         deterministic: bool = False,
         experiment_name: Optional[str] = None,
-        cfg: Optional[Union[Dict, Config, ConfigDict]] = None,
+        cfg: Optional[ConfigType] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -311,11 +333,11 @@ class Runner:
         self.dump_config()
 
     @classmethod
-    def build_from_cfg(cls, cfg: Config) -> 'Runner':
-        """Build a runner from config dict.
+    def build_from_cfg(cls, cfg: ConfigType) -> 'Runner':
+        """Build a runner from config.
 
         Args:
-            cfg (:obj:`Config`): A config used for building runner. Keys of
+            cfg (ConfigType): A config used for building runner. Keys of
                 ``cfg`` can see :meth:`__init__`.
 
         Returns:
@@ -323,8 +345,8 @@ class Runner:
         """
         cfg = copy.deepcopy(cfg)
         runner = cls(
-            model=cfg.get('model'),
-            work_dir=cfg.get('work_dir'),
+            model=cfg['model'],
+            work_dir=cfg['work_dir'],
             train_dataloader=cfg.get('train_dataloader'),
             val_dataloader=cfg.get('val_dataloader'),
             test_dataloader=cfg.get('test_dataloader'),
@@ -338,15 +360,15 @@ class Runner:
             default_hooks=cfg.get('default_hooks'),
             custom_hooks=cfg.get('custom_hooks'),
             load_from=cfg.get('load_from'),
-            resume=cfg.get('resume'),
-            launcher=cfg.get('launcher'),
-            env_cfg=cfg.get('env_cfg'),
+            resume=cfg.get('resume', False),
+            launcher=cfg.get('launcher', 'none'),
+            env_cfg=cfg.get('env_cfg'),  # type: ignore
             logger=cfg.get('log_cfg'),
             message_hub=cfg.get('message_hub'),
             writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),
             seed=cfg.get('seed'),
-            deterministic=cfg.get('deterministic'),
+            deterministic=cfg.get('deterministic', False),
             cfg=cfg,
         )
 
@@ -354,7 +376,7 @@ class Runner:
 
     @property
     def experiment_name(self):
-        """str: Name of experiment, usually the name of config + timestamp."""
+        """str: Name of experiment."""
         return self._experiment_name
 
     @property
@@ -394,28 +416,27 @@ class Runner:
 
     @property
     def rank(self):
-        """int: Rank of current process. (distributed training)"""
+        """int: Rank of current process."""
         return self._rank
 
     @property
     def world_size(self):
-        """int: Number of processes participating in the job.
-        (distributed training)"""
+        """int: Number of processes participating in the job."""
         return self._world_size
 
     @property
     def deterministic(self):
-        """int:  Whether cudnn to select deterministic algorithms."""
+        """int: Whether cudnn to select deterministic algorithms."""
         return self._deterministic
 
     @property
     def seed(self):
-        """int: A number to guarantee reproducible results."""
+        """int: A number to set random modules."""
         return self._seed
 
     @property
     def timestamp(self):
-        """str: Timestamp when create experiment."""
+        """str: Timestamp when creating experiment."""
         return self._timestamp
 
     @property
@@ -442,12 +463,13 @@ class Runner:
 
         Args:
             env_cfg (dict): Config for setting environment.
-            seed (int, optional): A number to guarantee reproducible results.
-                If not specified, a random number will be set as seed.
+            seed (int, optional): A number to set random modules. If not
+                specified, a random number will be set as seed.
                 Defaults to None.
             deterministic (bool): Whether cudnn to select deterministic
                 algorithms. Defaults to False.
-                See https://pytorch.org/docs/stable/notes/randomness.html.
+                See https://pytorch.org/docs/stable/notes/randomness.html for
+                more details.
         """
         self._deterministic = deterministic
         self._seed = seed
@@ -479,7 +501,7 @@ class Runner:
     def _set_multi_processing(self,
                               mp_start_method: str = 'fork',
                               opencv_num_threads: int = 0) -> None:
-        """Set multi-processing related env.
+        """Set multi-processing related environment.
 
         Args:
             mp_start_method (str): Set the method which should be used to start
@@ -556,7 +578,10 @@ class Runner:
         """Build a global asscessable MMLogger.
 
         Args:
-            logger (MMLogger or dict, optional): Config to build logger.
+            logger (MMLogger or dict, optional): A MMLogger object or a dict to
+                build MMLogger object. If ``logger`` is a MMLogger object, just
+                returns itself. If not specified, default config will be used
+                to build MMLogger object. Defaults to None.
 
         Returns:
             MMLogger: A MMLogger object build from ``logger``.
@@ -582,8 +607,11 @@ class Runner:
         """Build a global asscessable MessageHub.
 
         Args:
-            message_hub (MessageHub or dict, optional): Config to build
-                a MessageHub object.
+            message_hub (MessageHub or dict, optional): A MessageHub object or
+                a dict to build MessageHub object. If ``message_hub`` is a
+                MessageHub object, just returns itself. If not specified,
+                default config will be used to build MessageHub object.
+                Defaults to None.
 
         Returns:
             MessageHub: A MessageHub object build from ``message_hub``.
@@ -609,8 +637,11 @@ class Runner:
         """Build a global asscessable ComposedWriter.
 
         Args:
-            writer (ComposedWriter or dict, optional): Config to build
-                a ComposedWriter object.
+            writer (ComposedWriter or dict, optional): A ComposedWriter object
+                or a dict to build ComposedWriter object. If ``writer`` is a
+                ComposedWriter object, just returns itself. If not specified,
+                default config will be used to build ComposedWriter object.
+                Defaults to None.
 
         Returns:
             ComposedWriter: A ComposedWriter object build from ``writer``.
@@ -639,7 +670,9 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (nn.Module or dict): Config to build model.
+            model (nn.Module or dict): A nn.Module object or a dict to build
+                nn.Module object. If ``model`` is a nn.Module object, just
+                returns itself.
 
         Returns:
             nn.Module: Model build from ``model``.
@@ -665,8 +698,8 @@ class Runner:
 
         Args:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
-                specified, ``MMDistributedDataParallel`` or ``MMDataParallel``
-                will be used. Defaults to None.
+                specified, ``DistributedDataParallel`` will be used in
+                distributed environment. Defaults to None.
             model (nn.Module): Model to be wrapped.
 
         Returns:
@@ -694,7 +727,7 @@ class Runner:
             else:
                 # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
                 if torch.cuda.is_available():
-                    model = model.to('cuda:0')
+                    model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
@@ -711,7 +744,9 @@ class Runner:
             optimizer = dict(type='SGD', lr=0.01)
 
         Args:
-            optimizer (Optimizer or dict): Config to build optimizer.
+            optimizer (Optimizer or dict): An Optimizer object or a dict to
+                build Optimizer object. If ``optimizer`` is an Optimizer
+                object, just returns itself.
 
         Returns:
             Optimizer: Optimizer build from ``optimizer_cfg``.
@@ -731,13 +766,19 @@ class Runner:
                                List]) -> List[_ParamScheduler]:
         """Build parameter schedulers.
 
-        An example of ``scheduler``::
+        Examples of ``scheduler``::
 
             scheduler = dict(type='MultiStepLR', milestones=[1, 2])
 
+            # scheduler can also be a list of dict
+            scheduler = [
+                dict(type='MultiStepLR', milestones=[1, 2]),
+                dict(type='StepLR', step_size=1)
+            ]
+
         Args:
-            scheduler (_ParamScheduler or dict or list): Config to build
-                parameter schedulers.
+            scheduler (_ParamScheduler or dict or list): A Param Scheduler
+                object or a dict or list of dict to build parameter schedulers.
 
         Returns:
             list[:obj:`_ParamScheduler`]: List of parameter schedulers build
@@ -776,13 +817,19 @@ class Runner:
                                    EvaluatorType]) -> EvaluatorType:
         """Build evaluator.
 
-        An example of ``evaluator``::
+        Examples of ``evaluator``::
 
             evaluator = dict(type='ToyEvaluator')
 
+            # evaluator can also be a list of dict
+            evaluator = [
+                dict(type='ToyEvaluator1'),
+                dict(type='ToyEvaluator2')
+            ]
+
         Args:
             evaluator (BaseEvaluator or ComposedEvaluator or dict or list):
-                Config to build evaluators.
+                A Evaluator object or a dict or list of dict build evaluator.
 
         Returns:
             BaseEvaluator or ComposedEvaluator: Evaluators build from
@@ -818,7 +865,9 @@ class Runner:
             )
 
         Args:
-            dataloader (DataLoader or dict): A dict to build dataloader.
+            dataloader (DataLoader or dict): A Dataloader object or a dict to
+                build Dataloader object. If ``dataloader`` is a Dataloader
+                object, just returns itself.
 
         Returns:
             Dataloader: DataLoader build from ``dataloader_cfg``.
@@ -878,12 +927,21 @@ class Runner:
     def build_train_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build training loop.
 
-        An example of ``loop``::
+        Examples of ``loop``::
 
+            # `EpochBasedTrainLoop` will be used
             loop = dict(by_epoch=True, max_epochs=3)
 
+            # `IterBasedTrainLoop` will be used
+            loop = dict(by_epoch=False, max_epochs=3)
+
+            # custom training loop
+            loop = dict(type='CustomTrainLoop', max_epochs=3)
+
         Args:
-            loop (BaseLoop or dict): Config to build training loop.
+            loop (BaseLoop or dict): A training loop or a dict to build
+                training loop. If ``loop`` is a training loop object, just
+                returns itself.
 
         Returns:
             :obj:`BaseLoop`: Training loop object build from ``loop``.
@@ -927,12 +985,18 @@ class Runner:
     def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build validation loop.
 
-        An example of ``loop``:
+        Examples of ``loop``:
 
-            loop= dict(interval=1)
+            # `ValLoop` will be used
+            loop = dict(interval=1)
+
+            # custom validation loop
+            loop = dict(type='CustomValLoop', interval=1)
 
         Args:
-            loop (dict): Config to build validation loop.
+            loop (BaseLoop or dict): A validation loop or a dict to build
+                validation loop. If ``loop`` is a validation loop object, just
+                returns itself.
 
         Returns:
             :obj:`BaseLoop`: Validation loop object build from ``loop``.
@@ -965,6 +1029,18 @@ class Runner:
 
     def build_test_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build test loop.
+
+        Examples of ``loop``:
+
+            # `TestLoop` will be used
+            loop = dict()
+
+            # custom test loop
+            loop = dict(type='CustomTestLoop')
+
+        Args:
+            loop (BaseLoop or dict): A test loop or a dict to build test loop.
+                If ``loop`` is a test loop object, just returns itself.
 
         Args:
             loop_cfg (dict): Config to build test loop.

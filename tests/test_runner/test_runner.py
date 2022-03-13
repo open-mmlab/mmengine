@@ -623,6 +623,9 @@ class TestRunner(TestCase):
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
         self.assertIsInstance(param_schedulers[1], StepLR)
 
+    def test_build_evaluator(self):
+        pass
+
     def test_build_dataloader(self):
         runner = Runner.build_from_cfg(self.epoch_based_cfg)
 
