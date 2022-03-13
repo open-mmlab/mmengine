@@ -190,8 +190,7 @@ def _test_broadcast_dist(device):
 
 def _test_sync_random_seed_dist(device):
     with patch.object(
-            torch, 'tensor',
-            return_value=torch.tensor(1024).to(device)) as mock_tensor:
+            torch, 'tensor', return_value=torch.tensor(1024)) as mock_tensor:
         output = dist.sync_random_seed()
         assert output == 1024
     mock_tensor.assert_called()
