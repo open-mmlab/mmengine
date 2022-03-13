@@ -386,9 +386,9 @@ class Registry:
                 # if `default_scope` can not be found, fallback to use self
                 warnings.warn(
                     f'Failed to search registry named "{default_scope}". '
-                    'registry. As a workaround, the current registry is used '
-                    'to build instance. This may cause unexpected failure '
-                    'when running the built modules. Please ensure whether '
+                    'As a workaround, the current registry is used to build '
+                    'instance. This may cause unexpected failure when running '
+                    'the built modules. Please ensure whether '
                     f'"{default_scope}" is a correct scope.')
                 registry = self
         else:
