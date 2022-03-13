@@ -388,7 +388,7 @@ class Registry:
                     f'Failed to search registry named "{default_scope}". '
                     'As a workaround, the current registry is used to build '
                     'instance. This may cause unexpected failure when running '
-                    'the built modules. Please ensure whether '
+                    'the built modules. Please check whether '
                     f'"{default_scope}" is a correct scope.')
                 registry = self
         else:
