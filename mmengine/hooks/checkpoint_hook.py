@@ -25,6 +25,9 @@ class CheckpointHook(Hook):
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
             Default: True.
+        save_param_scheduler (bool): Whether to save param_scheduler state_dict
+            in the checkpoint. It is usually used for resuming experiments.
+            Default: True.
         out_dir (str, optional | Path): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
@@ -44,6 +47,7 @@ class CheckpointHook(Hook):
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Default: None.
     """
+    out_dir: str
 
     priority = 'VERY_LOW'
 
@@ -51,7 +55,8 @@ class CheckpointHook(Hook):
                  interval: int = -1,
                  by_epoch: bool = True,
                  save_optimizer: bool = True,
-                 out_dir: Union[str, Path] = None,
+                 save_param_scheduler: bool = True,
+                 out_dir: Optional[Union[str, Path]] = None,
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
                  sync_buffer: bool = False,
@@ -60,7 +65,8 @@ class CheckpointHook(Hook):
         self.interval = interval
         self.by_epoch = by_epoch
         self.save_optimizer = save_optimizer
-        self.out_dir = out_dir
+        self.save_param_scheduler = save_param_scheduler
+        self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
         self.args = kwargs
@@ -135,18 +141,25 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
+        if self.by_epoch:
+            ckpt_filename = self.args.get(
+                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
+        else:
+            ckpt_filename = self.args.get(
+                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
+
         runner.save_checkpoint(
-            self.out_dir, save_optimizer=self.save_optimizer, **self.args)
+            self.out_dir,
+            filename=ckpt_filename,
+            save_optimizer=self.save_optimizer,
+            save_param_scheduler=self.save_param_scheduler,
+            **self.args)
+
         if runner.meta is not None:
-            if self.by_epoch:
-                cur_ckpt_filename = self.args.get(
-                    'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
-            else:
-                cur_ckpt_filename = self.args.get(
-                    'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
             runner.meta.setdefault('hook_msgs', dict())
             runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
-                self.out_dir, cur_ckpt_filename)  # type: ignore
+                self.out_dir, ckpt_filename)
+
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
@@ -161,7 +174,7 @@ class CheckpointHook(Hook):
             filename_tmpl = self.args.get('filename_tmpl', name)
             for _step in redundant_ckpts:
                 ckpt_path = self.file_client.join_path(
-                    self.out_dir, filename_tmpl.format(_step))  # type: ignore
+                    self.out_dir, filename_tmpl.format(_step))
                 if self.file_client.isfile(ckpt_path):
                     self.file_client.remove(ckpt_path)
                 else:
