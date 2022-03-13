@@ -305,10 +305,16 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     if group is None:
         group = get_default_group()
 
+    group_backend = get_backend(group)
+    is_nccl_backend = group_backend == dist.Backend.NCCL
+    current_device = torch.device('cpu')
+    if is_nccl_backend:
+        current_device = torch.device('cuda', torch.cuda.current_device())
+
     if get_rank(group) == 0:
-        random_num = torch.tensor(seed, dtype=torch.int32)
+        random_num = torch.tensor(seed, dtype=torch.int32).to(current_device)
     else:
-        random_num = torch.tensor(0, dtype=torch.int32)
+        random_num = torch.tensor(0, dtype=torch.int32).to(current_device)
 
     dist.broadcast(random_num, src=0, group=group)
 
