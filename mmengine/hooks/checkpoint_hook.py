@@ -127,8 +127,8 @@ class CheckpointHook(Hook):
         # 2. reach the last epoch of training
         if self.every_n_epochs(runner, self.interval) or (
                 self.save_last and self.is_last_train_epoch(runner)):
-            runner.logger.info(f'Saving checkpoint at \
-                    {runner.epoch + 1} epochs')
+            runner.logger.info(
+                f'Saving checkpoint at {runner.epoch + 1} epochs')
             if self.sync_buffer:
                 pass
                 # TODO
