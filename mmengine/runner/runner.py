@@ -589,7 +589,11 @@ class Runner:
         if isinstance(logger, MMLogger):
             return logger
         elif logger is None:
-            logger = dict(name=self._experiment_name, log_level='INFO')
+            logger = dict(
+                name=self._experiment_name,
+                log_level='INFO',
+                log_file=osp.join(self.work_dir,
+                                  f'{self._experiment_name}.log'))
         elif isinstance(logger, dict):
             # ensure logger containing name key
             logger.setdefault('name', self._experiment_name)

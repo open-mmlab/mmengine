@@ -30,16 +30,16 @@ class EmptyCacheHook(Hook):
                  before_epoch: bool = False,
                  after_epoch: bool = True,
                  after_iter: bool = False) -> None:
-        self._before_epoch = before_epoch
-        self._after_epoch = after_epoch
-        self._after_iter = after_iter
+        self._do_before_epoch = before_epoch
+        self._do_after_epoch = after_epoch
+        self._do_after_iter = after_iter
 
-    def after_iter(self,
-                   runner,
-                   data_batch: DATA_BATCH = None,
-                   outputs:
-                   Optional[Union[dict, Sequence[BaseDataSample]]] = None)\
-            -> None:
+    def _after_iter(self,
+                    runner,
+                    data_batch: DATA_BATCH = None,
+                    outputs: Optional[Union[dict,
+                                            Sequence[BaseDataSample]]] = None,
+                    mode: str = 'train') -> None:
         """Empty cache after an iteration.
 
         Args:
@@ -48,24 +48,27 @@ class EmptyCacheHook(Hook):
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model.
                 Defaults to None.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._after_iter:
+        if self._do_after_iter:
             torch.cuda.empty_cache()
 
-    def before_epoch(self, runner) -> None:
+    def _before_epoch(self, runner, mode: str = 'train') -> None:
         """Empty cache before an epoch.
 
         Args:
             runner (Runner): The runner of the training process.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._before_epoch:
+        if self._do_before_epoch:
             torch.cuda.empty_cache()
 
-    def after_epoch(self, runner) -> None:
+    def _after_epoch(self, runner, mode: str = 'train') -> None:
         """Empty cache after an epoch.
 
         Args:
             runner (Runner): The runner of the training process.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
-        if self._after_epoch:
+        if self._do_after_epoch:
             torch.cuda.empty_cache()

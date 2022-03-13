@@ -10,6 +10,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 import torch
 
 from mmengine.data import BaseDataSample
+from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
@@ -232,6 +233,7 @@ class LoggerHook(Hook):
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
 
+    @master_only
     def _log_train(self, runner) -> None:
         """Collect and record training logs which start named with "train/*".
 
@@ -264,14 +266,15 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.data_loader)}]\t'
+                      f'[{cur_iter}/{len(runner.cur_dataloader)}]\t'
         else:
-            log_str = f'Iter [{cur_iter}/{runner.max_iters}]\t'
+            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
         log_str += f'{lr_momentum_str}, '
         # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
         time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter + 1)
-        eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
+        eta_sec = time_sec_avg * (
+            runner.train_loop.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
         log_str += f'eta: {eta_str}, '
         log_str += f'time: {tag["time"]:.3f}, ' \
@@ -294,6 +297,7 @@ class LoggerHook(Hook):
         runner.writer.add_scalars(
             tag, step=runner.iter + 1, file_path=self.json_log_path)
 
+    @master_only
     def _log_val(self, runner) -> None:
         """Collect and record training logs which start named with "val/*".
 
@@ -302,7 +306,7 @@ class LoggerHook(Hook):
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
-        eval_iter = len(runner.val_loop.dataloader)
+        eval_iter = len(runner.cur_dataloader)
         cur_iter = self._get_iter(runner)
         cur_epoch = self._get_epoch(runner, 'val')
         # val/test time
@@ -401,7 +405,7 @@ class LoggerHook(Hook):
             for cfg in log_cfg:
                 log_name = cfg.get('log_name', None)
                 if log_name in log_names:
-                    raise KeyError(f'{cfg["log_name"]} cannot be Redefined in '
+                    raise KeyError(f'{cfg["log_name"]} cannot be redefined in '
                                    'log_key')
                 if log_name is not None:
                     log_names.add(log_name)
@@ -417,7 +421,7 @@ class LoggerHook(Hook):
                 name = log_cfg.pop('log_name')
             else:
                 name = log_key
-            tag[name] = log_buffers[log_key].statistics(**log_cfg)
+            tag[name] = log_buffers[log_key].statistics(**log_cfg).item()
         else:
             raise ValueError('The structure of `LoggerHook.custom key` is '
                              'wrong, please make sure the type of each key is '
@@ -434,7 +438,6 @@ class LoggerHook(Hook):
             The maximum GPU memory occupied by tensors in megabytes for a given
             device.
         """
-        # TODO use `mmengine.dist.max_memory_allocated` to count mem_mb
         device = getattr(runner.model, 'output_device', None)
         mem = torch.cuda.max_memory_allocated(device=device)
         mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
