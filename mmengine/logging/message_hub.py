@@ -60,7 +60,8 @@ class MessageHub(BaseGlobalAccessible):
             >>> message_hub.update_log_vars(log_dict)
             >>> # The count of `c` is 2.
         """
-        assert isinstance(log_dict, dict), '`log_dict` must be a dict!'
+        assert isinstance(log_dict, dict), ('`log_dict` must be a dict!, '
+                                            f'but got {type(log_dict)}')
         for log_name, log_val in log_dict.items():
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
