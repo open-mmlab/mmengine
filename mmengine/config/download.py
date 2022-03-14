@@ -4,7 +4,7 @@ import os.path as osp
 
 import torch.nn as nn
 
-from mmengine.runner import load_checkpoint
+import mmengine.runner
 from mmengine.utils import check_install_package, get_installed_path
 from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
                            _parse_cfg_name, _parse_external_cfg_path)
@@ -89,5 +89,5 @@ def get_model(cfg_name: str,
         raise RuntimeError(f'`{build_func_name}` is not defined in '
                            f'`{package}.models`')
     model = build_func(cfg.model, **kwargs)
-    model = load_checkpoint(model, cfg.model_path)
+    model = mmengine.runner.load_checkpoint(model, cfg.model_path)
     return model
