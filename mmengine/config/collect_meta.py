@@ -1,12 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import os.path
 import os.path as osp
 import re
 from typing import Tuple
 
 from mmengine.fileio import load
 from mmengine.utils import check_file_exist
-
 
 PKG2PROJECT = {
     'mmcls': 'mmcls',

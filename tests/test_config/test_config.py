@@ -48,7 +48,7 @@ class TestConfig:
         # reserved keys cannot be set in config
         with pytest.raises(
                 KeyError, match='filename is reserved for config '
-                                'file'):
+                'file'):
             Config.fromfile(cfg_file)
 
     def test_fromfile(self):
@@ -514,8 +514,8 @@ class TestConfig:
 
     def _base_variables(self):
         for file in [
-            'py_config/test_base_variables.py',
-            'json_config/test_base.json', 'yaml_config/test_base.yaml'
+                'py_config/test_base_variables.py',
+                'json_config/test_base.json', 'yaml_config/test_base.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -534,9 +534,9 @@ class TestConfig:
 
         # test nested base
         for file in [
-            'py_config/test_base_variables_nested.py',
-            'json_config/test_base_variables_nested.json',
-            'yaml_config/test_base_variables_nested.yaml'
+                'py_config/test_base_variables_nested.py',
+                'json_config/test_base_variables_nested.json',
+                'yaml_config/test_base_variables_nested.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -665,7 +665,3 @@ class TestConfig:
         assert new_cfg._cfg_dict is not cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
-
-
-
-

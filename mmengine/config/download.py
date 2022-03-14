@@ -7,7 +7,7 @@ import torch.nn as nn
 from mmengine.runner import load_checkpoint
 from mmengine.utils import check_install_package, get_installed_path
 from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
-                           _parse_external_cfg_path, _parse_cfg_name)
+                           _parse_cfg_name, _parse_external_cfg_path)
 from .config import Config
 
 
@@ -31,8 +31,8 @@ def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
         >>> # Equivalent to
         >>> Config.fromfile(/path/tofaster_rcnn_r50_fpn_1x_coco.py)
         >>> cfg.model_path
-        https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth 
-        
+        https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+
     Returns:
         Config: A `Config` parsed from external package.
     """ # noqa E301
@@ -49,9 +49,9 @@ def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
         cfg = Config.fromfile(cfg_path)
         cfg.model_path = cfg_meta['Weights']
         if pretrained:
-            assert 'Weights' in cfg_meta, 'Cannot find `Weights` in ' \
-                                          'cfg_file.metafile.yml, please check ' \
-                                          'the metafile'
+            assert 'Weights' in cfg_meta, ('Cannot find `Weights` in cfg_file'
+                                           '.metafile.yml, please check the'
+                                           'metafile')
     except ValueError:
         # Since the base config does not contain a metafile, the absolute
         # config is `osp.join(package_path, cfg_path_prefix, cfg_name)`

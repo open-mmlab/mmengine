@@ -21,7 +21,7 @@ from mmengine.fileio import dump, load
 from mmengine.utils import (check_file_exist, check_install_package,
                             get_installed_path, import_modules_from_strings)
 from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
-                           _parse_external_cfg_path, _parse_cfg_name)
+                           _parse_cfg_name, _parse_external_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -470,16 +470,22 @@ class Config:
             str: The absolute path of `cfg_name`.
         """
         if '::' in cfg_path:
+            # `cfg_path` startswith '::' means an external config path.
+            # Get package name and relative config path.
             package, cfg_path = _parse_external_cfg_path(cfg_path)
+            # Get installed package path.
             check_install_package(package)
             package_path = get_installed_path(package)
             try:
+                # Get config path from meta file.
                 cfg_name = _parse_cfg_name(cfg_path)
                 cfg_path = _get_external_cfg_path(package_path, cfg_name)
             except ValueError:
-                cfg_path = _get_external_cfg_base_path(package_path,
-                                                       cfg_path)
+                # Since base config does not have a metafile, it should be
+                # concatenated with package path and relative config path.
+                cfg_path = _get_external_cfg_base_path(package_path, cfg_path)
         else:
+            # Get local config path.
             cfg_dir = osp.dirname(filename)
             cfg_path = osp.join(cfg_dir, cfg_path)
         return cfg_path
