@@ -4,6 +4,8 @@ import sys
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
+import torch
+
 from mmengine.hooks import CheckpointHook
 
 sys.modules['file_client'] = sys.modules['mmengine.fileio.file_client']
@@ -63,13 +65,17 @@ class TestCheckpointHook:
         runner.work_dir = './tmp'
         runner.epoch = 9
         runner.meta = dict()
+        runner.model = Mock()
+        runner.model.buffers = Mock(return_value=[torch.ones(0)])
 
         # by epoch is True
-        checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
+        checkpoint_hook = CheckpointHook(
+            interval=2, by_epoch=True, sync_buffer=True)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
         assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
+        runner.model.buffers.assert_called()
 
         # epoch can not be evenly divided by 2
         runner.epoch = 10
@@ -100,6 +106,8 @@ class TestCheckpointHook:
         runner.work_dir = './tmp'
         runner.iter = 9
         runner.meta = dict()
+        runner.model = Mock()
+        runner.model.buffers = Mock(return_value=[torch.ones(0)])
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
@@ -108,11 +116,13 @@ class TestCheckpointHook:
         assert runner.meta.get('hook_msgs', None) is None
 
         # by epoch is False
-        checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
+        checkpoint_hook = CheckpointHook(
+            interval=2, by_epoch=False, sync_buffer=True)
         checkpoint_hook.before_run(runner)
         checkpoint_hook.after_train_iter(runner)
         assert (runner.iter + 1) % 2 == 0
         assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/iter_10.pth'
+        runner.model.buffers.assert_called()
 
         # epoch can not be evenly divided by 2
         runner.iter = 10

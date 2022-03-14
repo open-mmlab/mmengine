@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataSample
+from mmengine.dist import all_reduce, master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
 from .hook import Hook
@@ -130,11 +131,13 @@ class CheckpointHook(Hook):
             runner.logger.info(
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
             if self.sync_buffer:
-                pass
-                # TODO
+                for buffer in runner.model.buffers():
+                    reduced_buffer = buffer.data
+                    all_reduce(reduced_buffer, op='mean')
+                    buffer.data.copy_(reduced_buffer)
             self._save_checkpoint(runner)
 
-    # TODO Add master_only decorator
+    @master_only
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
@@ -205,6 +208,8 @@ class CheckpointHook(Hook):
             runner.logger.info(
                 f'Saving checkpoint at {runner.iter + 1} iterations')
             if self.sync_buffer:
-                pass
-                # TODO
+                for buffer in runner.model.buffers():
+                    reduced_buffer = buffer.data
+                    all_reduce(reduced_buffer, op='mean')
+                    buffer.data.copy_(reduced_buffer)
             self._save_checkpoint(runner)
