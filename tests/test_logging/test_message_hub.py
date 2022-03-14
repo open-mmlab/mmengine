@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import pytest
+import torch
 
 from mmengine import MessageHub
 
@@ -55,3 +56,28 @@ class TestMessageHub:
         recorded_dict = dict(a=1, b=2)
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
+
+    def test_get_log_vars(self):
+        message_hub = MessageHub.create_instance()
+        log_dict = dict(
+            loss=1,
+            loss_cls=torch.tensor(2),
+            loss_bbox=np.array(3),
+            loss_iou=dict(value=1, count=2))
+        message_hub.update_log_vars(log_dict)
+        loss = message_hub.get_log('loss')
+        loss_cls = message_hub.get_log('loss_cls')
+        loss_bbox = message_hub.get_log('loss_bbox')
+        loss_iou = message_hub.get_log('loss_iou')
+        assert loss.current() == 1
+        assert loss_cls.current() == 2
+        assert loss_bbox.current() == 3
+        assert loss_iou.mean() == 0.5
+
+        with pytest.raises(TypeError):
+            loss_dict = dict(error_type=[])
+            message_hub.update_log_vars(loss_dict)
+
+        with pytest.raises(AssertionError):
+            loss_dict = dict(error_type=dict(count=1))
+            message_hub.update_log_vars(loss_dict)

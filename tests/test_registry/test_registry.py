@@ -341,12 +341,12 @@ class TestRegistry:
         assert isinstance(MID_HOUNDS.build(b_cfg), Beagle)
 
         # test `default_scope`
-        # `default_scope` is an invalid scope
-        with pytest.raises(KeyError):
-            LITTLE_HOUNDS.build(b_cfg, default_scope='invalid_mid_hound')
-
         # switch the current registry to another registry
         dog = LITTLE_HOUNDS.build(b_cfg, default_scope='mid_hound')
+        assert isinstance(dog, Beagle)
+
+        # `default_scope` can not be found
+        dog = MID_HOUNDS.build(b_cfg, default_scope='scope-not-found')
         assert isinstance(dog, Beagle)
 
     def test_repr(self):
