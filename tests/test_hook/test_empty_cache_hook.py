@@ -9,6 +9,6 @@ class TestEmptyCacheHook:
     def test_emtpy_cache_hook(self):
         Hook = EmptyCacheHook(True, True, True)
         Runner = Mock()
-        Hook.after_iter(Runner)
-        Hook.before_epoch(Runner)
-        Hook.after_epoch(Runner)
+        Hook._after_iter(Runner)
+        Hook._before_epoch(Runner)
+        Hook._after_epoch(Runner)

@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest.mock import Mock
 
+import pytest
+
 from mmengine.hooks import Hook
 
 
@@ -19,25 +21,25 @@ class TestHook:
     def test_before_epoch(self):
         hook = Hook()
         runner = Mock()
-        hook.before_epoch(runner)
+        hook._before_epoch(runner)
 
     def test_after_epoch(self):
         hook = Hook()
         runner = Mock()
-        hook.after_epoch(runner)
+        hook._after_epoch(runner)
 
     def test_before_iter(self):
         hook = Hook()
         runner = Mock()
         data_batch = {}
-        hook.before_iter(runner, data_batch)
+        hook._before_iter(runner, data_batch)
 
     def test_after_iter(self):
         hook = Hook()
         runner = Mock()
         data_batch = {}
         outputs = {}
-        hook.after_iter(runner, data_batch, outputs)
+        hook._after_iter(runner, data_batch, outputs)
 
     def test_before_save_checkpoint(self):
         hook = Hook()
@@ -161,7 +163,8 @@ class TestHook:
 
         # last inner iter
         runner.inner_iter = 1
-        runner.data_loader.__len__ = Mock(return_value=2)
+        runner.cur_dataloader.__len__ = Mock(return_value=2)
+        runner.cur_dataloader.__len__ = Mock(return_value=2)
         return_val = hook.end_of_epoch(runner)
         assert return_val
 
@@ -170,19 +173,19 @@ class TestHook:
         return_val = hook.end_of_epoch(runner)
         assert not return_val
 
-    def test_is_last_epoch(self):
+    def test_is_last_train_epoch(self):
         hook = Hook()
         runner = Mock()
 
         # last epoch
         runner.epoch = 1
-        runner._max_epochs = 2
-        return_val = hook.is_last_epoch(runner)
+        runner.train_loop.max_epochs = 2
+        return_val = hook.is_last_train_epoch(runner)
         assert return_val
 
         # not the last epoch
-        runner.epoch = 0
-        return_val = hook.is_last_epoch(runner)
+        runner.train_loop.max_epochs = 0
+        return_val = hook.is_last_train_epoch(runner)
         assert not return_val
 
     def test_is_last_iter(self):
@@ -191,11 +194,18 @@ class TestHook:
 
         # last iter
         runner.iter = 1
-        runner._max_iters = 2
+        runner.train_loop.max_iters = 2
         return_val = hook.is_last_iter(runner)
         assert return_val
 
         # not the last iter
-        runner.iter = 0
-        return_val = hook.is_last_iter(runner)
+        runner.val_loop.max_iters = 0
+        return_val = hook.is_last_iter(runner, mode='val')
         assert not return_val
+
+        runner.test_loop.max_iters = 0
+        return_val = hook.is_last_iter(runner, mode='test')
+        assert not return_val
+
+        with pytest.raises(ValueError):
+            hook.is_last_iter(runner, mode='error_mode')

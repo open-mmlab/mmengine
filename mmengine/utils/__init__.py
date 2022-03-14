@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .hub import load_url
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
-                   has_method, import_modules_from_strings, is_list_of,
+                   find_latest_checkpoint, has_method,
+                   import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
                    iter_cast, list_cast, mmcv_full_available,
                    requires_executable, requires_package, slice_list,
@@ -24,5 +25,5 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'is_installed', 'call_command', 'get_installed_path',
-    'check_install_package'
+    'check_install_package', 'find_latest_checkpoint'
 ]

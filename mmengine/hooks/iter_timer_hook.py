@@ -18,30 +18,37 @@ class IterTimerHook(Hook):
 
     priority = 'NORMAL'
 
-    def before_epoch(self, runner) -> None:
+    def _before_epoch(self, runner, mode: str = 'train') -> None:
         """Record time flag before start a epoch.
 
         Args:
             runner (Runner): The runner of the training process.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
         self.t = time.time()
 
-    def before_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
+    def _before_iter(self,
+                     runner,
+                     data_batch: DATA_BATCH = None,
+                     mode: str = 'train') -> None:
         """Logging time for loading data and update the time flag.
 
         Args:
             runner (Runner): The runner of the training process.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({'data_time': time.time() - self.t})
+        runner.message_hub.update_log(f'{mode}/data_time',
+                                      time.time() - self.t)
 
-    def after_iter(self,
-                   runner,
-                   data_batch: DATA_BATCH = None,
-                   outputs:
-                   Optional[Union[dict, Sequence[BaseDataSample]]] = None) \
+    def _after_iter(self,
+                    runner,
+                    data_batch: DATA_BATCH = None,
+                    outputs:
+                    Optional[Union[dict, Sequence[BaseDataSample]]] = None,
+                    mode: str = 'train') \
             -> None:
         """Logging time for a iteration and update the time flag.
 
@@ -51,7 +58,9 @@ class IterTimerHook(Hook):
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model. Defaults
                 to None.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
         # TODO: update for new logging system
-        runner.log_buffer.update({'time': time.time() - self.t})
+
+        runner.message_hub.update_log(f'{mode}/time', time.time() - self.t)
         self.t = time.time()

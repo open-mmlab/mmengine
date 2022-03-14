@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import collections.abc
 import functools
+import glob
 import itertools
+import os.path as osp
 import pkgutil
 import subprocess
 import warnings
@@ -11,6 +13,8 @@ from inspect import getfullargspec
 from itertools import repeat
 from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
 
+import numpy as np
+import torch
 import torch.nn as nn
 
 from .parrots_wrapper import _BatchNorm, _InstanceNorm
@@ -433,3 +437,80 @@ def is_norm(layer: nn.Module,
 
     all_norm_bases = (_BatchNorm, _InstanceNorm, nn.GroupNorm, nn.LayerNorm)
     return isinstance(layer, all_norm_bases)
+
+
+def tensor2imgs(tensor: torch.Tensor,
+                mean: Optional[Tuple[float, float, float]] = None,
+                std: Optional[Tuple[float, float, float]] = None,
+                to_bgr: bool = True):
+    """Convert tensor to 3-channel images or 1-channel gray images.
+
+    Args:
+        tensor (torch.Tensor): Tensor that contains multiple images, shape (
+            N, C, H, W). :math:`C` can be either 3 or 1. If C is 3, the format
+            should be RGB.
+        mean (tuple[float], optional): Mean of images. If None,
+            (0, 0, 0) will be used for tensor with 3-channel,
+            while (0, ) for tensor with 1-channel. Defaults to None.
+        std (tuple[float], optional): Standard deviation of images. If None,
+            (1, 1, 1) will be used for tensor with 3-channel,
+            while (1, ) for tensor with 1-channel. Defaults to None.
+        to_bgr (bool): For the tensor with 3 channel, convert its format to
+            BGR. For the tensor with 1 channel, it must be False. Defaults to
+            True.
+
+    Returns:
+        list[np.ndarray]: A list that contains multiple images.
+    """
+
+    assert torch.is_tensor(tensor) and tensor.ndim == 4
+    channels = tensor.size(1)
+    assert channels in [1, 3]
+    if mean is None:
+        mean = (0, ) * channels
+    if std is None:
+        std = (1, ) * channels
+    assert (channels == len(mean) == len(std) == 3) or \
+        (channels == len(mean) == len(std) == 1 and not to_bgr)
+    mean = tensor.new_tensor(mean).view(1, -1)
+    std = tensor.new_tensor(std).view(1, -1)
+    tensor = tensor.permute(0, 2, 3, 1) * std + mean
+    imgs = tensor.detach().cpu().numpy()
+    if to_bgr and channels == 3:
+        imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
+    imgs = [np.ascontiguousarray(img) for img in imgs]
+    return imgs
+
+
+def find_latest_checkpoint(path: str, suffix: str = 'pth'):
+    """Find the latest checkpoint from the given path.
+
+    Refer to https://github.com/microsoft/SoftTeacher/blob/main/ssod/utils/patch.py  # noqa: E501
+
+    Args:
+        path(str): The path to find checkpoints.
+        suffix(str): File extension. Defaults to 'pth'.
+
+    Returns:
+        str or None: File path of the latest checkpoint.
+    """
+    if not osp.exists(path):
+        raise FileNotFoundError('{path} does not exist.')
+
+    if osp.exists(osp.join(path, f'latest.{suffix}')):
+        return osp.join(path, f'latest.{suffix}')
+
+    checkpoints = glob.glob(osp.join(path, f'*.{suffix}'))
+    if len(checkpoints) == 0:
+        raise FileNotFoundError(f'checkpoints can not be found in {path}. '
+                                'Maybe check the suffix again.')
+
+    latest = -1
+    latest_path = None
+    for checkpoint in checkpoints:
+        count = int(osp.basename(checkpoint).split('_')[-1].split('.')[0])
+        if count > latest:
+            latest = count
+            latest_path = checkpoint
+
+    return latest_path

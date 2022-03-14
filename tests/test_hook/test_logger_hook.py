@@ -110,7 +110,7 @@ class TestLoggerHook:
         # Test end of the epoch.
         logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
         logger_hook._log_train = MagicMock()
-        runner.data_loader = [0] * 5
+        runner.cur_dataloader = [0] * 5
         runner.inner_iter = 4
         logger_hook.after_train_iter(runner)
         logger_hook._log_train.assert_called()
@@ -155,7 +155,7 @@ class TestLoggerHook:
         out, _ = capsys.readouterr()
         time_avg = logger_hook.time_sec_tot / (
             runner.iter + 1 - logger_hook.start_iter)
-        eta_second = time_avg * (runner.max_iters - runner.iter - 1)
+        eta_second = time_avg * (runner.train_loop.max_iters - runner.iter - 1)
         eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
             if torch.cuda.is_available():
@@ -337,10 +337,10 @@ class TestLoggerHook:
     def _setup_runner(self):
         runner = MagicMock()
         runner.epoch = 1
-        runner.data_loader = [0] * 5
+        runner.cur_dataloader = [0] * 5
         runner.inner_iter = 1
         runner.iter = 10
-        runner.max_iters = 50
+        runner.train_loop.max_iters = 50
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
         for handler in logger.handlers:

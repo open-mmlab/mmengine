@@ -10,4 +10,4 @@ class TestSyncBuffersHook:
         Runner = Mock()
         Runner.model = Mock()
         Hook = SyncBuffersHook()
-        Hook.after_epoch(Runner)
+        Hook._after_epoch(Runner)

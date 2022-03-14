@@ -210,10 +210,11 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 11 个根注册器：
+为了方便跨库调用，MMEngine 提供了 15 个根注册器：
 
-- RUNNERS: Runner 的注册器，如 `EpochBasedRunner`, `IterBasedRunner`
+- RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
+- LOOPS: 管理训练、验证以及测试流程，如 `EpochBasedTrainRunner`
 - HOOKS: 钩子，如 `CheckpointHook`, `ProfilerHook`
 - DATASETS: 数据集
 - DATA_SAMPLERS: `Dataloader` 的 `sampler`，用于采样数据
