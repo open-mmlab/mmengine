@@ -833,7 +833,8 @@ class Runner:
 
         Args:
             evaluator (BaseEvaluator or ComposedEvaluator or dict or list):
-                A Evaluator object or a dict or list of dict build evaluator.
+                An Evaluator object or a config dict or list of config dict
+                used to build evaluators.
 
         Returns:
             BaseEvaluator or ComposedEvaluator: Evaluators build from
@@ -1110,6 +1111,7 @@ class Runner:
 
         self.load_or_resume()
 
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
         self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
