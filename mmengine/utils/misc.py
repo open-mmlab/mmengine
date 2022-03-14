@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import collections.abc
 import functools
+import glob
 import itertools
+import os.path as osp
 import pkgutil
 import subprocess
 import warnings
@@ -478,3 +480,37 @@ def tensor2imgs(tensor: torch.Tensor,
         imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
     imgs = [np.ascontiguousarray(img) for img in imgs]
     return imgs
+
+
+def find_latest_checkpoint(path: str, suffix: str = 'pth'):
+    """Find the latest checkpoint from the given path.
+
+    Refer to https://github.com/microsoft/SoftTeacher/blob/main/ssod/utils/patch.py  # noqa: E501
+
+    Args:
+        path(str): The path to find checkpoints.
+        suffix(str): File extension. Defaults to 'pth'.
+
+    Returns:
+        str or None: File path of the latest checkpoint.
+    """
+    if not osp.exists(path):
+        raise FileNotFoundError('{path} does not exist.')
+
+    if osp.exists(osp.join(path, f'latest.{suffix}')):
+        return osp.join(path, f'latest.{suffix}')
+
+    checkpoints = glob.glob(osp.join(path, f'*.{suffix}'))
+    if len(checkpoints) == 0:
+        raise FileNotFoundError(f'checkpoints can not be found in {path}. '
+                                'Maybe check the suffix again.')
+
+    latest = -1
+    latest_path = None
+    for checkpoint in checkpoints:
+        count = int(osp.basename(checkpoint).split('_')[-1].split('.')[0])
+        if count > latest:
+            latest = count
+            latest_path = checkpoint
+
+    return latest_path
