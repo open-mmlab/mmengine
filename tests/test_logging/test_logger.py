@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,9 +13,10 @@ from mmengine import MMLogger, print_log
 class TestLogger:
     regex_time = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
 
-    @patch('torch.distributed.get_rank', lambda: 0)
-    @patch('torch.distributed.is_initialized', lambda: True)
-    @patch('torch.distributed.is_available', lambda: True)
+    @patch('torch.distributed.get_rank', MagicMock(return_value=0))
+    @patch('torch.distributed.is_initialized', MagicMock(return_value=True))
+    @patch('torch.distributed.is_available', MagicMock(return_value=True))
+    @patch('torch.distributed.distributed_c10d._get_default_group', MagicMock)
     def test_init_rank0(self, tmp_path):
         logger = MMLogger.create_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'rank0.pkg1'
@@ -31,7 +32,11 @@ class TestLogger:
         # depends on the given arguments.
         tmp_file = tmp_path / 'tmp_file.log'
         logger = MMLogger.create_instance(
-            'rank0.pkg2', log_level='INFO', log_file=str(tmp_file))
+            'rank0.pkg2',
+            module_name='mmengine',
+            log_level='INFO',
+            log_file=str(tmp_file))
+        assert logger.name == 'mmengine'
         assert isinstance(logger, logging.Logger)
         assert len(logger.handlers) == 2
         assert isinstance(logger.handlers[0], logging.StreamHandler)
@@ -40,9 +45,11 @@ class TestLogger:
         assert id(logger_pkg3) == id(logger)
         logging.shutdown()
 
-    @patch('torch.distributed.get_rank', lambda: 1)
-    @patch('torch.distributed.is_initialized', lambda: True)
-    @patch('torch.distributed.is_available', lambda: True)
+    @patch('torch.distributed.get_rank', MagicMock(return_value=1))
+    @patch('torch.distributed.is_initialized', MagicMock(return_value=True))
+    @patch('torch.distributed.is_available', MagicMock(return_value=True))
+    @patch('torch.distributed.distributed_c10d._get_default_group',
+           MagicMock())
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'

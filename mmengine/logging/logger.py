@@ -5,9 +5,9 @@ import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
 
-import torch.distributed as dist
 from termcolor import colored
 
+from mmengine.dist import get_rank
 from .base_global_accsessible import BaseGlobalAccessible
 
 
@@ -90,7 +90,9 @@ class MMLogger(Logger, BaseGlobalAccessible):
     BaseGlobalAccessible.
 
     Args:
-        name (str): Logger name. Defaults to ''.
+        name (str): Name used to get logger globally. Defaults to ''.
+        module_name (str): Name of logger. If module name is not specified,
+            logger name will be `name`. Defaults to ''.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level: The log level of the handler. Defaults to 'NOTSET'.
@@ -100,17 +102,15 @@ class MMLogger(Logger, BaseGlobalAccessible):
 
     def __init__(self,
                  name: str = '',
+                 module_name='',
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
                  file_mode: str = 'w'):
-        Logger.__init__(self, name)
+        module_name = module_name if module_name else name
+        Logger.__init__(self, module_name)
         BaseGlobalAccessible.__init__(self, name)
         # Get rank in DDP mode.
-        if dist.is_available() and dist.is_initialized():
-            rank = dist.get_rank()
-        else:
-            rank = 0
-
+        rank = get_rank()
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)
