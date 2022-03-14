@@ -30,13 +30,13 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
     torch.manual_seed(worker_seed)
 
 
-def collate_fn(data_batch: DATA_BATCH) -> DATA_BATCH:
+def pseudo_collate(data_batch: DATA_BATCH) -> DATA_BATCH:
     """The default behavior of dataloader is to merge a list of samples to form
-    a mini-batch of Tensor(s). However, in MMEngine, `collate_fn` does nothing
-    just to return input.
+    a mini-batch of Tensor(s). However, in MMEngine, ``pseudo_collate`` does
+    nothing just returns ``data_batch``.
 
     Args:
-        data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of Data from
+        data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data from
             dataloader.
 
     Returns:
