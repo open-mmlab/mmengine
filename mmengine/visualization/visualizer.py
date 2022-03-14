@@ -6,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.backend_bases import CloseEvent
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import (LineCollection, PatchCollection,
                                     PolyCollection)
@@ -14,8 +15,8 @@ from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataElement
 from mmengine.registry import VISUALIZERS
-from .utils import (check_type, check_type_and_length, tensor2ndarray,
-                    value2list)
+from mmengine.visualization.utils import (check_type, check_type_and_length,
+                                          tensor2ndarray, value2list)
 
 
 @VISUALIZERS.register_module()
@@ -121,13 +122,29 @@ class Visualizer:
     """
     task_dict: dict = {}
 
-    def __init__(self,
-                 image: Optional[np.ndarray] = None,
-                 metadata: Optional[dict] = None) -> None:
+    def __init__(
+        self,
+        image: Optional[np.ndarray] = None,
+        metadata: Optional[dict] = None,
+        fig_save_cfg=dict(frameon=False),
+        fig_show_cfg=dict(frameon=False)
+    ) -> None:
         self._metadata = metadata
+        self.is_inline = 'inline' in plt.get_backend()
 
+        self.fig_save = None
+        self.fig_show = None
+        self.fig_save_num = fig_save_cfg.get('number', None)
+        self.fig_show_num = fig_show_cfg.get('number', None)
+        self.fig_save_cfg = fig_save_cfg
+        self.fig_show_cfg = fig_show_cfg
+
+        (self.fig_save, self.ax_save,
+         self.fig_save_num) = self._initialize_fig(fig_save_cfg)
+
+        self.dpi = self.fig_save.get_dpi()
         if image is not None:
-            self._setup_fig(image)
+            self.set_image(image)
 
     def draw(self,
              image: Optional[np.ndarray] = None,
@@ -137,22 +154,47 @@ class Visualizer:
              draw_pred: bool = True) -> None:
         pass
 
-    def show(self, wait_time: int = 0) -> None:
+    def show(self,
+             drawn_img: Optional[np.ndarray] = None,
+             win_name: str = 'image',
+             wait_time: int = 0,
+             continue_key=' ') -> None:
         """Show the drawn image.
 
         Args:
             wait_time (int, optional): Delay in milliseconds. 0 is the special
                 value that means "forever". Defaults to 0.
         """
-        if wait_time == 0:
-            plt.show()
-        else:
-            plt.show(block=False)
-            plt.pause(wait_time)
+        if self.is_inline:
+            return
+        if self.fig_show is None or not plt.fignum_exists(self.fig_show_num):
+            (self.fig_show, self.ax_show,
+             self.fig_show_num) = self._initialize_fig(self.fig_show_cfg)
+        img = self.get_image() if drawn_img is None else drawn_img
+        height, width = img.shape[:2]
+        self.ax_show.cla()
+        self.ax_show.axis(False)
+        # Reserve some space for the tip.
+        self.ax_show.set_title(win_name)
+        self.ax_show.set_ylim(height + 20)
+        self.ax_show.text(
+            width // 2,
+            height + 18,
+            'Press SPACE to continue.',
+            ha='center',
+            fontsize=20)
+
+        # Refresh canvas, necessary for Qt5 backend.
+
+        self.wait_continue(timeout=wait_time, continue_key=continue_key)
+        self.ax_show.imshow(img)
+        self.fig_show.canvas.draw()  # type: ignore
 
     def close(self) -> None:
         """Close the figure."""
-        plt.close(self.fig)
+        plt.close(self.fig_save)
+        if self.fig_show is not None:
+            plt.close(self.fig_show)
 
     @classmethod
     def register_task(cls, task_name: str, force: bool = False) -> Callable:
@@ -188,7 +230,23 @@ class Visualizer:
             image (np.ndarray): The image to draw.
         """
         assert image is not None
-        self._setup_fig(image)
+        image = image.astype('uint8')
+        self._image = image
+        self.width, self.height = image.shape[1], image.shape[0]
+        self._default_font_size = max(
+            np.sqrt(self.height * self.width) // 90, 10)
+
+        # add a small 1e-2 to avoid precision lost due to matplotlib's
+        # truncation (https://github.com/matplotlib/matplotlib/issues/15363)
+        self.fig_save.set_size_inches(  # type: ignore
+            (self.width + 1e-2) / self.dpi, (self.height + 1e-2) / self.dpi)
+        # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
+        self.ax_save.cla()
+        self.ax_save.axis(False)
+        self.ax_save.imshow(
+            image,
+            extent=(0, self.width, self.height, 0),
+            interpolation='none')
 
     def get_image(self) -> np.ndarray:
         """Get the drawn image. The format is RGB.
@@ -197,43 +255,21 @@ class Visualizer:
             np.ndarray: the drawn image which channel is rgb.
         """
         assert self._image is not None, 'Please set image using `set_image`'
-        canvas = self.canvas
+        canvas = self.fig_save.canvas  # type: ignore
         s, (width, height) = canvas.print_to_buffer()
         buffer = np.frombuffer(s, dtype='uint8')
         img_rgba = buffer.reshape(height, width, 4)
         rgb, alpha = np.split(img_rgba, [3], axis=2)
         return rgb.astype('uint8')
 
-    def _setup_fig(self, image: np.ndarray) -> None:
-        """Set the image to draw.
+    def _initialize_fig(self, fig_cfg={}):
+        fig = plt.figure(**self.fig_save_cfg)
+        ax = fig.add_subplot()
+        ax.axis(False)
 
-        Args:
-            image (np.ndarray): The image to draw.The format
-                should be RGB.
-        """
-        image = image.astype('uint8')
-        self._image = image
-        self.width, self.height = image.shape[1], image.shape[0]
-        self._default_font_size = max(
-            np.sqrt(self.height * self.width) // 90, 10)
-        fig = plt.figure(frameon=False)
-
-        self.dpi = fig.get_dpi()
-        # add a small 1e-2 to avoid precision lost due to matplotlib's
-        # truncation (https://github.com/matplotlib/matplotlib/issues/15363)
-        fig.set_size_inches((self.width + 1e-2) / self.dpi,
-                            (self.height + 1e-2) / self.dpi)
-        self.canvas = fig.canvas
-        # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
-        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        plt.axis('off')
-        ax = plt.gca()
-        self.fig = fig
-        self.ax = ax
-        self.ax.imshow(
-            image,
-            extent=(0, self.width, self.height, 0),
-            interpolation='none')
+        # remove white edges by set subplot margin
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        return fig, ax, fig.number
 
     def _is_posion_valid(self, position: np.ndarray) -> bool:
         """Judge whether the position is in image.
@@ -250,6 +286,60 @@ class Visualizer:
                (position[..., 1] < self.height).all() and \
                (position[..., 1] >= 0).all()
         return flag
+
+    def wait_continue(self, timeout: int = 0, continue_key=' ') -> int:
+        """Show the image and wait for the user's input.
+
+        This implementation refers to
+        https://github.com/matplotlib/matplotlib/blob/v3.5.x/lib/matplotlib/_blocking_input.py
+
+        Args:
+            timeout (int): If positive, continue after ``timeout`` seconds.
+                Defaults to 0.
+            continue_key (str): The key for users to continue. Defaults to
+                the space key.
+
+        Returns:
+            int: If zero, means time out or the user pressed ``continue_key``,
+                and if one, means the user closed the show figure.
+        """  # noqa: E501
+        if self.is_inline:
+            # If use inline backend, interactive input and timeout is no use.
+            return 0
+
+        if self.fig_show.canvas.manager:  # type: ignore
+            # Ensure that the figure is shown
+            self.fig_show.show()  # type: ignore
+
+        while True:
+
+            # Connect the events to the handler function call.
+            event = None
+
+            def handler(ev):
+                # Set external event variable
+                nonlocal event
+                # Qt backend may fire two events at the same time,
+                # use a condition to avoid missing close event.
+                event = ev if not isinstance(event, CloseEvent) else event
+                self.fig_show.canvas.stop_event_loop()
+
+            cids = [
+                self.fig_show.canvas.mpl_connect(name, handler)  # type: ignore
+                for name in ('key_press_event', 'close_event')
+            ]
+
+            try:
+                self.fig_show.canvas.start_event_loop(timeout)  # type: ignore
+            finally:  # Run even on exception like ctrl-c.
+                # Disconnect the callbacks.
+                for cid in cids:
+                    self.fig_show.canvas.mpl_disconnect(cid)  # type: ignore
+
+            if isinstance(event, CloseEvent):
+                return 1  # Quit for close.
+            elif event is None or event.key == continue_key:
+                return 0  # Quit for continue.
 
     def draw_texts(
             self,
@@ -363,7 +453,7 @@ class Visualizer:
             bboxes = value2list(bboxes, dict, num_text)
 
         for i in range(num_text):
-            self.ax.text(
+            self.ax_save.text(
                 positions[i][0],
                 positions[i][1],
                 texts[i],
@@ -434,7 +524,7 @@ class Visualizer:
             colors=colors,
             linestyles=linestyles,
             linewidths=linewidths)
-        self.ax.add_collection(line_collect)
+        self.ax_save.add_collection(line_collect)
         return self
 
     def draw_circles(self,
@@ -512,7 +602,7 @@ class Visualizer:
                 edgecolor=edgecolors,
                 linewidth=linewidths,
                 linestyles=linestyles)
-        self.ax.add_collection(p)
+        self.ax_save.add_collection(p)
         return self
 
     def draw_bboxes(self,
@@ -643,7 +733,7 @@ class Visualizer:
                 edgecolors=edgecolors,
                 linewidths=linewidths)
 
-        self.ax.add_collection(polygon_collection)
+        self.ax_save.add_collection(polygon_collection)
         return self
 
     def draw_binary_masks(
@@ -693,7 +783,7 @@ class Visualizer:
                 img, img, mask=binary_mask_complement)
             rgb = rgb + img_complement
             img = cv2.addWeighted(img, alpha, rgb, 1 - alpha, 0)
-        self.ax.imshow(
+        self.ax_save.imshow(
             img,
             extent=(0, self.width, self.height, 0),
             interpolation='nearest')
