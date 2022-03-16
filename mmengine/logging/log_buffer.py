@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import warnings
 from functools import partial
 from typing import Any, Callable, Optional, Sequence, Tuple, Union
@@ -6,17 +7,7 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Union
 import numpy as np
 
 
-class BaseLogBuffer:
-    """Unified storage format for different log types.
-
-    Record the history of log for further statistics. The subclass inherited
-    from ``BaseLogBuffer`` will implement the specific statistical methods.
-
-    Args:
-        log_history (Sequence): History logs. Defaults to [].
-        count_history (Sequence): Counts of history logs. Defaults to [].
-        max_length (int): The max length of history logs. Defaults to 1000000.
-    """
+class HistoryBuffer:
     _statistics_methods: dict = dict()
 
     def __init__(self,
@@ -25,6 +16,7 @@ class BaseLogBuffer:
                  max_length: int = 1000000):
 
         self.max_length = max_length
+        self._set_default_statistics()
         assert len(log_history) == len(count_history), \
             'The lengths of log_history and count_histroy should be equal'
         if len(log_history) > max_length:
@@ -36,6 +28,12 @@ class BaseLogBuffer:
         else:
             self._log_history = np.array(log_history)
             self._count_history = np.array(count_history)
+
+    def _set_default_statistics(self):
+        self._statistics_methods.setdefault('min', HistoryBuffer.min)
+        self._statistics_methods.setdefault('max', HistoryBuffer.max)
+        self._statistics_methods.setdefault('current', HistoryBuffer.current)
+        self._statistics_methods.setdefault('mean', HistoryBuffer.mean)
 
     def update(self, log_val: Union[int, float], count: int = 1) -> None:
         """update the log history. If the length of the buffer exceeds
@@ -98,15 +96,8 @@ class BaseLogBuffer:
                            'BaseLogBuffer._statistics_methods')
         method = self._statistics_methods[method_name]
         # Provide self arguments for registered functions.
-        method = partial(method, self)
-        return method(*arg, **kwargs)
+        return method(self, *arg, **kwargs)
 
-
-class LogBuffer(BaseLogBuffer):
-    """``LogBuffer`` inherits from ``BaseLogBuffer`` and provides some basic
-    statistics methods, such as ``min``, ``max``, ``current`` and ``mean``."""
-
-    @BaseLogBuffer.register_statistics
     def mean(self, window_size: Optional[int] = None) -> np.ndarray:
         """Return the mean of the latest ``window_size`` values in log
         histories. If ``window_size is None``, return the global mean of
@@ -128,7 +119,6 @@ class LogBuffer(BaseLogBuffer):
         counts_sum = self._count_history[-window_size:].sum()
         return logs_sum / counts_sum
 
-    @BaseLogBuffer.register_statistics
     def max(self, window_size: Optional[int] = None) -> np.ndarray:
         """Return the maximum value of the latest ``window_size`` values in log
         histories. If ``window_size is None``, return the global maximum value
@@ -148,7 +138,6 @@ class LogBuffer(BaseLogBuffer):
             window_size = len(self._log_history)
         return self._log_history[-window_size:].max()
 
-    @BaseLogBuffer.register_statistics
     def min(self, window_size: Optional[int] = None) -> np.ndarray:
         """Return the minimum value of the latest ``window_size`` values in log
         histories. If ``window_size is None``, return the global minimum value
@@ -168,7 +157,6 @@ class LogBuffer(BaseLogBuffer):
             window_size = len(self._log_history)
         return self._log_history[-window_size:].min()
 
-    @BaseLogBuffer.register_statistics
     def current(self) -> np.ndarray:
         """Return the recently updated values in log histories.
 
