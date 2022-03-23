@@ -31,9 +31,8 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
-from mmengine.utils import (digit_version, find_latest_checkpoint, is_list_of,
-                            symlink)
-from mmengine.utils.parrots_wrapper import TORCH_VERSION
+from mmengine.utils import (TORCH_VERSION, digit_version,
+                            find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
