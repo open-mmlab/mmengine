@@ -121,6 +121,7 @@ class LoggerHook(Hook):
         keep_local=True,
         file_client_args=None,
     ):
+        self._inner_iter = 0
         self.by_epoch = by_epoch
         self.interval = interval
         self.custom_keys = custom_keys if custom_keys is not None else dict()
@@ -174,27 +175,31 @@ class LoggerHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """Record training logs.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
+        self._inner_iter = batch_idx
         if runner.meta is not None and 'exp_name' in runner.meta:
             if (self.every_n_iters(runner, self.interval_exp_name)) or (
-                    self.by_epoch and self.end_of_epoch(runner)):
+                    self.by_epoch and self.end_of_epoch(runner, batch_idx)):
                 exp_info = f'Exp name: {runner.meta["exp_name"]}'
                 runner.logger.info(exp_info)
-        if self.by_epoch and self.every_n_inner_iters(runner, self.interval):
+        if self.by_epoch and self.every_n_inner_iters(batch_idx,
+                                                      self.interval):
             self._log_train(runner)
         elif not self.by_epoch and self.every_n_iters(runner, self.interval):
             self._log_train(runner)
-        elif self.end_of_epoch(runner) and not self.ignore_last:
+        elif self.end_of_epoch(runner, batch_idx) and not self.ignore_last:
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
@@ -346,7 +351,7 @@ class LoggerHook(Hook):
                 'The value of windows size must equal to LoggerHook.interval'
             return window_size
         elif window_size == 'epoch':
-            return runner.inner_iter + 1
+            return self._inner_iter + 1
         elif window_size == 'global':
             return runner.iter + 1
         else:
@@ -505,7 +510,7 @@ class LoggerHook(Hook):
             int: The current global iter or inner iter.
         """
         if self.by_epoch and inner_iter:
-            current_iter = runner.inner_iter + 1
+            current_iter = self._inner_iter + 1
         else:
             current_iter = runner.iter + 1
         return current_iter

@@ -13,7 +13,7 @@ class TestParamSchedulerHook:
         scheduler.step = Mock()
         scheduler.by_epoch = False
         Runner.param_schedulers = [scheduler]
-        Hook.after_train_iter(Runner)
+        Hook.after_train_iter(Runner, 0)
         scheduler.step.assert_called()
 
     def test_after_epoch(self):

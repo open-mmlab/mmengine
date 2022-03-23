@@ -20,31 +20,31 @@ class CheckpointHook(Hook):
     Args:
         interval (int): The saving period. If ``by_epoch=True``, interval
             indicates epochs, otherwise it indicates iterations.
-            Default: -1, which means "never".
+            Defaults to -1, which means "never".
         by_epoch (bool): Saving checkpoints by epoch or by iteration.
             Default: True.
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
-            Default: True.
+            Defaults to True.
         save_param_scheduler (bool): Whether to save param_scheduler state_dict
             in the checkpoint. It is usually used for resuming experiments.
-            Default: True.
+            Defaults to True.
         out_dir (str, optional | Path): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
             and the last level directory of ``runner.work_dir``. For example,
             if the input ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is
             ``./work_dir/cur_exp``, then the ckpt will be saved in
-            ``./tmp/cur_exp``. Deafule to None.
+            ``./tmp/cur_exp``. Defaults to None.
         max_keep_ckpts (int): The maximum checkpoints to keep.
             In some cases we want only the latest few checkpoints and would
             like to delete old ones to save the disk space.
-            Default: -1, which means unlimited.
+            Defaults to -1, which means unlimited.
         save_last (bool): Whether to force the last checkpoint to be
-            saved regardless of interval. Default: True.
+            saved regardless of interval. Defaults to True.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None.
     """
     out_dir: str
 
@@ -177,12 +177,14 @@ class CheckpointHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs=Optional[dict]) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
