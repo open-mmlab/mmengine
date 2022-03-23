@@ -242,7 +242,8 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(ValueError, 'either all None or not None'):
             Runner(**cfg)
 
-        # all of training related configs are None
+        # all of training related configs are None and param_scheduler should
+        # also be None
         cfg.pop('train_dataloader')
         cfg.pop('optimizer')
         cfg.pop('param_scheduler')
@@ -256,6 +257,23 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
+
+        time.sleep(1)
+        # all of training related configs are not None and param_scheduler
+        # can be None
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.pop('param_scheduler')
+        runner = Runner(**cfg)
+        self.assertIsInstance(runner, Runner)
+
+        # param_scheduler should be None when optimizer is None
+        time.sleep(1)
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.pop('train_cfg')
+        cfg.pop('train_dataloader')
+        cfg.pop('optimizer')
+        with self.assertRaisesRegex(ValueError, 'should be None'):
+            runner = Runner(**cfg)
 
         # 1.2 val_dataloader, val_evaluator, val_cfg
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -392,8 +410,8 @@ class TestRunner(TestCase):
         # 5. test `dump_config`
         # TODO
 
-    def test_build_from_cfg(self):
-        runner = Runner.build_from_cfg(cfg=self.epoch_based_cfg)
+    def test_from_cfg(self):
+        runner = Runner.from_cfg(cfg=self.epoch_based_cfg)
         self.assertIsInstance(runner, Runner)
 
     def test_setup_env(self):
@@ -401,7 +419,7 @@ class TestRunner(TestCase):
         pass
 
     def test_logger(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertEqual(runner.experiment_name, runner.logger.instance_name)
         self.assertEqual(runner.logger.level, logging.NOTSET)
@@ -434,7 +452,7 @@ class TestRunner(TestCase):
             runner.build_logger('invalid-type')
 
     def test_build_message_hub(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.message_hub, MessageHub)
         self.assertEqual(runner.message_hub.instance_name,
                          runner.experiment_name)
@@ -462,7 +480,7 @@ class TestRunner(TestCase):
             runner.build_message_hub('invalid-type')
 
     def test_build_writer(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.writer, ComposedWriter)
         self.assertEqual(runner.experiment_name, runner.writer.instance_name)
 
@@ -501,12 +519,12 @@ class TestRunner(TestCase):
             type='ToyScheduler', milestones=[1, 2])
         self.epoch_based_cfg.default_scope = 'toy'
 
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.train()
         self.assertIsInstance(runner.param_schedulers[0], ToyScheduler)
 
     def test_build_model(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.model, ToyModel)
 
         # input should be a nn.Module object or dict
@@ -527,11 +545,11 @@ class TestRunner(TestCase):
         # custom model wrapper
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
-        runner = Runner.build_from_cfg(cfg)
+        runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
     def test_build_optimizer(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         # input should be an Optimizer object or dict
         with self.assertRaisesRegex(TypeError, 'optimizer should be'):
@@ -547,7 +565,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(optimizer, SGD)
 
     def test_build_param_scheduler(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         # `build_optimizer` should be called before `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
@@ -584,7 +602,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(param_schedulers[1], StepLR)
 
     def test_build_evaluator(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         # input is a BaseEvaluator or ComposedEvaluator object
         evaluator = ToyEvaluator1()
@@ -603,7 +621,7 @@ class TestRunner(TestCase):
             runner.build_evaluator(evaluator), ComposedEvaluator)
 
     def test_build_dataloader(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         cfg = dict(
             dataset=dict(type='ToyDataset'),
@@ -617,7 +635,7 @@ class TestRunner(TestCase):
 
     def test_build_train_loop(self):
         # input should be a Loop object or dict
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         with self.assertRaisesRegex(TypeError, 'should be'):
             runner.build_train_loop('invalid-type')
 
@@ -653,7 +671,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(loop, CustomTrainLoop)
 
     def test_build_val_loop(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         # input should be a Loop object or dict
         with self.assertRaisesRegex(TypeError, 'should be'):
@@ -678,7 +696,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(loop, CustomValLoop)
 
     def test_build_test_loop(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         # input should be a Loop object or dict
         with self.assertRaisesRegex(TypeError, 'should be'):
@@ -709,7 +727,7 @@ class TestRunner(TestCase):
         cfg.pop('train_cfg')
         cfg.pop('optimizer')
         cfg.pop('param_scheduler')
-        runner = Runner.build_from_cfg(cfg)
+        runner = Runner.from_cfg(cfg)
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.train()
 
@@ -736,7 +754,7 @@ class TestRunner(TestCase):
         self.epoch_based_cfg.custom_hooks = [
             dict(type='TestEpochHook', priority=50)
         ]
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
 
         runner.train()
 
@@ -772,7 +790,7 @@ class TestRunner(TestCase):
             dict(type='TestIterHook', priority=50)
         ]
         self.iter_based_cfg.val_cfg = dict(interval=4)
-        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner = Runner.from_cfg(self.iter_based_cfg)
         runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
@@ -789,12 +807,12 @@ class TestRunner(TestCase):
         cfg.pop('val_dataloader')
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
-        runner = Runner.build_from_cfg(cfg)
+        runner = Runner.from_cfg(cfg)
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.val()
 
         time.sleep(1)
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.val()
 
     def test_test(self):
@@ -802,16 +820,16 @@ class TestRunner(TestCase):
         cfg.pop('test_dataloader')
         cfg.pop('test_cfg')
         cfg.pop('test_evaluator')
-        runner = Runner.build_from_cfg(cfg)
+        runner = Runner.from_cfg(cfg)
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.test()
 
         time.sleep(1)
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.test()
 
     def test_register_hook(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner._hooks = []
 
         # 1. test `hook` parameter
@@ -870,7 +888,7 @@ class TestRunner(TestCase):
             get_priority(runner._hooks[3].priority), get_priority('VERY_LOW'))
 
     def test_default_hooks(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner._hooks = []
 
         # register five hooks by default
@@ -893,7 +911,7 @@ class TestRunner(TestCase):
         self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
     def test_custom_hooks(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertEqual(len(runner._hooks), 5)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
@@ -901,7 +919,7 @@ class TestRunner(TestCase):
         self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
     def test_register_hooks(self):
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
@@ -975,7 +993,7 @@ class TestRunner(TestCase):
         self.iter_based_cfg.custom_hooks = [
             dict(type='TestWarmupHook', priority=50)
         ]
-        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner = Runner.from_cfg(self.iter_based_cfg)
         runner.train()
 
         self.assertIsInstance(runner.train_loop, CustomTrainLoop2)
@@ -990,7 +1008,7 @@ class TestRunner(TestCase):
 
     def test_checkpoint(self):
         # 1. test epoch based
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.train()
 
         # 1.1 test `save_checkpoint` which called by `CheckpointHook`
@@ -1008,7 +1026,7 @@ class TestRunner(TestCase):
 
         time.sleep(1)
         # 1.2 test `load_checkpoint`
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 0)
@@ -1016,7 +1034,7 @@ class TestRunner(TestCase):
 
         time.sleep(1)
         # 1.3 test `resume`
-        runner = Runner.build_from_cfg(self.epoch_based_cfg)
+        runner = Runner.from_cfg(self.epoch_based_cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
@@ -1026,7 +1044,7 @@ class TestRunner(TestCase):
 
         # 2. test iter based
         time.sleep(1)
-        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner = Runner.from_cfg(self.iter_based_cfg)
         runner.train()
 
         # 2.1 test `save_checkpoint` which called by `CheckpointHook`
@@ -1044,7 +1062,7 @@ class TestRunner(TestCase):
 
         # 2.2 test `load_checkpoint`
         time.sleep(1)
-        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner = Runner.from_cfg(self.iter_based_cfg)
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 0)
@@ -1052,7 +1070,7 @@ class TestRunner(TestCase):
 
         time.sleep(1)
         # 2.3 test `resume`
-        runner = Runner.build_from_cfg(self.iter_based_cfg)
+        runner = Runner.from_cfg(self.iter_based_cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)

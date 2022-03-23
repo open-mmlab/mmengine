@@ -235,21 +235,25 @@ class Runner:
         self._inner_iter = 0
 
         # lazy initialization
-        training_related = [
-            train_dataloader, train_cfg, optimizer, param_scheduler
-        ]
+        training_related = [train_dataloader, train_cfg, optimizer]
         if not (all(item is None for item in training_related)
                 or all(item is not None for item in training_related)):
             raise ValueError(
-                'train_dataloader, train_cfg, optimizer and param_scheduler '
-                'should be either all None or not None, but got '
+                'train_dataloader, train_cfg and optimizer should be either '
+                'all None or not None, but got '
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
-                f'optimizer={optimizer}, '
-                f'param_scheduler={param_scheduler}.')
+                f'optimizer={optimizer}.')
         self.train_dataloader = train_dataloader
         self.train_loop = train_cfg
         self.optimizer = optimizer
+
+        # If there is no need to adjust learning rate, momentum or other
+        # parameters of optimizer, param_scheduler can be None
+        if param_scheduler is not None and self.optimizer is None:
+            raise ValueError(
+                'param_scheduler should be None when optimizer is None, '
+                f'but got {param_scheduler}')
         if not isinstance(param_scheduler, Sequence):
             self.param_schedulers = [param_scheduler]
         else:
@@ -333,7 +337,7 @@ class Runner:
         self.dump_config()
 
     @classmethod
-    def build_from_cfg(cls, cfg: ConfigType) -> 'Runner':
+    def from_cfg(cls, cfg: ConfigType) -> 'Runner':
         """Build a runner from config.
 
         Args:
