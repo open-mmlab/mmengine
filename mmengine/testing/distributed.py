@@ -126,7 +126,6 @@ class MultiProcessTestCase(TestCase):
                       child_conn),
             )
             process.start()
-            logger.info(f'Started process {rank} with pid {process.pid}')
             self.pid_to_pipe[process.pid] = parent_conn
             self.processes.append(process)
 
@@ -139,7 +138,6 @@ class MultiProcessTestCase(TestCase):
 
     @staticmethod
     def _event_listener(parent_pipe, signal_pipe, rank: int):
-        logger.info(f'Starting event listener thread for rank {rank}')
         while True:
             ready_pipes = multiprocessing.connection.wait(
                 [parent_pipe, signal_pipe])
@@ -147,13 +145,9 @@ class MultiProcessTestCase(TestCase):
             if parent_pipe in ready_pipes:
 
                 if parent_pipe.closed:
-                    logger.info(
-                        f'Pipe closed for process {rank}, stopping event '
-                        'listener thread')
                     return
 
                 event = parent_pipe.recv()
-                logger.info(f'Received event {event} on process {rank}')
 
                 if event == MultiProcessTestCase.Event.GET_TRACEBACK:
                     # Return traceback to the parent process.
@@ -163,8 +157,6 @@ class MultiProcessTestCase(TestCase):
                         tmp_file.flush()
                         tmp_file.seek(0)
                         parent_pipe.send(tmp_file.read())
-
-                        logger.info(f'Process {rank} sent traceback')
 
             if signal_pipe in ready_pipes:
                 return
