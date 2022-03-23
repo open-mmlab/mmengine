@@ -8,7 +8,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from .base_global_accsessible import BaseGlobalAccessible
+from .manage import ManageMixin
 
 
 class MMFormatter(logging.Formatter):
@@ -84,10 +84,10 @@ class MMFormatter(logging.Formatter):
         return result
 
 
-class MMLogger(Logger, BaseGlobalAccessible):
+class MMLogger(Logger, ManageMixin):
     """The Logger manager which can create formatted logger and get specified
     logger globally. MMLogger is created and accessed in the same way as
-    BaseGlobalAccessible.
+    ManageMixin.
 
     Args:
         name (str): Logger name. Defaults to ''.
@@ -104,7 +104,7 @@ class MMLogger(Logger, BaseGlobalAccessible):
                  log_level: str = 'NOTSET',
                  file_mode: str = 'w'):
         Logger.__init__(self, name)
-        BaseGlobalAccessible.__init__(self, name)
+        ManageMixin.__init__(self, name)
         # Get rank in DDP mode.
         if dist.is_available() and dist.is_initialized():
             rank = dist.get_rank()
@@ -161,10 +161,10 @@ def print_log(msg,
         logger_instance = MMLogger.get_instance(current=True)
         logger_instance.log(level, msg)
     elif isinstance(logger, str):
-        try:
-            _logger = MMLogger.get_instance(logger)
-            _logger.log(level, msg)
-        except AssertionError:
+        if MMLogger.check_instance_created(logger):
+            logger_instance = MMLogger.get_instance(logger)
+            logger_instance.log(level, msg)
+        else:
             raise ValueError(f'MMLogger: {logger} has not been created!')
     else:
         raise TypeError(
