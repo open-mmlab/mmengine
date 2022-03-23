@@ -31,7 +31,9 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
-from mmengine.utils import find_latest_checkpoint, is_list_of, symlink
+from mmengine.utils import (digit_version, find_latest_checkpoint, is_list_of,
+                            symlink)
+from mmengine.utils.parrots_wrapper import TORCH_VERSION
 from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -45,6 +47,22 @@ ConfigType = Union[Dict, Config, ConfigDict]
 
 class Runner:
     """A training helper for PyTorch.
+
+    The initialization mechanism of ``Runner.__init__`` is lazy initialization
+    that means ``__init__`` only initialize required components, e.g., model.
+    Optional components will be initialized when calling ``runner.train()``,
+    ``runner.val()`` or ``runner.test()``. The mechanism is convenient for
+    user, without repeatedly modifying parameters.
+
+    Suppose we provide all parameters to the ``Runner``, including
+    training-related, validation-related and test-related parameters. If we
+    only want to test the model and not train the model, then the
+    training-related components should not be initialized at this time and the
+    test-related components should be initialized that is what lazy
+    initialization does. Of course, if the mechanism is not applicable, we can
+    set the training-related parameters to None, so that the training-related
+    components will also not be initialized, but it requires us to modify the
+    initialization parameters.
 
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
@@ -113,23 +131,15 @@ class Runner:
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
-        logger (MMLogger or dict, optional): A MMLogger object or a dict to
-            build MMLogger object. Defaults to None. If not specified, default
-            config will be used.
-        message_hub (MessageHub or dict, optional): A Messagehub object or a
-            dict to build MessageHub object. Defaults to None. If not
-            specified, default config will be used.
+        log_level (int or str): The log level of the handler.
+            Defaults to 'INFO'.
         writer (ComposedWriter or dict, optional): A ComposedWriter object or a
             dict build ComposedWriter object. Defaults to None. If not
             specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
-        seed (int, optional): A number to set random modules. If not specified,
-            a random number will be set as seed. Defaults to None.
-        deterministic (bool): Whether cudnn to select deterministic algorithms.
-            Defaults to False.
-            See https://pytorch.org/docs/stable/notes/randomness.html for
-            more details.
+        randomness (dict): Some items to guaranteed to make the experiment
+            as resproducible as possible like seed and deterministic.
         experiment_name (str, optional): Name of current experiment. If not
             specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
@@ -172,13 +182,11 @@ class Runner:
                     param_scheduler=dict(type='ParamSchedulerHook')),
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                logger=dict(log_level='INFO'),
-                message_hub=None,
                 writer=dict(
                     name='composed_writer',
                     writers=[dict(type='LocalWriter', save_dir='temp_dir')])
             )
-        >>> runner = Runner.build_from_cfg(cfg)
+        >>> runner = Runner.from_cfg(cfg)
         >>> runner.train()
         >>> runner.test()
     """
@@ -207,12 +215,10 @@ class Runner:
         resume: bool = False,
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
-        logger: Optional[Union[MMLogger, Dict]] = None,
-        message_hub: Optional[Union[MessageHub, Dict]] = None,
+        log_level: str = 'INFO',
         writer: Optional[Union[ComposedWriter, Dict]] = None,
         default_scope: Optional[str] = None,
-        seed: Optional[int] = None,
-        deterministic: bool = False,
+        randomness: Optional[Dict] = None,
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
     ):
@@ -293,7 +299,7 @@ class Runner:
         # self._deterministic, self._seed and self._timestamp will be set in
         # the `setup_env`` method. Besides, it also will initialize
         # multi-process and (or) distributed environment.
-        self.setup_env(env_cfg, seed, deterministic)
+        self.setup_env(env_cfg, randomness)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
@@ -304,9 +310,9 @@ class Runner:
         else:
             self._experiment_name = self.timestamp
 
-        self.logger = self.build_logger(logger)
+        self.logger = self.build_logger(dict(log_level=log_level))
         # message hub used for component interaction
-        self.message_hub = self.build_message_hub(message_hub)
+        self.message_hub = self.build_message_hub()
         # writer used for writing log or visualizing all kinds of data
         self.writer = self.build_writer(writer)
 
@@ -367,12 +373,10 @@ class Runner:
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),
             env_cfg=cfg.get('env_cfg'),  # type: ignore
-            logger=cfg.get('log_cfg'),
-            message_hub=cfg.get('message_hub'),
+            log_level=cfg.get('log_level', 'INFO'),
             writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),
-            seed=cfg.get('seed'),
-            deterministic=cfg.get('deterministic', False),
+            randomness=cfg.get('randomness'),
             cfg=cfg,
         )
 
@@ -450,11 +454,10 @@ class Runner:
 
     def setup_env(self,
                   env_cfg: Dict,
-                  seed: Optional[int],
-                  deterministic: bool = False) -> None:
+                  randomness: Optional[Dict] = None) -> None:
         """Setup environment.
 
-        An example of ``env_cfg``::
+        Examples of ``env_cfg`` and ``randomness``::
 
             env_cfg = dict(
                 cudnn_benchmark=True,
@@ -464,20 +467,18 @@ class Runner:
                 ),
                 dist_cfg=dict(backend='nccl'),
             )
+            randomness = dict(
+                'seed': 0,
+                'deterministic': True,
+            )
 
         Args:
             env_cfg (dict): Config for setting environment.
-            seed (int, optional): A number to set random modules. If not
-                specified, a random number will be set as seed.
+            randomness (dict, optional): Some items to make the experiment as
+                resproducible as possible like seed and deterministic.
                 Defaults to None.
-            deterministic (bool): Whether cudnn to select deterministic
-                algorithms. Defaults to False.
-                See https://pytorch.org/docs/stable/notes/randomness.html for
-                more details.
         """
-        self._deterministic = deterministic
-        self._seed = seed
-
+        # TODO: should move to set_randomness
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
@@ -499,8 +500,16 @@ class Runner:
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
 
+        if randomness is None:
+            randomness = dict()
+
+        self._deterministic = randomness.get('deterministic', False)
+        self._seed = randomness.get('seed')
         # set random seeds
-        self._set_random_seed()
+        if self._seed is None:
+            self._seed = sync_random_seed()
+
+        self._set_randomness(self._seed, self._deterministic)
 
     def _set_multi_processing(self,
                               mp_start_method: str = 'fork',
@@ -555,86 +564,63 @@ class Runner:
                 'optimal performance in your application as needed.')
             os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
 
-    def _set_random_seed(self) -> None:
+    def _set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
 
-        Warning:
-            Results can not be guaranteed to resproducible if ``self.seed`` is
-            None because :meth:`_set_random_seed` will generate a random seed
-            when launching a new experiment.
-
-        See https://pytorch.org/docs/stable/notes/randomness.html for details.
+        Args:
+            seed (int): A number to set random modules.
+            deterministic (bool): Whether cudnn to select deterministic
+                algorithms. Defaults to False.
+                See https://pytorch.org/docs/stable/notes/randomness.html for
+                more details.
         """
-        if self._seed is None:
-            self._seed = sync_random_seed()
-
-        random.seed(self._seed)
-        np.random.seed(self._seed)
-        torch.manual_seed(self._seed)
-        torch.cuda.manual_seed_all(self._seed)
-        if self._deterministic:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        if deterministic:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
+            if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
+                torch.use_deterministic_algorithms(True)
 
-    def build_logger(self,
-                     logger: Optional[Union[MMLogger,
-                                            Dict]] = None) -> MMLogger:
+    def build_logger(self, log_cfg: dict = dict(log_level='INFO')) -> MMLogger:
         """Build a global asscessable MMLogger.
 
         Args:
-            logger (MMLogger or dict, optional): A MMLogger object or a dict to
-                build MMLogger object. If ``logger`` is a MMLogger object, just
-                returns itself. If not specified, default config will be used
-                to build MMLogger object. Defaults to None.
+            log_cfg (dict): A dict to build MMLogger object.
+                Defaults to ``dict(log_level='INFO')``.
 
         Returns:
             MMLogger: A MMLogger object build from ``logger``.
         """
-        if isinstance(logger, MMLogger):
-            return logger
-        elif logger is None:
-            logger = dict(
-                name=self._experiment_name,
-                log_level='INFO',
-                log_file=osp.join(self.work_dir,
-                                  f'{self._experiment_name}.log'))
-        elif isinstance(logger, dict):
-            # ensure logger containing name key
-            logger.setdefault('name', self._experiment_name)
-        else:
-            raise TypeError(
-                'logger should be MMLogger object, a dict or None, '
-                f'but got {logger}')
+        log_cfg.setdefault('name', self._experiment_name)
+        log_cfg.setdefault(
+            'log_file', osp.join(self.work_dir,
+                                 f'{self._experiment_name}.log'))
 
-        return MMLogger.get_instance(**logger)
+        return MMLogger.get_instance(**log_cfg)
 
-    def build_message_hub(
-            self,
-            message_hub: Optional[Union[MessageHub,
-                                        Dict]] = None) -> MessageHub:
+    def build_message_hub(self,
+                          message_hub: Optional[Dict] = None) -> MessageHub:
         """Build a global asscessable MessageHub.
 
         Args:
-            message_hub (MessageHub or dict, optional): A MessageHub object or
-                a dict to build MessageHub object. If ``message_hub`` is a
-                MessageHub object, just returns itself. If not specified,
-                default config will be used to build MessageHub object.
-                Defaults to None.
+            message_hub (dict, optional): A dict to build MessageHub object.
+                If not specified, default config will be used to build
+                MessageHub object. Defaults to None.
 
         Returns:
             MessageHub: A MessageHub object build from ``message_hub``.
         """
-        if isinstance(message_hub, MessageHub):
-            return message_hub
-        elif message_hub is None:
+        if message_hub is None:
             message_hub = dict(name=self._experiment_name)
         elif isinstance(message_hub, dict):
             # ensure message_hub containing name key
             message_hub.setdefault('name', self._experiment_name)
         else:
             raise TypeError(
-                'message_hub should be MessageHub object, a dict or None, '
-                f'but got {message_hub}')
+                f'message_hub should be dict or None, but got {message_hub}')
 
         return MessageHub.get_instance(**message_hub)
 
