@@ -16,7 +16,8 @@ class DefaultScope(ManageMixin):
         >>> DefaultScope.get_instance('mmdet')
         >>> # Get default scope globally.
         >>> scope = DefaultScope.get_instance('mmdet').scope
-        >>> model = MODELS.build(default_scope=scope)
+        >>> # build model from cfg.
+        >>> model = MODELS.build(model_cfg, default_scope=scope)
     """
 
     def __init__(self, name, scope_name='mmengine'):
