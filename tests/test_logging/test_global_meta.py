@@ -1,16 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine.logging import ManageMeta, ManageMixin
+from mmengine.logging import ManagerMeta, ManagerMixin
 
 
-class SubClassA(ManageMixin):
+class SubClassA(ManagerMixin):
 
     def __init__(self, name='', *args, **kwargs):
         super().__init__(name, *args, **kwargs)
 
 
-class SubClassB(ManageMixin):
+class SubClassB(ManagerMixin):
 
     def __init__(self, name='', *args, **kwargs):
         super().__init__(name, *args, **kwargs)
@@ -23,23 +23,23 @@ class TestGlobalMeta:
         # error.
         with pytest.raises(AssertionError):
 
-            class SubClassNoName1(metaclass=ManageMeta):
+            class SubClassNoName1(metaclass=ManagerMeta):
 
                 def __init__(self, a, *args, **kwargs):
                     pass
 
         # Valid subclass.
-        class GlobalAccessible1(metaclass=ManageMeta):
+        class GlobalAccessible1(metaclass=ManagerMeta):
 
             def __init__(self, name):
                 self.name = name
 
 
-class TestManageMixin:
+class TestManagerMixin:
 
     def test_init(self):
         # test create instance by name.
-        base_cls = ManageMixin('name')
+        base_cls = ManagerMixin('name')
         assert base_cls._name == 'name'
 
     def test_get_instance(self):

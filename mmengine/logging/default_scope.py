@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.logging import ManageMixin
+from .manage import ManagerMixin
 
 
-class DefaultScope(ManageMixin):
+class DefaultScope(ManagerMixin):
     """Scope of current task used to reset the current registry, which can be
     accessed globally.
 

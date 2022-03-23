@@ -11,7 +11,7 @@ import torch
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import dump
-from mmengine.logging import ManageMixin
+from mmengine.logging import ManagerMixin
 from mmengine.registry import VISUALIZERS, WRITERS
 from mmengine.utils import TORCH_VERSION
 from .visualizer import Visualizer
@@ -676,9 +676,9 @@ class TensorboardWriter(BaseWriter):
             self._tensorboard.close()
 
 
-class ComposedWriter(ManageMixin):
+class ComposedWriter(ManagerMixin):
     """Wrapper class to compose multiple a subclass of :class:`BaseWriter`
-    instances. By inheriting ManageMixin, it can be accessed anywhere once
+    instances. By inheriting ManagerMixin, it can be accessed anywhere once
     instantiated.
 
     Examples:

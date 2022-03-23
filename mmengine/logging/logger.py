@@ -8,7 +8,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from .manage import ManageMixin
+from .manage import ManagerMixin
 
 
 class MMFormatter(logging.Formatter):
@@ -84,10 +84,10 @@ class MMFormatter(logging.Formatter):
         return result
 
 
-class MMLogger(Logger, ManageMixin):
+class MMLogger(Logger, ManagerMixin):
     """The Logger manager which can create formatted logger and get specified
     logger globally. MMLogger is created and accessed in the same way as
-    ManageMixin.
+    ManagerMixin.
 
     Args:
         name (str): Logger name. Defaults to ''.
@@ -104,7 +104,7 @@ class MMLogger(Logger, ManageMixin):
                  log_level: str = 'NOTSET',
                  file_mode: str = 'w'):
         Logger.__init__(self, name)
-        ManageMixin.__init__(self, name)
+        ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
         if dist.is_available() and dist.is_initialized():
             rank = dist.get_rank()

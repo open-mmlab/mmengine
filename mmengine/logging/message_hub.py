@@ -8,12 +8,12 @@ import torch
 
 from mmengine.visualization.utils import check_type
 from .log_buffer import LogBuffer
-from .manage import ManageMixin
+from .manage import ManagerMixin
 
 
-class MessageHub(ManageMixin):
+class MessageHub(ManagerMixin):
     """Message hub for component interaction. MessageHub is created and
-    accessed in the same way as ManageMixin.
+    accessed in the same way as ManagerMixin.
 
     ``MessageHub`` will record log information and runtime information. The
     log information refers to the learning rate, loss, etc. of the model

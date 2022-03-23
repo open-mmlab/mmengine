@@ -22,20 +22,20 @@ def _release_lock():
         _lock.release()
 
 
-class ManageMeta(type):
+class ManagerMeta(type):
     """The metaclass for global accessible class.
 
-    The subclasses inheriting from ``ManageMeta`` will manage their
+    The subclasses inheriting from ``ManagerMeta`` will manage their
     own ``_instance_dict`` and root instances. The constructors of subclasses
     must contain an optional ``name`` argument.
 
     Examples:
-        >>> class SubClass1(metaclass=ManageMeta):
+        >>> class SubClass1(metaclass=ManagerMeta):
         >>>     def __init__(self, *args, **kwargs):
         >>>         pass
         AssertionError: <class '__main__.SubClass1'>.__init__ must have the
         name argument.
-        >>> class SubClass2(metaclass=ManageMeta):
+        >>> class SubClass2(metaclass=ManagerMeta):
         >>>     def __init__(self, name):
         >>>         pass
         >>> # valid format.
@@ -49,15 +49,15 @@ class ManageMeta(type):
         super().__init__(*args)
 
 
-class ManageMixin(metaclass=ManageMeta):
-    """``ManageMixin`` is the base class for classes that have global access
+class ManagerMixin(metaclass=ManagerMeta):
+    """``ManagerMixin`` is the base class for classes that have global access
     requirements.
 
-    The subclasses inheriting from ``ManageMixin`` can get their
+    The subclasses inheriting from ``ManagerMixin`` can get their
     global instancees.
 
     Examples:
-        >>> class GlobalAccessible(ManageMixin):
+        >>> class GlobalAccessible(ManagerMixin):
         >>>     def __init__(self, name=''):
         >>>         super().__init__(name)
         >>>
