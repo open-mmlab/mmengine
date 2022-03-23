@@ -377,6 +377,7 @@ class Runner:
             writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),
             randomness=cfg.get('randomness'),
+            experiment_name=cfg.get('experiment_name'),
             cfg=cfg,
         )
 
