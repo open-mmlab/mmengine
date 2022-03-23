@@ -7,17 +7,17 @@ from typing import Any, Optional
 _lock = threading.RLock()
 
 
-def _accquire_lock():
+def _accquire_lock() -> None:
     """Acquire the module-level lock for serializing access to shared data.
 
-    This should be released with _releaseLock().
+    This should be released with _release_lock().
     """
     if _lock:
         _lock.acquire()
 
 
-def _release_lock():
-    """Release the module-level lock acquired by calling _acquireLock()."""
+def _release_lock() ->None:
+    """Release the module-level lock acquired by calling _accquire_lock()."""
     if _lock:
         _lock.release()
 
