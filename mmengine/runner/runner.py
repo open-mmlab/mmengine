@@ -137,8 +137,8 @@ class Runner:
             specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
-        randomness (dict): Some items to guaranteed to make the experiment
-            as resproducible as possible like seed and deterministic.
+        randomness (dict): Some items to make the experiment as reproducible as
+            possible like seed and deterministic.
         experiment_name (str, optional): Name of current experiment. If not
             specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
@@ -217,7 +217,7 @@ class Runner:
         log_level: str = 'INFO',
         writer: Optional[Union[ComposedWriter, Dict]] = None,
         default_scope: Optional[str] = None,
-        randomness: Optional[Dict] = None,
+        randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
     ):
@@ -295,10 +295,13 @@ class Runner:
         else:
             self._distributed = True
 
-        # self._deterministic, self._seed and self._timestamp will be set in
-        # the `setup_env`` method. Besides, it also will initialize
-        # multi-process and (or) distributed environment.
-        self.setup_env(env_cfg, randomness)
+        # self._timestamp will be set in the `setup_env`` method. Besides,
+        # it also will initialize multi-process and (or) distributed
+        # environment.
+        self.setup_env(env_cfg)
+        # self._deterministic and self._seed will be set in the
+        # `set_randomness`` method
+        self.set_randomness(**randomness)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
@@ -375,7 +378,7 @@ class Runner:
             log_level=cfg.get('log_level', 'INFO'),
             writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),
-            randomness=cfg.get('randomness'),
+            randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
             cfg=cfg,
         )
@@ -452,12 +455,10 @@ class Runner:
         """list[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
 
-    def setup_env(self,
-                  env_cfg: Dict,
-                  randomness: Optional[Dict] = None) -> None:
+    def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
-        Examples of ``env_cfg`` and ``randomness``::
+        An example of ``env_cfg``::
 
             env_cfg = dict(
                 cudnn_benchmark=True,
@@ -467,16 +468,9 @@ class Runner:
                 ),
                 dist_cfg=dict(backend='nccl'),
             )
-            randomness = dict(
-                'seed': 0,
-                'deterministic': True,
-            )
 
         Args:
             env_cfg (dict): Config for setting environment.
-            randomness (dict, optional): Some items to make the experiment as
-                resproducible as possible like seed and deterministic.
-                Defaults to None.
         """
         # TODO: should move to set_randomness
         if env_cfg.get('cudnn_benchmark'):
@@ -499,17 +493,6 @@ class Runner:
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
-
-        if randomness is None:
-            randomness = dict()
-
-        self._deterministic = randomness.get('deterministic', False)
-        self._seed = randomness.get('seed')
-        # set random seeds
-        if self._seed is None:
-            self._seed = sync_random_seed()
-
-        self._set_randomness(self._seed, self._deterministic)
 
     def _set_multi_processing(self,
                               mp_start_method: str = 'fork',
@@ -564,7 +547,7 @@ class Runner:
                 'optimal performance in your application as needed.')
             os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
 
-    def _set_randomness(self, seed, deterministic: bool = False) -> None:
+    def set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
 
         Args:
@@ -574,10 +557,15 @@ class Runner:
                 See https://pytorch.org/docs/stable/notes/randomness.html for
                 more details.
         """
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+        self._deterministic = deterministic
+        self._seed = seed
+        if self._seed is None:
+            self._seed = sync_random_seed()
+
+        random.seed(self._seed)
+        np.random.seed(self._seed)
+        torch.manual_seed(self._seed)
+        torch.cuda.manual_seed_all(self._seed)
         if deterministic:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
