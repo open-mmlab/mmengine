@@ -280,13 +280,15 @@ class BaseDataset(Dataset):
         """
         if self._fully_initialized:
             return
-
+        self._fully_initialized = True
         # load data information
         self.data_list = self.load_data_list(self.ann_file)
         # filter illegal data, such as data that has no annotations.
         self.data_list = self.filter_data()
-        # if `indices > 0`, return the first `indices` data information
-        self.data_list = self.get_subset_()
+        # Get subset data according to indices.
+        if self._indices > 0:
+            self.data_list = self._get_unserialized_subdata(self._indices)
+
         # serialize data_infos
         if self.serialize_data:
             self.data_list_bytes, self.data_address = self._serialize_data()
@@ -294,7 +296,7 @@ class BaseDataset(Dataset):
             # `self.data_info` when loading data multi-processes.
             self.data_list.clear()
             gc.collect()
-        self._fully_initialized = True
+
 
     @property
     def meta(self) -> dict:
@@ -559,7 +561,7 @@ class BaseDataset(Dataset):
         # Get subset of data from  serialized data or data information list
         # according to `self.serialize_data`.
         if self.serialize_data:
-            self.data_list_bytes, self.data_adress = \
+            self.data_list_bytes, self.data_address = \
                 self._get_serialized_subdata(indices)
         else:
             self.data_list = self._get_unserialized_subdata(indices)
@@ -601,8 +603,9 @@ class BaseDataset(Dataset):
         # `_copy_without_annotation` will copy all attributes except data
         # information.
         sub_dataset = self._copy_without_annotation()
+        # Avoid calling `full_init` to overwrite `data_list`
         if self.serialize_data:
-            sub_dataset.data_list_bytes, sub_dataset.data_adress = \
+            sub_dataset.data_list_bytes, sub_dataset.data_address = \
                 self._get_serialized_subdata(indices)
         else:
             sub_dataset.data_list = self._get_unserialized_subdata(indices)
@@ -630,11 +633,12 @@ class BaseDataset(Dataset):
             sub_data_list_bytes = self.data_list_bytes[:end_addr].copy()
             # Since the buffer size of first few data information is not
             # changed,
-            sub_data_address = self.data_address[:end_addr]
+            sub_data_address = self.data_address[:indices]
         elif isinstance(indices, list):
             sub_data_list_bytes = []
             sub_data_address = []
             for idx in indices:
+                assert idx < len(self)
                 start_addr = 0 if idx == 0 else self.data_address[
                     idx - 1].item()
                 end_addr = self.data_address[idx].item()
@@ -642,7 +646,7 @@ class BaseDataset(Dataset):
                 sub_data_list_bytes.append(
                     self.data_list_bytes[start_addr:end_addr])
                 # Get data information size.
-                sub_data_address.append(start_addr - end_addr)
+                sub_data_address.append(end_addr - start_addr)
 
             sub_data_list_bytes = np.concatenate(sub_data_list_bytes)
             sub_data_address = np.cumsum(sub_data_address)
@@ -743,7 +747,8 @@ class BaseDataset(Dataset):
         for key, value in self.__dict__.items():
             if key in ['data_list', 'data_address', 'data_list_bytes']:
                 continue
-            super().__setattr__(key, copy.deepcopy(value, memo))
+            super(BaseDataset, other).__setattr__(
+                key, copy.deepcopy(value, memo))
 
         return other
 

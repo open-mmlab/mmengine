@@ -4,7 +4,7 @@ import copy
 import math
 import warnings
 from collections import defaultdict
-from typing import List, Sequence, Tuple
+from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
@@ -31,7 +31,7 @@ class ConcatDataset(_ConcatDataset):
         self.datasets = datasets  # type: ignore
         for i, dataset in enumerate(datasets, 1):
             if self._meta != dataset.meta:
-                warnings.warn(
+                raise ValueError(
                     f'The meta information of the {i}-th dataset does not '
                     'match meta information of the first dataset')
 
@@ -77,8 +77,9 @@ class ConcatDataset(_ConcatDataset):
                     f'absolute value of index({idx}) should not exceed dataset'
                     f'length({len(self)}).')
             idx = len(self) + idx
-        # Get the inner index of single dataset
+        # Get `dataset_idx` to tell idx belongs to which dataset.
         dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+        # Get the inner index of single dataset.
         if dataset_idx == 0:
             sample_idx = idx
         else:
@@ -111,6 +112,24 @@ class ConcatDataset(_ConcatDataset):
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
         return self.datasets[dataset_idx][sample_idx]
 
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
+
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
+
 
 class RepeatDataset:
     """A wrapper of repeated dataset.
@@ -123,7 +142,7 @@ class RepeatDataset:
     Args:
         dataset (BaseDataset): The dataset to be repeated.
         times (int): Repeat times.
-        lazy_init (bool, optional): Whether to load annotation during
+        lazy_init (bool): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
@@ -195,6 +214,24 @@ class RepeatDataset:
     def __len__(self):
         return self.times * self._ori_len
 
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
+
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
+
 
 class ClassBalancedDataset:
     """A wrapper of class balanced dataset.
@@ -257,9 +294,12 @@ class ClassBalancedDataset:
             return
 
         self.dataset.full_init()
-
+        # Get repeat factors for each image.
         repeat_factors = self._get_repeat_factors(self.dataset,
                                                   self.oversample_thr)
+        # Repeat dataset's indices according to repeat_factors. For example,
+        # if `repeat_factors = [1, 2, 3]`, and the `len(dataset) == 3`,
+        # the repeated indices will be [1, 2, 2, 3, 3, 3].
         repeat_indices = []
         for dataset_index, repeat_factor in enumerate(repeat_factors):
             repeat_indices.extend([dataset_index] * math.ceil(repeat_factor))
@@ -362,3 +402,21 @@ class ClassBalancedDataset:
     @force_full_init
     def __len__(self):
         return len(self.repeat_indices)
+
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
+
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        raise NotImplementedError(
+            'We not support `get_subset` and `get_subset_` interfaces in all '
+            'dataset wrappers, since doing so the  implementation and '
+            'logic of some method will be weird . If you want to use '
+            '`get_subset` or `get_subset_` interfaces, please firstly use '
+            "them from BaseDataset or BaseDataset's derived class, and then "
+            'use dataset wrapper.')
