@@ -8,7 +8,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from .manage import ManagerMixin
+from mmengine.utils import ManagerMixin
 
 
 class MMFormatter(logging.Formatter):

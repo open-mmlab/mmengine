@@ -11,9 +11,8 @@ import torch
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import dump
-from mmengine.logging import ManagerMixin
 from mmengine.registry import VISUALIZERS, WRITERS
-from mmengine.utils import TORCH_VERSION
+from mmengine.utils import TORCH_VERSION, ManagerMixin
 from .visualizer import Visualizer
 
 

@@ -16,7 +16,7 @@ def _accquire_lock() -> None:
         _lock.acquire()
 
 
-def _release_lock() ->None:
+def _release_lock() -> None:
     """Release the module-level lock acquired by calling _accquire_lock()."""
     if _lock:
         _lock.release()

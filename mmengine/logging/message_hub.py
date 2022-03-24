@@ -6,9 +6,9 @@ from typing import Any, Union
 import numpy as np
 import torch
 
+from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import check_type
 from .log_buffer import LogBuffer
-from .manage import ManagerMixin
 
 
 class MessageHub(ManagerMixin):

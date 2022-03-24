@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 
-from mmengine.logging import ManagerMeta, ManagerMixin
+from mmengine.utils import ManagerMeta, ManagerMixin
 
 
 class SubClassA(ManagerMixin):
