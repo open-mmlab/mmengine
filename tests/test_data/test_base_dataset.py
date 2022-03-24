@@ -139,10 +139,10 @@ class TestBaseDataset:
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/dummy_annotation.json')
 
-    def test_metainfo(self):
+    def test_meta(self):
         self._init_dataset()
-        # test dataset.meta with setting the metainfo from annotation file as the
-        # metainfo of self.base_dataset
+        # test dataset.meta with setting the metainfo from annotation file as
+        # the metainfo of self.base_dataset.
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
@@ -405,14 +405,13 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
-            indices=1
-        )
+            indices=1)
         assert dataset_sliced[0] == dataset[0]
         assert len(dataset_sliced) == 1
 
-    @pytest.mark.parametrize('lazy_init, serialize_data',
-                             ([True, False], [False, True],
-                              [True, True], [False, False]))
+    @pytest.mark.parametrize(
+        'lazy_init, serialize_data',
+        ([True, False], [False, True], [True, True], [False, False]))
     def test_get_subset_(self, lazy_init, serialize_data):
         indices = 1
         dataset = self.dataset_type(
@@ -420,8 +419,7 @@ class TestBaseDataset:
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
-            serialize_data=serialize_data
-        )
+            serialize_data=serialize_data)
         ori_data = dataset[0]
         # Test int indices.
         dataset.get_subset_(indices)
@@ -434,8 +432,7 @@ class TestBaseDataset:
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
-            serialize_data=serialize_data
-        )
+            serialize_data=serialize_data)
         ori_data = dataset[1]
         # The sample_idx of sliced dataset's first data information should
         # be 0.
@@ -447,10 +444,9 @@ class TestBaseDataset:
         with pytest.raises(TypeError):
             dataset.get_subset(-1)
 
-
-    @pytest.mark.parametrize('lazy_init, serialize_data',
-                             ([True, False], [False, True],
-                              [True, True], [False, False]))
+    @pytest.mark.parametrize(
+        'lazy_init, serialize_data',
+        ([True, False], [False, True], [True, True], [False, False]))
     def test_get_subset(self, lazy_init, serialize_data):
         indices = 1
         dataset = self.dataset_type(
@@ -458,8 +454,7 @@ class TestBaseDataset:
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
-            serialize_data=serialize_data
-        )
+            serialize_data=serialize_data)
         dataset_sliced = dataset.get_subset(indices)
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == dataset[0]
@@ -600,8 +595,8 @@ class TestRepeatDataset:
         self._init_dataset()
 
         self.repeat_datasets.full_init()
-        assert len(self.repeat_datasets) == self.repeat_times * len(
-            self.dataset)
+        assert len(
+            self.repeat_datasets) == self.repeat_times * len(self.dataset)
         self.repeat_datasets.full_init()
         self.repeat_datasets._fully_initialized = False
         self.repeat_datasets[1]

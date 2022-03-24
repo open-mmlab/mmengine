@@ -82,6 +82,7 @@ def force_full_init(old_func: Callable) -> Any:
     Returns:
         Any: Depends on old_func.
     """
+
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
         # The instance must have `full_init` method.
@@ -202,7 +203,7 @@ class BaseDataset(Dataset):
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
                  filter_cfg: Optional[dict] = None,
-                 indices: Optional[int or list[int]] = -1,
+                 indices: Union[int, List[int]] = -1,
                  serialize_data: bool = True,
                  pipeline: List[Union[dict, Callable]] = [],
                  test_mode: bool = False,
@@ -218,7 +219,7 @@ class BaseDataset(Dataset):
         self.test_mode = test_mode
         self.max_refetch = max_refetch
         self.data_list: List[dict] = []
-        self.data_list_bytes: bytearray = bytearray()
+        self.data_list_bytes: np.ndarray
 
         # Set meta information.
         self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
@@ -247,8 +248,9 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
             end_addr = self.data_address[idx].item()
-            bytes = memoryview(self.data_list_bytes[start_addr:end_addr])
-            data_info = pickle.loads(bytes)
+            bytes = memoryview(
+                self.data_list_bytes[start_addr:end_addr])  # type: ignore
+            data_info = pickle.loads(bytes)  # type: ignore
         else:
             data_info = self.data_list[idx]
         # Some codebase needs to record the positive index of data information
@@ -296,7 +298,6 @@ class BaseDataset(Dataset):
             # `self.data_info` when loading data multi-processes.
             self.data_list.clear()
             gc.collect()
-
 
     @property
     def meta(self) -> dict:
@@ -353,9 +354,9 @@ class BaseDataset(Dataset):
                                   'method')
 
     def __getitem__(self, idx: int) -> dict:
-        """Get the idx-th image and data inforamtion of dataset after
-        ``self.pipeline``, and ``full_init`` will be called if the dataset
-        has not been fully initialized.
+        """Get the idx-th image and data information of dataset after
+        ``self.pipeline``, and ``full_init`` will be called if the dataset has
+        not been fully initialized.
 
         During training phase, if ``self.pipeline`` get ``None``,
         ``self._rand_another`` will be called until a valid image is fetched or
@@ -408,7 +409,7 @@ class BaseDataset(Dataset):
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
         The subclass must override this method for load annotations. The meta
         information of annotation file will be overwritten :attr:`METAINFO`
-        and ``metainfo`` argument of constructor. 
+        and ``metainfo`` argument of constructor.
 
         Args:
             ann_file (str): Absolute annotation file path if ``self.root=None``
@@ -459,7 +460,7 @@ class BaseDataset(Dataset):
         return data_infos
 
     @classmethod
-    def _get_meta_info(cls, in_metainfo: dict = dict()) -> dict:
+    def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
@@ -606,14 +607,14 @@ class BaseDataset(Dataset):
         # Avoid calling `full_init` to overwrite `data_list`
         if self.serialize_data:
             sub_dataset.data_list_bytes, sub_dataset.data_address = \
-                self._get_serialized_subdata(indices)
+                self._get_serialized_subdata(indices)  # type: ignore
         else:
             sub_dataset.data_list = self._get_unserialized_subdata(indices)
         return sub_dataset
 
     def _get_serialized_subdata(self, indices: Union[List[int], int]) \
             -> Tuple[np.ndarray, np.ndarray]:
-        """ Get subset of serialized data information list.
+        """Get subset of serialized data information list.
 
         Args:
             indices (int or list of int): If ``type(indices)`` is int, indices
@@ -626,6 +627,8 @@ class BaseDataset(Dataset):
             Tuple[np.ndarray, np.ndarray]: subset of serialized data
             information list.
         """
+        sub_data_list_bytes: Union[List, np.ndarray]
+        sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int) and indices > 0:
             # Get the first few data information.
             end_addr = self.data_address[indices - 1].item()
@@ -639,8 +642,8 @@ class BaseDataset(Dataset):
             sub_data_address = []
             for idx in indices:
                 assert idx < len(self)
-                start_addr = 0 if idx == 0 else self.data_address[
-                    idx - 1].item()
+                start_addr = 0 if idx == 0 else self.data_address[idx -
+                                                                  1].item()
                 end_addr = self.data_address[idx].item()
                 # Get data information by address.
                 sub_data_list_bytes.append(
@@ -653,11 +656,11 @@ class BaseDataset(Dataset):
         else:
             raise TypeError('indices should be a int or list of int, '
                             f'but got {type(indices)}')
-        return sub_data_list_bytes, sub_data_address
+        return sub_data_list_bytes, sub_data_address  # type: ignore
 
     def _get_unserialized_subdata(self, indices: Union[List[int], int]) -> \
             list:
-        """ Get subset of data information list.
+        """Get subset of data information list.
 
         Args:
             indices (int or list of int): If ``type(indices)`` is int, indices
@@ -747,8 +750,7 @@ class BaseDataset(Dataset):
         for key, value in self.__dict__.items():
             if key in ['data_list', 'data_address', 'data_list_bytes']:
                 continue
-            super(BaseDataset, other).__setattr__(
-                key, copy.deepcopy(value, memo))
+            super(BaseDataset, other).__setattr__(key,
+                                                  copy.deepcopy(value, memo))
 
         return other
-
