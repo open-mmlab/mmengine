@@ -10,7 +10,7 @@ DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 @HOOKS.register_module()
 class ParamSchedulerHook(Hook):
-    """A hook to update some hyper-parameters in optimizer, e.g. learning rate
+    """A hook to update some hyper-parameters in optimizer, e.g., learning rate
     and momentum."""
 
     priority = 'LOW'

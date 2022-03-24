@@ -7,21 +7,21 @@ from mmengine.hooks import ParamSchedulerHook
 class TestParamSchedulerHook:
 
     def test_after_iter(self):
-        Hook = ParamSchedulerHook()
-        Runner = Mock()
+        hook = ParamSchedulerHook()
+        runner = Mock()
         scheduler = Mock()
         scheduler.step = Mock()
         scheduler.by_epoch = False
-        Runner.param_schedulers = [scheduler]
-        Hook.after_train_iter(Runner, 0)
+        runner.param_schedulers = [scheduler]
+        hook.after_train_iter(runner, 0)
         scheduler.step.assert_called()
 
     def test_after_epoch(self):
-        Hook = ParamSchedulerHook()
-        Runner = Mock()
+        hook = ParamSchedulerHook()
+        runner = Mock()
         scheduler = Mock()
         scheduler.step = Mock()
         scheduler.by_epoch = True
-        Runner.param_schedulers = [scheduler]
-        Hook.after_train_epoch(Runner)
+        runner.param_schedulers = [scheduler]
+        hook.after_train_epoch(runner)
         scheduler.step.assert_called()
