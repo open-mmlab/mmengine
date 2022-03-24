@@ -602,7 +602,7 @@ class Runner:
                 'logger should be MMLogger object, a dict or None, '
                 f'but got {logger}')
 
-        return MMLogger.create_instance(**logger)
+        return MMLogger.get_instance(**logger)
 
     def build_message_hub(
             self,
@@ -632,7 +632,7 @@ class Runner:
                 'message_hub should be MessageHub object, a dict or None, '
                 f'but got {message_hub}')
 
-        return MessageHub.create_instance(**message_hub)
+        return MessageHub.get_instance(**message_hub)
 
     def build_writer(
         self,
@@ -664,7 +664,7 @@ class Runner:
                 'writer should be ComposedWriter object, a dict or None, '
                 f'but got {writer}')
 
-        return ComposedWriter.create_instance(**writer)
+        return ComposedWriter.get_instance(**writer)
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.

@@ -17,7 +17,7 @@ class TestLogger:
     @patch('torch.distributed.is_initialized', lambda: True)
     @patch('torch.distributed.is_available', lambda: True)
     def test_init_rank0(self, tmp_path):
-        logger = MMLogger.create_instance('rank0.pkg1', log_level='INFO')
+        logger = MMLogger.get_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'rank0.pkg1'
         assert logger.instance_name == 'rank0.pkg1'
         # Logger get from `MMLogger.get_instance` does not inherit from
@@ -30,7 +30,7 @@ class TestLogger:
         # If `rank=0`, the `log_level` of stream_handler and file_handler
         # depends on the given arguments.
         tmp_file = tmp_path / 'tmp_file.log'
-        logger = MMLogger.create_instance(
+        logger = MMLogger.get_instance(
             'rank0.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert isinstance(logger, logging.Logger)
         assert len(logger.handlers) == 2
@@ -47,7 +47,7 @@ class TestLogger:
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
         log_path = tmp_path / 'rank1_tmp_file.log'
-        logger = MMLogger.create_instance(
+        logger = MMLogger.get_instance(
             'rank1.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert len(logger.handlers) == 2
         assert logger.handlers[0].level == logging.ERROR
@@ -60,7 +60,7 @@ class TestLogger:
     def test_handler(self, capsys, tmp_path, log_level):
         # test stream handler can output correct format logs
         logger_name = f'test_stream_{str(log_level)}'
-        logger = MMLogger.create_instance(logger_name, log_level=log_level)
+        logger = MMLogger.get_instance(logger_name, log_level=log_level)
         logger.log(level=log_level, msg='welcome')
         out, _ = capsys.readouterr()
         # Skip match colored INFO
@@ -73,7 +73,7 @@ class TestLogger:
         # test file_handler output plain text without color.
         tmp_file = tmp_path / 'tmp_file.log'
         logger_name = f'test_file_{log_level}'
-        logger = MMLogger.create_instance(
+        logger = MMLogger.get_instance(
             logger_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
         with open(tmp_file, 'r') as f:
@@ -87,7 +87,7 @@ class TestLogger:
     def test_erro_format(self, capsys):
         # test error level log can output file path, function name and
         # line number
-        logger = MMLogger.create_instance('test_error', log_level='INFO')
+        logger = MMLogger.get_instance('test_error', log_level='INFO')
         logger.error('welcome')
         lineno = sys._getframe().f_lineno - 1
         file_path = __file__
@@ -109,7 +109,7 @@ class TestLogger:
         print_log('welcome', logger='silent')
         out, _ = capsys.readouterr()
         assert out == ''
-        logger = MMLogger.create_instance('test_print_log')
+        logger = MMLogger.get_instance('test_print_log')
         # Test using specified logger
         print_log('welcome', logger=logger)
         out, _ = capsys.readouterr()
