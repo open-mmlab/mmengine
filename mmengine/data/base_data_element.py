@@ -47,10 +47,10 @@ class BaseDataElement:
         ``to_tensor()``, ``.detach()``.
 
     Args:
-        meta_info (dict, optional): A dict contains the meta information
+        metainfo (dict, optional): A dict contains the meta information
             of single image. such as ``dict(img_shape=(512, 512, 3),
             scale_factor=(1, 1, 1, 1))``. Defaults to None.
-        data (dict, optional): A dict contains annotations of single image or
+        kwargs (dict, optional): A dict contains annotations of single image or
             model predictions. Defaults to None.
 
     Examples:
@@ -62,9 +62,10 @@ class BaseDataElement:
         >>> img_shape = (800, 1333)
         >>> gt_instances = BaseDataElement(
         ...     metainfo=dict(img_id=img_id, img_shape=img_shape),
-        ...     data=dict(bboxes=bboxes, scores=scores))
-        >>> gt_instances = BaseDataElement(dict(img_id=img_id,
-        ...                                     img_shape=(H, W)))
+        ...     bboxes=bboxes, scores=scores)
+        >>> gt_instances = BaseDataElement(
+        ...                    metainfo=dict(img_id=img_id,
+        ...                                  img_shape=(H, W)))
 
         >>> # new
         >>> gt_instances1 = gt_instance.new(
@@ -97,7 +98,7 @@ class BaseDataElement:
         >>> # delete and change property
         >>> gt_instances = BaseDataElement(
         ...  metainfo=dict(img_id=0, img_shape=(640, 640)),
-        ...  data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        ...  bboxes=torch.rand((6, 4)), scores=torch.rand((6,)))
         >>> gt_instances.img_shape = (1280, 1280)
         >>> gt_instances.img_shape  # (1280, 1280)
         >>> gt_instances.bboxes = gt_instances.bboxes * 2
@@ -226,6 +227,13 @@ class BaseDataElement:
             self.set_field(name=k, value=v, field_type='data', dtype=None)
 
     def update(self, instance: 'BaseDataElement') -> None:
+        """The update() method updates the BaseDataElement with the elements
+        from another BaseDataElement object.
+
+        Args:
+            instance (BaseDataElement): Another BaseDataElement object for
+            update the current object.
+        """
         assert isinstance(
             instance, BaseDataElement
         ), f'instance should be a `BaseDataElement` but got {type(instance)}'
@@ -377,25 +385,19 @@ class BaseDataElement:
         """get property in data and metainfo as the same as python."""
         return self.__dict__.get(key, default)
 
-    def pop(self, *args) -> Any:
+    def pop(self, name, default=None) -> Any:
         """pop property in data and metainfo as the same as python."""
-        assert len(args) < 3, '``pop`` get more than 2 arguments'
-        name = args[0]
         if name in self._metainfo_fields:
-            self._metainfo_fields.remove(args[0])
-            return self.__dict__.pop(*args)
+            self._metainfo_fields.remove(name)
+            return self.__dict__.pop(name)
 
         elif name in self._data_fields:
-            self._data_fields.remove(args[0])
-            return self.__dict__.pop(*args)
+            self._data_fields.remove(name)
+            return self.__dict__.pop(name)
 
         # with default value
-        elif len(args) == 2:
-            return args[1]
         else:
-            # don't just use 'self.__dict__.pop(*args)' for only popping key in
-            # metainfo or data
-            raise KeyError(f'{args[0]} is not contained in metainfo or data')
+            return default
 
     def __contains__(self, item: str) -> bool:
         return item in self._data_fields or \
@@ -482,10 +484,10 @@ class BaseDataElement:
             data = {}
             if isinstance(v, np.ndarray):
                 v = torch.from_numpy(v)
-                data.update({k: v})
+                data[k] = v
             elif isinstance(v, BaseDataElement):
                 v = v.to_tensor()
-                data.update({k: v})
+                data[k] = v
             new_data.set_data(data)
         return new_data
 
@@ -521,12 +523,3 @@ class BaseDataElement:
             return _repr
 
         return dump(self)
-
-
-if __name__ == '__main__':
-    metainfo = dict(img_shape=(800, 1196, 3))
-    gt_instances = BaseDataElement(
-        metainfo=metainfo, det_labels=torch.LongTensor([0, 1, 2, 3]))
-    sample = BaseDataElement(metainfo=metainfo, gt_instances=gt_instances)
-    x = repr(sample)
-    print(x)
