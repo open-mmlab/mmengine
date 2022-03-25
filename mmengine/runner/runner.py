@@ -51,9 +51,9 @@ class Runner:
     that means ``__init__`` only initialize required components, e.g., model.
     Optional components will be initialized when calling ``runner.train()``,
     ``runner.val()`` or ``runner.test()``. The mechanism is convenient for
-    user, without repeatedly modifying parameters.
+    user, avoiding repeatedly modifying parameters.
 
-    Suppose we provide all parameters to the ``Runner``, including
+    Suppose we passes all parameters to the ``Runner``, including
     training-related, validation-related and test-related parameters. If we
     only want to test the model and not train the model, then the
     training-related components should not be initialized at this time and the
@@ -62,6 +62,10 @@ class Runner:
     set the training-related parameters to None, so that the training-related
     components will also not be initialized, but it requires us to modify the
     initialization parameters.
+
+    Note that if passed parameters are objects, e.g., ``train_dataloader`` is
+    a ``Dataloader`` object rather than a dict to build dataloader, lazy
+    initialization is not involved since it is already an object.
 
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
@@ -137,8 +141,11 @@ class Runner:
             specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
-        randomness (dict): Some items to make the experiment as reproducible as
-            possible like seed and deterministic.
+        randomness (dict): Some settings to make the experiment as reproducible
+            as possible like seed and deterministic.
+            Defaults to ``dict(seed=None)``. If seed is None, a random number
+            will be generated and it will be broadcasted to all other processes
+            if in distributed environment.
         experiment_name (str, optional): Name of current experiment. If not
             specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
