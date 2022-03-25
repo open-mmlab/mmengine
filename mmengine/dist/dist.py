@@ -11,10 +11,9 @@ from torch import distributed as dist
 
 import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
-                    get_default_group, barrier)
+                    get_default_group, barrier, get_data_device,
+                    get_backend_device, cast_data_device)
 from mmengine.utils import digit_version, TORCH_VERSION
-
-from typing import Sequence, Union
 
 
 def _get_reduce_op(name: str) -> dist.ReduceOp:
@@ -33,71 +32,6 @@ def _get_reduce_op(name: str) -> dist.ReduceOp:
             f'reduce op should be one of {op_mappings.keys()}, bug got {name}')
 
     return op_mappings[name.lower()]
-
-
-def _get_input_device(inputs: Union[Tensor, Sequence, dict]) -> torch.device:
-    """Return the device of ``inputs``.
-
-    Args:
-        inputs (Tensor or Sequence or dict): Inputs to be inferred the device.
-
-    Returns:
-        torch.device: The device of ``inputs``.
-    """
-    if isinstance(inputs, torch.Tensor):
-        return inputs.device
-    elif isinstance(inputs, Sequence):
-        return inputs[0].device
-    elif isinstance(inputs, dict):
-        for value in inputs.values():
-            return value.device
-    else:
-        raise TypeError(
-            'inputs should be a Tensor, sequence of tensor or dict, '
-            f'but got {type(inputs)}')
-
-
-def _get_backend_device(group: dist.ProcessGroup) -> torch.device:
-    """Return the device of backend.
-
-    Args:
-        group (ProcessGroup): The process group to work on.
-
-    Returns:
-        torch.device: The device of backend.
-    """
-    backend = get_backend(group)
-    if backend == dist.Backend.NCCL:
-        return torch.device('cuda', torch.cuda.current_device())
-    else:
-        # GLOO and MPI backends use cpu device by default
-        return torch.device('cpu')
-
-
-def _cast_tensor_device(inputs: Union[Tensor, List, dict],
-                        dst_type: torch.device) -> Union[Tensor, List, dict]:
-    """Recursively convert Tensor in ``inputs`` to ``dst_type``.
-
-    Args:
-        inputs (Tensor or list or dict): Inputs to be casted.
-        dst_type (torch.device): Destination device type.
-
-    Returns:
-        Tensor or list or dict: ``inputs`` was casted to ``dst_type``.
-    """
-
-    if isinstance(inputs, torch.Tensor):
-        return inputs.to(dst_type)
-    elif isinstance(inputs, list):
-        return [_cast_tensor_device(input, dst_type) for input in inputs]
-    elif isinstance(inputs, dict):
-        return type(inputs)(
-            {k: _cast_tensor_device(v, dst_type)
-             for k, v in inputs.items()})
-    else:
-        raise TypeError(
-            'inputs should be a Tensor, sequence of tensor or dict, '
-            f'but got {type(inputs)}')
 
 
 def all_reduce(data: Tensor,
@@ -147,8 +81,8 @@ def all_reduce(data: Tensor,
         if group is None:
             group = get_default_group()
 
-        input_device = _get_input_device(data)
-        backend_device = _get_backend_device(group)
+        input_device = get_data_device(data)
+        backend_device = get_backend_device(group)
         if input_device == backend_device:
             data_on_device = data
         else:
@@ -226,8 +160,8 @@ def all_gather(data: Tensor,
     if group is None:
         group = get_default_group()
 
-    input_device = _get_input_device(data)
-    backend_device = _get_backend_device(group)
+    input_device = get_data_device(data)
+    backend_device = get_backend_device(group)
     gather_list = [
         torch.empty_like(data).to(backend_device) for _ in range(world_size)
     ]
@@ -235,7 +169,7 @@ def all_gather(data: Tensor,
     dist.all_gather(gather_list, data, group)
 
     if input_device != backend_device:
-        return _cast_tensor_device(gather_list, input_device)  # type: ignore
+        return cast_data_device(gather_list, input_device)  # type: ignore
     else:
         return gather_list
 
@@ -304,8 +238,8 @@ def gather(
     if group is None:
         group = get_default_group()
 
-    input_device = _get_input_device(data)
-    backend_device = _get_backend_device(group)
+    input_device = get_data_device(data)
+    backend_device = get_backend_device(group)
 
     if get_rank(group) == dst:
         gather_list = [
@@ -318,7 +252,7 @@ def gather(
     dist.gather(data, gather_list, dst, group)
 
     if get_rank(group) == dst:
-        return _cast_tensor_device(gather_list, input_device)  # type: ignore
+        return cast_data_device(gather_list, input_device)  # type: ignore
     else:
         return gather_list
 
@@ -368,8 +302,8 @@ def broadcast(data: Tensor,
         if group is None:
             group = get_default_group()
 
-        input_device = _get_input_device(data)
-        backend_device = _get_backend_device(group)
+        input_device = get_data_device(data)
+        backend_device = get_backend_device(group)
         if input_device == backend_device:
             data_on_device = data
         else:
@@ -417,7 +351,7 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     if group is None:
         group = get_default_group()
 
-    backend_device = _get_backend_device(group)
+    backend_device = get_backend_device(group)
 
     if get_rank(group) == 0:
         random_num = torch.tensor(seed, dtype=torch.int32).to(backend_device)

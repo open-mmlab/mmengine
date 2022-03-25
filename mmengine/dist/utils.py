@@ -2,11 +2,13 @@
 import functools
 import os
 import subprocess
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, List, Sequence, Union
 
 import torch
+from torch import Tensor
 import torch.multiprocessing as mp
 from torch import distributed as dist
+from mmengine.utils import is_seq_of
 
 _LOCAL_PROCESS_GROUP = None
 
@@ -333,3 +335,65 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
         if group is None:
             group = get_default_group()
         dist.barrier(group)
+
+
+def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
+    """Return the device of ``data``.
+
+    Args:
+        data (Tensor or Sequence or dict): Inputs to be inferred the device.
+
+    Returns:
+        torch.device: The device of ``data``.
+    """
+    if isinstance(data, Tensor):
+        return data.device
+    elif isinstance(data, Sequence) and is_seq_of(data, Tensor):
+        return data[0].device
+    elif isinstance(data, dict):
+        for value in data.values():
+            return value.device
+    else:
+        raise TypeError('data should be a Tensor, sequence of tensor or dict, '
+                        f'but got {type(data)}')
+
+
+def get_backend_device(group: dist.ProcessGroup) -> torch.device:
+    """Return the device of backend.
+
+    Args:
+        group (ProcessGroup): The process group to work on.
+
+    Returns:
+        torch.device: The device of backend.
+    """
+    backend = get_backend(group)
+    if backend == dist.Backend.NCCL:
+        return torch.device('cuda', torch.cuda.current_device())
+    else:
+        # GLOO and MPI backends use cpu device by default
+        return torch.device('cpu')
+
+
+def cast_data_device(data: Union[Tensor, List, dict],
+                     dst_type: torch.device) -> Union[Tensor, List, dict]:
+    """Recursively convert Tensor in ``data`` to ``dst_type``.
+
+    Args:
+        data (Tensor or list or dict): Inputs to be casted.
+        dst_type (torch.device): Destination device type.
+
+    Returns:
+        Tensor or list or dict: ``data`` was casted to ``dst_type``.
+    """
+    if isinstance(data, Tensor):
+        return data.to(dst_type)
+    elif isinstance(data, list):
+        return [cast_data_device(input, dst_type) for input in data]
+    elif isinstance(data, dict):
+        return type(data)(
+            {k: cast_data_device(v, dst_type)
+             for k, v in data.items()})
+    else:
+        raise TypeError('data should be a Tensor, sequence of tensor or dict, '
+                        f'but got {type(data)}')
