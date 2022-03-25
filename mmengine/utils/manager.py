@@ -2,7 +2,7 @@
 import inspect
 import threading
 from collections import OrderedDict
-from typing import Any, Optional
+from typing import Any
 
 _lock = threading.RLock()
 
