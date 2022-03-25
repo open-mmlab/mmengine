@@ -284,7 +284,7 @@ class TestLoggerHook:
             'train/loss_cls': MagicMock(),
             'val/metric': MagicMock()
         }
-        runner.message_hub.log_buffers = log_buffers
+        runner.message_hub.log_scalars = log_buffers
         tag = logger_hook._collect_info(runner, mode='train')
         # Test parse custom_keys
         logger_hook._parse_custom_keys.assert_called()

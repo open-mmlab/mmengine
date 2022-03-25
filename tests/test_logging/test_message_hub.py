@@ -11,17 +11,17 @@ class TestMessageHub:
     def test_init(self):
         message_hub = MessageHub('name')
         assert message_hub.instance_name == 'name'
-        assert len(message_hub.log_buffers) == 0
-        assert len(message_hub.log_buffers) == 0
+        assert len(message_hub.log_scalars) == 0
+        assert len(message_hub.log_scalars) == 0
 
-    def test_update_log(self):
+    def test_update_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
-        # test create target `LogBuffer` by name
-        message_hub.update_log('name', 1)
-        log_buffer = message_hub.log_buffers['name']
+        # test create target `HistoryBuffer` by name
+        message_hub.update_scalar('name', 1)
+        log_buffer = message_hub.log_scalars['name']
         assert (log_buffer._log_history == np.array([1])).all()
-        # test update target `LogBuffer` by name
-        message_hub.update_log('name', 1)
+        # test update target `HistoryBuffer` by name
+        message_hub.update_scalar('name', 1)
         assert (log_buffer._log_history == np.array([1, 1])).all()
         # unmatched string will raise a key error
 
@@ -42,8 +42,8 @@ class TestMessageHub:
         log_history = np.array([1, 2, 3, 4, 5])
         count = np.array([1, 1, 1, 1, 1])
         for i in range(len(log_history)):
-            message_hub.update_log('test_value', float(log_history[i]),
-                                   int(count[i]))
+            message_hub.update_scalar('test_value', float(log_history[i]),
+                                      int(count[i]))
         recorded_history, recorded_count = \
             message_hub.get_log('test_value').data
         assert (log_history == recorded_history).all()
@@ -64,7 +64,7 @@ class TestMessageHub:
             loss_cls=torch.tensor(2),
             loss_bbox=np.array(3),
             loss_iou=dict(value=1, count=2))
-        message_hub.update_log_vars(log_dict)
+        message_hub.update_scalars(log_dict)
         loss = message_hub.get_log('loss')
         loss_cls = message_hub.get_log('loss_cls')
         loss_bbox = message_hub.get_log('loss_bbox')
@@ -76,8 +76,8 @@ class TestMessageHub:
 
         with pytest.raises(TypeError):
             loss_dict = dict(error_type=[])
-            message_hub.update_log_vars(loss_dict)
+            message_hub.update_scalars(loss_dict)
 
         with pytest.raises(AssertionError):
             loss_dict = dict(error_type=dict(count=1))
-            message_hub.update_log_vars(loss_dict)
+            message_hub.update_scalars(loss_dict)

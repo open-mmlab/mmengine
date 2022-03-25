@@ -3,15 +3,13 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine import LogBuffer
+from mmengine import HistoryBuffer
 
 
 class TestLoggerBuffer:
 
     def test_init(self):
-        # `BaseLogBuffer` is an abstract class, using `CurrentLogBuffer` to
-        # test `update` method
-        log_buffer = LogBuffer()
+        log_buffer = HistoryBuffer()
         assert log_buffer.max_length == 1000000
         log_history, counts = log_buffer.data
         assert len(log_history) == 0
@@ -19,7 +17,7 @@ class TestLoggerBuffer:
         # test the length of array exceed `max_length`
         logs = np.random.randint(1, 10, log_buffer.max_length + 1)
         counts = np.random.randint(1, 10, log_buffer.max_length + 1)
-        log_buffer = LogBuffer(logs, counts)
+        log_buffer = HistoryBuffer(logs, counts)
         log_history, count_history = log_buffer.data
 
         assert len(log_history) == log_buffer.max_length
@@ -30,14 +28,13 @@ class TestLoggerBuffer:
         # The different lengths of `log_history` and `count_history` will
         # raise error
         with pytest.raises(AssertionError):
-            LogBuffer([1, 2], [1])
+            HistoryBuffer([1, 2], [1])
 
     @pytest.mark.parametrize('array_method',
                              [torch.tensor, np.array, lambda x: x])
     def test_update(self, array_method):
-        # `BaseLogBuffer` is an abstract class, using `CurrentLogBuffer` to
         # test `update` method
-        log_buffer = LogBuffer()
+        log_buffer = HistoryBuffer()
         log_history = array_method([1, 2, 3, 4, 5])
         count_history = array_method([5, 5, 5, 5, 5])
         for i in range(len(log_history)):
@@ -52,7 +49,7 @@ class TestLoggerBuffer:
         # test the length of `array` exceed `max_length`
         max_array = array_method([[-1] + [1] * (log_buffer.max_length - 1)])
         max_count = array_method([[-1] + [1] * (log_buffer.max_length - 1)])
-        log_buffer = LogBuffer(max_array, max_count)
+        log_buffer = HistoryBuffer(max_array, max_count)
         log_buffer.update(1)
         log_history, count_history = log_buffer.data
         assert log_history[0] == 1
@@ -69,7 +66,7 @@ class TestLoggerBuffer:
     def test_max_min(self, statistics_method, log_buffer_type):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = LogBuffer(log_history, count_history)
+        log_buffer = HistoryBuffer(log_history, count_history)
         assert statistics_method(log_history[-10:]) == \
                getattr(log_buffer, log_buffer_type)(10)
         assert statistics_method(log_history) == \
@@ -78,7 +75,7 @@ class TestLoggerBuffer:
     def test_mean(self):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = LogBuffer(log_history, count_history)
+        log_buffer = HistoryBuffer(log_history, count_history)
         assert np.sum(log_history[-10:]) / \
                np.sum(count_history[-10:]) == \
                log_buffer.mean(10)
@@ -89,17 +86,17 @@ class TestLoggerBuffer:
     def test_current(self):
         log_history = np.random.randint(1, 5, 20)
         count_history = np.ones(20)
-        log_buffer = LogBuffer(log_history, count_history)
+        log_buffer = HistoryBuffer(log_history, count_history)
         assert log_history[-1] == log_buffer.current()
         # test get empty array
-        log_buffer = LogBuffer()
+        log_buffer = HistoryBuffer()
         with pytest.raises(ValueError):
             log_buffer.current()
 
     def test_statistics(self):
         log_history = np.array([1, 2, 3, 4, 5])
         count_history = np.array([1, 1, 1, 1, 1])
-        log_buffer = LogBuffer(log_history, count_history)
+        log_buffer = HistoryBuffer(log_history, count_history)
         assert log_buffer.statistics('mean') == 3
         assert log_buffer.statistics('min') == 1
         assert log_buffer.statistics('max') == 5
@@ -110,9 +107,9 @@ class TestLoggerBuffer:
 
     def test_register_statistics(self):
 
-        @LogBuffer.register_statistics
+        @HistoryBuffer.register_statistics
         def custom_statistics(self):
             return -1
 
-        log_buffer = LogBuffer()
+        log_buffer = HistoryBuffer()
         assert log_buffer.statistics('custom_statistics') == -1
