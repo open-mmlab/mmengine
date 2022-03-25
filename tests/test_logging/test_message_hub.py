@@ -1,4 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import pickle
+from collections import OrderedDict
+
 import numpy as np
 import pytest
 import torch
@@ -13,6 +16,15 @@ class TestMessageHub:
         assert message_hub.instance_name == 'name'
         assert len(message_hub.log_scalars) == 0
         assert len(message_hub.log_scalars) == 0
+        # The type of log_scalars's value must be `HistoryBuffer`.
+        with pytest.raises(AssertionError):
+            MessageHub('hello', log_scalars=OrderedDict(a=1))
+        # `Resumed_keys`
+        with pytest.raises(AssertionError):
+            MessageHub(
+                'hello',
+                runtime_info=OrderedDict(iter=1),
+                resumed_keys=OrderedDict(iters=False))
 
     def test_update_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
@@ -33,7 +45,7 @@ class TestMessageHub:
         message_hub.update_info('key', 1)
         assert message_hub.runtime_info['key'] == 1
 
-    def test_get_log_buffers(self):
+    def test_get_log(self):
         message_hub = MessageHub.get_instance('mmengine')
         # Get undefined key will raise error
         with pytest.raises(KeyError):
@@ -57,7 +69,7 @@ class TestMessageHub:
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
 
-    def test_get_log_vars(self):
+    def test_get_scalars(self):
         message_hub = MessageHub.get_instance('mmengine')
         log_dict = dict(
             loss=1,
@@ -81,3 +93,22 @@ class TestMessageHub:
         with pytest.raises(AssertionError):
             loss_dict = dict(error_type=dict(count=1))
             message_hub.update_scalars(loss_dict)
+
+    def test_getstate(self):
+        message_hub = MessageHub.get_instance('name')
+        # update log_scalars.
+        message_hub.update_scalar('loss', 0.1)
+        message_hub.update_scalar('lr', 0.1, resumed=False)
+        # update runtime information
+        message_hub.update_info('iter', 1, resumed=True)
+        message_hub.update_info('feat', [1, 2, 3], resumed=False)
+        obj = pickle.dumps(message_hub)
+        instance = pickle.loads(obj)
+
+        with pytest.raises(KeyError):
+            instance.get_info('feat')
+        with pytest.raises(KeyError):
+            instance.get_info('lr')
+
+        instance.get_info('iter')
+        instance.get_log('loss')

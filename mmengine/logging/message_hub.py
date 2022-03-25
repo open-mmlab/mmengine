@@ -55,9 +55,9 @@ class MessageHub(ManagerMixin):
 
     def __init__(self,
                  name: str = '',
-                 log_scalars=None,
-                 runtime_info=None,
-                 resumed_keys=None):
+                 log_scalars: OrderedDict = None,
+                 runtime_info: OrderedDict = None,
+                 resumed_keys: OrderedDict = None):
         super().__init__(name)
         self._log_scalars = log_scalars if log_scalars is not None else \
             OrderedDict()
@@ -65,6 +65,10 @@ class MessageHub(ManagerMixin):
             OrderedDict()
         self._resumed_keys = resumed_keys if resumed_keys is not None else \
             OrderedDict()
+
+        assert isinstance(self._log_scalars, OrderedDict)
+        assert isinstance(self._runtime_info, OrderedDict)
+        assert isinstance(self._resumed_keys, OrderedDict)
 
         for value in self._log_scalars.values():
             assert isinstance(value, HistoryBuffer), \
@@ -269,11 +273,19 @@ class MessageHub(ManagerMixin):
         return value
 
     def __getstate__(self):
-        for key in self.log_scalars:
-            if key not in self._resumed_keys:
-                self.log_scalars.pop(key)
+        for key in list(self._log_scalars.keys()):
+            assert key in self._resumed_keys, (
+                f'Cannot found {key} in {self}._resumed_keys, '
+                'please make sure you do not change the _resumed_keys '
+                'outside the class')
+            if not self._resumed_keys[key]:
+                self._log_scalars.pop(key)
 
-        for key in self.runtime_info:
-            if key not in self._resumed_keys:
-                self.runtime_info.pop(key)
+        for key in list(self._runtime_info.keys()):
+            assert key in self._resumed_keys, (
+                f'Cannot found {key} in {self}._resumed_keys, '
+                'please make sure you do not change the _resumed_keys '
+                'outside the class')
+            if not self._resumed_keys[key]:
+                self._runtime_info.pop(key)
         return self.__dict__
