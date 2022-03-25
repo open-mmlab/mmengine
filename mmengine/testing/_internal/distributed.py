@@ -71,6 +71,10 @@ class MultiProcessTestCase(TestCase):
     def world_size(self) -> int:
         return 2
 
+    @property
+    def timeout(self) -> int:
+        return 500
+
     def join_or_run(self, fn):
 
         @wraps(fn)
@@ -268,10 +272,10 @@ class MultiProcessTestCase(TestCase):
                 # Check if we should time out the test. If so, we terminate
                 # each process.
                 elapsed = time.time() - start_time
-                if elapsed > 500:
+                if elapsed > self.timeout:
                     self._get_timedout_process_traceback()
-                    print('Timing out after 500 seconds and killing '
-                          'subprocesses.')
+                    print(f'Timing out after {self.timeout} seconds and '
+                          'killing subprocesses.')
                     for p in self.processes:
                         p.terminate()
                     break
