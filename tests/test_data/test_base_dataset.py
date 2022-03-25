@@ -68,7 +68,7 @@ class TestBaseDataset:
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
         assert not hasattr(dataset, 'data_address')
-        assert len(dataset) == 2
+        assert len(dataset) == 3
         assert dataset.get_data_info(0) == self.data_info
 
         # test the instantiation of self.base_dataset with lazy init
@@ -119,7 +119,7 @@ class TestBaseDataset:
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
         assert hasattr(dataset, 'data_address')
-        assert len(dataset) == 4
+        assert len(dataset) == 6
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
 
@@ -134,7 +134,7 @@ class TestBaseDataset:
         with pytest.raises(TypeError):
             self.dataset_type.parse_data_info = MagicMock(
                 return_value=[self.data_info, 'xxx'])
-            dataset = self.dataset_type(
+            self.dataset_type(
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/dummy_annotation.json')
@@ -259,13 +259,13 @@ class TestBaseDataset:
         if not lazy_init:
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_list')
-            assert len(dataset) == 2
+            assert len(dataset) == 3
         else:
             # test `__len__()` when lazy_init is True
             assert not dataset._fully_initialized
             assert not dataset.data_list
             # call `full_init()` automatically
-            assert len(dataset) == 2
+            assert len(dataset) == 3
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_list')
 
@@ -379,7 +379,7 @@ class TestBaseDataset:
         dataset.full_init()
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert len(dataset) == 2
+        assert len(dataset) == 3
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
 
@@ -392,7 +392,7 @@ class TestBaseDataset:
         dataset.pipeline = self.pipeline
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert len(dataset) == 2
+        assert len(dataset) == 3
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
 
@@ -440,9 +440,6 @@ class TestBaseDataset:
         dataset.get_subset_(indices)
         assert len(dataset) == 1
         assert dataset[0] == ori_data
-        # If type of indices is int, indices must be positive.
-        with pytest.raises(TypeError):
-            dataset.get_subset(-1)
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',
@@ -458,13 +455,20 @@ class TestBaseDataset:
         dataset_sliced = dataset.get_subset(indices)
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == dataset[0]
+        # test negative indices.
+        indices = -1
+        dataset_sliced = dataset.get_subset(indices)
+        ori_data = dataset[-1]
+        ori_data['sample_idx'] = 0
+        assert len(dataset_sliced) == 1
+        assert dataset_sliced[0] == ori_data
+        # test list indices.
         indices = [1]
         dataset_sliced = dataset.get_subset(indices)
         ori_data = dataset[1]
         ori_data['sample_idx'] = 0
-        dataset.get_subset_(indices)
-        assert len(dataset) == 1
-        assert dataset[0] == ori_data
+        assert len(dataset_sliced) == 1
+        assert dataset_sliced[0] == ori_data
 
     def test_rand_another(self):
         # test the instantiation of self.base_dataset when passing num_samples
@@ -510,11 +514,11 @@ class TestConcatDataset:
         self._init_dataset()
         # test init with lazy_init=True
         self.cat_datasets.full_init()
-        assert len(self.cat_datasets) == 4
+        assert len(self.cat_datasets) == 6
         self.cat_datasets.full_init()
         self.cat_datasets._fully_initialized = False
         self.cat_datasets[1]
-        assert len(self.cat_datasets) == 4
+        assert len(self.cat_datasets) == 6
 
         with pytest.raises(NotImplementedError):
             self.cat_datasets.get_subset_(1)
