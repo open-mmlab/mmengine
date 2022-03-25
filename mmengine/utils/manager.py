@@ -74,8 +74,7 @@ class ManagerMixin(metaclass=ManagerMeta):
         self._instance_name = name
 
     @classmethod
-    def get_instance(cls, name: str, **kwargs)\
-            -> Any:
+    def get_instance(cls, name: str, **kwargs) -> Any:
         """Get subclass instance by name if the name exists.
 
         If corresponding name instance has not been created, ``get_instance``
@@ -112,9 +111,9 @@ class ManagerMixin(metaclass=ManagerMeta):
 
     @classmethod
     def get_current_instance(cls):
-        """Get latest create instance.
+        """Get latest created instance.
 
-        Before calling ``get_current_instance``. The subclass must have called
+        Before calling ``get_current_instance``, The subclass must have called
         ``get_instance(xxx)`` at least once.
 
         Examples
