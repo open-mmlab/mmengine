@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .hub import load_url
-from .manage import ManagerMeta, ManagerMixin
+from .manager import ManagerMeta, ManagerMixin
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    find_latest_checkpoint, has_method,
                    import_modules_from_strings, is_list_of,

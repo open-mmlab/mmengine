@@ -27,7 +27,7 @@ class ManagerMeta(type):
 
     The subclasses inheriting from ``ManagerMeta`` will manage their
     own ``_instance_dict`` and root instances. The constructors of subclasses
-    must contain an optional ``name`` argument.
+    must contain the ``name`` argument.
 
     Examples:
         >>> class SubClass1(metaclass=ManagerMeta):
@@ -45,7 +45,7 @@ class ManagerMeta(type):
         cls._instance_dict = OrderedDict()
         params = inspect.getfullargspec(cls)
         params_names = params[0] if params[0] else []
-        assert 'name' in params_names, (f'{cls} must have the `name` argument')
+        assert 'name' in params_names, f'{cls} must have the `name` argument'
         super().__init__(*args)
 
 
@@ -54,7 +54,7 @@ class ManagerMixin(metaclass=ManagerMeta):
     requirements.
 
     The subclasses inheriting from ``ManagerMixin`` can get their
-    global instancees.
+    global instances.
 
     Examples:
         >>> class GlobalAccessible(ManagerMixin):
@@ -71,69 +71,92 @@ class ManagerMixin(metaclass=ManagerMeta):
     """
 
     def __init__(self, name: str = '', **kwargs):
-        self._name = name
+        self._instance_name = name
 
     @classmethod
-    def get_instance(cls, name: str = '', current: bool = False, **kwargs)\
+    def get_instance(cls, name: str, **kwargs)\
             -> Any:
-        """Get subclass instance by name if the name exists. if name is not
-        specified, this method will return latest created instance.
+        """Get subclass instance by name if the name exists.
+
+        If corresponding name instance has not been created, ``get_instance``
+        will create an instance, otherwise ``get_instance`` will return the
+        corresponding instance.
 
         Examples
-            >>> instance = GlobalAccessible.get_instance(current=True)
-            AssertionError: At least one of name and current needs to be set
-            >>> instance = GlobalAccessible.get_instance('name1')
+            >>> instance1 = GlobalAccessible.get_instance('name1')
+            >>> # Create name1 instance.
             >>> instance.instance_name
             name1
-            >>> instance = GlobalAccessible.get_instance('name2')
-            >>> instance = GlobalAccessible.get_instance(current=True)
-            >>> instance.instance_name
-            name2
+            >>> instance2 = GlobalAccessible.get_instance('name1')
+            >>> # Get name1 instance.
+            >>> assert id(instance1) == id(instance2)
 
         Args:
             name (str): Name of instance. Defaults to ''.
-            current(bool): Whether to return the latest created instance, if
-                name is not spicified. Defaults to False.
 
         Returns:
             object: Corresponding name instance, the latest instance, or root
             instance.
         """
         _accquire_lock()
+        assert isinstance(name, str), \
+            f'type of name should be str, but got {type(cls)}'
         instance_dict = cls._instance_dict
         # Get the instance by name.
-        if name:
-            assert not current, ('`current` should not be True if `name` is '
-                                 'specified.')
-            if name not in instance_dict:
-                instance = cls(name=name, **kwargs)
-                instance_dict[name] = instance
+        if name not in instance_dict:
+            instance = cls(name=name, **kwargs)
+            instance_dict[name] = instance
         # Get latest instantiated instance or root instance.
-        else:
-            assert current, 'At least one of name and current needs to be set'
-            name = next(iter(reversed(cls._instance_dict)))
-            assert name, (f'Before calling {cls}.get_instance, you should '
-                          'call get_instance.')
         _release_lock()
         return instance_dict[name]
 
     @classmethod
-    def check_instance_created(cls, name: str) -> bool:
-        """Check if the instance was created.
+    def get_current_instance(cls):
+        """Get latest create instance.
 
-        Args:
-            name: Name of instance.
+        Before calling ``get_current_instance``. The subclass must have called
+        ``get_instance(xxx)`` at least once.
+
+        Examples
+            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            AssertionError: At least one of name and current needs to be set
+            >>> instance = GlobalAccessible.get_instance('name1')
+            >>> instance.instance_name
+            name1
+            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            >>> instance.instance_name
+            name1
 
         Returns:
-            bool: Whether instance is created.
+            object: Latest created instance.
+        """
+        _accquire_lock()
+        if not cls._instance_dict:
+            raise RuntimeError(
+                f'Before calling {cls.__name__}.get_instance('
+                f'current=True), you should call get_instance(name=xxx) '
+                f'at least once.')
+        name = next(iter(reversed(cls._instance_dict)))
+        _release_lock()
+        return cls._instance_dict[name]
+
+    @classmethod
+    def check_instance_created(cls, name: str) -> bool:
+        """Check whether the name corresponding instance exists.
+
+        Args:
+            name (str): Name of instance.
+
+        Returns:
+            bool: Whether the name corresponding instance exists.
         """
         return name in cls._instance_dict
 
     @property
-    def instance_name(self) -> Optional[str]:
+    def instance_name(self) -> str:
         """Get the name of instance.
 
         Returns:
             str: Name of instance.
         """
-        return self._name
+        return self._instance_name

@@ -158,7 +158,7 @@ def print_log(msg,
     elif logger == 'silent':
         pass
     elif logger == 'current':
-        logger_instance = MMLogger.get_instance(current=True)
+        logger_instance = MMLogger.get_current_instance()
         logger_instance.log(level, msg)
     elif isinstance(logger, str):
         if MMLogger.check_instance_created(logger):

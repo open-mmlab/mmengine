@@ -40,10 +40,12 @@ class TestManagerMixin:
     def test_init(self):
         # test create instance by name.
         base_cls = ManagerMixin('name')
-        assert base_cls._name == 'name'
+        assert base_cls.instance_name == 'name'
 
     def test_get_instance(self):
         # SubClass should manage their own `_instance_dict`.
+        with pytest.raises(RuntimeError):
+            SubClassA.get_current_instance()
         SubClassA.get_instance('instance_a')
         SubClassB.get_instance('instance_b')
         assert SubClassB._instance_dict != SubClassA._instance_dict
@@ -52,21 +54,19 @@ class TestManagerMixin:
         message_hub = SubClassA.get_instance('name1')
         assert message_hub.instance_name == 'name1'
         # no arguments will raise an assertion error.
-        with pytest.raises(AssertionError):
-            SubClassA.get_instance()
 
         SubClassA.get_instance('name2')
-        message_hub = SubClassA.get_instance(current=True)
+        message_hub = SubClassA.get_current_instance()
         message_hub.mark = -1
         assert message_hub.instance_name == 'name2'
         # test get latest `message_hub` repeatedly.
         message_hub = SubClassA.get_instance('name3')
         assert message_hub.instance_name == 'name3'
-        message_hub = SubClassA.get_instance(current=True)
+        message_hub = SubClassA.get_current_instance()
         assert message_hub.instance_name == 'name3'
         # test get name2 repeatedly
         message_hub = SubClassA.get_instance('name2')
         assert message_hub.mark == -1
         #
         with pytest.raises(AssertionError):
-            SubClassA.get_instance(a=1)
+            SubClassA.get_instance(name=1)
