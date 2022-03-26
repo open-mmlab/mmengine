@@ -395,5 +395,5 @@ def cast_data_device(data: Union[Tensor, List, dict],
             {k: cast_data_device(v, dst_type)
              for k, v in data.items()})
     else:
-        raise TypeError('data should be a Tensor, sequence of tensor or dict, '
+        raise TypeError('data should be a Tensor, list of tensor or dict, '
                         f'but got {type(data)}')
