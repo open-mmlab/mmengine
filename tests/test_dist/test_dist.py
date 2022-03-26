@@ -10,7 +10,7 @@ import torch
 
 import mmengine.dist as dist
 from mmengine.dist.dist import sync_random_seed
-from mmengine.testing import MultiProcessTestCase
+from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils import TORCH_VERSION, digit_version
 
 

@@ -7,7 +7,7 @@ import torch
 import torch.distributed as torch_dist
 
 import mmengine.dist as dist
-from mmengine.testing import MultiProcessTestCase
+from mmengine.testing._internal import MultiProcessTestCase
 
 
 class TestUtils(TestCase):
