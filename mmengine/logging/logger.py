@@ -161,6 +161,10 @@ def print_log(msg,
         logger_instance = MMLogger.get_current_instance()
         logger_instance.log(level, msg)
     elif isinstance(logger, str):
+        # If the type of `logger` is `str`, but not with value of `current` or
+        # `silent`, `logger` means the instance name of a logger. If the
+        # corresponding logger has not been created, `print_log` will raise
+        # a `ValueError`.
         if MMLogger.check_instance_created(logger):
             logger_instance = MMLogger.get_instance(logger)
             logger_instance.log(level, msg)
