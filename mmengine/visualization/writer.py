@@ -11,9 +11,8 @@ import torch
 
 from mmengine.data import BaseDataSample
 from mmengine.fileio import dump
-from mmengine.logging import BaseGlobalAccessible
 from mmengine.registry import VISUALIZERS, WRITERS
-from mmengine.utils import TORCH_VERSION
+from mmengine.utils import TORCH_VERSION, ManagerMixin
 from .visualizer import Visualizer
 
 
@@ -676,15 +675,15 @@ class TensorboardWriter(BaseWriter):
             self._tensorboard.close()
 
 
-class ComposedWriter(BaseGlobalAccessible):
+class ComposedWriter(ManagerMixin):
     """Wrapper class to compose multiple a subclass of :class:`BaseWriter`
-    instances. By inheriting BaseGlobalAccessible, it can be accessed anywhere
-    once instantiated.
+    instances. By inheriting ManagerMixin, it can be accessed anywhere once
+    instantiated.
 
     Examples:
         >>> from mmengine.visualization import ComposedWriter
         >>> import numpy as np
-        >>> composed_writer= ComposedWriter.create_instance( \
+        >>> composed_writer= ComposedWriter.get_instance( \
             'composed_writer', writers=[dict(type='LocalWriter', \
             visualizer=dict(type='DetVisualizer'), \
             save_dir='temp_dir'), dict(type='WandbWriter')])

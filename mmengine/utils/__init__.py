@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .hub import load_url
+from .manager import ManagerMeta, ManagerMixin
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    find_latest_checkpoint, has_method,
                    import_modules_from_strings, is_list_of,
@@ -22,5 +23,5 @@ __all__ = [
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
-    'find_latest_checkpoint'
+    'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin'
 ]

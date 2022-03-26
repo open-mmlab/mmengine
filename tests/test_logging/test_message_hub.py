@@ -15,7 +15,7 @@ class TestMessageHub:
         assert len(message_hub.log_buffers) == 0
 
     def test_update_log(self):
-        message_hub = MessageHub.create_instance()
+        message_hub = MessageHub.get_instance('mmengine')
         # test create target `LogBuffer` by name
         message_hub.update_log('name', 1)
         log_buffer = message_hub.log_buffers['name']
@@ -26,7 +26,7 @@ class TestMessageHub:
         # unmatched string will raise a key error
 
     def test_update_info(self):
-        message_hub = MessageHub.create_instance()
+        message_hub = MessageHub.get_instance('mmengine')
         # test runtime value can be overwritten.
         message_hub.update_info('key', 2)
         assert message_hub.runtime_info['key'] == 2
@@ -34,7 +34,7 @@ class TestMessageHub:
         assert message_hub.runtime_info['key'] == 1
 
     def test_get_log_buffers(self):
-        message_hub = MessageHub.create_instance()
+        message_hub = MessageHub.get_instance('mmengine')
         # Get undefined key will raise error
         with pytest.raises(KeyError):
             message_hub.get_log('unknown')
@@ -50,7 +50,7 @@ class TestMessageHub:
         assert (recorded_count == count).all()
 
     def test_get_runtime(self):
-        message_hub = MessageHub.create_instance()
+        message_hub = MessageHub.get_instance('mmengine')
         with pytest.raises(KeyError):
             message_hub.get_info('unknown')
         recorded_dict = dict(a=1, b=2)
@@ -58,7 +58,7 @@ class TestMessageHub:
         assert message_hub.get_info('test_value') == recorded_dict
 
     def test_get_log_vars(self):
-        message_hub = MessageHub.create_instance()
+        message_hub = MessageHub.get_instance('mmengine')
         log_dict = dict(
             loss=1,
             loss_cls=torch.tensor(2),
