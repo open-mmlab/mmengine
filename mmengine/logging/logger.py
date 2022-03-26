@@ -137,19 +137,22 @@ class MMLogger(Logger, ManagerMixin):
 
 def print_log(msg,
               logger: Optional[Union[Logger, str]] = None,
-              level=logging.INFO):
+              level=logging.INFO) -> None:
     """Print a log message.
 
     Args:
         msg (str): The message to be logged.
-        logger (Logger or str, optional): The logger to be used.
+        logger (Logger or str, optional): If the type of logger is
+        ``logging.Logger``, we directly use logger to log messages.
             Some special loggers are:
-            - "silent": no message will be printed.
-            - "current": Log message via the latest created logger.
-            - other str: the logger obtained with `MMLogger.get_instance`.
+            - "silent": No message will be printed.
+            - "current": Use latest created logger to log message.
+            - other str: Instance name of logger. The corresponding logger
+              will log message if it has been created, otherwise ``print_log``
+              will raise a `ValueError`.
             - None: The `print()` method will be used to print log messages.
         level (int): Logging level. Only available when `logger` is a Logger
-            object or "root".
+            object, "current", or a created logger instance name.
     """
     if logger is None:
         print(msg)
@@ -162,7 +165,7 @@ def print_log(msg,
         logger_instance.log(level, msg)
     elif isinstance(logger, str):
         # If the type of `logger` is `str`, but not with value of `current` or
-        # `silent`, `logger` means the instance name of a logger. If the
+        # `silent`, we assume it indicates the name of the logger. If the
         # corresponding logger has not been created, `print_log` will raise
         # a `ValueError`.
         if MMLogger.check_instance_created(logger):
