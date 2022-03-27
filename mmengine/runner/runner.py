@@ -139,7 +139,10 @@ class Runner:
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
             will be generated and it will be broadcasted to all other processes
-            if in distributed environment.
+            if in distributed environment. If ``cudnn_benchmarch`` is
+            ``True`` in ``env_cfg`` but ``deterministic`` is ``True`` in
+            ``randomness``, the value of ``torch.backends.cudnn.benchmark``
+            will be ``False`` finally.
         experiment_name (str, optional): Name of current experiment. If not
             specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
@@ -473,7 +476,6 @@ class Runner:
         Args:
             env_cfg (dict): Config for setting environment.
         """
-        # TODO: should move to set_randomness
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
@@ -553,8 +555,10 @@ class Runner:
 
         Args:
             seed (int): A number to set random modules.
-            deterministic (bool): Whether cudnn to select deterministic
-                algorithms. Defaults to False.
+            deterministic (bool): Whether to set the deterministic option for
+                CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
+                to True and `torch.backends.cudnn.benchmark` to False.
+                Defaults to False.
                 See https://pytorch.org/docs/stable/notes/randomness.html for
                 more details.
         """
@@ -568,8 +572,14 @@ class Runner:
         torch.manual_seed(self._seed)
         torch.cuda.manual_seed_all(self._seed)
         if deterministic:
-            torch.backends.cudnn.deterministic = True
+            if torch.backends.cudnn.benchmark:
+                warnings.warn(
+                    'torch.backends.cudnn.benchmark is going to be set as '
+                    '`False` to cause cuDNN to deterministically select an '
+                    'algorithm')
+
             torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
             if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
                 torch.use_deterministic_algorithms(True)
 
