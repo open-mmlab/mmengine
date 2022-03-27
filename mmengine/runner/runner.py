@@ -47,25 +47,19 @@ ConfigType = Union[Dict, Config, ConfigDict]
 class Runner:
     """A training helper for PyTorch.
 
-    The initialization mechanism of ``Runner.__init__`` is lazy initialization
-    that means ``__init__`` only initialize required components, e.g., model.
-    Optional components will be initialized when calling ``runner.train()``,
-    ``runner.val()`` or ``runner.test()``. The mechanism is convenient for
-    user, avoiding repeatedly modifying parameters.
+    Runner object may be build from config by ``runner = Runner.from_cfg(cfg)``
+    that the ``cfg`` probably contains training, validation and test-related
+    parameters to build corresponding components. However, all of them are not
+    always required at the same time. For example, testing a model does not
+    require training or validation-related parameters but it is tedious to
+    remove them from config.
 
-    Suppose we passes all parameters to the ``Runner``, including
-    training-related, validation-related and test-related parameters. If we
-    only want to test the model and not train the model, then the
-    training-related components should not be initialized at this time and the
-    test-related components should be initialized that is what lazy
-    initialization does. Of course, if the mechanism is not applicable, we can
-    set the training-related parameters to None, so that the training-related
-    components will also not be initialized, but it requires us to modify the
-    initialization parameters.
-
-    Note that if passed parameters are objects, e.g., ``train_dataloader`` is
-    a ``Dataloader`` object rather than a dict to build dataloader, lazy
-    initialization is not involved since it is already an object.
+    To avoid repeatedly modifying config, constructor of ``Runner`` uses lazy
+    initialization to only initialize components when they are going to be
+    used. Therefore, the model is always initialized at the beginning, and
+    training, validation, and testing related components are only initialized
+    when calling ``runner.train()``, ``runner.val()``, and ``runner.test()``,
+    respectively.
 
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
@@ -134,7 +128,7 @@ class Runner:
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
-        log_level (int or str): The log level of the handler.
+        log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
         writer (ComposedWriter or dict, optional): A ComposedWriter object or a
             dict build ComposedWriter object. Defaults to None. If not
@@ -231,7 +225,7 @@ class Runner:
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
 
-        # recursively copy the ``cfg`` because `self.cfg` will be modified
+        # recursively copy the `cfg` because `self.cfg` will be modified
         # everywhere.
         if cfg is not None:
             self.cfg = copy.deepcopy(cfg)
