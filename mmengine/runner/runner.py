@@ -123,8 +123,8 @@ class Runner:
         writer (ComposedWriter or dict, optional): A ComposedWriter object or a
             dict build ComposedWriter object. Defaults to None. If not
             specified, default config will be used.
-        default_scope (DefaultScope, optional): Used to reset registries
-            location. Defaults to None.
+        default_scope (str, optional): Used to reset registries location.
+            Defaults to None.
         seed (int, optional): A number to set random modules. If not specified,
             a random number will be set as seed. Defaults to None.
         deterministic (bool): Whether cudnn to select deterministic algorithms.
@@ -211,7 +211,7 @@ class Runner:
         logger: Optional[Union[MMLogger, Dict]] = None,
         message_hub: Optional[Union[MessageHub, Dict]] = None,
         writer: Optional[Union[ComposedWriter, Dict]] = None,
-        default_scope: Optional[DefaultScope] = None,
+        default_scope: Optional[str] = None,
         seed: Optional[int] = None,
         deterministic: bool = False,
         experiment_name: Optional[str] = None,
