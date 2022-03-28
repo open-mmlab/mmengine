@@ -21,6 +21,7 @@ class DefaultScope(ManagerMixin):
         >>> # build model from cfg.
         >>> model = MODELS.build(model_cfg, default_scope=scope)
     """
+
     def __init__(self, name: str, scope_name: str):
         super().__init__(name)
         self._scope_name = scope_name
