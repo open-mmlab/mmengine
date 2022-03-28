@@ -30,7 +30,8 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS)
+                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+                               DefaultScope)
 from mmengine.utils import find_latest_checkpoint, is_list_of, symlink
 from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
@@ -226,10 +227,6 @@ class Runner:
         else:
             self.cfg = dict()
 
-        # Used to reset registries location. See :meth:`Registry.build` for
-        # more details.
-        self.default_scope = default_scope
-
         self._epoch = 0
         self._iter = 0
         self._inner_iter = 0
@@ -305,6 +302,10 @@ class Runner:
         self.message_hub = self.build_message_hub(message_hub)
         # writer used for writing log or visualizing all kinds of data
         self.writer = self.build_writer(writer)
+        # Used to reset registries location. See :meth:`Registry.build` for
+        # more details.
+        self.default_scope = DefaultScope.get_instance(
+            self._experiment_name, scope_name=default_scope)
 
         self._load_from = load_from
         self._resume = resume
@@ -684,7 +685,8 @@ class Runner:
         if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
-            return MODELS.build(model, default_scope=self.default_scope)
+            return MODELS.build(
+                model, default_scope=self.default_scope.scope_name)
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
@@ -735,7 +737,7 @@ class Runner:
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
-                default_scope=self.default_scope,
+                default_scope=self.default_scope.scope_name,
                 default_args=dict(model=self.model))
 
         return model
@@ -759,7 +761,9 @@ class Runner:
             return optimizer
         elif isinstance(optimizer, dict):
             optimizer = build_optimizer(
-                self.model, optimizer, default_scope=self.default_scope)
+                self.model,
+                optimizer,
+                default_scope=self.default_scope.scope_name)
             return optimizer
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
@@ -807,7 +811,7 @@ class Runner:
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
                         _scheduler,
-                        default_scope=self.default_scope,
+                        default_scope=self.default_scope.scope_name,
                         default_args=dict(optimizer=self.optimizer)))
             else:
                 raise TypeError(
@@ -844,7 +848,8 @@ class Runner:
             return evaluator
         elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
             return build_evaluator(
-                evaluator, default_scope=self.default_scope)  # type: ignore
+                evaluator,
+                default_scope=self.default_scope.scope_name)  # type: ignore
         else:
             raise TypeError(
                 'evaluator should be one of dict, list of dict, BaseEvaluator '
@@ -886,7 +891,7 @@ class Runner:
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
             dataset = DATASETS.build(
-                dataset_cfg, default_scope=self.default_scope)
+                dataset_cfg, default_scope=self.default_scope.scope_name)
         else:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
@@ -897,7 +902,7 @@ class Runner:
         if isinstance(sampler_cfg, dict):
             sampler = DATA_SAMPLERS.build(
                 sampler_cfg,
-                default_scope=self.default_scope,
+                default_scope=self.default_scope.scope_name,
                 default_args=dict(dataset=dataset))
         else:
             # fallback to raise error in dataloader
@@ -966,7 +971,7 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope,
+                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self, dataloader=self.train_dataloader))
         else:
@@ -1017,7 +1022,7 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope,
+                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.val_dataloader,
@@ -1064,7 +1069,7 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope,
+                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.test_dataloader,
