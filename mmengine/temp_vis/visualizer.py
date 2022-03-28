@@ -42,7 +42,6 @@ class Visualizer(BaseGlobalAccessible):
                         f'writer should be an instance of a subclass of ' \
                         f'BaseWriter, but got {type(writer)}'
                     self._writers.append(writer)
-        print('Visualizer')
 
     def set_image(self, image: np.ndarray) -> None:
         assert image is not None
@@ -219,6 +218,58 @@ class Visualizer(BaseGlobalAccessible):
         self.ax.add_collection(polygon_collection)
         return self
 
+    def draw_binary_masks(
+            self,
+            binary_masks: Union[np.ndarray, torch.Tensor],
+            colors: np.ndarray = np.array([0, 255, 0]),
+            alphas: Union[float, List[float]] = 0.5) -> 'Visualizer':
+        """Draw single or multiple binary masks.
+        Args:
+            binary_masks (np.ndarray, torch.Tensor): The binary_masks to draw
+                with of shape (N, H, W), where H is the image height and W is
+                the image width. Each value in the array is either a 0 or 1
+                value of uint8 type.
+            colors (np.ndarray): The colors which binary_masks will convert to.
+                ``colors`` can have the same length with binary_masks or just
+                single value. If ``colors`` is single value, all the
+                binary_masks will convert to the same colors. The colors format
+                is RGB. Defaults to np.array([0, 255, 0]).
+            alphas (Union[int, List[int]]): The transparency of origin image.
+                Defaults to 0.5.
+        """
+        check_type('binary_masks', binary_masks, (np.ndarray, torch.Tensor))
+        binary_masks = tensor2ndarray(binary_masks)
+        assert binary_masks.dtype == np.bool_, (
+            'The dtype of binary_masks should be np.bool_, '
+            f'but got {binary_masks.dtype}')
+        binary_masks = binary_masks.astype('uint8') * 255
+        img = self.get_image()
+        if binary_masks.ndim == 2:
+            binary_masks = binary_masks[None]
+        assert img.shape[:2] == binary_masks.shape[
+                                1:], '`binary_marks` must have the same shpe with image'
+        assert isinstance(colors, np.ndarray)
+        if colors.ndim == 1:
+            colors = np.tile(colors, (binary_masks.shape[0], 1))
+        assert colors.shape == (binary_masks.shape[0], 3)
+        if isinstance(alphas, float):
+            alphas = [alphas] * binary_masks.shape[0]
+
+        for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
+            binary_mask_complement = cv2.bitwise_not(binary_mask)
+            rgb = np.zeros_like(img)
+            rgb[...] = color
+            rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
+            img_complement = cv2.bitwise_and(
+                img, img, mask=binary_mask_complement)
+            rgb = rgb + img_complement
+            img = cv2.addWeighted(img, alpha, rgb, 1 - alpha, 0)
+        self.ax.imshow(
+            img,
+            extent=(0, self.width, self.height, 0),
+            interpolation='nearest')
+        return self
+
     def add_datasample(self,
                        name,
                        image: Optional[np.ndarray] = None,
@@ -237,54 +288,6 @@ class Visualizer(BaseGlobalAccessible):
             writer.add_image(name, image, step)
 
     def close(self) -> None:
-        plt.close(self.fig)
+        # plt.close(self.fig)
         for writer in self._writers:
             writer.close()
-
-# class WandbVisualizer(Visualizer):
-#
-#     def __init__(self,
-#                  name='visualizer',
-#                  writers=None,
-#                  image: Optional[np.ndarray] = None,
-#                  metadata: Optional[dict] = None,
-#                  ):
-#         super().__init__(name, writers, image, metadata)
-#         self._bbox_data = []
-#
-#     def get_image(self):
-#         image = self._image
-#         _wandb = self.get_writer(1).experiment
-#         boxes = {
-#             'predictions': {
-#                 'box_data':  self._bbox_data
-#             }
-#         }
-#         # boxes = {'box_data': self._bbox_data}
-#         return _wandb.Image(image, boxes=boxes)
-#
-#     def add_image(self,
-#                   name: str,
-#                   image=None,
-#                   step: int = 0) -> None:
-#         if image is None:
-#             # 如果不是图片对象，则只能支持 wandb存储
-#             # 此时打印警告，说明只有 wandb 存储才有效，其余存储忽略
-#             image_data = self.get_image()
-#             writer = self.get_writer(1)
-#             writer.add_image(name, image_data, step)
-#         else:
-#             # 如果是图片则照旧
-#             super(WandbVisualizer, self).add_image()
-#
-#     def draw_bboxes(self,
-#                     bboxes: Union[np.ndarray, torch.Tensor],
-#                     **kwargs) -> 'WandbVisualizer':
-#
-#         position = dict(
-#             minX=int(bboxes[0]),
-#             minY=int(bboxes[1]),
-#             maxX=int(bboxes[2]),
-#             maxY=int(bboxes[3]))
-#
-#         self._bbox_data = [{'position': position}]

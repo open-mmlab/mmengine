@@ -22,6 +22,8 @@ class DetLocalVisualizer(Visualizer):
         self.set_image(image)
         gt_bboxes = gt_sample.bboxes
         self.draw_bboxes(gt_bboxes)
+        if 'masks' in gt_sample:
+            self.draw_binary_masks(gt_sample.masks)
         gt_data = self.get_image()
 
         self.set_image(image)
@@ -45,10 +47,10 @@ class DetWandbVisualizer(Visualizer):
             self.wandb = self.get_writer(1).experiment
             self.table = self.wandb.Table(columns=["gt", "pred"])
             self.class_id_to_label = {
-                0: 'car'
+                1: 'car'
             }
             self.class_set = self.wandb.Classes([{
-                'id': 0,
+                'id': 1,
                 'name': 'car'
             }])
 
@@ -66,9 +68,9 @@ class DetWandbVisualizer(Visualizer):
             minY=int(gt_bboxes[1]),
             maxX=int(gt_bboxes[2]),
             maxY=int(gt_bboxes[3]))
-        box_data =[ {
+        box_data = [{
             'position': position,
-            'class_id': 0,
+            'class_id': 1,
             'box_caption': 'car',
             'domain': 'pixel'
         }]
@@ -78,8 +80,18 @@ class DetWandbVisualizer(Visualizer):
                 'class_labels': self.class_id_to_label
             }
         }
+        if 'masks' in gt_sample:
+            mask = gt_sample.masks.astype(np.int32)
 
-        gt_data = self.wandb.Image(img_data, boxes=box_data, classes=self.class_set)
+            mask_data = {
+                'ground_truth': {
+                    'mask_data': mask,
+                    'class_labels': self.class_id_to_label
+                }
+            }
+            gt_data = self.wandb.Image(img_data, boxes=box_data, masks=mask_data, classes=self.class_set)
+        else:
+            gt_data = self.wandb.Image(img_data, boxes=box_data, classes=self.class_set)
 
         pred_bboxes = pred_sample.bboxes
         position = dict(
@@ -89,7 +101,7 @@ class DetWandbVisualizer(Visualizer):
             maxY=int(pred_bboxes[3]))
         box_data = [{
             'position': position,
-            'class_id': 0,
+            'class_id': 1,
             'box_caption': 'car',
             'domain': 'pixel'
         }]
@@ -107,9 +119,13 @@ class DetWandbVisualizer(Visualizer):
 
 
 if __name__ == '__main__':
+
+    init_kwargs = {'project': 'hello_my'}
+
     save_dir = 'work_dir'
-    writers = [dict(type='LocalWriter', save_dir=save_dir, img_show=False), dict(type='WandbWriter')]
+    writers = [dict(type='LocalWriter', save_dir=save_dir, img_show=False), dict(type='WandbWriter', init_kwargs=init_kwargs)]
     # writers = [dict(type='LocalWriter', save_dir=save_dir, img_show=True)]
+    # writers = [dict(type='WandbWriter')]
 
     # 暂时不考虑全局唯一性
     # det_local_visualizer = DetLocalVisualizer(writers=writers)
@@ -123,16 +139,28 @@ if __name__ == '__main__':
     # det_local_visualizer.draw_bboxes(torch.tensor([100, 100, 500, 500]))
     # det_local_visualizer.show()
 
+    mask = np.zeros_like(img_data)[..., 0]
+    bbox = [100, 10, 500, 400]
+    mask[bbox[0]:bbox[2], bbox[1]:bbox[3]] = 1
+    mask = mask.astype(np.bool)
     gt_instances = BaseDataElement(
-        data=dict(bboxes=torch.tensor([100, 100, 500, 500])))
+        data=dict(bboxes=torch.tensor([100, 100, 500, 500]), masks=mask))
+
     pred_instances = BaseDataElement(
         data=dict(bboxes=torch.tensor([40, 100, 400, 500])))
-    det_local_visualizer.add_datasample('val_image', img_data, gt_instances, pred_instances)
+    det_local_visualizer.add_datasample('val_image', img_data, gt_instances, pred_instances, step=0)
+
     gt_instances = BaseDataElement(
         data=dict(bboxes=torch.tensor([100, 110, 500, 500])))
     pred_instances = BaseDataElement(
         data=dict(bboxes=torch.tensor([40, 120, 400, 500])))
-    det_local_visualizer.add_datasample('val_image', img_data, gt_instances, pred_instances)
+    det_local_visualizer.add_datasample('val_image', img_data, gt_instances, pred_instances, step=1)
+    # det_local_visualizer.close()
+
+    # import wandb
+    # wandb.init()
+    # wandb.log({'acc': 2.1, 'loss': 3})
+    # wandb.log({'img': wandb.Image(img_data)})
 
     # det_local_visualizer.show()
 
