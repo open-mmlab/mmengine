@@ -442,7 +442,7 @@ class TestBaseDataset:
         # If indices is 0, return empty dataset.
         dataset.get_subset_(0)
         assert len(dataset) == 0
-        # Test list indices.
+        # Test list indices with positive element.
         indices = [1]
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
@@ -457,6 +457,31 @@ class TestBaseDataset:
         dataset.get_subset_(indices)
         assert len(dataset) == 1
         assert dataset[0] == ori_data
+        # Test list indices with positive element.
+        indices = [-1]
+        dataset = self.dataset_type(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img=None),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=lazy_init,
+            serialize_data=serialize_data)
+        ori_data = dataset[2]
+        # The sample_idx of sliced dataset's first data information should
+        # be 0.
+        ori_data['sample_idx'] = 0
+        dataset.get_subset_(indices)
+        assert len(dataset) == 1
+        assert dataset[0] == ori_data
+        # Test list indices with positive element.
+        indices = []
+        dataset = self.dataset_type(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img=None),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=lazy_init,
+            serialize_data=serialize_data)
+        dataset.get_subset_(indices)
+        assert len(dataset) == 0
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',

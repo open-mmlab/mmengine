@@ -533,9 +533,10 @@ class BaseDataset(Dataset):
 
         This method will convert the original dataset to a subset of dataset.
         If type of indices is int, ``get_subset_`` will return a subdataset
-        which contains the first ``indices`` data information. If type of
-        indices is a sequence of int, the subdataset will extract the data
-        information according to the index given in ``indices``.
+        which contains the first or last few data information according to
+        indices is positive or negative. If type of indices is a sequence of
+        int, the subdataset will extract the data information according to
+        the index given in indices.
 
         Examples:
               >>> dataset = BaseDataset('path/to/ann_file')
@@ -574,9 +575,9 @@ class BaseDataset(Dataset):
 
         This method will return a subset of original dataset. If type of
         indices is int, ``get_subset_`` will return a subdataset which
-        contains the first or indices data information according to indices
-        is positive or negative. If type of indices is a sequence of int,
-        the subdataset will extract the information according to the index
+        contains the first or last few data information according to
+        indices is positive or negative. If type of indices is a sequence of
+        int, the subdataset will extract the information according to the index
         given in indices.
 
         Examples:
@@ -659,7 +660,7 @@ class BaseDataset(Dataset):
             sub_date_bytes = []
             sub_data_address = []
             for idx in indices:
-                assert idx < len(self)
+                assert abs(idx) < len(self)
                 start_addr = 0 if idx == 0 else \
                     self.data_address[idx - 1].item()
                 end_addr = self.data_address[idx].item()
@@ -667,9 +668,13 @@ class BaseDataset(Dataset):
                 sub_date_bytes.append(self.date_bytes[start_addr:end_addr])
                 # Get data information size.
                 sub_data_address.append(end_addr - start_addr)
-
-            sub_date_bytes = np.concatenate(sub_date_bytes)
-            sub_data_address = np.cumsum(sub_data_address)
+            # Handle indices is an empty list.
+            if sub_date_bytes:
+                sub_date_bytes = np.concatenate(sub_date_bytes)
+                sub_data_address = np.cumsum(sub_data_address)
+            else:
+                sub_date_bytes = np.array([])
+                sub_data_address = np.array([])
         else:
             raise TypeError('indices should be a int or list of int, '
                             f'but got {type(indices)}')
