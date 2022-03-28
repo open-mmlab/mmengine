@@ -47,11 +47,12 @@ ConfigType = Union[Dict, Config, ConfigDict]
 class Runner:
     """A training helper for PyTorch.
 
-    Runner object may be build from config by ``runner = Runner.from_cfg(cfg)``
-    that the ``cfg`` probably contains training, validation and test-related
+    Runner object may be built from config by ``runner = Runner.from_cfg(cfg)``
+    where the ``cfg`` usually contains training, validation and test-related
     parameters to build corresponding components. However, all of them are not
     always required at the same time. For example, testing a model does not
-    require training or validation-related parameters but it is tedious to
+    need training or validation-related modules, although we usually use the
+    same config to launch training, testing and validation but it is tedious to
     remove them from config.
 
     To avoid repeatedly modifying config, constructor of ``Runner`` uses lazy
@@ -299,7 +300,7 @@ class Runner:
         else:
             self._distributed = True
 
-        # self._timestamp will be set in the `setup_env`` method. Besides,
+        # self._timestamp will be set in the `setup_env` method. Besides,
         # it also will initialize multi-process and (or) distributed
         # environment.
         self.setup_env(env_cfg)
