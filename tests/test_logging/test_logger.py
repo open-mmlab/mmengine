@@ -21,6 +21,7 @@ class TestLogger:
         logger = MMLogger.get_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'rank0.pkg1'
         assert logger.instance_name == 'rank0.pkg1'
+        assert logger.instance_name == 'rank0.pkg1'
         # Logger get from `MMLogger.get_instance` does not inherit from
         # `logging.root`
         assert logger.parent is None
@@ -39,6 +40,10 @@ class TestLogger:
         assert isinstance(logger.handlers[1], logging.FileHandler)
         logger_pkg3 = MMLogger.get_instance('rank0.pkg2')
         assert id(logger_pkg3) == id(logger)
+        logger = MMLogger.get_instance(
+            'rank0.pkg3', logger_name='logger_test', log_level='INFO')
+        assert logger.name == 'logger_test'
+        assert logger.instance_name == 'rank0.pkg3'
         logging.shutdown()
 
     @patch('torch.distributed.get_rank', lambda: 1)

@@ -87,29 +87,45 @@ class MMFormatter(logging.Formatter):
 class MMLogger(Logger, ManagerMixin):
     """Formatted logger used to record message.
 
-    MMLogger can create formatted logger to log different level message and
-    create instance in the same way as ManagerMixin. MMLogger has the following
-    features:
+    ``MMLogger`` can create formatted logger to log different level message and
+    get instance in the same way as ManagerMixin. ``MMLogger`` has the
+    following features:
 
-    - Distributed log storage, MMLogger can choose whether to save log of
+    - Distributed log storage, ``MMLogger`` can choose whether to save log of
     different ranks according to log_file.
     - Log with different loglevel will have different colors and format when
     displayed on terminal.
 
     Note:
-        - MMLogger instance cannot got by ``logging.getLogger``.
-        - Different from logging.Logger, MMLogger will not log warrning or
-        error message without Handler.
+        - The `name` of logger and the ``instance_name`` of ``MMLogger`` could
+          be different. We can only get ``MMLogger`` instance by
+          ``MMLogger.get_instance`` but not ``logging.getLogger``. This feature
+          ensures ``MMLogger`` will not be incluenced by third-party logging
+          config.
+        - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
+          or error message without Handler.
 
     Examples:
-        >>> # Get logger that do not store logs .
+        >>> logger = MMLogger.get_instance(name='MMLogger',
+        >>>                                logger_name='Logger')
+        >>> # Although logger has name attribute just like `logging.Logger`
+        >>> # We cannot get logger instance by `logging.getLogger`.
+        >>> assert logger.name == 'Logger'
+        >>> assert logger.instance_name = 'MMLogger'
+        >>> assert id(logger) != id(logging.getLogger('Logger'))
+        >>> # Get logger that do not store logs.
         >>> logger1 = MMLogger.get_instance('logger1')
-        >>> # Get logger only save rank0 logs
+        >>> # Get logger only save rank0 logs.
         >>> logger2 = MMLogger.get_instance('logger2', log_file='out.log')
-        >>> logger3 = MMLogger.get_instance('logger2', log_file='out.log',
-        >>>                                 distributed=False)
+        >>> # Get logger only save multiple ranks logs.
+        >>> logger3 = MMLogger.get_instance('logger3', log_file='out.log',
+        >>>                                 distributed=True)
+
     Args:
-        name (str): Logger name. Defaults to ''.
+        name (str): Global instance name, Defaults to ''.
+        logger_name (str): ``name`` attribute of ``Logging.Logger`` instance.
+            If `module_name` is not defined, it will be consistent with
+            ``name``.Defaults to ''.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level (str): The log level of the handler. Defaults to 'NOTSET'.
@@ -119,17 +135,20 @@ class MMLogger(Logger, ManagerMixin):
 
     def __init__(self,
                  name: str = '',
+                 logger_name='',
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
-                 file_mode: str = 'w'):
-        Logger.__init__(self, name)
+                 file_mode: str = 'w',
+                 distributed=False):
+        if not logger_name:
+            logger_name = name
+        Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
         if dist.is_available() and dist.is_initialized():
             rank = dist.get_rank()
         else:
             rank = 0
-
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)

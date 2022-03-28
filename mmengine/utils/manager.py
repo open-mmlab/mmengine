@@ -71,6 +71,8 @@ class ManagerMixin(metaclass=ManagerMeta):
     """
 
     def __init__(self, name: str = '', **kwargs):
+        assert isinstance(name, str) and name, \
+            'name argument must be an non-empty string.'
         self._instance_name = name
 
     @classmethod
@@ -132,9 +134,8 @@ class ManagerMixin(metaclass=ManagerMeta):
         _accquire_lock()
         if not cls._instance_dict:
             raise RuntimeError(
-                f'Before calling {cls.__name__}.get_instance('
-                'current=True), you should call get_instance(name=xxx) at '
-                'least once.')
+                f'Before calling {cls.__name__}.get_current_instance(), you '
+                'should call get_instance(name=xxx) at least once.')
         name = next(iter(reversed(cls._instance_dict)))
         _release_lock()
         return cls._instance_dict[name]
