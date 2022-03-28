@@ -8,6 +8,13 @@ class DefaultScope(ManagerMixin):
     """Scope of current task used to reset the current registry, which can be
     accessed globally.
 
+    Consider the case of reseting the current ``Resgitry`` by``default_scope``
+    in the internal module which cannot access runner directly, it is difficult
+    to get the ``default_scope`` defined in ``Runner``. However, if ``Runner``
+    created ``DefaultScope`` instance by given ``default_scope``, the internal
+    module can get ``default_scope`` by ``DefaultScope.get_current_instance``
+    everywhere.
+
     Args:
         name (str): Name of default scope for global access.
         scope_name (str): Scope of current task.
