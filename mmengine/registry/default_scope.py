@@ -9,8 +9,8 @@ class DefaultScope(ManagerMixin):
     accessed globally.
 
     Args:
-        name (str): Name of default scope for global access. Defaults to ''.
-        scope_name (str): Scope of current task. Defaults to 'mmengine'.
+        name (str): Name of default scope for global access.
+        scope_name (str): Scope of current task.
 
     Examples:
         >>> from mmengine import MODELS
@@ -21,8 +21,7 @@ class DefaultScope(ManagerMixin):
         >>> # build model from cfg.
         >>> model = MODELS.build(model_cfg, default_scope=scope)
     """
-
-    def __init__(self, name, scope_name='mmengine'):
+    def __init__(self, name: str, scope_name: str):
         super().__init__(name)
         self._scope_name = scope_name
 
