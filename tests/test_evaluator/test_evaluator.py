@@ -6,12 +6,12 @@ from unittest import TestCase
 import numpy as np
 
 from mmengine.data import BaseDataElement
-from mmengine.evaluator import BaseEvaluator, build_evaluator, get_metric_value
-from mmengine.registry import EVALUATORS
+from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
+from mmengine.registry import METRICS
 
 
-@EVALUATORS.register_module()
-class ToyEvaluator(BaseEvaluator):
+@METRICS.register_module()
+class ToyMetric(BaseMetric):
     """Evaluaotr that calculates the metric `accuracy` from predictions and
     labels. Alternatively, this evaluator can return arbitrary dummy metrics
     set in the config.
@@ -39,8 +39,8 @@ class ToyEvaluator(BaseEvaluator):
 
     def process(self, data_batch, predictions):
         results = [{
-            'pred': pred.pred,
-            'label': data[1].label
+            'pred': pred.get('pred'),
+            'label': data[1].get('label')
         } for pred, data in zip(predictions, data_batch)]
         self.results.extend(results)
 
@@ -61,13 +61,13 @@ class ToyEvaluator(BaseEvaluator):
         return metrics
 
 
-@EVALUATORS.register_module()
-class NonPrefixedEvaluator(BaseEvaluator):
+@METRICS.register_module()
+class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
-                predictions: Sequence[BaseDataElement]) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, dict]],
+                predictions: Sequence[dict]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
@@ -85,11 +85,11 @@ def generate_test_results(size, batch_size, pred, label):
         yield (data_batch, predictions)
 
 
-class TestBaseEvaluator(TestCase):
+class TestEvaluator(TestCase):
 
-    def test_single_evaluator(self):
-        cfg = dict(type='ToyEvaluator')
-        evaluator = build_evaluator(cfg)
+    def test_single_metric(self):
+        cfg = dict(type='ToyMetric')
+        evaluator = Evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -103,18 +103,18 @@ class TestBaseEvaluator(TestCase):
         self.assertEqual(metrics['Toy/size'], size)
 
         # Test empty results
-        cfg = dict(type='ToyEvaluator', dummy_metrics=dict(accuracy=1.0))
-        evaluator = build_evaluator(cfg)
-        with self.assertWarnsRegex(UserWarning, 'got empty `self._results`.'):
+        cfg = dict(type='ToyMetric', dummy_metrics=dict(accuracy=1.0))
+        evaluator = Evaluator(cfg)
+        with self.assertWarnsRegex(UserWarning, 'got empty `self.results`.'):
             evaluator.evaluate(0)
 
-    def test_composed_evaluator(self):
+    def test_composed_metrics(self):
         cfg = [
-            dict(type='ToyEvaluator'),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            dict(type='ToyMetric'),
+            dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = build_evaluator(cfg)
+        evaluator = Evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -132,11 +132,11 @@ class TestBaseEvaluator(TestCase):
     def test_ambiguate_metric(self):
 
         cfg = [
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0)),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0)),
+            dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = build_evaluator(cfg)
+        evaluator = Evaluator(cfg)
 
         size = 10
         batch_size = 4
@@ -147,28 +147,29 @@ class TestBaseEvaluator(TestCase):
 
         with self.assertRaisesRegex(
                 ValueError,
-                'There are multiple evaluators with the same metric name'):
+                'There are multiple evaluate results with the same metric name'
+        ):
             _ = evaluator.evaluate(size=size)
 
     def test_dataset_meta(self):
         dataset_meta = dict(classes=('cat', 'dog'))
 
         cfg = [
-            dict(type='ToyEvaluator'),
-            dict(type='ToyEvaluator', dummy_metrics=dict(mAP=0.0))
+            dict(type='ToyMetric'),
+            dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0))
         ]
 
-        evaluator = build_evaluator(cfg)
+        evaluator = Evaluator(cfg)
         evaluator.dataset_meta = dataset_meta
 
         self.assertDictEqual(evaluator.dataset_meta, dataset_meta)
-        for _evaluator in evaluator.evaluators:
+        for _evaluator in evaluator.metrics:
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
 
     def test_prefix(self):
-        cfg = dict(type='NonPrefixedEvaluator')
+        cfg = dict(type='NonPrefixedMetric')
         with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
-            _ = build_evaluator(cfg)
+            _ = Evaluator(cfg)
 
     def test_get_metric_value(self):
 

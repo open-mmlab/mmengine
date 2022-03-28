@@ -94,13 +94,14 @@ validation_cfg=dict(
 具体的实现如下：
 
 ```python
-from mmengine.evaluator import BaseEvaluator
-from mmengine.registry import EVALUATORS
+from mmengine.evaluator import BaseMetric
+from mmengine.registry import METRICS
 
 import numpy as np
 
-@EVALUATORS.register_module()
-class Accuracy(BaseEvaluator):
+
+@METRICS.register_module()
+class Accuracy(BaseMetric):
     """ Accuracy Evaluator
 
     Default prefix: ACC
@@ -127,7 +128,7 @@ class Accuracy(BaseEvaluator):
         # 取出分类预测结果和类别标签
         result = dict(
             'pred': predictions.pred_label,
-            'gt': data_samples.gt_label
+                    'gt': data_samples.gt_label
         )
 
         # 将当前 batch 的结果存进 self.results
