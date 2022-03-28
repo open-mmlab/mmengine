@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+# mypy: ignore-errors
 import copy
 import multiprocessing as mp
 import os

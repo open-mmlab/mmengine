@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -14,13 +14,14 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataElement
-from mmengine.registry import VISUALIZERS
+from mmengine.logging import BaseGlobalAccessible
+from mmengine.registry import VISBACKEND, VISUALIZERS
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           tensor2ndarray, value2list)
 
 
 @VISUALIZERS.register_module()
-class Visualizer:
+class Visualizer(BaseGlobalAccessible):
     """MMEngine provides a Visualizer class that uses the ``Matplotlib``
     library as the backend. It has the following functions:
 
@@ -124,12 +125,22 @@ class Visualizer:
 
     def __init__(
         self,
+        name='visualizer',
         image: Optional[np.ndarray] = None,
+        vis_backends=None,
         metadata: Optional[dict] = None,
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False)
     ) -> None:
+        super().__init__(name)
         self._metadata = metadata
+        self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
+
+        if vis_backends:
+            for vis_backend in vis_backends:
+                name = vis_backend.pop('name', vis_backend.get('type'))
+                self._vis_backends[name] = VISBACKEND.build(vis_backend)
+
         self.is_inline = 'inline' in plt.get_backend()
 
         self.fig_save = None
@@ -141,7 +152,6 @@ class Visualizer:
 
         (self.fig_save, self.ax_save,
          self.fig_save_num) = self._initialize_fig(fig_save_cfg)
-
         self.dpi = self.fig_save.get_dpi()
         if image is not None:
             self.set_image(image)
@@ -189,12 +199,6 @@ class Visualizer:
         self.wait_continue(timeout=wait_time, continue_key=continue_key)
         self.ax_show.imshow(img)
         self.fig_show.canvas.draw()  # type: ignore
-
-    def close(self) -> None:
-        """Close the figure."""
-        plt.close(self.fig_save)
-        if self.fig_show is not None:
-            plt.close(self.fig_show)
 
     @classmethod
     def register_task(cls, task_name: str, force: bool = False) -> Callable:
@@ -270,6 +274,9 @@ class Visualizer:
         # remove white edges by set subplot margin
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
         return fig, ax, fig.number
+
+    def get_backend(self, name) -> 'BaseVisBackend':
+        return self._vis_backends.get(name)  # type: ignore
 
     def _is_posion_valid(self, position: np.ndarray) -> bool:
         """Judge whether the position is in image.
@@ -929,3 +936,88 @@ class Visualizer:
             img_rgba = buffer.reshape(height, width, 4)
             rgb, alpha = np.split(img_rgba, [3], axis=2)
             return rgb.astype('uint8')
+
+    def add_config(self, params_dict: dict, **kwargs):
+        """Record parameters.
+
+        Args:
+            params_dict (dict): The dictionary of parameters to save.
+        """
+        for vis_backend in self._vis_backends:
+            vis_backend.add_config(params_dict, **kwargs)  # type: ignore
+
+    def add_graph(self, model: torch.nn.Module,
+                  input_array: Union[torch.Tensor,
+                                     List[torch.Tensor]], **kwargs) -> None:
+        """Record graph data.
+
+        Args:
+            model (torch.nn.Module): Model to draw.
+            input_array (torch.Tensor, list[torch.Tensor]): A variable
+                or a tuple of variables to be fed.
+        """
+        for vis_backend in self._vis_backends:
+            vis_backend.add_graph(model, input_array, **kwargs)  # type: ignore
+
+    def add_image(self, name: str, image, step: int = 0) -> None:
+        """Record image.
+
+        Args:
+            name (str): The unique identifier for the image to save.
+            image (np.ndarray, optional): The image to be saved. The format
+                should be RGB. Default to None.
+            step (int): Global step value to record. Default to 0.
+        """
+        for vis_backend in self._vis_backends:
+            vis_backend.add_image(name, image, step)  # type: ignore
+
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record scalar data.
+
+        Args:
+            name (str): The unique identifier for the scalar to save.
+            value (float, int): Value to save.
+            step (int): Global step value to record. Default to 0.
+        """
+        for vis_backend in self._vis_backends:
+            vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
+
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record scalars' data.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Default to 0.
+            file_path (str, optional): The scalar's data will be
+                saved to the `file_path` file at the same time
+                if the `file_path` parameter is specified.
+                Default to None.
+        """
+        for vis_backend in self._vis_backends:
+            vis_backend.add_scalars(  # type: ignore
+                scalar_dict, step, file_path, **kwargs)
+
+    def add_datasample(self,
+                       name,
+                       image: Optional[np.ndarray] = None,
+                       gt_sample: Optional['BaseDataElement'] = None,
+                       pred_sample: Optional['BaseDataElement'] = None,
+                       draw_gt: bool = True,
+                       draw_pred: bool = True,
+                       step=0) -> None:
+        pass
+
+    def close(self) -> None:
+        """close an opened object."""
+        plt.close(self.fig)
+        for vis_backend in self._vis_backends:
+            vis_backend.close()  # type: ignore

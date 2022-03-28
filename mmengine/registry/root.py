@@ -44,4 +44,4 @@ TASK_UTILS = Registry('task util')
 # manage visualizer
 VISUALIZERS = Registry('visualizer')
 # manage writer
-WRITERS = Registry('writer')
+VISBACKEND = Registry('writer')
