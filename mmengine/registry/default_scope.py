@@ -15,11 +15,11 @@ class DefaultScope(ManagerMixin):
     Examples:
         >>> from mmengine import MODELS
         >>> # Define default scope in runner.
-        >>> DefaultScope.get_instance('mmdet')
+        >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.
-        >>> scope = DefaultScope.get_instance('mmdet').scope
+        >>> scope_name = DefaultScope.get_instance('task').scope_name
         >>> # build model from cfg.
-        >>> model = MODELS.build(model_cfg, default_scope=scope)
+        >>> model = MODELS.build(model_cfg, default_scope=scope_name)
     """
 
     def __init__(self, name: str, scope_name: str):
