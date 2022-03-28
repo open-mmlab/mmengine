@@ -415,79 +415,82 @@ class TestBaseDataset:
         ([True, False], [False, True], [True, True], [False, False]))
     def test_get_subset_(self, lazy_init, serialize_data):
         # Test positive int indices.
-        indices = 1
+        indices = 2
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
             serialize_data=serialize_data)
-        ori_data = dataset[0]
-        dataset.get_subset_(indices)
-        assert len(dataset) == 1
-        assert dataset[0] == ori_data
+
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(indices)
+        assert len(dataset_copy) == 2
+        for i in range(len(dataset_copy)):
+            ori_data = dataset[i]
+            assert dataset_copy[i] == ori_data
+
         # Test negative int indices.
         indices = -2
-        dataset = self.dataset_type(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
-            ann_file='annotations/dummy_annotation.json',
-            lazy_init=lazy_init,
-            serialize_data=serialize_data)
-        ori_data = dataset[1]
-        ori_data['sample_idx'] = 0
-        dataset.get_subset_(indices)
-        assert len(dataset) == 2
-        assert dataset[0] == ori_data
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(indices)
+        assert len(dataset_copy) == 2
+        for i in range(len(dataset_copy)):
+            ori_data = dataset[i + 1]
+            ori_data['sample_idx'] = i
+            assert dataset_copy[i] == ori_data
+
         # If indices is 0, return empty dataset.
-        dataset.get_subset_(0)
-        assert len(dataset) == 0
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(0)
+        assert len(dataset_copy) == 0
+
         # Test list indices with positive element.
         indices = [1]
-        dataset = self.dataset_type(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
-            ann_file='annotations/dummy_annotation.json',
-            lazy_init=lazy_init,
-            serialize_data=serialize_data)
+        dataset_copy = copy.deepcopy(dataset)
         ori_data = dataset[1]
-        # The sample_idx of sliced dataset's first data information should
-        # be 0.
         ori_data['sample_idx'] = 0
-        dataset.get_subset_(indices)
-        assert len(dataset) == 1
-        assert dataset[0] == ori_data
-        # Test list indices with positive element.
+        dataset_copy.get_subset_(indices)
+        assert len(dataset_copy) == 1
+        assert dataset_copy[0] == ori_data
+
+        # Test list indices with negative element.
         indices = [-1]
-        dataset = self.dataset_type(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
-            ann_file='annotations/dummy_annotation.json',
-            lazy_init=lazy_init,
-            serialize_data=serialize_data)
+        dataset_copy = copy.deepcopy(dataset)
         ori_data = dataset[2]
-        # The sample_idx of sliced dataset's first data information should
-        # be 0.
         ori_data['sample_idx'] = 0
-        dataset.get_subset_(indices)
-        assert len(dataset) == 1
-        assert dataset[0] == ori_data
-        # Test list indices with positive element.
+        dataset_copy.get_subset_(indices)
+        assert len(dataset_copy) == 1
+        assert dataset_copy[0] == ori_data
+
+        # Test empty list.
         indices = []
-        dataset = self.dataset_type(
-            data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
-            ann_file='annotations/dummy_annotation.json',
-            lazy_init=lazy_init,
-            serialize_data=serialize_data)
-        dataset.get_subset_(indices)
-        assert len(dataset) == 0
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(indices)
+        assert len(dataset_copy) == 0
+        # Test list with multiple positive indices.
+        indices = [0, 1, 2]
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(indices)
+        for i in range(len(dataset_copy)):
+            ori_data = dataset[i]
+            ori_data['sample_idx'] = i
+            assert dataset_copy[i] == ori_data
+        # Test list with multiple negative indices.
+        indices = [-1, -2, 0]
+        dataset_copy = copy.deepcopy(dataset)
+        dataset_copy.get_subset_(indices)
+        for i in range(len(dataset_copy)):
+            ori_data = dataset[len(dataset) - i - 1]
+            ori_data['sample_idx'] = i
+            assert dataset_copy[i] == ori_data
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',
         ([True, False], [False, True], [True, True], [False, False]))
     def test_get_subset(self, lazy_init, serialize_data):
-        indices = 1
+        # Test positive indices.
+        indices = 2
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img=None),
@@ -495,15 +498,18 @@ class TestBaseDataset:
             lazy_init=lazy_init,
             serialize_data=serialize_data)
         dataset_sliced = dataset.get_subset(indices)
-        assert len(dataset_sliced) == 1
+        assert len(dataset_sliced) == 2
         assert dataset_sliced[0] == dataset[0]
-        # test negative indices.
-        indices = -1
+        for i in range(len(dataset_sliced)):
+            assert dataset_sliced[i] == dataset[i]
+        # Test negative indices.
+        indices = -2
         dataset_sliced = dataset.get_subset(indices)
-        ori_data = dataset[-1]
-        ori_data['sample_idx'] = 0
-        assert len(dataset_sliced) == 1
-        assert dataset_sliced[0] == ori_data
+        assert len(dataset_sliced) == 2
+        for i in range(len(dataset_sliced)):
+            ori_data = dataset[i + 1]
+            ori_data['sample_idx'] = i
+            assert dataset_sliced[i] == ori_data
         # If indices is 0, return empty dataset.
         assert len(dataset.get_subset(0)) == 0
         # test list indices.
@@ -513,6 +519,20 @@ class TestBaseDataset:
         ori_data['sample_idx'] = 0
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == ori_data
+        # Test list with multiple positive index.
+        indices = [0, 1, 2]
+        dataset_sliced = dataset.get_subset(indices)
+        for i in range(len(dataset_sliced)):
+            ori_data = dataset[i]
+            ori_data['sample_idx'] = i
+            assert dataset_sliced[i] == ori_data
+        # Test list with multiple negative index.
+        indices = [-1, -2, 0]
+        dataset_sliced = dataset.get_subset(indices)
+        for i in range(len(dataset_sliced)):
+            ori_data = dataset[len(dataset) - i - 1]
+            ori_data['sample_idx'] = i
+            assert dataset_sliced[i] == ori_data
 
     def test_rand_another(self):
         # test the instantiation of self.base_dataset when passing num_samples

@@ -186,7 +186,7 @@ class BaseDataset(Dataset):
         >>> metainfo=dict(task_name='custom_task_name')
         >>> custom_dataset = CustomDataset(
         >>>                      'path/to/ann_file',
-        >>>                      metainfo=metainfo
+        >>>                      metainfo=metainfo)
         >>> # meta information of annotation file will be overwritten by
         >>> # `CustomDataset.METAINFO`. The merged meta information will
         >>> # further be overwritten by argument `metainfo`.
@@ -290,7 +290,7 @@ class BaseDataset(Dataset):
         if self._indices is not None:
             self.data_list = self._get_unserialized_subdata(self._indices)
 
-        # serialize data_infos
+        # serialize data_list
         if self.serialize_data:
             self.date_bytes, self.data_address = self._serialize_data()
 
@@ -324,9 +324,9 @@ class BaseDataset(Dataset):
 
     def filter_data(self) -> List[dict]:
         """Filter annotations according to filter_cfg. Defaults return all
-        ``data_infos``.
+        ``data_list``.
 
-        If some ``data_infos`` could be filtered according to specific logic,
+        If some ``data_list`` could be filtered according to specific logic,
         the subclass should override this method.
 
         Returns:
@@ -432,14 +432,14 @@ class BaseDataset(Dataset):
             self._metainfo.setdefault(k, v)
 
         # load and parse data_infos
-        data_infos = []
+        data_list = []
         for raw_data_info in raw_data_infos:
             # parse raw data information to target format
             data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
                 # For image tasks, `data_info` should information if single
                 # image, such as dict(img_path='xxx', width=360, ...)
-                data_infos.append(data_info)
+                data_list.append(data_info)
             elif isinstance(data_info, list):
                 # For video tasks, `data_info` could contain image
                 # information of multiple frames, such as
@@ -449,12 +449,12 @@ class BaseDataset(Dataset):
                     if not isinstance(item, dict):
                         raise TypeError('data_info must be list of dict, but '
                                         f'got {type(item)}')
-                data_infos.extend(data_info)
+                data_list.extend(data_info)
             else:
                 raise TypeError('data_info should be a dict or list of dict, '
                                 f'but got {type(data_info)}')
 
-        return data_infos
+        return data_list
 
     @classmethod
     def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
@@ -644,8 +644,11 @@ class BaseDataset(Dataset):
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
             if indices >= 0:
+                assert indices < len(self.data_address), \
+                    f'{indices} is out of dataset length({len(self)}'
                 # Return the first few data information.
-                end_addr = self.data_address[indices].item()
+                end_addr = self.data_address[indices - 1].item() \
+                    if indices > 0 else 0
                 # Slicing operation of `np.ndarray` does not trigger a memory
                 # copy.
                 sub_date_bytes = self.date_bytes[:end_addr]
@@ -653,15 +656,19 @@ class BaseDataset(Dataset):
                 # changed,
                 sub_data_address = self.data_address[:indices]
             else:
+                assert -indices <= len(self.data_address), \
+                    f'{indices} is out of dataset length({len(self)}'
                 # Return the last few data information.
+                ignored_bytes_size = self.data_address[indices - 1]
                 start_addr = self.data_address[indices - 1].item()
                 sub_date_bytes = self.date_bytes[start_addr:]
                 sub_data_address = self.data_address[indices:]
+                sub_data_address = sub_data_address - ignored_bytes_size
         elif isinstance(indices, Sequence):
             sub_date_bytes = []
             sub_data_address = []
             for idx in indices:
-                assert abs(idx) < len(self)
+                assert len(self) > idx >= -len(self)
                 start_addr = 0 if idx == 0 else \
                     self.data_address[idx - 1].item()
                 end_addr = self.data_address[idx].item()
