@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.utils.manager import ManagerMixin
+from typing import Optional
+
+from mmengine.utils.manager import ManagerMixin, _accquire_lock, _release_lock
 
 
 class DefaultScope(ManagerMixin):
@@ -31,3 +33,36 @@ class DefaultScope(ManagerMixin):
             str: Get current scope.
         """
         return self._scope_name
+
+    @classmethod
+    def get_current_instance(cls) -> Optional['DefaultScope']:
+        """Get latest created default scope.
+
+        Since default_scope is an optional argument for ``Registry.build``.
+        ``get_current_instance`` should return ``None`` if there is no
+        ``DefaultScope`` created.
+
+        Examples:
+            >>> default_scope = DefaultScope.get_current_instance()
+            >>> # There is no `DefaultScope` created yet,
+            >>> # `get_current_instance` return `None`.
+            >>> default_scope = DefaultScope.get_instance(
+            >>>     'instance_name', scope_name='mmengine')
+            >>> default_scope.scope_name
+            mmengine
+            >>> default_scope = DefaultScope.get_current_instance()
+            >>> default_scope.scope_name
+            mmengine
+
+        Returns:
+            Optional[DefaultScope]: Return None If there has not been
+            ``DefaultScope`` instance created yet, otherwise return the
+            latest created DefaultScope instance.
+        """
+        _accquire_lock()
+        if cls._instance_dict:
+            instance = super(DefaultScope, cls).get_current_instance()
+        else:
+            instance = None
+        _release_lock()
+        return instance
