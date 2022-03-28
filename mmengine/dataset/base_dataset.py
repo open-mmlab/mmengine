@@ -461,8 +461,9 @@ class BaseDataset(Dataset):
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_metainfo (dict): Meta information dict. If ``in_meta`` contains
-                existed filename, it will be parsed by ``list_from_file``.
+            in_metainfo (dict): Meta information dict. If ``in_metainfo``
+                contains existed filename, it will be parsed by
+                ``list_from_file``.
 
         Returns:
             dict: Parsed meta information.
@@ -473,11 +474,11 @@ class BaseDataset(Dataset):
             return cls_meta
         if not isinstance(in_metainfo, dict):
             raise TypeError(
-                f'in_meta should be a dict, but got {type(in_metainfo)}')
+                f'in_metainfo should be a dict, but got {type(in_metainfo)}')
 
         for k, v in in_metainfo.items():
             if isinstance(v, str) and osp.isfile(v):
-                # if filename in in_meta, this key will be further parsed.
+                # if filename in in_metainfo, this key will be further parsed.
                 # nested filename will be ignored.:
                 cls_meta[k] = list_from_file(v)
             else:
