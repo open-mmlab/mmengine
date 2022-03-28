@@ -439,6 +439,9 @@ class TestBaseDataset:
         dataset.get_subset_(indices)
         assert len(dataset) == 2
         assert dataset[0] == ori_data
+        # If indices is 0, return empty dataset.
+        dataset.get_subset_(0)
+        assert len(dataset) == 0
         # Test list indices.
         indices = [1]
         dataset = self.dataset_type(
@@ -454,8 +457,6 @@ class TestBaseDataset:
         dataset.get_subset_(indices)
         assert len(dataset) == 1
         assert dataset[0] == ori_data
-        with pytest.raises(AssertionError):
-            dataset.get_subset_(0)
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',
@@ -478,6 +479,8 @@ class TestBaseDataset:
         ori_data['sample_idx'] = 0
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == ori_data
+        # If indices is 0, return empty dataset.
+        assert len(dataset.get_subset(0)) == 0
         # test list indices.
         indices = [1]
         dataset_sliced = dataset.get_subset(indices)
@@ -485,8 +488,6 @@ class TestBaseDataset:
         ori_data['sample_idx'] = 0
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == ori_data
-        with pytest.raises(AssertionError):
-            dataset.get_subset_(0)
 
     def test_rand_another(self):
         # test the instantiation of self.base_dataset when passing num_samples

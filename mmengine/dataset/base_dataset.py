@@ -641,9 +641,7 @@ class BaseDataset(Dataset):
         sub_date_bytes: Union[List, np.ndarray]
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
-            assert indices != 0, \
-                'If type of indices is int, indices should not be 0!'
-            if indices > 0:
+            if indices >= 0:
                 # Return the first few data information.
                 end_addr = self.data_address[indices].item()
                 # Slicing operation of `np.ndarray` does not trigger a memory
@@ -692,8 +690,6 @@ class BaseDataset(Dataset):
             Tuple[np.ndarray, np.ndarray]: subset of data information.
         """
         if isinstance(indices, int):
-            assert indices != 0, \
-                'If type of indices is int, indices should not be 0!'
             if indices >= 0:
                 # Return the first few data information.
                 sub_data_list = self.data_list[:indices]
