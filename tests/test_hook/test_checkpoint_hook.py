@@ -63,6 +63,7 @@ class TestCheckpointHook:
         runner.work_dir = './tmp'
         runner.epoch = 9
         runner.meta = dict()
+        runner.model = Mock()
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
@@ -100,6 +101,7 @@ class TestCheckpointHook:
         runner.work_dir = './tmp'
         runner.iter = 9
         runner.meta = dict()
+        runner.model = Mock()
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)

@@ -50,23 +50,23 @@ class TestManagerMixin:
         SubClassB.get_instance('instance_b')
         assert SubClassB._instance_dict != SubClassA._instance_dict
 
-        # test `message_hub` can create by name.
+        # Test `message_hub` can create by name.
         message_hub = SubClassA.get_instance('name1')
         assert message_hub.instance_name == 'name1'
-        # no arguments will raise an assertion error.
+        # No arguments will raise an assertion error.
 
         SubClassA.get_instance('name2')
         message_hub = SubClassA.get_current_instance()
         message_hub.mark = -1
         assert message_hub.instance_name == 'name2'
-        # test get latest `message_hub` repeatedly.
+        # Test get latest `message_hub` repeatedly.
         message_hub = SubClassA.get_instance('name3')
         assert message_hub.instance_name == 'name3'
         message_hub = SubClassA.get_current_instance()
         assert message_hub.instance_name == 'name3'
-        # test get name2 repeatedly
+        # Test get name2 repeatedly.
         message_hub = SubClassA.get_instance('name2')
         assert message_hub.mark == -1
-        #
+        # Non-string instance name will raise `AssertionError`.
         with pytest.raises(AssertionError):
             SubClassA.get_instance(name=1)

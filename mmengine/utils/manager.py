@@ -133,8 +133,8 @@ class ManagerMixin(metaclass=ManagerMeta):
         if not cls._instance_dict:
             raise RuntimeError(
                 f'Before calling {cls.__name__}.get_instance('
-                f'current=True), you should call get_instance(name=xxx) '
-                f'at least once.')
+                'current=True), you should call get_instance(name=xxx) at '
+                'least once.')
         name = next(iter(reversed(cls._instance_dict)))
         _release_lock()
         return cls._instance_dict[name]
