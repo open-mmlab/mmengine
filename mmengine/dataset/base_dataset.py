@@ -190,7 +190,7 @@ class BaseDataset(Dataset):
         >>> # meta information of annotation file will be overwritten by
         >>> # `CustomDataset.METAINFO`. The merged meta information will
         >>> # further be overwritten by argument `metainfo`.
-        >>> custom_dataset.meta
+        >>> custom_dataset.metainfo
         {'task_name': custom_task_name, dataset_type: custom_type}
     """
 
@@ -302,7 +302,7 @@ class BaseDataset(Dataset):
 
         Returns:
             dict: meta information collected from ``BaseDataset.METAINFO``,
-            annotation file and meta parameter during instantiation.
+            annotation file and metainfo argument during instantiation.
         """
         return copy.deepcopy(self._metainfo)
 
@@ -469,9 +469,9 @@ class BaseDataset(Dataset):
             dict: Parsed meta information.
         """
         # cls.METAINFO will be overwritten by in_meta
-        cls_meta = copy.deepcopy(cls.METAINFO)
+        cls_metainfo = copy.deepcopy(cls.METAINFO)
         if in_metainfo is None:
-            return cls_meta
+            return cls_metainfo
         if not isinstance(in_metainfo, dict):
             raise TypeError(
                 f'in_metainfo should be a dict, but got {type(in_metainfo)}')
@@ -480,11 +480,11 @@ class BaseDataset(Dataset):
             if isinstance(v, str) and osp.isfile(v):
                 # if filename in in_metainfo, this key will be further parsed.
                 # nested filename will be ignored.:
-                cls_meta[k] = list_from_file(v)
+                cls_metainfo[k] = list_from_file(v)
             else:
-                cls_meta[k] = v
+                cls_metainfo[k] = v
 
-        return cls_meta
+        return cls_metainfo
 
     def _join_prefix(self):
         """Join ``self.data_root`` with ``self.data_prefix`` and
