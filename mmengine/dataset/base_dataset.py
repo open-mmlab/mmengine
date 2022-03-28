@@ -153,8 +153,8 @@ class BaseDataset(Dataset):
         data_prefix (dict, optional): Prefix for training data. Defaults to
             dict(img=None, ann=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
-        indices (int or list, optional): Support using first few data in
-            annotation file to facilitate training/testing on a smaller
+        indices (int or Sequence[int], optional): Support using first few
+            data in annotation file to facilitate training/testing on a smaller
             dataset. Defaults to None which means using all ``data_infos``.
         serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
@@ -203,7 +203,7 @@ class BaseDataset(Dataset):
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
                  filter_cfg: Optional[dict] = None,
-                 indices: Optional[Union[int, List[int]]] = None,
+                 indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
                  pipeline: List[Union[dict, Callable]] = [],
                  test_mode: bool = False,
@@ -282,7 +282,6 @@ class BaseDataset(Dataset):
         """
         if self._fully_initialized:
             return
-        self._fully_initialized = True
         # load data information
         self.data_list = self.load_data_list(self.ann_file)
         # filter illegal data, such as data that has no annotations.
@@ -295,8 +294,10 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             self.date_bytes, self.data_address = self._serialize_data()
 
+        self._fully_initialized = True
+
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get meta information of dataset.
 
         Returns:
@@ -317,7 +318,7 @@ class BaseDataset(Dataset):
             raw_data_info (dict): Raw data information load from ``ann_file``
 
         Returns:
-            list or list of dict: Parsed annotation.
+            list or list[dict]: Parsed annotation.
         """
         return raw_data_info
 
@@ -329,7 +330,7 @@ class BaseDataset(Dataset):
         the subclass should override this method.
 
         Returns:
-            list of dict: Filtered results.
+            list[int]: Filtered results.
         """
         return self.data_list
 
@@ -344,7 +345,7 @@ class BaseDataset(Dataset):
             idx (int): The index of data.
 
         Returns:
-            list of int: All categories in the image of specified index.
+            list[int]: All categories in the image of specified index.
         """
         raise NotImplementedError(f'{type(self)} must implement `get_cat_ids` '
                                   'method')
@@ -412,7 +413,7 @@ class BaseDataset(Dataset):
                 or relative path if ``self.root=/path/to/data/``.
 
         Returns:
-            List[dict]: A list of annotation.
+            list[dict]: A list of annotation.
         """  # noqa: E501
         check_file_exist(ann_file)
         annotations = load(ann_file)
@@ -526,15 +527,15 @@ class BaseDataset(Dataset):
                                 f'{type(prefix)}')
 
     @force_full_init
-    def get_subset_(self, indices: Union[List[int], int]) -> None:
+    def get_subset_(self, indices: Union[Sequence[int], int]) -> None:
         """The in-place version of  ``get_subset `` to convert dataset to a
-        sub-dataset.
+        subset of original dataset.
 
-        This method will overwrite the original dataset to a subset dataset. If
-        ``type(indices)`` is int, ``get_subset_`` will return a subdataset
-        which contains the first ``indices`` data information. If
-        ``type(indices)`` is a list of int, the subdataset will contain the
-        data information according to the index given in ``indices``.
+        This method will convert the original dataset to a subset of dataset.
+        If type of indices is int, ``get_subset_`` will return a subdataset
+        which contains the first ``indices`` data information. If type of
+        indices is a sequence of int, the subdataset will extract the data
+        information according to the index given in ``indices``.
 
         Examples:
               >>> dataset = BaseDataset('path/to/ann_file')
@@ -543,17 +544,23 @@ class BaseDataset(Dataset):
               >>> dataset.get_subset_(90)
               >>> len(dataset)
               90
-              >>> dataset.get_subset([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+              >>> # if type of indices is sequence, extract the corresponding
+              >>> # index data information
+              >>> dataset.get_subset_([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
               >>> len(dataset)
               10
+              >>> dataset.get_subset_(-3)
+              >>> len(dataset) # Get the latest few data information.
+              3
 
         Args:
-            indices (int or list of int): If ``type(indices)`` is int, indices
-                represents the first few data of dataset. If  `type(indices)``
-                is list, indices represents the target data information index
-                which consist of subdataset.
+            indices (int or Sequence[int]): If type of indices is int, indices
+                represents the first or last few data of dataset according to
+                indices is positive or negative. If type of indices is
+                Sequence, indices represents the target data information
+                index of dataset.
         """
-        # Get subset of data from  serialized data or data information list
+        # Get subset of data from  serialized data or data information sequence
         # according to `self.serialize_data`.
         if self.serialize_data:
             self.date_bytes, self.data_address = \
@@ -562,14 +569,15 @@ class BaseDataset(Dataset):
             self.data_list = self._get_unserialized_subdata(indices)
 
     @force_full_init
-    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+    def get_subset(self, indices: Union[Sequence[int], int]) -> 'BaseDataset':
         """Return a subset of dataset.
 
-        This method will return a subdataset of original dataset. If
-        ``type(indices)`` is int, ``get_subset_`` will return a subdataset
-        which contains the first ``indices`` data information. If
-        ``type(indices)`` is a list of int, the subdataset will contain the
-        data information according to the index given in ``indices``.
+        This method will return a subset of original dataset. If type of
+        indices is int, ``get_subset_`` will return a subdataset which
+        contains the first or indices data information according to indices
+        is positive or negative. If type of indices is a sequence of int,
+        the subdataset will extract the information according to the index
+        given in indices.
 
         Examples:
               >>> dataset = BaseDataset('path/to/ann_file')
@@ -578,16 +586,22 @@ class BaseDataset(Dataset):
               >>> subdataset = dataset.get_subset(90)
               >>> len(sub_dataset)
               90
+              >>> # if type of indices is list, extract the corresponding
+              >>> # index data information
               >>> subdataset = dataset.get_subset([0, 1, 2, 3, 4, 5, 6, 7,
-              >>> 8, 9])
+              >>>                                  8, 9])
               >>> len(sub_dataset)
               10
+              >>> subdataset = dataset.get_subset(-3)
+              >>> len(subdataset) # Get the latest few data information.
+              3
 
         Args:
-            indices (int or list of int): If ``type(indices)`` is int, indices
-                represents the first few data of dataset. If  `type(indices)``
-                is list, indices represents the target data information index
-                which consist of subdataset.
+            indices (int or Sequence[int]): If type of indices is int, indices
+                represents the first or last few data of dataset according to
+                indices is positive or negative. If  type of indices is
+                Sequence, indices represents the target data information
+                index of dataset.
 
         Returns:
             BaseDataset: A subset of dataset.
@@ -605,28 +619,31 @@ class BaseDataset(Dataset):
             sub_dataset.date_bytes = date_bytes.copy()
             sub_dataset.data_address = data_address.copy()
         else:
-            sub_dataset.data_list = self._get_unserialized_subdata(indices)
+            data_list = self._get_unserialized_subdata(indices)
+            sub_dataset.data_list = copy.deepcopy(data_list)
         return sub_dataset
 
-    def _get_serialized_subdata(self, indices: Union[List[int], int]) \
+    def _get_serialized_subdata(self, indices: Union[Sequence[int], int]) \
             -> Tuple[np.ndarray, np.ndarray]:
         """Get subset of serialized data information list.
 
         Args:
-            indices (int or list of int): If ``type(indices)`` is int, indices
-                represents the first few data of serialized data information
-                list. If  `type(indices)`` is list, indices represents the
-                target data information index which consist of subset data
-                information.
+            indices (int or Sequence[int]): If type of indices is int,
+                indices represents the first or last few data of serialized
+                data information list. If type of indices is Sequence, indices
+                represents the target data information index which consist of
+                subset data information.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: subset of serialized data
-            information list.
+            information.
         """
         sub_date_bytes: Union[List, np.ndarray]
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
-            if indices >= 0:
+            assert indices != 0, \
+                'If type of indices is int, indices should not be 0!'
+            if indices > 0:
                 # Return the first few data information.
                 end_addr = self.data_address[indices].item()
                 # Slicing operation of `np.ndarray` does not trigger a memory
@@ -660,21 +677,23 @@ class BaseDataset(Dataset):
                             f'but got {type(indices)}')
         return sub_date_bytes, sub_data_address  # type: ignore
 
-    def _get_unserialized_subdata(self, indices: Union[List[int], int]) -> \
-            list:
+    def _get_unserialized_subdata(self, indices: Union[Sequence[int],
+                                                       int]) -> list:
         """Get subset of data information list.
 
         Args:
-            indices (int or list of int): If ``type(indices)`` is int, indices
-                represents the first few data of data information.
-                If  `type(indices)`` is list, indices represents the target
-                data information index which consist of subset data
-                information.
+            indices (int or Sequence[int]): If type of indices is int,
+                indices represents the first or last few data of data
+                information. If  indices of indices is Sequence, indices
+                represents the target data information index which consist
+                of subset data information.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: subset of data information list.
+            Tuple[np.ndarray, np.ndarray]: subset of data information.
         """
         if isinstance(indices, int):
+            assert indices != 0, \
+                'If type of indices is int, indices should not be 0!'
             if indices >= 0:
                 # Return the first few data information.
                 sub_data_list = self.data_list[:indices]
@@ -752,7 +771,14 @@ class BaseDataset(Dataset):
         else:
             return len(self.data_list)
 
-    def _copy_without_annotation(self, memo=dict()):
+    def _copy_without_annotation(self, memo=dict()) -> 'BaseDataset':
+        """Deepcopy for all attributes other than ``data_list``,
+        ``data_address`` and ``date_bytes``.
+
+        Args:
+            memo: Memory dict which used to reconstruct complex object
+                correctly.
+        """
         cls = self.__class__
         other = cls.__new__(cls)
         memo[id(self)] = other

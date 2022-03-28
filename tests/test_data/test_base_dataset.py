@@ -141,17 +141,17 @@ class TestBaseDataset:
 
     def test_meta(self):
         self._init_dataset()
-        # test dataset.meta with setting the metainfo from annotation file as
-        # the metainfo of self.base_dataset.
+        # test dataset.metainfo with setting the metainfo from annotation file
+        # as the metainfo of self.base_dataset.
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
 
-        assert dataset.meta == dict(
+        assert dataset.metainfo == dict(
             dataset_type='test_dataset', task_name='test_task', empty_list=[])
 
-        # test dataset.meta with setting METAINFO in self.base_dataset
+        # test dataset.metainfo with setting METAINFO in self.base_dataset
         dataset_type = 'new_dataset'
         self.dataset_type.METAINFO = dict(
             dataset_type=dataset_type, classes=('dog', 'cat'))
@@ -160,13 +160,13 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
-        assert dataset.meta == dict(
+        assert dataset.metainfo == dict(
             dataset_type=dataset_type,
             task_name='test_task',
             classes=('dog', 'cat'),
             empty_list=[])
 
-        # test dataset.meta with passing metainfo into self.base_dataset
+        # test dataset.metainfo with passing metainfo into self.base_dataset
         metainfo = dict(classes=('dog', ), task_name='new_task')
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
@@ -175,22 +175,23 @@ class TestBaseDataset:
             metainfo=metainfo)
         assert self.dataset_type.METAINFO == dict(
             dataset_type=dataset_type, classes=('dog', 'cat'))
-        assert dataset.meta == dict(
+        assert dataset.metainfo == dict(
             dataset_type=dataset_type,
             task_name='new_task',
             classes=('dog', ),
             empty_list=[])
-        # reset `base_dataset.METAINFO`, the `dataset.meta` should not change
+        # reset `base_dataset.METAINFO`, the `dataset.metainfo` should not
+        # change
         self.dataset_type.METAINFO['classes'] = ('dog', 'cat', 'fish')
         assert self.dataset_type.METAINFO == dict(
             dataset_type=dataset_type, classes=('dog', 'cat', 'fish'))
-        assert dataset.meta == dict(
+        assert dataset.metainfo == dict(
             dataset_type=dataset_type,
             task_name='new_task',
             classes=('dog', ),
             empty_list=[])
 
-        # test dataset.meta with passing metainfo containing a file into
+        # test dataset.metainfo with passing metainfo containing a file into
         # self.base_dataset
         metainfo = dict(
             classes=osp.join(
@@ -200,13 +201,13 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json',
             metainfo=metainfo)
-        assert dataset.meta == dict(
+        assert dataset.metainfo == dict(
             dataset_type=dataset_type,
             task_name='test_task',
             classes=['dog'],
             empty_list=[])
 
-        # test dataset.meta with passing unsupported metainfo into
+        # test dataset.metainfo with passing unsupported metainfo into
         # self.base_dataset
         with pytest.raises(TypeError):
             metainfo = 'dog'
@@ -216,8 +217,8 @@ class TestBaseDataset:
                 ann_file='annotations/dummy_annotation.json',
                 metainfo=metainfo)
 
-        # test dataset.meta with passing metainfo into self.base_dataset and
-        # lazy_init is True
+        # test dataset.metainfo with passing metainfo into self.base_dataset
+        # and lazy_init is True
         metainfo = dict(classes=('dog', ))
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
@@ -225,8 +226,8 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             metainfo=metainfo,
             lazy_init=True)
-        # 'task_name' and 'empty_list' not in dataset.meta
-        assert dataset.meta == dict(
+        # 'task_name' and 'empty_list' not in dataset.metainfo
+        assert dataset.metainfo == dict(
             dataset_type=dataset_type, classes=('dog', ))
 
         # test whether self.base_dataset.METAINFO is changed when a customize
@@ -413,6 +414,7 @@ class TestBaseDataset:
         'lazy_init, serialize_data',
         ([True, False], [False, True], [True, True], [False, False]))
     def test_get_subset_(self, lazy_init, serialize_data):
+        # Test positive int indices.
         indices = 1
         dataset = self.dataset_type(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
@@ -421,9 +423,21 @@ class TestBaseDataset:
             lazy_init=lazy_init,
             serialize_data=serialize_data)
         ori_data = dataset[0]
-        # Test int indices.
         dataset.get_subset_(indices)
         assert len(dataset) == 1
+        assert dataset[0] == ori_data
+        # Test negative int indices.
+        indices = -2
+        dataset = self.dataset_type(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img=None),
+            ann_file='annotations/dummy_annotation.json',
+            lazy_init=lazy_init,
+            serialize_data=serialize_data)
+        ori_data = dataset[1]
+        ori_data['sample_idx'] = 0
+        dataset.get_subset_(indices)
+        assert len(dataset) == 2
         assert dataset[0] == ori_data
         # Test list indices.
         indices = [1]
@@ -440,6 +454,8 @@ class TestBaseDataset:
         dataset.get_subset_(indices)
         assert len(dataset) == 1
         assert dataset[0] == ori_data
+        with pytest.raises(AssertionError):
+            dataset.get_subset_(0)
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',
@@ -469,6 +485,8 @@ class TestBaseDataset:
         ori_data['sample_idx'] = 0
         assert len(dataset_sliced) == 1
         assert dataset_sliced[0] == ori_data
+        with pytest.raises(AssertionError):
+            dataset.get_subset_(0)
 
     def test_rand_another(self):
         # test the instantiation of self.base_dataset when passing num_samples
@@ -536,7 +554,7 @@ class TestConcatDataset:
 
     def test_metainfo(self):
         self._init_dataset()
-        assert self.cat_datasets.meta == self.dataset_a.meta
+        assert self.cat_datasets.metainfo == self.dataset_a.metainfo
 
     def test_length(self):
         self._init_dataset()
@@ -615,7 +633,7 @@ class TestRepeatDataset:
 
     def test_metainfo(self):
         self._init_dataset()
-        assert self.repeat_datasets.meta == self.dataset.meta
+        assert self.repeat_datasets.metainfo == self.dataset.metainfo
 
     def test_length(self):
         self._init_dataset()
@@ -675,7 +693,7 @@ class TestClassBalancedDataset:
 
     def test_metainfo(self):
         self._init_dataset()
-        assert self.cls_banlanced_datasets.meta == self.dataset.meta
+        assert self.cls_banlanced_datasets.metainfo == self.dataset.metainfo
 
     def test_length(self):
         self._init_dataset()

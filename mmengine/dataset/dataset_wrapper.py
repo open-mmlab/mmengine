@@ -26,11 +26,11 @@ class ConcatDataset(_ConcatDataset):
     def __init__(self,
                  datasets: Sequence[BaseDataset],
                  lazy_init: bool = False):
-        # Only use meta of first dataset.
-        self._meta = datasets[0].meta
+        # Only use metainfo of first dataset.
+        self._metainfo = datasets[0].metainfo
         self.datasets = datasets  # type: ignore
         for i, dataset in enumerate(datasets, 1):
-            if self._meta != dataset.meta:
+            if self._metainfo != dataset.metainfo:
                 raise ValueError(
                     f'The meta information of the {i}-th dataset does not '
                     'match meta information of the first dataset')
@@ -40,14 +40,14 @@ class ConcatDataset(_ConcatDataset):
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the first dataset in ``self.datasets``.
 
         Returns:
             dict: Meta information of first dataset.
         """
-        # Prevent `self._meta` from being modified by outside.
-        return copy.deepcopy(self._meta)
+        # Prevent `self._metainfo` from being modified by outside.
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
@@ -152,20 +152,20 @@ class RepeatDataset:
                  lazy_init: bool = False):
         self.dataset = dataset
         self.times = times
-        self._meta = dataset.meta
+        self._metainfo = dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the repeated dataset.
 
         Returns:
             dict: The meta information of repeated dataset.
         """
-        return copy.deepcopy(self._meta)
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
@@ -273,20 +273,20 @@ class ClassBalancedDataset:
                  lazy_init: bool = False):
         self.dataset = dataset
         self.oversample_thr = oversample_thr
-        self._meta = dataset.meta
+        self._metainfo = dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the repeated dataset.
 
         Returns:
             dict: The meta information of repeated dataset.
         """
-        return copy.deepcopy(self._meta)
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
