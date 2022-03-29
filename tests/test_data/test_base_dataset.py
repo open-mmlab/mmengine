@@ -510,8 +510,9 @@ class TestBaseDataset:
             ori_data = dataset[i + 1]
             ori_data['sample_idx'] = i
             assert dataset_sliced[i] == ori_data
-        # If indices is 0, return empty dataset.
+        # If indices is 0 or empty list, return empty dataset.
         assert len(dataset.get_subset(0)) == 0
+        assert len(dataset.get_subset([])) == 0
         # test list indices.
         indices = [1]
         dataset_sliced = dataset.get_subset(indices)
