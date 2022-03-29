@@ -385,15 +385,15 @@ class BaseDataElement:
         """get property in data and metainfo as the same as python."""
         return self.__dict__.get(key, default)
 
-    def pop(self, name, default=None) -> Any:
+    def pop(self, key, default=None) -> Any:
         """pop property in data and metainfo as the same as python."""
-        if name in self._metainfo_fields:
-            self._metainfo_fields.remove(name)
-            return self.__dict__.pop(name)
+        if key in self._metainfo_fields:
+            self._metainfo_fields.remove(key)
+            return self.__dict__.pop(key)
 
-        elif name in self._data_fields:
-            self._data_fields.remove(name)
-            return self.__dict__.pop(name)
+        elif key in self._data_fields:
+            self._data_fields.remove(key)
+            return self.__dict__.pop(key)
 
         # with default value
         else:
@@ -435,7 +435,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def cpu(self) -> 'BaseDataElement':
-        """Convert all tensors to CPU in metainfo and data."""
+        """Convert all tensors to CPU in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
@@ -446,7 +446,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def cuda(self) -> 'BaseDataElement':
-        """Convert all tensors to GPU in metainfo and data."""
+        """Convert all tensors to GPU in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
@@ -457,7 +457,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def detach(self) -> 'BaseDataElement':
-        """Detach all tensors in metainfo and data."""
+        """Detach all tensors in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
@@ -468,7 +468,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataElement':
-        """Convert all tensor to np.narray in metainfo and data."""
+        """Convert all tensor to np.narray in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
@@ -478,7 +478,7 @@ class BaseDataElement:
         return new_data
 
     def to_tensor(self) -> 'BaseDataElement':
-        """Convert all np.narray to tensor in metainfo and data."""
+        """Convert all np.narray to tensor in data."""
         new_data = self.new()
         for k, v in self.items():
             data = {}
