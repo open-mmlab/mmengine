@@ -413,15 +413,13 @@ class TestRunner(TestCase):
         self.assertEqual(runner.experiment_name, runner.logger.instance_name)
 
         # input is a dict
-        log_cfg = dict(name='test_build_logger2')
-        logger = runner.build_logger(log_cfg)
+        logger = runner.build_logger(name='test_build_logger2')
         self.assertIsInstance(logger, MMLogger)
         self.assertEqual(logger.instance_name, 'test_build_logger2')
 
         # input is a dict but does not contain name key
         runner._experiment_name = 'test_build_logger3'
-        log_cfg = dict()
-        logger = runner.build_logger(log_cfg)
+        logger = runner.build_logger()
         self.assertIsInstance(logger, MMLogger)
         self.assertEqual(logger.instance_name, 'test_build_logger3')
 

@@ -48,18 +48,17 @@ ConfigType = Union[Dict, Config, ConfigDict]
 class Runner:
     """A training helper for PyTorch.
 
-    Runner object may be built from config by ``runner = Runner.from_cfg(cfg)``
-    where the ``cfg`` usually contains training, validation and test-related
-    parameters to build corresponding components. However, all of them are not
-    always required at the same time. For example, testing a model does not
-    need training or validation-related modules, although we usually use the
-    same config to launch training, testing and validation but it is tedious to
-    remove them from config.
+    Runner object can be built from config by ``runner = Runner.from_cfg(cfg)``
+    where the ``cfg`` usually contains training, validation, and test-related
+    configurations to build corresponding components. We usually use the
+    same config to launch training, testing, and validation tasks. However,
+    only some of these components are necessary at the same time, e.g.,
+    testing a model does not need training or validation-related components.
 
-    To avoid repeatedly modifying config, constructor of ``Runner`` uses lazy
-    initialization to only initialize components when they are going to be
+    To avoid repeatedly modifying config, the construction of ``Runner`` adopts
+    lazy initialization to only initialize components when they are going to be
     used. Therefore, the model is always initialized at the beginning, and
-    training, validation, and testing related components are only initialized
+    training, validation, and, testing related components are only initialized
     when calling ``runner.train()``, ``runner.val()``, and ``runner.test()``,
     respectively.
 
@@ -246,7 +245,7 @@ class Runner:
         if not (all(item is None for item in training_related)
                 or all(item is not None for item in training_related)):
             raise ValueError(
-                'train_dataloader, train_cfg and optimizer should be either '
+                'train_dataloader, train_cfg, and optimizer should be either '
                 'all None or not None, but got '
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
@@ -271,7 +270,7 @@ class Runner:
                     for item in val_related) or all(item is not None
                                                     for item in val_related)):
             raise ValueError(
-                'val_dataloader, val_cfg and val_evaluator should be either '
+                'val_dataloader, val_cfg, and val_evaluator should be either '
                 'all None or not None, but got '
                 f'val_dataloader={val_dataloader}, val_cfg={val_cfg}, '
                 f'val_evaluator={val_evaluator}')
@@ -283,8 +282,8 @@ class Runner:
         if not (all(item is None for item in test_related)
                 or all(item is not None for item in test_related)):
             raise ValueError(
-                'test_dataloader, test_cfg and test_evaluator should be either'
-                ' all None or not None, but got '
+                'test_dataloader, test_cfg, and test_evaluator should be '
+                'either all None or not None, but got '
                 f'test_dataloader={test_dataloader}, test_cfg={test_cfg}, '
                 f'test_evaluator={test_evaluator}')
         self.test_dataloader = test_dataloader
@@ -314,7 +313,7 @@ class Runner:
         else:
             self._experiment_name = self.timestamp
 
-        self.logger = self.build_logger(dict(log_level=log_level))
+        self.logger = self.build_logger(log_level=log_level)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub()
         # writer used for writing log or visualizing all kinds of data
@@ -585,22 +584,29 @@ class Runner:
             if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
                 torch.use_deterministic_algorithms(True)
 
-    def build_logger(self, log_cfg: dict = dict(log_level='INFO')) -> MMLogger:
+    def build_logger(self,
+                     log_level: Union[int, str] = 'INFO',
+                     log_file: str = None,
+                     **kwargs) -> MMLogger:
         """Build a global asscessable MMLogger.
 
         Args:
-            log_cfg (dict): A dict to build MMLogger object.
-                Defaults to ``dict(log_level='INFO')``.
+            log_level (int or str): The log level of MMLogger handlers.
+                Defaults to 'INFO'.
+            log_file (str, optional): Path of filename to save log.
+                Defaults to None.
+            **kwargs: Remaining parameters passed to ``MMLogger``.
 
         Returns:
             MMLogger: A MMLogger object build from ``logger``.
         """
-        log_cfg.setdefault('name', self._experiment_name)
-        log_cfg.setdefault(
-            'log_file', osp.join(self.work_dir,
-                                 f'{self._experiment_name}.log'))
+        if log_file is None:
+            log_file = osp.join(self.work_dir, f'{self._experiment_name}.log')
 
-        return MMLogger.get_instance(**log_cfg)
+        log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
+        log_cfg.setdefault('name', self._experiment_name)
+
+        return MMLogger.get_instance(**log_cfg)  # type: ignore
 
     def build_message_hub(self,
                           message_hub: Optional[Dict] = None) -> MessageHub:
