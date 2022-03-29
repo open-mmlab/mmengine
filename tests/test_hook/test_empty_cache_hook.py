@@ -7,8 +7,8 @@ from mmengine.hooks import EmptyCacheHook
 class TestEmptyCacheHook:
 
     def test_emtpy_cache_hook(self):
-        Hook = EmptyCacheHook(True, True, True)
-        Runner = Mock()
-        Hook._after_iter(Runner)
-        Hook._before_epoch(Runner)
-        Hook._after_epoch(Runner)
+        hook = EmptyCacheHook(True, True, True)
+        runner = Mock()
+        hook._after_iter(runner, 0)
+        hook._before_epoch(runner)
+        hook._after_epoch(runner)

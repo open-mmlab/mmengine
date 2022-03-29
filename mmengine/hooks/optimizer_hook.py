@@ -58,6 +58,7 @@ class OptimizerHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """All operations need to be finished after each training iteration.
@@ -69,12 +70,13 @@ class OptimizerHook(Hook):
 
         - Compute the gradient of model parameters.
 
-        - Clip the gradidents of each parameters. (optional)
+        - Clip the gradients of each parameter. (optional)
 
         - Update model parameters with gradients.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.

@@ -229,7 +229,6 @@ class Runner:
 
         self._epoch = 0
         self._iter = 0
-        self._inner_iter = 0
 
         # lazy initialization
         training_related = [
@@ -399,11 +398,6 @@ class Runner:
     def iter(self):
         """int: Current epoch."""
         return self._iter
-
-    @property
-    def inner_iter(self):
-        """int: Current iteration."""
-        return self._inner_iter
 
     @property
     def launcher(self):
