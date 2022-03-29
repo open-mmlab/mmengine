@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import datetime
 import logging
 import os.path as osp
@@ -12,6 +13,8 @@ import torch
 
 from mmengine.hooks import LoggerHook
 from mmengine.runner import LogProcessor
+from mmengine.logging import MMLogger
+from mmengine.logging import MessageHub
 
 class TestLogProcessor:
 
@@ -23,9 +26,9 @@ class TestLogProcessor:
         assert log_processor.custom_cfg is None
 
     def test_check_custom_cfg(self):
-        # If ``by_epoch==False``, log config with window size will raise
-        # AssertionError.
-        custom_cfg = [dict(data_src='loss', window_size=10)]
+        # ``by_epoch==False`` and `window_size='epoch'` in log config will
+        # raise AssertionError.
+        custom_cfg = [dict(data_src='loss', window_size='epoch')]
         with pytest.raises(AssertionError):
             LogProcessor(by_epoch=False, custom_cfg=custom_cfg)
         # Duplicate log_name will raise AssertionError.
@@ -39,23 +42,47 @@ class TestLogProcessor:
         with pytest.raises(AssertionError):
             LogProcessor(custom_cfg=custom_cfg)
 
-        custom_cfg = [dict(data_src='loss_cls', window_size=100, ),
-                      dict(data_src='loss', log_name='loss_1')]
+        custom_cfg = [dict(data_src='loss_cls',
+                           window_size=100,
+                           method_name='min'),
+                      dict(data_src='loss',
+                           log_name='loss_min',
+                           method_name='max'),
+                      dict(data_src='loss',
+                           log_name='loss_max',
+                           method_name='max')
+                      ]
+        LogProcessor(custom_cfg=custom_cfg)
 
-    def test_before_run(self):
+    def test_parse_windows_size(self):
+        runner = self._setup_runner()
+        log_processor = LogProcessor()
+        # Test parse 'epoch' window_size.
+        custom_cfg = [dict(data_src='loss_cls', window_size='epoch')]
+        log_processor._parse_windows_size(custom_cfg, runner, 1)
+        assert custom_cfg[0]['window_size'] == 2
 
-        runner = MagicMock()
-        runner.iter = 10
-        runner.timestamp = 'timestamp'
-        runner.work_dir = 'work_dir'
-        runner.logger = MagicMock()
-        logger_hook = LoggerHook(out_dir='out_dir')
-        logger_hook.before_run(runner)
-        assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
-        assert logger_hook.json_log_path == osp.join('work_dir',
-                                                     'timestamp.log.json')
-        assert logger_hook.start_iter == runner.iter
-        runner.writer.add_params.assert_called()
+        # Test parse 'global' window_size.
+        custom_cfg = [dict(data_src='loss_cls', window_size='global')]
+        log_processor._parse_windows_size(custom_cfg, runner, 1)
+        assert custom_cfg[0]['window_size'] == 11
+
+        # Test parse int window_size
+        custom_cfg = [dict(data_src='loss_cls', window_size=100)]
+        log_processor._parse_windows_size(custom_cfg, runner, 1)
+        assert custom_cfg[0]['window_size'] == 100
+
+        # Invalid type window_size will raise TypeError.
+        custom_cfg = [dict(data_src='loss_cls', window_size=[])]
+        with pytest.raises(TypeError):
+            log_processor._parse_windows_size(custom_cfg, runner, 1)
+
+    def test_get_log(self):
+        runner = self._setup_runner()
+        log_processor = LogProcessor()
+        tag, log_str = log_processor.get_log(runner, 9, mode='train')
+        assert tag == dict(loss==)
+
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'
@@ -332,17 +359,13 @@ class TestLogProcessor:
         runner = MagicMock()
         runner.epoch = 1
         runner.cur_dataloader = [0] * 5
-        runner.inner_iter = 1
         runner.iter = 10
         runner.train_loop.max_iters = 50
-        logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
-        for handler in logger.handlers:
-            if not isinstance(handler, logging.StreamHandler):
-                continue
-        else:
-            logger.addHandler(logging.StreamHandler(stream=sys.stdout))
+        logger = MMLogger.get_instance('log_processor_test')
         runner.logger = logger
-        runner.message_hub = MagicMock()
-        runner.composed_wirter = MagicMock()
+        message_hub = MessageHub.get_instance('log_processor_test')
+        for i in range(10):
+            message_hub.update_scalar('train/loss', 10-i)
+        for i in range(10):
+            message_hub.update_scalar('val/acc', i*0.1)
         return runner

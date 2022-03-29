@@ -2,6 +2,7 @@ import copy
 from collections import OrderedDict
 import torch
 from mmengine.runner import Runner
+from typing import List, Optional
 
 
 class LogProcessor:
@@ -14,11 +15,12 @@ class LogProcessor:
 
     Args:
         window_size (int): default smooth interval Defaults to 10.
-        by_epoch (bool): Whether to format logs with epoch stype.
+        by_epoch (bool): Whether to format logs with epoch stype. Defaults to
+            True.
         custom_cfg (list[dict], optional): Contains multiple log config dict,
             in which key means the data source name of log and value means the
             statistic method and corresponding arguments used to count the
-            data souce.
+            data souce. Defaults to None
             - If custom_cfg is None, all logs will be formatted via default
               methods, such as smoothing loss by default window_size. If
               custom_cfg is defined as a list of config dict, for example:
@@ -76,7 +78,7 @@ class LogProcessor:
     def __init__(self,
                  window_size=10,
                  by_epoch=True,
-                 custom_cfg=None, ):
+                 custom_cfg: Optional[List[dict]] = None):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else OrderedDict()
@@ -199,13 +201,13 @@ class LogProcessor:
         return log_str
 
     def _collect_scalars(self,
-                         custom_cfg: dict,
+                         custom_cfg: List[dict],
                          runner: 'Runner',
                          mode: str) -> dict:
         """Collect log information to compose a dict according to mode.
 
         Args:
-            custom_cfg (dict): A copy of ``self.custom_cfg`` with int
+            List[dict] (dict): A copy of ``self.custom_cfg`` with int
                 ``window_size``.
             runner (Runner): The runner of the training process.
             mode (str): 'train' or 'val', which means the prefix attached by
@@ -252,8 +254,6 @@ class LogProcessor:
                     assert log_cfg['window_size'] != 'epoch', \
                         'window_size cannot be epoch if LoggerHook.by_epoch' \
                         ' is False.'
-                if 'window_size' in log_cfg['window_size']:
-                    assert log_cfg['window_size'] == self.window_size
 
         def _check_repeated_log_name():
             check_dict = dict()
@@ -278,12 +278,12 @@ class LogProcessor:
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, custom_cfg: dict, runner: 'Runner',
+    def _parse_windows_size(self, custom_cfg: List[dict], runner: 'Runner',
                             batch_idx: int) -> None:
         """Parse window_size defined in custom_cfg to int value.
 
         Args:
-            custom_cfg (dict): A copy of ``self.custom_cfg``.
+            custom_cfg (List[dict]): A copy of ``self.custom_cfg``.
             runner (Runner): The runner of the training process.
             batch_idx (int): The iteration index of current dataloader.
         """
@@ -296,7 +296,7 @@ class LogProcessor:
             elif window_size == 'global':
                 log_cfg['window_size'] = runner.iter + 1
             else:
-                raise ValueError(
+                raise TypeError(
                     'window_size should be int, epoch or global, but got '
                     f'invalid {window_size}')
 
