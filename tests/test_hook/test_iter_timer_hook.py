@@ -18,7 +18,7 @@ class TestIterTimerHook:
         Runner.log_buffer = dict()
         Hook._before_epoch(Runner)
         Hook._before_iter(Runner)
-        Runner.message_hub.update_log.assert_called()
+        Runner.message_hub.update_scalar.assert_called()
 
     def test_after_iter(self):
         Hook = IterTimerHook()
@@ -26,4 +26,4 @@ class TestIterTimerHook:
         Runner.log_buffer = dict()
         Hook._before_epoch(Runner)
         Hook._after_iter(Runner)
-        Runner.message_hub.update_log.assert_called()
+        Runner.message_hub.update_scalar.assert_called()
