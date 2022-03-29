@@ -726,8 +726,8 @@ class TestRunner(TestCase):
         epoch_targets = [i for i in range(3)]
         iter_results = []
         iter_targets = [i for i in range(4 * 3)]
-        inner_iter_results = []
-        inner_iter_targets = [i for i in range(4)] * 3  # train and val
+        batch_idx_results = []
+        batch_idx_targets = [i for i in range(4)] * 3  # train and val
 
         @HOOKS.register_module()
         class TestEpochHook(Hook):
@@ -735,9 +735,9 @@ class TestRunner(TestCase):
             def before_train_epoch(self, runner):
                 epoch_results.append(runner.epoch)
 
-            def before_train_iter(self, runner, data_batch=None):
+            def before_train_iter(self, runner, batch_idx, data_batch=None):
                 iter_results.append(runner.iter)
-                inner_iter_results.append(runner.inner_iter)
+                batch_idx_results.append(batch_idx)
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train2'
@@ -752,15 +752,15 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(iter_results, iter_targets):
             self.assertEqual(result, target)
-        for result, target, in zip(inner_iter_results, inner_iter_targets):
+        for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
 
         # 3. test iter and epoch counter of IterBasedTrainLoop
         epoch_results = []
         iter_results = []
-        inner_iter_results = []
+        batch_idx_results = []
         iter_targets = [i for i in range(12)]
-        inner_iter_targets = [0, 1, 2, 3] * 3
+        batch_idx_targets = [i for i in range(12)]
 
         @HOOKS.register_module()
         class TestIterHook(Hook):
@@ -768,9 +768,9 @@ class TestRunner(TestCase):
             def before_train_epoch(self, runner):
                 epoch_results.append(runner.epoch)
 
-            def before_train_iter(self, runner, data_batch=None):
+            def before_train_iter(self, runner, batch_idx, data_batch=None):
                 iter_results.append(runner.iter)
-                inner_iter_results.append(runner.inner_iter)
+                batch_idx_results.append(batch_idx)
 
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train3'
@@ -785,7 +785,7 @@ class TestRunner(TestCase):
         self.assertEqual(epoch_results[0], 0)
         for result, target, in zip(iter_results, iter_targets):
             self.assertEqual(result, target)
-        for result, target, in zip(inner_iter_results, inner_iter_targets):
+        for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
 
     def test_val(self):
@@ -1082,7 +1082,6 @@ class TestRunner(TestCase):
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
-        self.assertEqual(runner.inner_iter, 0)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)

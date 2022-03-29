@@ -36,6 +36,7 @@ class EmptyCacheHook(Hook):
 
     def _after_iter(self,
                     runner,
+                    batch_idx: int,
                     data_batch: DATA_BATCH = None,
                     outputs: Optional[Union[dict,
                                             Sequence[BaseDataSample]]] = None,
@@ -44,6 +45,7 @@ class EmptyCacheHook(Hook):
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model.

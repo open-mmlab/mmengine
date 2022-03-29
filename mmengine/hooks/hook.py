@@ -164,41 +164,57 @@ class Hook:
         """
         self._after_epoch(runner, mode='test')
 
-    def before_train_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
+    def before_train_iter(self,
+                          runner,
+                          batch_idx: int,
+                          data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each training iteration.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=data_batch, mode='train')
+        self._before_iter(
+            runner, batch_idx=batch_idx, data_batch=data_batch, mode='train')
 
-    def before_val_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
+    def before_val_iter(self,
+                        runner,
+                        batch_idx: int,
+                        data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each validation iteration.
 
         Args:
             runner (Runner): The runner of the validation process.
+            batch_idx (int): The index of the current batch in the val loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=data_batch, mode='val')
+        self._before_iter(
+            runner, batch_idx=batch_idx, data_batch=data_batch, mode='val')
 
-    def before_test_iter(self, runner, data_batch: DATA_BATCH = None) -> None:
+    def before_test_iter(self,
+                         runner,
+                         batch_idx: int,
+                         data_batch: DATA_BATCH = None) -> None:
         """All subclasses should override this method, if they need any
         operations before each test iteration.
 
         Args:
             runner (Runner): The runner of the testing process.
+            batch_idx (int): The index of the current batch in the test loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
         """
-        self._before_iter(runner, data_batch=data_batch, mode='test')
+        self._before_iter(
+            runner, batch_idx=batch_idx, data_batch=data_batch, mode='test')
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """All subclasses should override this method, if they need any
@@ -206,16 +222,22 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         self._after_iter(
-            runner, data_batch=data_batch, outputs=outputs, mode='train')
+            runner,
+            batch_idx=batch_idx,
+            data_batch=data_batch,
+            outputs=outputs,
+            mode='train')
 
     def after_val_iter(self,
                        runner,
+                       batch_idx: int,
                        data_batch: DATA_BATCH = None,
                        outputs: Optional[Sequence[BaseDataSample]] = None) \
             -> None:
@@ -224,17 +246,23 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the validation process.
+            batch_idx (int): The index of the current batch in the val loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
         self._after_iter(
-            runner, data_batch=data_batch, outputs=outputs, mode='val')
+            runner,
+            batch_idx=batch_idx,
+            data_batch=data_batch,
+            outputs=outputs,
+            mode='val')
 
     def after_test_iter(
             self,
             runner,
+            batch_idx: int,
             data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """All subclasses should override this method, if they need any
@@ -242,13 +270,18 @@ class Hook:
 
         Args:
             runner (Runner): The runner of the training  process.
+            batch_idx (int): The index of the current batch in the test loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         self._after_iter(
-            runner, data_batch=data_batch, outputs=outputs, mode='test')
+            runner,
+            batch_idx=batch_idx,
+            data_batch=data_batch,
+            outputs=outputs,
+            mode='test')
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
@@ -274,6 +307,7 @@ class Hook:
 
     def _before_iter(self,
                      runner,
+                     batch_idx: int,
                      data_batch: DATA_BATCH = None,
                      mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
@@ -282,6 +316,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
+            batch_idx (int): The index of the current batch in the loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
@@ -290,6 +325,7 @@ class Hook:
 
     def _after_iter(self,
                     runner,
+                    batch_idx: int,
                     data_batch: DATA_BATCH = None,
                     outputs: Optional[Union[Sequence[BaseDataSample],
                                             dict]] = None,
@@ -300,6 +336,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
+            batch_idx (int): The index of the current batch in the loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
                 Data from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
@@ -321,12 +358,12 @@ class Hook:
         """
         return (runner.epoch + 1) % n == 0 if n > 0 else False
 
-    def every_n_inner_iters(self, runner, n: int) -> bool:
+    def every_n_inner_iters(self, inner_iter: int, n: int) -> bool:
         """Test whether current inner iteration can be evenly divided by n.
 
         Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
+            inner_iter (int): Current inner_iter of the training, validation
+                or testing loop.
             n (int): Whether current inner iteration can be evenly
                 divided by n.
 
@@ -334,7 +371,7 @@ class Hook:
             bool: Whether current inner iteration can be evenly
             divided by n.
         """
-        return (runner.inner_iter + 1) % n == 0 if n > 0 else False
+        return (inner_iter + 1) % n == 0 if n > 0 else False
 
     def every_n_iters(self, runner, n: int) -> bool:
         """Test whether current iteration can be evenly divided by n.
@@ -350,18 +387,19 @@ class Hook:
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False
 
-    def end_of_epoch(self, runner) -> bool:
+    def end_of_epoch(self, runner, batch_idx: int) -> bool:
         """Check whether the current iteration reaches the last iteration of
         current dataloader.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
+            batch_idx (int): The index of the current batch in the loop.
 
         Returns:
             bool: Whether reaches the end of current epoch or not.
         """
-        return runner.inner_iter + 1 == len(runner.cur_dataloader)
+        return batch_idx + 1 == len(runner.cur_dataloader)
 
     def is_last_train_epoch(self, runner) -> bool:
         """Test whether current epoch is the last train epoch.

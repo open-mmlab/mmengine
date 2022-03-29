@@ -40,12 +40,14 @@ class NaiveVisualizationHook(Hook):
     def after_test_iter(
             self,
             runner,
+            batch_idx: int,
             data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
             outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the test loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             outputs (Sequence[BaseDataSample], optional): Outputs from model.
