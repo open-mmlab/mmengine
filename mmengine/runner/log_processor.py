@@ -1,7 +1,7 @@
 import copy
 from collections import OrderedDict
 import torch
-from mmengine.runner import Runner
+from mmengine.runner import runner
 from typing import List, Optional
 
 
@@ -84,7 +84,8 @@ class LogProcessor:
         self.custom_cfg = custom_cfg if custom_cfg else OrderedDict()
         self._check_custom_keys()
 
-    def get_log(self, runner, batch_idx, mode='train'):
+    def get_log(self, runner: 'runner.Runner',
+                batch_idx: int, mode: str = 'train'):
         # Consider the `window_size` such as "epoch" and "global" will
         # change with `runner.iter` Therefore, we should use a copy of
         # `self.custom_cfg` to calculate specific window_size and keep
@@ -107,7 +108,8 @@ class LogProcessor:
             raise ValueError('mode must be train, val or test!')
         return tag, log_str
 
-    def _get_train_log_str(self, runner: 'Runner', tag: dict, cur_iter: int) \
+    def _get_train_log_str(self, runner: 'runner.Runner',
+                           tag: dict, cur_iter: int) \
             -> str:
         """Format log string during training phases.
 
@@ -167,8 +169,8 @@ class LogProcessor:
         log_str += ', '.join(log_items)
         return log_str
 
-    def _get_val_log_str(self, runner: 'Runner', tag: dict, cur_iter: int) \
-            -> str:
+    def _get_val_log_str(self, runner: 'runner.Runner',
+                         tag: dict, cur_iter: int) -> str:
         """Format log string during validation phases.
 
         Args:
@@ -203,7 +205,7 @@ class LogProcessor:
 
     def _collect_scalars(self,
                          custom_cfg: List[dict],
-                         runner: 'Runner',
+                         runner: 'runner.Runner',
                          mode: str) -> dict:
         """Collect log information to compose a dict according to mode.
 
@@ -282,7 +284,8 @@ class LogProcessor:
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, custom_cfg: List[dict], runner: 'Runner',
+    def _parse_windows_size(self, custom_cfg: List[dict],
+                            runner: 'runner.Runner',
                             batch_idx: int) -> None:
         """Parse window_size defined in custom_cfg to int value.
 
@@ -304,7 +307,7 @@ class LogProcessor:
                     'window_size should be int, epoch or global, but got '
                     f'invalid {window_size}')
 
-    def _get_max_memory(self, runner: 'Runner') -> int:
+    def _get_max_memory(self, runner: 'runner.Runner') -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
         for a given device.
 
@@ -323,7 +326,7 @@ class LogProcessor:
         torch.cuda.reset_peak_memory_stats()
         return int(mem_mb.item())
 
-    def _get_iter(self, runner: 'Runner', batch_idx: int = None) -> int:
+    def _get_iter(self, runner: 'runner.Runner', batch_idx: int = None) -> int:
         """Get current training iteration step.
 
         Args:
@@ -340,7 +343,7 @@ class LogProcessor:
             current_iter = runner.iter + 1
         return current_iter
 
-    def _get_epoch(self, runner: 'Runner', mode: str) -> int:
+    def _get_epoch(self, runner: 'runner.Runner', mode: str) -> int:
         """Get current epoch according to mode.
 
         Args:

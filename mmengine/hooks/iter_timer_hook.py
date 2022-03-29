@@ -13,7 +13,7 @@ DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 class IterTimerHook(Hook):
     """A hook that logs the time spent during iteration.
 
-    Eg. ``data_time`` for loading data and ``time`` for a model train step.
+    E.g. ``data_time`` for loading data and ``time`` for a model train step.
     """
 
     priority = 'NORMAL'
@@ -42,6 +42,7 @@ class IterTimerHook(Hook):
 
     def _before_iter(self,
                      runner,
+                     batch_idx: int,
                      data_batch: DATA_BATCH = None,
                      mode: str = 'train') -> None:
         """Logging time for loading data and update "data_time"
@@ -49,6 +50,7 @@ class IterTimerHook(Hook):
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
@@ -58,16 +60,17 @@ class IterTimerHook(Hook):
 
     def _after_iter(self,
                     runner,
+                    batch_idx: int,
                     data_batch: DATA_BATCH = None,
-                    outputs:
-                    Optional[Union[dict, Sequence[BaseDataSample]]] = None,
-                    mode: str = 'train') \
-            -> None:
-        """Logging time for a iteration and update "time" ``HistoryBuffer`` of 
+                    outputs: Optional[Union[dict,
+                                            Sequence[BaseDataSample]]] = None,
+                    mode: str = 'train') -> None:
+        """Logging time for a iteration and update "time" ``HistoryBuffer`` of
         ``runner.message_hub``.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model. Defaults

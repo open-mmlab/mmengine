@@ -117,12 +117,14 @@ class LoggerHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """Record training logs.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[BaseDataSample], optional): Data from
                 dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
@@ -130,19 +132,29 @@ class LoggerHook(Hook):
         """
         if (self.every_n_iters(runner, self.interval_exp_name)) or (
                 runner.log_processor.by_epoch and self.end_of_epoch(
-                runner)):
+                runner, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
-        if self.by_epoch and self.every_n_inner_iters(runner, self.interval):
-            self._log_train(runner)
-        elif not self.by_epoch and self.every_n_iters(runner, self.interval):
-            self._log_train(runner)
-        elif self.end_of_epoch(runner) and not self.ignore_last:
+        if runner.log_processor.by_epoch and \
+                self.every_n_inner_iters(batch_idx, self.interval):
+            tag, log_str = runner.log_processor.get_log(
+                runner, batch_idx, 'train')
+        elif not runner.log_processor.by_epoch and \
+                self.every_n_iters(runner, self.interval):
+            tag, log_str = runner.log_processor.get_log(
+                runner, batch_idx, 'train')
+        elif self.end_of_epoch(runner, batch_idx) and not self.ignore_last:
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
             # iterations will be recorded).
-            self._log_train(runner)
+            tag, log_str = runner.log_processor.get_log(
+                runner, batch_idx, 'train')
+        else:
+            return
+        runner.logger.info(log_str)
+        # TODO compatible with visualizer.
+        runner.writer.add_scalars(tag, step=runner.iter+1)
 
     def after_val_epoch(self, runner) -> None:
         """Record validation logs.
@@ -150,7 +162,11 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        self._log_val(runner)
+        tag, log_str = runner.log_processor.get_log(
+            runner, len(runner.cur_dataloader), 'val')
+        runner.logger.info(log_str)
+        # TODO compatible with visualizer.
+        runner.writer.add_scalars(tag, step=runner.iter+1)
 
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
@@ -175,5 +191,3 @@ class LoggerHook(Hook):
                 os.remove(local_filepath)
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
-
-

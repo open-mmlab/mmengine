@@ -11,9 +11,10 @@ class TestNaiveVisualizationHook:
 
     def test_after_train_iter(self):
         naive_visualization_hook = NaiveVisualizationHook()
-        Runner = Mock(iter=1)
-        Runner.writer.add_image = Mock()
+        runner = Mock(iter=1)
+        runner.writer.add_image = Mock()
         inputs = torch.randn(1, 3, 15, 15)
+        batch_idx = 10
         # test with normalize, resize, pad
         gt_datasamples = [
             BaseDataSample(
@@ -28,7 +29,7 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        naive_visualization_hook.after_test_iter(Runner, data_batch,
+        naive_visualization_hook.after_test_iter(runner, batch_idx, data_batch,
                                                  pred_datasamples)
         # test with resize, pad
         gt_datasamples = [
@@ -42,7 +43,7 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        naive_visualization_hook.after_test_iter(Runner, data_batch,
+        naive_visualization_hook.after_test_iter(runner, batch_idx, data_batch,
                                                  pred_datasamples)
         # test with only resize
         gt_datasamples = [
@@ -55,7 +56,7 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        naive_visualization_hook.after_test_iter(Runner, data_batch,
+        naive_visualization_hook.after_test_iter(runner, batch_idx, data_batch,
                                                  pred_datasamples)
 
         # test with only pad
@@ -69,7 +70,7 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        naive_visualization_hook.after_test_iter(Runner, data_batch,
+        naive_visualization_hook.after_test_iter(runner, batch_idx, data_batch,
                                                  pred_datasamples)
 
         # test no transform
@@ -80,5 +81,5 @@ class TestNaiveVisualizationHook:
         ]
         pred_datasamples = [BaseDataSample()]
         data_batch = (inputs, gt_datasamples)
-        naive_visualization_hook.after_test_iter(Runner, data_batch,
+        naive_visualization_hook.after_test_iter(runner, batch_idx, data_batch,
                                                  pred_datasamples)

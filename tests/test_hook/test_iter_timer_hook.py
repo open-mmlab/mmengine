@@ -15,9 +15,10 @@ class TestIterTimerHook(TestCase):
         assert self.hook.start_iter == 0
     
     def test_before_run(self):
-        self.hook.before_run(Mock())
-        self.hook.start_iter = 1
-        assert self.hook.start_iter == 0
+        runner = MagicMock()
+        runner.iter = 1
+        self.hook.before_run(runner)
+        assert self.hook.start_iter == 1
     
     def test_before_epoch(self):
         runner = Mock()
@@ -30,7 +31,7 @@ class TestIterTimerHook(TestCase):
         runner.log_buffer = dict()
         self.hook._before_epoch(runner)
         for mode in ['train', 'val', 'test']:
-            self.hook._before_iter(runner, mode=mode)
+            self.hook._before_iter(runner, batch_idx=1, mode=mode)
             runner.message_hub.update_scalar.assert_called_with(
                 f'{mode}/data_time', 0)
 
@@ -43,11 +44,11 @@ class TestIterTimerHook(TestCase):
         runner.iter = 0
         self.hook._before_epoch(runner)
         self.hook.before_run(runner)
-        self.hook._after_iter(runner)
+        self.hook._after_iter(runner, batch_idx=1)
         runner.message_hub.update_scalar.assert_called()
         runner.message_hub.get_log.assert_not_called()
         runner.message_hub.update_info.assert_not_called()
         runner.message_hub = MessageHub.get_instance('test_iter_timer_hook')
         runner.iter = 9
-        self.hook._after_iter(runner)
+        self.hook._after_iter(runner, batch_idx=1)
         assert runner.message_hub.get_info('eta') == 0
