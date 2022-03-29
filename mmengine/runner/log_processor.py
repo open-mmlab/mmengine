@@ -145,7 +145,8 @@ class LogProcessor:
         log_str += f'{lr_str}, '
         # If IterTimerHook used in runner, eta, time, and data_time should be
         # recorded.
-        if 'time' in tag:
+        if all(item in tag for item in ['time', 'data_time']) and \
+                'eta' in runner.message_hub.runtime_info:
             eta = runner.message_hub.get_info('eta')
             log_str += f'eta: {eta}, '
             log_str += f'time: {tag["time"]:.3f}, ' \
