@@ -6,11 +6,12 @@ from .checkpoint import (CheckpointLoader, get_deprecated_model_names,
                          load_state_dict, save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .runner import Runner
+from .log_processor import LogProcessor
 
 __all__ = [
     'BaseLoop', 'load_state_dict', 'get_torchvision_models',
     'get_external_models', 'get_mmcls_models', 'get_deprecated_model_names',
     'CheckpointLoader', 'load_checkpoint', 'weights_to_cpu', 'get_state_dict',
     'save_checkpoint', 'EpochBasedTrainLoop', 'IterBasedTrainLoop', 'ValLoop',
-    'TestLoop', 'Runner'
+    'TestLoop', 'Runner', 'LogProcessor'
 ]
