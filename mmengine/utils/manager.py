@@ -119,12 +119,12 @@ class ManagerMixin(metaclass=ManagerMeta):
         ``get_instance(xxx)`` at least once.
 
         Examples
-            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            >>> instance = GlobalAccessible.get_current_instance()
             AssertionError: At least one of name and current needs to be set
             >>> instance = GlobalAccessible.get_instance('name1')
             >>> instance.instance_name
             name1
-            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            >>> instance = GlobalAccessible.get_current_instance()
             >>> instance.instance_name
             name1
 
