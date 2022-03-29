@@ -1,20 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import datetime
-import logging
-import os.path as osp
-import sys
-from collections import OrderedDict
 from unittest.mock import MagicMock, patch
-
+from collections import OrderedDict
 import pytest
-import torch
 
+import torch
 
 from mmengine.hooks import LoggerHook
 from mmengine.runner import LogProcessor
 from mmengine.logging import MMLogger
 from mmengine.logging import MessageHub
+
 
 class TestLogProcessor:
 
@@ -23,7 +19,7 @@ class TestLogProcessor:
                                      custom_cfg=None)
         assert log_processor.by_epoch
         assert log_processor.window_size == 10
-        assert log_processor.custom_cfg is None
+        assert log_processor.custom_cfg == OrderedDict()
 
     def test_check_custom_cfg(self):
         # ``by_epoch==False`` and `window_size='epoch'` in log config will
@@ -79,251 +75,124 @@ class TestLogProcessor:
 
     def test_get_log(self):
         runner = self._setup_runner()
+        # Test train mode.
         log_processor = LogProcessor()
-        tag, log_str = log_processor.get_log(runner, 9, mode='train')
-        assert tag == dict(loss==)
+        log_processor._get_train_log_str = MagicMock()
+        log_processor._get_val_log_str = MagicMock()
+        log_processor.get_log(runner, 1, 'train')
+        log_processor._get_train_log_str.assert_called()
+        log_processor._get_val_log_str.assert_not_called()
 
+        # Test validation or test mode.
+        log_processor = LogProcessor()
+        log_processor._get_train_log_str = MagicMock()
+        log_processor._get_val_log_str = MagicMock()
+        log_processor.get_log(runner, 1, 'val')
+        log_processor._get_train_log_str.assert_not_called()
+        log_processor._get_val_log_str.assert_called()
 
-    def test_after_run(self, tmp_path):
-        out_dir = tmp_path / 'out_dir'
-        out_dir.mkdir()
-        work_dir = tmp_path / 'work_dir'
-        work_dir.mkdir()
-        work_dir_json = work_dir / 'tmp.log.json'
-        json_f = open(work_dir_json, 'w')
-        json_f.close()
-        runner = MagicMock()
-        runner.work_dir = work_dir
-
-        logger_hook = LoggerHook(out_dir=str(tmp_path), keep_local=False)
-        logger_hook.out_dir = str(out_dir)
-        logger_hook.after_run(runner)
-        # Verify that the file has been moved to `out_dir`.
-        assert not osp.exists(str(work_dir_json))
-        assert osp.exists(str(out_dir / 'tmp.log.json'))
-
-    def test_after_train_iter(self):
-        # Test LoggerHook by iter.
-        runner = MagicMock()
-        runner.iter = 10
-        logger_hook = LoggerHook(by_epoch=False)
-        logger_hook._log_train = MagicMock()
-        logger_hook.after_train_iter(runner)
-        # `cur_iter=10+1`, which cannot be exact division by
-        # `logger_hook.interval`
-        logger_hook._log_train.assert_not_called()
-        runner.iter = 9
-        logger_hook.after_train_iter(runner)
-        logger_hook._log_train.assert_called()
-
-        # Test LoggerHook by epoch.
-        logger_hook = LoggerHook(by_epoch=True)
-        logger_hook._log_train = MagicMock()
-        # Only `runner.inner_iter` will work.
-        runner.iter = 9
-        runner.inner_iter = 10
-        logger_hook.after_train_iter(runner)
-        logger_hook._log_train.assert_not_called()
-        runner.inner_iter = 9
-        logger_hook.after_train_iter(runner)
-        logger_hook._log_train.assert_called()
-
-        # Test end of the epoch.
-        logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
-        logger_hook._log_train = MagicMock()
-        runner.cur_dataloader = [0] * 5
-        runner.inner_iter = 4
-        logger_hook.after_train_iter(runner)
-        logger_hook._log_train.assert_called()
-
-        # Test print exp_name
-        runner.meta = dict(exp_name='retinanet')
-        logger_hook = LoggerHook()
-        runner.logger = MagicMock()
-        logger_hook._log_train = MagicMock()
-        logger_hook.after_train_iter(runner)
-        runner.logger.info.assert_called_with(
-            f'Exp name: {runner.meta["exp_name"]}')
-
-    def test_after_val_epoch(self):
-        logger_hook = LoggerHook()
-        runner = MagicMock()
-        logger_hook._log_val = MagicMock()
-        logger_hook.after_val_epoch(runner)
-        logger_hook._log_val.assert_called()
+        # Test error mode.
+        with pytest.raises(ValueError):
+            log_processor.get_log(runner, 1, 'trainn')
 
     @pytest.mark.parametrize('by_epoch', [True, False])
-    def test_log_train(self, by_epoch, capsys):
+    def test_get_log_train_str(self, by_epoch):
         runner = self._setup_runner()
-        runner.meta = dict(exp_name='retinanet')
         # Prepare LoggerHook
-        logger_hook = LoggerHook(by_epoch=by_epoch)
-        logger_hook.writer = MagicMock()
-        logger_hook.time_sec_tot = 1000
-        logger_hook.start_iter = 0
-        logger_hook._get_max_memory = MagicMock(return_value='100')
-        logger_hook.json_log_path = 'tmp.json'
-
+        log_processor = LogProcessor(by_epoch=by_epoch)
+        log_processor._get_max_memory = MagicMock(return_value='100')
+        eta = 40
+        runner.message_hub.update_info('eta', eta)
         # Prepare training information.
-        train_infos = dict(
-            lr=0.1, momentum=0.9, time=1.0, data_time=1.0, loss_cls=1.0)
-        logger_hook._collect_info = MagicMock(return_value=train_infos)
-        logger_hook._log_train(runner)
-        # Verify that the correct variables have been written.
-        runner.writer.add_scalars.assert_called_with(
-            train_infos, step=11, file_path='tmp.json')
+        train_logs = dict(
+            lr=0.1, time=1.0, data_time=1.0, loss_cls=1.0)
+        cur_iter = 2 if by_epoch else 11
+        out = log_processor._get_train_log_str(runner, train_logs, cur_iter)
         # Verify that the correct context have been logged.
-        out, _ = capsys.readouterr()
-        time_avg = logger_hook.time_sec_tot / (
-            runner.iter + 1 - logger_hook.start_iter)
-        eta_second = time_avg * (runner.train_loop.max_iters - runner.iter - 1)
-        eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
             if torch.cuda.is_available():
                 log_str = 'Epoch [2][2/5]\t' \
-                          f"lr: {train_infos['lr']:.3e} " \
-                          f"momentum: {train_infos['momentum']:.3e}, " \
-                          f'eta: {eta_str}, ' \
-                          f"time: {train_infos['time']:.3f}, " \
-                          f"data_time: {train_infos['data_time']:.3f}, " \
+                          f"lr: {train_logs['lr']:.3e}, " \
+                          f'eta: {eta}, ' \
+                          f"time: {train_logs['time']:.3f}, " \
+                          f"data_time: {train_logs['data_time']:.3f}, " \
                           f'memory: 100, ' \
-                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+                          f"loss_cls: {train_logs['loss_cls']:.4f}"
             else:
                 log_str = 'Epoch [2][2/5]\t' \
-                          f"lr: {train_infos['lr']:.3e} " \
-                          f"momentum: {train_infos['momentum']:.3e}, " \
-                          f'eta: {eta_str}, ' \
-                          f"time: {train_infos['time']:.3f}, " \
-                          f"data_time: {train_infos['data_time']:.3f}, " \
-                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+                          f"lr: {train_logs['lr']:.3e}, " \
+                          f'eta: {eta}, ' \
+                          f"time: {train_logs['time']:.3f}, " \
+                          f"data_time: {train_logs['data_time']:.3f}, " \
+                          f"loss_cls: {train_logs['loss_cls']:.4f}"
             assert out == log_str
         else:
             if torch.cuda.is_available():
                 log_str = 'Iter [11/50]\t' \
-                          f"lr: {train_infos['lr']:.3e} " \
-                          f"momentum: {train_infos['momentum']:.3e}, " \
-                          f'eta: {eta_str}, ' \
-                          f"time: {train_infos['time']:.3f}, " \
-                          f"data_time: {train_infos['data_time']:.3f}, " \
+                          f"lr: {train_logs['lr']:.3e}, " \
+                          f'eta: {eta}, ' \
+                          f"time: {train_logs['time']:.3f}, " \
+                          f"data_time: {train_logs['data_time']:.3f}, " \
                           f'memory: 100, ' \
-                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+                          f"loss_cls: {train_logs['loss_cls']:.4f}"
             else:
                 log_str = 'Iter [11/50]\t' \
-                          f"lr: {train_infos['lr']:.3e} " \
-                          f"momentum: {train_infos['momentum']:.3e}, " \
-                          f'eta: {eta_str}, ' \
-                          f"time: {train_infos['time']:.3f}, " \
-                          f"data_time: {train_infos['data_time']:.3f}, " \
-                          f"loss_cls: {train_infos['loss_cls']:.4f}\n"
+                          f"lr: {train_logs['lr']:.3e}, " \
+                          f'eta: {eta}, ' \
+                          f"time: {train_logs['time']:.3f}, " \
+                          f"data_time: {train_logs['data_time']:.3f}, " \
+                          f"loss_cls: {train_logs['loss_cls']:.4f}"
             assert out == log_str
 
     @pytest.mark.parametrize('by_epoch', [True, False])
-    def test_log_val(self, by_epoch, capsys):
+    def test_log_val(self, by_epoch):
         runner = self._setup_runner()
-        # Prepare LoggerHook.
-        logger_hook = LoggerHook(by_epoch=by_epoch)
-        logger_hook.json_log_path = 'tmp.json'
-        metric = dict(accuracy=0.9, data_time=1.0)
-        logger_hook._collect_info = MagicMock(return_value=metric)
-        logger_hook._log_val(runner)
-        # Verify that the correct context have been logged.
-        out, _ = capsys.readouterr()
-        runner.writer.add_scalars.assert_called_with(
-            metric, step=11, file_path='tmp.json')
+        # Prepare LoggerHook
+        log_processor = LogProcessor(by_epoch=by_epoch)
+        # Prepare validation information.
+        val_logs = dict(accuracy=0.9, data_time=1.0)
+        cur_iter = 2
+        out = log_processor._get_val_log_str(runner, val_logs, cur_iter)
         if by_epoch:
             assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
-                          'data_time: 1.0000\n'
+                          'data_time: 1.0000'
 
         else:
-            assert out == 'Iter(val) [5]\taccuracy: 0.9000, ' \
-                          'data_time: 1.0000\n'
+            assert out == 'Iter(val) [2][5]\taccuracy: 0.9000, ' \
+                          'data_time: 1.0000'
 
-    def test_get_window_size(self):
+    def test_collect_scalars(self):
         runner = self._setup_runner()
-        logger_hook = LoggerHook()
-        # Test get window size by name.
-        assert logger_hook._get_window_size(runner, 'epoch') == 2
-        assert logger_hook._get_window_size(runner, 'global') == 11
-        assert logger_hook._get_window_size(runner, 10) == 10
-        # Window size must equal to `logger_hook.interval`.
-        with pytest.raises(AssertionError):
-            logger_hook._get_window_size(runner, 20)
-
-        with pytest.raises(ValueError):
-            logger_hook._get_window_size(runner, 'unknwon')
-
-    def test_parse_custom_keys(self):
-        tag = OrderedDict()
-        runner = self._setup_runner()
-        log_buffers = OrderedDict(lr=MagicMock(), loss=MagicMock())
-        cfg_dict = dict(
-            lr=dict(method='min'),
-            loss=[
-                dict(method='min', window_size='global'),
-                dict(method='max', log_name='loss_max')
-            ])
-        logger_hook = LoggerHook()
-        for log_key, log_cfg in cfg_dict.items():
-            logger_hook._parse_custom_keys(runner, log_key, log_cfg,
-                                           log_buffers, tag)
-        assert list(tag) == ['lr', 'loss', 'loss_max']
-        assert log_buffers['lr'].min.assert_called
-        assert log_buffers['loss'].min.assert_called
-        assert log_buffers['loss'].max.assert_called
-        assert log_buffers['loss'].mean.assert_called
-        # `log_name` Cannot be repeated.
-        with pytest.raises(KeyError):
-            cfg_dict = dict(loss=[
-                dict(method='min', window_size='global'),
-                dict(method='max', log_name='loss_max'),
-                dict(method='mean', log_name='loss_max')
-            ])
-            logger_hook.custom_keys = cfg_dict
-            for log_key, log_cfg in cfg_dict.items():
-                logger_hook._parse_custom_keys(runner, log_key, log_cfg,
-                                               log_buffers, tag)
-        # `log_key` cannot be overwritten multiple times.
-        with pytest.raises(AssertionError):
-            cfg_dict = dict(loss=[
-                dict(method='min', window_size='global'),
-                dict(method='max'),
-            ])
-            logger_hook.custom_keys = cfg_dict
-            for log_key, log_cfg in cfg_dict.items():
-                logger_hook._parse_custom_keys(runner, log_key, log_cfg,
-                                               log_buffers, tag)
-
-    def test_collect_info(self):
-        runner = self._setup_runner()
-        logger_hook = LoggerHook(
-            custom_keys=dict(time=dict(method='max', log_name='time_max')))
-        logger_hook._parse_custom_keys = MagicMock()
+        custom_cfg = [
+            dict(data_src='time', method_name='mean', window_size=100),
+            dict(data_src='time', method_name='max', log_name='time_max')]
+        logger_hook = LogProcessor(custom_cfg=custom_cfg)
         # Collect with prefix.
-        log_buffers = {
+        log_scalars = {
             'train/time': MagicMock(),
             'lr': MagicMock(),
             'train/loss_cls': MagicMock(),
             'val/metric': MagicMock()
         }
-        runner.message_hub.log_buffers = log_buffers
-        tag = logger_hook._collect_info(runner, mode='train')
-        # Test parse custom_keys
-        logger_hook._parse_custom_keys.assert_called()
+        runner.message_hub._log_scalars = log_scalars
+        tag = logger_hook._collect_scalars(copy.deepcopy(custom_cfg),
+                                           runner, mode='train')
         # Test training key in tag.
-        assert list(tag.keys()) == ['time', 'loss_cls']
+        assert list(tag.keys()) == ['time', 'loss_cls', 'time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
-        log_buffers['train/time'].mean.assert_called()
-        log_buffers['train/loss_cls'].mean.assert_called()
-        log_buffers['train/loss_cls'].current.assert_not_called()
+        log_scalars['train/time'].statistics.assert_called_with(
+            method_name='max')
+        log_scalars['train/loss_cls'].mean.assert_called()
 
-        tag = logger_hook._collect_info(runner, mode='val')
+        tag = logger_hook._collect_scalars(copy.deepcopy(custom_cfg),
+                                           runner, mode='val')
         assert list(tag.keys()) == ['metric']
-        log_buffers['val/metric'].current.assert_called()
+        log_scalars['val/metric'].current.assert_called()
 
     @patch('torch.cuda.max_memory_allocated', MagicMock())
     @patch('torch.cuda.reset_peak_memory_stats', MagicMock())
     def test_get_max_memory(self):
-        logger_hook = LoggerHook()
+        logger_hook = LogProcessor()
         runner = MagicMock()
         runner.world_size = 1
         runner.model = torch.nn.Linear(1, 1)
@@ -333,16 +202,16 @@ class TestLogProcessor:
 
     def test_get_iter(self):
         runner = self._setup_runner()
-        logger_hook = LoggerHook()
+        log_processor = LogProcessor()
         # Get global iter when `inner_iter=False`
-        iter = logger_hook._get_iter(runner)
+        iter = log_processor._get_iter(runner)
         assert iter == 11
         # Get inner iter
-        iter = logger_hook._get_iter(runner, inner_iter=True)
+        iter = log_processor._get_iter(runner, 1)
         assert iter == 2
         # Still get global iter when `logger_hook.by_epoch==False`
-        logger_hook.by_epoch = False
-        iter = logger_hook._get_iter(runner, inner_iter=True)
+        log_processor.by_epoch = False
+        iter = log_processor._get_iter(runner, 1)
         assert iter == 11
 
     def test_get_epoch(self):
@@ -368,4 +237,5 @@ class TestLogProcessor:
             message_hub.update_scalar('train/loss', 10-i)
         for i in range(10):
             message_hub.update_scalar('val/acc', i*0.1)
+        runner.message_hub = message_hub
         return runner

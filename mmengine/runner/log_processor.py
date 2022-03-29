@@ -132,7 +132,6 @@ class LogProcessor:
                 log_tag.pop(key)
                 lr_str_list.append(f'{key}: {value:.3e}')
         lr_str = ' '.join(lr_str_list)
-
         # Format log header.
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
@@ -167,7 +166,8 @@ class LogProcessor:
         log_str += ', '.join(log_items)
         return log_str
 
-    def _get_val_log_str(self, runner, tag, cur_iter):
+    def _get_val_log_str(self, runner: 'Runner', tag: dict, cur_iter: int) \
+            -> str:
         """Format log string during validation phases.
 
         Args:
@@ -221,7 +221,8 @@ class LogProcessor:
         history_scalars = runner.message_hub.log_scalars
         # corresponding mode history_scalars
         mode_history_scalars = OrderedDict()
-        # extract log scalars to `mode_history_scalars` according to mode.
+        # extract log scalars and remove prefix to `mode_history_scalars`
+        # according to mode.
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
                 key = prefix_key.split('/')[-1]
@@ -234,14 +235,16 @@ class LogProcessor:
                 # Default statistic method is current.
                 tag[key] = mode_history_scalars[key].current()
         # Update custom keys.
-        if mode == 'train' or mode == 'val':
-            for log_cfg in custom_cfg:
-                data_source = log_cfg.pop('data_src')
-                if 'log_name' in log_cfg['log_name']:
-                    log_name = log_cfg.pop('log_name')
-                else:
-                    log_name = data_source
-                tag[log_name] = mode_history_scalars['data_src'].statistics(
+        for log_cfg in custom_cfg:
+            data_src = log_cfg.pop('data_src')
+            if 'log_name' in log_cfg:
+                log_name = log_cfg.pop('log_name')
+            else:
+                log_name = data_src
+            # log item in custom_cfg could only exist in train or val
+            # mode.
+            if data_src in mode_history_scalars:
+                tag[log_name] = mode_history_scalars[data_src].statistics(
                     **log_cfg)
         return tag
 
