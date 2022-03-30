@@ -86,8 +86,20 @@ class LogProcessor:
 
     def get_log(self, runner: 'runner.Runner',
                 batch_idx: int, mode: str = 'train'):
+        """Get formatted log at training/validation/testing phase.
+
+
+
+        Args:
+            runner:
+            batch_idx:
+            mode:
+
+        Returns:
+
+        """
         # Consider the `window_size` such as "epoch" and "global" will
-        # change with `runner.iter` Therefore, we should use a copy of
+        # change with `runner.iter` Therefore, we should make a copy of
         # `self.custom_cfg` to calculate specific window_size and keep
         # `self.custom_cfg` unchanged.
         custom_cfg = copy.deepcopy(self.custom_cfg)

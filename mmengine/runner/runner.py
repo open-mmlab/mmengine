@@ -34,7 +34,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                DefaultScope)
 from mmengine.utils import find_latest_checkpoint, is_list_of, symlink
 from mmengine.visualization import ComposedWriter
-from mmengine.runner import log_processor as processor
+from .log_processor import LogProcessor
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
@@ -302,7 +302,7 @@ class Runner:
             self._experiment_name = self.timestamp
 
         log_processor = dict() if log_processor is None else log_processor
-        self.log_processor = processor.LogProcessor(**log_processor)
+        self.log_processor = LogProcessor(**log_processor)
         self.logger = self.build_logger(logger)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub(message_hub)
