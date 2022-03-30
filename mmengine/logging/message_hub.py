@@ -36,8 +36,9 @@ class MessageHub(ManagerMixin):
             :attr:`_runtime_info` could be serialized or not.
 
     Note:
-        If the key in :attr:`_resumed_keys` belongs to :attr:`_log_scalars`,
-        The corresponding value cannot be set repeatedly.
+        Key in :attr:`_resumed_keys` belongs to :attr:`_log_scalars` or
+        :attr:`_runtime_info`. The corresponding value cannot be set
+        repeatedly.
 
     Examples:
         >>> # create empty `MessageHub`.
@@ -107,7 +108,8 @@ class MessageHub(ManagerMixin):
             resumed cannot be set repeatedly for the same key.
 
         Args:
-            resumed (str):
+            resumed (str): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
             key (str): Key of ``HistoryBuffer``.
             value (int or float): Value of log.
             count (int): Accumulation times of log, defaults to 1. `count`
@@ -129,8 +131,8 @@ class MessageHub(ManagerMixin):
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
-            resumed (bool): Whether the corresponding ``HistoryBuffer``
-                could be resumed.
+            resumed (bool): Whether all ``HistoryBuffer`` refered in
+                log_dict could be resumed.
 
         Examples:
             >>> message_hub = MessageHub.get_instance('mmengine')

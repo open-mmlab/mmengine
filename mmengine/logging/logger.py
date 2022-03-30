@@ -92,9 +92,9 @@ class MMLogger(Logger, ManagerMixin):
     following features:
 
     - Distributed log storage, ``MMLogger`` can choose whether to save log of
-    different ranks according to log_file.
+      different ranks according to log_file.
     - Log with different loglevel will have different colors and format when
-    displayed on terminal.
+      displayed on terminal.
 
     Note:
         - The `name` of logger and the ``instance_name`` of ``MMLogger`` could
@@ -130,6 +130,7 @@ class MMLogger(Logger, ManagerMixin):
         log_level (str): The log level of the handler. Defaults to 'NOTSET'.
         file_mode (str): The file mode used in opening log file.
             Defaults to 'w'.
+        distributed (bool): Whether to save distributed logs.
     """
 
     def __init__(self,
