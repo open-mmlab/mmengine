@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 from collections import OrderedDict
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -52,11 +52,12 @@ class MessageHub(ManagerMixin):
         >>>     runtime_info=runtime_info,
         >>>     resumed_keys=resumed_keys)
     """
+
     def __init__(self,
-                 name,
-                 log_scalars: OrderedDict = None,
-                 runtime_info: OrderedDict = None,
-                 resumed_keys: OrderedDict = None):
+                 name: str,
+                 log_scalars: Optional[OrderedDict] = None,
+                 runtime_info: Optional[OrderedDict] = None,
+                 resumed_keys: Optional[OrderedDict] = None):
         super().__init__(name)
         self._log_scalars = log_scalars if log_scalars is not None else \
             OrderedDict()
@@ -128,6 +129,8 @@ class MessageHub(ManagerMixin):
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
 
         Examples:
             >>> message_hub = MessageHub.get_instance('mmengine')
@@ -168,6 +171,8 @@ class MessageHub(ManagerMixin):
         Args:
             key (str): Key of runtime information.
             value (Any): Value of runtime information.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
         """
         self._set_resumed_keys(key, resumed)
         self._resumed_keys[key] = resumed
@@ -182,8 +187,8 @@ class MessageHub(ManagerMixin):
 
         Args:
             key (str): Key of :attr:`_log_scalrs` or :attr:`_runtime_info`.
-            resumed: Whether the corresponding ``HistoryBuffer`` could be
-                resumed.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
         """
         if key not in self._resumed_keys:
             self._resumed_keys[key] = resumed
@@ -228,7 +233,7 @@ class MessageHub(ManagerMixin):
 
         Returns:
             HistoryBuffer: Corresponding ``HistoryBuffer`` instance if the
-                key exists.
+            key exists.
         """
         if key not in self.log_scalars:
             raise KeyError(f'{key} is not found in Messagehub.log_buffers: '

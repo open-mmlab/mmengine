@@ -6,6 +6,29 @@ import numpy as np
 
 
 class HistoryBuffer:
+    """Unified storage format for different log types.
+
+    ``HistoryBuffer`` records the history of log for further statistics.
+
+    Examples:
+        >>> history_buffer = HistoryBuffer()
+        >>> # Update history_buffer.
+        >>> history_buffer.update(1)
+        >>> history_buffer.update(2)
+        >>> history_buffer.min()  # minimum of (1, 2)
+        1
+        >>> history_buffer.max()  # maximum of (1, 2)
+        2
+        >>> history_buffer.mean()  # mean of (1, 2)
+        1.5
+        >>> history_buffer.statistics('mean')  # access method by string.
+        1.5
+
+    Args:
+        log_history (Sequence): History logs. Defaults to [].
+        count_history (Sequence): Counts of history logs. Defaults to [].
+        max_length (int): The max length of history logs. Defaults to 1000000.
+    """
     _statistics_methods: dict = dict()
 
     def __init__(self,
@@ -27,7 +50,8 @@ class HistoryBuffer:
             self._log_history = np.array(log_history)
             self._count_history = np.array(count_history)
 
-    def _set_default_statistics(self):
+    def _set_default_statistics(self) -> None:
+        """Register default statistic methods: min, max, current and mean."""
         self._statistics_methods.setdefault('min', HistoryBuffer.min)
         self._statistics_methods.setdefault('max', HistoryBuffer.max)
         self._statistics_methods.setdefault('current', HistoryBuffer.current)
@@ -36,9 +60,9 @@ class HistoryBuffer:
     def update(self, log_val: Union[int, float], count: int = 1) -> None:
         """update the log history.
 
-        If the length of the buffer exceeds
-        ``self._max_length``, the oldest element will be removed from the
-        buffer.
+        If the length of the buffer exceeds ``self._max_length``, the oldest
+        element will be removed from the buffer.
+
         Args:
             log_val (int or float): The value of log.
             count (int): The accumulation times of log, defaults to 1.
@@ -69,6 +93,21 @@ class HistoryBuffer:
     def register_statistics(cls, method: Callable) -> Callable:
         """Register custom statistics method to ``_statistics_methods``.
 
+        The registered method can be called by ``history_buffer.statistics``
+        with corresponding method name and arguments.
+
+        Examples:
+            >>> @HistoryBuffer.register_statistics
+            >>> def weighted_mean(self, window_size, weight):
+            >>>     assert len(weight) == window_size
+            >>>     return (self._log_history[-window_size:] *
+            >>>             np.array(weight)).sum() / \
+            >>>             self._count_history[-window_size:]
+
+            >>> log_buffer = HistoryBuffer([1, 2], [1, 1])
+            >>> log_buffer.statistics('weighted_mean', 2, [2, 1])
+            2
+
         Args:
             method (Callable): Custom statistics method.
         Returns:
@@ -85,12 +124,13 @@ class HistoryBuffer:
 
         Args:
             method_name (str): Name of method.
+
         Returns:
             Any: Depends on corresponding method.
         """
         if method_name not in self._statistics_methods:
             raise KeyError(f'{method_name} has not been registered in '
-                           'BaseHistoryBuffer._statistics_methods')
+                           'HistoryBuffer._statistics_methods')
         method = self._statistics_methods[method_name]
         # Provide self arguments for registered functions.
         return method(self, *arg, **kwargs)
@@ -99,8 +139,9 @@ class HistoryBuffer:
         """Return the mean of the latest ``window_size`` values in log
         histories.
 
-        If ``window_size is None``, return the global mean of
-        history logs.
+        If ``window_size is None`` or ``window_size > len(self._log_history)``,
+        return the global mean value of history logs.
+
         Args:
             window_size (int, optional): Size of statistics window.
         Returns:
@@ -120,8 +161,9 @@ class HistoryBuffer:
         """Return the maximum value of the latest ``window_size`` values in log
         histories.
 
-        If ``window_size is None``, return the global maximum value
-        of history logs.
+        If ``window_size is None`` or ``window_size > len(self._log_history)``,
+        return the global maximum value of history logs.
+
         Args:
             window_size (int, optional): Size of statistics window.
         Returns:
@@ -139,8 +181,9 @@ class HistoryBuffer:
         """Return the minimum value of the latest ``window_size`` values in log
         histories.
 
-        If ``window_size is None``, return the global minimum value
-        of history logs.
+        If ``window_size is None`` or ``window_size > len(self._log_history)``,
+        return the global minimum value of history logs.
+
         Args:
             window_size (int, optional): Size of statistics window.
         Returns:

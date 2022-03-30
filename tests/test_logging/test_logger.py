@@ -128,24 +128,21 @@ class TestLogger:
         print_log('welcome', logger=logger)
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - mmengine - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test access logger by name.
         print_log('welcome', logger='test_print_log')
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - mmengine - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test access the latest created logger.
         print_log('welcome', logger='current')
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - mmengine - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test invalid logger type.

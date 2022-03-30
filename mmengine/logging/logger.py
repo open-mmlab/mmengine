@@ -133,7 +133,7 @@ class MMLogger(Logger, ManagerMixin):
     """
 
     def __init__(self,
-                 name: str = '',
+                 name: str,
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
@@ -152,7 +152,7 @@ class MMLogger(Logger, ManagerMixin):
         # `StreamHandler` record month, day hour, minute, and second timestamp.
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
-        # Only rank0 `StreamHandler` will log messages bellow error level.
+        # Only rank0 `StreamHandler` will log messages below error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
