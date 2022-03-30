@@ -120,7 +120,7 @@ class DetWandbVisualizer(Visualizer):
 
 if __name__ == '__main__':
 
-    init_kwargs = {'project': 'hello_my'}
+    init_kwargs = {'project': 'hello_my', "group": "experiment_1"}
 
     save_dir = 'work_dir'
     writers = [dict(type='LocalWriter', save_dir=save_dir, img_show=False), dict(type='WandbWriter', init_kwargs=init_kwargs)]
@@ -155,12 +155,14 @@ if __name__ == '__main__':
     pred_instances = BaseDataElement(
         data=dict(bboxes=torch.tensor([40, 120, 400, 500])))
     det_local_visualizer.add_datasample('val_image', img_data, gt_instances, pred_instances, step=1)
-    # det_local_visualizer.close()
+    det_local_visualizer.close()
 
-    # import wandb
-    # wandb.init()
-    # wandb.log({'acc': 2.1, 'loss': 3})
-    # wandb.log({'img': wandb.Image(img_data)})
+    import wandb
+
+    init_kwargs = {'project': 'hello_my', "group": "experiment_1"}
+    wandb.init(**init_kwargs)
+    wandb.log({'acc': 2.1, 'loss': 3})
+    wandb.log({'img': wandb.Image(img_data)})
 
     # det_local_visualizer.show()
 
