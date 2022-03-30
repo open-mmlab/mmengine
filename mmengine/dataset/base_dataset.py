@@ -174,9 +174,9 @@ class BaseDataset(Dataset):
 
     Note:
         BaseDataset collects meta information from `annotation file` (the
-        lowest priority), ``BaseDataset.METAINFO``(medium) and `meta parameter`
-        (highest) passed to constructors. The lower priority meta information
-        will be overwritten by higher one.
+        lowest priority), ``BaseDataset.METAINFO``(medium) and `metainfo
+        parameter` (highest) passed to constructors. The lower priority meta
+        information will be overwritten by higher one.
 
     Examples:
         Assume the annotation file is given above.
@@ -601,14 +601,14 @@ class BaseDataset(Dataset):
         Args:
             indices (int or Sequence[int]): If type of indices is int, indices
                 represents the first or last few data of dataset according to
-                indices is positive or negative. If  type of indices is
+                indices is positive or negative. If type of indices is
                 Sequence, indices represents the target data information
                 index of dataset.
 
         Returns:
             BaseDataset: A subset of dataset.
         """
-        # Get subset of data from  serialized data or data information list
+        # Get subset of data from serialized data or data information list
         # according to `self.serialize_data`. Since `_get_serialized_subdata`
         # will recalculate the subset data information,
         # `_copy_without_annotation` will copy all attributes except data
