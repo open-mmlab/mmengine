@@ -1,0 +1,119 @@
+version: 2.1
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/python:3.7.4
+    steps:
+      - checkout
+      - run:
+          name: Install pre-commit hook
+          command: |
+            sudo apt-add-repository ppa:brightbox/ruby-ng -y
+            sudo apt-get update
+            sudo apt-get install -y ruby2.7
+            pip install pre-commit
+            pre-commit install
+      - run:
+          name: Linting
+          command: pre-commit run --all-files
+      - run:
+          name: Check docstring coverage
+          command: |
+            pip install interrogate
+            interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 95 mmengine
+
+  build_cpu:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+      torch:
+        type: string
+      torchvision:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install PyTorch
+          command: python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+      - run:
+          name: Install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch1.8.0/index.html
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: python -m pytest tests/
+
+  build_cu102:
+    machine:
+      image: ubuntu-1604-cuda-10.1:201909-23  # the actual version of cuda is 10.2
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - run:
+          # https://github.com/pytorch/vision/issues/2921
+          name: Install dependency of torchvision when using pyenv
+          command: sudo apt-get install -y liblzma-dev
+      - run:
+          # python3.7 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
+          name: Select python3.7
+          command: |
+            pyenv uninstall -f 3.7.0
+            pyenv install 3.7.0
+            pyenv global 3.7.0
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install PyTorch
+          command: python -m pip install torch==1.8.1+cu102 torchvision==0.9.1+cu102 -f https://download.pytorch.org/whl/torch_stable.html
+      - run:
+          name: Install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: |
+            python -m coverage run --branch --source mmengine -m pytest tests/
+            python -m coverage xml
+            python -m coverage report -m
+
+workflows:
+  unit_tests:
+    jobs:
+      - lint
+      - build_cpu:
+          name: build_cpu_th1.8_py3.7
+          torch: 1.8.0
+          torchvision: 0.9.0
+          requires:
+            - lint
+
+      - build_cu102:
+          requires:
+            - build_cpu_th1.8_py3.7
