@@ -6,7 +6,6 @@ import pytest
 
 import torch
 
-from mmengine.hooks import LoggerHook
 from mmengine.runner import LogProcessor
 from mmengine.logging import MMLogger
 from mmengine.logging import MessageHub
@@ -113,7 +112,7 @@ class TestLogProcessor:
             if torch.cuda.is_available():
                 log_str = 'Epoch [2][2/5]\t' \
                           f"lr: {train_logs['lr']:.3e}, " \
-                          f'eta: {eta}, ' \
+                          f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
                           f"data_time: {train_logs['data_time']:.3f}, " \
                           f'memory: 100, ' \
@@ -121,7 +120,7 @@ class TestLogProcessor:
             else:
                 log_str = 'Epoch [2][2/5]\t' \
                           f"lr: {train_logs['lr']:.3e}, " \
-                          f'eta: {eta}, ' \
+                          f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
                           f"data_time: {train_logs['data_time']:.3f}, " \
                           f"loss_cls: {train_logs['loss_cls']:.4f}"
@@ -130,7 +129,7 @@ class TestLogProcessor:
             if torch.cuda.is_available():
                 log_str = 'Iter [11/50]\t' \
                           f"lr: {train_logs['lr']:.3e}, " \
-                          f'eta: {eta}, ' \
+                          f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
                           f"data_time: {train_logs['data_time']:.3f}, " \
                           f'memory: 100, ' \
@@ -138,7 +137,7 @@ class TestLogProcessor:
             else:
                 log_str = 'Iter [11/50]\t' \
                           f"lr: {train_logs['lr']:.3e}, " \
-                          f'eta: {eta}, ' \
+                          f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
                           f"data_time: {train_logs['data_time']:.3f}, " \
                           f"loss_cls: {train_logs['loss_cls']:.4f}"
@@ -216,13 +215,13 @@ class TestLogProcessor:
 
     def test_get_epoch(self):
         runner = self._setup_runner()
-        logger_hook = LoggerHook()
-        epoch = logger_hook._get_epoch(runner, 'train')
+        log_processor = LogProcessor()
+        epoch = log_processor._get_epoch(runner, 'train')
         assert epoch == 2
-        epoch = logger_hook._get_epoch(runner, 'val')
+        epoch = log_processor._get_epoch(runner, 'val')
         assert epoch == 1
         with pytest.raises(ValueError):
-            logger_hook._get_epoch(runner, 'test')
+            log_processor._get_epoch(runner, 'test')
 
     def _setup_runner(self):
         runner = MagicMock()

@@ -318,6 +318,7 @@ class Runner:
             self._experiment_name = self.timestamp
 
         log_processor = dict() if log_processor is None else log_processor
+        self.log_processor = LogProcessor(**log_processor)
         self.logger = self.build_logger(log_level=log_level)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub()
