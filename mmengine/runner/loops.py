@@ -70,9 +70,8 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner._inner_iter = idx
-
-        self.runner.call_hook('before_train_iter', data_batch=data_batch)
+        self.runner.call_hook(
+            'before_train_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be a dict containing one or multiple loss tensors
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
@@ -82,6 +81,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook(
             'after_train_iter',
+            batch_idx=idx,
             data_batch=data_batch,
             outputs=self.runner.outputs)
 
@@ -126,9 +126,6 @@ class IterBasedTrainLoop(BaseLoop):
             if (self.runner.val_loop is not None and
                     self.runner._iter % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
-                # reset inner_iter to 0 to ensure it counts as expected in
-                # train loop
-                self.runner._inner_iter = 0
 
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
@@ -141,7 +138,10 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner.call_hook('before_train_iter', data_batch=data_batch)
+        self.runner.call_hook(
+            'before_train_iter',
+            batch_idx=self.runner._iter,
+            data_batch=data_batch)
         # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
@@ -151,10 +151,10 @@ class IterBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook(
             'after_train_iter',
+            batch_idx=self.runner._iter,
             data_batch=data_batch,
             outputs=self.runner.outputs)
         self.runner._iter += 1
-        self.runner._inner_iter += 1
 
 
 @LOOPS.register_module()
@@ -208,13 +208,16 @@ class ValLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner._inner_iter = idx
-        self.runner.call_hook('before_val_iter', data_batch=data_batch)
+        self.runner.call_hook(
+            'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataSample
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
-            'after_val_iter', data_batch=data_batch, outputs=outputs)
+            'after_val_iter',
+            batch_idx=idx,
+            data_batch=data_batch,
+            outputs=outputs)
 
 
 @LOOPS.register_module()
@@ -263,10 +266,13 @@ class TestLoop(BaseLoop):
             data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
                 from dataloader.
         """
-        self.runner._inner_iter = idx
-        self.runner.call_hook('before_test_iter', data_batch=data_batch)
+        self.runner.call_hook(
+            'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataSample
         predictions = self.runner.model(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
-            'after_test_iter', data_batch=data_batch, outputs=predictions)
+            'after_test_iter',
+            batch_idx=idx,
+            data_batch=data_batch,
+            outputs=predictions)

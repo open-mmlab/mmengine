@@ -85,14 +85,15 @@ class TestLoggerHook:
         # Test LoggerHook by iter.
         runner = MagicMock()
         runner.iter = 10
+        batch_idx = 5
         logger_hook = LoggerHook(by_epoch=False)
         logger_hook._log_train = MagicMock()
-        logger_hook.after_train_iter(runner)
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         # `cur_iter=10+1`, which cannot be exact division by
         # `logger_hook.interval`
         logger_hook._log_train.assert_not_called()
         runner.iter = 9
-        logger_hook.after_train_iter(runner)
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_called()
 
         # Test LoggerHook by epoch.
@@ -100,19 +101,19 @@ class TestLoggerHook:
         logger_hook._log_train = MagicMock()
         # Only `runner.inner_iter` will work.
         runner.iter = 9
-        runner.inner_iter = 10
-        logger_hook.after_train_iter(runner)
+        batch_idx = 10
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_not_called()
-        runner.inner_iter = 9
-        logger_hook.after_train_iter(runner)
+        batch_idx = 9
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_called()
 
         # Test end of the epoch.
         logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
         logger_hook._log_train = MagicMock()
         runner.cur_dataloader = [0] * 5
-        runner.inner_iter = 4
-        logger_hook.after_train_iter(runner)
+        batch_idx = 4
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_called()
 
         # Test print exp_name
@@ -120,7 +121,7 @@ class TestLoggerHook:
         logger_hook = LoggerHook()
         runner.logger = MagicMock()
         logger_hook._log_train = MagicMock()
-        logger_hook.after_train_iter(runner)
+        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         runner.logger.info.assert_called_with(
             f'Exp name: {runner.meta["exp_name"]}')
 
@@ -137,6 +138,7 @@ class TestLoggerHook:
         runner.meta = dict(exp_name='retinanet')
         # Prepare LoggerHook
         logger_hook = LoggerHook(by_epoch=by_epoch)
+        logger_hook._inner_iter = 1
         logger_hook.writer = MagicMock()
         logger_hook.time_sec_tot = 1000
         logger_hook.start_iter = 0
@@ -220,6 +222,7 @@ class TestLoggerHook:
     def test_get_window_size(self):
         runner = self._setup_runner()
         logger_hook = LoggerHook()
+        logger_hook._inner_iter = 1
         # Test get window size by name.
         assert logger_hook._get_window_size(runner, 'epoch') == 2
         assert logger_hook._get_window_size(runner, 'global') == 11
@@ -313,6 +316,7 @@ class TestLoggerHook:
     def test_get_iter(self):
         runner = self._setup_runner()
         logger_hook = LoggerHook()
+        logger_hook._inner_iter = 1
         # Get global iter when `inner_iter=False`
         iter = logger_hook._get_iter(runner)
         assert iter == 11
@@ -338,7 +342,6 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.epoch = 1
         runner.cur_dataloader = [0] * 5
-        runner.inner_iter = 1
         runner.iter = 10
         runner.train_loop.max_iters = 50
         logger = logging.getLogger()

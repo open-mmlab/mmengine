@@ -10,19 +10,21 @@ DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
 @HOOKS.register_module()
 class ParamSchedulerHook(Hook):
-    """A hook to update some hyper-parameters in optimizer, e.g learning rate
+    """A hook to update some hyper-parameters in optimizer, e.g., learning rate
     and momentum."""
 
     priority = 'LOW'
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """Call step function for each scheduler after each iteration.
 
         Args:
             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.

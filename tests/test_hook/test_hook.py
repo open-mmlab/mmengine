@@ -136,11 +136,9 @@ class TestHook:
 
     def test_every_n_inner_iters(self):
         hook = Hook()
-        runner = Mock()
 
         for i in range(100):
-            runner.inner_iter = i
-            return_val = hook.every_n_inner_iters(runner, 3)
+            return_val = hook.every_n_inner_iters(i, 3)
             if (i + 1) % 3 == 0:
                 assert return_val
             else:
@@ -162,15 +160,15 @@ class TestHook:
         runner = Mock()
 
         # last inner iter
-        runner.inner_iter = 1
+        batch_idx = 1
         runner.cur_dataloader.__len__ = Mock(return_value=2)
         runner.cur_dataloader.__len__ = Mock(return_value=2)
-        return_val = hook.end_of_epoch(runner)
+        return_val = hook.end_of_epoch(runner, batch_idx)
         assert return_val
 
         # not the last inner iter
-        runner.inner_iter = 0
-        return_val = hook.end_of_epoch(runner)
+        batch_idx = 0
+        return_val = hook.end_of_epoch(runner, batch_idx)
         assert not return_val
 
     def test_is_last_train_epoch(self):

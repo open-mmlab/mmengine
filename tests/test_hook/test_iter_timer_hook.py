@@ -7,23 +7,23 @@ from mmengine.hooks import IterTimerHook
 class TestIterTimerHook:
 
     def test_before_epoch(self):
-        Hook = IterTimerHook()
-        Runner = Mock()
-        Hook._before_epoch(Runner)
-        assert isinstance(Hook.t, float)
+        hook = IterTimerHook()
+        runner = Mock()
+        hook._before_epoch(runner)
+        assert isinstance(hook.t, float)
 
     def test_before_iter(self):
-        Hook = IterTimerHook()
-        Runner = Mock()
-        Runner.log_buffer = dict()
-        Hook._before_epoch(Runner)
-        Hook._before_iter(Runner)
-        Runner.message_hub.update_scalar.assert_called()
+        hook = IterTimerHook()
+        runner = Mock()
+        runner.log_buffer = dict()
+        hook._before_epoch(runner)
+        hook._before_iter(runner, 0)
+        runner.message_hub.update_log.assert_called()
 
     def test_after_iter(self):
-        Hook = IterTimerHook()
-        Runner = Mock()
-        Runner.log_buffer = dict()
-        Hook._before_epoch(Runner)
-        Hook._after_iter(Runner)
-        Runner.message_hub.update_scalar.assert_called()
+        hook = IterTimerHook()
+        runner = Mock()
+        runner.log_buffer = dict()
+        hook._before_epoch(runner)
+        hook._after_iter(runner, 0)
+        runner.message_hub.update_log.assert_called()
