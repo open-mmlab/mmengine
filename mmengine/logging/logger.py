@@ -88,7 +88,7 @@ class MMLogger(Logger, ManagerMixin):
     """Formatted logger used to record message.
 
     ``MMLogger`` can create formatted logger to log different level message and
-    get instance in the same way as ManagerMixin. ``MMLogger`` has the
+    get instance in the same way as ``ManagerMixin``. ``MMLogger`` has the
     following features:
 
     - Distributed log storage, ``MMLogger`` can choose whether to save log of
@@ -103,7 +103,7 @@ class MMLogger(Logger, ManagerMixin):
           ensures ``MMLogger`` will not be incluenced by third-party logging
           config.
         - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
-          or error message without Handler.
+          or error message without ``Handler``.
 
     Examples:
         >>> logger = MMLogger.get_instance(name='MMLogger',
@@ -149,8 +149,10 @@ class MMLogger(Logger, ManagerMixin):
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)
+        # `StreamHandler` record month, day hour, minute, and second timestamp.
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
+        # Only rank0 `StreamHandler` will log messages bellow error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
@@ -166,13 +168,17 @@ class MMLogger(Logger, ManagerMixin):
                 else:
                     path_split[-1] = f'{path_split[-1]}_rank{rank}'
                 log_file = os.sep.join(path_split)
-            # Save distributed log if distributed is True.
+            # Save multi-ranks logs if distributed is True. The logs of rank0
+            # will always be saved.
             if rank == 0 or distributed:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to
                 # have colors, otherwise it will appear garbled.
                 file_handler = logging.FileHandler(log_file, file_mode)
+                # `StreamHandler` record year, month, day hour, minute,
+                # and second timestamp. file_handler will only record logs
+                # without color to avoid garbled code saved in files.
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
@@ -181,10 +187,10 @@ class MMLogger(Logger, ManagerMixin):
     def callHandlers(self, record: LogRecord) -> None:
         """Call the handlers for the specified record.
 
-        Override ``callHandlers`` method in logging.Logger to avoid multiple
-        warning messages in DDP mode. Loop through all handlers for this
-        logger and its parents in the logger hierarchy. If no handler was
-        found, the record will not be output.
+        Override ``callHandlers`` method in ``logging.Logger`` to avoid
+        multiple warning messages in DDP mode. Loop through all handlers of
+        the logger instance and its parents in the logger hierarchy. If no
+        handler was found, the record will not be output.
 
         Args:
             record (LogRecord): A ``LogRecord`` instance represents a message

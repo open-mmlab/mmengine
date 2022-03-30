@@ -17,14 +17,14 @@ class MessageHub(ManagerMixin):
 
     ``MessageHub`` will record log information and runtime information. The
     log information refers to the learning rate, loss, etc. of the model
-    when training a model, which will be stored as ``HistoryBuffer``. The
+    during training phase, which will be stored as ``HistoryBuffer``. The
     runtime information refers to the iter times, meta information of
     runner etc. which will be overwritten by next update.
 
     Args:
-        name (str): Name of message hub, for global access. Defaults to ''.
+        name (str): Instance name of message hub, for global access.
         log_scalars (OrderedDict, optional): Each key-value pair in the
-            dictionary is the name of the log information name, and it's
+            dictionary is the name of the log information name and it's
             corresponding value, such as "loss", "lr", "metric" .etc. and
             their values. The type of value must be HistoryBuffer. Defaults to
             None.
@@ -52,9 +52,8 @@ class MessageHub(ManagerMixin):
         >>>     runtime_info=runtime_info,
         >>>     resumed_keys=resumed_keys)
     """
-
     def __init__(self,
-                 name: str = '',
+                 name,
                  log_scalars: OrderedDict = None,
                  runtime_info: OrderedDict = None,
                  resumed_keys: OrderedDict = None):
