@@ -124,8 +124,7 @@ class MMLogger(Logger, ManagerMixin):
     Args:
         name (str): Global instance name, Defaults to ''.
         logger_name (str): ``name`` attribute of ``Logging.Logger`` instance.
-            If `module_name` is not defined, it will be consistent with
-            ``name``.Defaults to ''.
+            If `module_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level (str): The log level of the handler. Defaults to 'NOTSET'.
@@ -135,13 +134,11 @@ class MMLogger(Logger, ManagerMixin):
 
     def __init__(self,
                  name: str = '',
-                 logger_name='',
+                 logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: str = 'NOTSET',
                  file_mode: str = 'w',
                  distributed=False):
-        if not logger_name:
-            logger_name = name
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
