@@ -1,8 +1,10 @@
 import copy
 from collections import OrderedDict
+from typing import List, Optional
+import datetime
+
 import torch
 from mmengine.runner import runner
-from typing import List, Optional
 
 
 class LogProcessor:
@@ -162,7 +164,8 @@ class LogProcessor:
         if all(item in tag for item in ['time', 'data_time']) and \
                 'eta' in runner.message_hub.runtime_info:
             eta = runner.message_hub.get_info('eta')
-            log_str += f'eta: {eta}, '
+            eta_str = str(datetime.timedelta(seconds=int(eta)))
+            log_str += f'eta: {eta_str}, '
             log_str += f'time: {tag["time"]:.3f}, ' \
                        f'data_time: {tag["data_time"]:.3f}, '
             # Pop recorded keys
