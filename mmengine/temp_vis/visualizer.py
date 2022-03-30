@@ -118,7 +118,7 @@ class Visualizer(BaseGlobalAccessible):
                     edgecolors: Union[str, List[str]] = 'r',
                     linestyles: Union[str, List[str]] = '-',
                     linewidths: Union[Union[int, float],
-                                      List[Union[int, float]]] = 1,
+                                      List[Union[int, float]]] = 2,
                     is_filling: bool = False) -> 'Visualizer':
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
@@ -146,6 +146,131 @@ class Visualizer(BaseGlobalAccessible):
             linestyles=linestyles,
             linewidths=linewidths,
             is_filling=is_filling)
+
+    def draw_texts(
+            self,
+            texts: Union[str, List[str]],
+            positions: Union[np.ndarray, torch.Tensor],
+            font_sizes: Optional[Union[int, List[int]]] = None,
+            colors: Union[str, List[str]] = 'g',
+            verticalalignments: Union[str, List[str]] = 'top',
+            horizontalalignments: Union[str, List[str]] = 'left',
+            font_families: Union[str, List[str]] = 'sans-serif',
+            rotations: Union[int, str, List[Union[int, str]]] = 0,
+            bboxes: Optional[Union[dict, List[dict]]] = None) -> 'Visualizer':
+        """Draw single or multiple text boxes.
+
+        Args:
+            texts (Union[str, List[str]]): Texts to draw.
+            positions (Union[np.ndarray, torch.Tensor]): The position to draw
+                the texts, which should have the same length with texts and
+                each dim contain x and y.
+            font_sizes (Union[int, List[int]], optional): The font size of
+                texts. ``font_sizes`` can have the same length with texts or
+                just single value. If ``font_sizes`` is single value, all the
+                texts will have the same font size. Defaults to None.
+            colors (Union[str, List[str]]): The colors of texts. ``colors``
+                can have the same length with texts or just single value.
+                If ``colors`` is single value, all the texts will have the same
+                colors. Reference to
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details. Defaults to 'g.
+            verticalalignments (Union[str, List[str]]): The verticalalignment
+                of texts. verticalalignment controls whether the y positional
+                argument for the text indicates the bottom, center or top side
+                of the text bounding box.
+                ``verticalalignments`` can have the same length with
+                texts or just single value. If ``verticalalignments`` is single
+                value, all the texts will have the same verticalalignment.
+                verticalalignment can be 'center' or 'top', 'bottom' or
+                'baseline'. Defaults to 'top'.
+            horizontalalignments (Union[str, List[str]]): The
+                horizontalalignment of texts. Horizontalalignment controls
+                whether the x positional argument for the text indicates the
+                left, center or right side of the text bounding box.
+                ``horizontalalignments`` can have
+                the same length with texts or just single value.
+                If ``horizontalalignments`` is single value, all the texts will
+                have the same horizontalalignment. Horizontalalignment
+                can be 'center','right' or 'left'. Defaults to 'left'.
+            font_families (Union[str, List[str]]): The font family of
+                texts. ``font_families`` can have the same length with texts or
+                just single value. If ``font_families`` is single value, all
+                the texts will have the same font family.
+                font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
+                 or 'monospace'.  Defaults to 'sans-serif'.
+            rotations (Union[int, List[int]]): The rotation degrees of
+                texts. ``rotations`` can have the same length with texts or
+                just single value. If ``rotations`` is single value, all the
+                texts will have the same rotation. rotation can be angle
+                in degrees, 'vertical' or 'horizontal'. Defaults to 0.
+            bboxes (Union[dict, List[dict]], optional): The bounding box of the
+                texts. If bboxes is None, there are no bounding box around
+                texts. ``bboxes`` can have the same length with texts or
+                just single value. If ``bboxes`` is single value, all
+                the texts will have the same bbox. Reference to
+                https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
+                for more details. Defaults to None.
+        """
+        check_type('texts', texts, (str, list))
+        if isinstance(texts, str):
+            texts = [texts]
+        num_text = len(texts)
+        check_type('positions', positions, (np.ndarray, torch.Tensor))
+        positions = tensor2ndarray(positions)
+        if len(positions.shape) == 1:
+            positions = positions[None]
+        assert positions.shape == (num_text, 2), (
+            '`positions` should have the shape of '
+            f'({num_text}, 2), but got {positions.shape}')
+        if not self._is_posion_valid(positions):
+            warnings.warn(
+                'Warning: The text is out of bounds,'
+                ' the drawn text may not be in the image', UserWarning)
+        positions = positions.tolist()
+
+        if font_sizes is None:
+            font_sizes = self._default_font_size
+        check_type_and_length('font_sizes', font_sizes, (int, list), num_text)
+        font_sizes = value2list(font_sizes, int, num_text)
+
+        check_type_and_length('colors', colors, (str, list), num_text)
+        colors = value2list(colors, str, num_text)
+
+        check_type_and_length('verticalalignments', verticalalignments,
+                              (str, list), num_text)
+        verticalalignments = value2list(verticalalignments, str, num_text)
+
+        check_type_and_length('horizontalalignments', horizontalalignments,
+                              (str, list), num_text)
+        horizontalalignments = value2list(horizontalalignments, str, num_text)
+
+        check_type_and_length('rotations', rotations, (int, list), num_text)
+        rotations = value2list(rotations, int, num_text)
+
+        check_type_and_length('font_families', font_families, (str, list),
+                              num_text)
+        font_families = value2list(font_families, str, num_text)
+
+        if bboxes is None:
+            bboxes = [None for _ in range(num_text)]  # type: ignore
+        else:
+            check_type_and_length('bboxes', bboxes, (dict, list), num_text)
+            bboxes = value2list(bboxes, dict, num_text)
+
+        for i in range(num_text):
+            self.ax.text(
+                positions[i][0],
+                positions[i][1],
+                texts[i],
+                size=font_sizes[i],  # type: ignore
+                bbox=bboxes[i],  # type: ignore
+                verticalalignment=verticalalignments[i],
+                horizontalalignment=horizontalalignments[i],
+                family=font_families[i],
+                color=colors[i])
+        return self
+
 
     def draw_polygons(self,
                       polygons: Union[Union[np.ndarray, torch.Tensor],
@@ -222,7 +347,7 @@ class Visualizer(BaseGlobalAccessible):
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
             colors: np.ndarray = np.array([0, 255, 0]),
-            alphas: Union[float, List[float]] = 0.5) -> 'Visualizer':
+            alphas: Union[float, List[float]] = 0.2) -> 'Visualizer':
         """Draw single or multiple binary masks.
         Args:
             binary_masks (np.ndarray, torch.Tensor): The binary_masks to draw

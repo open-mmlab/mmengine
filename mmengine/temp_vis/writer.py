@@ -3,7 +3,7 @@ import os.path as osp
 import time
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Union
-
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import torch
@@ -92,9 +92,14 @@ class LocalWriter(BaseWriter):
         assert isinstance(image, np.ndarray)
         if self._img_show:
             # show image
-            cv2.namedWindow(name, 0)
-            cv2.imshow(name, image)
-            cv2.waitKey(self._wait_time)
+            # plt.close()
+            plt.imshow(image)
+            plt.show()
+            plt.close()
+            # drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            # cv2.namedWindow(name, 0)
+            # cv2.imshow(name, drawn_image)
+            # cv2.waitKey(self._wait_time)
         else:
             drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             os.makedirs(self._img_save_dir, exist_ok=True)
