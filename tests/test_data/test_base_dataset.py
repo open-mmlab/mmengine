@@ -312,22 +312,32 @@ class TestBaseDataset:
             assert hasattr(dataset, 'data_list')
             assert dataset[0] == dict(imgs=self.imgs)
         else:
-            # test `__getitem__()` when lazy_init is True
+            # Test `__getitem__()` when lazy_init is True
             assert not dataset._fully_initialized
             assert not dataset.data_list
-            # call `full_init()` automatically
+            # Call `full_init()` automatically
             assert dataset[0] == dict(imgs=self.imgs)
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_list')
 
-        # test with test mode
-        dataset.test_mode = True
-        assert dataset[0] == dict(imgs=self.imgs)
-
-        pipeline = MagicMock(return_value=None)
-        dataset.pipeline = pipeline
-        # test cannot get a valid image.
+        # Test with test mode
         dataset.test_mode = False
+        assert dataset[0] == dict(imgs=self.imgs)
+        # Test cannot get a valid image.
+        dataset.prepare_data = MagicMock(return_value=None)
+        with pytest.raises(Exception):
+            dataset[0]
+        # Test get valid image by `_rand_another`
+
+        def fake_prepare_data(idx):
+            if idx == 0:
+                return None
+            else:
+                return 1
+
+        dataset.prepare_data = fake_prepare_data
+        dataset[0]
+        dataset.test_mode = True
         with pytest.raises(Exception):
             dataset[0]
 
@@ -484,6 +494,9 @@ class TestBaseDataset:
             ori_data = dataset[len(dataset) - i - 1]
             ori_data['sample_idx'] = i
             assert dataset_copy[i] == ori_data
+
+        with pytest.raises(TypeError):
+            dataset.get_subset_(dict())
 
     @pytest.mark.parametrize(
         'lazy_init, serialize_data',

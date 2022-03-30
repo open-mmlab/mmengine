@@ -684,7 +684,7 @@ class BaseDataset(Dataset):
                 sub_date_bytes = np.array([])
                 sub_data_address = np.array([])
         else:
-            raise TypeError('indices should be a int or list of int, '
+            raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')
         return sub_date_bytes, sub_data_address  # type: ignore
 
@@ -715,7 +715,7 @@ class BaseDataset(Dataset):
                 subdata_list.append(self.data_list[idx])
             sub_data_list = subdata_list
         else:
-            raise TypeError('indices should be a int or list of int, '
+            raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')
         return sub_data_list
 
