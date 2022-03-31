@@ -5,7 +5,7 @@ from typing import Any, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils.misc import tensor2imgs
@@ -41,16 +41,16 @@ class NaiveVisualizationHook(Hook):
             self,
             runner,
             batch_idx: int,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataSample]]] = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+            data_batch: Optional[Sequence[Tuple[Any, BaseDataElement]]] = None,
+            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (Sequence[BaseDataElement], optional): Outputs from model.
                 Defaults to None.
         """
         if self.every_n_iters(runner, self._interval):

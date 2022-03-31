@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Sequence, Tuple, Union
 import torch
 from torch.utils.data import DataLoader
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.evaluator import BaseEvaluator, build_evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
@@ -63,11 +63,11 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._epoch += 1
 
     def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
+                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
         """Iterate one min-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
@@ -131,11 +131,11 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train')
 
     def run_iter(self, data_batch: Sequence[Tuple[Any,
-                                                  BaseDataSample]]) -> None:
+                                                  BaseDataElement]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
@@ -201,16 +201,16 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('after_val')
 
     @torch.no_grad()
-    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataSample]]):
+    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataElement]]):
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be sequence of BaseDataSample
+        # outputs should be sequence of BaseDataElement
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
@@ -259,16 +259,16 @@ class TestLoop(BaseLoop):
 
     @torch.no_grad()
     def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
+                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
-        # predictions should be sequence of BaseDataSample
+        # predictions should be sequence of BaseDataElement
         predictions = self.runner.model(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(

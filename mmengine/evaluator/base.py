@@ -3,7 +3,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.dist import (broadcast_object_list, collect_results,
                            is_main_process)
 
@@ -51,16 +51,16 @@ class BaseEvaluator(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: Sequence[BaseDataSample]) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
+                predictions: Sequence[BaseDataElement]) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataSample]): A batch of outputs from
+            predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
 

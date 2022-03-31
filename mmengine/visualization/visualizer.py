@@ -12,7 +12,7 @@ from matplotlib.collections import (LineCollection, PatchCollection,
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.registry import VISUALIZERS
 from .utils import (check_type, check_type_and_length, tensor2ndarray,
                     value2list)
@@ -113,8 +113,8 @@ class Visualizer:
         >>>         pass
         >>>     def draw(self,
         >>>             image: Optional[np.ndarray] = None,
-        >>>             gt_sample: Optional['BaseDataSample'] = None,
-        >>>             pred_sample: Optional['BaseDataSample'] = None,
+        >>>             gt_sample: Optional['BaseDataElement'] = None,
+        >>>             pred_sample: Optional['BaseDataElement'] = None,
         >>>             show_gt: bool = True,
         >>>             show_pred: bool = True) -> None:
         >>>         pass
@@ -131,8 +131,8 @@ class Visualizer:
 
     def draw(self,
              image: Optional[np.ndarray] = None,
-             gt_sample: Optional['BaseDataSample'] = None,
-             pred_sample: Optional['BaseDataSample'] = None,
+             gt_sample: Optional['BaseDataElement'] = None,
+             pred_sample: Optional['BaseDataElement'] = None,
              draw_gt: bool = True,
              draw_pred: bool = True) -> None:
         pass

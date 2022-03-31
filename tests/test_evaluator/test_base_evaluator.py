@@ -5,7 +5,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.evaluator import BaseEvaluator, build_evaluator, get_metric_value
 from mmengine.registry import EVALUATORS
 
@@ -66,8 +66,8 @@ class NonPrefixedEvaluator(BaseEvaluator):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: Sequence[BaseDataSample]) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
+                predictions: Sequence[BaseDataElement]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
@@ -80,9 +80,9 @@ def generate_test_results(size, batch_size, pred, label):
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
         data_batch = [(np.zeros(
-            (3, 10, 10)), BaseDataSample(data={'label': label}))
+            (3, 10, 10)), BaseDataElement(data={'label': label}))
                       for _ in range(bs)]
-        predictions = [BaseDataSample(data={'pred': pred}) for _ in range(bs)]
+        predictions = [BaseDataElement(data={'pred': pred}) for _ in range(bs)]
         yield (data_batch, predictions)
 
 

@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 class Hook:
@@ -174,7 +174,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
         """
         self._before_iter(
@@ -190,7 +190,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
         """
         self._before_iter(
@@ -206,7 +206,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the testing process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
         """
         self._before_iter(
@@ -223,7 +223,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
@@ -239,7 +239,7 @@ class Hook:
                        runner,
                        batch_idx: int,
                        data_batch: DATA_BATCH = None,
-                       outputs: Optional[Sequence[BaseDataSample]] = None) \
+                       outputs: Optional[Sequence[BaseDataElement]] = None) \
             -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
@@ -247,7 +247,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
@@ -264,14 +264,14 @@ class Hook:
             runner,
             batch_idx: int,
             data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataSample]] = None) -> None:
+            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test iteration.
 
         Args:
             runner (Runner): The runner of the training  process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
@@ -317,7 +317,7 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
@@ -327,7 +327,7 @@ class Hook:
                     runner,
                     batch_idx: int,
                     data_batch: DATA_BATCH = None,
-                    outputs: Optional[Union[Sequence[BaseDataSample],
+                    outputs: Optional[Union[Sequence[BaseDataElement],
                                             dict]] = None,
                     mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
@@ -337,9 +337,9 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional):
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
                 Data from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataSample], optional): Outputs from model.
+            outputs (Sequence[BaseDataElement], optional): Outputs from model.
                 Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """

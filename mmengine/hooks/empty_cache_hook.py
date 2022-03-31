@@ -3,11 +3,11 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -39,14 +39,14 @@ class EmptyCacheHook(Hook):
                     batch_idx: int,
                     data_batch: DATA_BATCH = None,
                     outputs: Optional[Union[dict,
-                                            Sequence[BaseDataSample]]] = None,
+                                            Sequence[BaseDataElement]]] = None,
                     mode: str = 'train') -> None:
         """Empty cache after an iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model.
                 Defaults to None.
