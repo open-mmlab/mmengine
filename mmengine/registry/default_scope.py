@@ -8,7 +8,7 @@ class DefaultScope(ManagerMixin):
     """Scope of current task used to reset the current registry, which can be
     accessed globally.
 
-    Consider the case of reseting the current ``Resgitry`` by``default_scope``
+    Consider the case of resetting the current ``Resgitry`` by``default_scope``
     in the internal module which cannot access runner directly, it is difficult
     to get the ``default_scope`` defined in ``Runner``. However, if ``Runner``
     created ``DefaultScope`` instance by given ``default_scope``, the internal
@@ -25,8 +25,6 @@ class DefaultScope(ManagerMixin):
         >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.
         >>> scope_name = DefaultScope.get_instance('task').scope_name
-        >>> # build model from cfg.
-        >>> model = MODELS.build(model_cfg, default_scope=scope_name)
     """
 
     def __init__(self, name: str, scope_name: str):
