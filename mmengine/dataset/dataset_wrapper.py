@@ -148,7 +148,7 @@ class RepeatDataset:
         ``RepeatDataset`` should not inherit from ``BaseDataset`` since
         ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
         sub-dataset which conflicts with original dataset. If you want to use
-        a sub-dataset of ``ConcatDataset``, you should set ``indices``
+        a sub-dataset of ``RepeatDataset``, you should set ``indices``
         arguments for wrapped dataset which inherit from ``BaseDataset``.
 
     Args:
@@ -270,7 +270,7 @@ class ClassBalancedDataset:
         ``ClassBalancedDataset`` should not inherit from ``BaseDataset``
         since ``get_subset`` and ``get_subset_`` could  produce ambiguous
         meaning sub-dataset which conflicts with original dataset. If you
-        want to use a sub-dataset of ``ConcatDataset``, you should set
+        want to use a sub-dataset of ``ClassBalancedDataset``, you should set
         ``indices`` arguments for wrapped dataset which inherit from
         ``BaseDataset``.
 
