@@ -115,20 +115,20 @@ class ConcatDataset(_ConcatDataset):
     def get_subset_(self, indices: Union[List[int], int]) -> None:
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
 
 
 class RepeatDataset:
@@ -217,20 +217,20 @@ class RepeatDataset:
     def get_subset_(self, indices: Union[List[int], int]) -> None:
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
 
 
 class ClassBalancedDataset:
@@ -406,17 +406,17 @@ class ClassBalancedDataset:
     def get_subset_(self, indices: Union[List[int], int]) -> None:
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
             'We not support `get_subset` and `get_subset_` interfaces in all '
-            'dataset wrappers, since doing so the  implementation and '
-            'logic of some method will be weird . If you want to use '
-            '`get_subset` or `get_subset_` interfaces, please firstly use '
-            "them from BaseDataset or BaseDataset's derived class, and then "
-            'use dataset wrapper.')
+            'dataset wrappers, because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please firstly use them from '
+            'BaseDataset or or their subclasses, and then use dataset '
+            'wrapper.')
