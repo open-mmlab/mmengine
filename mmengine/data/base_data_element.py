@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, Iterator, Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple, Type
 
 import numpy as np
 import torch
@@ -40,17 +40,17 @@ class BaseDataElement:
       - ``data``: Annotations or model predictions are
         stored. The attributes can be accessed or modified by
         dict-like or object-like operations, such as
-        ``.`` , ``in``, ``del``, ``pop(str)`` ``get(str)``, ``data_keys()``,
-        ``data_values()``, ``data_items()``. Users can also apply tensor-like
+        ``.`` , ``in``, ``del``, ``pop(str)`` ``get(str)``, ``keys()``,
+        ``values()``, ``items()``. Users can also apply tensor-like
         methods to all obj:``torch.Tensor`` in the ``data_fileds``,
         such as ``.cuda()``, ``.cpu()``, ``.numpy()``, , ``.to()``
-        ``to_tensor()``, ``.detach()``, ``.numpy()``
+        ``to_tensor()``, ``.detach()``.
 
     Args:
-        meta_info (dict, optional): A dict contains the meta information
+        metainfo (dict, optional): A dict contains the meta information
             of single image. such as ``dict(img_shape=(512, 512, 3),
             scale_factor=(1, 1, 1, 1))``. Defaults to None.
-        data (dict, optional): A dict contains annotations of single image or
+        kwargs (dict, optional): A dict contains annotations of single image or
             model predictions. Defaults to None.
 
     Examples:
@@ -62,9 +62,10 @@ class BaseDataElement:
         >>> img_shape = (800, 1333)
         >>> gt_instances = BaseDataElement(
         ...     metainfo=dict(img_id=img_id, img_shape=img_shape),
-        ...     data=dict(bboxes=bboxes, scores=scores))
-        >>> gt_instances = BaseDataElement(dict(img_id=img_id,
-        ...                                     img_shape=(H, W)))
+        ...     bboxes=bboxes, scores=scores)
+        >>> gt_instances = BaseDataElement(
+        ...                    metainfo=dict(img_id=img_id,
+        ...                                  img_shape=(H, W)))
 
         >>> # new
         >>> gt_instances1 = gt_instance.new(
@@ -78,26 +79,26 @@ class BaseDataElement:
         >>> gt_instances.set_metainfo(dict(img_id=9, img_shape=(100, 100))
         >>> assert 'img_shape' in gt_instances.metainfo_keys()
         >>> assert 'img_shape' in gt_instances
-        >>> assert 'img_shape' not in gt_instances.data_keys()
-        >>> assert 'img_shape' in gt_instances.keys()
+        >>> assert 'img_shape' not in gt_instances.keys()
+        >>> assert 'img_shape' in gt_instances.all_keys()
         >>> print(gt_instances.img_shape)
         >>> gt_instances.scores = torch.rand((5,))
-        >>> assert 'scores' in gt_instances.data_keys()
-        >>> assert 'scores' in gt_instances
         >>> assert 'scores' in gt_instances.keys()
+        >>> assert 'scores' in gt_instances
+        >>> assert 'scores' in gt_instances.all_keys()
         >>> assert 'scores' not in gt_instances.metainfo_keys()
         >>> print(gt_instances.scores)
         >>> gt_instances.bboxes = torch.rand((5, 4))
-        >>> assert 'bboxes' in gt_instances.data_keys()
-        >>> assert 'bboxes' in gt_instances
         >>> assert 'bboxes' in gt_instances.keys()
+        >>> assert 'bboxes' in gt_instances
+        >>> assert 'bboxes' in gt_instances.all_keys()
         >>> assert 'bboxes' not in gt_instances.metainfo_keys()
         >>> print(gt_instances.bboxes)
 
         >>> # delete and change property
         >>> gt_instances = BaseDataElement(
         ...  metainfo=dict(img_id=0, img_shape=(640, 640)),
-        ...  data=dict(bboxes=torch.rand((6, 4)), scores=torch.rand((6,))))
+        ...  bboxes=torch.rand((6, 4)), scores=torch.rand((6,)))
         >>> gt_instances.img_shape = (1280, 1280)
         >>> gt_instances.img_shape  # (1280, 1280)
         >>> gt_instances.bboxes = gt_instances.bboxes * 2
@@ -122,32 +123,75 @@ class BaseDataElement:
         >>> np_instances = cpu_instances.numpy()
 
         >>> # print
-        >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
-        >>> instance_data = BaseDataElement(metainfo=img_meta)
-        >>> instance_data.det_labels = torch.LongTensor([0, 1, 2, 3])
-        >>> instance_data.det_scores = torch.Tensor([0.01, 0.1, 0.2, 0.3])
-        >>> print(results)
+        >>> metainfo = dict(img_shape=(800, 1196, 3))
+        >>> gt_instances = BaseDataElement(
+        >>>     metainfo=metainfo, det_labels=torch.LongTensor([0, 1, 2, 3]))
+        >>> sample = BaseDataElement(metainfo=metainfo,
+        ...                          gt_instances=gt_instances)
+        >>> print(sample)
         <BaseDataElement(
-        META INFORMATION
-        img_shape: (800, 1196, 3)
-        pad_shape: (800, 1216, 3)
-        DATA FIELDS
-        shape of det_labels: torch.Size([4])
-        shape of det_scores: torch.Size([4])
-        ) at 0x7f84acd10f90>
+            META INFORMATION
+            img_shape: (800, 1196, 3)
+            DATA FIELDS
+            gt_instances: <BaseDataElement(
+                    META INFORMATION
+                    img_shape: (800, 1196, 3)
+                    DATA FIELDS
+                    det_labels: tensor([0, 1, 2, 3])
+                ) at 0x7f0ec5eadc70>
+        ) at 0x7f0fea49e130>
+
+        >>> # inheritance
+        >>> class DetDataSample(BaseDataElement):
+        ...     @property
+        ...     def proposals(self):
+        ...         return self._proposals
+        ...     @proposals.setter
+        ...     def proposals(self, value):
+        ...         self.set_field(value, '_proposals', dtype=BaseDataElement)
+        ...     @proposals.deleter
+        ...     def proposals(self):
+        ...         del self._proposals
+        ...     @property
+        ...     def gt_instances(self):
+        ...         return self._gt_instances
+        ...     @gt_instances.setter
+        ...     def gt_instances(self, value):
+        ...         self.set_field(value, '_gt_instances',
+        ...                        dtype=BaseDataElement)
+        ...     @gt_instances.deleter
+        ...     def gt_instances(self):
+        ...         del self._gt_instances
+        ...     @property
+        ...     def pred_instances(self):
+        ...         return self._pred_instances
+        ...     @pred_instances.setter
+        ...     def pred_instances(self, value):
+        ...         self.set_field(value,'_pred_instances',
+        ...                        dtype=BaseDataElement)
+        ...     @pred_instances.deleter
+        ...     def pred_instances(self):
+        ...         del self._pred_instances
+        >>> det_sample = DetDataSample()
+        >>> proposals = BaseDataElement(bboxes=torch.rand((5, 4)))
+        >>> det_sample.proposals = proposals
+        >>> assert 'proposals' in det_sample
+        >>> assert det_sample.proposals == proposals
+        >>> del det_sample.proposals
+        >>> assert 'proposals' not in det_sample
+        >>> with self.assertRaises(AssertionError):
+        ...     det_sample.proposals = torch.rand((5, 4))
     """
 
-    def __init__(self,
-                 metainfo: Optional[dict] = None,
-                 data: Optional[dict] = None) -> None:
+    def __init__(self, *, metainfo: Optional[dict] = None, **kwargs) -> None:
 
         self._metainfo_fields: set = set()
         self._data_fields: set = set()
 
         if metainfo is not None:
             self.set_metainfo(metainfo=metainfo)
-        if data is not None:
-            self.set_data(data)
+        if kwargs:
+            self.set_data(kwargs)
 
     def set_metainfo(self, metainfo: dict) -> None:
         """Set or change key-value pairs in ``metainfo_field`` by parameter
@@ -167,8 +211,7 @@ class BaseDataElement:
                                      'which is immutable. If you want to'
                                      'change the key in data, please use'
                                      'set_data')
-            self._metainfo_fields.add(k)
-            self.__dict__[k] = v
+            self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
         """Set or change key-value pairs in ``data_field`` by parameter
@@ -181,7 +224,21 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
-            self.__setattr__(k, v)
+            self.set_field(name=k, value=v, field_type='data', dtype=None)
+
+    def update(self, instance: 'BaseDataElement') -> None:
+        """The update() method updates the BaseDataElement with the elements
+        from another BaseDataElement object.
+
+        Args:
+            instance (BaseDataElement): Another BaseDataElement object for
+            update the current object.
+        """
+        assert isinstance(
+            instance, BaseDataElement
+        ), f'instance should be a `BaseDataElement` but got {type(instance)}'
+        self.set_metainfo(dict(instance.metainfo_items()))
+        self.set_data(dict(instance.items()))
 
     def new(self,
             metainfo: dict = None,
@@ -197,6 +254,8 @@ class BaseDataElement:
                 Defaults to None.
             data (dict, optional): A dict contains annotations of image or
                 model predictions. Defaults to None.
+        Returns:
+            BaseDataElement: a new data element with same type.
         """
         new_data = self.__class__()
 
@@ -207,10 +266,21 @@ class BaseDataElement:
         if data is not None:
             new_data.set_data(data)
         else:
-            new_data.set_data(dict(self.data_items()))
+            new_data.set_data(dict(self.items()))
         return new_data
 
-    def data_keys(self) -> list:
+    def clone(self):
+        """Deep copy the current data element.
+
+        Returns:
+            BaseDataElement: the copy of current data element.
+        """
+        clone_data = self.__class__()
+        clone_data.set_metainfo(dict(self.metainfo_items()))
+        clone_data.set_data(dict(self.items()))
+        return clone_data
+
+    def keys(self) -> list:
         """
         Returns:
             list: Contains all keys in data_fields.
@@ -224,12 +294,12 @@ class BaseDataElement:
         """
         return list(self._metainfo_fields)
 
-    def data_values(self) -> list:
+    def values(self) -> list:
         """
         Returns:
             list: Contains all values in data.
         """
-        return [getattr(self, k) for k in self.data_keys()]
+        return [getattr(self, k) for k in self.keys()]
 
     def metainfo_values(self) -> list:
         """
@@ -238,36 +308,36 @@ class BaseDataElement:
         """
         return [getattr(self, k) for k in self.metainfo_keys()]
 
-    def keys(self) -> list:
+    def all_keys(self) -> list:
         """
         Returns:
             list: Contains all keys in metainfo and data.
         """
-        return self.metainfo_keys() + self.data_keys()
+        return self.metainfo_keys() + self.keys()
 
-    def values(self) -> list:
+    def all_values(self) -> list:
         """
         Returns:
             list: Contains all values in metainfo and data.
         """
-        return self.metainfo_values() + self.data_values()
+        return self.metainfo_values() + self.values()
 
-    def items(self) -> Iterator[Tuple[str, Any]]:
+    def all_items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             iterator: an iterator object whose element is (key, value) tuple
             pairs for ``metainfo`` and ``data``.
         """
-        for k in self.keys():
+        for k in self.all_keys():
             yield (k, getattr(self, k))
 
-    def data_items(self) -> Iterator[Tuple[str, Any]]:
+    def items(self) -> Iterator[Tuple[str, Any]]:
         """
         Returns:
             iterator: an iterator object whose element is (key, value) tuple
             pairs for ``data``.
         """
-        for k in self.data_keys():
+        for k in self.keys():
             yield (k, getattr(self, k))
 
     def metainfo_items(self) -> Iterator[Tuple[str, Any]]:
@@ -279,11 +349,11 @@ class BaseDataElement:
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
 
-    def __setattr__(self, name: str, val: Any):
+    def __setattr__(self, name: str, value: Any):
         """setattr is only used to set data."""
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
-                super().__setattr__(name, val)
+                super().__setattr__(name, value)
             else:
                 raise AttributeError(f'{name} has been used as a '
                                      'private attribute, which is immutable. ')
@@ -292,10 +362,10 @@ class BaseDataElement:
                 raise AttributeError(
                     f'`{name}` is used in meta information.'
                     'if you want to change the key in metainfo, please use'
-                    'set_metainfo(dict(name=val))')
+                    '`set_metainfo(dict(name=value))`')
 
-            self._data_fields.add(name)
-            super().__setattr__(name, val)
+            self.set_field(
+                name=name, value=value, field_type='data', dtype=None)
 
     def __delattr__(self, item: str):
         if item in ('_metainfo_fields', '_data_fields'):
@@ -311,10 +381,9 @@ class BaseDataElement:
     __setitem__ = __setattr__
     __delitem__ = __delattr__
 
-    def get(self, *args) -> Any:
+    def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
-        assert len(args) < 3, '``get`` get more than 2 arguments'
-        return self.__dict__.get(*args)
+        return self.__dict__.get(key, default)
 
     def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
@@ -340,113 +409,123 @@ class BaseDataElement:
         return item in self._data_fields or \
                     item in self._metainfo_fields
 
+    def set_field(self,
+                  value: Any,
+                  name: str,
+                  dtype: Optional[Type] = None,
+                  field_type: str = 'data') -> None:
+        """Special method for set union field, used as property.setter
+        functions."""
+        assert field_type in ['metainfo', 'data']
+        if dtype is not None:
+            assert isinstance(
+                value,
+                dtype), f'{value} should be a {dtype} but got {type(value)}'
+
+        super().__setattr__(name, value)
+        if field_type == 'metainfo':
+            self._metainfo_fields.add(name)
+        else:
+            self._data_fields.add(name)
+
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataElement':
         """Apply same name function to all tensors in data_fields."""
         new_data = self.new()
-        for k, v in self.data_items():
+        for k, v in self.items():
             if hasattr(v, 'to'):
                 v = v.to(*args, **kwargs)
                 data = {k: v}
                 new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if hasattr(v, 'to'):
-                v = v.to(*args, **kwargs)
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
         return new_data
 
     # Tensor-like methods
     def cpu(self) -> 'BaseDataElement':
-        """Convert all tensors to CPU in metainfo and data."""
+        """Convert all tensors to CPU in data."""
         new_data = self.new()
-        for k, v in self.data_items():
-            if isinstance(v, torch.Tensor):
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
                 v = v.cpu()
                 data = {k: v}
                 new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if isinstance(v, torch.Tensor):
-                v = v.cpu()
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
         return new_data
 
     # Tensor-like methods
     def cuda(self) -> 'BaseDataElement':
-        """Convert all tensors to GPU in metainfo and data."""
+        """Convert all tensors to GPU in data."""
         new_data = self.new()
-        for k, v in self.data_items():
-            if isinstance(v, torch.Tensor):
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
                 v = v.cuda()
                 data = {k: v}
                 new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if isinstance(v, torch.Tensor):
-                v = v.cuda()
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
         return new_data
 
     # Tensor-like methods
     def detach(self) -> 'BaseDataElement':
-        """Detach all tensors in metainfo and data."""
+        """Detach all tensors in data."""
         new_data = self.new()
-        for k, v in self.data_items():
-            if isinstance(v, torch.Tensor):
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
                 v = v.detach()
                 data = {k: v}
                 new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if isinstance(v, torch.Tensor):
-                v = v.detach()
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
         return new_data
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataElement':
-        """Convert all tensor to np.narray in metainfo and data."""
+        """Convert all tensor to np.narray in data."""
         new_data = self.new()
-        for k, v in self.data_items():
-            if isinstance(v, torch.Tensor):
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
                 v = v.detach().cpu().numpy()
                 data = {k: v}
                 new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if isinstance(v, torch.Tensor):
-                v = v.detach().cpu().numpy()
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
         return new_data
 
     def to_tensor(self) -> 'BaseDataElement':
-        """Convert all np.narray to tensor in metainfo and data."""
+        """Convert all np.narray to tensor in data."""
         new_data = self.new()
-        for k, v in self.data_items():
+        for k, v in self.items():
+            data = {}
             if isinstance(v, np.ndarray):
                 v = torch.from_numpy(v)
-                data = {k: v}
-                new_data.set_data(data)
-        for k, v in self.metainfo_items():
-            if isinstance(v, np.ndarray):
-                v = torch.from_numpy(v)
-                metainfo = {k: v}
-                new_data.set_metainfo(metainfo)
+                data[k] = v
+            elif isinstance(v, BaseDataElement):
+                v = v.to_tensor()
+                data[k] = v
+            new_data.set_data(data)
         return new_data
 
     def __repr__(self) -> str:
-        repr = '\n  META INFORMATION \n'
-        for k, v in self.metainfo_items():
-            if isinstance(v, (torch.Tensor, np.ndarray)):
-                repr += f'shape of {k}: {v.shape} \n'
+
+        def _addindent(s_: str, num_spaces: int) -> str:
+            s = s_.split('\n')
+            # don't do anything for single-line stuff
+            if len(s) == 1:
+                return s_
+            first = s.pop(0)
+            s = [(num_spaces * ' ') + line for line in s]
+            s = '\n'.join(s)  # type: ignore
+            s = first + '\n' + s  # type: ignore
+            return s  # type: ignore
+
+        def dump(obj: Any) -> str:
+            _repr = ''
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    _repr += f'\n{k}: {_addindent(dump(v), 4)}'
+            elif isinstance(obj, BaseDataElement):
+                _repr += '\n\n    META INFORMATION'
+                metainfo_items = dict(obj.metainfo_items())
+                _repr += _addindent(dump(metainfo_items), 4)
+                _repr += '\n\n    DATA FIELDS'
+                items = dict(obj.items())
+                _repr += _addindent(dump(items), 4)
+                classname = obj.__class__.__name__
+                _repr = f'<{classname}({_repr}\n) at {hex(id(obj))}>'
             else:
-                repr += f'{k}: {v} \n'
-        repr += '\n  DATA FIELDS \n'
-        for k, v in self.data_items():
-            if isinstance(v, (torch.Tensor, np.ndarray)):
-                repr += f'shape of {k}: {v.shape} \n'
-            else:
-                repr += f'{k}: {v} \n'
-        classname = self.__class__.__name__
-        return f'<{classname}({repr}\n) at {hex(id(self))}>'
+                _repr += repr(obj)
+            return _repr
+
+        return dump(self)

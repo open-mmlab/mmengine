@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 import torch
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.fileio import dump
 from mmengine.registry import VISUALIZERS, WRITERS
 from mmengine.utils import TORCH_VERSION, ManagerMixin
@@ -90,8 +90,8 @@ class BaseWriter(metaclass=ABCMeta):
     def add_image(self,
                   name: str,
                   image: Optional[np.ndarray] = None,
-                  gt_sample: Optional['BaseDataSample'] = None,
-                  pred_sample: Optional['BaseDataSample'] = None,
+                  gt_sample: Optional['BaseDataElement'] = None,
+                  pred_sample: Optional['BaseDataElement'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
@@ -102,10 +102,10 @@ class BaseWriter(metaclass=ABCMeta):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.
@@ -228,8 +228,8 @@ class LocalWriter(BaseWriter):
     def add_image(self,
                   name: str,
                   image: Optional[np.ndarray] = None,
-                  gt_sample: Optional['BaseDataSample'] = None,
-                  pred_sample: Optional['BaseDataSample'] = None,
+                  gt_sample: Optional['BaseDataElement'] = None,
+                  pred_sample: Optional['BaseDataElement'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
@@ -240,10 +240,10 @@ class LocalWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.
@@ -411,8 +411,8 @@ class WandbWriter(BaseWriter):
     def add_image(self,
                   name: str,
                   image: Optional[np.ndarray] = None,
-                  gt_sample: Optional['BaseDataSample'] = None,
-                  pred_sample: Optional['BaseDataSample'] = None,
+                  gt_sample: Optional['BaseDataElement'] = None,
+                  pred_sample: Optional['BaseDataElement'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
@@ -423,10 +423,10 @@ class WandbWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default: True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.
@@ -475,8 +475,8 @@ class WandbWriter(BaseWriter):
     def add_image_to_wandb(self,
                            name: str,
                            image: np.ndarray,
-                           gt_sample: Optional['BaseDataSample'] = None,
-                           pred_sample: Optional['BaseDataSample'] = None,
+                           gt_sample: Optional['BaseDataElement'] = None,
+                           pred_sample: Optional['BaseDataElement'] = None,
                            draw_gt: bool = True,
                            draw_pred: bool = True,
                            step: int = 0,
@@ -487,10 +487,10 @@ class WandbWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray): The image to be saved. The format
                 should be BGR.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.
@@ -608,8 +608,8 @@ class TensorboardWriter(BaseWriter):
     def add_image(self,
                   name: str,
                   image: Optional[np.ndarray] = None,
-                  gt_sample: Optional['BaseDataSample'] = None,
-                  pred_sample: Optional['BaseDataSample'] = None,
+                  gt_sample: Optional['BaseDataElement'] = None,
+                  pred_sample: Optional['BaseDataElement'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
@@ -620,10 +620,10 @@ class TensorboardWriter(BaseWriter):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.
@@ -756,8 +756,8 @@ class ComposedWriter(ManagerMixin):
     def add_image(self,
                   name: str,
                   image: Optional[np.ndarray] = None,
-                  gt_sample: Optional['BaseDataSample'] = None,
-                  pred_sample: Optional['BaseDataSample'] = None,
+                  gt_sample: Optional['BaseDataElement'] = None,
+                  pred_sample: Optional['BaseDataElement'] = None,
                   draw_gt: bool = True,
                   draw_pred: bool = True,
                   step: int = 0,
@@ -768,10 +768,10 @@ class ComposedWriter(ManagerMixin):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataSample`, optional): The ground truth data
+            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
                 structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataSample`, optional): The predicted result
-                data structure of OpenMMlab. Default to None.
+            pred_sample (:obj:`BaseDataElement`, optional): The predicted
+                result data structure of OpenMMlab. Default to None.
             draw_gt (bool): Whether to draw the ground truth. Default to True.
             draw_pred (bool): Whether to draw the predicted result.
                 Default to True.

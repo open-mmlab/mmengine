@@ -4,13 +4,13 @@ import warnings
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -185,7 +185,7 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.

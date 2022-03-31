@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from .base import BaseEvaluator
 
 
@@ -32,14 +32,14 @@ class ComposedEvaluator:
         for evaluator in self.evaluators:
             evaluator.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: Sequence[BaseDataSample]):
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
+                predictions: Sequence[BaseDataElement]):
         """Invoke process method of each wrapped evaluator.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataSample]): A batch of outputs from
+            predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
 
