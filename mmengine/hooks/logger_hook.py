@@ -9,6 +9,7 @@ from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
+from mmengine.runner import runner
 
 DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
 
@@ -18,18 +19,19 @@ class LoggerHook(Hook):
     """Collect logs from different components of ``Runner`` and write them to
     terminal, JSON file, tensorboard and wandb .etc.
 
-    ``LoggerHook`` is used to control following behaviers:
+    ``LoggerHook`` is used to record logs formatted by ``LogProcessor`` during
+    training/validation/testing phase. It is used to control following
+    behaviers:
 
     - The frequency of logs update in terminal, local, tensorboad wandb.etc.
     - The frequency of show experiment information in terminal.
     - The work directory to save logs.
 
-    ``LoggerHook`` is used to record logs formatted by ``LogProcessor`` during
-     training/validation/testing phase.
-
     Args:
         interval (int): Logging interval (every k iterations).
             Defaults to 10.
+        by_epoch (bool): Whether to log messages by epoch. Defaults to
+            True.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
             the number of remaining iterations is less than :attr:`interval`.
             Defaults to True.
@@ -60,18 +62,21 @@ class LoggerHook(Hook):
     priority = 'BELOW_NORMAL'
 
     def __init__(
-        self,
-        interval: int = 10,
-        ignore_last: bool = True,
-        interval_exp_name: int = 1000,
-        out_dir: Optional[Union[str, Path]] = None,
-        out_suffix: Union[Sequence[str], str] = ('.log.json', '.log', '.py'),
-        keep_local=True,
-        file_client_args=None,
+            self,
+            interval: int = 10,
+            by_epoch: bool = True,
+            ignore_last: bool = True,
+            interval_exp_name: int = 1000,
+            out_dir: Optional[Union[str, Path]] = None,
+            out_suffix: Union[Sequence[str], str] = (
+            '.log.json', '.log', '.py'),
+            keep_local: bool = True,
+            file_client_args: Optional[dict] = None,
     ):
         self.interval = interval
         self.ignore_last = ignore_last
         self.interval_exp_name = interval_exp_name
+        self.by_epoch = by_epoch
 
         if out_dir is None and file_client_args is not None:
             raise ValueError(
@@ -91,7 +96,7 @@ class LoggerHook(Hook):
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
 
-    def before_run(self, runner: 'Runner') -> None:
+    def before_run(self, runner: 'runner.Runner') -> None:
         """Infer ``self.file_client`` from ``self.out_dir``. Initialize the
         ``self.start_iter`` and record the meta information.
 
@@ -116,7 +121,7 @@ class LoggerHook(Hook):
             runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
 
     def after_train_iter(self,
-                         runner,
+                         runner: 'runner.Runner',
                          batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
@@ -130,17 +135,16 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        if (self.every_n_iters(runner, self.interval_exp_name)) or (
-                runner.log_processor.by_epoch and self.end_of_epoch(
-                runner, batch_idx)):
+        if self.every_n_iters(runner, self.interval_exp_name) or (
+                self.by_epoch and self.end_of_epoch(runner, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
-        if runner.log_processor.by_epoch and \
-                self.every_n_inner_iters(batch_idx, self.interval):
+        if self.by_epoch and (
+                self.every_n_inner_iters(batch_idx, self.interval)):
             tag, log_str = runner.log_processor.get_log(
                 runner, batch_idx, 'train')
-        elif not runner.log_processor.by_epoch and \
-                self.every_n_iters(runner, self.interval):
+        elif not self.by_epoch and (
+                  self.every_n_iters(runner, self.interval)):
             tag, log_str = runner.log_processor.get_log(
                 runner, batch_idx, 'train')
         elif self.end_of_epoch(runner, batch_idx) and not self.ignore_last:
@@ -154,9 +158,9 @@ class LoggerHook(Hook):
             return
         runner.logger.info(log_str)
         # TODO compatible with visualizer.
-        runner.writer.add_scalars(tag, step=runner.iter+1)
+        runner.writer.add_scalars(tag, step=runner.iter + 1)
 
-    def after_val_epoch(self, runner) -> None:
+    def after_val_epoch(self, runner: 'runner.Runner') -> None:
         """Record validation logs.
 
         Args:
@@ -166,9 +170,9 @@ class LoggerHook(Hook):
             runner, len(runner.cur_dataloader), 'val')
         runner.logger.info(log_str)
         # TODO compatible with visualizer.
-        runner.writer.add_scalars(tag, step=runner.iter+1)
+        runner.writer.add_scalars(tag, step=runner.iter + 1)
 
-    def after_run(self, runner) -> None:
+    def after_run(self, runner: 'runner.Runner') -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
         Args:

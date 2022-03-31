@@ -1,6 +1,6 @@
 import copy
 from collections import OrderedDict
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import datetime
 
 import torch
@@ -8,12 +8,13 @@ from mmengine.runner import runner
 
 
 class LogProcessor:
-    """A log prosessor used to format ``runner.message_hub.log_scalars``.
+    """A log prosessor used to format log information collected from
+    ``runner.message_hub.log_scalars``.
 
     ``LogProcessor`` instance is built by runner and will format
     ``runner.message_hub.log_scalars`` to ``tag`` and ``log_str``, which can
-    direcly used by ``Visualizer`` and ``MMLogger``. Besides, the argument
-    custom_cfg of constructor can control the statitics method of logs.
+    direcly used by ``LoggerHook`` and ``MMLogger``. Besides, the argument
+    ``custom_cfg`` of constructor can control the statitics method of logs.
 
     Args:
         window_size (int): default smooth interval Defaults to 10.
@@ -49,7 +50,7 @@ class LogProcessor:
         >>> log_processor = dict(
         >>>     window_size=10,
         >>>     by_epoch=True,
-        >>>     custom_keys=[dict(data_src='loss',
+        >>>     custom_cfg=[dict(data_src='loss',
         >>>                       log_name='loss_large_window',
         >>>                       method_name='mean',
         >>>                       window_size=100)])
@@ -57,25 +58,31 @@ class LogProcessor:
         >>> log_processor = dict(
         >>>     window_size=10,
         >>>     by_epoch=True,
-        >>>     custom_keys=[dict(data_src='loss',
+        >>>     custom_cfg=[dict(data_src='loss',
         >>>                       method_name='mean',
         >>>                       window_size=100)])
         >>> # Record loss with different statistics methods.
-        >>>     custom_keys=[dict(data_src='loss',
+        >>> log_processor = dict(
+        >>>     window_size=10,
+        >>>     by_epoch=True,
+        >>>     custom_cfg=[dict(data_src='loss',
         >>>                       log_name='loss_large_window',
         >>>                       method_name='mean',
-        >>>                       window_size=100)],
+        >>>                       window_size=100),
         >>>                  dict(data_src='loss',
         >>>                       method_name='mean',
-        >>>                       window_size=100))
+        >>>                       window_size=100)])
         >>> # Overwrite loss item twice will raise an error.
-        >>>     custom_keys=[dict(data_src='loss',
+        >>> log_processor = dict(
+        >>>     window_size=10,
+        >>>     by_epoch=True,
+        >>>     custom_cfg=[dict(data_src='loss',
         >>>                       method_name='mean',
-        >>>                       window_size=100)],
+        >>>                       window_size=100),
         >>>                  dict(data_src='loss',
         >>>                       method_name='max',
-        >>>                       window_size=100))
-        >>>
+        >>>                       window_size=100)])
+        AssertionError
     """
     def __init__(self,
                  window_size=10,
@@ -84,21 +91,24 @@ class LogProcessor:
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else OrderedDict()
-        self._check_custom_keys()
+        self._check_custom_cfg()
 
     def get_log(self, runner: 'runner.Runner',
-                batch_idx: int, mode: str = 'train'):
+                batch_idx: int, mode: str) -> Tuple[dict, str]:
         """Get formatted log at training/validation/testing phase.
 
-
+        :meth:`get_log` is called by :obj:`LoggerHook` to return corresponding
+        phase ``log_str`` and ``tag``.
 
         Args:
-            runner:
-            batch_idx:
-            mode:
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            batch_idx (int): The index of the current batch in the train loop.
+            mode (str): Current mode of runner.
 
         Returns:
-
+            Tuple[dict, str]:  The log information collected from
+            ``runner.message_hub`` and the formatted log string.
         """
         # Consider the `window_size` such as "epoch" and "global" will
         # change with `runner.iter` Therefore, we should make a copy of
@@ -266,9 +276,8 @@ class LogProcessor:
                     **log_cfg)
         return tag
 
-    def _check_custom_keys(self) -> None:
+    def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""
-
         def _check_window_size():
             for log_cfg in self.custom_cfg:
                 if not self.by_epoch:
@@ -378,3 +387,4 @@ class LogProcessor:
             raise ValueError(f"runner mode should be 'train' or 'val', "
                              f'but got {mode}')
         return epoch
+
