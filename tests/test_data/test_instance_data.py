@@ -17,7 +17,7 @@ class TestInstanceData(TestCase):
             img_shape=(random.randint(400, 600), random.randint(400, 600)))
         instances_infos = [1] * 5
         bboxes = torch.rand((5, 4))
-        labels = np.random.rand((5, ))
+        labels = np.random.rand(5)
         instance_data = InstanceData(
             metainfo=metainfo,
             bboxes=bboxes,
@@ -35,11 +35,11 @@ class TestInstanceData(TestCase):
             instance_data._data_fields = 1
 
         # value only supports (torch.Tensor, np.ndarray, list)
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AssertionError):
             instance_data.v = 'value'
 
         # The data length in InstanceData must be the same
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AssertionError):
             instance_data.keypoints = torch.rand((17, 2))
 
         instance_data.keypoints = torch.rand((5, 2))
@@ -48,7 +48,7 @@ class TestInstanceData(TestCase):
     def test_getitem(self):
         instance_data = InstanceData()
         # length must be greater than 0
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AssertionError):
             instance_data[1]
 
         instance_data = self.setup_data()
@@ -91,11 +91,11 @@ class TestInstanceData(TestCase):
         # All inputs must be InstanceData
         instance_data_2 = BaseDataElement(
             bboxes=torch.rand((5, 4)), labels=torch.rand((5, )))
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AssertionError):
             InstanceData.cat([instance_data_1, instance_data_2])
 
         # Input List length must be greater than 0
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AssertionError):
             InstanceData.cat([])
 
     def test_len(self):
