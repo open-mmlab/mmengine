@@ -385,19 +385,25 @@ class BaseDataElement:
         """get property in data and metainfo as the same as python."""
         return self.__dict__.get(key, default)
 
-    def pop(self, key, default=None) -> Any:
+    def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
-        if key in self._metainfo_fields:
-            self._metainfo_fields.remove(key)
-            return self.__dict__.pop(key)
+        assert len(args) < 3, '``pop`` get more than 2 arguments'
+        name = args[0]
+        if name in self._metainfo_fields:
+            self._metainfo_fields.remove(args[0])
+            return self.__dict__.pop(*args)
 
-        elif key in self._data_fields:
-            self._data_fields.remove(key)
-            return self.__dict__.pop(key)
+        elif name in self._data_fields:
+            self._data_fields.remove(args[0])
+            return self.__dict__.pop(*args)
 
         # with default value
+        elif len(args) == 2:
+            return args[1]
         else:
-            return default
+            # don't just use 'self.__dict__.pop(*args)' for only popping key in
+            # metainfo or data
+            raise KeyError(f'{args[0]} is not contained in metainfo or data')
 
     def __contains__(self, item: str) -> bool:
         return item in self._data_fields or \
