@@ -16,6 +16,11 @@ class ConcatDataset(_ConcatDataset):
 
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
+    Note:
+        ``ConcatDataset`` dataset should not inherit from ``BaseDataset`` since
+        ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
+        sub-dataset which conflicts with original dataset.
+
     Args:
         datasets (Sequence[BaseDataset]): A list of datasets which will be
             concatenated.
@@ -114,19 +119,19 @@ class ConcatDataset(_ConcatDataset):
 
     def get_subset_(self, indices: Union[List[int], int]) -> None:
         raise NotImplementedError(
-            '`ConcatDataset` dose not support `get_subset` and `get_subset_` '
-            'interfaces because this will lead to ambiguous implementation of '
-            'some methods. If you want to use `get_subset` or `get_subset_` '
-            'interfaces, please firstly use them from BaseDataset or or their '
-            'subclasses, and then use `ConcatDataset`.')
+            '`ConcatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ConcatDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
-            '`ConcatDataset` dose not support `get_subset` and `get_subset_` '
-            'interfaces because this will lead to ambiguous implementation of '
-            'some methods. If you want to use `get_subset` or `get_subset_` '
-            'interfaces, please firstly use them from BaseDataset or or their '
-            'subclasses, and then use `ConcatDataset`.')
+            '`ConcatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ConcatDataset`.')
 
 
 class RepeatDataset:
@@ -136,6 +141,11 @@ class RepeatDataset:
     dataset. This is useful when the data loading time is long but the dataset
     is small. Using RepeatDataset can reduce the data loading time between
     epochs.
+
+    Note:
+        ``RepeatDataset`` dataset should not inherit from ``BaseDataset`` since
+        ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
+        sub-dataset which conflicts with original dataset.
 
     Args:
         dataset (BaseDataset): The dataset to be repeated.
@@ -214,19 +224,19 @@ class RepeatDataset:
 
     def get_subset_(self, indices: Union[List[int], int]) -> None:
         raise NotImplementedError(
-            '`RepeatDataset` dose not support `get_subset` and `get_subset_` '
-            'interfaces because this will lead to ambiguous implementation of '
-            'some methods. If you want to use `get_subset` or `get_subset_` '
-            'interfaces, please firstly use them from BaseDataset or or their '
-            'subclasses, and then use `RepeatDataset`.')
+            '`RepeatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `RepeatDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
-            '`RepeatDataset` dose not support `get_subset` and `get_subset_` '
-            'interfaces because this will lead to ambiguous implementation of '
-            'some methods. If you want to use `get_subset` or `get_subset_` '
-            'interfaces, please firstly use them from BaseDataset or or their '
-            'subclasses, and then use `RepeatDataset`.')
+            '`RepeatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `RepeatDataset`.')
 
 
 class ClassBalancedDataset:
@@ -251,6 +261,12 @@ class ClassBalancedDataset:
        :math:`r(c) = max(1, sqrt(t/f(c)))`
     3. For each image I, compute the image-level repeat factor:
        :math:`r(I) = max_{c in I} r(c)`
+
+    Note:
+        ``ClassBalancedDataset`` dataset should not inherit from
+        ``BaseDataset`` since ``get_subset`` and ``get_subset_`` could
+        produce ambiguous meaning sub-dataset which conflicts with original
+        dataset.
 
     Args:
         dataset (BaseDataset): The dataset to be repeated.
@@ -404,15 +420,13 @@ class ClassBalancedDataset:
             '`ClassBalancedDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
             'implementation of some methods. If you want to use `get_subset` '
-            'or `get_subset_` interfaces, please firstly use them from '
-            'BaseDataset or or their subclasses, and then use '
-            '`ClassBalancedDataset`.')
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ClassBalancedDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
         raise NotImplementedError(
             '`ClassBalancedDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
             'implementation of some methods. If you want to use `get_subset` '
-            'or `get_subset_` interfaces, please firstly use them from '
-            'BaseDataset or or their subclasses, and then use '
-            '`ClassBalancedDataset`.')
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ClassBalancedDataset`.')
