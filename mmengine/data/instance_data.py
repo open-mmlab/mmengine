@@ -8,6 +8,8 @@ import torch
 from .base_data_element import BaseDataElement
 
 
+# Modified from
+# https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/data_structures/instance_data.py # noqa
 class InstanceData(BaseDataElement):
     """Data structure for instance-level annnotations or predictions.
 
