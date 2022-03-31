@@ -1,20 +1,20 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import datetime
 from collections import OrderedDict
 from typing import List, Optional, Tuple
-import datetime
 
 import torch
-from mmengine.runner import runner
 
 
 class LogProcessor:
-    """A log prosessor used to format log information collected from
+    """A log processor used to format log information collected from
     ``runner.message_hub.log_scalars``.
 
     ``LogProcessor`` instance is built by runner and will format
     ``runner.message_hub.log_scalars`` to ``tag`` and ``log_str``, which can
-    direcly used by ``LoggerHook`` and ``MMLogger``. Besides, the argument
-    ``custom_cfg`` of constructor can control the statitics method of logs.
+    directly used by ``LoggerHook`` and ``MMLogger``. Besides, the argument
+    ``custom_cfg`` of constructor can control the statistics method of logs.
 
     Args:
         window_size (int): default smooth interval Defaults to 10.
@@ -23,7 +23,7 @@ class LogProcessor:
         custom_cfg (list[dict], optional): Contains multiple log config dict,
             in which key means the data source name of log and value means the
             statistic method and corresponding arguments used to count the
-            data souce. Defaults to None
+            data source. Defaults to None
             - If custom_cfg is None, all logs will be formatted via default
               methods, such as smoothing loss by default window_size. If
               custom_cfg is defined as a list of config dict, for example:
@@ -84,17 +84,17 @@ class LogProcessor:
         >>>                       window_size=100)])
         AssertionError
     """
+
     def __init__(self,
                  window_size=10,
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None):
         self.window_size = window_size
         self.by_epoch = by_epoch
-        self.custom_cfg = custom_cfg if custom_cfg else OrderedDict()
+        self.custom_cfg = custom_cfg if custom_cfg else []
         self._check_custom_cfg()
 
-    def get_log(self, runner: 'runner.Runner',
-                batch_idx: int, mode: str) -> Tuple[dict, str]:
+    def get_log(self, runner, batch_idx: int, mode: str) -> Tuple[dict, str]:
         """Get formatted log at training/validation/testing phase.
 
         :meth:`get_log` is called by :obj:`LoggerHook` to return corresponding
@@ -132,9 +132,7 @@ class LogProcessor:
             raise ValueError('mode must be train, val or test!')
         return tag, log_str
 
-    def _get_train_log_str(self, runner: 'runner.Runner',
-                           tag: dict, cur_iter: int) \
-            -> str:
+    def _get_train_log_str(self, runner, tag: dict, cur_iter: int) -> str:
         """Format log string during training phases.
 
         Args:
@@ -161,10 +159,11 @@ class LogProcessor:
         # Format log header.
         # by epoch: Epoch [4][100/1000]
         # by iter:  Iter [100/100000]
+        # TODO Maybe should compatible with return validation loss.
         if self.by_epoch:
             cur_epoch = self._get_epoch(runner, 'train')
-            log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.cur_dataloader)}]\t'
+            log_str = (f'Epoch [{cur_epoch}]'
+                       f'[{cur_iter}/{len(runner.cur_dataloader)}]\t')
         else:
             log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
         # Concatenate lr, momentum string with log header.
@@ -194,8 +193,7 @@ class LogProcessor:
         log_str += ', '.join(log_items)
         return log_str
 
-    def _get_val_log_str(self, runner: 'runner.Runner',
-                         tag: dict, cur_iter: int) -> str:
+    def _get_val_log_str(self, runner, tag: dict, cur_iter: int) -> str:
         """Format log string during validation phases.
 
         Args:
@@ -228,9 +226,7 @@ class LogProcessor:
         log_str += ', '.join(log_items)
         return log_str
 
-    def _collect_scalars(self,
-                         custom_cfg: List[dict],
-                         runner: 'runner.Runner',
+    def _collect_scalars(self, custom_cfg: List[dict], runner,
                          mode: str) -> dict:
         """Collect log information to compose a dict according to mode.
 
@@ -278,6 +274,7 @@ class LogProcessor:
 
     def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""
+
         def _check_window_size():
             for log_cfg in self.custom_cfg:
                 if not self.by_epoch:
@@ -294,8 +291,8 @@ class LogProcessor:
                 assert 'data_src' in log_cfg
                 data_src = log_cfg['data_src']
                 log_name = log_cfg.get('log_name', data_src)
-                check_dict.setdefault(
-                    data_src, dict(log_names=set(), log_counts=0))
+                check_dict.setdefault(data_src,
+                                      dict(log_names=set(), log_counts=0))
                 check_dict[data_src]['log_names'].add(log_name)
                 check_dict[data_src]['log_counts'] += 1
                 assert len(check_dict[data_src]['log_names']) == \
@@ -308,8 +305,7 @@ class LogProcessor:
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, custom_cfg: List[dict],
-                            runner: 'runner.Runner',
+    def _parse_windows_size(self, custom_cfg: List[dict], runner,
                             batch_idx: int) -> None:
         """Parse window_size defined in custom_cfg to int value.
 
@@ -331,7 +327,7 @@ class LogProcessor:
                     'window_size should be int, epoch or global, but got '
                     f'invalid {window_size}')
 
-    def _get_max_memory(self, runner: 'runner.Runner') -> int:
+    def _get_max_memory(self, runner) -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
         for a given device.
 
@@ -350,12 +346,12 @@ class LogProcessor:
         torch.cuda.reset_peak_memory_stats()
         return int(mem_mb.item())
 
-    def _get_iter(self, runner: 'runner.Runner', batch_idx: int = None) -> int:
+    def _get_iter(self, runner, batch_idx: int = None) -> int:
         """Get current training iteration step.
 
         Args:
             runner (Runner): The runner of the training process.
-            batch_idx (int, optional): The interation index of current
+            batch_idx (int, optional): The interaction index of current
                 dataloader. Defaults to None.
 
         Returns:
@@ -367,7 +363,7 @@ class LogProcessor:
             current_iter = runner.iter + 1
         return current_iter
 
-    def _get_epoch(self, runner: 'runner.Runner', mode: str) -> int:
+    def _get_epoch(self, runner, mode: str) -> int:
         """Get current epoch according to mode.
 
         Args:
@@ -387,4 +383,3 @@ class LogProcessor:
             raise ValueError(f"runner mode should be 'train' or 'val', "
                              f'but got {mode}')
         return epoch
-

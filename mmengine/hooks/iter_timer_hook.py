@@ -87,8 +87,8 @@ class IterTimerHook(Hook):
             self.time_sec_tot += iter_time * window_size
             # Calculate average iterative time.
             time_sec_avg = self.time_sec_tot / (
-                        runner.iter - self.start_iter + 1)
+                runner.iter - self.start_iter + 1)
             # Calculate eta.
             eta_sec = time_sec_avg * (
-                    runner.train_loop.max_iters - runner.iter - 1)
+                runner.train_loop.max_iters - runner.iter - 1)
             runner.message_hub.update_info('eta', eta_sec)

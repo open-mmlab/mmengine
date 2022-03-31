@@ -35,10 +35,10 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import ComposedWriter
-from .log_processor import LogProcessor
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
+from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
@@ -130,7 +130,7 @@ class Runner:
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
-        log_processor (dict, optional): A prosessor to format logs. Defaults to
+        log_processor (dict, optional): A processor to format logs. Defaults to
             None.
         log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
@@ -319,6 +319,8 @@ class Runner:
 
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = LogProcessor(**log_processor)
+        # Since `get_instance` could return any subclass of ManagerMixin. The
+        # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub()

@@ -2,10 +2,9 @@
 import logging
 import os.path as osp
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import torch
 
 from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
@@ -43,16 +42,20 @@ class TestLoggerHook:
         runner.writer.add_params.assert_called()
 
     def test_after_run(self, tmp_path):
+        # Test
         out_dir = tmp_path / 'out_dir'
         out_dir.mkdir()
         work_dir = tmp_path / 'work_dir'
         work_dir.mkdir()
         work_dir_json = work_dir / 'tmp.log.json'
-        json_f = open(work_dir_json, 'w')
-        json_f.close()
         runner = MagicMock()
         runner.work_dir = work_dir
-
+        # Test without out_dir.
+        logger_hook = LoggerHook()
+        logger_hook.after_run(runner)
+        # Test with out_dir and make sure json file has been moved to out_dir.
+        json_f = open(work_dir_json, 'w')
+        json_f.close()
         logger_hook = LoggerHook(out_dir=str(tmp_path), keep_local=False)
         logger_hook.out_dir = str(out_dir)
         logger_hook.after_run(runner)

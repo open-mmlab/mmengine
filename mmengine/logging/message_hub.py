@@ -131,7 +131,7 @@ class MessageHub(ManagerMixin):
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
-            resumed (bool): Whether all ``HistoryBuffer`` refered in
+            resumed (bool): Whether all ``HistoryBuffer`` referred in
                 log_dict could be resumed.
 
         Examples:
@@ -270,13 +270,14 @@ class MessageHub(ManagerMixin):
         """
         if isinstance(value, np.ndarray):
             assert value.size == 1
-            value = value.item()
+            valid_value = value.item()
         elif isinstance(value, torch.Tensor):
             assert value.numel() == 1
-            value = value.item()
+            valid_value = value.item()
         else:
             check_type(key, value, (int, float))
-        return value
+            valid_value = value
+        return valid_value
 
     def __getstate__(self):
         for key in list(self._log_scalars.keys()):

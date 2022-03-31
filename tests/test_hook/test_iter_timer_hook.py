@@ -1,25 +1,26 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from unittest.mock import Mock, MagicMock, patch
 from unittest import TestCase
+from unittest.mock import MagicMock, Mock, patch
 
-from mmengine.logging import MessageHub
 from mmengine.hooks import IterTimerHook
+from mmengine.logging import MessageHub
 
 
 class TestIterTimerHook(TestCase):
+
     def setUp(self) -> None:
         self.hook = IterTimerHook()
-    
+
     def test_init(self):
         assert self.hook.time_sec_tot == 0
         assert self.hook.start_iter == 0
-    
+
     def test_before_run(self):
         runner = MagicMock()
         runner.iter = 1
         self.hook.before_run(runner)
         assert self.hook.start_iter == 1
-    
+
     def test_before_epoch(self):
         runner = Mock()
         self.hook._before_epoch(runner)

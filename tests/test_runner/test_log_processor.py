@@ -1,24 +1,22 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 from unittest.mock import MagicMock, patch
-from collections import OrderedDict
-import pytest
 
+import pytest
 import torch
 
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.runner import LogProcessor
-from mmengine.logging import MMLogger
-from mmengine.logging import MessageHub
 
 
 class TestLogProcessor:
 
     def test_init(self):
-        log_processor = LogProcessor(window_size=10, by_epoch=True,
-                                     custom_cfg=None)
+        log_processor = LogProcessor(
+            window_size=10, by_epoch=True, custom_cfg=None)
         assert log_processor.by_epoch
         assert log_processor.window_size == 10
-        assert log_processor.custom_cfg == OrderedDict()
+        assert log_processor.custom_cfg == []
 
     def test_check_custom_cfg(self):
         # ``by_epoch==False`` and `window_size='epoch'` in log config will
@@ -27,26 +25,22 @@ class TestLogProcessor:
         with pytest.raises(AssertionError):
             LogProcessor(by_epoch=False, custom_cfg=custom_cfg)
         # Duplicate log_name will raise AssertionError.
-        custom_cfg = [dict(data_src='loss', log_name='loss_1'),
-                      dict(data_src='loss', log_name='loss_1')]
+        custom_cfg = [
+            dict(data_src='loss', log_name='loss_1'),
+            dict(data_src='loss', log_name='loss_1')
+        ]
         with pytest.raises(AssertionError):
             LogProcessor(custom_cfg=custom_cfg)
         # Overwrite loss item twice will raise AssertionError.
-        custom_cfg = [dict(data_src='loss'),
-                      dict(data_src='loss')]
+        custom_cfg = [dict(data_src='loss'), dict(data_src='loss')]
         with pytest.raises(AssertionError):
             LogProcessor(custom_cfg=custom_cfg)
 
-        custom_cfg = [dict(data_src='loss_cls',
-                           window_size=100,
-                           method_name='min'),
-                      dict(data_src='loss',
-                           log_name='loss_min',
-                           method_name='max'),
-                      dict(data_src='loss',
-                           log_name='loss_max',
-                           method_name='max')
-                      ]
+        custom_cfg = [
+            dict(data_src='loss_cls', window_size=100, method_name='min'),
+            dict(data_src='loss', log_name='loss_min', method_name='max'),
+            dict(data_src='loss', log_name='loss_max', method_name='max')
+        ]
         LogProcessor(custom_cfg=custom_cfg)
 
     def test_parse_windows_size(self):
@@ -103,8 +97,7 @@ class TestLogProcessor:
         eta = 40
         runner.message_hub.update_info('eta', eta)
         # Prepare training information.
-        train_logs = dict(
-            lr=0.1, time=1.0, data_time=1.0, loss_cls=1.0)
+        train_logs = dict(lr=0.1, time=1.0, data_time=1.0, loss_cls=1.0)
         cur_iter = 2 if by_epoch else 11
         out = log_processor._get_train_log_str(runner, train_logs, cur_iter)
         # Verify that the correct context have been logged.
@@ -164,7 +157,8 @@ class TestLogProcessor:
         runner = self._setup_runner()
         custom_cfg = [
             dict(data_src='time', method_name='mean', window_size=100),
-            dict(data_src='time', method_name='max', log_name='time_max')]
+            dict(data_src='time', method_name='max', log_name='time_max')
+        ]
         logger_hook = LogProcessor(custom_cfg=custom_cfg)
         # Collect with prefix.
         log_scalars = {
@@ -174,8 +168,8 @@ class TestLogProcessor:
             'val/metric': MagicMock()
         }
         runner.message_hub._log_scalars = log_scalars
-        tag = logger_hook._collect_scalars(copy.deepcopy(custom_cfg),
-                                           runner, mode='train')
+        tag = logger_hook._collect_scalars(
+            copy.deepcopy(custom_cfg), runner, mode='train')
         # Test training key in tag.
         assert list(tag.keys()) == ['time', 'loss_cls', 'time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
@@ -183,8 +177,8 @@ class TestLogProcessor:
             method_name='max')
         log_scalars['train/loss_cls'].mean.assert_called()
 
-        tag = logger_hook._collect_scalars(copy.deepcopy(custom_cfg),
-                                           runner, mode='val')
+        tag = logger_hook._collect_scalars(
+            copy.deepcopy(custom_cfg), runner, mode='val')
         assert list(tag.keys()) == ['metric']
         log_scalars['val/metric'].current.assert_called()
 
@@ -233,8 +227,8 @@ class TestLogProcessor:
         runner.logger = logger
         message_hub = MessageHub.get_instance('log_processor_test')
         for i in range(10):
-            message_hub.update_scalar('train/loss', 10-i)
+            message_hub.update_scalar('train/loss', 10 - i)
         for i in range(10):
-            message_hub.update_scalar('val/acc', i*0.1)
+            message_hub.update_scalar('val/acc', i * 0.1)
         runner.message_hub = message_hub
         return runner
