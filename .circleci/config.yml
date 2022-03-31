@@ -113,8 +113,10 @@ workflows:
           torchvision: 0.9.0
           requires:
             - lint
-
-      - build_cu102:
+      - hold:
           type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
             - build_cpu_th1.8_py3.7
+      - build_cu102:
+          requires:
+            - hold
