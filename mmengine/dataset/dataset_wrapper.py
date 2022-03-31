@@ -17,9 +17,11 @@ class ConcatDataset(_ConcatDataset):
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
     Note:
-        ``ConcatDataset`` dataset should not inherit from ``BaseDataset`` since
+        ``ConcatDataset`` should not inherit from ``BaseDataset`` since
         ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
-        sub-dataset which conflicts with original dataset.
+        sub-dataset which conflicts with original dataset. If you want to use
+        a sub-dataset of ``ConcatDataset``, you should set ``indices``
+        arguments for wrapped dataset which inherit from ``BaseDataset``.
 
     Args:
         datasets (Sequence[BaseDataset]): A list of datasets which will be
@@ -143,9 +145,11 @@ class RepeatDataset:
     epochs.
 
     Note:
-        ``RepeatDataset`` dataset should not inherit from ``BaseDataset`` since
+        ``RepeatDataset`` should not inherit from ``BaseDataset`` since
         ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
-        sub-dataset which conflicts with original dataset.
+        sub-dataset which conflicts with original dataset. If you want to use
+        a sub-dataset of ``ConcatDataset``, you should set ``indices``
+        arguments for wrapped dataset which inherit from ``BaseDataset``.
 
     Args:
         dataset (BaseDataset): The dataset to be repeated.
@@ -263,10 +267,12 @@ class ClassBalancedDataset:
        :math:`r(I) = max_{c in I} r(c)`
 
     Note:
-        ``ClassBalancedDataset`` dataset should not inherit from
-        ``BaseDataset`` since ``get_subset`` and ``get_subset_`` could
-        produce ambiguous meaning sub-dataset which conflicts with original
-        dataset.
+        ``ClassBalancedDataset`` should not inherit from ``BaseDataset``
+        since ``get_subset`` and ``get_subset_`` could  produce ambiguous
+        meaning sub-dataset which conflicts with original dataset. If you
+        want to use a sub-dataset of ``ConcatDataset``, you should set
+        ``indices`` arguments for wrapped dataset which inherit from
+        ``BaseDataset``.
 
     Args:
         dataset (BaseDataset): The dataset to be repeated.

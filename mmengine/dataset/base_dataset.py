@@ -179,7 +179,7 @@ class BaseDataset(Dataset):
         information will be overwritten by higher one.
 
     Note:
-        Wrapped dataset such as ``ConcatDataset``, ``RepeatDataset`` .etc.
+        Dataset wrapper such as ``ConcatDataset``, ``RepeatDataset`` .etc.
         should not inherit from ``BaseDataset`` since ``get_subset`` and
         ``get_subset_`` could produce ambiguous meaning sub-dataset which
         conflicts with original dataset.
