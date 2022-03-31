@@ -112,9 +112,7 @@ class InstanceData(BaseDataElement):
                 # keep the dimension
                 item = slice(item, None, len(self))
 
-        new_data = InstanceData()
-        new_data.set_metainfo(dict(self.metainfo_items()))
-
+        new_data = self.new(data={})
         if isinstance(item, torch.Tensor):
             assert item.dim() == 1, 'Only support to get the' \
                                     ' values along the first dimension.'
@@ -147,7 +145,7 @@ class InstanceData(BaseDataElement):
             # item is a slice
             for k, v in self.items():
                 new_data[k] = v[item]
-        return new_data
+        return new_data  # type:ignore
 
     @staticmethod
     def cat(instances_list: List['InstanceData']) -> 'InstanceData':
