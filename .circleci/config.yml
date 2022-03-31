@@ -115,5 +115,6 @@ workflows:
             - lint
 
       - build_cu102:
+          type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
             - build_cpu_th1.8_py3.7
