@@ -56,18 +56,13 @@ class Evaluator:
             predictions (Sequence[BaseDataSample]): A batch of outputs from
                 the model.
         """
-
-        # convert BaseDataSample to dict
-        # TODO: replace with todict()
-        def datasample2dict(datasample):
-            if isinstance(datasample, BaseDataSample):
-                return {k: datasample.get(k) for k in datasample.keys()}
-            else:
-                return datasample
-
-        data_batch = [datasample2dict(data) for _, data in data_batch]
+        data_batch = [
+            (input, self._datasample2dict(data))  # type: ignore
+            for input, data in data_batch
+        ]
         predictions = [
-            datasample2dict(prediction) for prediction in predictions
+            self._datasample2dict(prediction)  # type: ignore
+            for prediction in predictions
         ]
 
         for metric in self.metrics:
@@ -102,14 +97,14 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         data: Sequence[dict],
-                         predictions: Sequence[dict],
+                         data: Sequence,
+                         predictions: Sequence,
                          chunk_size: int = 1):
-        """Evaluate the predictions on the given data offline.
+        """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            data (Sequence[dict]): All data samples of the validation set.
-            predictions (Sequence[dict]): All predictions of the model on the
+            data (Sequence): All data of the validation set.
+            predictions (Sequence): All predictions of the model on the
                 validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
@@ -136,3 +131,11 @@ class Evaluator:
             size += len(data_chunk)
             self.process(data_chunk, pred_chunk)
         return self.evaluate(size)
+
+    def _datasample2dict(self, datasample: Union[dict,
+                                                 BaseDataSample]) -> dict:
+        """Convert ``BaseDataSample`` to dict."""
+        if isinstance(datasample, BaseDataSample):
+            return {k: datasample.get(k) for k in datasample.keys()}
+        else:
+            return datasample

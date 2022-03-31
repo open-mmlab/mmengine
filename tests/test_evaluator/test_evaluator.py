@@ -209,3 +209,16 @@ class TestEvaluator(TestCase):
         indicator = 'metric_2'  # unmatched indicator
         with self.assertRaisesRegex(ValueError, 'can not match any metric'):
             _ = get_metric_value(indicator, metrics)
+
+    def test_offline_evaluate(self):
+        cfg = dict(type='ToyMetric')
+        evaluator = Evaluator(cfg)
+
+        size = 10
+
+        all_data = [(np.zeros((3, 10, 10)), BaseDataSample(data={'label': 1}))
+                    for _ in range(size)]
+        all_predictions = [
+            BaseDataSample(data={'pred': 0}) for _ in range(size)
+        ]
+        evaluator.offline_evaluate(all_data, all_predictions)
