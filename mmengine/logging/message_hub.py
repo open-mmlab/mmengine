@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 from collections import OrderedDict
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -17,14 +17,14 @@ class MessageHub(ManagerMixin):
 
     ``MessageHub`` will record log information and runtime information. The
     log information refers to the learning rate, loss, etc. of the model
-    when training a model, which will be stored as ``HistoryBuffer``. The
+    during training phase, which will be stored as ``HistoryBuffer``. The
     runtime information refers to the iter times, meta information of
     runner etc. which will be overwritten by next update.
 
     Args:
-        name (str): Name of message hub, for global access. Defaults to ''.
+        name (str): Instance name of message hub, for global access.
         log_scalars (OrderedDict, optional): Each key-value pair in the
-            dictionary is the name of the log information name, and it's
+            dictionary is the name of the log information name and it's
             corresponding value, such as "loss", "lr", "metric" .etc. and
             their values. The type of value must be HistoryBuffer. Defaults to
             None.
@@ -36,8 +36,9 @@ class MessageHub(ManagerMixin):
             :attr:`_runtime_info` could be serialized or not.
 
     Note:
-        If the key in :attr:`_resumed_keys` belongs to :attr:`_log_scalars`,
-        The corresponding value cannot be set repeatedly.
+        Key in :attr:`_resumed_keys` belongs to :attr:`_log_scalars` or
+        :attr:`_runtime_info`. The corresponding value cannot be set
+        repeatedly.
 
     Examples:
         >>> # create empty `MessageHub`.
@@ -54,10 +55,10 @@ class MessageHub(ManagerMixin):
     """
 
     def __init__(self,
-                 name: str = '',
-                 log_scalars: OrderedDict = None,
-                 runtime_info: OrderedDict = None,
-                 resumed_keys: OrderedDict = None):
+                 name: str,
+                 log_scalars: Optional[OrderedDict] = None,
+                 runtime_info: Optional[OrderedDict] = None,
+                 resumed_keys: Optional[OrderedDict] = None):
         super().__init__(name)
         self._log_scalars = log_scalars if log_scalars is not None else \
             OrderedDict()
@@ -107,7 +108,8 @@ class MessageHub(ManagerMixin):
             resumed cannot be set repeatedly for the same key.
 
         Args:
-            resumed (str):
+            resumed (str): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
             key (str): Key of ``HistoryBuffer``.
             value (int or float): Value of log.
             count (int): Accumulation times of log, defaults to 1. `count`
@@ -129,6 +131,8 @@ class MessageHub(ManagerMixin):
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
+            resumed (bool): Whether all ``HistoryBuffer`` refered in
+                log_dict could be resumed.
 
         Examples:
             >>> message_hub = MessageHub.get_instance('mmengine')
@@ -169,6 +173,8 @@ class MessageHub(ManagerMixin):
         Args:
             key (str): Key of runtime information.
             value (Any): Value of runtime information.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
         """
         self._set_resumed_keys(key, resumed)
         self._resumed_keys[key] = resumed
@@ -183,8 +189,8 @@ class MessageHub(ManagerMixin):
 
         Args:
             key (str): Key of :attr:`_log_scalrs` or :attr:`_runtime_info`.
-            resumed: Whether the corresponding ``HistoryBuffer`` could be
-                resumed.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
         """
         if key not in self._resumed_keys:
             self._resumed_keys[key] = resumed
@@ -229,7 +235,7 @@ class MessageHub(ManagerMixin):
 
         Returns:
             HistoryBuffer: Corresponding ``HistoryBuffer`` instance if the
-                key exists.
+            key exists.
         """
         if key not in self.log_scalars:
             raise KeyError(f'{key} is not found in Messagehub.log_buffers: '

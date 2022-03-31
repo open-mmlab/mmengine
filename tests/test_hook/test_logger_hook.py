@@ -65,10 +65,9 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log = MagicMock(
             return_value=(dict(), 'log_str'))
-        runner.log_processor.by_epoch = False
         runner.iter = 10
         batch_idx = 5
-        logger_hook = LoggerHook()
+        logger_hook = LoggerHook(by_epoch=False)
         logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         # `cur_iter=10+1`, which cannot be exact division by
         # `logger_hook.interval`
@@ -78,8 +77,7 @@ class TestLoggerHook:
         runner.log_processor.get_log.assert_called()
 
         # Test LoggerHook by epoch.
-        logger_hook = LoggerHook()
-        runner.log_processor.by_epoch = True
+        logger_hook = LoggerHook(by_epoch=True)
         runner.log_processor.get_log = MagicMock(
             return_value=(dict(), 'log_str'))
         # Only `batch_idx` will work.

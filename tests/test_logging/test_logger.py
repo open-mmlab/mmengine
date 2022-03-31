@@ -19,7 +19,7 @@ class TestLogger:
     @patch('torch.distributed.is_available', lambda: True)
     def test_init_rank0(self, tmp_path):
         logger = MMLogger.get_instance('rank0.pkg1', log_level='INFO')
-        assert logger.name == 'rank0.pkg1'
+        assert logger.name == 'mmengine'
         assert logger.instance_name == 'rank0.pkg1'
         assert logger.instance_name == 'rank0.pkg1'
         # Logger get from `MMLogger.get_instance` does not inherit from
@@ -71,33 +71,33 @@ class TestLogger:
                              [logging.WARNING, logging.INFO, logging.DEBUG])
     def test_handler(self, capsys, tmp_path, log_level):
         # test stream handler can output correct format logs
-        logger_name = f'test_stream_{str(log_level)}'
-        logger = MMLogger.get_instance(logger_name, log_level=log_level)
+        instance_name = f'test_stream_{str(log_level)}'
+        logger = MMLogger.get_instance(instance_name, log_level=log_level)
         logger.log(level=log_level, msg='welcome')
         out, _ = capsys.readouterr()
         # Skip match colored INFO
         loglevl_name = logging._levelToName[log_level]
         match = re.fullmatch(
-            self.stream_handler_regex_time + f' - {logger_name} - '
+            self.stream_handler_regex_time + f' - mmengine - '
             f'(.*){loglevl_name}(.*) - welcome\n', out)
         assert match is not None
 
         # test file_handler output plain text without color.
         tmp_file = tmp_path / 'tmp_file.log'
-        logger_name = f'test_file_{log_level}'
+        instance_name = f'test_file_{log_level}'
         logger = MMLogger.get_instance(
-            logger_name, log_level=log_level, log_file=tmp_file)
+            instance_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
         with open(tmp_file, 'r') as f:
             log_text = f.read()
             match = re.fullmatch(
                 self.file_handler_regex_time +
-                f' - {logger_name} - {loglevl_name} - '
+                f' - mmengine - {loglevl_name} - '
                 f'welcome\n', log_text)
             assert match is not None
         logging.shutdown()
 
-    def test_erro_format(self, capsys):
+    def test_error_format(self, capsys):
         # test error level log can output file path, function name and
         # line number
         logger = MMLogger.get_instance('test_error', log_level='INFO')
@@ -106,7 +106,7 @@ class TestLogger:
         file_path = __file__
         function_name = sys._getframe().f_code.co_name
         pattern = self.stream_handler_regex_time + \
-            r' - test_error - (.*)ERROR(.*) - ' \
+            r' - mmengine - (.*)ERROR(.*) - ' \
             f'{file_path} - {function_name} - ' \
             f'{lineno} - welcome\n'
         out, _ = capsys.readouterr()
@@ -128,24 +128,21 @@ class TestLogger:
         print_log('welcome', logger=logger)
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - test_print_log - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test access logger by name.
         print_log('welcome', logger='test_print_log')
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - test_print_log - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test access the latest created logger.
         print_log('welcome', logger='current')
         out, _ = capsys.readouterr()
         match = re.fullmatch(
-            self.stream_handler_regex_time +
-            ' - test_print_log - (.*)INFO(.*) - '
+            self.stream_handler_regex_time + ' - mmengine - (.*)INFO(.*) - '
             'welcome\n', out)
         assert match is not None
         # Test invalid logger type.
