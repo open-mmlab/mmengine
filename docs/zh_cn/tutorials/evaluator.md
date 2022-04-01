@@ -111,16 +111,16 @@ class Accuracy(BaseEvaluator):
 
     default_prefix = 'ACC'
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: Sequence[BaseDataSample]):
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
+                predictions: Sequence[BaseDataElement]):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
         to computed the metrics when all batches have been processed.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataSample]): A batch of outputs from
+            predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
 

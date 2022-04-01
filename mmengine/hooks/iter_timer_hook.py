@@ -2,11 +2,11 @@
 import time
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -32,10 +32,11 @@ class IterTimerHook(Hook):
         self.start_iter = runner.iter
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
-        """Record time flag before start a epoch.
+        """Record timestamp before start an epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training validation and
+                testing process.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         self.t = time.time()
@@ -45,16 +46,18 @@ class IterTimerHook(Hook):
                      batch_idx: int,
                      data_batch: DATA_BATCH = None,
                      mode: str = 'train') -> None:
-        """Logging time for loading data and update "data_time"
+        """Calculating time for loading data and updating "data_time"
         ``HistoryBuffer`` of ``runner.message_hub``.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training, validation and
+                testing process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
+        # Update data loading time in `runner.message_hub`.
         runner.message_hub.update_scalar(f'{mode}/data_time',
                                          time.time() - self.t)
 
@@ -63,20 +66,22 @@ class IterTimerHook(Hook):
                     batch_idx: int,
                     data_batch: DATA_BATCH = None,
                     outputs: Optional[Union[dict,
-                                            Sequence[BaseDataSample]]] = None,
+                                            Sequence[BaseDataElement]]] = None,
                     mode: str = 'train') -> None:
-        """Logging time for a iteration and update "time" ``HistoryBuffer`` of
-        ``runner.message_hub``.
+        """Calculating time for an iteration and updating "time"
+        ``HistoryBuffer`` of ``runner.message_hub``.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training validation and
+                testing process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict or sequence, optional): Outputs from model. Defaults
                 to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
+        # Update iteration time in `runner.message_hub`.
         message_hub = runner.message_hub
         message_hub.update_scalar(f'{mode}/time', time.time() - self.t)
         self.t = time.time()
