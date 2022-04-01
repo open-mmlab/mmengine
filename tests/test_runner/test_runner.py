@@ -589,13 +589,22 @@ class TestRunner(TestCase):
         evaluator = Evaluator([ToyMetric1(), ToyMetric2()])
         self.assertEqual(id(runner.build_evaluator(evaluator)), id(evaluator))
 
-        # input is a dict or list of dict
+        # input is a dict
         evaluator = dict(type='ToyMetric1')
         self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
 
-        # input is a invalid type
+        # input is a list of dict
         evaluator = [dict(type='ToyMetric1'), dict(type='ToyMetric2')]
         self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
+
+        # test collect device
+        evaluator = [
+            dict(type='ToyMetric1', collect_device='cpu'),
+            dict(type='ToyMetric2', collect_device='gpu')
+        ]
+        _evaluator = runner.build_evaluator(evaluator)
+        self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
+        self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
 
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

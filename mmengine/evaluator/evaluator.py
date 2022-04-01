@@ -11,16 +11,10 @@ class Evaluator:
 
     Args:
         metrics (dict or BaseMetric or Sequence): The config of metrics.
-        collect_device (str): Device name used for collecting results from
-            different ranks during distributed training. Must be 'cpu' or
-            'gpu'. Defaults to 'cpu'.
     """
 
-    def __init__(self,
-                 metrics: Union[dict, BaseMetric, Sequence],
-                 collect_device='cpu'):
+    def __init__(self, metrics: Union[dict, BaseMetric, Sequence]):
         self._dataset_meta: Optional[dict] = None
-        self.collect_device = collect_device
         if not isinstance(metrics, Sequence):
             metrics = [metrics]
         self.metrics: List[BaseMetric] = []

@@ -166,6 +166,19 @@ class TestEvaluator(TestCase):
         for _evaluator in evaluator.metrics:
             self.assertDictEqual(_evaluator.dataset_meta, dataset_meta)
 
+    def test_collect_device(self):
+        cfg = [
+            dict(type='ToyMetric', collect_device='cpu'),
+            dict(
+                type='ToyMetric',
+                collect_device='gpu',
+                dummy_metrics=dict(mAP=0.0))
+        ]
+
+        evaluator = Evaluator(cfg)
+        self.assertEqual(evaluator.metrics[0].collect_device, 'cpu')
+        self.assertEqual(evaluator.metrics[1].collect_device, 'gpu')
+
     def test_prefix(self):
         cfg = dict(type='NonPrefixedMetric')
         with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
