@@ -1,8 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import time
+
 import pytest
 
 from mmengine.config import Config, ConfigDict  # type: ignore
-from mmengine.registry import Registry, build_from_cfg
+from mmengine.registry import DefaultScope, Registry, build_from_cfg
 
 
 class TestRegistry:
@@ -342,11 +344,15 @@ class TestRegistry:
 
         # test `default_scope`
         # switch the current registry to another registry
-        dog = LITTLE_HOUNDS.build(b_cfg, default_scope='mid_hound')
+        DefaultScope.get_instance(
+            f'test-{time.time()}', scope_name='mid_hound')
+        dog = LITTLE_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
 
         # `default_scope` can not be found
-        dog = MID_HOUNDS.build(b_cfg, default_scope='scope-not-found')
+        DefaultScope.get_instance(
+            f'test2-{time.time()}', scope_name='scope-not-found')
+        dog = MID_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
 
     def test_repr(self):
