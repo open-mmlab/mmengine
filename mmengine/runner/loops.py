@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from mmengine.data import BaseDataElement
-from mmengine.evaluator import BaseMetric
+from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
 from .base_loop import BaseLoop
@@ -165,14 +165,14 @@ class ValLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        evaluator (BaseMetric or dict or list): Used for computing metrics.
+        evaluator (Evaluator or dict or list): Used for computing metrics.
         interval (int): Validation interval. Defaults to 1.
     """
 
     def __init__(self,
                  runner,
                  dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[BaseMetric, Dict, List],
+                 evaluator: Union[Evaluator, Dict, List],
                  interval: int = 1) -> None:
         super().__init__(runner, dataloader)
 
@@ -228,11 +228,11 @@ class TestLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        evaluator (BaseMetric or dict or list): Used for computing metrics.
+        evaluator (Evaluator or dict or list): Used for computing metrics.
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[BaseMetric, Dict, List]):
+                 evaluator: Union[Evaluator, Dict, List]):
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):

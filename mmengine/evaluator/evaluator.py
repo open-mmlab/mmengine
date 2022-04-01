@@ -95,7 +95,7 @@ class Evaluator:
                     raise ValueError(
                         'There are multiple evaluation results with the same '
                         f'metric name {name}. Please make sure all metrics '
-                        'have different prefix.')
+                        'have different prefixes.')
 
             metrics.update(_results)
         return metrics

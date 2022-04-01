@@ -11,7 +11,7 @@ class BaseMetric(metaclass=ABCMeta):
     """Base class for a metric.
 
     The metric first processes each batch of data_samples and predictions,
-    and appends the processed results in to the results list. Then it
+    and appends the processed results to the results list. Then it
     collects all results together from all ranks if distributed training
     is used. Finally, it computes the metrics of the entire dataset.
 
