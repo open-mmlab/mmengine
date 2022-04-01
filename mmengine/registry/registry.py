@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
 from ..utils import is_seq_of
+from .default_scope import DefaultScope
 
 
 def build_from_cfg(
@@ -354,19 +355,13 @@ class Registry:
 
         return None
 
-    def build(self,
-              *args,
-              default_scope: Optional[str] = None,
-              **kwargs) -> Any:
+    def build(self, *args, **kwargs) -> Any:
         """Build an instance.
 
-        Build an instance by calling :attr:`build_func`. If
-        :attr:`default_scope` is given, :meth:`build` will firstly get the
-        responding registry and then call its own :meth:`build`.
-
-        Args:
-            default_scope (str, optional): The ``default_scope`` is used to
-                reset the current registry. Defaults to None.
+        Build an instance by calling :attr:`build_func`. If the global
+        variable default scope (:obj:`DefaultScope`) exists ,
+        :meth:`build` will firstly get the responding registry and then call
+        its own :meth:`build`.
 
         Examples:
             >>> from mmengine import Registry
@@ -379,9 +374,11 @@ class Registry:
             >>> cfg = dict(type='ResNet', depth=50)
             >>> model = MODELS.build(cfg)
         """
+        # get the global default scope
+        default_scope = DefaultScope.get_current_instance()
         if default_scope is not None:
             root = self._get_root_registry()
-            registry = root._search_child(default_scope)
+            registry = root._search_child(default_scope.scope_name)
             if registry is None:
                 # if `default_scope` can not be found, fallback to use self
                 warnings.warn(

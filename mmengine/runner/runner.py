@@ -675,8 +675,7 @@ class Runner:
         if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
-            return MODELS.build(
-                model, default_scope=self.default_scope.scope_name)
+            return MODELS.build(model)
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
@@ -726,9 +725,7 @@ class Runner:
                     model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg,
-                default_scope=self.default_scope.scope_name,
-                default_args=dict(model=self.model))
+                model_wrapper_cfg, default_args=dict(model=self.model))
 
         return model
 
@@ -750,10 +747,7 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            optimizer = build_optimizer(
-                self.model,
-                optimizer,
-                default_scope=self.default_scope.scope_name)
+            optimizer = build_optimizer(self.model, optimizer)
             return optimizer
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
@@ -801,7 +795,6 @@ class Runner:
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
                         _scheduler,
-                        default_scope=self.default_scope.scope_name,
                         default_args=dict(optimizer=self.optimizer)))
             else:
                 raise TypeError(
@@ -837,9 +830,7 @@ class Runner:
         if isinstance(evaluator, (BaseEvaluator, ComposedEvaluator)):
             return evaluator
         elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            return build_evaluator(
-                evaluator,
-                default_scope=self.default_scope.scope_name)  # type: ignore
+            return build_evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
                 'evaluator should be one of dict, list of dict, BaseEvaluator '
@@ -880,8 +871,7 @@ class Runner:
         # build dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
-            dataset = DATASETS.build(
-                dataset_cfg, default_scope=self.default_scope.scope_name)
+            dataset = DATASETS.build(dataset_cfg)
         else:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
@@ -891,9 +881,7 @@ class Runner:
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg,
-                default_scope=self.default_scope.scope_name,
-                default_args=dict(dataset=dataset))
+                sampler_cfg, default_args=dict(dataset=dataset))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -961,7 +949,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self, dataloader=self.train_dataloader))
         else:
@@ -1012,7 +999,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.val_dataloader,
@@ -1059,7 +1045,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.test_dataloader,
