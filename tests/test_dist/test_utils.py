@@ -55,7 +55,13 @@ def init_process(rank, world_size, functions, backend='gloo'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29501'
     os.environ['RANK'] = str(rank)
-    dist.init_dist('pytorch', backend, rank=rank, world_size=world_size)
+
+    if backend == 'nccl':
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(rank % num_gpus)
+
+    torch_dist.init_process_group(
+        backend=backend, rank=rank, world_size=world_size)
     dist.init_local_group(0, world_size)
 
     for func in functions:
