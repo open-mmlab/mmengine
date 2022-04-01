@@ -263,9 +263,8 @@ class BaseDataset(Dataset):
             data_info = pickle.loads(bytes)  # type: ignore
         else:
             data_info = self.data_list[idx]
-        # Some codebase needs to get the `sample_idx` of data information.
-        # Here we convert idx to positive idx, and save it to data
-        # information.
+        # Some codebase needs `sample_idx` of data information. Here we convert
+        # the idx to a positive number and save it in data information.
         if idx >= 0:
             data_info['sample_idx'] = idx
         else:
