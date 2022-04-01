@@ -25,9 +25,11 @@ class Compose:
 
     def __init__(self, transforms: Sequence[Union[dict, Callable]]):
         self.transforms: List[Callable] = []
+
         for transform in transforms:
+            # `Compose` can be built with config dict with type and
+            # corresponding arguments.
             if isinstance(transform, dict):
-                # Build transform from dict.
                 transform = TRANSFORMS.build(transform)
                 if not callable(transform):
                     raise TypeError(f'transform should be a callable object, '
@@ -51,8 +53,10 @@ class Compose:
         """
         for t in self.transforms:
             data = t(data)
-            # If transform get `None` data, terminate the loop immediately
-            # and return `None`.
+            # The transform will return None when it failed to load images or
+            # cannot find suitable augmentation parameters to augment the data.
+            # Here we simply return None if the transform returns None and the
+            # dataset will handle it by randomly selecting another data sample.
             if data is None:
                 return None
         return data
@@ -236,7 +240,7 @@ class BaseDataset(Dataset):
 
         # Build pipeline.
         self.pipeline = Compose(pipeline)
-        # Full initialize data.
+        # Full initialize the dataset.
         if not lazy_init:
             self.full_init()
 
@@ -294,7 +298,7 @@ class BaseDataset(Dataset):
         self.data_list = self.filter_data()
         # Get subset data according to indices.
         if self._indices is not None:
-            self.data_list = self._get_unserialized_subdata(self._indices)
+            self.data_list = self._get_unserialized_subset(self._indices)
 
         # serialize data_list
         if self.serialize_data:
@@ -375,10 +379,10 @@ class BaseDataset(Dataset):
         # Performing full initialization by calling `__getitem__` will consume
         # extra memory. If a dataset is not fully initialized by setting
         # `lazy_init=True` and then fed into the dataloader. Different workers
-        # will simultaneously read and parse the annotation. Although this may
-        # work, but it will consume a lot of time and memory. Therefore, it is
-        # recommended to manually call `full_init` before dataset fed into
-        # dataloader to ensure all workers use shared RAM from master process.
+        # will simultaneously read and parse the annotation. It will cost more
+        # time and memory, although this may work. Therefore, it is recommended
+        # to manually call `full_init` before dataset fed into dataloader to
+        # ensure all workers use shared RAM from master process.
         if not self._fully_initialized:
             warnings.warn(
                 'Please call `full_init()` method manually to accelerate '
@@ -386,16 +390,15 @@ class BaseDataset(Dataset):
             self.full_init()
 
         if self.test_mode:
-            # Get a testing phase data.
             data = self.prepare_data(idx)
             if data is None:
                 raise Exception('Test time pipline should not get `None` '
                                 'data_sample')
             return data
-        # Get a training phase data.
+
         for _ in range(self.max_refetch + 1):
             data = self.prepare_data(idx)
-            # Broken images or random enhancements may cause the returned data
+            # Broken images or random augmentations may cause the returned data
             # to be None
             if data is None:
                 idx = self._rand_another()
@@ -432,12 +435,13 @@ class BaseDataset(Dataset):
         meta_data = annotations['metadata']
         raw_data_infos = annotations['data_infos']
 
-        # update self._metainfo
+        # Meta information load from annotation file will not influence the
+        # existed meta information load from `BaseDataset.METAINFO` and
+        # `metainfo` arguments defined in constructor.
         for k, v in meta_data.items():
-            # We only merge keys that are not contained in self._metainfo.
             self._metainfo.setdefault(k, v)
 
-        # load and parse data_infos
+        # load and parse data_infos.
         data_list = []
         for raw_data_info in raw_data_infos:
             # parse raw data information to target format
@@ -474,7 +478,7 @@ class BaseDataset(Dataset):
         Returns:
             dict: Parsed meta information.
         """
-        # cls.METAINFO will be overwritten by in_meta
+        # `cls.METAINFO` will be overwritten by in_meta
         cls_metainfo = copy.deepcopy(cls.METAINFO)
         if in_metainfo is None:
             return cls_metainfo
@@ -485,7 +489,7 @@ class BaseDataset(Dataset):
         for k, v in in_metainfo.items():
             if isinstance(v, str) and osp.isfile(v):
                 # if filename in in_metainfo, this key will be further parsed.
-                # nested filename will be ignored.:
+                # nested filename will be ignored.
                 cls_metainfo[k] = list_from_file(v)
             else:
                 cls_metainfo[k] = v
@@ -568,13 +572,13 @@ class BaseDataset(Dataset):
                 Sequence, indices represents the target data information
                 index of dataset.
         """
-        # Get subset of data from  serialized data or data information sequence
+        # Get subset of data from serialized data or data information sequence
         # according to `self.serialize_data`.
         if self.serialize_data:
             self.date_bytes, self.data_address = \
-                self._get_serialized_subdata(indices)
+                self._get_serialized_subset(indices)
         else:
-            self.data_list = self._get_unserialized_subdata(indices)
+            self.data_list = self._get_unserialized_subset(indices)
 
     @force_full_init
     def get_subset(self, indices: Union[Sequence[int], int]) -> 'BaseDataset':
@@ -615,23 +619,23 @@ class BaseDataset(Dataset):
             BaseDataset: A subset of dataset.
         """
         # Get subset of data from serialized data or data information list
-        # according to `self.serialize_data`. Since `_get_serialized_subdata`
+        # according to `self.serialize_data`. Since `_get_serialized_subset`
         # will recalculate the subset data information,
         # `_copy_without_annotation` will copy all attributes except data
         # information.
         sub_dataset = self._copy_without_annotation()
-        # Avoid calling `full_init` to overwrite `data_list`
+        # Get subset of dataset with serialize and unserialized data.
         if self.serialize_data:
             date_bytes, data_address = \
-                self._get_serialized_subdata(indices)
+                self._get_serialized_subset(indices)
             sub_dataset.date_bytes = date_bytes.copy()
             sub_dataset.data_address = data_address.copy()
         else:
-            data_list = self._get_unserialized_subdata(indices)
+            data_list = self._get_unserialized_subset(indices)
             sub_dataset.data_list = copy.deepcopy(data_list)
         return sub_dataset
 
-    def _get_serialized_subdata(self, indices: Union[Sequence[int], int]) \
+    def _get_serialized_subset(self, indices: Union[Sequence[int], int]) \
             -> Tuple[np.ndarray, np.ndarray]:
         """Get subset of serialized data information list.
 
@@ -694,8 +698,8 @@ class BaseDataset(Dataset):
                             f'but got {type(indices)}')
         return sub_date_bytes, sub_data_address  # type: ignore
 
-    def _get_unserialized_subdata(self, indices: Union[Sequence[int],
-                                                       int]) -> list:
+    def _get_unserialized_subset(self, indices: Union[Sequence[int],
+                                                      int]) -> list:
         """Get subset of data information list.
 
         Args:
@@ -716,6 +720,7 @@ class BaseDataset(Dataset):
                 # Return the last few data information.
                 sub_data_list = self.data_list[indices:]
         elif isinstance(indices, Sequence):
+            # Return the data information according to given indices.
             subdata_list = []
             for idx in indices:
                 subdata_list.append(self.data_list[idx])
@@ -741,17 +746,19 @@ class BaseDataset(Dataset):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
 
-        serialized_data_list = [_serialize(x) for x in self.data_list]
-        address_list = np.asarray([len(x) for x in serialized_data_list],
-                                  dtype=np.int64)
+        # Serialize data information list avoid making multiple copies of
+        # `self.data_list` when iterate `import torch.utils.data.dataloader`
+        # with multiple workers.
+        data_list = [_serialize(x) for x in self.data_list]
+        address_list = np.asarray([len(x) for x in data_list], dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
         # TODO Check if np.concatenate is necessary
-        serialized_data_bytes = np.concatenate(serialized_data_list)
+        data_bytes = np.concatenate(data_list)
         # Empty cache for preventing making multiple copies of
         # `self.data_info` when loading data multi-processes.
         self.data_list.clear()
         gc.collect()
-        return serialized_data_bytes, data_address
+        return data_bytes, data_address
 
     def _rand_another(self) -> int:
         """Get random index.

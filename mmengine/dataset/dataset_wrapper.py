@@ -120,6 +120,8 @@ class ConcatDataset(_ConcatDataset):
         return self.datasets[dataset_idx][sample_idx]
 
     def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``ConcatDataset`` for the ambiguous meaning of sub-
+        dataset."""
         raise NotImplementedError(
             '`ConcatDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
@@ -128,6 +130,8 @@ class ConcatDataset(_ConcatDataset):
             'dataset first and then use `ConcatDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``ConcatDataset`` for the ambiguous meaning of sub-
+        dataset."""
         raise NotImplementedError(
             '`ConcatDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
@@ -227,6 +231,8 @@ class RepeatDataset:
         return self.times * self._ori_len
 
     def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``RepeatDataset`` for the ambiguous meaning of sub-
+        dataset."""
         raise NotImplementedError(
             '`RepeatDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
@@ -235,6 +241,8 @@ class RepeatDataset:
             'dataset first and then use `RepeatDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``RepeatDataset`` for the ambiguous meaning of sub-
+        dataset."""
         raise NotImplementedError(
             '`RepeatDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
@@ -422,6 +430,8 @@ class ClassBalancedDataset:
         return len(self.repeat_indices)
 
     def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``ClassBalancedDataset`` for the ambiguous meaning
+        of sub-dataset."""
         raise NotImplementedError(
             '`ClassBalancedDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
@@ -430,6 +440,8 @@ class ClassBalancedDataset:
             'dataset first and then use `ClassBalancedDataset`.')
 
     def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``ClassBalancedDataset`` for the ambiguous meaning
+        of sub-dataset."""
         raise NotImplementedError(
             '`ClassBalancedDataset` dose not support `get_subset` and '
             '`get_subset_` interfaces because this will lead to ambiguous '
