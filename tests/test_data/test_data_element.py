@@ -417,3 +417,12 @@ class TestBaseDataElement(TestCase):
 
         # test_items
         assert len(dict(instances.items())) == len(dict(data.items()))
+
+    def test_to_dict(self):
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo=metainfo, **data)
+        dict_instances = instances.to_dict()
+        # test convert BaseDataElement to dict
+        assert isinstance(dict_instances, dict)
+        assert isinstance(dict_instances['gt_instances'], dict)
+        assert isinstance(dict_instances['pred_instances'], dict)

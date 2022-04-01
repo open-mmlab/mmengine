@@ -13,16 +13,14 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
-from mmengine.evaluator import (BaseEvaluator, ComposedEvaluator,
-                                build_evaluator)
+from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (Hook, IterTimerHook, LoggerHook, OptimizerHook,
                             ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
-from mmengine.registry import (DATASETS, EVALUATORS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               Registry)
+from mmengine.registry import (DATASETS, HOOKS, LOOPS, METRICS, MODEL_WRAPPERS,
+                               MODELS, PARAM_SCHEDULERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -80,8 +78,8 @@ class ToyDataset(Dataset):
         return self.data[index], self.label[index]
 
 
-@EVALUATORS.register_module()
-class ToyEvaluator1(BaseEvaluator):
+@METRICS.register_module()
+class ToyMetric1(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
         super().__init__(collect_device=collect_device)
@@ -95,8 +93,8 @@ class ToyEvaluator1(BaseEvaluator):
         return dict(acc=1)
 
 
-@EVALUATORS.register_module()
-class ToyEvaluator2(BaseEvaluator):
+@METRICS.register_module()
+class ToyMetric2(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
         super().__init__(collect_device=collect_device)
@@ -145,7 +143,7 @@ class CustomValLoop(BaseLoop):
         self._runner = runner
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            self.evaluator = build_evaluator(evaluator)  # type: ignore
+            self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator
 
@@ -161,7 +159,7 @@ class CustomTestLoop(BaseLoop):
         self._runner = runner
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            self.evaluator = build_evaluator(evaluator)  # type: ignore
+            self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator
 
@@ -197,8 +195,8 @@ class TestRunner(TestCase):
                 num_workers=0),
             optimizer=dict(type='SGD', lr=0.01),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
-            val_evaluator=dict(type='ToyEvaluator1'),
-            test_evaluator=dict(type='ToyEvaluator1'),
+            val_evaluator=dict(type='ToyMetric1'),
+            test_evaluator=dict(type='ToyMetric1'),
             train_cfg=dict(by_epoch=True, max_epochs=3),
             val_cfg=dict(interval=1),
             test_cfg=dict(),
@@ -355,14 +353,14 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner.val_loop, BaseLoop)
         self.assertIsInstance(runner.val_loop.dataloader, DataLoader)
-        self.assertIsInstance(runner.val_loop.evaluator, ToyEvaluator1)
+        self.assertIsInstance(runner.val_loop.evaluator, Evaluator)
 
         # After calling runner.test(), test_dataloader should be initialized
         self.assertIsInstance(runner.test_loop, dict)
         runner.test()
         self.assertIsInstance(runner.test_loop, BaseLoop)
         self.assertIsInstance(runner.test_loop.dataloader, DataLoader)
-        self.assertIsInstance(runner.test_loop.evaluator, ToyEvaluator1)
+        self.assertIsInstance(runner.test_loop.evaluator, Evaluator)
 
         # 4. initialize runner with objects rather than config
         model = ToyModel()
@@ -385,10 +383,10 @@ class TestRunner(TestCase):
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
             val_cfg=dict(interval=1),
             val_dataloader=val_dataloader,
-            val_evaluator=ToyEvaluator1(),
+            val_evaluator=ToyMetric1(),
             test_cfg=dict(),
             test_dataloader=test_dataloader,
-            test_evaluator=ToyEvaluator1(),
+            test_evaluator=ToyMetric1(),
             default_hooks=dict(param_scheduler=toy_hook),
             custom_hooks=[toy_hook2],
             experiment_name='test_init14')
@@ -585,20 +583,28 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
 
         # input is a BaseEvaluator or ComposedEvaluator object
-        evaluator = ToyEvaluator1()
+        evaluator = Evaluator(ToyMetric1())
         self.assertEqual(id(runner.build_evaluator(evaluator)), id(evaluator))
 
-        evaluator = ComposedEvaluator([ToyEvaluator1(), ToyEvaluator2()])
+        evaluator = Evaluator([ToyMetric1(), ToyMetric2()])
         self.assertEqual(id(runner.build_evaluator(evaluator)), id(evaluator))
 
-        # input is a dict or list of dict
-        evaluator = dict(type='ToyEvaluator1')
-        self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator1)
+        # input is a dict
+        evaluator = dict(type='ToyMetric1')
+        self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
 
-        # input is a invalid type
-        evaluator = [dict(type='ToyEvaluator1'), dict(type='ToyEvaluator2')]
-        self.assertIsInstance(
-            runner.build_evaluator(evaluator), ComposedEvaluator)
+        # input is a list of dict
+        evaluator = [dict(type='ToyMetric1'), dict(type='ToyMetric2')]
+        self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
+
+        # test collect device
+        evaluator = [
+            dict(type='ToyMetric1', collect_device='cpu'),
+            dict(type='ToyMetric2', collect_device='gpu')
+        ]
+        _evaluator = runner.build_evaluator(evaluator)
+        self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
+        self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
 
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
