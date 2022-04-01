@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Iterator, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from ..registry.root import METRICS
 from .metric import BaseMetric
 
@@ -45,15 +45,15 @@ class Evaluator:
         for evaluator in self.metrics:
             evaluator.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataSample]],
-                predictions: Sequence[BaseDataSample]):
+    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
+                predictions: Sequence[BaseDataElement]):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): A batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataSample]): A batch of outputs from
+            predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
         data_batch = [
@@ -133,9 +133,9 @@ class Evaluator:
         return self.evaluate(size)
 
     def _datasample2dict(self, datasample: Union[dict,
-                                                 BaseDataSample]) -> dict:
-        """Convert ``BaseDataSample`` to dict."""
-        if isinstance(datasample, BaseDataSample):
+                                                 BaseDataElement]) -> dict:
+        """Convert ``BaseDataElement`` to dict."""
+        if isinstance(datasample, BaseDataElement):
             return {k: datasample.get(k) for k in datasample.keys()}
         else:
             return datasample

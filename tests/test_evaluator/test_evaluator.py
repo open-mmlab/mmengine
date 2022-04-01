@@ -216,9 +216,7 @@ class TestEvaluator(TestCase):
 
         size = 10
 
-        all_data = [(np.zeros((3, 10, 10)), BaseDataSample(data={'label': 1}))
+        all_data = [(np.zeros((3, 10, 10)), BaseDataElement(label=1))
                     for _ in range(size)]
-        all_predictions = [
-            BaseDataSample(data={'pred': 0}) for _ in range(size)
-        ]
+        all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
         evaluator.offline_evaluate(all_data, all_predictions)
