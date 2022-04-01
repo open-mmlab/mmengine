@@ -497,6 +497,13 @@ class BaseDataElement:
             new_data.set_data(data)
         return new_data
 
+    def to_dict(self) -> dict:
+        """Convert BaseDataElement to dict."""
+        return {
+            k: v.to_dict() if isinstance(v, BaseDataElement) else v
+            for k, v in self.items()
+        }
+
     def __repr__(self) -> str:
 
         def _addindent(s_: str, num_spaces: int) -> str:

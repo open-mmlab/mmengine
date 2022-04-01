@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Iterator, Optional, Sequence, Tuple, Union
+from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 from mmengine.data import BaseDataElement
 from ..registry.root import METRICS
@@ -7,24 +7,24 @@ from .metric import BaseMetric
 
 
 class Evaluator:
-    """Wrapper class to compose multiple :class:`BaseEvaluator` instances.
+    """Wrapper class to compose multiple :class:`BaseMetric` instances.
 
     Args:
-        metrics (dict, BaseMetric, BaseMetric): The config of metrics.
+        metrics (dict or BaseMetric or Sequence): The config of metrics.
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
     """
 
     def __init__(self,
-                 metrics: Union[dict, BaseMetric, BaseMetric],
+                 metrics: Union[dict, BaseMetric, Sequence],
                  collect_device='cpu'):
-        self._dataset_meta: Union[None, dict] = None
+        self._dataset_meta: Optional[dict] = None
         self.collect_device = collect_device
         if not isinstance(metrics, Sequence):
-            metrics = [metrics]  # type: ignore
-        self.metrics = []  # type: ignore
-        for metric in metrics:  # type: ignore
+            metrics = [metrics]
+        self.metrics: List[BaseMetric] = []
+        for metric in metrics:
             if isinstance(metric, BaseMetric):
                 self.metrics.append(metric)
             elif isinstance(metric, dict):
@@ -40,8 +40,8 @@ class Evaluator:
     @dataset_meta.setter
     def dataset_meta(self, dataset_meta: dict) -> None:
         self._dataset_meta = dataset_meta
-        for evaluator in self.metrics:
-            evaluator.dataset_meta = dataset_meta
+        for metric in self.metrics:
+            metric.dataset_meta = dataset_meta
 
     def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
                 predictions: Sequence[BaseDataElement]):
@@ -54,20 +54,25 @@ class Evaluator:
             predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
-        data_batch = [
-            (input, self._datasample2dict(data))  # type: ignore
-            for input, data in data_batch
-        ]
-        predictions = [
-            self._datasample2dict(prediction)  # type: ignore
-            for prediction in predictions
-        ]
+        _data_batch = []
+        for input, data in data_batch:
+            if isinstance(data, BaseDataElement):
+                _data_batch.append((input, data.to_dict()))
+            else:
+                _data_batch.append((input, data))
+        _predictions = []
+        for pred in predictions:
+            if isinstance(pred, BaseDataElement):
+                _predictions.append(pred.to_dict())
+            else:
+                _predictions.append(pred)
 
         for metric in self.metrics:
-            metric.process(data_batch, predictions)  # type: ignore
+            metric.process(_data_batch, _predictions)
 
     def evaluate(self, size: int) -> dict:
-        """Invoke evaluate method of each metric and collect the metrics dict.
+        """Invoke ``evaluate`` method of each metric and collect the metrics
+        dictionary.
 
         Args:
             size (int): Length of the entire validation dataset. When batch
@@ -88,8 +93,9 @@ class Evaluator:
             for name in _results.keys():
                 if name in metrics:
                     raise ValueError(
-                        'There are multiple evaluate results with the same '
-                        f'metric name {name}')
+                        'There are multiple evaluation results with the same '
+                        f'metric name {name}. Please make sure all metrics '
+                        'have different prefix.')
 
             metrics.update(_results)
         return metrics
@@ -129,11 +135,3 @@ class Evaluator:
             size += len(data_chunk)
             self.process(data_chunk, pred_chunk)
         return self.evaluate(size)
-
-    def _datasample2dict(self, datasample: Union[dict,
-                                                 BaseDataElement]) -> dict:
-        """Convert ``BaseDataElement`` to dict."""
-        if isinstance(datasample, BaseDataElement):
-            return {k: datasample.get(k) for k in datasample.keys()}
-        else:
-            return datasample

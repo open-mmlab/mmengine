@@ -147,8 +147,8 @@ class TestEvaluator(TestCase):
 
         with self.assertRaisesRegex(
                 ValueError,
-                'There are multiple evaluate results with the same metric name'
-        ):
+                'There are multiple evaluation results with the same metric '
+                'name'):
             _ = evaluator.evaluate(size=size)
 
     def test_dataset_meta(self):
