@@ -10,21 +10,19 @@ class Evaluator:
     """Wrapper class to compose multiple :class:`BaseEvaluator` instances.
 
     Args:
-        metrics (dict, Sequence[dict]): The config of metrics.
+        metrics (dict, BaseMetric, BaseMetric): The config of metrics.
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
     """
 
     def __init__(self,
-                 metrics: Union[dict, Sequence[dict], BaseMetric,
-                                Sequence[BaseMetric]],
+                 metrics: Union[dict, BaseMetric, BaseMetric],
                  collect_device='cpu'):
         self._dataset_meta: Union[None, dict] = None
         self.collect_device = collect_device
         if not isinstance(metrics, Sequence):
             metrics = [metrics]  # type: ignore
-        # TODO: default scope
         self.metrics = []  # type: ignore
         for metric in metrics:  # type: ignore
             if isinstance(metric, BaseMetric):
