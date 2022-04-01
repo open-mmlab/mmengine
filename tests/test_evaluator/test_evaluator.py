@@ -129,8 +129,7 @@ class TestEvaluator(TestCase):
         self.assertAlmostEqual(metrics['Toy/mAP'], 0.0)
         self.assertEqual(metrics['Toy/size'], size)
 
-    def test_ambiguate_metric(self):
-
+    def test_ambiguous_metric(self):
         cfg = [
             dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0)),
             dict(type='ToyMetric', dummy_metrics=dict(mAP=0.0))
