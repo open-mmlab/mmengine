@@ -25,7 +25,10 @@ class Compose:
 
     def __init__(self, transforms: Sequence[Union[dict, Callable]]):
         self.transforms: List[Callable] = []
+
         for transform in transforms:
+            # `Compose` can be built with config dict with type and
+            # corresponding arguments.
             if isinstance(transform, dict):
                 transform = TRANSFORMS.build(transform)
                 if not callable(transform):
@@ -50,6 +53,10 @@ class Compose:
         """
         for t in self.transforms:
             data = t(data)
+            # The transform will return None when it failed to load images or
+            # cannot find suitable augmentation parameters to augment the data.
+            # Here we simply return None if the transform returns None and the
+            # dataset will handle it by randomly selecting another data sample.
             if data is None:
                 return None
         return data
@@ -79,12 +86,16 @@ def force_full_init(old_func: Callable) -> Any:
     Returns:
         Any: Depends on old_func.
     """
-    # TODO This decorator can also be used in runner.
+
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
+        # The instance must have `full_init` method.
         if not hasattr(obj, 'full_init'):
             raise AttributeError(f'{type(obj)} does not have full_init '
                                  'method.')
+        # If instance does not have `_fully_initialized` attribute or
+        # `_fully_initialized` is False, call `full_init` and set
+        # `_fully_initialized` to True
         if not getattr(obj, '_fully_initialized', False):
             warnings.warn('Attribute `_fully_initialized` is not defined in '
                           f'{type(obj)} or `type(obj)._fully_initialized is '
@@ -139,16 +150,16 @@ class BaseDataset(Dataset):
 
     Args:
         ann_file (str): Annotation file path.
-        meta (dict, optional): Meta information for dataset, such as class
+        metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
         data_root (str, optional): The root directory for ``data_prefix`` and
             ``ann_file``. Defaults to None.
         data_prefix (dict, optional): Prefix for training data. Defaults to
             dict(img=None, ann=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
-        num_samples (int, optional): Support using first few data in
-            annotation file to facilitate training/testing on a smaller
-            dataset. Defaults to -1 which means using all ``data_infos``.
+        indices (int or Sequence[int], optional): Support using first few
+            data in annotation file to facilitate training/testing on a smaller
+            dataset. Defaults to None which means using all ``data_infos``.
         serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
             shared RAM from master process instead of making a copy. Defaults
@@ -161,26 +172,48 @@ class BaseDataset(Dataset):
             information of the dataset is needed, which is not necessary to
             load annotation file. ``Basedataset`` can skip load annotations to
             save time by set ``lazy_init=False``. Defaults to False.
-        max_refetch (int, optional): The maximum number of cycles to get a
-            valid image. Defaults to 1000.
+        max_refetch (int, optional): If ``Basedataset.prepare_data`` get a
+            None img. The maximum extra number of cycles to get a valid
+            image. Defaults to 1000.
 
     Note:
         BaseDataset collects meta information from `annotation file` (the
-        lowest priority), ``BaseDataset.META``(medium) and `meta parameter`
-        (highest) passed to constructors. The lower priority meta information
-        will be overwritten by higher one.
+        lowest priority), ``BaseDataset.METAINFO``(medium) and `metainfo
+        parameter` (highest) passed to constructors. The lower priority meta
+        information will be overwritten by higher one.
+
+    Note:
+        Dataset wrapper such as ``ConcatDataset``, ``RepeatDataset`` .etc.
+        should not inherit from ``BaseDataset`` since ``get_subset`` and
+        ``get_subset_`` could produce ambiguous meaning sub-dataset which
+        conflicts with original dataset.
+
+    Examples:
+        Assume the annotation file is given above.
+        >>> class CustomDataset(BaseDataset):
+        >>>     METAINFO: dict = dict(task_name='custom_task',
+        >>>                           dataset_type='custom_type')
+        >>> metainfo=dict(task_name='custom_task_name')
+        >>> custom_dataset = CustomDataset(
+        >>>                      'path/to/ann_file',
+        >>>                      metainfo=metainfo)
+        >>> # meta information of annotation file will be overwritten by
+        >>> # `CustomDataset.METAINFO`. The merged meta information will
+        >>> # further be overwritten by argument `metainfo`.
+        >>> custom_dataset.metainfo
+        {'task_name': custom_task_name, dataset_type: custom_type}
     """
 
-    META: dict = dict()
+    METAINFO: dict = dict()
     _fully_initialized: bool = False
 
     def __init__(self,
                  ann_file: str,
-                 meta: Optional[dict] = None,
+                 metainfo: Optional[dict] = None,
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
                  filter_cfg: Optional[dict] = None,
-                 num_samples: int = -1,
+                 indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
                  pipeline: List[Union[dict, Callable]] = [],
                  test_mode: bool = False,
@@ -191,23 +224,23 @@ class BaseDataset(Dataset):
         self.data_prefix = copy.copy(data_prefix)
         self.ann_file = ann_file
         self.filter_cfg = copy.deepcopy(filter_cfg)
-        self._num_samples = num_samples
+        self._indices = indices
         self.serialize_data = serialize_data
         self.test_mode = test_mode
         self.max_refetch = max_refetch
-        self.data_infos: List[dict] = []
-        self.data_infos_bytes: bytearray = bytearray()
+        self.data_list: List[dict] = []
+        self.date_bytes: np.ndarray
 
-        # set meta information
-        self._meta = self._get_meta_data(copy.deepcopy(meta))
+        # Set meta information.
+        self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
 
-        # join paths
+        # Join paths.
         if self.data_root is not None:
             self._join_prefix()
 
-        # build pipeline
+        # Build pipeline.
         self.pipeline = Compose(pipeline)
-
+        # Full initialize the dataset.
         if not lazy_init:
             self.full_init()
 
@@ -225,11 +258,13 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
             end_addr = self.data_address[idx].item()
-            bytes = memoryview(self.data_infos_bytes[start_addr:end_addr])
-            data_info = pickle.loads(bytes)
+            bytes = memoryview(
+                self.date_bytes[start_addr:end_addr])  # type: ignore
+            data_info = pickle.loads(bytes)  # type: ignore
         else:
-            data_info = self.data_infos[idx]
-        # To record the real positive index of data information.
+            data_info = self.data_list[idx]
+        # Some codebase needs `sample_idx` of data information. Here we convert
+        # the idx to a positive number and save it in data information.
         if idx >= 0:
             data_info['sample_idx'] = idx
         else:
@@ -248,69 +283,66 @@ class BaseDataset(Dataset):
 
         Several steps to initialize annotation:
 
-            - load_annotations: Load annotations from annotation file.
+            - load_data_list: Load annotations from annotation file.
             - filter data information: Filter annotations according to
-            filter_cfg.
-            - slice_data: Slice dataset according to ``self._num_samples``
-            - serialize_data: Serialize ``self.data_infos`` if
+              filter_cfg.
+            - slice_data: Slice dataset according to ``self._indices``
+            - serialize_data: Serialize ``self.data_list`` if
             ``self.serialize_data`` is True.
         """
         if self._fully_initialized:
             return
-
         # load data information
-        self.data_infos = self.load_annotations(self.ann_file)
+        self.data_list = self.load_data_list(self.ann_file)
         # filter illegal data, such as data that has no annotations.
-        self.data_infos = self.filter_data()
-        # if `num_samples > 0`, return the first `num_samples` data information
-        self.data_infos = self._slice_data()
-        # serialize data_infos
+        self.data_list = self.filter_data()
+        # Get subset data according to indices.
+        if self._indices is not None:
+            self.data_list = self._get_unserialized_subset(self._indices)
+
+        # serialize data_list
         if self.serialize_data:
-            self.data_infos_bytes, self.data_address = self._serialize_data()
-            # Empty cache for preventing making multiple copies of
-            # `self.data_info` when loading data multi-processes.
-            self.data_infos.clear()
-            gc.collect()
+            self.date_bytes, self.data_address = self._serialize_data()
+
         self._fully_initialized = True
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get meta information of dataset.
 
         Returns:
-            dict: meta information collected from ``BaseDataset.META``,
-            annotation file and meta parameter during instantiation.
+            dict: meta information collected from ``BaseDataset.METAINFO``,
+            annotation file and metainfo argument during instantiation.
         """
-        return copy.deepcopy(self._meta)
+        return copy.deepcopy(self._metainfo)
 
-    def parse_annotations(self,
-                          raw_data_info: dict) -> Union[dict, List[dict]]:
+    def parse_data_info(self, raw_data_info: dict) -> Union[dict, List[dict]]:
         """Parse raw annotation to target format.
 
-        ``parse_annotations`` should return ``dict`` or ``List[dict]``. Each
-        dict contains the annotations of a training sample. If the protocol of
+        This method should return dict or list of dict. Each dict or list
+        contains the data information of a training sample. If the protocol of
         the sample annotations is changed, this function can be overridden to
         update the parsing logic while keeping compatibility.
 
         Args:
-            raw_data_info (dict): Raw annotation load from ``ann_file``
+            raw_data_info (dict): Raw data information load from ``ann_file``
 
         Returns:
-            Union[dict, List[dict]]: Parsed annotation.
+            list or list[dict]: Parsed annotation.
         """
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
         """Filter annotations according to filter_cfg. Defaults return all
-        ``data_infos``.
+        ``data_list``.
 
-        If some ``data_infos`` could be filtered according to specific logic,
+        If some ``data_list`` could be filtered according to specific logic,
         the subclass should override this method.
 
         Returns:
-            List[dict]: Filtered results.
+            list[int]: Filtered results.
         """
-        return self.data_infos
+        return self.data_list
 
     def get_cat_ids(self, idx: int) -> List[int]:
         """Get category ids by index. Dataset wrapped by ClassBalancedDataset
@@ -323,26 +355,34 @@ class BaseDataset(Dataset):
             idx (int): The index of data.
 
         Returns:
-            List[int]: All categories in the image of specified index.
+            list[int]: All categories in the image of specified index.
         """
         raise NotImplementedError(f'{type(self)} must implement `get_cat_ids` '
                                   'method')
 
     def __getitem__(self, idx: int) -> dict:
-        """Get the idx-th image of dataset after ``self.pipelines`` and
-        ``full_init`` will be called if the  dataset has not been fully
-        initialized.
+        """Get the idx-th image and data information of dataset after
+        ``self.pipeline``, and ``full_init`` will be called if the dataset has
+        not been fully initialized.
 
-        During training phase, if ``self.pipelines`` get ``None``,
+        During training phase, if ``self.pipeline`` get ``None``,
         ``self._rand_another`` will be called until a valid image is fetched or
          the maximum limit of refetech is reached.
 
         Args:
-            idx (int): The index of self.data_infos
+            idx (int): The index of self.data_list.
 
         Returns:
-            dict: The idx-th image of dataset after ``self.pipelines``.
+            dict: The idx-th image and data information of dataset after
+            ``self.pipeline``.
         """
+        # Performing full initialization by calling `__getitem__` will consume
+        # extra memory. If a dataset is not fully initialized by setting
+        # `lazy_init=True` and then fed into the dataloader. Different workers
+        # will simultaneously read and parse the annotation. It will cost more
+        # time and memory, although this may work. Therefore, it is recommended
+        # to manually call `full_init` before dataset fed into dataloader to
+        # ensure all workers use shared RAM from master process.
         if not self._fully_initialized:
             warnings.warn(
                 'Please call `full_init()` method manually to accelerate '
@@ -350,31 +390,39 @@ class BaseDataset(Dataset):
             self.full_init()
 
         if self.test_mode:
-            return self.prepare_data(idx)
+            data = self.prepare_data(idx)
+            if data is None:
+                raise Exception('Test time pipline should not get `None` '
+                                'data_sample')
+            return data
 
-        for _ in range(self.max_refetch):
-            data_sample = self.prepare_data(idx)
-            if data_sample is None:
+        for _ in range(self.max_refetch + 1):
+            data = self.prepare_data(idx)
+            # Broken images or random augmentations may cause the returned data
+            # to be None
+            if data is None:
                 idx = self._rand_another()
                 continue
-            return data_sample
+            return data
 
         raise Exception(f'Cannot find valid image after {self.max_refetch}! '
-                        'Please check your image path and pipelines')
+                        'Please check your image path and pipeline')
 
-    def load_annotations(self, ann_file: str) -> List[dict]:
+    def load_data_list(self, ann_file: str) -> List[dict]:
         """Load annotations from an annotation file.
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
-        The subclass must override this method for load annotations.
+        The subclass must override this method for load annotations. The meta
+        information of annotation file will be overwritten :attr:`METAINFO`
+        and ``metainfo`` argument of constructor.
 
         Args:
             ann_file (str): Absolute annotation file path if ``self.root=None``
                 or relative path if ``self.root=/path/to/data/``.
 
         Returns:
-            List[dict]: A list of annotation.
+            list[dict]: A list of annotation.
         """  # noqa: E501
         check_file_exist(ann_file)
         annotations = load(ann_file)
@@ -387,59 +435,66 @@ class BaseDataset(Dataset):
         meta_data = annotations['metadata']
         raw_data_infos = annotations['data_infos']
 
-        # update self._meta
+        # Meta information load from annotation file will not influence the
+        # existed meta information load from `BaseDataset.METAINFO` and
+        # `metainfo` arguments defined in constructor.
         for k, v in meta_data.items():
-            # We only merge keys that are not contained in self._meta.
-            self._meta.setdefault(k, v)
+            self._metainfo.setdefault(k, v)
 
-        # load and parse data_infos
-        data_infos = []
+        # load and parse data_infos.
+        data_list = []
         for raw_data_info in raw_data_infos:
-            data_info = self.parse_annotations(raw_data_info)
+            # parse raw data information to target format
+            data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
-                data_infos.append(data_info)
+                # For image tasks, `data_info` should information if single
+                # image, such as dict(img_path='xxx', width=360, ...)
+                data_list.append(data_info)
             elif isinstance(data_info, list):
-                # data_info can also be a list of dict, which means one
-                # data_info contains multiple samples.
+                # For video tasks, `data_info` could contain image
+                # information of multiple frames, such as
+                # [dict(video_path='xxx', timestamps=...),
+                #  dict(video_path='xxx', timestamps=...)]
                 for item in data_info:
                     if not isinstance(item, dict):
-                        raise TypeError('data_info must be a list[dict], but '
+                        raise TypeError('data_info must be list of dict, but '
                                         f'got {type(item)}')
-                data_infos.extend(data_info)
+                data_list.extend(data_info)
             else:
-                raise TypeError('data_info should be a dict or list[dict], '
+                raise TypeError('data_info should be a dict or list of dict, '
                                 f'but got {type(data_info)}')
 
-        return data_infos
+        return data_list
 
     @classmethod
-    def _get_meta_data(cls, in_meta: dict = None) -> dict:
+    def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_meta (dict): Meta information dict. If ``in_meta`` contains
-                existed filename, it will be parsed by ``list_from_file``.
+            in_metainfo (dict): Meta information dict. If ``in_metainfo``
+                contains existed filename, it will be parsed by
+                ``list_from_file``.
 
         Returns:
             dict: Parsed meta information.
         """
-        # cls.META will be overwritten by in_meta
-        cls_meta = copy.deepcopy(cls.META)
-        if in_meta is None:
-            return cls_meta
-        if not isinstance(in_meta, dict):
+        # `cls.METAINFO` will be overwritten by in_meta
+        cls_metainfo = copy.deepcopy(cls.METAINFO)
+        if in_metainfo is None:
+            return cls_metainfo
+        if not isinstance(in_metainfo, dict):
             raise TypeError(
-                f'in_meta should be a dict, but got {type(in_meta)}')
+                f'in_metainfo should be a dict, but got {type(in_metainfo)}')
 
-        for k, v in in_meta.items():
+        for k, v in in_metainfo.items():
             if isinstance(v, str) and osp.isfile(v):
-                # if filename in in_meta, this key will be further parsed.
-                # nested filename will be ignored.:
-                cls_meta[k] = list_from_file(v)
+                # if filename in in_metainfo, this key will be further parsed.
+                # nested filename will be ignored.
+                cls_metainfo[k] = list_from_file(v)
             else:
-                cls_meta[k] = v
+                cls_metainfo[k] = v
 
-        return cls_meta
+        return cls_metainfo
 
     def _join_prefix(self):
         """Join ``self.data_root`` with ``self.data_prefix`` and
@@ -465,9 +520,12 @@ class BaseDataset(Dataset):
             >>> self.ann_file
             'a/b/c/f'
         """
+        # Automatically join annotation file path with `self.root` if
+        # `self.ann_file` is not an absolute path.
         if not osp.isabs(self.ann_file):
             self.ann_file = osp.join(self.data_root, self.ann_file)
-
+        # Automatically join data directory with `self.root` if path value in
+        # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
             if prefix is None:
                 self.data_prefix[data_key] = self.data_root
@@ -479,31 +537,208 @@ class BaseDataset(Dataset):
                 raise TypeError('prefix should be a string or None, but got '
                                 f'{type(prefix)}')
 
-    def _slice_data(self) -> List[dict]:
-        """Slice ``self.data_infos``. BaseDataset supports only using the first
-        few data.
+    @force_full_init
+    def get_subset_(self, indices: Union[Sequence[int], int]) -> None:
+        """The in-place version of  ``get_subset `` to convert dataset to a
+        subset of original dataset.
+
+        This method will convert the original dataset to a subset of dataset.
+        If type of indices is int, ``get_subset_`` will return a subdataset
+        which contains the first or last few data information according to
+        indices is positive or negative. If type of indices is a sequence of
+        int, the subdataset will extract the data information according to
+        the index given in indices.
+
+        Examples:
+              >>> dataset = BaseDataset('path/to/ann_file')
+              >>> len(dataset)
+              100
+              >>> dataset.get_subset_(90)
+              >>> len(dataset)
+              90
+              >>> # if type of indices is sequence, extract the corresponding
+              >>> # index data information
+              >>> dataset.get_subset_([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+              >>> len(dataset)
+              10
+              >>> dataset.get_subset_(-3)
+              >>> len(dataset) # Get the latest few data information.
+              3
+
+        Args:
+            indices (int or Sequence[int]): If type of indices is int, indices
+                represents the first or last few data of dataset according to
+                indices is positive or negative. If type of indices is
+                Sequence, indices represents the target data information
+                index of dataset.
+        """
+        # Get subset of data from serialized data or data information sequence
+        # according to `self.serialize_data`.
+        if self.serialize_data:
+            self.date_bytes, self.data_address = \
+                self._get_serialized_subset(indices)
+        else:
+            self.data_list = self._get_unserialized_subset(indices)
+
+    @force_full_init
+    def get_subset(self, indices: Union[Sequence[int], int]) -> 'BaseDataset':
+        """Return a subset of dataset.
+
+        This method will return a subset of original dataset. If type of
+        indices is int, ``get_subset_`` will return a subdataset which
+        contains the first or last few data information according to
+        indices is positive or negative. If type of indices is a sequence of
+        int, the subdataset will extract the information according to the index
+        given in indices.
+
+        Examples:
+              >>> dataset = BaseDataset('path/to/ann_file')
+              >>> len(dataset)
+              100
+              >>> subdataset = dataset.get_subset(90)
+              >>> len(sub_dataset)
+              90
+              >>> # if type of indices is list, extract the corresponding
+              >>> # index data information
+              >>> subdataset = dataset.get_subset([0, 1, 2, 3, 4, 5, 6, 7,
+              >>>                                  8, 9])
+              >>> len(sub_dataset)
+              10
+              >>> subdataset = dataset.get_subset(-3)
+              >>> len(subdataset) # Get the latest few data information.
+              3
+
+        Args:
+            indices (int or Sequence[int]): If type of indices is int, indices
+                represents the first or last few data of dataset according to
+                indices is positive or negative. If type of indices is
+                Sequence, indices represents the target data information
+                index of dataset.
 
         Returns:
-            List[dict]: A slice of ``self.data_infos``
+            BaseDataset: A subset of dataset.
         """
-        assert self._num_samples < len(self.data_infos), \
-            f'Slice size({self._num_samples}) is larger than dataset ' \
-            f'size({self.data_infos}, please keep `num_sample` smaller than' \
-            f'{self.data_infos})'
-        if self._num_samples > 0:
-            return self.data_infos[:self._num_samples]
+        # Get subset of data from serialized data or data information list
+        # according to `self.serialize_data`. Since `_get_serialized_subset`
+        # will recalculate the subset data information,
+        # `_copy_without_annotation` will copy all attributes except data
+        # information.
+        sub_dataset = self._copy_without_annotation()
+        # Get subset of dataset with serialize and unserialized data.
+        if self.serialize_data:
+            date_bytes, data_address = \
+                self._get_serialized_subset(indices)
+            sub_dataset.date_bytes = date_bytes.copy()
+            sub_dataset.data_address = data_address.copy()
         else:
-            return self.data_infos
+            data_list = self._get_unserialized_subset(indices)
+            sub_dataset.data_list = copy.deepcopy(data_list)
+        return sub_dataset
+
+    def _get_serialized_subset(self, indices: Union[Sequence[int], int]) \
+            -> Tuple[np.ndarray, np.ndarray]:
+        """Get subset of serialized data information list.
+
+        Args:
+            indices (int or Sequence[int]): If type of indices is int,
+                indices represents the first or last few data of serialized
+                data information list. If type of indices is Sequence, indices
+                represents the target data information index which consist of
+                subset data information.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: subset of serialized data
+            information.
+        """
+        sub_date_bytes: Union[List, np.ndarray]
+        sub_data_address: Union[List, np.ndarray]
+        if isinstance(indices, int):
+            if indices >= 0:
+                assert indices < len(self.data_address), \
+                    f'{indices} is out of dataset length({len(self)}'
+                # Return the first few data information.
+                end_addr = self.data_address[indices - 1].item() \
+                    if indices > 0 else 0
+                # Slicing operation of `np.ndarray` does not trigger a memory
+                # copy.
+                sub_date_bytes = self.date_bytes[:end_addr]
+                # Since the buffer size of first few data information is not
+                # changed,
+                sub_data_address = self.data_address[:indices]
+            else:
+                assert -indices <= len(self.data_address), \
+                    f'{indices} is out of dataset length({len(self)}'
+                # Return the last few data information.
+                ignored_bytes_size = self.data_address[indices - 1]
+                start_addr = self.data_address[indices - 1].item()
+                sub_date_bytes = self.date_bytes[start_addr:]
+                sub_data_address = self.data_address[indices:]
+                sub_data_address = sub_data_address - ignored_bytes_size
+        elif isinstance(indices, Sequence):
+            sub_date_bytes = []
+            sub_data_address = []
+            for idx in indices:
+                assert len(self) > idx >= -len(self)
+                start_addr = 0 if idx == 0 else \
+                    self.data_address[idx - 1].item()
+                end_addr = self.data_address[idx].item()
+                # Get data information by address.
+                sub_date_bytes.append(self.date_bytes[start_addr:end_addr])
+                # Get data information size.
+                sub_data_address.append(end_addr - start_addr)
+            # Handle indices is an empty list.
+            if sub_date_bytes:
+                sub_date_bytes = np.concatenate(sub_date_bytes)
+                sub_data_address = np.cumsum(sub_data_address)
+            else:
+                sub_date_bytes = np.array([])
+                sub_data_address = np.array([])
+        else:
+            raise TypeError('indices should be a int or sequence of int, '
+                            f'but got {type(indices)}')
+        return sub_date_bytes, sub_data_address  # type: ignore
+
+    def _get_unserialized_subset(self, indices: Union[Sequence[int],
+                                                      int]) -> list:
+        """Get subset of data information list.
+
+        Args:
+            indices (int or Sequence[int]): If type of indices is int,
+                indices represents the first or last few data of data
+                information. If  indices of indices is Sequence, indices
+                represents the target data information index which consist
+                of subset data information.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: subset of data information.
+        """
+        if isinstance(indices, int):
+            if indices >= 0:
+                # Return the first few data information.
+                sub_data_list = self.data_list[:indices]
+            else:
+                # Return the last few data information.
+                sub_data_list = self.data_list[indices:]
+        elif isinstance(indices, Sequence):
+            # Return the data information according to given indices.
+            subdata_list = []
+            for idx in indices:
+                subdata_list.append(self.data_list[idx])
+            sub_data_list = subdata_list
+        else:
+            raise TypeError('indices should be a int or sequence of int, '
+                            f'but got {type(indices)}')
+        return sub_data_list
 
     def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Serialize ``self.data_infos`` to save memory when launching multiple
+        """Serialize ``self.data_list`` to save memory when launching multiple
         workers in data loading. This function will be called in ``full_init``.
 
         Hold memory using serialized objects, and data loader workers can use
         shared RAM from master process instead of making a copy.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: serialize result and corresponding
+            Tuple[np.ndarray, np.ndarray]: Serialized result and corresponding
             address.
         """
 
@@ -511,13 +746,19 @@ class BaseDataset(Dataset):
             buffer = pickle.dumps(data, protocol=4)
             return np.frombuffer(buffer, dtype=np.uint8)
 
-        serialized_data_infos_list = [_serialize(x) for x in self.data_infos]
-        address_list = np.asarray([len(x) for x in serialized_data_infos_list],
-                                  dtype=np.int64)
+        # Serialize data information list avoid making multiple copies of
+        # `self.data_list` when iterate `import torch.utils.data.dataloader`
+        # with multiple workers.
+        data_list = [_serialize(x) for x in self.data_list]
+        address_list = np.asarray([len(x) for x in data_list], dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
-        serialized_data_infos = np.concatenate(serialized_data_infos_list)
-
-        return serialized_data_infos, data_address
+        # TODO Check if np.concatenate is necessary
+        data_bytes = np.concatenate(data_list)
+        # Empty cache for preventing making multiple copies of
+        # `self.data_info` when loading data multi-processes.
+        self.data_list.clear()
+        gc.collect()
+        return data_bytes, data_address
 
     def _rand_another(self) -> int:
         """Get random index.
@@ -550,4 +791,24 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             return len(self.data_address)
         else:
-            return len(self.data_infos)
+            return len(self.data_list)
+
+    def _copy_without_annotation(self, memo=dict()) -> 'BaseDataset':
+        """Deepcopy for all attributes other than ``data_list``,
+        ``data_address`` and ``date_bytes``.
+
+        Args:
+            memo: Memory dict which used to reconstruct complex object
+                correctly.
+        """
+        cls = self.__class__
+        other = cls.__new__(cls)
+        memo[id(self)] = other
+
+        for key, value in self.__dict__.items():
+            if key in ['data_list', 'data_address', 'date_bytes']:
+                continue
+            super(BaseDataset, other).__setattr__(key,
+                                                  copy.deepcopy(value, memo))
+
+        return other

@@ -25,8 +25,6 @@ class DefaultScope(ManagerMixin):
         >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.
         >>> scope_name = DefaultScope.get_instance('task').scope_name
-        >>> # build model from cfg.
-        >>> model = MODELS.build(model_cfg, default_scope=scope_name)
     """
 
     def __init__(self, name: str, scope_name: str):

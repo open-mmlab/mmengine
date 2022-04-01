@@ -9,14 +9,14 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -183,7 +183,7 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[BaseDataSample], optional): Data from
+            data_batch (Sequence[BaseDataElement], optional): Data from
                 dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.

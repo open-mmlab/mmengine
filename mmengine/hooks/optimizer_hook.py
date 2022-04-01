@@ -6,11 +6,11 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.nn.utils import clip_grad
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -77,7 +77,7 @@ class OptimizerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
                 Defaults to None.

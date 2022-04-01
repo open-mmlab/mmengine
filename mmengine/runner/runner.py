@@ -23,8 +23,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
                            sync_random_seed)
-from mmengine.evaluator import (BaseEvaluator, ComposedEvaluator,
-                                build_evaluator)
+from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
@@ -41,7 +40,6 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
-EvaluatorType = Union[BaseEvaluator, ComposedEvaluator]
 ConfigType = Union[Dict, Config, ConfigDict]
 
 
@@ -211,8 +209,8 @@ class Runner:
         test_cfg: Optional[Dict] = None,
         optimizer: Optional[Union[Optimizer, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        val_evaluator: Optional[Union[EvaluatorType, Dict, List]] = None,
-        test_evaluator: Optional[Union[EvaluatorType, Dict, List]] = None,
+        val_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
+        test_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
         load_from: Optional[str] = None,
@@ -675,8 +673,7 @@ class Runner:
         if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
-            return MODELS.build(
-                model, default_scope=self.default_scope.scope_name)
+            return MODELS.build(model)
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
@@ -726,9 +723,7 @@ class Runner:
                     model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg,
-                default_scope=self.default_scope.scope_name,
-                default_args=dict(model=self.model))
+                model_wrapper_cfg, default_args=dict(model=self.model))
 
         return model
 
@@ -750,10 +745,7 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            optimizer = build_optimizer(
-                self.model,
-                optimizer,
-                default_scope=self.default_scope.scope_name)
+            optimizer = build_optimizer(self.model, optimizer)
             return optimizer
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
@@ -801,7 +793,6 @@ class Runner:
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
                         _scheduler,
-                        default_scope=self.default_scope.scope_name,
                         default_args=dict(optimizer=self.optimizer)))
             else:
                 raise TypeError(
@@ -811,39 +802,35 @@ class Runner:
         return param_schedulers
 
     def build_evaluator(
-            self, evaluator: Union[Dict, List[Dict],
-                                   EvaluatorType]) -> EvaluatorType:
+            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
 
-            evaluator = dict(type='ToyEvaluator')
+            evaluator = dict(type='ToyMetric')
 
             # evaluator can also be a list of dict
             evaluator = [
-                dict(type='ToyEvaluator1'),
+                dict(type='ToyMetric1'),
                 dict(type='ToyEvaluator2')
             ]
 
         Args:
-            evaluator (BaseEvaluator or ComposedEvaluator or dict or list):
+            evaluator (Evaluator or dict or list):
                 An Evaluator object or a config dict or list of config dict
-                used to build evaluators.
+                used to build an Evaluator.
 
         Returns:
-            BaseEvaluator or ComposedEvaluator: Evaluators build from
-            ``evaluator``.
+            Evaluator: Evaluator build from ``evaluator``.
         """
-        if isinstance(evaluator, (BaseEvaluator, ComposedEvaluator)):
+        if isinstance(evaluator, Evaluator):
             return evaluator
         elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            return build_evaluator(
-                evaluator,
-                default_scope=self.default_scope.scope_name)  # type: ignore
+            return Evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
-                'evaluator should be one of dict, list of dict, BaseEvaluator '
-                f'and ComposedEvaluator, but got {evaluator}')
+                'evaluator should be one of dict, list of dict, and Evaluator'
+                f', but got {evaluator}')
 
     def build_dataloader(self, dataloader: Union[DataLoader,
                                                  Dict]) -> DataLoader:
@@ -880,8 +867,7 @@ class Runner:
         # build dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
-            dataset = DATASETS.build(
-                dataset_cfg, default_scope=self.default_scope.scope_name)
+            dataset = DATASETS.build(dataset_cfg)
         else:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
@@ -891,9 +877,7 @@ class Runner:
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg,
-                default_scope=self.default_scope.scope_name,
-                default_args=dict(dataset=dataset))
+                sampler_cfg, default_args=dict(dataset=dataset))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -961,7 +945,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self, dataloader=self.train_dataloader))
         else:
@@ -1012,7 +995,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.val_dataloader,
@@ -1059,7 +1041,6 @@ class Runner:
         if 'type' in loop_cfg:
             loop = LOOPS.build(
                 loop_cfg,
-                default_scope=self.default_scope.scope_name,
                 default_args=dict(
                     runner=self,
                     dataloader=self.test_dataloader,

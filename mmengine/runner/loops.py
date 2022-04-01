@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Sequence, Tuple, Union
 import torch
 from torch.utils.data import DataLoader
 
-from mmengine.data import BaseDataSample
-from mmengine.evaluator import BaseEvaluator, build_evaluator
+from mmengine.data import BaseDataElement
+from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
 from .base_loop import BaseLoop
@@ -63,11 +63,11 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner._epoch += 1
 
     def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
+                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
         """Iterate one min-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
@@ -131,11 +131,11 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train')
 
     def run_iter(self, data_batch: Sequence[Tuple[Any,
-                                                  BaseDataSample]]) -> None:
+                                                  BaseDataElement]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
@@ -165,19 +165,19 @@ class ValLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        evaluator (BaseEvaluator or dict or list): Used for computing metrics.
+        evaluator (Evaluator or dict or list): Used for computing metrics.
         interval (int): Validation interval. Defaults to 1.
     """
 
     def __init__(self,
                  runner,
                  dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[BaseEvaluator, Dict, List],
+                 evaluator: Union[Evaluator, Dict, List],
                  interval: int = 1) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            self.evaluator = build_evaluator(evaluator)  # type: ignore
+            self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator  # type: ignore
 
@@ -201,16 +201,16 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('after_val')
 
     @torch.no_grad()
-    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataSample]]):
+    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataElement]]):
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be sequence of BaseDataSample
+        # outputs should be sequence of BaseDataElement
         outputs = self.runner.model(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
@@ -228,15 +228,15 @@ class TestLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        evaluator (BaseEvaluator or dict or list): Used for computing metrics.
+        evaluator (Evaluator or dict or list): Used for computing metrics.
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[BaseEvaluator, Dict, List]):
+                 evaluator: Union[Evaluator, Dict, List]):
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            self.evaluator = build_evaluator(evaluator)  # type: ignore
+            self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator  # type: ignore
 
@@ -259,16 +259,16 @@ class TestLoop(BaseLoop):
 
     @torch.no_grad()
     def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataSample]]) -> None:
+                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataSample]]): Batch of data
+            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
-        # predictions should be sequence of BaseDataSample
+        # predictions should be sequence of BaseDataElement
         predictions = self.runner.model(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(

@@ -35,8 +35,8 @@ OPTIMIZERS = Registry('optimizer')
 OPTIMIZER_CONSTRUCTORS = Registry('optimizer constructor')
 # mangage all kinds of parameter schedulers like `MultiStepLR`
 PARAM_SCHEDULERS = Registry('parameter scheduler')
-# manage all kinds of evaluators for computing metrics
-EVALUATORS = Registry('evaluator')
+# manage all kinds of metrics
+METRICS = Registry('metric')
 
 # manage task-specific modules like anchor generators and box coders
 TASK_UTILS = Registry('task util')
