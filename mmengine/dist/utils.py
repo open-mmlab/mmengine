@@ -66,12 +66,8 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
     """
     # TODO: use local_rank instead of rank % num_gpus
     rank = int(os.environ['RANK'])
-
-    # support initializing distributed environment without GPUs
-    if torch.cuda.is_available():
-        num_gpus = torch.cuda.device_count()
-        torch.cuda.set_device(rank % num_gpus)
-
+    num_gpus = torch.cuda.device_count()
+    torch.cuda.set_device(rank % num_gpus)
     dist.init_process_group(backend=backend, **kwargs)
 
 
@@ -85,12 +81,8 @@ def _init_dist_mpi(backend, **kwargs) -> None:
     """
     # TODO: use local_rank instead of rank % num_gpus
     rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
-
-    # support initializing distributed environment without GPUs
-    if torch.cuda.is_available():
-        num_gpus = torch.cuda.device_count()
-        torch.cuda.set_device(rank % num_gpus)
-
+    num_gpus = torch.cuda.device_count()
+    torch.cuda.set_device(rank % num_gpus)
     dist.init_process_group(backend=backend, **kwargs)
 
 
@@ -110,6 +102,8 @@ def _init_dist_slurm(backend, port=None) -> None:
     proc_id = int(os.environ['SLURM_PROCID'])
     ntasks = int(os.environ['SLURM_NTASKS'])
     node_list = os.environ['SLURM_NODELIST']
+    num_gpus = torch.cuda.device_count()
+    torch.cuda.set_device(proc_id % num_gpus)
     addr = subprocess.getoutput(
         f'scontrol show hostname {node_list} | head -n1')
     # specify master port
@@ -124,15 +118,7 @@ def _init_dist_slurm(backend, port=None) -> None:
     if 'MASTER_ADDR' not in os.environ:
         os.environ['MASTER_ADDR'] = addr
     os.environ['WORLD_SIZE'] = str(ntasks)
-
-    # support initializing distributed environment without GPUs
-    if torch.cuda.is_available():
-        num_gpus = torch.cuda.device_count()
-        torch.cuda.set_device(proc_id % num_gpus)
-        os.environ['LOCAL_RANK'] = str(proc_id % num_gpus)
-    else:
-        os.environ['LOCAL_RANK'] = str(proc_id)
-
+    os.environ['LOCAL_RANK'] = str(proc_id % num_gpus)
     os.environ['RANK'] = str(proc_id)
     dist.init_process_group(backend=backend)
 
