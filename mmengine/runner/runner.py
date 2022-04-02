@@ -327,6 +327,9 @@ class Runner:
 
         # build a model
         self.model = self.build_model(model)
+        # init weights
+        if hasattr(self.model, 'init_weights'):
+            self.model.init_weights()
         # wrap model
         self.model = self.wrap_model(
             self.cfg.get('model_wrapper_cfg'), self.model)
