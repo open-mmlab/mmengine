@@ -131,7 +131,7 @@ class MessageHub(ManagerMixin):
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
-            resumed (bool): Whether all ``HistoryBuffer`` refered in
+            resumed (bool): Whether all ``HistoryBuffer`` referred in
                 log_dict could be resumed.
 
         Examples:
