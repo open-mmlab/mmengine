@@ -4,10 +4,7 @@ import os.path as osp
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
-import torch
-
 from mmengine.data import BaseDataElement
-from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
