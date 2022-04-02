@@ -132,7 +132,7 @@ class MessageHub(ManagerMixin):
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
             resumed (bool): Whether all ``HistoryBuffer`` referred in
-                log_dict could be resumed.
+                log_dict could be resumed. Defaults to True.
 
         Examples:
             >>> message_hub = MessageHub.get_instance('mmengine')

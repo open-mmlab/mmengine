@@ -150,7 +150,8 @@ class MMLogger(Logger, ManagerMixin):
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)
-        # `StreamHandler` record month, day hour, minute, and second timestamp.
+        # `StreamHandler` record month, day, hour, minute, and second
+        # timestamp.
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
         # Only rank0 `StreamHandler` will log messages below error level.
