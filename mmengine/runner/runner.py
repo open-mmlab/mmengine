@@ -658,6 +658,10 @@ class Runner:
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
+        If ``model`` is a dict, it will be used to build a nn.Module object
+        and initialize the weights if it has ``init_weights`` method.
+        Else, if ``model`` is a nn.Module object it will be returned directly.
+
         An example of ``model``::
 
             model = dict(type='ResNet')
@@ -673,7 +677,11 @@ class Runner:
         if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
-            return MODELS.build(model)
+            model = MODELS.build(model)
+            # init weights
+            if hasattr(model, 'init_weights'):
+                model.init_weights()
+            return model
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
