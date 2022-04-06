@@ -269,9 +269,9 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.cur_dataloader)}]\t'
+                      f'[{cur_iter}/{len(runner.cur_dataloader)}] '
         else:
-            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
+            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}] '
         log_str += f'{lr_momentum_str}, '
         # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
@@ -317,9 +317,9 @@ class LoggerHook(Hook):
         # by iter: Iter[val] [1000]
         if self.by_epoch:
             # runner.epoch += 1 has been done before val workflow
-            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]\t'
+            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}] '
         else:
-            log_str = f'Iter(val) [{eval_iter}]\t'
+            log_str = f'Iter(val) [{eval_iter}] '
 
         log_items = []
         for name, val in tag.items():
