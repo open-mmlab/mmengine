@@ -161,7 +161,7 @@ class TestLoggerHook:
         eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
             if torch.cuda.is_available():
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -170,7 +170,7 @@ class TestLoggerHook:
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
             else:
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -180,7 +180,7 @@ class TestLoggerHook:
             assert out == log_str
         else:
             if torch.cuda.is_available():
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -189,7 +189,7 @@ class TestLoggerHook:
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
             else:
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -212,11 +212,11 @@ class TestLoggerHook:
         runner.writer.add_scalars.assert_called_with(
             metric, step=11, file_path='tmp.json')
         if by_epoch:
-            assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
+            assert out == 'Epoch(val) [1][5] accuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
 
         else:
-            assert out == 'Iter(val) [5]\taccuracy: 0.9000, ' \
+            assert out == 'Iter(val) [5] accuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
 
     def test_get_window_size(self):

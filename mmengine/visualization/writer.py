@@ -10,10 +10,10 @@ import numpy as np
 import torch
 
 from mmengine.data import BaseDataElement
+from mmengine.dist import master_only
 from mmengine.fileio import dump
 from mmengine.registry import VISUALIZERS, WRITERS
 from mmengine.utils import TORCH_VERSION, ManagerMixin
-from mmengine.dist import master_only
 from .visualizer import Visualizer
 
 
