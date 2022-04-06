@@ -10,7 +10,6 @@ from typing import Any, Optional, Sequence, Tuple, Union
 import torch
 
 from mmengine.data import BaseDataElement
-from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
@@ -238,7 +237,6 @@ class LoggerHook(Hook):
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
 
-    @master_only
     def _log_train(self, runner) -> None:
         """Collect and record training logs which start named with "train/*".
 
@@ -302,7 +300,6 @@ class LoggerHook(Hook):
         runner.writer.add_scalars(
             tag, step=runner.iter + 1, file_path=self.json_log_path)
 
-    @master_only
     def _log_val(self, runner) -> None:
         """Collect and record training logs which start named with "val/*".
 
