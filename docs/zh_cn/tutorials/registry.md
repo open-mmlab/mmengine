@@ -225,7 +225,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
 - OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
 - PARAM_SCHEDULERS: 各种参数调度器， 如 `MultiStepLR`
-- EVALUATORS: 用于验证模型精度的评估器
+- METRICS: 用于验证模型精度的评估指标
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
 - VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
 - WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`

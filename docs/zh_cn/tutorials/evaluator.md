@@ -40,7 +40,7 @@ validation_cfg=dict(
         dict(type='Accuracy', top_k=1),  # 使用分类正确率评测器
         dict(type='F1Score')  # 使用 F1_score 评测器
     ],
-    main_metric='accuracy'
+    main_metric='accuracy',
     interval=10,
     by_epoch=True,
 )
@@ -94,13 +94,14 @@ validation_cfg=dict(
 具体的实现如下：
 
 ```python
-from mmengine.evaluator import BaseEvaluator
-from mmengine.registry import EVALUATORS
+from mmengine.evaluator import BaseMetric
+from mmengine.registry import METRICS
 
 import numpy as np
 
-@EVALUATORS.register_module()
-class Accuracy(BaseEvaluator):
+
+@METRICS.register_module()
+class Accuracy(BaseMetric):
     """ Accuracy Evaluator
 
     Default prefix: ACC
@@ -111,24 +112,24 @@ class Accuracy(BaseEvaluator):
 
     default_prefix = 'ACC'
 
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
-                predictions: Sequence[BaseDataElement]):
+    def process(self, data_batch: Sequence[Tuple[Any, dict]],
+                predictions: Sequence[dict]):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
         to computed the metrics when all batches have been processed.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
+            data_batch (Sequence[Tuple[Any, dict]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataElement]): A batch of outputs from
+            predictions (Sequence[dict]): A batch of outputs from
                 the model.
         """
 
         # 取出分类预测结果和类别标签
-        result = dict(
-            'pred': predictions.pred_label,
-            'gt': data_samples.gt_label
-        )
+        result = {
+            'pred': predictions['pred_label'],
+            'gt': data_batch['gt_label']
+        }
 
         # 将当前 batch 的结果存进 self.results
         self.results.append(result)

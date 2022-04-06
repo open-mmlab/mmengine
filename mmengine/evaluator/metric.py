@@ -3,20 +3,19 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataElement
 from mmengine.dist import (broadcast_object_list, collect_results,
                            is_main_process)
 
 
-class BaseEvaluator(metaclass=ABCMeta):
-    """Base class for an evaluator.
+class BaseMetric(metaclass=ABCMeta):
+    """Base class for a metric.
 
-    The evaluator first processes each batch of data_samples and
-    predictions, and appends the processed results in to the results list.
-    Then it collects all results together from all ranks if distributed
-    training is used. Finally, it computes the metrics of the entire dataset.
+    The metric first processes each batch of data_samples and predictions,
+    and appends the processed results to the results list. Then it
+    collects all results together from all ranks if distributed training
+    is used. Finally, it computes the metrics of the entire dataset.
 
-    A subclass of class:`BaseEvaluator` should assign a meaningful value to the
+    A subclass of class:`BaseMetric` should assign a meaningful value to the
     class attribute `default_prefix`. See the argument `prefix` for details.
 
     Args:
@@ -39,7 +38,7 @@ class BaseEvaluator(metaclass=ABCMeta):
         self.results: List[Any] = []
         self.prefix = prefix or self.default_prefix
         if self.prefix is None:
-            warnings.warn('The prefix is not set in evaluator class '
+            warnings.warn('The prefix is not set in metric class '
                           f'{self.__class__.__name__}.')
 
     @property
@@ -51,16 +50,16 @@ class BaseEvaluator(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self, data_batch: Sequence[Tuple[Any, BaseDataElement]],
-                predictions: Sequence[BaseDataElement]) -> None:
+    def process(self, data_batch: Sequence[Tuple[Any, dict]],
+                predictions: Sequence[dict]) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): A batch of data
+            data_batch (Sequence[Tuple[Any, dict]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[BaseDataElement]): A batch of outputs from
+            predictions (Sequence[dict]): A batch of outputs from
                 the model.
         """
 
@@ -84,7 +83,7 @@ class BaseEvaluator(metaclass=ABCMeta):
             size (int): Length of the entire validation dataset. When batch
                 size > 1, the dataloader may pad some data samples to make
                 sure all ranks have the same length of dataset slice. The
-                ``collect_results`` function will drop the padded data base on
+                ``collect_results`` function will drop the padded data based on
                 this size.
 
         Returns:
@@ -93,9 +92,9 @@ class BaseEvaluator(metaclass=ABCMeta):
         """
         if len(self.results) == 0:
             warnings.warn(
-                f'{self.__class__.__name__} got empty `self._results`. Please '
+                f'{self.__class__.__name__} got empty `self.results`. Please '
                 'ensure that the processed results are properly added into '
-                '`self._results` in `process` method.')
+                '`self.results` in `process` method.')
 
         results = collect_results(self.results, size, self.collect_device)
 
