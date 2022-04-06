@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Dict, List, Sequence, Tuple, Union
+import warnings
+from typing import Dict, List, Sequence, Union
 
 import torch
 from torch.utils.data import DataLoader
 
-from mmengine.data import BaseDataElement
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
@@ -62,13 +62,11 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train_epoch')
         self.runner._epoch += 1
 
-    def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
+    def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
         """Iterate one min-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
-                from dataloader.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
@@ -130,13 +128,11 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
 
-    def run_iter(self, data_batch: Sequence[Tuple[Any,
-                                                  BaseDataElement]]) -> None:
+    def run_iter(self, data_batch: Sequence[dict]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
-                from dataloader.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         self.runner.call_hook(
             'before_train_iter',
@@ -180,7 +176,13 @@ class ValLoop(BaseLoop):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator  # type: ignore
-
+        if hasattr(self.dataloader.dataset, 'metainfo'):
+            self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
+        else:
+            warnings.warn(
+                f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
+                'metainfo. ``dataset_meta`` in evaluator and metric will be '
+                'None.')
         self.interval = interval
 
     def run(self):
@@ -201,11 +203,11 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('after_val')
 
     @torch.no_grad()
-    def run_iter(self, idx, data_batch: Sequence[Tuple[Any, BaseDataElement]]):
+    def run_iter(self, idx, data_batch: Sequence[dict]):
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
+            data_batch (Sequence[dict]): Batch of data
                 from dataloader.
         """
         self.runner.call_hook(
@@ -239,6 +241,13 @@ class TestLoop(BaseLoop):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             self.evaluator = evaluator  # type: ignore
+        if hasattr(self.dataloader.dataset, 'metainfo'):
+            self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
+        else:
+            warnings.warn(
+                f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
+                'metainfo. ``dataset_meta`` in evaluator and metric will be '
+                'None.')
 
     def run(self) -> None:
         """Launch test."""
@@ -258,13 +267,11 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('after_test')
 
     @torch.no_grad()
-    def run_iter(self, idx,
-                 data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
+    def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
         """Iterate one mini-batch.
 
         Args:
-            data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data
-                from dataloader.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)

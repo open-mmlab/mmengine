@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from mmengine.dist import (broadcast_object_list, collect_results,
                            is_main_process)
@@ -50,15 +50,14 @@ class BaseMetric(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self, data_batch: Sequence[Tuple[Any, dict]],
+    def process(self, data_batch: Sequence[dict],
                 predictions: Sequence[dict]) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            data_batch (Sequence[Tuple[Any, dict]]): A batch of data
-                from the dataloader.
+            data_batch (Sequence[dict]): A batch of data from the dataloader.
             predictions (Sequence[dict]): A batch of outputs from
                 the model.
         """
