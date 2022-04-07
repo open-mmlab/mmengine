@@ -157,18 +157,17 @@ class TestHook:
 
     def test_end_of_epoch(self):
         hook = Hook()
-        runner = Mock()
 
         # last inner iter
         batch_idx = 1
-        runner.cur_dataloader.__len__ = Mock(return_value=2)
-        runner.cur_dataloader.__len__ = Mock(return_value=2)
-        return_val = hook.end_of_epoch(runner, batch_idx)
+        dataloader = Mock()
+        dataloader.__len__ = Mock(return_value=2)
+        return_val = hook.end_of_epoch(dataloader, batch_idx)
         assert return_val
 
         # not the last inner iter
         batch_idx = 0
-        return_val = hook.end_of_epoch(runner, batch_idx)
+        return_val = hook.end_of_epoch(dataloader, batch_idx)
         assert not return_val
 
     def test_is_last_train_epoch(self):

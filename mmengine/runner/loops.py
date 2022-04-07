@@ -40,7 +40,6 @@ class EpochBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
-        self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_train')
 
         while self.runner._epoch < self._max_epochs:
@@ -110,7 +109,6 @@ class IterBasedTrainLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch training."""
-        self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_train')
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
@@ -187,7 +185,6 @@ class ValLoop(BaseLoop):
 
     def run(self):
         """Launch validation."""
-        self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_val')
         self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
@@ -251,7 +248,6 @@ class TestLoop(BaseLoop):
 
     def run(self) -> None:
         """Launch test."""
-        self.runner.cur_dataloader = self.dataloader
         self.runner.call_hook('before_test')
         self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
