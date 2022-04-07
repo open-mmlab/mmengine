@@ -103,7 +103,7 @@ class TestLogProcessor:
         # Verify that the correct context have been logged.
         if by_epoch:
             if torch.cuda.is_available():
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5]  ' \
                           f"lr: {train_logs['lr']:.3e}, " \
                           f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
@@ -111,7 +111,7 @@ class TestLogProcessor:
                           f'memory: 100, ' \
                           f"loss_cls: {train_logs['loss_cls']:.4f}"
             else:
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5]  ' \
                           f"lr: {train_logs['lr']:.3e}, " \
                           f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
@@ -120,7 +120,7 @@ class TestLogProcessor:
             assert out == log_str
         else:
             if torch.cuda.is_available():
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50]  ' \
                           f"lr: {train_logs['lr']:.3e}, " \
                           f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
@@ -128,7 +128,7 @@ class TestLogProcessor:
                           f'memory: 100, ' \
                           f"loss_cls: {train_logs['loss_cls']:.4f}"
             else:
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50]  ' \
                           f"lr: {train_logs['lr']:.3e}, " \
                           f'eta: 0:00:40, ' \
                           f"time: {train_logs['time']:.3f}, " \
@@ -146,11 +146,11 @@ class TestLogProcessor:
         cur_iter = 2
         out = log_processor._get_val_log_str(runner, val_logs, cur_iter)
         if by_epoch:
-            assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
+            assert out == 'Epoch(val) [1][5]  accuracy: 0.9000, ' \
                           'data_time: 1.0000'
 
         else:
-            assert out == 'Iter(val) [2][5]\taccuracy: 0.9000, ' \
+            assert out == 'Iter(val) [2][5]  accuracy: 0.9000, ' \
                           'data_time: 1.0000'
 
     def test_collect_scalars(self):

@@ -97,18 +97,22 @@ class LogProcessor:
     def get_log(self, runner, batch_idx: int, mode: str) -> Tuple[dict, str]:
         """Get formatted log at training/validation/testing phase.
 
-        :meth:`get_log` is called by :obj:`LoggerHook` to return corresponding
-        phase ``log_str`` and ``tag``.
+        Format the log scalars stored in  ``runner.message_hub.log_scalars``
+        into log string(``log_str``) and log dictionary(``tag``).
+        ``MMLogger`` will output the ``log_str`` to terminal and save log
+        file locally. ``Visualizer`` will write ``tag`` into corresponding
+        backend defined in config file, such as local, tensorboard, wanbd .etc.
+
+        Note:
+            ``LogProcessor.get_log`` will be called in ``LoggerHook``.
 
         Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
-            batch_idx (int): The index of the current batch in the train loop.
+            runner (Runner): Runner of traning/testing/validation process.
+            batch_idx (int): The index of the current batch in the loop.
             mode (str): Current mode of runner.
 
         Returns:
-            Tuple[dict, str]:  The log information collected from
-            ``runner.message_hub`` and the formatted log string.
+            Tuple[str, dict]: Formatted log string and log dictionary.
         """
         # Consider the `window_size` such as "epoch" and "global" will
         # change with `runner.iter` Therefore, we should make a copy of
@@ -163,9 +167,9 @@ class LogProcessor:
         if self.by_epoch:
             cur_epoch = self._get_epoch(runner, 'train')
             log_str = (f'Epoch [{cur_epoch}]'
-                       f'[{cur_iter}/{len(runner.cur_dataloader)}]\t')
+                       f'[{cur_iter}/{len(runner.cur_dataloader)}]  ')
         else:
-            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
+            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]  '
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}, '
         # If IterTimerHook used in runner, eta, time, and data_time should be
@@ -214,9 +218,9 @@ class LogProcessor:
         if self.by_epoch:
             cur_epoch = self._get_epoch(runner, 'val')
             # runner.epoch += 1 has been done before val workflow
-            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]\t'
+            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]  '
         else:
-            log_str = f'Iter(val) [{cur_iter}][{eval_iter}]\t'
+            log_str = f'Iter(val) [{cur_iter}][{eval_iter}]  '
 
         log_items = []
         for name, val in tag.items():
