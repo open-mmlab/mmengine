@@ -407,10 +407,22 @@ class Runner:
         """int: Current epoch."""
         return self._epoch
 
+    @epoch.setter
+    def epoch(self, epoch: int):
+        """Synchronize epoch in messagehub."""
+        self._epoch = epoch
+        self.message_hub.update_info('epoch', epoch)
+
     @property
     def iter(self):
-        """int: Current epoch."""
+        """int: Current iteration."""
         return self._iter
+
+    @iter.setter
+    def iter(self, iter: int):
+        """Synchronize iter in messagehub."""
+        self._iter = iter
+        self.message_hub.update_info('iter', iter)
 
     @property
     def launcher(self):
