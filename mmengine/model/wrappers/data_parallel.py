@@ -9,6 +9,9 @@ from torch.nn.parallel.distributed import (DistributedDataParallel,
 from mmengine.registry import MODEL_WRAPPERS
 from mmengine.utils import TORCH_VERSION, digit_version
 
+MODEL_WRAPPERS.register_module(module=DataParallel)
+MODEL_WRAPPERS.register_module(module=DistributedDataParallel)
+
 
 @MODEL_WRAPPERS.register_module()
 class MMDataParallel(DataParallel):

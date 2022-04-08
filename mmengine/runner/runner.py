@@ -1397,8 +1397,13 @@ class Runner:
         # Add comments to describe the usage of `after_load_ckpt`
         self.call_hook('after_load_ckpt', checkpoint=checkpoint)
 
+        if is_model_wrapper(self.model):
+            model = self.model.module
+        else:
+            model = self.model
+
         checkpoint = _load_checkpoint_to_model(
-            self.model, checkpoint, strict, revise_keys=revise_keys)
+            model, checkpoint, strict, revise_keys=revise_keys)
 
         self._has_loaded = True
 
