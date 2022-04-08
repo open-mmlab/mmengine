@@ -416,7 +416,7 @@ class Runner:
 
     @epoch.setter
     def epoch(self, epoch: int):
-        """Synchronize epoch in messagehub."""
+        """Update epoch and synchronize epoch in messagehub."""
         self._epoch = epoch
         # To allow components that cannot access runner to get current epoch.
         self.message_hub.update_info('epoch', epoch)
@@ -428,7 +428,7 @@ class Runner:
 
     @iter.setter
     def iter(self, iter: int):
-        """Synchronize iter in messagehub."""
+        """Update iter and synchronize iter in messagehub."""
         self._iter = iter
         # To allow components that cannot access runner to get current
         # iteration.
