@@ -271,47 +271,6 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
         else:
             self.assertIsNone(output)
 
-    def test_collect_results(self):
-        self._init_dist_env(self.rank, self.world_size)
-        if dist.get_rank() == 0:
-            data = ['foo', {1: 2}]
-        else:
-            data = [24, {'a': 'b'}]
-
-        size = 4
-
-        expected = ['foo', 24, {1: 2}, {'a': 'b'}]
-
-        # test `device=cpu`
-        output = dist.collect_results(data, size, device='cpu')
-        if dist.get_rank() == 0:
-            self.assertEqual(output, expected)
-        else:
-            self.assertIsNone(output)
-
-        # test `device=cpu` and `tmpdir is not None`
-        tmpdir = tempfile.mkdtemp()
-        # broadcast tmpdir to all ranks to make it consistent
-        object_list = [tmpdir]
-        dist.broadcast_object_list(object_list)
-        output = dist.collect_results(
-            data, size, device='cpu', tmpdir=object_list[0])
-        if dist.get_rank() == 0:
-            self.assertEqual(output, expected)
-        else:
-            self.assertIsNone(output)
-
-        if dist.get_rank() == 0:
-            # object_list[0] will be removed by `dist.collect_results`
-            self.assertFalse(osp.exists(object_list[0]))
-
-        # test `device=gpu`
-        output = dist.collect_results(data, size, device='gpu')
-        if dist.get_rank() == 0:
-            self.assertEqual(output, expected)
-        else:
-            self.assertIsNone(output)
-
 
 @unittest.skipIf(
     torch.cuda.device_count() < 2, reason='need 2 gpu to test nccl')
