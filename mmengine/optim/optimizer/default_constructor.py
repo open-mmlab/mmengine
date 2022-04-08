@@ -241,9 +241,7 @@ class DefaultOptimizerConstructor:
                 prefix=child_prefix,
                 is_dcn_module=is_dcn_module)
 
-    def __call__(self,
-                 model: nn.Module,
-                 default_scope: Optional[str] = None) -> torch.optim.Optimizer:
+    def __call__(self, model: nn.Module) -> torch.optim.Optimizer:
         if hasattr(model, 'module'):
             model = model.module
 
@@ -251,11 +249,11 @@ class DefaultOptimizerConstructor:
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()
-            return OPTIMIZERS.build(optimizer_cfg, default_scope=default_scope)
+            return OPTIMIZERS.build(optimizer_cfg)
 
         # set param-wise lr and weight decay recursively
         params: List = []
         self.add_params(params, model)
         optimizer_cfg['params'] = params
 
-        return OPTIMIZERS.build(optimizer_cfg, default_scope=default_scope)
+        return OPTIMIZERS.build(optimizer_cfg)

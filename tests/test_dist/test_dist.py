@@ -7,6 +7,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import torch
+import torch.distributed as torch_dist
 
 import mmengine.dist as dist
 from mmengine.dist.dist import sync_random_seed
@@ -105,7 +106,8 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
-        dist.init_dist('pytorch', 'gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(
+            backend='gloo', rank=rank, world_size=world_size)
 
     def setUp(self):
         super().setUp()
@@ -320,7 +322,11 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
-        dist.init_dist('pytorch', 'nccl', rank=rank, world_size=world_size)
+
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(rank % num_gpus)
+        torch_dist.init_process_group(
+            backend='nccl', rank=rank, world_size=world_size)
 
     def setUp(self):
         super().setUp()

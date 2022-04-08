@@ -73,7 +73,7 @@ class TestOptimizerHook:
             wraps=optimizer_hook.detect_anomalous_parameters)
         optimizer_hook.clip_grads = Mock(wraps=optimizer_hook.clip_grads)
 
-        optimizer_hook.after_train_iter(dummy_runner)
+        optimizer_hook.after_train_iter(dummy_runner, 0)
         # assert the parameters of conv2 and conv3 are not in the
         # computational graph which is with x1.sum() as root.
         assert 'conv2.weight' in dummy_runner.logger.msg
@@ -89,7 +89,7 @@ class TestOptimizerHook:
 
         dummy_runner.outputs['loss'] = model(x)[1].sum()
         dummy_runner.logger.msg = ''
-        optimizer_hook.after_train_iter(dummy_runner)
+        optimizer_hook.after_train_iter(dummy_runner, 0)
         # assert the parameters of conv3 are not in the computational graph
         assert 'conv3.weight' in dummy_runner.logger.msg
         assert 'conv3.bias' in dummy_runner.logger.msg
@@ -107,7 +107,7 @@ class TestOptimizerHook:
         dummy_runner.outputs['loss'].backward = Mock(
             wraps=dummy_runner.outputs['loss'].backward)
 
-        optimizer_hook.after_train_iter(dummy_runner)
+        optimizer_hook.after_train_iter(dummy_runner, 0)
 
         dummy_runner.optimizer.step.assert_called()
         dummy_runner.outputs['loss'].backward.assert_called()

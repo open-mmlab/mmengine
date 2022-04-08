@@ -52,7 +52,9 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
-        dist.init_dist('pytorch', 'gloo', rank=rank, world_size=world_size)
+
+        torch_dist.init_process_group(
+            backend='gloo', rank=rank, world_size=world_size)
         dist.init_local_group(0, world_size)
 
     def setUp(self):
@@ -116,7 +118,11 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
-        dist.init_dist('pytorch', 'nccl', rank=rank, world_size=world_size)
+
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(rank % num_gpus)
+        torch_dist.init_process_group(
+            backend='nccl', rank=rank, world_size=world_size)
         dist.init_local_group(0, world_size)
 
     def setUp(self):
