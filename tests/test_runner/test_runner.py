@@ -36,7 +36,8 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        inputs, labels = zip(*data_batch)
+        inputs, labels = zip(
+            *map(lambda x: (x['inputs'], x['data_sample']), data_batch))
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
@@ -67,7 +68,7 @@ class CustomModelWrapper(nn.Module):
 
 @DATASETS.register_module()
 class ToyDataset(Dataset):
-    META = dict()  # type: ignore
+    METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
     label = torch.ones(12)
 
@@ -75,7 +76,7 @@ class ToyDataset(Dataset):
         return self.data.size(0)
 
     def __getitem__(self, index):
-        return self.data[index], self.label[index]
+        return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
 @METRICS.register_module()

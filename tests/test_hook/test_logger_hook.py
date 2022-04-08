@@ -111,7 +111,7 @@ class TestLoggerHook:
         # Test end of the epoch.
         logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
         logger_hook._log_train = MagicMock()
-        runner.cur_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
         batch_idx = 4
         logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_called()
@@ -341,7 +341,9 @@ class TestLoggerHook:
     def _setup_runner(self):
         runner = MagicMock()
         runner.epoch = 1
-        runner.cur_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
+        runner.val_loop.dataloader = [0] * 5
+        runner.test_loop.dataloader = [0] * 5
         runner.iter = 10
         runner.train_loop.max_iters = 50
         logger = logging.getLogger()

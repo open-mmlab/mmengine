@@ -20,9 +20,11 @@ class DistSamplerSeedHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if hasattr(runner.cur_dataloader.sampler, 'set_epoch'):
+        if hasattr(runner.train_loop.dataloader.sampler, 'set_epoch'):
             # in case the data loader uses `SequentialSampler` in Pytorch
-            runner.cur_dataloader.sampler.set_epoch(runner.epoch)
-        elif hasattr(runner.cur_dataloader.batch_sampler.sampler, 'set_epoch'):
+            runner.train_loop.dataloader.sampler.set_epoch(runner.epoch)
+        elif hasattr(runner.train_loop.dataloader.batch_sampler.sampler,
+                     'set_epoch'):
             # batch sampler in pytorch warps the sampler as its attributes.
-            runner.cur_dataloader.batch_sampler.sampler.set_epoch(runner.epoch)
+            runner.train_loop.dataloader.batch_sampler.sampler.set_epoch(
+                runner.epoch)

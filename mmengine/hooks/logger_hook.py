@@ -5,18 +5,17 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 import torch
 
-from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
+DATA_BATCH = Optional[Sequence[dict]]
 
 
 @HOOKS.register_module()
@@ -183,15 +182,16 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[BaseDataElement], optional): Data from
-                dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
         self._inner_iter = batch_idx
         if runner.meta is not None and 'exp_name' in runner.meta:
             if (self.every_n_iters(runner, self.interval_exp_name)) or (
-                    self.by_epoch and self.end_of_epoch(runner, batch_idx)):
+                    self.by_epoch and self.end_of_epoch(
+                        runner.train_loop.dataloader, batch_idx)):
                 exp_info = f'Exp name: {runner.meta["exp_name"]}'
                 runner.logger.info(exp_info)
         if self.by_epoch and self.every_n_inner_iters(batch_idx,
@@ -199,7 +199,8 @@ class LoggerHook(Hook):
             self._log_train(runner)
         elif not self.by_epoch and self.every_n_iters(runner, self.interval):
             self._log_train(runner)
-        elif self.end_of_epoch(runner, batch_idx) and not self.ignore_last:
+        elif self.end_of_epoch(runner.train_loop.dataloader,
+                               batch_idx) and not self.ignore_last:
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
@@ -271,7 +272,7 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.cur_dataloader)}]\t'
+                      f'[{cur_iter}/{len(runner.train_loop.dataloader)}]\t'
         else:
             log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
         log_str += f'{lr_momentum_str}, '
@@ -311,7 +312,7 @@ class LoggerHook(Hook):
         """
         tag = self._collect_info(runner, 'val')
         # Compatible with function `log` https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/logger/text.py # noqa E501
-        eval_iter = len(runner.cur_dataloader)
+        eval_iter = len(runner.val_loop.dataloader)
         cur_iter = self._get_iter(runner)
         cur_epoch = self._get_epoch(runner, 'val')
         # val/test time
