@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 import torch.nn as nn
+from torch.nn.parallel import DataParallel
+from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.model.wrappers import (MMDataParallel, MMDistributedDataParallel,
                                      is_model_wrapper)
@@ -43,6 +45,12 @@ def test_is_model_wrapper():
 
     mmddp = MMDistributedDataParallel(model, process_group=MagicMock())
     assert is_model_wrapper(mmddp)
+
+    torch_dp = DataParallel(model)
+    assert is_model_wrapper(torch_dp)
+
+    torch_ddp = DistributedDataParallel(model, process_group=MagicMock())
+    assert is_model_wrapper(torch_ddp)
 
     # test model wrapper registry
     @MODEL_WRAPPERS.register_module()
