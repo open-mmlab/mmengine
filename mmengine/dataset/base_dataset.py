@@ -229,7 +229,7 @@ class BaseDataset(Dataset):
         self.test_mode = test_mode
         self.max_refetch = max_refetch
         self.data_list: List[dict] = []
-        self.date_bytes: np.ndarray
+        self.data_bytes: np.ndarray
 
         # Set meta information.
         self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
@@ -259,7 +259,7 @@ class BaseDataset(Dataset):
             start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
             end_addr = self.data_address[idx].item()
             bytes = memoryview(
-                self.date_bytes[start_addr:end_addr])  # type: ignore
+                self.data_bytes[start_addr:end_addr])  # type: ignore
             data_info = pickle.loads(bytes)  # type: ignore
         else:
             data_info = self.data_list[idx]
@@ -302,7 +302,7 @@ class BaseDataset(Dataset):
 
         # serialize data_list
         if self.serialize_data:
-            self.date_bytes, self.data_address = self._serialize_data()
+            self.data_bytes, self.data_address = self._serialize_data()
 
         self._fully_initialized = True
 
@@ -575,7 +575,7 @@ class BaseDataset(Dataset):
         # Get subset of data from serialized data or data information sequence
         # according to `self.serialize_data`.
         if self.serialize_data:
-            self.date_bytes, self.data_address = \
+            self.data_bytes, self.data_address = \
                 self._get_serialized_subset(indices)
         else:
             self.data_list = self._get_unserialized_subset(indices)
@@ -626,9 +626,9 @@ class BaseDataset(Dataset):
         sub_dataset = self._copy_without_annotation()
         # Get subset of dataset with serialize and unserialized data.
         if self.serialize_data:
-            date_bytes, data_address = \
+            data_bytes, data_address = \
                 self._get_serialized_subset(indices)
-            sub_dataset.date_bytes = date_bytes.copy()
+            sub_dataset.data_bytes = data_bytes.copy()
             sub_dataset.data_address = data_address.copy()
         else:
             data_list = self._get_unserialized_subset(indices)
@@ -650,7 +650,7 @@ class BaseDataset(Dataset):
             Tuple[np.ndarray, np.ndarray]: subset of serialized data
             information.
         """
-        sub_date_bytes: Union[List, np.ndarray]
+        sub_data_bytes: Union[List, np.ndarray]
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
             if indices >= 0:
@@ -661,7 +661,7 @@ class BaseDataset(Dataset):
                     if indices > 0 else 0
                 # Slicing operation of `np.ndarray` does not trigger a memory
                 # copy.
-                sub_date_bytes = self.date_bytes[:end_addr]
+                sub_data_bytes = self.data_bytes[:end_addr]
                 # Since the buffer size of first few data information is not
                 # changed,
                 sub_data_address = self.data_address[:indices]
@@ -671,11 +671,11 @@ class BaseDataset(Dataset):
                 # Return the last few data information.
                 ignored_bytes_size = self.data_address[indices - 1]
                 start_addr = self.data_address[indices - 1].item()
-                sub_date_bytes = self.date_bytes[start_addr:]
+                sub_data_bytes = self.data_bytes[start_addr:]
                 sub_data_address = self.data_address[indices:]
                 sub_data_address = sub_data_address - ignored_bytes_size
         elif isinstance(indices, Sequence):
-            sub_date_bytes = []
+            sub_data_bytes = []
             sub_data_address = []
             for idx in indices:
                 assert len(self) > idx >= -len(self)
@@ -683,20 +683,20 @@ class BaseDataset(Dataset):
                     self.data_address[idx - 1].item()
                 end_addr = self.data_address[idx].item()
                 # Get data information by address.
-                sub_date_bytes.append(self.date_bytes[start_addr:end_addr])
+                sub_data_bytes.append(self.data_bytes[start_addr:end_addr])
                 # Get data information size.
                 sub_data_address.append(end_addr - start_addr)
             # Handle indices is an empty list.
-            if sub_date_bytes:
-                sub_date_bytes = np.concatenate(sub_date_bytes)
+            if sub_data_bytes:
+                sub_data_bytes = np.concatenate(sub_data_bytes)
                 sub_data_address = np.cumsum(sub_data_address)
             else:
-                sub_date_bytes = np.array([])
+                sub_data_bytes = np.array([])
                 sub_data_address = np.array([])
         else:
             raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')
-        return sub_date_bytes, sub_data_address  # type: ignore
+        return sub_data_bytes, sub_data_address  # type: ignore
 
     def _get_unserialized_subset(self, indices: Union[Sequence[int],
                                                       int]) -> list:
@@ -795,7 +795,7 @@ class BaseDataset(Dataset):
 
     def _copy_without_annotation(self, memo=dict()) -> 'BaseDataset':
         """Deepcopy for all attributes other than ``data_list``,
-        ``data_address`` and ``date_bytes``.
+        ``data_address`` and ``data_bytes``.
 
         Args:
             memo: Memory dict which used to reconstruct complex object
@@ -806,7 +806,7 @@ class BaseDataset(Dataset):
         memo[id(self)] = other
 
         for key, value in self.__dict__.items():
-            if key in ['data_list', 'data_address', 'date_bytes']:
+            if key in ['data_list', 'data_address', 'data_bytes']:
                 continue
             super(BaseDataset, other).__setattr__(key,
                                                   copy.deepcopy(value, memo))
