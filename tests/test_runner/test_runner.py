@@ -25,7 +25,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import is_list_of
-from mmengine.visualization.writer import ComposedWriter
+from mmengine.visualization import Visualizer
 
 
 @MODELS.register_module()
@@ -36,8 +36,8 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        inputs, labels = zip(
-            *map(lambda x: (x['inputs'], x['data_sample']), data_batch))
+        inputs, labels = zip(*map(lambda x:
+                                  (x['inputs'], x['data_sample']), data_batch))
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
@@ -308,24 +308,24 @@ class TestRunner(TestCase):
         self.assertFalse(runner.distributed)
         self.assertFalse(runner.deterministic)
 
-        # 1.5 message_hub, logger and writer
+        # 1.5 message_hub, logger and visualizer
         # they are all not specified
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init12'
         runner = Runner(**cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertIsInstance(runner.message_hub, MessageHub)
-        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertIsInstance(runner.visualizer, Visualizer)
 
         # they are all specified
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init13'
         cfg.log_level = 'INFO'
-        cfg.writer = dict(name='test_writer')
+        cfg.visualizer = dict(name='test_visualizer')
         runner = Runner(**cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertIsInstance(runner.message_hub, MessageHub)
-        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertIsInstance(runner.visualizer, Visualizer)
 
         assert runner.distributed is False
         assert runner.seed is not None
@@ -446,32 +446,34 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(TypeError, 'message_hub should be'):
             runner.build_message_hub('invalid-type')
 
-    def test_build_writer(self):
-        self.epoch_based_cfg.experiment_name = 'test_build_writer1'
+    def test_build_visualizer(self):
+        self.epoch_based_cfg.experiment_name = 'test_build_visualizer1'
         runner = Runner.from_cfg(self.epoch_based_cfg)
-        self.assertIsInstance(runner.writer, ComposedWriter)
-        self.assertEqual(runner.experiment_name, runner.writer.instance_name)
+        self.assertIsInstance(runner.visualizer, Visualizer)
+        self.assertEqual(runner.experiment_name,
+                         runner.visualizer.instance_name)
 
-        # input is a ComposedWriter object
+        # input is a Visualizer object
         self.assertEqual(
-            id(runner.build_writer(runner.writer)), id(runner.writer))
+            id(runner.build_visualizer(runner.visualizer)),
+            id(runner.visualizer))
 
         # input is a dict
-        writer_cfg = dict(name='test_build_writer2')
-        writer = runner.build_writer(writer_cfg)
-        self.assertIsInstance(writer, ComposedWriter)
-        self.assertEqual(writer.instance_name, 'test_build_writer2')
+        visualizer_cfg = dict(name='test_build_visualizer2')
+        visualizer = runner.build_visualizer(visualizer_cfg)
+        self.assertIsInstance(visualizer, Visualizer)
+        self.assertEqual(visualizer.instance_name, 'test_build_visualizer2')
 
         # input is a dict but does not contain name key
-        runner._experiment_name = 'test_build_writer3'
-        writer_cfg = dict()
-        writer = runner.build_writer(writer_cfg)
-        self.assertIsInstance(writer, ComposedWriter)
-        self.assertEqual(writer.instance_name, 'test_build_writer3')
+        runner._experiment_name = 'test_build_visualizer3'
+        visualizer_cfg = dict()
+        visualizer = runner.build_visualizer(visualizer_cfg)
+        self.assertIsInstance(visualizer, Visualizer)
+        self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')
 
         # input is not a valid type
-        with self.assertRaisesRegex(TypeError, 'writer should be'):
-            runner.build_writer('invalid-type')
+        with self.assertRaisesRegex(TypeError, 'visualizer should be'):
+            runner.build_visualizer('invalid-type')
 
     def test_default_scope(self):
         TOY_SCHEDULERS = Registry(

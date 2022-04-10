@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -14,14 +14,16 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataElement
-from mmengine.logging import BaseGlobalAccessible
 from mmengine.registry import VISBACKEND, VISUALIZERS
+from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
+                                          color_val_matplotlib, concat_heatmap,
                                           tensor2ndarray, value2list)
+from mmengine.visualization.vis_backend import BaseVisBackend
 
 
 @VISUALIZERS.register_module()
-class Visualizer(BaseGlobalAccessible):
+class Visualizer(ManagerMixin):
     """MMEngine provides a Visualizer class that uses the ``Matplotlib``
     library as the backend. It has the following functions:
 
@@ -69,15 +71,15 @@ class Visualizer(BaseGlobalAccessible):
 
         >>> # Basic drawing methods
         >>> vis = Visualizer(metadata=metadata, image=image)
-        >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edgecolors='g')
+        >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edge_colors='g')
         >>> vis.draw_bboxes(bbox=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
-                            edgecolors=['g', 'r'], is_filling=True)
+                            edge_colors=['g', 'r'], is_filling=True)
         >>> vis.draw_lines(x_datas=np.array([1, 3]),
                         y_datas=np.array([1, 3]),
-                        colors='r', linewidths=1)
+                        colors='r', line_widths=1)
         >>> vis.draw_lines(x_datas=np.array([[1, 3], [2, 4]]),
                         y_datas=np.array([[1, 3], [2, 4]]),
-                        colors=['r', 'r'], linewidths=[1, 2])
+                        colors=['r', 'r'], line_widths=[1, 2])
         >>> vis.draw_texts(text='MMEngine',
                         position=np.array([2, 2]),
                         colors='b')
@@ -89,10 +91,10 @@ class Visualizer(BaseGlobalAccessible):
                             radius=np.array[1, 2], colors=['g', 'r'],
                             is_filling=True)
         >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
-                            edgecolors='g')
+                            edge_colors='g')
         >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
                                     np.array([2, 2, 3, 2, 3, 3, 2, 3]]),
-                            edgecolors=['g', 'r'], is_filling=True)
+                            edge_colors=['g', 'r'], is_filling=True)
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
 
         >>> # chain calls
@@ -127,10 +129,10 @@ class Visualizer(BaseGlobalAccessible):
         self,
         name='visualizer',
         image: Optional[np.ndarray] = None,
-        vis_backends=None,
+        vis_backends: Optional[Dict] = None,
         metadata: Optional[dict] = None,
         fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False)
+        fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
         super().__init__(name)
         self._metadata = metadata
@@ -138,15 +140,15 @@ class Visualizer(BaseGlobalAccessible):
 
         if vis_backends:
             for vis_backend in vis_backends:
-                name = vis_backend.pop('name', vis_backend.get('type'))
+                name = vis_backend.pop('name')
                 self._vis_backends[name] = VISBACKEND.build(vis_backend)
 
         self.is_inline = 'inline' in plt.get_backend()
 
         self.fig_save = None
         self.fig_show = None
-        self.fig_save_num = fig_save_cfg.get('number', None)
-        self.fig_show_num = fig_show_cfg.get('number', None)
+        self.fig_save_num = fig_save_cfg.get('num', None)
+        self.fig_show_num = fig_show_cfg.get('num', None)
         self.fig_save_cfg = fig_save_cfg
         self.fig_show_cfg = fig_show_cfg
 
@@ -161,7 +163,8 @@ class Visualizer(BaseGlobalAccessible):
              gt_sample: Optional['BaseDataElement'] = None,
              pred_sample: Optional['BaseDataElement'] = None,
              draw_gt: bool = True,
-             draw_pred: bool = True) -> None:
+             draw_pred: bool = True,
+             show: bool = False) -> None:
         pass
 
     def show(self,
@@ -181,51 +184,19 @@ class Visualizer(BaseGlobalAccessible):
             (self.fig_show, self.ax_show,
              self.fig_show_num) = self._initialize_fig(self.fig_show_cfg)
         img = self.get_image() if drawn_img is None else drawn_img
-        height, width = img.shape[:2]
+        # dpi = self.fig_show.get_dpi()
+        # height, width = img.shape[:2]
+        # self.fig_show.set_size_inches((width + 1e-2) / dpi,
+        #                               (height + 1e-2) / dpi)
         self.ax_show.cla()
         self.ax_show.axis(False)
-        # Reserve some space for the tip.
-        self.ax_show.set_title(win_name)
-        self.ax_show.set_ylim(height + 20)
-        self.ax_show.text(
-            width // 2,
-            height + 18,
-            'Press SPACE to continue.',
-            ha='center',
-            fontsize=20)
+        # self.ax_show.set_title(win_name)
+        # self.fig_show.set_label(win_name)
 
         # Refresh canvas, necessary for Qt5 backend.
-
-        self.wait_continue(timeout=wait_time, continue_key=continue_key)
         self.ax_show.imshow(img)
         self.fig_show.canvas.draw()  # type: ignore
-
-    @classmethod
-    def register_task(cls, task_name: str, force: bool = False) -> Callable:
-        """Register a function.
-
-        A record will be added to ``task_dict``, whose key is the task_name
-        and value is the decorated function.
-
-        Args:
-            cls (type): Module class to be registered.
-            task_name (str or list of str, optional): The module name to be
-                registered.
-            force (bool): Whether to override an existing function with the
-                same name. Defaults to False.
-        """
-
-        def _register(task_func):
-
-            if (task_name not in cls.task_dict) or force:
-                cls.task_dict[task_name] = task_func
-            else:
-                raise KeyError(
-                    f'"{task_name}" is already registered in task_dict, '
-                    'add "force=True" if you want to override it')
-            return task_func
-
-        return _register
+        self.wait_continue(timeout=wait_time, continue_key=continue_key)
 
     def set_image(self, image: np.ndarray) -> None:
         """Set the image to draw.
@@ -266,8 +237,8 @@ class Visualizer(BaseGlobalAccessible):
         rgb, alpha = np.split(img_rgba, [3], axis=2)
         return rgb.astype('uint8')
 
-    def _initialize_fig(self, fig_cfg={}):
-        fig = plt.figure(**self.fig_save_cfg)
+    def _initialize_fig(self, fig_cfg):
+        fig = plt.figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
 
@@ -348,14 +319,32 @@ class Visualizer(BaseGlobalAccessible):
             elif event is None or event.key == continue_key:
                 return 0  # Quit for continue.
 
+    def draw_points(self,
+                    positions: Union[np.ndarray, torch.Tensor],
+                    colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+                    marker: Optional[str] = None,
+                    sizes: Optional[Union[np.ndarray, torch.Tensor]] = None):
+        check_type('positions', positions, (np.ndarray, torch.Tensor))
+        positions = tensor2ndarray(positions)
+
+        if len(positions.shape) == 1:
+            positions = positions[None]
+        assert positions.shape[-1] == 2, (
+            'The shape of `positions` should be (N, 2), '
+            f'but got {positions.shape}')
+        colors = color_val_matplotlib(colors)
+        self.ax_save.scatter(
+            positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
+        return self
+
     def draw_texts(
             self,
             texts: Union[str, List[str]],
             positions: Union[np.ndarray, torch.Tensor],
             font_sizes: Optional[Union[int, List[int]]] = None,
-            colors: Union[str, List[str]] = 'g',
-            verticalalignments: Union[str, List[str]] = 'top',
-            horizontalalignments: Union[str, List[str]] = 'left',
+            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            vertical_alignments: Union[str, List[str]] = 'top',
+            horizontal_alignments: Union[str, List[str]] = 'left',
             font_families: Union[str, List[str]] = 'sans-serif',
             rotations: Union[int, str, List[Union[int, str]]] = 0,
             bboxes: Optional[Union[dict, List[dict]]] = None) -> 'Visualizer':
@@ -370,29 +359,29 @@ class Visualizer(BaseGlobalAccessible):
                 texts. ``font_sizes`` can have the same length with texts or
                 just single value. If ``font_sizes`` is single value, all the
                 texts will have the same font size. Defaults to None.
-            colors (Union[str, List[str]]): The colors of texts. ``colors``
-                can have the same length with texts or just single value.
-                If ``colors`` is single value, all the texts will have the same
-                colors. Reference to
+            colors (Union[str, tuple, List[str], List[tuple]]): The colors
+                of texts. ``colors`` can have the same length with texts or
+                just single value. If ``colors`` is single value, all the
+                texts will have the same colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
-            verticalalignments (Union[str, List[str]]): The verticalalignment
+            vertical_alignments (Union[str, List[str]]): The verticalalignment
                 of texts. verticalalignment controls whether the y positional
                 argument for the text indicates the bottom, center or top side
                 of the text bounding box.
-                ``verticalalignments`` can have the same length with
-                texts or just single value. If ``verticalalignments`` is single
-                value, all the texts will have the same verticalalignment.
-                verticalalignment can be 'center' or 'top', 'bottom' or
-                'baseline'. Defaults to 'top'.
-            horizontalalignments (Union[str, List[str]]): The
+                ``vertical_alignments`` can have the same length with
+                texts or just single value. If ``vertical_alignments`` is
+                single value, all the texts will have the same
+                verticalalignment. verticalalignment can be 'center' or
+                'top', 'bottom' or 'baseline'. Defaults to 'top'.
+            horizontal_alignments (Union[str, List[str]]): The
                 horizontalalignment of texts. Horizontalalignment controls
                 whether the x positional argument for the text indicates the
                 left, center or right side of the text bounding box.
-                ``horizontalalignments`` can have
+                ``horizontal_alignments`` can have
                 the same length with texts or just single value.
-                If ``horizontalalignments`` is single value, all the texts will
-                have the same horizontalalignment. Horizontalalignment
+                If ``horizontal_alignments`` is single value, all the texts
+                will have the same horizontalalignment. Horizontalalignment
                 can be 'center','right' or 'left'. Defaults to 'left'.
             font_families (Union[str, List[str]]): The font family of
                 texts. ``font_families`` can have the same length with texts or
@@ -432,19 +421,22 @@ class Visualizer(BaseGlobalAccessible):
 
         if font_sizes is None:
             font_sizes = self._default_font_size
-        check_type_and_length('font_sizes', font_sizes, (int, list), num_text)
-        font_sizes = value2list(font_sizes, int, num_text)
+        check_type_and_length('font_sizes', font_sizes, (int, float, list),
+                              num_text)
+        font_sizes = value2list(font_sizes, (int, float), num_text)
 
-        check_type_and_length('colors', colors, (str, list), num_text)
-        colors = value2list(colors, str, num_text)
+        check_type_and_length('colors', colors, (str, tuple, list), num_text)
+        colors = value2list(colors, (str, tuple), num_text)
+        colors = color_val_matplotlib(colors)
 
-        check_type_and_length('verticalalignments', verticalalignments,
+        check_type_and_length('vertical_alignments', vertical_alignments,
                               (str, list), num_text)
-        verticalalignments = value2list(verticalalignments, str, num_text)
+        vertical_alignments = value2list(vertical_alignments, str, num_text)
 
-        check_type_and_length('horizontalalignments', horizontalalignments,
+        check_type_and_length('horizontal_alignments', horizontal_alignments,
                               (str, list), num_text)
-        horizontalalignments = value2list(horizontalalignments, str, num_text)
+        horizontal_alignments = value2list(horizontal_alignments, str,
+                                           num_text)
 
         check_type_and_length('rotations', rotations, (int, list), num_text)
         rotations = value2list(rotations, int, num_text)
@@ -466,8 +458,8 @@ class Visualizer(BaseGlobalAccessible):
                 texts[i],
                 size=font_sizes[i],  # type: ignore
                 bbox=bboxes[i],  # type: ignore
-                verticalalignment=verticalalignments[i],
-                horizontalalignment=horizontalalignments[i],
+                verticalalignment=vertical_alignments[i],
+                horizontalalignment=horizontal_alignments[i],
                 family=font_families[i],
                 color=colors[i])
         return self
@@ -476,9 +468,9 @@ class Visualizer(BaseGlobalAccessible):
         self,
         x_datas: Union[np.ndarray, torch.Tensor],
         y_datas: Union[np.ndarray, torch.Tensor],
-        colors: Union[str, List[str]] = 'g',
-        linestyles: Union[str, List[str]] = '-',
-        linewidths: Union[Union[int, float], List[Union[int, float]]] = 1
+        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
 
@@ -487,23 +479,23 @@ class Visualizer(BaseGlobalAccessible):
                 each line' start and end points.
             y_datas (Union[np.ndarray, torch.Tensor]): The y coordinate of
                 each line' start and end points.
-            colors (Union[str, List[str]]): The colors of lines. ``colors``
-                can have the same length with lines or just single value.
-                If ``colors`` is single value, all the lines will have the same
-                colors. Reference to
+            colors (Union[str, tuple, List[str], List[tuple]]): The colors of
+                lines. ``colors`` can have the same length with lines or just
+                single value. If ``colors`` is single value, all the lines
+                will have the same colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g'.
-            linestyles (Union[str, List[str]]): The linestyle
-                of lines. ``linestyles`` can have the same length with
-                texts or just single value. If ``linestyles`` is single
+            line_styles (Union[str, List[str]]): The linestyle
+                of lines. ``line_styles`` can have the same length with
+                texts or just single value. If ``line_styles`` is single
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
-                linewidth of lines. ``linewidths`` can have
+            line_widths (Union[Union[int, float], List[Union[int, float]]]):
+                The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
-                If ``linewidths`` is single value, all the lines will
+                If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
         """
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
@@ -518,7 +510,7 @@ class Visualizer(BaseGlobalAccessible):
         if len(x_datas.shape) == 1:
             x_datas = x_datas[None]
             y_datas = y_datas[None]
-
+        colors = color_val_matplotlib(colors)
         lines = np.concatenate(
             (x_datas.reshape(-1, 2, 1), y_datas.reshape(-1, 2, 1)), axis=-1)
         if not self._is_posion_valid(lines):
@@ -529,20 +521,21 @@ class Visualizer(BaseGlobalAccessible):
         line_collect = LineCollection(
             lines.tolist(),
             colors=colors,
-            linestyles=linestyles,
-            linewidths=linewidths)
+            linestyles=line_styles,
+            linewidths=line_widths)
         self.ax_save.add_collection(line_collect)
         return self
 
-    def draw_circles(self,
-                     center: Union[np.ndarray, torch.Tensor],
-                     radius: Union[np.ndarray, torch.Tensor],
-                     alpha: Union[float, int] = 0.8,
-                     edgecolors: Union[str, List[str]] = 'g',
-                     linestyles: Union[str, List[str]] = '-',
-                     linewidths: Union[Union[int, float],
-                                       List[Union[int, float]]] = 1,
-                     is_filling: bool = False) -> 'Visualizer':
+    def draw_circles(
+        self,
+        center: Union[np.ndarray, torch.Tensor],
+        radius: Union[np.ndarray, torch.Tensor],
+        alpha: Union[float, int] = 0.8,
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+    ) -> 'Visualizer':
         """Draw single or multiple circles.
 
         Args:
@@ -550,23 +543,23 @@ class Visualizer(BaseGlobalAccessible):
             each line' start and end points.
             radius (Union[np.ndarray, torch.Tensor]): The y coordinate of
             each line' start and end points.
-            edgecolors (Union[str, List[str]]): The colors of circles.
-                ``colors`` can have the same length with lines or just single
-                value. If ``colors`` is single value, all the lines will have
-                the same colors. Reference to
+            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
+                colors of circles. ``colors`` can have the same length with
+                lines or just single value. If ``colors`` is single value,
+                all the lines will have the same colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
-            linestyles (Union[str, List[str]]): The linestyle
-                of lines. ``linestyles`` can have the same length with
-                texts or just single value. If ``linestyles`` is single
+            line_styles (Union[str, List[str]]): The linestyle
+                of lines. ``line_styles`` can have the same length with
+                texts or just single value. If ``line_styles`` is single
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
-                linewidth of lines. ``linewidths`` can have
+            line_widths (Union[Union[int, float], List[Union[int, float]]]):
+                The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
-                If ``linewidths`` is single value, all the lines will
+                If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
             is_filling (bool): Whether to fill all the circles. Defaults to
                 False.
@@ -590,57 +583,59 @@ class Visualizer(BaseGlobalAccessible):
 
         center = center.tolist()
         radius = radius.tolist()
+        edge_colors = color_val_matplotlib(edge_colors)
+        face_colors = color_val_matplotlib(face_colors)
         circles = []
         for i in range(len(center)):
             circles.append(Circle(tuple(center[i]), radius[i]))
-        if is_filling:
-            p = PatchCollection(circles, alpha=alpha, facecolor=edgecolors)
-        else:
-            if isinstance(linewidths, (int, float)):
-                linewidths = [linewidths] * len(circles)
-            linewidths = [
-                min(max(linewidth, 1), self._default_font_size / 4)
-                for linewidth in linewidths
-            ]
-            p = PatchCollection(
-                circles,
-                alpha=alpha,
-                facecolor='none',
-                edgecolor=edgecolors,
-                linewidth=linewidths,
-                linestyles=linestyles)
+
+        if isinstance(line_widths, (int, float)):
+            line_widths = [line_widths] * len(circles)
+        line_widths = [
+            min(max(linewidth, 1), self._default_font_size / 4)
+            for linewidth in line_widths
+        ]
+        p = PatchCollection(
+            circles,
+            alpha=alpha,
+            facecolors=face_colors,
+            edgecolors=edge_colors,
+            linewidths=line_widths,
+            linestyles=line_styles)
         self.ax_save.add_collection(p)
         return self
 
-    def draw_bboxes(self,
-                    bboxes: Union[np.ndarray, torch.Tensor],
-                    alpha: Union[int, float] = 0.8,
-                    edgecolors: Union[str, List[str]] = 'g',
-                    linestyles: Union[str, List[str]] = '-',
-                    linewidths: Union[Union[int, float],
-                                      List[Union[int, float]]] = 1,
-                    is_filling: bool = False) -> 'Visualizer':
+    def draw_bboxes(
+        self,
+        bboxes: Union[np.ndarray, torch.Tensor],
+        alpha: Union[int, float] = 0.8,
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+    ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
         Args:
             bboxes (Union[np.ndarray, torch.Tensor]): The bboxes to draw with
                 the format of(x1,y1,x2,y2).
-            edgecolors (Union[str, List[str]]): The colors of bboxes.
-                ``colors`` can have the same length with lines or just single
-                value. If ``colors`` is single value, all the lines will have
-                the same colors. Refer to `matplotlib.colors` for full list of
-                formats that are accepted.. Defaults to 'g'.
-            linestyles (Union[str, List[str]]): The linestyle
-                of lines. ``linestyles`` can have the same length with
-                texts or just single value. If ``linestyles`` is single
+            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
+                colors of bboxes. ``colors`` can have the same length with
+                lines or just single value. If ``colors`` is single value, all
+                the lines will have the same colors. Refer to `matplotlib.
+                colors` for full list of formats that are accepted.
+                Defaults to 'g'.
+            line_styles (Union[str, List[str]]): The linestyle
+                of lines. ``line_styles`` can have the same length with
+                texts or just single value. If ``line_styles`` is single
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
-                linewidth of lines. ``linewidths`` can have
+            line_widths (Union[Union[int, float], List[Union[int, float]]]):
+                The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
-                If ``linewidths`` is single value, all the lines will
+                If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
             is_filling (bool): Whether to fill all the bboxes. Defaults to
                 False.
@@ -667,47 +662,51 @@ class Visualizer(BaseGlobalAccessible):
         return self.draw_polygons(
             poly,
             alpha=alpha,
-            edgecolors=edgecolors,
-            linestyles=linestyles,
-            linewidths=linewidths,
-            is_filling=is_filling)
+            edge_colors=edge_colors,
+            line_styles=line_styles,
+            line_widths=line_widths,
+            face_colors=face_colors)
 
-    def draw_polygons(self,
-                      polygons: Union[Union[np.ndarray, torch.Tensor],
-                                      List[Union[np.ndarray, torch.Tensor]]],
-                      alpha: Union[int, float] = 0.8,
-                      edgecolors: Union[str, List[str]] = 'g',
-                      linestyles: Union[str, List[str]] = '-',
-                      linewidths: Union[Union[int, float],
-                                        List[Union[int, float]]] = 1.0,
-                      is_filling: bool = False) -> 'Visualizer':
+    def draw_polygons(
+        self,
+        polygons: Union[Union[np.ndarray, torch.Tensor],
+                        List[Union[np.ndarray, torch.Tensor]]],
+        alpha: Union[int, float] = 0.8,
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1.0,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+    ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
         Args:
             polygons (Union[Union[np.ndarray, torch.Tensor],
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
-            edgecolors (Union[str, List[str]]): The colors of polygons.
-                ``colors`` can have the same length with lines or just single
-                value. If ``colors`` is single value, all the lines will have
-                the same colors. Refer to `matplotlib.colors` for full list of
-                formats that are accepted.. Defaults to 'g.
-            linestyles (Union[str, List[str]]): The linestyle
-                of lines. ``linestyles`` can have the same length with
-                texts or just single value. If ``linestyles`` is single
+            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
+                colors of polygons. ``colors`` can have the same length with
+                lines or just single value. If ``colors`` is single value,
+                all the lines will have the same colors. Refer to
+                `matplotlib.colors` for full list of formats that are accepted.
+                Defaults to 'g.
+            line_styles (Union[str, List[str]]): The linestyle
+                of lines. ``line_styles`` can have the same length with
+                texts or just single value. If ``line_styles`` is single
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
                 for more details. Defaults to '-'.
-            linewidths (Union[Union[int, float], List[Union[int, float]]]): The
-                linewidth of lines. ``linewidths`` can have
+            line_widths (Union[Union[int, float], List[Union[int, float]]]):
+                The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
-                If ``linewidths`` is single value, all the lines will
+                If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 1.
             is_filling (bool): Whether to fill all the polygons. Defaults to
                 False.
         """
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
+        edge_colors = color_val_matplotlib(edge_colors)
+        face_colors = color_val_matplotlib(face_colors)
 
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -722,23 +721,19 @@ class Visualizer(BaseGlobalAccessible):
                 warnings.warn(
                     'Warning: The polygon is out of bounds,'
                     ' the drawn polygon may not be in the image', UserWarning)
-        if is_filling:
-            polygon_collection = PolyCollection(
-                polygons, alpha=alpha, facecolor=edgecolors)
-        else:
-            if isinstance(linewidths, (int, float)):
-                linewidths = [linewidths] * len(polygons)
-            linewidths = [
-                min(max(linewidth, 1), self._default_font_size / 4)
-                for linewidth in linewidths
-            ]
-            polygon_collection = PolyCollection(
-                polygons,
-                alpha=alpha,
-                facecolor='none',
-                linestyles=linestyles,
-                edgecolors=edgecolors,
-                linewidths=linewidths)
+        if isinstance(line_widths, (int, float)):
+            line_widths = [line_widths] * len(polygons)
+        line_widths = [
+            min(max(linewidth, 1), self._default_font_size / 4)
+            for linewidth in line_widths
+        ]
+        polygon_collection = PolyCollection(
+            polygons,
+            alpha=alpha,
+            facecolor=face_colors,
+            linestyles=line_styles,
+            edgecolors=edge_colors,
+            linewidths=line_widths)
 
         self.ax_save.add_collection(polygon_collection)
         return self
@@ -746,7 +741,7 @@ class Visualizer(BaseGlobalAccessible):
     def draw_binary_masks(
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
-            colors: np.ndarray = np.array([0, 255, 0]),
+            colors: Union[Tuple, List[Tuple]] = (0, 255, 0),
             alphas: Union[float, List[float]] = 0.5) -> 'Visualizer':
         """Draw single or multiple binary masks.
 
@@ -774,12 +769,19 @@ class Visualizer(BaseGlobalAccessible):
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
             1:], '`binary_marks` must have the same shpe with image'
-        assert isinstance(colors, np.ndarray)
-        if colors.ndim == 1:
-            colors = np.tile(colors, (binary_masks.shape[0], 1))
-        assert colors.shape == (binary_masks.shape[0], 3)
+        binary_mask_len = binary_masks.shape[0]
+
+        if isinstance(colors, tuple):
+            colors = [colors]
+        for color in colors:
+            assert isinstance(color, tuple)
+            assert len(color) == 3
+        check_type_and_length('colors', colors, list, binary_mask_len)
+        colors = np.array(colors)
+        if colors.ndim == 1:  # type: ignore
+            colors = np.tile(colors, (binary_mask_len, 1))
         if isinstance(alphas, float):
-            alphas = [alphas] * binary_masks.shape[0]
+            alphas = [alphas] * binary_mask_len
 
         for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
             binary_mask_complement = cv2.bitwise_not(binary_mask)
@@ -835,37 +837,6 @@ class Visualizer(BaseGlobalAccessible):
         Returns:
             np.ndarray: featmap.
         """
-
-        def concat_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
-                           img: Optional[np.ndarray] = None,
-                           alpha: float = 0.5) -> np.ndarray:
-            """Convert feat_map to heatmap and sum to image, if image is not
-            None.
-
-            Args:
-                feat_map (np.ndarray, torch.Tensor): The feat_map to convert
-                    with of shape (H, W), where H is the image height and W is
-                    the image width.
-                img (np.ndarray, optional): The origin image. The format
-                    should be RGB. Defaults to None.
-                alphas (Union[int, List[int]]): The transparency of origin
-                    image. Defaults to 0.5.
-
-            Returns:
-                np.ndarray: heatmap
-            """
-            if isinstance(feat_map, torch.Tensor):
-                feat_map = feat_map.detach().cpu().numpy()
-            norm_img = np.zeros(feat_map.shape)
-            norm_img = cv2.normalize(feat_map, norm_img, 0, 255,
-                                     cv2.NORM_MINMAX)
-            norm_img = np.asarray(norm_img, dtype=np.uint8)
-            heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
-            heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
-            if img is not None:
-                heat_img = cv2.addWeighted(img, alpha, heat_img, 1 - alpha, 0)
-            return heat_img
-
         assert isinstance(
             tensor_chw,
             torch.Tensor), (f'`tensor_chw` should be {torch.Tensor} '
@@ -882,8 +853,6 @@ class Visualizer(BaseGlobalAccessible):
             ], (f'Mode only support "mean", "max", "min", but got {mode}')
             if mode == 'max':
                 feat_map, _ = torch.max(tensor_chw, dim=0)
-            elif mode == 'min':
-                feat_map, _ = torch.min(tensor_chw, dim=0)
             elif mode == 'mean':
                 feat_map = torch.mean(tensor_chw, dim=0)
             return concat_heatmap(feat_map, image, alpha)
@@ -943,7 +912,7 @@ class Visualizer(BaseGlobalAccessible):
         Args:
             params_dict (dict): The dictionary of parameters to save.
         """
-        for vis_backend in self._vis_backends:
+        for vis_backend in self._vis_backends.values():
             vis_backend.add_config(params_dict, **kwargs)  # type: ignore
 
     def add_graph(self, model: torch.nn.Module,
@@ -956,10 +925,10 @@ class Visualizer(BaseGlobalAccessible):
             input_array (torch.Tensor, list[torch.Tensor]): A variable
                 or a tuple of variables to be fed.
         """
-        for vis_backend in self._vis_backends:
+        for vis_backend in self._vis_backends.values():
             vis_backend.add_graph(model, input_array, **kwargs)  # type: ignore
 
-    def add_image(self, name: str, image, step: int = 0) -> None:
+    def add_image(self, name: str, image: np.ndarray, step: int = 0) -> None:
         """Record image.
 
         Args:
@@ -968,7 +937,7 @@ class Visualizer(BaseGlobalAccessible):
                 should be RGB. Default to None.
             step (int): Global step value to record. Default to 0.
         """
-        for vis_backend in self._vis_backends:
+        for vis_backend in self._vis_backends.values():
             vis_backend.add_image(name, image, step)  # type: ignore
 
     def add_scalar(self,
@@ -983,7 +952,7 @@ class Visualizer(BaseGlobalAccessible):
             value (float, int): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        for vis_backend in self._vis_backends:
+        for vis_backend in self._vis_backends.values():
             vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
 
     def add_scalars(self,
@@ -1002,7 +971,7 @@ class Visualizer(BaseGlobalAccessible):
                 if the `file_path` parameter is specified.
                 Default to None.
         """
-        for vis_backend in self._vis_backends:
+        for vis_backend in self._vis_backends.values():
             vis_backend.add_scalars(  # type: ignore
                 scalar_dict, step, file_path, **kwargs)
 
@@ -1013,11 +982,14 @@ class Visualizer(BaseGlobalAccessible):
                        pred_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
+                       show=False,
                        step=0) -> None:
         pass
 
     def close(self) -> None:
         """close an opened object."""
-        plt.close(self.fig)
-        for vis_backend in self._vis_backends:
+        plt.close(self.fig_save)
+        if self.fig_show is not None:
+            plt.close(self.fig_show)
+        for vis_backend in self._vis_backends.values():
             vis_backend.close()  # type: ignore

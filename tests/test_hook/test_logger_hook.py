@@ -61,7 +61,7 @@ class TestLoggerHook:
         assert logger_hook.json_log_path == osp.join('work_dir',
                                                      'timestamp.log.json')
         assert logger_hook.start_iter == runner.iter
-        runner.writer.add_params.assert_called()
+        runner.visualizer.add_config.assert_called()
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'
@@ -151,7 +151,7 @@ class TestLoggerHook:
         logger_hook._collect_info = MagicMock(return_value=train_infos)
         logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
-        runner.writer.add_scalars.assert_called_with(
+        runner.visualizer.add_scalars.assert_called_with(
             train_infos, step=11, file_path='tmp.json')
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
@@ -209,7 +209,7 @@ class TestLoggerHook:
         logger_hook._log_val(runner)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
-        runner.writer.add_scalars.assert_called_with(
+        runner.visualizer.add_scalars.assert_called_with(
             metric, step=11, file_path='tmp.json')
         if by_epoch:
             assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \

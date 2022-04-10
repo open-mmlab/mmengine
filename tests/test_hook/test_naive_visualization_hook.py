@@ -12,7 +12,7 @@ class TestNaiveVisualizationHook:
     def test_after_train_iter(self):
         naive_visualization_hook = NaiveVisualizationHook()
         runner = Mock(iter=1)
-        runner.writer.add_image = Mock()
+        runner.visualizer.add_image = Mock()
         inputs = torch.randn(1, 3, 15, 15)
         batch_idx = 10
         # test with normalize, resize, pad

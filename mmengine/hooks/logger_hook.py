@@ -170,7 +170,8 @@ class LoggerHook(Hook):
                                       f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
         if runner.meta is not None:
-            runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
+            runner.visualizer.add_config(
+                runner.meta, file_path=self.yaml_log_path)
 
     def after_train_iter(self,
                          runner,
@@ -300,7 +301,7 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write logs to local, tensorboad, and wandb.
-        runner.writer.add_scalars(
+        runner.visualizer.add_scalars(
             tag, step=runner.iter + 1, file_path=self.json_log_path)
 
     @master_only
@@ -333,7 +334,7 @@ class LoggerHook(Hook):
         log_str += ', '.join(log_items)
         runner.logger.info(log_str)
         # Write tag.
-        runner.writer.add_scalars(
+        runner.visualizer.add_scalars(
             tag, step=cur_iter, file_path=self.json_log_path)
 
     def _get_window_size(self, runner, window_size: Union[int, str]) \

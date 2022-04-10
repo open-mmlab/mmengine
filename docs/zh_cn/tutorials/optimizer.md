@@ -108,7 +108,7 @@ optimizer = dict(type='SGD',
 ```python
 @OPTIMIZER_CONSTRUCTORS.register_module()
 class LayerDecayOptimizerConstructor(DefaultOptimizerConstructor):
-    def add_params(self, params, module, prefix='', is_dcn_module=None):
+    def add_config(self, params, module, prefix='', is_dcn_module=None):
         ...
 ```
 

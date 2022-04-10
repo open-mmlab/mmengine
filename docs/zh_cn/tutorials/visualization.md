@@ -193,7 +193,7 @@ Visualizer 只实现了单张图片的绘制功能，但是在训练或者测试
 
 BaseWriter 定义了对外调用的接口规范，主要接口和属性如下：
 
-- [add_params](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_params) 写超参到特定后端，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- [add_config](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_config) 写超参到特定后端，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
 - [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_graph) 写模型图到特定后端
 - [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_image) 写图片到特定后端
 - [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.BaseWriter.add_scalar) 写标量到特定后端
@@ -216,7 +216,7 @@ local_writer=WRITERS.build(writer)
 local_writer.add_scalar('mAP', 0.9)
 local_writer.add_scalars({'loss': 1.2, 'acc': 0.8})
 # 写超参
-local_writer.add_params(dict(lr=0.1, mode='linear'))
+local_writer.add_config(dict(lr=0.1, mode='linear'))
 # 写图片
 local_writer.add_image('demo_image', image, datasample)
 ```
@@ -245,7 +245,7 @@ local_writer.add_image('featmap', featmap_image)
 
 考虑到在训练或者测试过程中，可能需要同时调用多个 Writer，例如想同时写到本地和 Wandb 端，为此设计了对外的 `ComposedWriter` 类，在训练或者测试过程中 `ComposedWriter` 会依次调用各个 Writer 的接口，其接口和 `BaseWriter` 一致，主要接口如下：
 
-- [add_params](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_params) 写超参到所有已经加入的后端中，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
+- [add_config](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_config) 写超参到所有已经加入的后端中，常见的训练超参如初始学习率 LR、权重衰减系数和批大小等等
 - [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_graph) 写模型图到所有已经加入的后端中
 - [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_image) 写图片到所有已经加入的后端中
 - [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.writer.ComposedWriter.add_scalar) 写标量到所有已经加入的后端中
@@ -273,7 +273,7 @@ composed_writer=ComposedWriter.get_instance('composed_writer')
 composed_writer.add_scalar('mAP', 0.9)
 composed_writer.add_scalars({'loss': 1.2, 'acc': 0.8})
 # 写超参
-composed_writer.add_params(dict(lr=0.1, mode='linear'))
+composed_writer.add_config(dict(lr=0.1, mode='linear'))
 # 写图片
 composed_writer.add_image('demo_image', image, datasample)
 # 写模型图

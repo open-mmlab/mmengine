@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# mypy: ignore-errors
 import copy
 import multiprocessing as mp
 import os
@@ -34,7 +33,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                DefaultScope)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
-from mmengine.visualization import ComposedWriter
+from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
@@ -130,8 +129,8 @@ class Runner:
             dict(dist_cfg=dict(backend='nccl')).
         log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
-        writer (ComposedWriter or dict, optional): A ComposedWriter object or a
-            dict build ComposedWriter object. Defaults to None. If not
+        visualizer (Visualizer or dict, optional): A Visualizer object or a
+            dict build Visualizer object. Defaults to None. If not
             specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
@@ -185,9 +184,10 @@ class Runner:
                     param_scheduler=dict(type='ParamSchedulerHook')),
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                writer=dict(
-                    name='composed_writer',
-                    writers=[dict(type='LocalWriter', save_dir='temp_dir')])
+                visualizer=dict(
+                    name='composed_visualizer',
+                    visualizers=[dict(type='Localvisualizer',
+                                      save_dir='temp_dir')])
             )
         >>> runner = Runner.from_cfg(cfg)
         >>> runner.train()
@@ -219,7 +219,7 @@ class Runner:
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         log_level: str = 'INFO',
-        writer: Optional[Union[ComposedWriter, Dict]] = None,
+        visualizer: Optional[Union[Visualizer, Dict]] = None,
         default_scope: Optional[str] = None,
         randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
@@ -314,8 +314,8 @@ class Runner:
         self.logger = self.build_logger(log_level=log_level)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub()
-        # writer used for writing log or visualizing all kinds of data
-        self.writer = self.build_writer(writer)
+        # visualizer used for writing log or visualizing all kinds of data
+        self.visualizer = self.build_visualizer(visualizer)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
@@ -379,7 +379,7 @@ class Runner:
             launcher=cfg.get('launcher', 'none'),
             env_cfg=cfg.get('env_cfg'),  # type: ignore
             log_level=cfg.get('log_level', 'INFO'),
-            writer=cfg.get('writer'),
+            visualizer=cfg.get('visualizer'),
             default_scope=cfg.get('default_scope'),
             randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
@@ -624,37 +624,42 @@ class Runner:
 
         return MessageHub.get_instance(**message_hub)
 
-    def build_writer(
-        self,
-        writer: Optional[Union[ComposedWriter,
-                               Dict]] = None) -> ComposedWriter:
-        """Build a global asscessable ComposedWriter.
+    def build_visualizer(
+            self,
+            visualizer: Optional[Union[Visualizer,
+                                       Dict]] = None) -> Visualizer:
+        """Build a global asscessable Visualizer.
 
         Args:
-            writer (ComposedWriter or dict, optional): A ComposedWriter object
-                or a dict to build ComposedWriter object. If ``writer`` is a
-                ComposedWriter object, just returns itself. If not specified,
-                default config will be used to build ComposedWriter object.
+            visualizer (Visualizer or dict, optional): A Visualizer object
+                or a dict to build Visualizer object. If ``visualizer`` is a
+                Visualizer object, just returns itself. If not specified,
+                default config will be used to build Visualizer object.
                 Defaults to None.
 
         Returns:
-            ComposedWriter: A ComposedWriter object build from ``writer``.
+            Visualizer: A Visualizer object build from ``visualizer``.
         """
-        if isinstance(writer, ComposedWriter):
-            return writer
-        elif writer is None:
-            writer = dict(
+        if isinstance(visualizer, Visualizer):
+            return visualizer
+        elif visualizer is None:
+            visualizer = dict(
                 name=self._experiment_name,
-                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
-        elif isinstance(writer, dict):
-            # ensure writer containing name key
-            writer.setdefault('name', self._experiment_name)
+                vis_backends=[
+                    dict(
+                        type='LocalVisBackend',
+                        name='local',
+                        save_dir=self._work_dir)
+                ])
+        elif isinstance(visualizer, dict):
+            # ensure visualizer containing name key
+            visualizer.setdefault('name', self._experiment_name)
         else:
             raise TypeError(
-                'writer should be ComposedWriter object, a dict or None, '
-                f'but got {writer}')
+                'visualizer should be Visualizer object, a dict or None, '
+                f'but got {visualizer}')
 
-        return ComposedWriter.get_instance(**writer)
+        return Visualizer.get_instance(**visualizer)
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.

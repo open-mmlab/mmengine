@@ -12,7 +12,6 @@ import torch
 from mmengine.fileio import dump
 from mmengine.registry import VISBACKEND
 from mmengine.utils import TORCH_VERSION
-from .visualizer import Visualizer
 
 
 class BaseVisBackend(metaclass=ABCMeta):
@@ -22,8 +21,6 @@ class BaseVisBackend(metaclass=ABCMeta):
     the required functions.
 
     Args:
-        visualizer (dict, :obj:`Visualizer`, optional):
-            Visualizer instance or dictionary. Default to None.
         save_dir (str, optional): The root directory to save
             the files produced by the writer. Default to None.
     """
@@ -69,7 +66,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     def add_image(self,
                   name: str,
-                  image: Optional[np.ndarray] = None,
+                  image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
         """Record image.
@@ -151,11 +148,9 @@ class LocalVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
-                 visualizer: Optional[Union[dict, 'Visualizer']] = None,
                  img_save_dir: str = 'writer_image',
                  params_save_file: str = 'parameters.yaml',
-                 scalar_save_file: str = 'scalars.json',
-                 img_show: bool = False):
+                 scalar_save_file: str = 'scalars.json'):
         assert params_save_file.split('.')[-1] == 'yaml'
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalVisBackend, self).__init__(save_dir)
@@ -169,7 +164,6 @@ class LocalVisBackend(BaseVisBackend):
         self._params_save_file = osp.join(
             self._save_dir,  # type: ignore
             params_save_file)
-        self._img_show = img_show
 
     @property
     def experiment(self) -> 'LocalVisBackend':
@@ -187,7 +181,7 @@ class LocalVisBackend(BaseVisBackend):
 
     def add_image(self,
                   name: str,
-                  image: Optional[np.ndarray] = None,
+                  image: np.ndarray = None,
                   step: int = 0,
                   **kwargs) -> None:
         """Record image to disk.
@@ -341,7 +335,7 @@ class WandbVisBackend(BaseVisBackend):
 
     def add_image(self,
                   name: str,
-                  image: Optional[np.ndarray] = None,
+                  image: np.ndarray = None,
                   step: int = 0,
                   **kwargs) -> None:
         """Record image to wandb.
@@ -491,7 +485,7 @@ class TensorboardVisBackend(BaseVisBackend):
 
     def add_image(self,
                   name: str,
-                  image: Optional[np.ndarray] = None,
+                  image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
         """Record image to tensorboard.
