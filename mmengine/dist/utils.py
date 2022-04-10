@@ -7,7 +7,7 @@ from typing import Callable, Optional, Tuple, List, Sequence, Union
 import torch
 from torch import Tensor
 import torch.multiprocessing as mp
-from torch import distributed as dist
+from torch import distributed as torch_dist
 from mmengine.utils import is_seq_of
 
 _LOCAL_PROCESS_GROUP = None
@@ -15,10 +15,10 @@ _LOCAL_PROCESS_GROUP = None
 
 def is_distributed() -> bool:
     """Return True if distributed environment has been initialized."""
-    return dist.is_available() and dist.is_initialized()
+    return torch_dist.is_available() and torch_dist.is_initialized()
 
 
-def get_local_group() -> Optional[dist.ProcessGroup]:
+def get_local_group() -> Optional[torch_dist.ProcessGroup]:
     """Return local process group."""
     if not is_distributed():
         return None
@@ -30,10 +30,10 @@ def get_local_group() -> Optional[dist.ProcessGroup]:
     return _LOCAL_PROCESS_GROUP
 
 
-def get_default_group() -> Optional[dist.ProcessGroup]:
+def get_default_group() -> Optional[torch_dist.ProcessGroup]:
     """Return default process group."""
 
-    return dist.distributed_c10d._get_default_group()
+    return torch_dist.distributed_c10d._get_default_group()
 
 
 def init_dist(launcher, backend='nccl', **kwargs) -> None:
@@ -70,7 +70,7 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
     rank = int(os.environ['RANK'])
     num_gpus = torch.cuda.device_count()
     torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    torch_dist.init_process_group(backend=backend, **kwargs)
 
 
 def _init_dist_mpi(backend, **kwargs) -> None:
@@ -85,7 +85,7 @@ def _init_dist_mpi(backend, **kwargs) -> None:
     rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
     num_gpus = torch.cuda.device_count()
     torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    torch_dist.init_process_group(backend=backend, **kwargs)
 
 
 def _init_dist_slurm(backend, port=None) -> None:
@@ -122,7 +122,7 @@ def _init_dist_slurm(backend, port=None) -> None:
     os.environ['WORLD_SIZE'] = str(ntasks)
     os.environ['LOCAL_RANK'] = str(proc_id % num_gpus)
     os.environ['RANK'] = str(proc_id)
-    dist.init_process_group(backend=backend)
+    torch_dist.init_process_group(backend=backend)
 
 
 def init_local_group(node_rank: int, num_gpus_per_node: int):
@@ -145,10 +145,11 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     ranks = list(
         range(node_rank * num_gpus_per_node,
               (node_rank + 1) * num_gpus_per_node))
-    _LOCAL_PROCESS_GROUP = dist.new_group(ranks)
+    _LOCAL_PROCESS_GROUP = torch_dist.new_group(ranks)
 
 
-def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
+def get_backend(
+        group: Optional[torch_dist.ProcessGroup] = None) -> Optional[str]:
     """Return the backend of the given process group.
 
     Note:
@@ -170,12 +171,12 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_backend(group)
+        return torch_dist.get_backend(group)
     else:
         return None
 
 
-def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
+def get_world_size(group: Optional[torch_dist.ProcessGroup] = None) -> int:
     """Return the number of the given process group.
 
     Note:
@@ -195,12 +196,12 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_world_size(group)
+        return torch_dist.get_world_size(group)
     else:
         return 1
 
 
-def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
+def get_rank(group: Optional[torch_dist.ProcessGroup] = None) -> int:
     """Return the rank of the given process group.
 
     Rank is a unique identifier assigned to each process within a distributed
@@ -224,7 +225,7 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_rank(group)
+        return torch_dist.get_rank(group)
     else:
         return 0
 
@@ -243,7 +244,7 @@ def get_local_size() -> int:
         raise RuntimeError('Local process group is not created, please use '
                            '`init_local_group` to setup local process group.')
 
-    return dist.get_world_size(_LOCAL_PROCESS_GROUP)
+    return torch_dist.get_world_size(_LOCAL_PROCESS_GROUP)
 
 
 def get_local_rank() -> int:
@@ -260,11 +261,11 @@ def get_local_rank() -> int:
         raise RuntimeError('Local process group is not created, please use '
                            '`init_local_group` to setup local process group.')
 
-    return dist.get_rank(_LOCAL_PROCESS_GROUP)
+    return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
 
 
 def get_dist_info(
-        group: Optional[dist.ProcessGroup] = None) -> Tuple[int, int]:
+        group: Optional[torch_dist.ProcessGroup] = None) -> Tuple[int, int]:
     """Get distributed information of the given process group.
 
     Note:
@@ -284,7 +285,7 @@ def get_dist_info(
     return rank, world_size
 
 
-def is_main_process(group: Optional[dist.ProcessGroup] = None) -> bool:
+def is_main_process(group: Optional[torch_dist.ProcessGroup] = None) -> bool:
     """Whether the current rank of the given process group is equal to 0.
 
     Args:
@@ -316,7 +317,7 @@ def master_only(func: Callable) -> Callable:
     return wrapper
 
 
-def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
+def barrier(group: Optional[torch_dist.ProcessGroup] = None) -> None:
     """Synchronize all processes from the given process group.
 
     This collective blocks processes until the whole group enters this
@@ -334,7 +335,7 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        dist.barrier(group)
+        torch_dist.barrier(group)
 
 
 def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
@@ -358,7 +359,7 @@ def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
                         f'but got {type(data)}')
 
 
-def get_backend_device(group: dist.ProcessGroup) -> torch.device:
+def get_backend_device(group: torch_dist.ProcessGroup) -> torch.device:
     """Return the device of backend.
 
     Args:
@@ -368,7 +369,7 @@ def get_backend_device(group: dist.ProcessGroup) -> torch.device:
         torch.device: The device of backend.
     """
     backend = get_backend(group)
-    if backend == dist.Backend.NCCL:
+    if backend == torch_dist.Backend.NCCL:
         return torch.device('cuda', torch.cuda.current_device())
     else:
         # GLOO and MPI backends use cpu device by default

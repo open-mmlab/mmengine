@@ -71,7 +71,7 @@ def all_reduce(data: Tensor,
         >>> data
         tensor([1, 2]) # Rank 0
         tensor([3, 4]) # Rank 1
-        >>> dist.all_reduce(data, op=torch.dist.ReduceOp.SUM)
+        >>> dist.all_reduce(data, op=dist.ReduceOp.SUM)
         >>> data
         tensor([4, 6]) # Rank 0
         tensor([4, 6]) # Rank 1
@@ -162,8 +162,12 @@ def all_gather(data: Tensor,
 
     input_device = get_data_device(data)
     backend_device = get_backend_device(group)
+    if input_device != backend_device:
+        data = data.to(backend_device)
+
     gather_list = [
-        torch.empty_like(data).to(backend_device) for _ in range(world_size)
+        torch.empty_like(data, device=backend_device)
+        for _ in range(world_size)
     ]
 
     dist.all_gather(gather_list, data, group)
@@ -243,7 +247,7 @@ def gather(
 
     if get_rank(group) == dst:
         gather_list = [
-            torch.empty_like(data).to(backend_device)
+            torch.empty_like(data, device=backend_device)
             for _ in range(world_size)
         ]
     else:
@@ -354,9 +358,10 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     backend_device = get_backend_device(group)
 
     if get_rank(group) == 0:
-        random_num = torch.tensor(seed, dtype=torch.int32).to(backend_device)
+        random_num = torch.tensor(
+            seed, dtype=torch.int32, device=backend_device)
     else:
-        random_num = torch.tensor(0, dtype=torch.int32).to(backend_device)
+        random_num = torch.tensor(0, dtype=torch.int32, device=backend_device)
 
     dist.broadcast(random_num, src=0, group=group)
 
