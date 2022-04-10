@@ -210,7 +210,7 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 15 个根注册器：
+为了方便跨库调用，MMEngine 提供了 17 个根注册器：
 
 - RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -225,8 +225,10 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
 - OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
 - PARAM_SCHEDULERS: 各种参数调度器， 如 `MultiStepLR`
+- METRICS: 用于验证模型精度的评估指标
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
-- EVALUATORS: 用于验证模型精度的评估器
+- VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
+- WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 
@@ -309,11 +311,15 @@ from mmcls.models import MODELS
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
 ```
 
-调用兄弟节点的模块需要指定在 `type` 中指定 `scope` 前缀，如果不想指定，我们可以将 `build` 方法中的 `default_scope` 参数设置为 'mmdet'，它会将 `default_scope` 对应的 `registry` 作为当前 `Registry` 并调用 `build` 方法。
+调用非本节点的模块需要指定在 `type` 中指定 `scope` 前缀，如果不想指定，我们可以创建一个全局变量 `default_scope` 并将 `scope_name` 设置为 'mmdet'，`Registry` 会将 `scope_name` 对应的 `registry` 作为当前 `Registry` 并调用 `build` 方法。
 
 ```python
-from mmcls.models import MODELS
-model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
+from mmengine.registry import DefaultScope, MODELS
+
+# 调用注册在 mmdet 中的 RetinaNet
+default_scope = DefaultScope.get_instance(
+            'my_experiment', scope_name='mmdet')
+model = MODELS.build(cfg=dict(type='RetinaNet'))
 ```
 
 注册器除了支持两层结构，三层甚至更多层结构也是支持的。
@@ -323,7 +329,7 @@ model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
 `DetPlus` 中定义了模块 `MetaNet`，
 
 ```python
-from mmengine.model import Registry
+from mmengine.registry import Registry
 from mmdet.model import MODELS as MMDET_MODELS
 MODELS = Registry('model', parent=MMDET_MODELS, scope='det_plus')
 
@@ -352,6 +358,10 @@ model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 from mmcls.models import MODELS
 # 需要注意前缀的顺序，'detplus.mmdet.ResNet' 是不正确的
 model = MODELS.build(cfg=dict(type='mmdet.detplus.MetaNet'))
-# 当然，更简单的方法是直接设置 default_scope
+
+# 如果希望默认从 detplus 构建模型，设置可以 default_scope
+from mmengine.registry import DefaultScope
+default_scope = DefaultScope.get_instance(
+            'my_experiment', scope_name='detplus')
 model = MODELS.build(cfg=dict(type='MetaNet', default_scope='detplus'))
 ```

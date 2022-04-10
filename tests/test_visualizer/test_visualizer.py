@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.visualization import Visualizer
 
 
@@ -366,8 +366,8 @@ class TestVisualizer(TestCase):
 
             def draw(self,
                      image: Optional[np.ndarray] = None,
-                     gt_sample: Optional['BaseDataSample'] = None,
-                     pred_sample: Optional['BaseDataSample'] = None,
+                     gt_sample: Optional['BaseDataElement'] = None,
+                     pred_sample: Optional['BaseDataElement'] = None,
                      draw_gt: bool = True,
                      draw_pred: bool = True) -> None:
                 return super().draw(image, gt_sample, pred_sample, draw_gt,

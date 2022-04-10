@@ -7,7 +7,7 @@ from mmengine.hooks import SyncBuffersHook
 class TestSyncBuffersHook:
 
     def test_sync_buffers_hook(self):
-        Runner = Mock()
-        Runner.model = Mock()
-        Hook = SyncBuffersHook()
-        Hook._after_epoch(Runner)
+        runner = Mock()
+        runner.model = Mock()
+        hook = SyncBuffersHook()
+        hook._after_epoch(runner)

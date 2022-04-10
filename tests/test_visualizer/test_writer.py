@@ -332,7 +332,7 @@ class TestComposedWriter:
         assert len(composed_writer._writers) == 2
 
         # test global
-        composed_writer = ComposedWriter.create_instance(
+        composed_writer = ComposedWriter.get_instance(
             'composed_writer',
             writers=[
                 WandbWriter(),

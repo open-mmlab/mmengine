@@ -63,6 +63,7 @@ class TestCheckpointHook:
         runner.work_dir = './tmp'
         runner.epoch = 9
         runner.meta = dict()
+        runner.model = Mock()
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
@@ -99,18 +100,20 @@ class TestCheckpointHook:
         runner = Mock()
         runner.work_dir = './tmp'
         runner.iter = 9
+        batch_idx = 9
         runner.meta = dict()
+        runner.model = Mock()
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
         checkpoint_hook.before_run(runner)
-        checkpoint_hook.after_train_iter(runner)
+        checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert runner.meta.get('hook_msgs', None) is None
 
         # by epoch is False
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_run(runner)
-        checkpoint_hook.after_train_iter(runner)
+        checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert (runner.iter + 1) % 2 == 0
         assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/iter_10.pth'
 
@@ -127,5 +130,5 @@ class TestCheckpointHook:
             checkpoint_hook = CheckpointHook(
                 interval=2, by_epoch=False, max_keep_ckpts=1)
             checkpoint_hook.before_run(runner)
-            checkpoint_hook.after_train_iter(runner)
+            checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
             assert not os.path.exists(f'{tempo_dir}/iter_8.pth')

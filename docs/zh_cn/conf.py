@@ -50,7 +50,9 @@ extensions = [
     'sphinx_markdown_tables',
     'myst_parser',
     'sphinx_copybutton',
+    'sphinx.ext.autodoc.typehints',
 ]  # yapf: disable
+autodoc_typehints = 'description'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

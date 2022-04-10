@@ -6,11 +6,11 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.nn.utils import clip_grad
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -58,6 +58,7 @@ class OptimizerHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
         """All operations need to be finished after each training iteration.
@@ -69,13 +70,14 @@ class OptimizerHook(Hook):
 
         - Compute the gradient of model parameters.
 
-        - Clip the gradidents of each parameters. (optional)
+        - Clip the gradients of each parameter. (optional)
 
         - Update model parameters with gradients.
 
         Args:
             runner (Runner): The runner of the training process.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. In order to keep this interface consistent
                 with other hooks, we keep ``data_batch`` here.
                 Defaults to None.

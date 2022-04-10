@@ -4,12 +4,13 @@ import warnings
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from mmengine.data import BaseDataSample
+from mmengine.data import BaseDataElement
+from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataSample]]]
+DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
 
 
 @HOOKS.register_module()
@@ -19,33 +20,31 @@ class CheckpointHook(Hook):
     Args:
         interval (int): The saving period. If ``by_epoch=True``, interval
             indicates epochs, otherwise it indicates iterations.
-            Default: -1, which means "never".
+            Defaults to -1, which means "never".
         by_epoch (bool): Saving checkpoints by epoch or by iteration.
             Default: True.
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
-            Default: True.
+            Defaults to True.
         save_param_scheduler (bool): Whether to save param_scheduler state_dict
             in the checkpoint. It is usually used for resuming experiments.
-            Default: True.
+            Defaults to True.
         out_dir (str, optional | Path): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
             and the last level directory of ``runner.work_dir``. For example,
             if the input ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is
             ``./work_dir/cur_exp``, then the ckpt will be saved in
-            ``./tmp/cur_exp``. Deafule to None.
+            ``./tmp/cur_exp``. Defaults to None.
         max_keep_ckpts (int): The maximum checkpoints to keep.
             In some cases we want only the latest few checkpoints and would
             like to delete old ones to save the disk space.
-            Default: -1, which means unlimited.
+            Defaults to -1, which means unlimited.
         save_last (bool): Whether to force the last checkpoint to be
-            saved regardless of interval. Default: True.
-        sync_buffer (bool): Whether to synchronize buffers in
-            different gpus. Default: False.
+            saved regardless of interval. Defaults to True.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None.
     """
     out_dir: str
 
@@ -59,7 +58,6 @@ class CheckpointHook(Hook):
                  out_dir: Optional[Union[str, Path]] = None,
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
-                 sync_buffer: bool = False,
                  file_client_args: Optional[dict] = None,
                  **kwargs) -> None:
         self.interval = interval
@@ -70,7 +68,6 @@ class CheckpointHook(Hook):
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
         self.args = kwargs
-        self.sync_buffer = sync_buffer
         self.file_client_args = file_client_args
 
     def before_run(self, runner) -> None:
@@ -129,12 +126,9 @@ class CheckpointHook(Hook):
                 self.save_last and self.is_last_train_epoch(runner)):
             runner.logger.info(
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
-            if self.sync_buffer:
-                pass
-                # TODO
             self._save_checkpoint(runner)
 
-    # TODO Add master_only decorator
+    @master_only
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
@@ -183,13 +177,15 @@ class CheckpointHook(Hook):
 
     def after_train_iter(self,
                          runner,
+                         batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs=Optional[dict]) -> None:
         """Save the checkpoint and synchronize buffers after each iteration.
 
         Args:
             runner (Runner): The runner of the training process.
-            data_batch (Sequence[Tuple[Any, BaseDataSample]], optional): Data
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
                 from dataloader. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
@@ -204,7 +200,4 @@ class CheckpointHook(Hook):
                 (self.save_last and self.is_last_iter(runner, mode='train')):
             runner.logger.info(
                 f'Saving checkpoint at {runner.iter + 1} iterations')
-            if self.sync_buffer:
-                pass
-                # TODO
             self._save_checkpoint(runner)

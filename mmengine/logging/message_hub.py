@@ -6,14 +6,14 @@ from typing import Any, Union
 import numpy as np
 import torch
 
+from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import check_type
-from .base_global_accsessible import BaseGlobalAccessible
 from .log_buffer import LogBuffer
 
 
-class MessageHub(BaseGlobalAccessible):
+class MessageHub(ManagerMixin):
     """Message hub for component interaction. MessageHub is created and
-    accessed in the same way as BaseGlobalAccessible.
+    accessed in the same way as ManagerMixin.
 
     ``MessageHub`` will record log information and runtime information. The
     log information refers to the learning rate, loss, etc. of the model
@@ -52,7 +52,7 @@ class MessageHub(BaseGlobalAccessible):
             log_dict (str): Used for batch updating :attr:`_log_buffers`.
 
         Examples:
-            >>> message_hub = MessageHub.create_instance()
+            >>> message_hub = MessageHub.get_instance('mmengine')
             >>> log_dict = dict(a=1, b=2, c=3)
             >>> message_hub.update_log_vars(log_dict)
             >>> # The default count of  `a`, `b` and `c` is 1.
