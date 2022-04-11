@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.fileio import load
-from mmengine.registry import VISBACKEND
+from mmengine.registry import VISBACKENDS
 from mmengine.visualization import (LocalVisBackend, TensorboardVisBackend,
                                     WandbVisBackend)
 
@@ -31,7 +31,7 @@ class TestLocalVisBackend:
         assert os.path.exists(local_vis_backend._save_dir)
         shutil.rmtree('temp_dir')
 
-        local_vis_backend = VISBACKEND.build(
+        local_vis_backend = VISBACKENDS.build(
             dict(type='LocalVisBackend', save_dir='temp_dir'))
         assert os.path.exists(local_vis_backend._save_dir)
         shutil.rmtree('temp_dir')
@@ -119,7 +119,7 @@ class TestTensorboardVisBackend:
     def test_init(self):
 
         TensorboardVisBackend('temp_dir')
-        VISBACKEND.build(
+        VISBACKENDS.build(
             dict(type='TensorboardVisBackend', save_dir='temp_dir'))
 
     def test_experiment(self):
@@ -205,7 +205,7 @@ class TestWandbVisBackend:
 
     def test_init(self):
         WandbVisBackend()
-        VISBACKEND.build(dict(type='WandbVisBackend', save_dir='temp_dir'))
+        VISBACKENDS.build(dict(type='WandbVisBackend', save_dir='temp_dir'))
 
     def test_experiment(self):
         wandb_vis_backend = WandbVisBackend()

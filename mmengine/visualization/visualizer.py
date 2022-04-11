@@ -14,11 +14,12 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
 from mmengine.data import BaseDataElement
-from mmengine.registry import VISBACKEND, VISUALIZERS
+from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_val_matplotlib, concat_heatmap,
-                                          tensor2ndarray, value2list)
+                                          str_color_to_rgb, tensor2ndarray,
+                                          value2list)
 from mmengine.visualization.vis_backend import BaseVisBackend
 
 
@@ -110,20 +111,15 @@ class Visualizer(ManagerMixin):
 
         >>> # inherit
         >>> class DetVisualizer2(Visualizer):
-        >>>     @Visualizer.register_task('instances')
-        >>>     def draw_instance(self,
-        >>>                      instances: 'BaseDataInstance',
-        >>>                      data_type: Type):
-        >>>         pass
-        >>>     def draw(self,
+        >>>     def add_datasample(self,
         >>>             image: Optional[np.ndarray] = None,
         >>>             gt_sample: Optional['BaseDataElement'] = None,
         >>>             pred_sample: Optional['BaseDataElement'] = None,
         >>>             show_gt: bool = True,
-        >>>             show_pred: bool = True) -> None:
+        >>>             show_pred: bool = True,
+        >>>             show:bool = True) -> None:
         >>>         pass
     """
-    task_dict: dict = {}
 
     def __init__(
         self,
@@ -139,9 +135,20 @@ class Visualizer(ManagerMixin):
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
         if vis_backends:
+            with_name = False
+            without_name = False
             for vis_backend in vis_backends:
-                name = vis_backend.pop('name')
-                self._vis_backends[name] = VISBACKEND.build(vis_backend)
+                if 'name' in vis_backend:
+                    with_name = True
+                else:
+                    without_name = True
+            if with_name and without_name:
+                raise AssertionError
+
+            for vis_backend in vis_backends:
+                name = vis_backend.pop('name', vis_backend['type'])
+                assert name not in self._vis_backends
+                self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.is_inline = 'inline' in plt.get_backend()
 
@@ -157,15 +164,6 @@ class Visualizer(ManagerMixin):
         self.dpi = self.fig_save.get_dpi()
         if image is not None:
             self.set_image(image)
-
-    def draw(self,
-             image: Optional[np.ndarray] = None,
-             gt_sample: Optional['BaseDataElement'] = None,
-             pred_sample: Optional['BaseDataElement'] = None,
-             draw_gt: bool = True,
-             draw_pred: bool = True,
-             show: bool = False) -> None:
-        pass
 
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
@@ -196,7 +194,7 @@ class Visualizer(ManagerMixin):
         # Refresh canvas, necessary for Qt5 backend.
         self.ax_show.imshow(img)
         self.fig_show.canvas.draw()  # type: ignore
-        self.wait_continue(timeout=wait_time, continue_key=continue_key)
+        self._wait_continue(timeout=wait_time, continue_key=continue_key)
 
     def set_image(self, image: np.ndarray) -> None:
         """Set the image to draw.
@@ -265,7 +263,7 @@ class Visualizer(ManagerMixin):
                (position[..., 1] >= 0).all()
         return flag
 
-    def wait_continue(self, timeout: int = 0, continue_key=' ') -> int:
+    def _wait_continue(self, timeout: int = 0, continue_key=' ') -> int:
         """Show the image and wait for the user's input.
 
         This implementation refers to
@@ -741,7 +739,7 @@ class Visualizer(ManagerMixin):
     def draw_binary_masks(
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
-            colors: Union[Tuple, List[Tuple]] = (0, 255, 0),
+            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
             alphas: Union[float, List[float]] = 0.5) -> 'Visualizer':
         """Draw single or multiple binary masks.
 
@@ -771,12 +769,17 @@ class Visualizer(ManagerMixin):
             1:], '`binary_marks` must have the same shpe with image'
         binary_mask_len = binary_masks.shape[0]
 
-        if isinstance(colors, tuple):
-            colors = [colors]
+        check_type_and_length('colors', colors, (str, tuple, list),
+                              binary_mask_len)
+        colors = value2list(colors, (str, tuple), binary_mask_len)
+        colors = [
+            str_color_to_rgb(color) if isinstance(color, str) else color
+            for color in colors
+        ]
         for color in colors:
-            assert isinstance(color, tuple)
             assert len(color) == 3
-        check_type_and_length('colors', colors, list, binary_mask_len)
+            for channel in color:
+                assert 0 <= channel <= 255  # type: ignore
         colors = np.array(colors)
         if colors.ndim == 1:  # type: ignore
             colors = np.tile(colors, (binary_mask_len, 1))

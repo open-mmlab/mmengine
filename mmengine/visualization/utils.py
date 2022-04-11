@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+
 from typing import Any, List, Optional, Tuple, Type, Union
 
 import cv2
+import matplotlib
 import numpy as np
 import torch
 
@@ -88,7 +90,7 @@ def check_type_and_length(name: str, value: Any,
 
 
 def color_val_matplotlib(colors):
-    """Convert various input in BGR order to normalized RGB matplotlib color
+    """Convert various input in RGB order to normalized RGB matplotlib color
     tuples,
     Args:
         color (:obj:`mmcv.Color`/str/tuple/int/ndarray): Color inputs
@@ -108,6 +110,13 @@ def color_val_matplotlib(colors):
         return colors
     else:
         raise TypeError(f'Invalid type for color: {type(colors)}')
+
+
+def str_color_to_rgb(color):
+
+    color = matplotlib.colors.to_rgb(color)
+    color = tuple([int(c * 255) for c in color])
+    return color
 
 
 def concat_heatmap(feat_map: Union[np.ndarray, torch.Tensor],

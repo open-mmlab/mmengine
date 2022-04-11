@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 from mmengine.fileio import dump
-from mmengine.registry import VISBACKEND
+from mmengine.registry import VISBACKENDS
 from mmengine.utils import TORCH_VERSION
 
 
@@ -116,7 +116,7 @@ class BaseVisBackend(metaclass=ABCMeta):
         pass
 
 
-@VISBACKEND.register_module()
+@VISBACKENDS.register_module()
 class LocalVisBackend(BaseVisBackend):
     """Local write class.
 
@@ -256,7 +256,7 @@ class LocalVisBackend(BaseVisBackend):
             f.write('\n')
 
 
-@VISBACKEND.register_module()
+@VISBACKENDS.register_module()
 class WandbVisBackend(BaseVisBackend):
     """Write various types of data to wandb.
 
@@ -392,7 +392,7 @@ class WandbVisBackend(BaseVisBackend):
             self._wandb.join()
 
 
-@VISBACKEND.register_module()
+@VISBACKENDS.register_module()
 class TensorboardVisBackend(BaseVisBackend):
     """Tensorboard write class. It can write images, hyperparameters, scalars,
     etc. to a tensorboard file.

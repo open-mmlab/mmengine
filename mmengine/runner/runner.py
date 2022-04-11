@@ -646,10 +646,7 @@ class Runner:
             visualizer = dict(
                 name=self._experiment_name,
                 vis_backends=[
-                    dict(
-                        type='LocalVisBackend',
-                        name='local',
-                        save_dir=self._work_dir)
+                    dict(type='LocalVisBackend', save_dir=self._work_dir)
                 ])
         elif isinstance(visualizer, dict):
             # ensure visualizer containing name key

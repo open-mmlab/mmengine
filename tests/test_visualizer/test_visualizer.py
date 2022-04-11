@@ -9,11 +9,11 @@ import pytest
 import torch
 import torch.nn as nn
 
-from mmengine import VISBACKEND
+from mmengine import VISBACKENDS
 from mmengine.visualization import Visualizer
 
 
-@VISBACKEND.register_module()
+@VISBACKENDS.register_module()
 class MockVisBackend:
 
     def __init__(self, save_dir: Optional[str] = None):
@@ -315,7 +315,10 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.draw_binary_masks(binary_mask)
         visualizer.draw_binary_masks(torch.from_numpy(binary_mask))
-
+        # multi binary
+        binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(np.bool)
+        visualizer = Visualizer(image=self.image)
+        visualizer.draw_binary_masks(binary_mask, colors=['r', (0, 255, 0)])
         # test the error that the size of mask and image are different.
         with pytest.raises(AssertionError):
             binary_mask = np.random.randint(0, 2, size=(8, 10)).astype(np.bool)
