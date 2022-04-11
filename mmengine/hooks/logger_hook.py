@@ -9,7 +9,6 @@ from typing import Optional, Sequence, Union
 
 import torch
 
-from mmengine.data import BaseDataElement
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
