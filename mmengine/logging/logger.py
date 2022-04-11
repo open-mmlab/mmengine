@@ -97,8 +97,8 @@ class MMLogger(Logger, ManagerMixin):
       displayed on terminal.
 
     Note:
-        - The `name` of logger and the ``instance_name`` of ``MMLogger`` could
-          be different. We can only get ``MMLogger`` instance by
+        - The ``name`` of logger and the ``instance_name`` of ``MMLogger``
+          could be different. We can only get ``MMLogger`` instance by
           ``MMLogger.get_instance`` but not ``logging.getLogger``. This feature
           ensures ``MMLogger`` will not be incluenced by third-party logging
           config.
@@ -130,7 +130,8 @@ class MMLogger(Logger, ManagerMixin):
         log_level (str): The log level of the handler. Defaults to 'NOTSET'.
         file_mode (str): The file mode used in opening log file.
             Defaults to 'w'.
-        distributed (bool): Whether to save distributed logs.
+        distributed (bool): Whether to save distributed logs. Defaults to
+            False.
     """
 
     def __init__(self,

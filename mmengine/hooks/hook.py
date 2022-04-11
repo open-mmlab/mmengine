@@ -362,7 +362,7 @@ class Hook:
         """Test whether current inner iteration can be evenly divided by n.
 
         Args:
-            inner_iter (int): Current inner_iter of the training, validation
+            batch_idx (int): Current batch index of the training, validation
                 or testing loop.
             n (int): Whether current inner iteration can be evenly
                 divided by n.
@@ -418,10 +418,10 @@ class Hook:
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
+            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: Whether current iteration is the last iteration.
-            mode (str): Current mode of runner. Defaults to 'train'.
         """
         if mode == 'train':
             return runner.iter + 1 == runner.train_loop.max_iters
