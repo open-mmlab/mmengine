@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 import torch
 
@@ -7,7 +7,7 @@ from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
+DATA_BATCH = Optional[Sequence[dict]]
 
 
 @HOOKS.register_module()
@@ -46,8 +46,8 @@ class EmptyCacheHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
-                from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict or sequence, optional): Outputs from model.
                 Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.

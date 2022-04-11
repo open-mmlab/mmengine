@@ -1215,6 +1215,8 @@ class Runner:
         +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
         +----------------------+-------------------------+
+        | DistSamplerSeedHook  | NORMAL (40)             |
+        +----------------------+-------------------------+
         | LoggerHook           | BELOW_NORMAL (60)       |
         +----------------------+-------------------------+
         | ParamSchedulerHook   | LOW (70)                |
@@ -1228,6 +1230,7 @@ class Runner:
             default_hooks = dict(
                 optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
+                sampler_seed=dict(type='DistSamplerSeedHook'),
                 logger=dict(type='LoggerHook'),
                 param_scheduler=dict(type='ParamSchedulerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
@@ -1252,6 +1255,7 @@ class Runner:
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
+            sampler_seed=dict(type='DistSamplerSeedHook'),
         )
         if hooks is not None:
             for name, hook in hooks.items():
@@ -1393,8 +1397,13 @@ class Runner:
         # Add comments to describe the usage of `after_load_ckpt`
         self.call_hook('after_load_ckpt', checkpoint=checkpoint)
 
+        if is_model_wrapper(self.model):
+            model = self.model.module
+        else:
+            model = self.model
+
         checkpoint = _load_checkpoint_to_model(
-            self.model, checkpoint, strict, revise_keys=revise_keys)
+            model, checkpoint, strict, revise_keys=revise_keys)
 
         self._has_loaded = True
 

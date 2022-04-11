@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
-from typing import Any, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -41,26 +41,25 @@ class NaiveVisualizationHook(Hook):
             self,
             runner,
             batch_idx: int,
-            data_batch: Optional[Sequence[Tuple[Any, BaseDataElement]]] = None,
+            data_batch: Optional[Sequence[dict]] = None,
             outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
+            data_batch (Sequence[dict], optional): Data
                 from dataloader. Defaults to None.
             outputs (Sequence[BaseDataElement], optional): Outputs from model.
                 Defaults to None.
         """
         if self.every_n_iters(runner, self._interval):
-            inputs, data_samples = data_batch  # type: ignore
-            inputs = tensor2imgs(inputs,
-                                 **data_samples[0].get('img_norm_cfg', dict()))
-            for input, data_sample, output in zip(
-                    inputs,
-                    data_samples,  # type: ignore
-                    outputs):  # type: ignore
+            for data, output in zip(data_batch, outputs):  # type: ignore
+                input = data['inputs']
+                data_sample = data['data_sample']
+                input = tensor2imgs(input,
+                                    **data_sample.get('img_norm_cfg',
+                                                      dict()))[0]
                 # TODO We will implement a function to revert the augmentation
                 # in the future.
                 ori_shape = (data_sample.ori_width, data_sample.ori_height)

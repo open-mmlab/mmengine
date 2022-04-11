@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader, Dataset
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
-from mmengine.hooks import (Hook, IterTimerHook, LoggerHook, OptimizerHook,
-                            ParamSchedulerHook)
+from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
+                            LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
@@ -36,7 +36,8 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        inputs, labels = zip(*data_batch)
+        inputs, labels = zip(
+            *map(lambda x: (x['inputs'], x['data_sample']), data_batch))
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
@@ -67,7 +68,7 @@ class CustomModelWrapper(nn.Module):
 
 @DATASETS.register_module()
 class ToyDataset(Dataset):
-    META = dict()  # type: ignore
+    METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
     label = torch.ones(12)
 
@@ -75,7 +76,7 @@ class ToyDataset(Dataset):
         return self.data.size(0)
 
     def __getitem__(self, index):
-        return self.data[index], self.label[index]
+        return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
 @METRICS.register_module()
@@ -912,33 +913,35 @@ class TestRunner(TestCase):
 
         # register five hooks by default
         runner.register_default_hooks()
-        self.assertEqual(len(runner._hooks), 5)
-        # the forth registered hook should be `ParamSchedulerHook`
-        self.assertTrue(isinstance(runner._hooks[3], ParamSchedulerHook))
+        self.assertEqual(len(runner._hooks), 6)
+        # the third registered hook should be `DistSamplerSeedHook`
+        self.assertTrue(isinstance(runner._hooks[2], DistSamplerSeedHook))
+        # the fifth registered hook should be `ParamSchedulerHook`
+        self.assertTrue(isinstance(runner._hooks[4], ParamSchedulerHook))
 
         runner._hooks = []
         # remove `ParamSchedulerHook` from default hooks
         runner.register_default_hooks(hooks=dict(timer=None))
-        self.assertEqual(len(runner._hooks), 4)
+        self.assertEqual(len(runner._hooks), 5)
         # `ParamSchedulerHook` was popped so the forth is `CheckpointHook`
-        self.assertTrue(isinstance(runner._hooks[3], CheckpointHook))
+        self.assertTrue(isinstance(runner._hooks[4], CheckpointHook))
 
         # add a new default hook
         runner._hooks = []
         runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
-        self.assertEqual(len(runner._hooks), 5)
+        self.assertEqual(len(runner._hooks), 6)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -948,9 +951,9 @@ class TestRunner(TestCase):
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
-        # five default hooks + custom hook (ToyHook)
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        # six default hooks + custom hook (ToyHook)
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_loop(self):
         # test custom loop with additional hook

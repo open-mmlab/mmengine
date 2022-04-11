@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence
 from unittest import TestCase
 
 import numpy as np
@@ -40,7 +40,7 @@ class ToyMetric(BaseMetric):
     def process(self, data_batch, predictions):
         results = [{
             'pred': pred.get('pred'),
-            'label': data[1].get('label')
+            'label': data['data_sample'].get('label')
         } for pred, data in zip(predictions, data_batch)]
         self.results.extend(results)
 
@@ -66,7 +66,7 @@ class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[Tuple[Any, dict]],
+    def process(self, data_batch: Sequence[dict],
                 predictions: Sequence[dict]) -> None:
         pass
 
@@ -79,8 +79,11 @@ def generate_test_results(size, batch_size, pred, label):
     bs_residual = size % batch_size
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
-        data_batch = [(np.zeros((3, 10, 10)), BaseDataElement(label=label))
-                      for _ in range(bs)]
+        data_batch = [
+            dict(
+                inputs=np.zeros((3, 10, 10)),
+                data_sample=BaseDataElement(label=label)) for _ in range(bs)
+        ]
         predictions = [BaseDataElement(pred=pred) for _ in range(bs)]
         yield (data_batch, predictions)
 
@@ -228,7 +231,10 @@ class TestEvaluator(TestCase):
 
         size = 10
 
-        all_data = [(np.zeros((3, 10, 10)), BaseDataElement(label=1))
-                    for _ in range(size)]
+        all_data = [
+            dict(
+                inputs=np.zeros((3, 10, 10)),
+                data_sample=BaseDataElement(label=1)) for _ in range(size)
+        ]
         all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
         evaluator.offline_evaluate(all_data, all_predictions)
