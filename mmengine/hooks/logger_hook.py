@@ -9,7 +9,6 @@ from typing import Optional, Sequence, Union
 
 import torch
 
-from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
@@ -239,7 +238,6 @@ class LoggerHook(Hook):
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
 
-    @master_only
     def _log_train(self, runner) -> None:
         """Collect and record training logs which start named with "train/*".
 
@@ -272,9 +270,9 @@ class LoggerHook(Hook):
         # by iter:  Iter [100/100000]
         if self.by_epoch:
             log_str = f'Epoch [{cur_epoch}]' \
-                      f'[{cur_iter}/{len(runner.train_loop.dataloader)}]\t'
+                      f'[{cur_iter}/{len(runner.train_loop.dataloader)}] '
         else:
-            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]\t'
+            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}] '
         log_str += f'{lr_momentum_str}, '
         # Calculate eta time.
         self.time_sec_tot += (tag['time'] * self.interval)
@@ -303,7 +301,6 @@ class LoggerHook(Hook):
         runner.writer.add_scalars(
             tag, step=runner.iter + 1, file_path=self.json_log_path)
 
-    @master_only
     def _log_val(self, runner) -> None:
         """Collect and record training logs which start named with "val/*".
 
@@ -321,9 +318,9 @@ class LoggerHook(Hook):
         # by iter: Iter[val] [1000]
         if self.by_epoch:
             # runner.epoch += 1 has been done before val workflow
-            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]\t'
+            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}] '
         else:
-            log_str = f'Iter(val) [{eval_iter}]\t'
+            log_str = f'Iter(val) [{eval_iter}] '
 
         log_items = []
         for name, val in tag.items():

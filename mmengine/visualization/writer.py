@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from mmengine.data import BaseDataElement
+from mmengine.dist import master_only
 from mmengine.fileio import dump
 from mmengine.registry import VISUALIZERS, WRITERS
 from mmengine.utils import TORCH_VERSION, ManagerMixin
@@ -796,6 +797,7 @@ class ComposedWriter(ManagerMixin):
         for writer in self._writers:
             writer.add_scalar(name, value, step, **kwargs)
 
+    @master_only
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
