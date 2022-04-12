@@ -1075,9 +1075,34 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
-        # 2. test iter based
+        # 1.4 test auto resume
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_checkpoint4'
+        cfg.resume = True
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 3)
+        self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 1.5 test resume from a specified checkpoint
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint5'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'epoch_1.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 1)
+        self.assertEqual(runner.iter, 4)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2. test iter based
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint6'
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -1096,7 +1121,7 @@ class TestRunner(TestCase):
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint5'
+        cfg.experiment_name = 'test_checkpoint7'
         runner = Runner.from_cfg(cfg)
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
@@ -1105,11 +1130,36 @@ class TestRunner(TestCase):
 
         # 2.3 test `resume`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint6'
+        cfg.experiment_name = 'test_checkpoint8'
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.4 test auto resume
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint9'
+        cfg.resume = True
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 0)
+        self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.5 test resume from a specified checkpoint
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint10'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 0)
+        self.assertEqual(runner.iter, 3)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
