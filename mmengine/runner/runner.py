@@ -30,7 +30,7 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               DefaultScope)
+                               DefaultScope, VISUALIZERS)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import Visualizer
@@ -311,15 +311,18 @@ class Runner:
         else:
             self._experiment_name = self.timestamp
 
+        # Used to reset registries location. See :meth:`Registry.build` for
+        # more details.
+        self.default_scope = DefaultScope.get_instance(
+            self._experiment_name, scope_name=default_scope)
+
         self.logger = self.build_logger(log_level=log_level)
         # message hub used for component interaction
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
-        # Used to reset registries location. See :meth:`Registry.build` for
-        # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+        # TODO: temporary plan
+        self.message_hub.update_info('visualizer', self.visualizer)
 
         self._load_from = load_from
         self._resume = resume
@@ -640,23 +643,27 @@ class Runner:
         Returns:
             Visualizer: A Visualizer object build from ``visualizer``.
         """
-        if isinstance(visualizer, Visualizer):
-            return visualizer
-        elif visualizer is None:
+        if visualizer is None:
             visualizer = dict(
                 name=self._experiment_name,
                 vis_backends=[
                     dict(type='LocalVisBackend', save_dir=self._work_dir)
                 ])
-        elif isinstance(visualizer, dict):
+            return Visualizer.get_instance(**visualizer)
+
+        if isinstance(visualizer, Visualizer):
+            return visualizer
+
+        if isinstance(visualizer, dict):
             # ensure visualizer containing name key
             visualizer.setdefault('name', self._experiment_name)
+            visualizer.setdefault('save_dir', self._work_dir)
+            # TODO: How to achieve global uniqueness
+            return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
-
-        return Visualizer.get_instance(**visualizer)
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.

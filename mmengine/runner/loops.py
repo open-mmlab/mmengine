@@ -176,6 +176,9 @@ class ValLoop(BaseLoop):
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
+            # TODO
+            visualizer = runner.message_hub.get_info('visualizer')
+            visualizer.dataset_meta = self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '

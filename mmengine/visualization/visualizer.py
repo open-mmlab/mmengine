@@ -126,15 +126,16 @@ class Visualizer(ManagerMixin):
         name='visualizer',
         image: Optional[np.ndarray] = None,
         vis_backends: Optional[Dict] = None,
-        metadata: Optional[dict] = None,
+        save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
         super().__init__(name)
-        self._metadata = metadata
+        self._dataset_meta: Union[None, dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
-        if vis_backends:
+        # TODO: If save_dir is not specified, no need to initialize the vis backend.
+        if vis_backends and save_dir is not None:
             with_name = False
             without_name = False
             for vis_backend in vis_backends:
@@ -148,6 +149,8 @@ class Visualizer(ManagerMixin):
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
                 assert name not in self._vis_backends
+                # TODO:
+                vis_backend['save_dir'] = save_dir
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.is_inline = 'inline' in plt.get_backend()
@@ -164,6 +167,14 @@ class Visualizer(ManagerMixin):
         self.dpi = self.fig_save.get_dpi()
         if image is not None:
             self.set_image(image)
+
+    @property
+    def dataset_meta(self) -> Optional[dict]:
+        return self._dataset_meta
+
+    @dataset_meta.setter
+    def dataset_meta(self, dataset_meta: dict) -> None:
+        self._dataset_meta = dataset_meta
 
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
@@ -609,7 +620,7 @@ class Visualizer(ManagerMixin):
         alpha: Union[int, float] = 0.8,
         edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1,
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
@@ -740,7 +751,7 @@ class Visualizer(ManagerMixin):
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
             colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            alphas: Union[float, List[float]] = 0.5) -> 'Visualizer':
+            alphas: Union[float, List[float]] = 0.6) -> 'Visualizer':
         """Draw single or multiple binary masks.
 
         Args:
@@ -794,7 +805,7 @@ class Visualizer(ManagerMixin):
             img_complement = cv2.bitwise_and(
                 img, img, mask=binary_mask_complement)
             rgb = rgb + img_complement
-            img = cv2.addWeighted(img, alpha, rgb, 1 - alpha, 0)
+            img = cv2.addWeighted(img, 1-alpha, rgb, alpha, 0)
         self.ax_save.imshow(
             img,
             extent=(0, self.width, self.height, 0),
@@ -986,6 +997,7 @@ class Visualizer(ManagerMixin):
                        draw_gt: bool = True,
                        draw_pred: bool = True,
                        show=False,
+                       wait_time=0,
                        step=0) -> None:
         pass
 
