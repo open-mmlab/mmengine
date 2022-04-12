@@ -1084,7 +1084,13 @@ class Runner:
         # decide to load from checkpoint or resume from checkpoint
         resume_from = None
         if self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
             resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(
+                f'Auto resumed from the latest checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
 
         if resume_from is not None:
             self.resume(resume_from)
