@@ -30,7 +30,7 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               DefaultScope, VISUALIZERS)
+                               VISUALIZERS, DefaultScope)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import Visualizer
@@ -321,8 +321,6 @@ class Runner:
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
-        # TODO: temporary plan
-        self.message_hub.update_info('visualizer', self.visualizer)
 
         self._load_from = load_from
         self._resume = resume
@@ -658,7 +656,6 @@ class Runner:
             # ensure visualizer containing name key
             visualizer.setdefault('name', self._experiment_name)
             visualizer.setdefault('save_dir', self._work_dir)
-            # TODO: How to achieve global uniqueness
             return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(

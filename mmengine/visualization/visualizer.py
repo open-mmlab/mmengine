@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Dict, List, Optional, Tuple, Union, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -13,6 +13,7 @@ from matplotlib.collections import (LineCollection, PatchCollection,
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
+from mmengine.config import Config
 from mmengine.data import BaseDataElement
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.utils import ManagerMixin
@@ -21,7 +22,6 @@ from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           str_color_to_rgb, tensor2ndarray,
                                           value2list)
 from mmengine.visualization.vis_backend import BaseVisBackend
-from mmengine.config import Config
 
 
 @VISUALIZERS.register_module()
@@ -127,6 +127,7 @@ class Visualizer(ManagerMixin):
         name='visualizer',
         image: Optional[np.ndarray] = None,
         vis_backends: Optional[Dict] = None,
+        save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
@@ -148,6 +149,7 @@ class Visualizer(ManagerMixin):
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
                 assert name not in self._vis_backends
+                vis_backend.setdefault('save_dir', save_dir)
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.is_inline = 'inline' in plt.get_backend()
@@ -744,10 +746,11 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_binary_masks(
-            self,
-            binary_masks: Union[np.ndarray, torch.Tensor],
-            alphas: Union[float, List[float]] = 0.8,
-            colors: Union[str, tuple, List[str], List[tuple]] = 'g') -> 'Visualizer':
+        self,
+        binary_masks: Union[np.ndarray, torch.Tensor],
+        alphas: Union[float, List[float]] = 0.8,
+        colors: Union[str, tuple, List[str],
+                      List[tuple]] = 'g') -> 'Visualizer':
         """Draw single or multiple binary masks.
 
         Args:
@@ -884,7 +887,7 @@ class Visualizer(ManagerMixin):
                                          cv2.NORM_MINMAX)
                 heat_img = np.asarray(norm_img, dtype=np.uint8)
                 if image is not None:
-                    heat_img = cv2.addWeighted(image, 1-alpha, heat_img,
+                    heat_img = cv2.addWeighted(image, 1 - alpha, heat_img,
                                                alpha, 0)
                 return heat_img
         else:
@@ -924,8 +927,8 @@ class Visualizer(ManagerMixin):
         for vis_backend in self._vis_backends.values():
             vis_backend.add_config(config, **kwargs)  # type: ignore
 
-    def add_graph(self, model: torch.nn.Module,
-                  data_batch: Sequence[dict], **kwargs) -> None:
+    def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
+                  **kwargs) -> None:
         """Record graph data.
 
         Args:
@@ -1003,7 +1006,7 @@ class Visualizer(ManagerMixin):
             vis_backend.close()  # type: ignore
 
     @classmethod
-    def get_instance(cls, name: str, **kwargs):
+    def get_instance(cls, name: str, **kwargs) -> 'Visualizer':
         """Make subclass can get latest created instance by
         ``Visualizer.get_current_instance()``.
 
@@ -1035,5 +1038,5 @@ class Visualizer(ManagerMixin):
             object: Corresponding name instance.
         """
         instance = super().get_instance(name, **kwargs)
-        Visualizer._instance_dict['name'] = instance
+        Visualizer._instance_dict[name] = instance
         return instance

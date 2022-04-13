@@ -3,16 +3,16 @@ import os
 import os.path as osp
 import time
 from abc import ABCMeta, abstractmethod
-from typing import Any, Optional, Union, Sequence
+from typing import Any, Optional, Sequence, Union
 
 import cv2
 import numpy as np
 import torch
 
+from mmengine.config import Config
 from mmengine.fileio import dump
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import TORCH_VERSION
-from mmengine.config import Config
 
 
 class BaseVisBackend(metaclass=ABCMeta):
@@ -30,8 +30,8 @@ class BaseVisBackend(metaclass=ABCMeta):
         self._save_dir = save_dir
         if self._save_dir:
             timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            self._save_dir = osp.join(
-                self._save_dir, f'vis_data_{timestamp}')  # type: ignore
+            self._save_dir = osp.join(self._save_dir,
+                                      f'vis_data_{timestamp}')  # type: ignore
 
     @property
     @abstractmethod
@@ -52,8 +52,8 @@ class BaseVisBackend(metaclass=ABCMeta):
         """
         pass
 
-    def add_graph(self, model: torch.nn.Module,
-                  data_batch: Sequence[dict], **kwargs) -> None:
+    def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
+                  **kwargs) -> None:
         """Record graph.
 
         Args:
@@ -396,7 +396,8 @@ class TensorboardVisBackend(BaseVisBackend):
         log_dir (str): Save directory location. Default to 'tf_writer'.
     """
 
-    def __init__(self, save_dir: Optional[str] = None,
+    def __init__(self,
+                 save_dir: Optional[str] = None,
                  log_dir: str = 'tf_logs'):
         super(TensorboardVisBackend, self).__init__(save_dir)
         if save_dir is not None:

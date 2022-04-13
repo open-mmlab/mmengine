@@ -36,8 +36,8 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        inputs, labels = zip(*map(lambda x:
-                                  (x['inputs'], x['data_sample']), data_batch))
+        inputs, labels = zip(
+            *map(lambda x: (x['inputs'], x['data_sample']), data_batch))
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
