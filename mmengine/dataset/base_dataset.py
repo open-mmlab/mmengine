@@ -123,7 +123,7 @@ class BaseDataset(Dataset):
               "dataset_type": "test_dataset",
               "task_name": "test_task"
             },
-            "data_infos":
+            "data_list":
             [
               {
                 "img_path": "test_img.jpg",
@@ -433,7 +433,7 @@ class BaseDataset(Dataset):
             raise ValueError('Annotation must have data_infos and metadata '
                              'keys')
         meta_data = annotations['metadata']
-        raw_data_infos = annotations['data_infos']
+        raw_data_list = annotations['data_list']
 
         # Meta information load from annotation file will not influence the
         # existed meta information load from `BaseDataset.METAINFO` and
@@ -443,7 +443,7 @@ class BaseDataset(Dataset):
 
         # load and parse data_infos.
         data_list = []
-        for raw_data_info in raw_data_infos:
+        for raw_data_info in raw_data_list:
             # parse raw data information to target format
             data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
