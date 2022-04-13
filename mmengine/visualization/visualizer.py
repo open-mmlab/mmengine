@@ -134,7 +134,8 @@ class Visualizer(ManagerMixin):
         self._dataset_meta: Union[None, dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
-        # TODO: If save_dir is not specified, no need to initialize the vis backend.
+        # TODO: If save_dir is not specified, no need to initialize the vis
+        #  backend.
         if vis_backends and save_dir is not None:
             with_name = False
             without_name = False
@@ -523,7 +524,6 @@ class Visualizer(ManagerMixin):
         lines = np.concatenate(
             (x_datas.reshape(-1, 2, 1), y_datas.reshape(-1, 2, 1)), axis=-1)
         if not self._is_posion_valid(lines):
-
             warnings.warn(
                 'Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image', UserWarning)
@@ -805,7 +805,7 @@ class Visualizer(ManagerMixin):
             img_complement = cv2.bitwise_and(
                 img, img, mask=binary_mask_complement)
             rgb = rgb + img_complement
-            img = cv2.addWeighted(img, 1-alpha, rgb, alpha, 0)
+            img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
         self.ax_save.imshow(
             img,
             extent=(0, self.width, self.height, 0),
@@ -1008,3 +1008,39 @@ class Visualizer(ManagerMixin):
             plt.close(self.fig_show)
         for vis_backend in self._vis_backends.values():
             vis_backend.close()  # type: ignore
+
+    @classmethod
+    def get_instance(cls, name: str, **kwargs):
+        """Make subclass can get latest created instance by
+        ``Visualizer.get_current_instance()``.
+
+        Downstream codebase may need to get the latest created instance
+        without knowing the specific Visualizer type. For example, mmdetection
+        builds visualizer in runner and some component which cannot access
+        runner wants to get latest created visualizer. In this case,
+        the component does not know which type of visualizer has been built
+        and cannot get target instance. Therefore, :class:`Visualizer`
+        overrides the :meth:`get_instance` and its subclass will register
+        the created instance to :attr:`_instance_dict` additionally.
+        :meth:`get_current_instance` will return the latest created subclass
+        instance.
+
+        Examples:
+            >>> class DetLocalVisualizer(Visualizer):
+            >>>     def __init__(self, name):
+            >>>         super().__init__(name)
+            >>>
+            >>> visualizer1 = DetLocalVisualizer.get_instance('name1')
+            >>> visualizer2 = Visualizer.get_current_instance()
+            >>> visualizer3 = DetLocalVisualizer.get_current_instance()
+            >>> assert id(visualizer1) == id(visualizer2) == id(visualizer3)
+
+        Args:
+            name (str): Name of instance. Defaults to ''.
+
+        Returns:
+            object: Corresponding name instance.
+        """
+        instance = super().get_instance(name, **kwargs)
+        Visualizer._instance_dict['name'] = instance
+        return instance

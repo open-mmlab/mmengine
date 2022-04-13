@@ -456,6 +456,18 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_scalars is True
 
+    def test_get_instance(self):
+
+        class DetLocalVisualizer(Visualizer):
+
+            def __init__(self, name):
+                super().__init__(name)
+
+        visualizer1 = DetLocalVisualizer.get_instance('name1')
+        visualizer2 = Visualizer.get_current_instance()
+        visualizer3 = DetLocalVisualizer.get_current_instance()
+        assert id(visualizer1) == id(visualizer2) == id(visualizer3)
+
 
 if __name__ == '__main__':
     t = TestVisualizer()
