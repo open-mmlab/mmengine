@@ -3,7 +3,7 @@ import os
 import os.path as osp
 import time
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union, Sequence
 
 import cv2
 import numpy as np
@@ -12,17 +12,18 @@ import torch
 from mmengine.fileio import dump
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import TORCH_VERSION
+from mmengine.config import Config
 
 
 class BaseVisBackend(metaclass=ABCMeta):
-    """Base class for writer.
+    """Base class for vis backend.
 
-    Each writer can inherit ``BaseVisBackend`` and implement
+    Each backend can inherit ``BaseVisBackend`` and implement
     the required functions.
 
     Args:
         save_dir (str, optional): The root directory to save
-            the files produced by the writer. Default to None.
+            the files produced by the backend. Default to None.
     """
 
     def __init__(self, save_dir: Optional[str] = None):
@@ -30,7 +31,7 @@ class BaseVisBackend(metaclass=ABCMeta):
         if self._save_dir:
             timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
             self._save_dir = osp.join(
-                self._save_dir, f'write_data_{timestamp}')  # type: ignore
+                self._save_dir, f'vis_data_{timestamp}')  # type: ignore
 
     @property
     @abstractmethod
@@ -43,24 +44,21 @@ class BaseVisBackend(metaclass=ABCMeta):
         """
         pass
 
-    def add_config(self, params_dict: dict, **kwargs) -> None:
+    def add_config(self, config: Config, **kwargs) -> None:
         """Record a set of parameters.
 
         Args:
-            params_dict (dict): Each key-value pair in the dictionary is the
-                  name of the parameters and it's corresponding value.
+            config (Config): The Config object
         """
         pass
 
     def add_graph(self, model: torch.nn.Module,
-                  input_tensor: Union[torch.Tensor,
-                                      List[torch.Tensor]], **kwargs) -> None:
+                  data_batch: Sequence[dict], **kwargs) -> None:
         """Record graph.
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor, list[torch.Tensor]): A variable
-                or a tuple of variables to be fed.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         pass
 
@@ -118,9 +116,9 @@ class BaseVisBackend(metaclass=ABCMeta):
 
 @VISBACKENDS.register_module()
 class LocalVisBackend(BaseVisBackend):
-    """Local write class.
+    """Local vis backend class.
 
-    It can write image, hyperparameters, scalars, etc.
+    It can write image, config, scalars, etc.
     to the local hard disk. You can get the drawing backend
     through the visualizer property for custom drawing.
 
@@ -136,48 +134,45 @@ class LocalVisBackend(BaseVisBackend):
         >>> local_writer.add_image('img', image)
 
     Args:
-        save_dir (str): The root directory to save the files
-            produced by the writer.
+        save_dir (str, optional): The root directory to save the files
+            produced by the writer. If it is none, it means no data
+            is stored. Default None.
         img_save_dir (str): The directory to save images.
             Default to 'writer_image'.
-        params_save_file (str): The file to save parameters.
+        config_save_file (str): The file to save parameters.
             Default to 'parameters.yaml'.
         scalar_save_file (str):  The file to save scalar values.
             Default to 'scalars.json'.
     """
 
     def __init__(self,
-                 save_dir: str,
-                 img_save_dir: str = 'writer_image',
-                 params_save_file: str = 'parameters.yaml',
+                 save_dir: Optional[str] = None,
+                 img_save_dir: str = 'vis_image',
+                 config_save_file: str = 'config.py',
                  scalar_save_file: str = 'scalars.json'):
-        assert params_save_file.split('.')[-1] == 'yaml'
+        assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalVisBackend, self).__init__(save_dir)
-        os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-        self._img_save_dir = osp.join(
-            self._save_dir,  # type: ignore
-            img_save_dir)
-        self._scalar_save_file = osp.join(
-            self._save_dir,  # type: ignore
-            scalar_save_file)
-        self._params_save_file = osp.join(
-            self._save_dir,  # type: ignore
-            params_save_file)
+        if self._save_dir is not None:
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+            self._img_save_dir = osp.join(
+                self._save_dir,  # type: ignore
+                img_save_dir)
+            self._scalar_save_file = osp.join(
+                self._save_dir,  # type: ignore
+                scalar_save_file)
+            self._config_save_file = osp.join(
+                self._save_dir,  # type: ignore
+                config_save_file)
 
     @property
     def experiment(self) -> 'LocalVisBackend':
         """Return the experiment object associated with this writer."""
         return self
 
-    def add_config(self, params_dict: dict, **kwargs) -> None:
-        """Record parameters to disk.
-
-        Args:
-            params_dict (dict): The dict of parameters to save.
-        """
-        assert isinstance(params_dict, dict)
-        self._dump(params_dict, self._params_save_file, 'yaml')
+    def add_config(self, config: Config, **kwargs) -> None:
+        # TODO
+        pass
 
     def add_image(self,
                   name: str,
@@ -322,16 +317,9 @@ class WandbVisBackend(BaseVisBackend):
 
         return wandb
 
-    def add_config(self, params_dict: dict, **kwargs) -> None:
-        """Record a set of parameters to be compared in wandb.
-
-        Args:
-            params_dict (dict): Each key-value pair in the dictionary
-                is the name of the parameters and it's
-                corresponding value.
-        """
-        assert isinstance(params_dict, dict)
-        self._wandb.log(params_dict, commit=self._commit)
+    def add_config(self, config: Config, **kwargs) -> None:
+        # TODO
+        pass
 
     def add_image(self,
                   name: str,
@@ -344,16 +332,8 @@ class WandbVisBackend(BaseVisBackend):
             name (str): The unique identifier for the image to save.
             image (np.ndarray, optional): The image to be saved. The format
                 should be RGB. Default to None.
-            gt_sample (:obj:`BaseDataElement`, optional): The ground truth data
-                structure of OpenMMlab. Default to None.
-            pred_sample (:obj:`BaseDataElement`, optional): The predicted
-                result data structure of OpenMMlab. Default to None.
-            draw_gt (bool): Whether to draw the ground truth. Default: True.
-            draw_pred (bool): Whether to draw the predicted result.
-                Default to True.
             step (int): Global step value to record. Default to 0.
         """
-
         self._wandb.log({name: image}, commit=self._commit, step=step)
 
     def add_scalar(self,
@@ -416,9 +396,11 @@ class TensorboardVisBackend(BaseVisBackend):
         log_dir (str): Save directory location. Default to 'tf_writer'.
     """
 
-    def __init__(self, save_dir: str, log_dir: str = 'tf_logs'):
+    def __init__(self, save_dir: Optional[str] = None,
+                 log_dir: str = 'tf_logs'):
         super(TensorboardVisBackend, self).__init__(save_dir)
-        self._tensorboard = self._setup_env(log_dir)
+        if save_dir is not None:
+            self._tensorboard = self._setup_env(log_dir)
 
     def _setup_env(self, log_dir: str):
         """Setup env.
@@ -443,45 +425,20 @@ class TensorboardVisBackend(BaseVisBackend):
                     'Please run "pip install future tensorboard" to install '
                     'the dependencies to use torch.utils.tensorboard '
                     '(applicable to PyTorch 1.1 or higher)')
-
-        self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
-        return SummaryWriter(self.log_dir)
+        if self._save_dir is None:
+            return SummaryWriter(f'./{log_dir}')
+        else:
+            self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
+            return SummaryWriter(self.log_dir)
 
     @property
     def experiment(self):
         """Return Tensorboard object."""
         return self._tensorboard
 
-    def add_graph(self, model: torch.nn.Module,
-                  input_tensor: Union[torch.Tensor,
-                                      List[torch.Tensor]], **kwargs) -> None:
-        """Record graph data to tensorboard.
-
-        Args:
-            model (torch.nn.Module): Model to draw.
-            input_tensor (torch.Tensor, list[torch.Tensor]): A variable
-                or a tuple of variables to be fed.
-        """
-        if isinstance(input_tensor, list):
-            for array in input_tensor:
-                assert array.ndim == 4
-                assert isinstance(array, torch.Tensor)
-        else:
-            assert isinstance(input_tensor,
-                              torch.Tensor) and input_tensor.ndim == 4
-        self._tensorboard.add_graph(model, input_tensor)
-
-    def add_config(self, params_dict: dict, **kwargs) -> None:
-        """Record a set of hyperparameters to be compared in TensorBoard.
-
-        Args:
-            params_dict (dict): Each key-value pair in the dictionary is the
-                  name of the hyper parameter and it's corresponding value.
-                  The type of the value can be one of `bool`, `string`,
-                   `float`, `int`, or `None`.
-        """
-        assert isinstance(params_dict, dict)
-        self._tensorboard.add_hparams(params_dict, {})
+    def add_config(self, config: Config, **kwargs) -> None:
+        # TODO
+        pass
 
     def add_image(self,
                   name: str,

@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Sequence
 
 import cv2
 import matplotlib.pyplot as plt
@@ -21,6 +21,7 @@ from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           str_color_to_rgb, tensor2ndarray,
                                           value2list)
 from mmengine.visualization.vis_backend import BaseVisBackend
+from mmengine.config import Config
 
 
 @VISUALIZERS.register_module()
@@ -126,7 +127,6 @@ class Visualizer(ManagerMixin):
         name='visualizer',
         image: Optional[np.ndarray] = None,
         vis_backends: Optional[Dict] = None,
-        save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
@@ -134,9 +134,7 @@ class Visualizer(ManagerMixin):
         self._dataset_meta: Union[None, dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
-        # TODO: If save_dir is not specified, no need to initialize the vis
-        #  backend.
-        if vis_backends and save_dir is not None:
+        if vis_backends:
             with_name = False
             without_name = False
             for vis_backend in vis_backends:
@@ -150,8 +148,6 @@ class Visualizer(ManagerMixin):
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
                 assert name not in self._vis_backends
-                # TODO:
-                vis_backend['save_dir'] = save_dir
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.is_inline = 'inline' in plt.get_backend()
@@ -480,7 +476,7 @@ class Visualizer(ManagerMixin):
         y_datas: Union[np.ndarray, torch.Tensor],
         colors: Union[str, tuple, List[str], List[tuple]] = 'g',
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
 
@@ -506,7 +502,7 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 1.
+                have the same linewidth. Defaults to 2.
         """
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
@@ -542,7 +538,7 @@ class Visualizer(ManagerMixin):
         alpha: Union[float, int] = 0.8,
         edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1,
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple circles.
@@ -569,7 +565,7 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 1.
+                have the same linewidth. Defaults to 2.
             is_filling (bool): Whether to fill all the circles. Defaults to
                 False.
         """
@@ -683,7 +679,7 @@ class Visualizer(ManagerMixin):
         alpha: Union[int, float] = 0.8,
         edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 1.0,
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
@@ -709,7 +705,7 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 1.
+                have the same linewidth. Defaults to 2.
             is_filling (bool): Whether to fill all the polygons. Defaults to
                 False.
         """
@@ -750,8 +746,8 @@ class Visualizer(ManagerMixin):
     def draw_binary_masks(
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
-            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            alphas: Union[float, List[float]] = 0.6) -> 'Visualizer':
+            alphas: Union[float, List[float]] = 0.8,
+            colors: Union[str, tuple, List[str], List[tuple]] = 'g') -> 'Visualizer':
         """Draw single or multiple binary masks.
 
         Args:
@@ -818,7 +814,7 @@ class Visualizer(ManagerMixin):
                      mode: str = 'mean',
                      topk: int = 10,
                      arrangement: Tuple[int, int] = (5, 2),
-                     alpha: float = 0.3) -> np.ndarray:
+                     alpha: float = 0.8) -> np.ndarray:
         """Draw featmap. If img is not None, the final image will be the
         weighted sum of img and featmap. It support the mode:
 
@@ -884,13 +880,12 @@ class Visualizer(ManagerMixin):
                 return concat_heatmap(tensor_chw[0], image, alpha)
             else:
                 tensor_chw = tensor_chw.permute(1, 2, 0).numpy()
-                norm_img = np.zeros(tensor_chw.shape)
                 norm_img = cv2.normalize(tensor_chw, None, 0, 255,
                                          cv2.NORM_MINMAX)
                 heat_img = np.asarray(norm_img, dtype=np.uint8)
                 if image is not None:
-                    heat_img = cv2.addWeighted(image, alpha, heat_img,
-                                               1 - alpha, 0)
+                    heat_img = cv2.addWeighted(image, 1-alpha, heat_img,
+                                               alpha, 0)
                 return heat_img
         else:
             row, col = arrangement
@@ -920,27 +915,25 @@ class Visualizer(ManagerMixin):
             rgb, alpha = np.split(img_rgba, [3], axis=2)
             return rgb.astype('uint8')
 
-    def add_config(self, params_dict: dict, **kwargs):
+    def add_config(self, config: Config, **kwargs):
         """Record parameters.
 
         Args:
-            params_dict (dict): The dictionary of parameters to save.
+            config (Config): The Config object.
         """
         for vis_backend in self._vis_backends.values():
-            vis_backend.add_config(params_dict, **kwargs)  # type: ignore
+            vis_backend.add_config(config, **kwargs)  # type: ignore
 
     def add_graph(self, model: torch.nn.Module,
-                  input_array: Union[torch.Tensor,
-                                     List[torch.Tensor]], **kwargs) -> None:
+                  data_batch: Sequence[dict], **kwargs) -> None:
         """Record graph data.
 
         Args:
             model (torch.nn.Module): Model to draw.
-            input_array (torch.Tensor, list[torch.Tensor]): A variable
-                or a tuple of variables to be fed.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         for vis_backend in self._vis_backends.values():
-            vis_backend.add_graph(model, input_array, **kwargs)  # type: ignore
+            vis_backend.add_graph(model, data_batch, **kwargs)  # type: ignore
 
     def add_image(self, name: str, image: np.ndarray, step: int = 0) -> None:
         """Record image.
@@ -991,14 +984,14 @@ class Visualizer(ManagerMixin):
 
     def add_datasample(self,
                        name,
-                       image: Optional[np.ndarray] = None,
+                       image: np.ndarray,
                        gt_sample: Optional['BaseDataElement'] = None,
                        pred_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
-                       show=False,
-                       wait_time=0,
-                       step=0) -> None:
+                       show: bool = False,
+                       wait_time: int = 0,
+                       step: int = 0) -> None:
         pass
 
     def close(self) -> None:
