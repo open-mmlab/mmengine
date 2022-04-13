@@ -165,12 +165,7 @@ class LoggerHook(Hook):
 
         self.json_log_path = osp.join(runner.work_dir,
                                       f'{runner.timestamp}.log.json')
-        self.yaml_log_path = osp.join(runner.work_dir,
-                                      f'{runner.timestamp}.log.json')
         self.start_iter = runner.iter
-        if runner.meta is not None:
-            runner.visualizer.add_config(
-                runner.meta, file_path=self.yaml_log_path)
 
     def after_train_iter(self,
                          runner,

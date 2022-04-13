@@ -140,7 +140,7 @@ class DefaultOptimizerConstructor:
 
         return not param.isdisjoint(param_set)
 
-    def add_config(self,
+    def add_params(self,
                    params: List[dict],
                    module: nn.Module,
                    prefix: str = '',
@@ -235,7 +235,7 @@ class DefaultOptimizerConstructor:
             is_dcn_module = False
         for child_name, child_mod in module.named_children():
             child_prefix = f'{prefix}.{child_name}' if prefix else child_name
-            self.add_config(
+            self.add_params(
                 params,
                 child_mod,
                 prefix=child_prefix,
@@ -253,7 +253,7 @@ class DefaultOptimizerConstructor:
 
         # set param-wise lr and weight decay recursively
         params: List = []
-        self.add_config(params, model)
+        self.add_params(params, model)
         optimizer_cfg['params'] = params
 
         return OPTIMIZERS.build(optimizer_cfg)

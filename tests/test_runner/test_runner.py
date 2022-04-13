@@ -321,7 +321,7 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init13'
         cfg.log_level = 'INFO'
-        cfg.visualizer = dict(name='test_visualizer')
+        cfg.visualizer = None
         runner = Runner(**cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertIsInstance(runner.message_hub, MessageHub)
@@ -459,14 +459,14 @@ class TestRunner(TestCase):
             id(runner.visualizer))
 
         # input is a dict
-        visualizer_cfg = dict(name='test_build_visualizer2')
+        visualizer_cfg = dict(type='Visualizer', name='test_build_visualizer2')
         visualizer = runner.build_visualizer(visualizer_cfg)
         self.assertIsInstance(visualizer, Visualizer)
         self.assertEqual(visualizer.instance_name, 'test_build_visualizer2')
 
         # input is a dict but does not contain name key
         runner._experiment_name = 'test_build_visualizer3'
-        visualizer_cfg = dict()
+        visualizer_cfg = None
         visualizer = runner.build_visualizer(visualizer_cfg)
         self.assertIsInstance(visualizer, Visualizer)
         self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')

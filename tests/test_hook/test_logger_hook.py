@@ -61,7 +61,6 @@ class TestLoggerHook:
         assert logger_hook.json_log_path == osp.join('work_dir',
                                                      'timestamp.log.json')
         assert logger_hook.start_iter == runner.iter
-        runner.visualizer.add_config.assert_called()
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'

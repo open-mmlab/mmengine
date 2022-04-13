@@ -172,7 +172,7 @@ class LocalVisBackend(BaseVisBackend):
 
     def add_config(self, config: Config, **kwargs) -> None:
         # TODO
-        pass
+        assert isinstance(config, Config)
 
     def add_image(self,
                   name: str,
