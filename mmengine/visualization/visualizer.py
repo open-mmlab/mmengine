@@ -18,7 +18,7 @@ from mmengine.data import BaseDataElement
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
-                                          color_val_matplotlib, concat_heatmap,
+                                          color_val_matplotlib, convert_overlay_heatmap,
                                           str_color_to_rgb, tensor2ndarray,
                                           value2list)
 from mmengine.visualization.vis_backend import BaseVisBackend
@@ -868,7 +868,7 @@ class Visualizer(ManagerMixin):
                 feat_map, _ = torch.max(tensor_chw, dim=0)
             elif mode == 'mean':
                 feat_map = torch.mean(tensor_chw, dim=0)
-            return concat_heatmap(feat_map, image, alpha)
+            return convert_overlay_heatmap(feat_map, image, alpha)
 
         if topk <= 0:
             tensor_chw_channel = tensor_chw.shape[0]
@@ -880,7 +880,7 @@ class Visualizer(ManagerMixin):
                 ' mode parameter or set topk greater than 0 to solve '
                 'the error')
             if tensor_chw_channel == 1:
-                return concat_heatmap(tensor_chw[0], image, alpha)
+                return convert_overlay_heatmap(tensor_chw[0], image, alpha)
             else:
                 tensor_chw = tensor_chw.permute(1, 2, 0).numpy()
                 norm_img = cv2.normalize(tensor_chw, None, 0, 255,
@@ -911,7 +911,7 @@ class Visualizer(ManagerMixin):
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
-                axes.imshow(concat_heatmap(topk_tensor[i], image, alpha))
+                axes.imshow(convert_overlay_heatmap(topk_tensor[i], image, alpha))
             s, (width, height) = canvas.print_to_buffer()
             buffer = np.frombuffer(s, dtype='uint8')
             img_rgba = buffer.reshape(height, width, 4)

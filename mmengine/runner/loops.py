@@ -29,12 +29,11 @@ class EpochBasedTrainLoop(BaseLoop):
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
         if hasattr(self.dataloader.dataset, 'metainfo'):
-            visualizer = Visualizer.get_current_instance()
-            visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
-                'metainfo. ``dataset_meta`` in evaluator and metric will be '
+                'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
 
     @property
@@ -110,12 +109,11 @@ class IterBasedTrainLoop(BaseLoop):
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         if hasattr(self.dataloader.dataset, 'metainfo'):
-            visualizer = Visualizer.get_current_instance()
-            visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
-                'metainfo. ``dataset_meta`` in evaluator and metric will be '
+                'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
         self.dataloader = iter(self.dataloader)
 
@@ -193,13 +191,12 @@ class ValLoop(BaseLoop):
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
-            visualizer = Visualizer.get_current_instance()
-            visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
-                'metainfo. ``dataset_meta`` in evaluator and metric will be '
-                'None.')
+                'metainfo. ``dataset_meta`` in evaluator, metric and '
+                'visualizer will be None.')
         self.interval = interval
 
     def run(self):
@@ -259,13 +256,12 @@ class TestLoop(BaseLoop):
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
-            visualizer = Visualizer.get_current_instance()
-            visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
-                'metainfo. ``dataset_meta`` in evaluator and metric will be '
-                'None.')
+                'metainfo. ``dataset_meta`` in evaluator, metric and '
+                'visualizer will be None.')
 
     def run(self) -> None:
         """Launch test."""

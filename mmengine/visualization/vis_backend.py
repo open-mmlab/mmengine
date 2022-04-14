@@ -18,7 +18,7 @@ from mmengine.utils import TORCH_VERSION
 class BaseVisBackend(metaclass=ABCMeta):
     """Base class for vis backend.
 
-    Each backend can inherit ``BaseVisBackend`` and implement
+    All backends must inherit ``BaseVisBackend`` and implement
     the required functions.
 
     Args:

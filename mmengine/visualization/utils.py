@@ -113,16 +113,15 @@ def color_val_matplotlib(colors):
 
 
 def str_color_to_rgb(color):
-
     color = matplotlib.colors.to_rgb(color)
     color = tuple([int(c * 255) for c in color])
     return color
 
 
-def concat_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
-                   img: Optional[np.ndarray] = None,
-                   alpha: float = 0.5) -> np.ndarray:
-    """Convert feat_map to heatmap and sum to image, if image is not None.
+def convert_overlay_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
+                            img: Optional[np.ndarray] = None,
+                            alpha: float = 0.5) -> np.ndarray:
+    """Convert feat_map to heatmap and overlay on image, if image is not None.
 
     Args:
         feat_map (np.ndarray, torch.Tensor): The feat_map to convert
@@ -130,8 +129,7 @@ def concat_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
             the image width.
         img (np.ndarray, optional): The origin image. The format
             should be RGB. Defaults to None.
-        alphas (Union[int, List[int]]): The transparency of origin
-            image. Defaults to 0.5.
+        alpha (float): The transparency of origin image. Defaults to 0.5.
 
     Returns:
         np.ndarray: heatmap

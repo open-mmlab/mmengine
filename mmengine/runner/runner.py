@@ -184,9 +184,8 @@ class Runner:
                     param_scheduler=dict(type='ParamSchedulerHook')),
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                visualizer=dict(
-                    name='composed_visualizer',
-                    visualizers=[dict(type='Localvisualizer',
+                visualizer=dict(type='Visualizer',
+                    vis_backends=[dict(type='LocalVisBackend',
                                       save_dir='temp_dir')])
             )
         >>> runner = Runner.from_cfg(cfg)
