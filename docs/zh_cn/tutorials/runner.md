@@ -91,17 +91,18 @@ runner.train()
 model = FasterRCNN()
 test_dataset = CocoDataset()
 test_dataloader = Dataloader(dataset=test_dataset, batch_size=2, num_workers=2)
-evaluator = CocoEvaluator(metric='bbox')
+metric = CocoMetric()
+test_evaluator = Evaluator(metric)
 
 # 初始化执行器
-runner = Runner(model=model, test_dataloader=test_dataloader, evaluator=evaluator,
-                load_checkpoint='./faster_rcnn.pth')
+runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=test_evaluator,
+                load_from='./faster_rcnn.pth')
 
 # 执行测试
 runner.test()
 ```
 
-这个例子中我们手动构建了一个 Faster R-CNN 检测模型，以及测试用的 COCO 数据集和对应的 COCO 评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
+这个例子中我们手动构建了一个 Faster R-CNN 检测模型，以及测试用的 COCO 数据集和使用 COCO 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
 
 ### 通过配置文件使用执行器
 
@@ -146,8 +147,9 @@ test_dataloader = ...
 optimizer = dict(type='SGD', lr=0.01)
 # 参数调度器配置
 param_scheduler = dict(type='MultiStepLR', milestones=[80, 90])
-#评测器配置
-evaluator = dict(type='Accuracy')
+#验证和测试的评测器配置
+val_evaluator = dict(type='Accuracy')
+test_evaluator = dict(type='Accuracy')
 
 # 训练、验证、测试流程配置
 train_cfg = dict(by_epoch=True, max_epochs=100)
@@ -163,19 +165,39 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', interval=1),  # 模型保存钩子
     logger=dict(type='TextLoggerHook'),  # 训练日志钩子
     optimizer=dict(type='OptimzierHook', grad_clip=False),  # 优化器钩子
-    param_scheduler=dict(type='ParamSchedulerHook'))  # 参数调度器执行钩子
+    param_scheduler=dict(type='ParamSchedulerHook'),  # 参数调度器执行钩子
+    sampler_seed=dict(type='DistSamplerSeedHook'))  # 为每轮次的数据采样设置随机种子的钩子
 
 # 环境配置
 env_cfg = dict(
-    dist_params=dict(backend='nccl'),
+    cudnn_benchmark=False,
+    dist_cfg=dict(backend='nccl'),
     mp_cfg=dict(mp_start_method='fork')
 )
-# 系统日志配置
-log_cfg = dict(log_level='INFO')
+# 日志等级配置
+log_level = 'INFO'
+
+# 加载权重
+load_from = None
+# 恢复训练
+resume = False
 ```
 
 一个完整的配置文件主要由模型、数据、优化器、参数调度器、评测器等模块的配置，训练、验证、测试等流程的配置，还有执行流程过程中的各种钩子模块的配置，以及环境和日志等其他配置的字段组成。
 通过配置文件构建的执行器采用了懒初始化 (lazy initialization)，只有当调用到训练或测试等执行函数时，才会根据配置文件去完整初始化所需要的模块。
+
+## 加载权重或恢复训练
+
+执行器可以通过 `load_from` 参数加载检查点（checkpoint）文件中的模型权重，只需要将 `load_from` 参数设置为检查点文件的路径即可。
+
+```python
+runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=test_evaluator,
+                load_from='./faster_rcnn.pth')
+```
+
+如果是通过配置文件使用执行器，只需修改配置文件中的 `load_from` 字段即可。
+
+用户也可通过设置 `resume=True` 来，加载检查点中的训练状态信息来恢复训练。当 `load_from` 和 `resume=True` 同时被设置时，执行器将加载 `load_from` 路径对应的检查点文件中的训练状态。如果仅设置 `resume=True`，执行器将会尝试从 `work_dir` 文件夹中寻找并读取最新的检查点文件。
 
 ## 进阶使用
 
@@ -205,25 +227,25 @@ from mmengine.runner.loop import BaseLoop
 
 @LOOPS.register_module()
 class CustomValLoop(BaseLoop):
-    def __init__(self, runner, loader, evaluator, loader2):
-        super().__init__(runner, loader, evaluator)
-        self.loader2 = runner.build_dataloader(loader2)
+    def __init__(self, runner, dataloader, evaluator, dataloader2):
+        super().__init__(runner, dataloader, evaluator)
+        self.dataloader2 = runner.build_dataloader(dataloader2)
 
     def run(self):
         self.runner.call_hooks('before_val_epoch')
-        for idx, databatch in enumerate(self.loader):
-            self.runner.call_hooks('before_val_iter',
-                                   args=dict(databatch=databatch))
-            outputs = self.run_iter(idx, databatch)
-            self.runner.call_hooks('after_val_iter',
-                                   args=dict(databatch=databatch, outputs=outputs))
+        for idx, data_batch in enumerate(self.dataloader):
+            self.runner.call_hooks(
+                'before_val_iter', batch_idx=idx, data_batch=data_batch))
+            outputs = self.run_iter(idx, data_batch)
+            self.runner.call_hooks(
+                'after_val_iter', batch_idx=idx, data_batch=data_batch, outputs=outputs))
         metric = self.evaluator.evaluate()
-        for idx, databatch in enumerate(self.loader2):
-            self.runner.call_hooks('before_val_iter2',
-                                   args=dict(databatch=databatch))
-            self.run_iter(idx, databatch)
-            self.runner.call_hooks('after_val_iter2',
-                                   args=dict(databatch=databatch, outputs=outputs))
+        for idx, data_batch in enumerate(self.dataloader2):
+            self.runner.call_hooks(
+                'before_val_iter2', batch_idx=idx, data_batch=data_batch))
+            self.run_iter(idx, data_batch)
+            self.runner.call_hooks(
+                'after_val_iter2', batch_idx=idx, data_batch=data_batch, outputs=outputs))
         metric2 = self.evaluator.evaluate()
 
         ...
@@ -236,7 +258,7 @@ class CustomValLoop(BaseLoop):
 只需要在配置文件的 `validation_cfg` 内设置 `type='CustomValLoop'`，并添加额外的配置即可。
 
 ```python
-validation_cfg = dict(type='CustomValLoop', loader2=dict(dataset=dict(type='ValDataset2'), ...))
+validation_cfg = dict(type='CustomValLoop', dataloader2=dict(dataset=dict(type='ValDataset2'), ...))
 ```
 
 ### 自定义执行器
