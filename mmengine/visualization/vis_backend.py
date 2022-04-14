@@ -38,9 +38,9 @@ class BaseVisBackend(metaclass=ABCMeta):
     def experiment(self) -> Any:
         """Return the experiment object associated with this writer.
 
-        The experiment attribute can get the write backend, such as wandb,
+        The experiment attribute can get the visualizer backend, such as wandb,
         tensorboard. If you want to write other data, such as writing a table,
-        you can directly get the write backend through experiment.
+        you can directly get the visualizer backend through experiment.
         """
         pass
 
@@ -125,13 +125,12 @@ class LocalVisBackend(BaseVisBackend):
     Examples:
         >>> from mmengine.visualization import LocalVisBackend
         >>> import numpy as np
-        >>> local_writer = LocalVisBackend(save_dir='temp_dir')
+        >>> local_vis_backend = LocalVisBackend(save_dir='temp_dir')
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
-        >>> local_writer.add_image('img', img)
-        >>> local_writer.add_scaler('mAP', 0.6)
-        >>> local_writer.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
-        >>> local_writer.add_config(dict(lr=0.1, mode='linear'))
-        >>> local_writer.add_image('img', image)
+        >>> local_vis_backend.add_image('img', img)
+        >>> local_vis_backend.add_scaler('mAP', 0.6)
+        >>> local_vis_backend.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
+        >>> local_vis_backend.add_image('img', image)
 
     Args:
         save_dir (str, optional): The root directory to save the files
@@ -167,7 +166,8 @@ class LocalVisBackend(BaseVisBackend):
 
     @property
     def experiment(self) -> 'LocalVisBackend':
-        """Return the experiment object associated with this writer."""
+        """Return the experiment object associated with this visualizer
+        backend."""
         return self
 
     def add_config(self, config: Config, **kwargs) -> None:
@@ -258,13 +258,12 @@ class WandbVisBackend(BaseVisBackend):
     Examples:
         >>> from mmengine.visualization import WandbVisBackend
         >>> import numpy as np
-        >>> wandb_writer = WandbVisBackend()
+        >>> wandb_vis_backend = WandbVisBackend()
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
-        >>> wandb_writer.add_image('img', img)
-        >>> wandb_writer.add_scaler('mAP', 0.6)
-        >>> wandb_writer.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
-        >>> wandb_writer.add_config(dict(lr=0.1, mode='linear'))
-        >>> wandb_writer.add_image('img', img)
+        >>> wandb_vis_backend.add_image('img', img)
+        >>> wandb_vis_backend.add_scaler('mAP', 0.6)
+        >>> wandb_vis_backend.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
+        >>> wandb_vis_backend.add_image('img', img)
 
     Args:
         init_kwargs (dict, optional): wandb initialization
@@ -374,26 +373,25 @@ class WandbVisBackend(BaseVisBackend):
 
 @VISBACKENDS.register_module()
 class TensorboardVisBackend(BaseVisBackend):
-    """Tensorboard write class. It can write images, hyperparameters, scalars,
-    etc. to a tensorboard file.
+    """Tensorboard class. It can write images, config, scalars, etc. to a
+    tensorboard file.
 
     Its drawing function is provided by Visualizer.
 
     Examples:
         >>> from mmengine.visualization import TensorboardVisBackend
         >>> import numpy as np
-        >>> tensorboard_writer = TensorboardVisBackend(save_dir='temp_dir')
+        >>> tensorboard_visualizer = TensorboardVisBackend(save_dir='temp_dir')
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
-        >>> tensorboard_writer.add_image('img', img)
-        >>> tensorboard_writer.add_scaler('mAP', 0.6)
-        >>> tensorboard_writer.add_scalars({'loss': 0.1,'acc':0.8})
-        >>> tensorboard_writer.add_config(dict(lr=0.1, mode='linear'))
-        >>> tensorboard_writer.add_image('img', image)
+        >>> tensorboard_visualizer.add_image('img', img)
+        >>> tensorboard_visualizer.add_scaler('mAP', 0.6)
+        >>> tensorboard_visualizer.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> tensorboard_visualizer.add_image('img', image)
 
     Args:
         save_dir (str): The root directory to save the files
-            produced by the writer.
-        log_dir (str): Save directory location. Default to 'tf_writer'.
+            produced by the backend.
+        log_dir (str): Save directory location. Default to 'tf_logs'.
     """
 
     def __init__(self,
@@ -407,7 +405,7 @@ class TensorboardVisBackend(BaseVisBackend):
         """Setup env.
 
         Args:
-            log_dir (str): Save directory location. Default 'tf_writer'.
+            log_dir (str): Save directory location.
 
         Return:
             :obj:`SummaryWriter`

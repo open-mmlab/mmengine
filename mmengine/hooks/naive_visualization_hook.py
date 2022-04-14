@@ -11,6 +11,8 @@ from mmengine.registry import HOOKS
 from mmengine.utils.misc import tensor2imgs
 
 
+# TODO: Due to interface changes, the current class
+#  functions incorrectly
 @HOOKS.register_module()
 class NaiveVisualizationHook(Hook):
     """Show or Write the predicted results during the process of testing.
