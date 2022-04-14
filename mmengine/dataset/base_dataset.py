@@ -118,7 +118,7 @@ class BaseDataset(Dataset):
     .. code-block:: none
 
         {
-            "metadata":
+            "metainfo":
             {
               "dataset_type": "test_dataset",
               "task_name": "test_task"
@@ -429,16 +429,16 @@ class BaseDataset(Dataset):
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
-        if 'data_infos' not in annotations or 'metadata' not in annotations:
-            raise ValueError('Annotation must have data_infos and metadata '
+        if 'data_list' not in annotations or 'metainfo' not in annotations:
+            raise ValueError('Annotation must have data_list and metainfo '
                              'keys')
-        meta_data = annotations['metadata']
+        metainfo = annotations['metainfo']
         raw_data_list = annotations['data_list']
 
         # Meta information load from annotation file will not influence the
         # existed meta information load from `BaseDataset.METAINFO` and
         # `metainfo` arguments defined in constructor.
-        for k, v in meta_data.items():
+        for k, v in metainfo.items():
             self._metainfo.setdefault(k, v)
 
         # load and parse data_infos.
