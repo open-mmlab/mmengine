@@ -7,6 +7,9 @@ import torch
 
 from .base_data_element import BaseDataElement
 
+IndexType = Union[str, slice, int, torch.LongTensor, torch.cuda.LongTensor,
+                  torch.BoolTensor, torch.cuda.BoolTensor, np.long, np.bool]
+
 
 # Modified from
 # https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/data_structures/instance_data.py # noqa
@@ -87,9 +90,7 @@ class InstanceData(BaseDataElement):
                                                 f'{len(self)} '
             super().__setattr__(name, value)
 
-    def __getitem__(
-        self, item: Union[str, slice, int, torch.LongTensor, torch.BoolTensor]
-    ) -> 'InstanceData':
+    def __getitem__(self, item: IndexType) -> 'InstanceData':
         """
         Args:
             item (str, obj:`slice`,
@@ -102,7 +103,8 @@ class InstanceData(BaseDataElement):
         assert len(self) > 0, ' This is a empty instance'
 
         assert isinstance(
-            item, (str, slice, int, torch.LongTensor, torch.BoolTensor))
+            item, (str, slice, int, torch.LongTensor, torch.cuda.LongTensor,
+                   torch.BoolTensor, torch.cuda.BoolTensor, np.bool, np.long))
 
         if isinstance(item, str):
             return getattr(self, item)
@@ -118,7 +120,7 @@ class InstanceData(BaseDataElement):
         if isinstance(item, torch.Tensor):
             assert item.dim() == 1, 'Only support to get the' \
                                     ' values along the first dimension.'
-            if isinstance(item, torch.BoolTensor):
+            if isinstance(item, (torch.BoolTensor, torch.cuda.BoolTensor)):
                 assert len(item) == len(self), f'The shape of the' \
                                                f' input(BoolTensor)) ' \
                                                f'{len(item)} ' \
@@ -136,7 +138,8 @@ class InstanceData(BaseDataElement):
                 elif isinstance(v, list):
                     r_list = []
                     # convert to indexes from boolTensor
-                    if isinstance(item, torch.BoolTensor):
+                    if isinstance(item,
+                                  (torch.BoolTensor, torch.cuda.BoolTensor)):
                         indexes = torch.nonzero(item).view(-1)
                     else:
                         indexes = item
