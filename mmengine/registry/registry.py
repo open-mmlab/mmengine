@@ -88,10 +88,13 @@ def build_from_cfg(
             f'type must be a str or valid type, but got {type(obj_type)}')
 
     try:
-        # Only instances created by `ManagerMixin.get_instance` could be
-        # globally accessed.
-        if ManagerMixin in obj_cls.__mro__:
-            return obj_cls.get_instance(**args)
+        # If `obj_cls` inherits from `ManagerMixin`, it should be instantiated
+        # by `ManagerMixin.get_instance` to ensure that it can be accessed
+        # globally. Since `obj_cls` is a class rather than an instance,
+        # we check whether it inherits from `ManagerMixin` by search
+        # `obj_cls.__mro__`
+        if ManagerMixin in obj_cls.__mro__:  # type: ignore
+            return obj_cls.get_instance(**args)  # type: ignore
         else:
             return obj_cls(**args)  # type: ignore
     except Exception as e:
