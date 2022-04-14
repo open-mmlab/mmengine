@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
-from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 
 
@@ -29,7 +28,8 @@ class EpochBasedTrainLoop(BaseLoop):
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
         if hasattr(self.dataloader.dataset, 'metainfo'):
-            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = \
+                self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
@@ -109,7 +109,8 @@ class IterBasedTrainLoop(BaseLoop):
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         if hasattr(self.dataloader.dataset, 'metainfo'):
-            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = \
+                self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
@@ -191,7 +192,8 @@ class ValLoop(BaseLoop):
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
-            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = \
+                self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
@@ -256,7 +258,8 @@ class TestLoop(BaseLoop):
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
-            self.runner.visualizer.dataset_meta = self.dataloader.dataset.metainfo
+            self.runner.visualizer.dataset_meta = \
+                self.dataloader.dataset.metainfo
         else:
             warnings.warn(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '

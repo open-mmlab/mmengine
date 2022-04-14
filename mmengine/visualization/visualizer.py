@@ -18,7 +18,8 @@ from mmengine.data import BaseDataElement
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
-                                          color_val_matplotlib, convert_overlay_heatmap,
+                                          color_val_matplotlib,
+                                          convert_overlay_heatmap,
                                           str_color_to_rgb, tensor2ndarray,
                                           value2list)
 from mmengine.visualization.vis_backend import BaseVisBackend
@@ -911,7 +912,8 @@ class Visualizer(ManagerMixin):
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
-                axes.imshow(convert_overlay_heatmap(topk_tensor[i], image, alpha))
+                axes.imshow(
+                    convert_overlay_heatmap(topk_tensor[i], image, alpha))
             s, (width, height) = canvas.print_to_buffer()
             buffer = np.frombuffer(s, dtype='uint8')
             img_rgba = buffer.reshape(height, width, 4)
