@@ -32,7 +32,6 @@ class TestLogger:
         # If `rank=0`, the `log_level` of stream_handler and file_handler
         # depends on the given arguments.
         tmp_file = tmp_path / 'tmp_file.log'
-        (tmp_path / 'tmp_file').mkdir()
         logger = MMLogger.get_instance(
             'rank0.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert isinstance(logger, logging.Logger)
@@ -52,7 +51,6 @@ class TestLogger:
     @patch('torch.distributed.is_available', lambda: True)
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
-        (tmp_path / 'tmp_file').mkdir()
         tmp_file = tmp_path / 'tmp_file.log'
         log_path = tmp_path / 'tmp_file' / 'tmp_file_rank1.log'
         logger = MMLogger.get_instance(
@@ -86,7 +84,6 @@ class TestLogger:
 
         # test file_handler output plain text without color.
         tmp_file = tmp_path / 'tmp_file.log'
-        (tmp_path / 'tmp_file').mkdir()
         instance_name = f'test_file_{log_level}'
         logger = MMLogger.get_instance(
             instance_name, log_level=log_level, log_file=tmp_file)

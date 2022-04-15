@@ -276,7 +276,7 @@ class MessageHub(ManagerMixin):
             value = value.item()
         else:
             check_type(key, value, (int, float))
-        return value
+        return value  # type: ignore
 
     def __getstate__(self):
         for key in list(self._log_scalars.keys()):

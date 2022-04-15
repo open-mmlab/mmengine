@@ -9,7 +9,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from mmengine.utils import ManagerMixin
+from mmengine.utils import ManagerMixin, mkdir_or_exist
 
 
 class MMFormatter(logging.Formatter):
@@ -169,7 +169,9 @@ class MMLogger(Logger, ManagerMixin):
             filename = osp.basename(log_file)
             filename_list = filename.split('.')
             sub_file_name = '.'.join(filename_list[:-1])
-            log_file = osp.join(log_dir, sub_file_name, filename)
+            log_dir = osp.join(log_dir, sub_file_name)
+            mkdir_or_exist(log_dir)
+            log_file = osp.join(log_dir, filename)
             if rank != 0:
                 # rename `log_file` with rank suffix.
                 path_split = log_file.split(os.sep)
