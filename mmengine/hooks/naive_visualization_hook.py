@@ -11,6 +11,8 @@ from mmengine.registry import HOOKS
 from mmengine.utils.misc import tensor2imgs
 
 
+# TODO: Due to interface changes, the current class
+#  functions incorrectly
 @HOOKS.register_module()
 class NaiveVisualizationHook(Hook):
     """Show or Write the predicted results during the process of testing.
@@ -68,5 +70,6 @@ class NaiveVisualizationHook(Hook):
                                         data_sample.get('scale', ori_shape))
                 origin_image = cv2.resize(input, ori_shape)
                 name = osp.basename(data_sample.img_path)
-                runner.writer.add_image(name, origin_image, data_sample,
-                                        output, self.draw_gt, self.draw_pred)
+                runner.visualizer.add_datasample(name, origin_image,
+                                                 data_sample, output,
+                                                 self.draw_gt, self.draw_pred)
