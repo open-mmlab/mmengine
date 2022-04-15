@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
+import os.path as osp
 import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
@@ -104,6 +105,8 @@ class MMLogger(Logger, ManagerMixin):
           config.
         - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
           or error message without ``Handler``.
+        - If `log_file=/path/to/tmp.log`, all logs will be saved to
+          `/path/to/tmp/tmp.log`
 
     Examples:
         >>> logger = MMLogger.get_instance(name='MMLogger',
@@ -137,7 +140,7 @@ class MMLogger(Logger, ManagerMixin):
                  name: str,
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
-                 log_level: str = 'NOTSET',
+                 log_level: str = 'INFO',
                  file_mode: str = 'w',
                  distributed=False):
         Logger.__init__(self, logger_name)
@@ -160,6 +163,13 @@ class MMLogger(Logger, ManagerMixin):
         self.handlers.append(stream_handler)
 
         if log_file is not None:
+            # If `log_file=/path/to/tmp.log`, all logs will be saved to
+            # `/path/to/tmp/tmp.log`
+            log_dir = osp.dirname(log_file)
+            filename = osp.basename(log_file)
+            filename_list = filename.split('.')
+            sub_file_name = '.'.join(filename_list[:-1])
+            log_file = osp.join(log_dir, sub_file_name, filename)
             if rank != 0:
                 # rename `log_file` with rank suffix.
                 path_split = log_file.split(os.sep)
