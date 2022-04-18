@@ -25,7 +25,7 @@ from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
                            sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
@@ -37,7 +37,6 @@ from mmengine.visualization import ComposedWriter
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
-from mmengine.logging import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 

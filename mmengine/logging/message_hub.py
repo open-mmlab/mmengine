@@ -22,18 +22,18 @@ class MessageHub(ManagerMixin):
     runner etc. which will be overwritten by next update.
 
     Args:
-        name (str): Instance name of message hub, for global access.
+        name (str): Name of message hub used to get corresponding instance
+            globally.
         log_scalars (OrderedDict, optional): Each key-value pair in the
-            dictionary is the name of the log information name and it's
-            corresponding value, such as "loss", "lr", "metric" .etc. and
-            their values. The type of value must be HistoryBuffer. Defaults to
-            None.
+            dictionary is the name of the log information such as "loss", "lr",
+            "metric" and their corresponding values. The type of value must be
+            HistoryBuffer. Defaults to None.
         runtime_info (OrderedDict, optional): Each key-value pair in the
-            dictionary is the name of the runtime information name, and it's
-            corresponding value. Defaults to None.
+            dictionary is the name of the runtime information and their
+            corresponding values. Defaults to None.
         resumed_keys (OrderedDict, optional): Each key-value pair in the
-            dictionary represent the key in :attr:`_log_scalars` and
-            :attr:`_runtime_info` could be serialized or not.
+            dictionary decides whether the key in :attr:`_log_scalars` and
+            :attr:`_runtime_info` will be serialized.
 
     Note:
         Key in :attr:`_resumed_keys` belongs to :attr:`_log_scalars` or
@@ -83,16 +83,16 @@ class MessageHub(ManagerMixin):
 
     def update_scalar(self,
                       key: str,
-                      value: Union[int, float],
+                      value: Union[int, float, np.ndarray, torch.Tensor],
                       count: int = 1,
                       resumed: bool = True) -> None:
         """Update :attr:_log_scalars.
 
         Update ``HistoryBuffer`` in :attr:`_log_scalars`. If corresponding key
-        ``HistoryBuffer`` has not been created, ``value`` and ``count``
-        is the argument of ``HistoryBuffer.update``, Otherwise,
-        ``update_scalar`` will create an ``HistoryBuffer`` with value and
-        count via the constructor of ``HistoryBuffer``.
+        ``HistoryBuffer`` has been created, ``value`` and ``count`` is the
+        argument of ``HistoryBuffer.update``, Otherwise, ``update_scalar``
+        will create an ``HistoryBuffer`` with value and count via the
+        constructor of ``HistoryBuffer``.
 
         Examples:
             >>> message_hub = MessageHub
@@ -108,18 +108,22 @@ class MessageHub(ManagerMixin):
             resumed cannot be set repeatedly for the same key.
 
         Args:
-            resumed (str): Whether the corresponding ``HistoryBuffer``
-                could be resumed.
             key (str): Key of ``HistoryBuffer``.
-            value (int or float): Value of log.
-            count (int): Accumulation times of log, defaults to 1. `count`
-                will be used in smooth statistics.
+            value (torch.Tensor or np.ndarray or int or float): Value of log.
+            count (torch.Tensor or np.ndarray or int or float): Accumulation
+                times of log, defaults to 1. `count` will be used in smooth
+                statistics.
+            resumed (str): Whether the corresponding ``HistoryBuffer``
+                could be resumed. Defaults to True.
         """
         self._set_resumed_keys(key, resumed)
+        checked_value = self._get_valid_value(key, value)
+        assert isinstance(count, int), (
+            f'The type of count must be int. but got {type(count): {count}}')
         if key in self._log_scalars:
-            self._log_scalars[key].update(value, count)
+            self._log_scalars[key].update(checked_value, count)
         else:
-            self._log_scalars[key] = HistoryBuffer([value], [count])
+            self._log_scalars[key] = HistoryBuffer([checked_value], [count])
 
     def update_scalars(self, log_dict: dict, resumed: bool = True) -> None:
         """Update :attr:`_log_scalars` with a dict.
@@ -127,12 +131,12 @@ class MessageHub(ManagerMixin):
         ``update_scalars`` iterates through each pair of log_dict key-value,
         and calls ``update_scalar``. If type of value is dict, the value should
         be ``dict(value=xxx) or dict(value=xxx, count=xxx)``. Item in
-        ``log_dict`` has the same resume policy.
+        ``log_dict`` has the same resume option.
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
             resumed (bool): Whether all ``HistoryBuffer`` referred in
-                log_dict could be resumed.
+                log_dict should be resumed. Defaults to True.
 
         Examples:
             >>> message_hub = MessageHub.get_instance('mmengine')
@@ -150,18 +154,23 @@ class MessageHub(ManagerMixin):
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
                     f'value must be defined in {log_val}'
-                count = log_val.get('count', 1)
-                value = self._get_valid_value(log_name, log_val['value'])
+                count = self._get_valid_value(log_name,
+                                              log_val.get('count', 1))
+                checked_value = self._get_valid_value(log_name,
+                                                      log_val['value'])
             else:
-                value = self._get_valid_value(log_name, log_val)
                 count = 1
-            self.update_scalar(log_name, value, count)
+                checked_value = self._get_valid_value(log_name, log_val)
+            assert isinstance(count,
+                              int), ('The type of count must be int. but got '
+                                     f'{type(count): {count}}')
+            self.update_scalar(log_name, checked_value, count)
 
     def update_info(self, key: str, value: Any, resumed: bool = True) -> None:
         """Update runtime information.
 
         The key corresponding runtime information will be overwritten each
-        time call ``update_info``.
+        time calling ``update_info``.
 
         Note:
             resumed cannot be set repeatedly for the same key.
@@ -204,9 +213,9 @@ class MessageHub(ManagerMixin):
         """Get all ``HistoryBuffer`` instances.
 
         Note:
-            Considering the large memory footprint of ``log_buffers`` in the
-            post-training, ``MessageHub.log_buffers`` will not return the
-            result of ``copy.deepcopy``.
+            Considering the large memory footprint of history buffers in the
+            post-training, :meth:`get_scalar` will return a reference of
+            history buffer rather than a copy.
 
         Returns:
             OrderedDict: All ``HistoryBuffer`` instances.
@@ -222,13 +231,13 @@ class MessageHub(ManagerMixin):
         """
         return copy.deepcopy(self._runtime_info)
 
-    def get_log(self, key: str) -> HistoryBuffer:
+    def get_scalar(self, key: str) -> HistoryBuffer:
         """Get ``HistoryBuffer`` instance by key.
 
         Note:
-            Considering the large memory footprint of ``log_buffers`` in the
-            post-training, ``MessageHub.get_log`` will not return the
-            result of ``copy.deepcopy``.
+            Considering the large memory footprint of history buffers in the
+            post-training, :meth:`get_scalar` will not return a reference of
+            history buffer rather than a copy.
 
         Args:
             key (str): Key of ``HistoryBuffer``.
@@ -270,14 +279,13 @@ class MessageHub(ManagerMixin):
         """
         if isinstance(value, np.ndarray):
             assert value.size == 1
-            valid_value = value.item()
+            value = value.item()
         elif isinstance(value, torch.Tensor):
             assert value.numel() == 1
-            valid_value = value.item()
+            value = value.item()
         else:
             check_type(key, value, (int, float))
-            valid_value = value
-        return valid_value
+        return value  # type: ignore
 
     def __getstate__(self):
         for key in list(self._log_scalars.keys()):

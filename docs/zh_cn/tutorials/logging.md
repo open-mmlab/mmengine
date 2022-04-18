@@ -296,21 +296,21 @@ if __name__ == '__main__':
 
 - `update_log(key, value, count=1)`: 更新指定字段的日志缓冲区。`value`，`count` 对应 `LogBuffer.update` 接口的输入参数。该方法用于更新训练日志，例如学习率、损失、迭代时间等。
 - `update_info(key, value)`: 更新运行时信息，例如执行器的元信息、迭代次数等。运行时信息每次更新都会覆盖上一次的内容。
-- `get_log(key)`: 获取指定字段的日志。
+- `get_scalar(key)`: 获取指定字段的日志。
 - `get_info(key)`: 获取指定字段的运行时信息。
 - `log_buffers`: 返回所有日志。
 - `runtime_info`: 返回所有运行时信息。
 
 ### 更新/获取日志
 
-日志缓冲区以字典的形式存储在消息枢纽中。当我们第一次调用 `update_log` 时，会初始化对应字段的日志缓冲区，后续每次更新等价于对应字段的日志缓冲区调用 `update` 方法。同样的我们可以通过 `get_log` 来获取对应字段的日志缓冲区，并按需计算统计值。如果想获取消息枢纽的全部日志，可以访问其 `log_buffers` 属性。
+日志缓冲区以字典的形式存储在消息枢纽中。当我们第一次调用 `update_log` 时，会初始化对应字段的日志缓冲区，后续每次更新等价于对应字段的日志缓冲区调用 `update` 方法。同样的我们可以通过 `get_scalar` 来获取对应字段的日志缓冲区，并按需计算统计值。如果想获取消息枢纽的全部日志，可以访问其 `log_buffers` 属性。
 
 ```python
 message_hub = MessageHub.create_instance('task')
 message_hub.update_log('loss', 1, 1)
-message_hub.get_log('loss').current() # 1，最近一次更新值为 1
+message_hub.get_scalar('loss').current() # 1，最近一次更新值为 1
 message_hub.update_log('loss', 3, 1)
-message_hub.get_log('loss').mean()  # 2，均值为 (3 + 1) / (1 + 1)
+message_hub.get_scalar('loss').mean()  # 2，均值为 (3 + 1) / (1 + 1)
 message_hub.update_log('lr', 0.1, 1)
 
 log_dict = message_hub.log_buffers  # 返回存储全部 LogBuffer 的字典
@@ -343,8 +343,8 @@ class Receiver:
         self.message_hub = MessageHub.get_instance(name)  # 获取 MessageHub
 
     def run(self):
-        print(f"Learning rate is {self.message_hub.get_log('lr').current()}")
-        print(f"Learning rate is {self.message_hub.get_log('loss').current()}")
+        print(f"Learning rate is {self.message_hub.get_scalar('lr').current()}")
+        print(f"Learning rate is {self.message_hub.get_scalar('loss').current()}")
         print(f"Learning rate is {self.message_hub.get_info('meta')}")
 
 

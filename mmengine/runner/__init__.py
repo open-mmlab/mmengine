@@ -4,7 +4,6 @@ from .checkpoint import (CheckpointLoader, get_deprecated_model_names,
                          get_external_models, get_mmcls_models, get_state_dict,
                          get_torchvision_models, load_checkpoint,
                          load_state_dict, save_checkpoint, weights_to_cpu)
-
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .runner import Runner
 

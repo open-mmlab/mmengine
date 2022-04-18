@@ -52,7 +52,7 @@ class TestLogger:
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
-        log_path = tmp_path / 'tmp_file_rank1.log'
+        log_path = tmp_path / 'tmp_file' / 'tmp_file_rank1.log'
         logger = MMLogger.get_instance(
             'rank1.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert len(logger.handlers) == 1
@@ -88,7 +88,7 @@ class TestLogger:
         logger = MMLogger.get_instance(
             instance_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
-        with open(tmp_file, 'r') as f:
+        with open(tmp_path / 'tmp_file' / 'tmp_file.log', 'r') as f:
             log_text = f.read()
             match = re.fullmatch(
                 self.file_handler_regex_time +

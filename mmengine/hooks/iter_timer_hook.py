@@ -88,7 +88,8 @@ class IterTimerHook(Hook):
         window_size = runner.log_processor.window_size
         # Calculate eta every `window_size` iterations.
         if self.every_n_iters(runner, window_size) and mode == 'train':
-            iter_time = message_hub.get_log(f'{mode}/time').mean(window_size)
+            iter_time = message_hub.get_scalar(f'{mode}/time').mean(
+                window_size)
             self.time_sec_tot += iter_time * window_size
             # Calculate average iterative time.
             time_sec_avg = self.time_sec_tot / (
