@@ -95,11 +95,11 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 - [get_backend](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.get_backend) 通过 name 获取特定存储后端
 - [close](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.close) 关闭所有已经打开的资源，包括 VisBackend
 
-**为了确保可视化对象 Visualizer 能够在任何地方被调用，将其继承自 ManagerMixin 类，从而转变为全局唯一对象，在实例化必须要通过 `visualizer.get_instance()` 方式来初始化才能具备全局唯一功能。一旦初始化后可以在任意代码位置通过 `Visualizer.get_current_instance()` 来获取可视化对象。**
-
 ### 使用样例
 
 **(1) 在任意位置获取 visualizer**
+
+为了确保可视化对象 Visualizer 能够在任何地方被调用，设计上将其继承自 `ManagerMixin` 类，转变为全局唯一对象，在实例化必须要通过 `visualizer.get_instance()` 方式来初始化才能具备全局唯一功能。后续可以在任意代码位置通过 `Visualizer.get_current_instance()` 来获取可视化对象。
 
 以 MMDetection 为例，假设 `DetLocalVisualizer` 类继承自 `Visualizer`，并实现了 `add_datasample` 接口。配置文件写法为：
 
@@ -108,21 +108,19 @@ vis_backends = [dict(type='LocalVisBackend')]
 visualizer = dict(
     type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 ```
-如果想在任意位置获取 visualizer，则需要在类初始化时候保证实例对象的全局唯一。由于 Visualizer 继承自 ManagerMixin，在 build 时候内部会调用 `get_instance` 方法，从而保证实例对象全局唯一。
-
 ```python
 # 内部会调用 get_instance() 进行全局唯一实例化
 VISUALIZERS.build(cfg.visualizer)
 ```
 
-通过上述代码实例化后，可以在任意位置调用 get_current_instance 方法来获取 visualizer
+通过上述代码实例化后，可以在任意位置调用 `get_current_instance` 方法来获取 visualizer
 
 ```python
 # 任意代码位置获取 visualizer
 visualizer = Visualizer.get_current_instance()
 ```
 
-如果用户直接使用了 mmengine 或者下游库中的 Runner，则无需进行额外的实例化，在 Runner 的初始化函数中会自动创建 visualizer。
+如果用户直接使用了 MMEngine 或者下游库中的 Runner，则无需进行额外的实例化，因为在 Runner 的初始化函数中会自动创建全局唯一的 visualizer。
 
 **(2) 将数据写入至特定后端**
 
