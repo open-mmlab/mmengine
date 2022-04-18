@@ -248,7 +248,7 @@ shape of det_scores: torch.Size([4])
 
 ### DataSample
 
-类似 `nn.Module` 的派生类内部可以拥有类型为 `nn.Module` 的属性，`BaseDataElement` 也允许封装 `BaseDataElement` 的属性。这样的类一般在算法库中封装一个样本的全体数据
+类似 `nn.Module` 的派生类内部可以拥有类型为 `nn.Module` 的属性，`BaseDataElement` 也允许封装 `BaseDataElement` 的属性。这样的类一般在算法库中封装一个样本的全体数据。
 基于 `BaseDataElement`，下游算法库可以定义 `DetDataSample`，并且定义 3 个 property：proposals，gt_instances，pred_instances，并约束他们的类型。
 
 ```python
