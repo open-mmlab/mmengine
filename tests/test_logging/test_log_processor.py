@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from mmengine.logging import MessageHub, MMLogger, LogProcessor
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 
 
 class TestLogProcessor:
@@ -219,7 +219,8 @@ class TestLogProcessor:
     def _setup_runner(self):
         runner = MagicMock()
         runner.epoch = 1
-        runner.cur_dataloader = [0] * 5
+        runner.train_dataloader = [0] * 5
+        runner.val_dataloader = [0] * 5
         runner.iter = 10
         runner.train_loop.max_iters = 50
         logger = MMLogger.get_instance('log_processor_test')

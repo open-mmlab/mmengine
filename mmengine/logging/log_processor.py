@@ -167,7 +167,7 @@ class LogProcessor:
         if self.by_epoch:
             cur_epoch = self._get_epoch(runner, 'train')
             log_str = (f'Epoch [{cur_epoch}]'
-                       f'[{cur_iter}/{len(runner.cur_dataloader)}]  ')
+                       f'[{cur_iter}/{len(runner.train_dataloader)}]  ')
         else:
             log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]  '
         # Concatenate lr, momentum string with log header.
@@ -210,7 +210,7 @@ class LogProcessor:
         Return:
             str: Formatted log string which will be recorded by ``MMLogger``.
         """
-        eval_iter = len(runner.cur_dataloader)
+        eval_iter = len(runner.val_dataloader)
         # val/test time
         # here 1000 is the length of the val dataloader
         # by epoch: Epoch[val] [4][1000]

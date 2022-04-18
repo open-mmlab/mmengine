@@ -387,19 +387,18 @@ class Hook:
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False
 
-    def end_of_epoch(self, runner, batch_idx: int) -> bool:
+    def end_of_epoch(self, dataloader, batch_idx: int) -> bool:
         """Check whether the current iteration reaches the last iteration of
-        current dataloader.
+        the dataloader.
 
         Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
+            dataloader (Dataloader): The dataloader of the training,
+                validation or testing process.
             batch_idx (int): The index of the current batch in the loop.
-
         Returns:
             bool: Whether reaches the end of current epoch or not.
         """
-        return batch_idx + 1 == len(runner.cur_dataloader)
+        return batch_idx + 1 == len(dataloader)
 
     def is_last_train_epoch(self, runner) -> bool:
         """Test whether current epoch is the last train epoch.
