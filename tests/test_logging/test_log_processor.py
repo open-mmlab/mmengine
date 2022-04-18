@@ -5,8 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from mmengine.logging import MessageHub, MMLogger
-from mmengine.runner import LogProcessor
+from mmengine.logging import MessageHub, MMLogger, LogProcessor
 
 
 class TestLogProcessor:
