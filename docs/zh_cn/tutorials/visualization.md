@@ -19,6 +19,7 @@
 <div align="center">
  <img src="https://user-images.githubusercontent.com/17425982/163327736-f7cb3b16-ef07-46bc-982a-3cc7495e6c82.png" >
 </div>
+
 ## 可视化对象 Visualizer
 
 ### 接口说明
@@ -98,6 +99,8 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 
 ### 使用样例
 
+**(1) 在任意位置获取 visualizer**
+
 以 MMDetection 为例，假设 `DetLocalVisualizer` 类继承自 `Visualizer`，并实现了 `add_datasample` 接口。配置文件写法为：
 
 ```python
@@ -105,24 +108,34 @@ vis_backends = [dict(type='LocalVisBackend')]
 visualizer = dict(
     type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 ```
+如果想在任意位置获取 visualizer，则需要在类初始化时候保证实例对象的全局唯一。由于 Visualizer 继承自 ManagerMixin，在 build 时候内部会调用 `get_instance` 方法，从而保证实例对象全局唯一。
 
 ```python
 # 内部会调用 get_instance() 进行全局唯一实例化
 VISUALIZERS.build(cfg.visualizer)
+```
 
+通过上述代码实例化后，可以在任意位置调用 get_current_instance 方法来获取 visualizer
+
+```python
 # 任意代码位置获取 visualizer
 visualizer = Visualizer.get_current_instance()
+```
 
+如果用户直接使用了 mmengine 或者下游库中的 Runner，则无需进行额外的实例化，在 Runner 的初始化函数中会自动创建 visualizer。
+
+**(2) 将数据写入至特定后端**
+
+在获取到 visualizer 后，可以调用 `add_xxx` 接口将各类数据写入到特定后端
+
+```python
 # 绘制 datasample，并保存到本地存储后端
-visualizer.add_datasample('demo_image',image, gt_sample, pred_sample, step=1)
+visualizer.add_datasample('demo_image', image, gt_sample, pred_sample, step=1)
 # 直接本地窗口显示，而无需存储
-visualizer.add_datasample('demo_image',image, gt_sample, pred_sample, show=True)
+visualizer.add_datasample('demo_image', image, gt_sample, pred_sample, show=True)
 
 # 写图片
-visualizer.add_image('demo_image', image, datasample, step=1)
-# 绘制特征图并保存
-featmap_image = visualizer.draw_featmap(tensor_chw)
-visualizer.add_image('featmap', featmap_image)
+visualizer.add_image('demo_image', image, step=1)
 
 # 写模型精度值
 visualizer.add_scalar('mAP', 0.9, step=1)
@@ -135,12 +148,111 @@ visualizer.add_config(cfg)
 visualizer.add_graph(model, data_batch)
 ```
 
-对于一些用户需要的自定义绘制需求或者上述接口无法满足的需求，用户可以通过 `get_backend` 方法获取具体对象来实现特定需求，假设同时存储多个存储后端，配置为：
+**(3) 特征图可视化**
+
+通过 `channel_reduction` 参数压缩或者选择特征图，并显示到本地窗口
 
 ```python
-vis_backends = [dict(type='LocalVisBackend'), dict(type='WandbVisBackend')]
+featmap = ... # CHW shape 的 tensor
+
+# 压缩
+feat_img = visualizer.draw_featmap(featmap, channel_reduction='squeeze_mean')
+visualizer.show(feat_img)
+
+# 选择激活度最高的通道显示
+feat_img = visualizer.draw_featmap(featmap, channel_reduction='select_max')
+visualizer.show(feat_img)
+```
+
+叠加图片或者 bboxes 显示
+
+```python
+featmap = ... # CHW shape 的 tensor
+img = ... # shape 的 hw 必须和 featmap 一致
+bboxes = ...
+
+# 压缩
+feat_img = visualizer.draw_featmap(featmap, img, bboxes, channel_reduction='squeeze_mean')
+visualizer.show(feat_img)
+
+# 选择激活度最高的通道显示
+feat_img = visualizer.draw_featmap(featmap, img, bboxes, channel_reduction='select_max')
+visualizer.show(feat_img)
+```
+
+通过 `topk` 参数选择指定个数的通道显示，并显示到本地窗口
+
+```python
+featmap= ... # CHW shape 的 tensor
+
+# topk，并以 2 行 5 列模式显示
+feat_img = visualizer.draw_featmap(featmap, channel_reduction=None, topk=10, arrangement=(2, 5))
+visualizer.show(feat_img)
+
+# topk，并以 5 行 2 列模式显示
+feat_img = visualizer.draw_featmap(featmap, channel_reduction=None, topk=10, arrangement=(5, 2))
+visualizer.show(feat_img)
+```
+
+通过 `resize_shape` 缩放显示的特征图
+
+```python
+featmap = ... # CHW shape 的 tensor
+
+# 压缩
+feat_img = visualizer.draw_featmap(featmap, channel_reduction='squeeze_mean', resize_shape=(224, 224))
+visualizer.show(feat_img)
+```
+
+存储特征图到可视化后端
+
+```python
+featmap = ... # CHW shape 的 tensor
+
+# 压缩
+feat_img = visualizer.draw_featmap(featmap, channel_reduction='squeeze_mean', resize_shape=(224, 224))
+# 存储
+visualizer.add_image('feat_image', feat_img)
+```
+
+**(4) 远程窗口显示**
+
+用户可以指定 Wandb 、Tensorboard 或者自定义具备远程窗口显示的后端来保存数据，然后在浏览器上显示。以 Wandb 为例，典型配置为：
+
+```python
+vis_backends = [dict(type='WandbVisBackend')]
 visualizer = dict(
-    type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
+    type='DetWandbVisualizer', vis_backends=vis_backends, name='visualizer')
+```
+
+使用方法和上面完全一致。需要特别注意的是由于 Wandb 绘制的数据无法和 `LocalVisBackend` 后端兼容，所以当 `vis_backends` 存在多个可视化存储后端时候只有 `WandbVisBackend` 才是有效的。
+
+## 可视化存储后端 VisBackend
+
+在绘制后可以将绘制后的数据存储到多个可视化存储后端中。为了统一接口调用，MMEngine 提供了统一的抽象类 `BaseVisBackend`，和一些常用的 VisBackend 如 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend`。
+
+### 接口说明
+
+BaseVisBackend 定义了对外调用的接口规范，主要接口和属性如下：
+
+- [add_config](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_config) 写配置到特定存储后端
+- [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_graph) 写模型图到特定后端
+- [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_image) 写图片到特定后端
+- [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_scalar) 写标量到特定后端
+- [add_scalars](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_scalars) 一次性写多个标量到特定后端
+- [close](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.close) 关闭已经打开的资源
+- [experiment](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.experiment) 写后端对象，例如 Wandb 对象和 Tensorboard 对象
+
+`BaseVisBackend` 定义了 5 个常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。而 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend` 等都是继承自 `BaseVisBackend`，并根据自身特性实现了对应的存储功能。
+
+### 使用案例
+
+一般情况下用户无需操作 VisBackend 对象，只有在当前可视化存储无法满足需求时候，用户会希望直接操作存储后端。以 Wandb 为例，其提供了非常丰富的存储格式，例如存储表格、存储权重等等接口。为了所有后端能够统一接口，我们并没有提供这类常用接口，此时用户可以直接获取 Wandb 对象进行自定义存储。
+
+```python
+vis_backends = [dict(type='WandbVisBackend')]
+visualizer = dict(
+    type='DetWandbVisualizer', vis_backends=vis_backends, name='visualizer')
 ```
 
 ```python
@@ -155,28 +267,38 @@ val_table = wandb.Table(data=my_data, columns=column_names)
 wandb.log({'my_val_table': val_table})
 ```
 
-假设用户想使用 Wandb 优异的前端绘制功能，则可以使用 DetWandbVisualizer，典型配置如下
+一个 visualizer 对象可以接入任意多个 VisBackend。为了方便用户获取任意的 VisBackend，在不指定 name 参数情况下，可以通过类名获取
 
 ```python
 vis_backends = [dict(type='LocalVisBackend'), dict(type='WandbVisBackend')]
 visualizer = dict(
-    type='DetWandbVisualizer', vis_backends=vis_backends, name='visualizer')
+    type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 ```
 
-注意：由于 Wandb 绘制的数据无法和 `LocalVisBackend` 后端兼容，所以当 `vis_backends` 存在多个可视化存储后端时候只有 `WandbVisBackend` 才是有效的，用法和上面完全一致。
+```python
+# 内部会调用 get_instance() 进行全局唯一实例化
+VISUALIZERS.build(cfg.visualizer)
+# 任意代码位置获取 visualizer
+visualizer = Visualizer.get_current_instance()
 
-## 可视化存储后端 VisBackend
+local_vis_backend = visualizer.get_backend('LocalVisBackend')
+wandb_vis_backend = visualizer.get_backend('WandbVisBackend')
+```
 
-在绘制后可以将绘制后的数据存储到多个可视化存储后端中。为了统一接口调用，MMEngine 提供了统一的抽象类 `BaseVisBackend`，和一些常用的 VisBackend 如 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend`。
+当存在多个同名的 VisBackend 时候，用户必须指定唯一的 name 参数，后续可以通过 name 字符串来获取
 
-BaseVisBackend 定义了对外调用的接口规范，主要接口和属性如下：
+```python
+vis_backends = [dict(type='LocalVisBackend', name='local_vis_backend_1'), dict(type='LocalVisBackend', name='local_vis_backend_2')]
+visualizer = dict(
+    type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
+```
 
-- [add_config](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_config) 写配置到特定存储后端
-- [add_graph](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_graph) 写模型图到特定后端
-- [add_image](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_image) 写图片到特定后端
-- [add_scalar](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_scalar) 写标量到特定后端
-- [add_scalars](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.add_scalars) 一次性写多个标量到特定后端
-- [close](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.close) 关闭已经打开的资源
-- [experiment](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.vis_backend.BaseVisBackend.experiment) 写后端对象，例如 Wandb 对象和 Tensorboard 对象
+```python
+# 内部会调用 get_instance() 进行全局唯一实例化
+VISUALIZERS.build(cfg.visualizer)
+# 任意代码位置获取 visualizer
+visualizer = Visualizer.get_current_instance()
 
-`BaseVisBackend` 定义了 5 个常见的写数据接口，考虑到某些写后端功能非常强大，例如 Wandb，其具备写表格，写视频等等功能，针对这类需求用户可以直接获取 experiment 对象，然后调用写后端对象本身的 API 即可。而 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend` 等都是继承自 `BaseVisBackend`，并根据自身特性实现了对应的存储功能。
+local_vis_backend_1 = visualizer.get_backend('local_vis_backend_1')
+local_vis_backend_2 = visualizer.get_backend('local_vis_backend_2')
+```
