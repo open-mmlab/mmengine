@@ -125,15 +125,16 @@ class MMLogger(Logger, ManagerMixin):
         >>>                                 distributed=True)
 
     Args:
-        name (str): Global instance name, Defaults to ''.
+        name (str): Global instance name.
         logger_name (str): ``name`` attribute of ``Logging.Logger`` instance.
-            If `module_name` is not defined, defaults to 'mmengine'.
+            If `logger_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
-        log_level (str): The log level of the handler. Defaults to 'NOTSET'.
-        file_mode (str): The file mode used in opening log file.
-            Defaults to 'w'.
-        distributed (bool): Whether to save distributed logs.
+        log_level (str): The log level of the handler and logger. Defaults to
+            "NOTSET".
+        file_mode (str): The file mode used to open log file. Defaults to 'w'.
+        distributed (bool): Whether to save distributed logs, Defaults to
+            false.
     """
 
     def __init__(self,
@@ -199,7 +200,7 @@ class MMLogger(Logger, ManagerMixin):
                 self.handlers.append(file_handler)
 
     def callHandlers(self, record: LogRecord) -> None:
-        """Call the handlers for the specified record.
+        """Pass a record to all relevant handlers.
 
         Override ``callHandlers`` method in ``logging.Logger`` to avoid
         multiple warning messages in DDP mode. Loop through all handlers of
@@ -207,8 +208,8 @@ class MMLogger(Logger, ManagerMixin):
         handler was found, the record will not be output.
 
         Args:
-            record (LogRecord): A ``LogRecord`` instance represents a message
-                being logged.
+            record (LogRecord): A ``LogRecord`` instance contains logged
+                message.
         """
         for handler in self.handlers:
             if record.levelno >= handler.level:

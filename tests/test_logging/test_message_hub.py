@@ -45,11 +45,11 @@ class TestMessageHub:
         message_hub.update_info('key', 1)
         assert message_hub.runtime_info['key'] == 1
 
-    def test_get_log(self):
+    def test_get_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
         # Get undefined key will raise error
         with pytest.raises(KeyError):
-            message_hub.get_log('unknown')
+            message_hub.get_scalar('unknown')
         # test get log_buffer as wished
         log_history = np.array([1, 2, 3, 4, 5])
         count = np.array([1, 1, 1, 1, 1])
@@ -57,7 +57,7 @@ class TestMessageHub:
             message_hub.update_scalar('test_value', float(log_history[i]),
                                       int(count[i]))
         recorded_history, recorded_count = \
-            message_hub.get_log('test_value').data
+            message_hub.get_scalar('test_value').data
         assert (log_history == recorded_history).all()
         assert (recorded_count == count).all()
 
@@ -77,10 +77,10 @@ class TestMessageHub:
             loss_bbox=np.array(3),
             loss_iou=dict(value=1, count=2))
         message_hub.update_scalars(log_dict)
-        loss = message_hub.get_log('loss')
-        loss_cls = message_hub.get_log('loss_cls')
-        loss_bbox = message_hub.get_log('loss_bbox')
-        loss_iou = message_hub.get_log('loss_iou')
+        loss = message_hub.get_scalar('loss')
+        loss_cls = message_hub.get_scalar('loss_cls')
+        loss_bbox = message_hub.get_scalar('loss_bbox')
+        loss_iou = message_hub.get_scalar('loss_iou')
         assert loss.current() == 1
         assert loss_cls.current() == 2
         assert loss_bbox.current() == 3
@@ -111,4 +111,4 @@ class TestMessageHub:
             instance.get_info('lr')
 
         instance.get_info('iter')
-        instance.get_log('loss')
+        instance.get_scalar('loss')
