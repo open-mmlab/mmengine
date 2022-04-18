@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
+import tempfile
 import time
 from abc import ABCMeta, abstractmethod
 from typing import Any, Optional, Sequence, Union
@@ -36,7 +37,7 @@ class BaseVisBackend(metaclass=ABCMeta):
     @property
     @abstractmethod
     def experiment(self) -> Any:
-        """Return the experiment object associated with this writer.
+        """Return the experiment object associated with this vis backend.
 
         The experiment attribute can get the visualizer backend, such as wandb,
         tensorboard. If you want to write other data, such as writing a table,
@@ -45,7 +46,7 @@ class BaseVisBackend(metaclass=ABCMeta):
         pass
 
     def add_config(self, config: Config, **kwargs) -> None:
-        """Record a set of parameters.
+        """Record the config.
 
         Args:
             config (Config): The Config object
@@ -54,7 +55,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
                   **kwargs) -> None:
-        """Record graph.
+        """Record the model graph.
 
         Args:
             model (torch.nn.Module): Model to draw.
@@ -67,11 +68,11 @@ class BaseVisBackend(metaclass=ABCMeta):
                   image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image.
+        """Record the image.
 
         Args:
-            name (str): The unique identifier for the image to save.
-            image (np.ndarray, optional): The image to be saved. The format
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
                 should be RGB. Default to None.
             step (int): Global step value to record. Default to 0.
         """
@@ -82,11 +83,11 @@ class BaseVisBackend(metaclass=ABCMeta):
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Record scalar.
+        """Record the scalar.
 
         Args:
-            name (str): The unique identifier for the scalar to save.
-            value (float, int): Value to save.
+            name (str): The scalar identifier.
+            value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
         pass
@@ -96,7 +97,7 @@ class BaseVisBackend(metaclass=ABCMeta):
                     step: int = 0,
                     file_path: Optional[str] = None,
                     **kwargs) -> None:
-        """Record scalars' data.
+        """Record the scalars' data.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
@@ -120,27 +121,28 @@ class LocalVisBackend(BaseVisBackend):
 
     It can write image, config, scalars, etc.
     to the local hard disk. You can get the drawing backend
-    through the visualizer property for custom drawing.
+    through the experiment property for custom drawing.
 
     Examples:
         >>> from mmengine.visualization import LocalVisBackend
         >>> import numpy as np
         >>> local_vis_backend = LocalVisBackend(save_dir='temp_dir')
-        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> local_vis_backend.add_image('img', img)
-        >>> local_vis_backend.add_scaler('mAP', 0.6)
+        >>> local_vis_backend.add_scalar('mAP', 0.6)
         >>> local_vis_backend.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
-        >>> local_vis_backend.add_image('img', image)
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> local_vis_backend.add_config(cfg)
 
     Args:
         save_dir (str, optional): The root directory to save the files
-            produced by the writer. If it is none, it means no data
-            is stored. Default None.
+            produced by the visualizer. If it is none, it means no data
+            is stored. Default to None.
         img_save_dir (str): The directory to save images.
-            Default to 'writer_image'.
-        config_save_file (str): The file to save parameters.
-            Default to 'parameters.yaml'.
-        scalar_save_file (str):  The file to save scalar values.
+            Default to 'vis_image'.
+        config_save_file (str): The file name to save config.
+            Default to 'config.py'.
+        scalar_save_file (str):  The file name to save scalar values.
             Default to 'scalars.json'.
     """
 
@@ -152,17 +154,19 @@ class LocalVisBackend(BaseVisBackend):
         assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalVisBackend, self).__init__(save_dir)
+        # If ``self._save_dir`` is None, no data will be saved
+        # after calling ``add_xxx()``.
         if self._save_dir is not None:
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
             self._img_save_dir = osp.join(
                 self._save_dir,  # type: ignore
                 img_save_dir)
-            self._scalar_save_file = osp.join(
-                self._save_dir,  # type: ignore
-                scalar_save_file)
             self._config_save_file = osp.join(
                 self._save_dir,  # type: ignore
                 config_save_file)
+            self._scalar_save_file = osp.join(
+                self._save_dir,  # type: ignore
+                scalar_save_file)
 
     @property
     def experiment(self) -> 'LocalVisBackend':
@@ -171,49 +175,62 @@ class LocalVisBackend(BaseVisBackend):
         return self
 
     def add_config(self, config: Config, **kwargs) -> None:
-        # TODO
+        """Record the config to disk.
+
+        Args:
+            config (Config): The Config object
+        """
         assert isinstance(config, Config)
+        if self._save_dir is not None:
+            config.dump(self._config_save_file)
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray = None,
+                  image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image to disk.
+        """Record the image to disk.
 
         Args:
-            name (str): The unique identifier for the image to save.
-            image (np.ndarray, optional): The image to be saved. The format
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
                 should be RGB. Default to None.
             step (int): Global step value to record. Default to 0.
         """
-
-        drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        os.makedirs(self._img_save_dir, exist_ok=True)
-        save_file_name = f'{name}_{step}.png'
-        cv2.imwrite(osp.join(self._img_save_dir, save_file_name), drawn_image)
+        if self._save_dir is not None:
+            drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            os.makedirs(self._img_save_dir, exist_ok=True)
+            save_file_name = f'{name}_{step}.png'
+            cv2.imwrite(
+                osp.join(self._img_save_dir, save_file_name), drawn_image)
 
     def add_scalar(self,
                    name: str,
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Add scalar data to disk.
+        """Record the scalar data to disk.
 
         Args:
-            name (str): The unique identifier for the scalar to save.
-            value (float, int): Value to save.
+            name (str): The scalar identifier.
+            value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self._dump({name: value, 'step': step}, self._scalar_save_file, 'json')
+        if self._save_dir is not None:
+            self._dump({
+                name: value,
+                'step': step
+            }, self._scalar_save_file, 'json')
 
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
                     file_path: Optional[str] = None,
                     **kwargs) -> None:
-        """Record scalars. The scalar dict will be written to the default and
-        specified files if ``file_name`` is specified.
+        """Record the scalars to disk.
+
+        The scalar dict will be written to the default and
+        specified files if ``file_path`` is specified.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
@@ -226,23 +243,24 @@ class LocalVisBackend(BaseVisBackend):
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
-        if file_path is not None:
-            assert file_path.split('.')[-1] == 'json'
-            new_save_file_path = osp.join(
-                self._save_dir,  # type: ignore
-                file_path)
-            assert new_save_file_path != self._scalar_save_file, \
-                '"file_path" and "scalar_save_file" have the same name, ' \
-                'please set "file_path" to another value'
-            self._dump(scalar_dict, new_save_file_path, 'json')
-        self._dump(scalar_dict, self._scalar_save_file, 'json')
+        if self._save_dir is not None:
+            if file_path is not None:
+                assert file_path.split('.')[-1] == 'json'
+                new_save_file_path = osp.join(
+                    self._save_dir,  # type: ignore
+                    file_path)
+                assert new_save_file_path != self._scalar_save_file, \
+                    '``file_path`` and ``scalar_save_file`` have the ' \
+                    'same name, please set ``file_path`` to another value'
+                self._dump(scalar_dict, new_save_file_path, 'json')
+            self._dump(scalar_dict, self._scalar_save_file, 'json')
 
     def _dump(self, value_dict: dict, file_path: str,
               file_format: str) -> None:
         """dump dict to file.
 
         Args:
-           value_dict (dict) : Save dict data.
+           value_dict (dict) : The dict data to saved.
            file_path (str): The file path to save data.
            file_format (str): The file format to save data.
         """
@@ -263,7 +281,8 @@ class WandbVisBackend(BaseVisBackend):
         >>> wandb_vis_backend.add_image('img', img)
         >>> wandb_vis_backend.add_scaler('mAP', 0.6)
         >>> wandb_vis_backend.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
-        >>> wandb_vis_backend.add_image('img', img)
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> wandb_vis_backend.add_config(cfg)
 
     Args:
         init_kwargs (dict, optional): wandb initialization
@@ -274,7 +293,7 @@ class WandbVisBackend(BaseVisBackend):
                 and metrics won't be saved until `wandb.log` is called
                 with `commit=True`. Default to True.
         save_dir (str, optional): The root directory to save the files
-            produced by the writer. Default to None.
+            produced by the visualizer. Default to None.
     """
 
     def __init__(self,
@@ -317,20 +336,21 @@ class WandbVisBackend(BaseVisBackend):
         return wandb
 
     def add_config(self, config: Config, **kwargs) -> None:
-        # TODO
-        pass
+        with tempfile.TemporaryDirectory() as temp_config_dir:
+            config.dump(os.path.join(temp_config_dir, 'config.py'))
+            self._wandb.save(os.path.join(temp_config_dir, 'config.py'))
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray = None,
+                  image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image to wandb.
+        """Record the image to wandb.
 
         Args:
-            name (str): The unique identifier for the image to save.
-            image (np.ndarray, optional): The image to be saved. The format
-                should be RGB. Default to None.
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
             step (int): Global step value to record. Default to 0.
         """
         self._wandb.log({name: image}, commit=self._commit, step=step)
@@ -340,11 +360,11 @@ class WandbVisBackend(BaseVisBackend):
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Record scalar data to wandb.
+        """Record the scalar data to wandb.
 
         Args:
-            name (str): The unique identifier for the scalar to save.
-            value (float, int): Value to save.
+            name (str): The scalar identifier.
+            value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
         self._wandb.log({name: value}, commit=self._commit, step=step)
@@ -354,7 +374,7 @@ class WandbVisBackend(BaseVisBackend):
                     step: int = 0,
                     file_path: Optional[str] = None,
                     **kwargs) -> None:
-        """Record scalar's data to wandb.
+        """Record the scalar's data to wandb.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
@@ -376,21 +396,21 @@ class TensorboardVisBackend(BaseVisBackend):
     """Tensorboard class. It can write images, config, scalars, etc. to a
     tensorboard file.
 
-    Its drawing function is provided by Visualizer.
-
     Examples:
         >>> from mmengine.visualization import TensorboardVisBackend
         >>> import numpy as np
-        >>> tensorboard_visualizer = TensorboardVisBackend(save_dir='temp_dir')
+        >>> tensorboard_vis_backend = \
+        >>>     TensorboardVisBackend(save_dir='temp_dir')
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
-        >>> tensorboard_visualizer.add_image('img', img)
-        >>> tensorboard_visualizer.add_scaler('mAP', 0.6)
-        >>> tensorboard_visualizer.add_scalars({'loss': 0.1,'acc':0.8})
-        >>> tensorboard_visualizer.add_image('img', image)
+        >>> tensorboard_vis_backend.add_image('img', img)
+        >>> tensorboard_vis_backend.add_scaler('mAP', 0.6)
+        >>> tensorboard_vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> tensorboard_vis_backend.add_config(cfg)
 
     Args:
         save_dir (str): The root directory to save the files
-            produced by the backend.
+            produced by the backend. Default to None.
         log_dir (str): Save directory location. Default to 'tf_logs'.
     """
 
@@ -398,10 +418,10 @@ class TensorboardVisBackend(BaseVisBackend):
                  save_dir: Optional[str] = None,
                  log_dir: str = 'tf_logs'):
         super(TensorboardVisBackend, self).__init__(save_dir)
-        if save_dir is not None:
+        if self._save_dir is not None:
             self._tensorboard = self._setup_env(log_dir)
 
-    def _setup_env(self, log_dir: str):
+    def _setup_env(self, log_dir: str) -> Any:
         """Setup env.
 
         Args:
@@ -424,11 +444,8 @@ class TensorboardVisBackend(BaseVisBackend):
                     'Please run "pip install future tensorboard" to install '
                     'the dependencies to use torch.utils.tensorboard '
                     '(applicable to PyTorch 1.1 or higher)')
-        if self._save_dir is None:
-            return SummaryWriter(f'./{log_dir}')
-        else:
-            self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
-            return SummaryWriter(self.log_dir)
+        self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
+        return SummaryWriter(self.log_dir)
 
     @property
     def experiment(self):
@@ -436,44 +453,51 @@ class TensorboardVisBackend(BaseVisBackend):
         return self._tensorboard
 
     def add_config(self, config: Config, **kwargs) -> None:
-        # TODO
-        pass
+        """Record the config to tensorboard.
+
+        Args:
+            config (Config): The Config object
+        """
+        if self._save_dir is not None:
+            self._tensorboard.add_text('config', config.pretty_text)
 
     def add_image(self,
                   name: str,
                   image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
-        """Record image to tensorboard.
+        """Record the image to tensorboard.
 
         Args:
-            name (str): The unique identifier for the image to save.
-            image (np.ndarray, optional): The image to be saved. The format
-                should be RGB. Default to None.
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self._tensorboard.add_image(name, image, step, dataformats='HWC')
+        if self._save_dir is not None:
+            self._tensorboard.add_image(name, image, step, dataformats='HWC')
 
     def add_scalar(self,
                    name: str,
                    value: Union[int, float],
                    step: int = 0,
                    **kwargs) -> None:
-        """Record scalar data to summary.
+        """Record the scalar data to tensorboard.
 
         Args:
-            name (str): The unique identifier for the scalar to save.
-            value (float, int): Value to save.
+            name (str): The scalar identifier.
+            value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self._tensorboard.add_scalar(name, value, step)
+        if self._save_dir is not None:
+            self._tensorboard.add_scalar(name, value, step)
 
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
                     file_path: Optional[str] = None,
                     **kwargs) -> None:
-        """Record scalar's data to summary.
+        """Record the scalar's data to tensorboard.
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
@@ -485,8 +509,14 @@ class TensorboardVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        for key, value in scalar_dict.items():
-            self.add_scalar(key, value, step)
+        if self._save_dir is not None:
+            for key, value in scalar_dict.items():
+                self.add_scalar(key, value, step)
+
+    # TODO
+    def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
+                  **kwargs) -> None:
+        pass
 
     def close(self):
         """close an opened tensorboard object."""
