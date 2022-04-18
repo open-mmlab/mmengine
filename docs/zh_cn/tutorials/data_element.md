@@ -34,7 +34,8 @@ for img, data_sample in dataloader:
 
 一种典型数据元素是某一算法任务上的预测数据或标注：例如检测框，实例掩码，语义分割掩码，和图像标签等。这些数据元素可以进一步区分为实例级别，像素级别，和标签级别。这些类型各有自己的特点。因此，MMEngine 基于 `BaseDataElement` 派生出了 3 类数据结构来封装不同类型的标注数据或者模型的预测结果：`InstanceData`, `PixelData`, 和 `LabelData`。这些接口可以被用于模型内各个模块之间的数据传递。因为标注数据和预测数据往往具有相似的性质（例如模型的预测框和标注框具有相同的性质），MMEngine 使用相同的抽象数据接口来封装预测数据和标注数据，并推荐使用命名来区分他们，如使用 `gt_instances` 和 `pred_instances` 来区分标注和预测的实例数据。
 
-算法库中另一种常见的数据元素是一个训练样本（例如一张图片）的所有标注和预测构成的数据元素。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。 一个训练样本（例如一张图片）的所有标注和预测经常在 dataset，model，visualizer，和 evaluator 组件之间被传递。为了简化组件之间的接口，我们可以将他们当作一个大的数据元素并对他们进行封装，这类数据元素在 OpenMMLab 算法库中一般被称为 `XXDataSample`。例如，MMDetection 由 `BaseDataElement` 派生出了 `DetDataSample` 来封装该算法库中一个样本的标注与预测的数据元素，**它的属性一般会是各种类型的数据元素**。
+算法库中另一种常见的数据元素是一个训练样本（例如一张图片）的所有标注和预测构成的数据元素。一般情况下，一张图片可以同时有多种类型的标注和/或预测（例如，同时拥有像素级别的语义分割标注和实例级别的检测框标注）。 一个训练样本（例如一张图片）的所有标注和预测经常在 dataset，model，visualizer，和 evaluator 组件之间被传递。为了简化组件之间的接口，我们可以将他们当作一个大的数据元素并对他们进行封装，这类数据元素在 OpenMMLab 算法库中一般被称为 `XXDataSample`。
+因此，类似于 `nn.Module` 的派生类内部可以拥有类型为 `nn.Module` 的属性，`BaseDataElement` 也允许封装 `BaseDataElement` 作为它的属性。这样的类一般在算法库中封装一个样本的全体数据， 并且**它的属性一般会是各种类型的数据元素**。例如，MMDetection 由 `BaseDataElement` 派生出了 `DetDataSample` 来封装该算法库中一个样本的标注与预测的全部数据元素，`DetDataSample` 的属性一般是 `InstanceData`。
 
 他们的关系如下图所示
 
@@ -248,7 +249,6 @@ shape of det_scores: torch.Size([4])
 
 ### DataSample
 
-类似 `nn.Module` 的派生类内部可以拥有类型为 `nn.Module` 的属性，`BaseDataElement` 也允许封装 `BaseDataElement` 的属性。这样的类一般在算法库中封装一个样本的全体数据。
 基于 `BaseDataElement`，下游算法库可以定义 `DetDataSample`，并且定义 3 个 property：proposals，gt_instances，pred_instances，并约束他们的类型。
 
 ```python
