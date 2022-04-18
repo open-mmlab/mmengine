@@ -153,7 +153,7 @@ test_evaluator = dict(type='Accuracy')
 
 # 训练、验证、测试流程配置
 train_cfg = dict(by_epoch=True, max_epochs=100)
-validation_cfg = dict(interval=1)  # 每隔一个 epoch 进行一次验证
+val_cfg = dict(interval=1)  # 每隔一个 epoch 进行一次验证
 test_cfg = dict()
 
 # 自定义钩子
@@ -217,14 +217,17 @@ MMEngine 内提供了四种默认的循环：
 
 用户可以通过继承循环基类来实现自己的训练流程。循环基类需要提供两个输入：`runner` 执行器的实例和 `loader` 循环所需要迭代的迭代器。
 用户如果有自定义的需求，也可以增加更多的输入参数。MMEngine 中同样提供了 LOOPS 注册器对循环类进行管理，用户可以向注册器内注册自定义的循环模块，
-然后在配置文件的 `train_cfg`、`validation_cfg`、`test_cfg` 中增加 `type` 字段来指定使用何种循环。
+然后在配置文件的 `train_cfg`、`val_cfg`、`test_cfg` 中增加 `type` 字段来指定使用何种循环。
 用户可以在自定义的循环中实现任意的执行逻辑，也可以增加或删减钩子（hook）点位，但需要注意的是一旦钩子点位被修改，默认的钩子函数可能不会被执行，导致一些训练过程中默认发生的行为发生变化。
 因此，我们强烈建议用户按照本文档中定义的循环执行流程图以及[钩子规范](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html) 去重载循环基类。
 
 ```python
-from mmengine.registry import LOOPS
+from mmengine.registry import LOOPS, HOOKS
 from mmengine.runner.loop import BaseLoop
+from mmengine.hooks import Hook
 
+
+# 自定义验证循环
 @LOOPS.register_module()
 class CustomValLoop(BaseLoop):
     def __init__(self, runner, dataloader, evaluator, dataloader2):
@@ -235,30 +238,47 @@ class CustomValLoop(BaseLoop):
         self.runner.call_hooks('before_val_epoch')
         for idx, data_batch in enumerate(self.dataloader):
             self.runner.call_hooks(
-                'before_val_iter', batch_idx=idx, data_batch=data_batch))
+                'before_val_iter', batch_idx=idx, data_batch=data_batch)
             outputs = self.run_iter(idx, data_batch)
             self.runner.call_hooks(
-                'after_val_iter', batch_idx=idx, data_batch=data_batch, outputs=outputs))
+                'after_val_iter', batch_idx=idx, data_batch=data_batch, outputs=outputs)
         metric = self.evaluator.evaluate()
+
+        # 增加额外的验证循环
         for idx, data_batch in enumerate(self.dataloader2):
+            # 增加额外的钩子点位
             self.runner.call_hooks(
-                'before_val_iter2', batch_idx=idx, data_batch=data_batch))
+                'before_valloader2_iter', batch_idx=idx, data_batch=data_batch)
             self.run_iter(idx, data_batch)
+            # 增加额外的钩子点位
             self.runner.call_hooks(
-                'after_val_iter2', batch_idx=idx, data_batch=data_batch, outputs=outputs))
+                'after_valloader2_iter', batch_idx=idx, data_batch=data_batch, outputs=outputs)
         metric2 = self.evaluator.evaluate()
 
         ...
 
         self.runner.call_hooks('after_val_epoch')
 
+
+# 定义额外点位的钩子类
+@HOOKS.register_module()
+class CustomValHook(Hook):
+    def before_valloader2_iter(self, batch_idx, data_batch):
+        ...
+
+    def after_valloader2_iter(self, batch_idx, data_batch, outputs):
+        ...
+
 ```
 
 上面的例子中实现了一个与默认验证循环不一样的自定义验证循环，它在两个不同的验证集上进行验证，同时对第二次验证增加了额外的钩子点位，并在最后对两个验证结果进行进一步的处理。在实现了自定义的循环类之后，
-只需要在配置文件的 `validation_cfg` 内设置 `type='CustomValLoop'`，并添加额外的配置即可。
+只需要在配置文件的 `val_cfg` 内设置 `type='CustomValLoop'`，并添加额外的配置即可。
 
 ```python
-validation_cfg = dict(type='CustomValLoop', dataloader2=dict(dataset=dict(type='ValDataset2'), ...))
+# 自定义验证循环
+val_cfg = dict(type='CustomValLoop', dataloader2=dict(dataset=dict(type='ValDataset2'), ...))
+# 额外点位的钩子
+custom_hooks = [dict(type='CustomValHook')]
 ```
 
 ### 自定义执行器
