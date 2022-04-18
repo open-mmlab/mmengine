@@ -467,11 +467,11 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
+    def _get_meta_info(cls, metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_metainfo (dict): Meta information dict. If ``in_metainfo``
+            metainfo (dict): Meta information dict. If ``metainfo``
                 contains existed filename, it will be parsed by
                 ``list_from_file``.
 
@@ -480,15 +480,15 @@ class BaseDataset(Dataset):
         """
         # `cls.METAINFO` will be overwritten by in_meta
         cls_metainfo = copy.deepcopy(cls.METAINFO)
-        if in_metainfo is None:
+        if metainfo is None:
             return cls_metainfo
-        if not isinstance(in_metainfo, dict):
+        if not isinstance(metainfo, dict):
             raise TypeError(
-                f'in_metainfo should be a dict, but got {type(in_metainfo)}')
+                f'metainfo should be a dict, but got {type(metainfo)}')
 
-        for k, v in in_metainfo.items():
+        for k, v in metainfo.items():
             if isinstance(v, str) and osp.isfile(v):
-                # if filename in in_metainfo, this key will be further parsed.
+                # if filename in metainfo, this key will be further parsed.
                 # nested filename will be ignored.
                 cls_metainfo[k] = list_from_file(v)
             else:
