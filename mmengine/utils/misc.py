@@ -87,7 +87,7 @@ def import_modules_from_strings(imports, allow_failed_imports=False):
                               UserWarning)
                 imported_tmp = None
             else:
-                raise ImportError
+                raise ImportError(f'Failed to import {imp}')
         imported.append(imported_tmp)
     if single_import:
         imported = imported[0]
