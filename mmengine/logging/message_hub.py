@@ -123,8 +123,7 @@ class MessageHub(ManagerMixin):
         if key in self._log_scalars:
             self._log_scalars[key].update(checked_value, count)
         else:
-            self._log_scalars[key] = HistoryBuffer(
-                [checked_value], [count])
+            self._log_scalars[key] = HistoryBuffer([checked_value], [count])
 
     def update_scalars(self, log_dict: dict, resumed: bool = True) -> None:
         """Update :attr:`_log_scalars` with a dict.
@@ -155,16 +154,16 @@ class MessageHub(ManagerMixin):
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
                     f'value must be defined in {log_val}'
-                count = self._get_valid_value(
-                    log_name, log_val.get('count', 1))
-                checked_value = self._get_valid_value(
-                    log_name, log_val['value'])
+                count = self._get_valid_value(log_name,
+                                              log_val.get('count', 1))
+                checked_value = self._get_valid_value(log_name,
+                                                      log_val['value'])
             else:
-                count = self._get_valid_value(log_name, log_val)
-                checked_value = 1
-            assert isinstance(count, int), (
-                'The type of count must be int. but got '
-                f'{type(count): {count}}')
+                count = 1
+                checked_value = self._get_valid_value(log_name, log_val)
+            assert isinstance(count,
+                              int), ('The type of count must be int. but got '
+                                     f'{type(count): {count}}')
             self.update_scalar(log_name, checked_value, count)
 
     def update_info(self, key: str, value: Any, resumed: bool = True) -> None:
