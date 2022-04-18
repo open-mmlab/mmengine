@@ -1,4 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os.path as osp
+import time
 import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -136,9 +138,15 @@ class Visualizer(ManagerMixin):
         self._dataset_meta: Union[None, dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
+        if save_dir is not None:
+            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+            save_dir = osp.join(save_dir,
+                                f'vis_data_{timestamp}')  # type: ignore
+
         if vis_backends:
             with_name = False
             without_name = False
+
             for vis_backend in vis_backends:
                 if 'name' in vis_backend:
                     with_name = True

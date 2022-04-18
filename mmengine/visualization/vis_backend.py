@@ -2,7 +2,6 @@
 import os
 import os.path as osp
 import tempfile
-import time
 from abc import ABCMeta, abstractmethod
 from typing import Any, Optional, Sequence, Union
 
@@ -29,10 +28,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     def __init__(self, save_dir: Optional[str] = None):
         self._save_dir = save_dir
-        if self._save_dir:
-            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            self._save_dir = osp.join(self._save_dir,
-                                      f'vis_data_{timestamp}')  # type: ignore
+        self._is_created = False
 
     @property
     @abstractmethod
@@ -154,19 +150,29 @@ class LocalVisBackend(BaseVisBackend):
         assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
         super(LocalVisBackend, self).__init__(save_dir)
-        # If ``self._save_dir`` is None, no data will be saved
-        # after calling ``add_xxx()``.
-        if self._save_dir is not None:
+        self._img_save_dir = img_save_dir
+        self._config_save_file = config_save_file
+        self._scalar_save_file = scalar_save_file
+
+    def __mkdir_or_exist(self):
+        """If ``save_dir`` is None, the directory will not be created, and
+        ``add_xxx`` will have no effect."""
+        if self._save_dir is None:
+            return False
+
+        if self._is_created is False:
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
             self._img_save_dir = osp.join(
                 self._save_dir,  # type: ignore
-                img_save_dir)
+                self._img_save_dir)
             self._config_save_file = osp.join(
                 self._save_dir,  # type: ignore
-                config_save_file)
+                self._config_save_file)
             self._scalar_save_file = osp.join(
                 self._save_dir,  # type: ignore
-                scalar_save_file)
+                self._scalar_save_file)
+            self._is_created = True
+        return True
 
     @property
     def experiment(self) -> 'LocalVisBackend':
@@ -181,7 +187,7 @@ class LocalVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         assert isinstance(config, Config)
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             config.dump(self._config_save_file)
 
     def add_image(self,
@@ -197,7 +203,7 @@ class LocalVisBackend(BaseVisBackend):
                 should be RGB. Default to None.
             step (int): Global step value to record. Default to 0.
         """
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             os.makedirs(self._img_save_dir, exist_ok=True)
             save_file_name = f'{name}_{step}.png'
@@ -216,7 +222,7 @@ class LocalVisBackend(BaseVisBackend):
             value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             self._dump({
                 name: value,
                 'step': step
@@ -243,7 +249,7 @@ class LocalVisBackend(BaseVisBackend):
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             if file_path is not None:
                 assert file_path.split('.')[-1] == 'json'
                 new_save_file_path = osp.join(
@@ -418,8 +424,19 @@ class TensorboardVisBackend(BaseVisBackend):
                  save_dir: Optional[str] = None,
                  log_dir: str = 'tf_logs'):
         super(TensorboardVisBackend, self).__init__(save_dir)
-        if self._save_dir is not None:
-            self._tensorboard = self._setup_env(log_dir)
+        self._log_dir = log_dir
+
+    def __mkdir_or_exist(self):
+        """If ``save_dir`` is None, the directory will not be created, and
+        ``add_xxx`` will have no effect."""
+        if self._save_dir is None:
+            return False
+
+        if self._is_created is False:
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+            self._tensorboard = self._setup_env(self._log_dir)
+            self._is_created = True
+        return True
 
     def _setup_env(self, log_dir: str) -> Any:
         """Setup env.
@@ -458,7 +475,7 @@ class TensorboardVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             self._tensorboard.add_text('config', config.pretty_text)
 
     def add_image(self,
@@ -474,7 +491,7 @@ class TensorboardVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             self._tensorboard.add_image(name, image, step, dataformats='HWC')
 
     def add_scalar(self,
@@ -489,7 +506,7 @@ class TensorboardVisBackend(BaseVisBackend):
             value (int, float): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             self._tensorboard.add_scalar(name, value, step)
 
     def add_scalars(self,
@@ -509,7 +526,7 @@ class TensorboardVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        if self._save_dir is not None:
+        if self.__mkdir_or_exist():
             for key, value in scalar_dict.items():
                 self.add_scalar(key, value, step)
 
