@@ -278,7 +278,7 @@ model = MODELS.build(cfg=dict(type='Conv2d'))
 
 如果不加前缀，`build` 方法首先查找当前节点是否存在该模块，如果存在则返回该模块，否则会继续向上查找父节点甚至祖先节点直到找到该模块，因此，如果当前节点和父节点存在同一模块并且希望调用父节点的模块，我们需要指定 `scope` 前缀。需要注意的是，向上查找父节点甚至祖先节点的**前提是父节点或者祖先节点的模块已通过某种方式被导入进而完成注册**。例如，在上面这个示例中，之所以没有显示导入父节点 `mmengine` 中的 `MODELS`，是因为通过 `from mmdet.models import MODELS` 间接触发 `mmengine.MODELS` 完成模块的注册。
 
-上面展示了使用子节点注册器构建模块的示例，但有时候我们需要在父节点中使用注册器构建子节点的模块，目的是提供通用的代码，避免下游算法库重写一样的代码，该如何实现呢？
+上面展示了使用子节点注册器构建模块的示例，但有时候我们希望不填加前缀也能在父节点注册器中构建子节点的模块，目的是提供通用的代码，避免下游算法库重复造轮子，该如何实现呢？
 
 假设 MMEngine 中有一个 `build_model` 函数，该方法用于构建模型。
 
@@ -293,12 +293,13 @@ def build_model(cfg):
 
 ```python
 from mmengine import build_model
+import mmdet.models  # 通过 import 的方式将 mmdet 中的模块导入注册器进而完成注册
 
 default_scope = DefaultScope.get_instance('my_experiment', scope_name='mmdet')
 model = build_model(cfg=dict(type='RetinaNet'))
 ```
 
-获取 `DefaultScope` 实例的目的是 Registry 的 build 方法会将当前的（mmdet）注册器节点作为注册器的起点，才能在 MMDetection 中找到 RetinaNet 模块，如若不然，程序会报找不到 RetinaNet 错误。
+获取 `DefaultScope` 实例的目的是使 Registry 的 build 方法会将 DefaultScope 名称（mmdet）注册器节点作为注册器的起点，才能在配置中不填加 mmdet 前缀的情况下在 MMDetection 的注册器节点中找到 RetinaNet 模块，如若不然，程序会报找不到 RetinaNet 错误。
 
 ### 调用兄弟节点的模块
 
