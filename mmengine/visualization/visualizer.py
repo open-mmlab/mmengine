@@ -158,13 +158,12 @@ class Visualizer(ManagerMixin):
         self._dataset_meta: Union[None, dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
-        if save_dir is not None:
-            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            save_dir = osp.join(save_dir,
-                                f'vis_data_{timestamp}')  # type: ignore
-
-        if vis_backends is not None:
-            assert len(vis_backends) > 1, 'empty list'
+        if save_dir is None:
+            warnings.warn('Due to ``save_dir`` is None, vis backend does '
+                          'not take effect, so there is no need to '
+                          'initialize vis backend.')
+        elif vis_backends is not None:
+            assert len(vis_backends) > 0, 'empty list'
             names = [
                 vis_backend.get('name', None) for vis_backend in vis_backends
             ]
@@ -173,6 +172,10 @@ class Visualizer(ManagerMixin):
                                    'all backends must use the name attribute')
             if None not in names and len(set(names)) == len(names):
                 raise RuntimeError('The name fields cannot be the same')
+
+            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+            save_dir = osp.join(save_dir,
+                                f'vis_data_{timestamp}')  # type: ignore
 
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])

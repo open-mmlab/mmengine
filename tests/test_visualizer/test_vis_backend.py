@@ -31,27 +31,18 @@ class TestLocalVisBackend:
         assert isinstance(local_vis_backend, LocalVisBackend)
 
     def test_experiment(self):
-        local_vis_backend = LocalVisBackend()
+        local_vis_backend = LocalVisBackend('temp_dir')
         assert local_vis_backend.experiment == local_vis_backend
 
     def test_add_config(self):
-        local_vis_backend = LocalVisBackend()
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        local_vis_backend.add_config(cfg)
-        assert local_vis_backend._is_created is False
-
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_config(cfg)
-        assert local_vis_backend._is_created is True
         assert os.path.exists(local_vis_backend._config_save_file)
         shutil.rmtree('temp_dir')
 
     def test_add_image(self):
-        local_vis_backend = LocalVisBackend()
         image = np.random.randint(0, 256, size=(10, 10, 3))
-        local_vis_backend.add_image('img', image)
-        assert local_vis_backend._is_created is False
-
         local_vis_backend = LocalVisBackend('temp_dir')
 
         # image must be in np.uint8 format
@@ -67,10 +58,6 @@ class TestLocalVisBackend:
         shutil.rmtree('temp_dir')
 
     def test_add_scalar(self):
-        local_vis_backend = LocalVisBackend()
-        local_vis_backend.add_scalar('map', 0.9)
-        assert local_vis_backend._is_created is False
-
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalar('map', 0.9)
         out_dict = load(local_vis_backend._scalar_save_file, 'json')
@@ -96,11 +83,7 @@ class TestLocalVisBackend:
         shutil.rmtree('temp_dir')
 
     def test_add_scalars(self):
-        local_vis_backend = LocalVisBackend()
         input_dict = {'map': 0.7, 'acc': 0.9}
-        local_vis_backend.add_scalars(input_dict)
-        assert local_vis_backend._is_created is False
-
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalars(input_dict)
         out_dict = load(local_vis_backend._scalar_save_file, 'json')
@@ -114,7 +97,6 @@ class TestLocalVisBackend:
                            '"step": 0}\n{"map": 0.8, "acc": 0.8, "step": 1}\n'
 
         # test file_path
-        local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalars(input_dict, file_path='temp.json')
         assert os.path.exists(local_vis_backend._scalar_save_file)
         assert os.path.exists(
@@ -132,29 +114,20 @@ class TestTensorboardVisBackend:
     sys.modules['tensorboardX'] = MagicMock()
 
     def test_init(self):
-        TensorboardVisBackend()
         TensorboardVisBackend('temp_dir')
         VISBACKENDS.build(
             dict(type='TensorboardVisBackend', save_dir='temp_dir'))
 
     def test_experiment(self):
-        tensorboard_vis_backend = TensorboardVisBackend()
-        assert tensorboard_vis_backend.experiment is None
-
         tensorboard_vis_backend = TensorboardVisBackend('temp_dir')
         assert (tensorboard_vis_backend.experiment ==
                 tensorboard_vis_backend._tensorboard)
         shutil.rmtree('temp_dir')
 
     def test_add_config(self):
-        tensorboard_vis_backend = TensorboardVisBackend()
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        tensorboard_vis_backend.add_config(cfg)
-        assert tensorboard_vis_backend._is_created is False
-
         tensorboard_vis_backend = TensorboardVisBackend('temp_dir')
         tensorboard_vis_backend.add_config(cfg)
-        assert tensorboard_vis_backend._is_created is True
         shutil.rmtree('temp_dir')
 
     def test_add_image(self):
@@ -204,34 +177,24 @@ class TestWandbVisBackend:
     sys.modules['wandb.run'] = MagicMock()
 
     def test_init(self):
-        WandbVisBackend()
         WandbVisBackend('temp_dir')
         VISBACKENDS.build(dict(type='WandbVisBackend', save_dir='temp_dir'))
 
     def test_experiment(self):
-        wandb_vis_backend = WandbVisBackend()
-        assert wandb_vis_backend.experiment is None
-
         wandb_vis_backend = WandbVisBackend('temp_dir')
         assert wandb_vis_backend.experiment == wandb_vis_backend._wandb
         shutil.rmtree('temp_dir')
 
     def test_add_config(self):
-        wandb_vis_backend = WandbVisBackend()
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        wandb_vis_backend.add_config(cfg)
-        assert wandb_vis_backend._is_created is False
-
         wandb_vis_backend = WandbVisBackend('temp_dir')
         _wandb = wandb_vis_backend.experiment
         _wandb.run.dir = 'temp_dir'
         wandb_vis_backend.add_config(cfg)
-        assert wandb_vis_backend._is_created is True
         shutil.rmtree('temp_dir')
 
     def test_add_image(self):
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
-
         wandb_vis_backend = WandbVisBackend('temp_dir')
         wandb_vis_backend.add_image('img', image)
         wandb_vis_backend.add_image('img', image)
