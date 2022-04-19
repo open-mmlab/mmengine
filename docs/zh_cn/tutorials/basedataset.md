@@ -97,9 +97,9 @@ data
 
 - `__len__()`：返回数据集长度，返回值为整数型
 
-- `get_subset_(indices)`：根据 `indices` 以 inplace 的方式返回子数据集。如果 `indices` 为 `int`，则返回的子数据集类只包含前若干个数据样本；如果 `indices` 为 `Sequence[int]`，则返回的子数据集类包含根据 `Sequence[int]` 指定的数据样本。
+- `get_subset_(indices)`：根据 `indices` 以 inplace 的方式**修改原数据集类**。如果 `indices` 为 `int`，则原数据集类只包含前若干个数据样本；如果 `indices` 为 `Sequence[int]`，则原数据集类包含根据 `Sequence[int]` 指定的数据样本。
 
-- `get_subset(indices)`：根据 `indices` 以**非** inplace 的方式返回子数据集，即重新复制一份子数据集。如果 `indices` 为 `int`，则返回的子数据集类只包含前若干个数据样本；如果 `indices` 为 `Sequence[int]`，则返回的子数据集类包含根据 `Sequence[int]` 指定的数据样本。
+- `get_subset(indices)`：根据 `indices` 以**非** inplace 的方式**返回子数据集类**，即重新复制一份子数据集。如果 `indices` 为 `int`，则返回的子数据集类只包含前若干个数据样本；如果 `indices` 为 `Sequence[int]`，则返回的子数据集类包含根据 `Sequence[int]` 指定的数据样本。
 
 ## 使用数据集基类自定义数据集类
 
@@ -107,7 +107,7 @@ data
 
 ### 对于满足 OpenMMLab 2.0 数据集格式规范的标注文件
 
-如上所述，对于满足 OpenMMLab 2.0 数据集格式规范的标注文件，用户可以重载 `parse_data_info()`来加载标签。以下是一个使用数据集基类来实现某一具体数据集的例子。
+如上所述，对于满足 OpenMMLab 2.0 数据集格式规范的标注文件，用户可以重载 `parse_data_info()` 来加载标签。以下是一个使用数据集基类来实现某一具体数据集的例子。
 
 ```python
 import os.path as osp
@@ -176,9 +176,9 @@ len(toy_dataset), len(sub_toy_dataset)
 # 2, 1
 
 # `get_subset_` 接口会对原数据集类做修改，即 inplace 的方式
-sub_toy_dataset = toy_dataset.get_subset_(1)
-len(toy_dataset), len(sub_toy_dataset)
-# 1, 1
+toy_dataset.get_subset_(1)
+len(toy_dataset)
+# 1
 ```
 
 经过以上步骤，可以了解基于数据集基类如何自定义新的数据集类，以及如何使用自定义数据集类。
