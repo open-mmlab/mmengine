@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
-import tempfile
+import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, Optional, Sequence, Union
 
@@ -28,6 +28,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     def __init__(self, save_dir: Optional[str] = None):
         self._save_dir = save_dir
+        # lazy creation for save dir
         self._is_created = False
 
     @property
@@ -192,7 +193,7 @@ class LocalVisBackend(BaseVisBackend):
 
     def add_image(self,
                   name: str,
-                  image: np.ndarray,
+                  image: np.array,
                   step: int = 0,
                   **kwargs) -> None:
         """Record the image to disk.
@@ -204,6 +205,7 @@ class LocalVisBackend(BaseVisBackend):
             step (int): Global step value to record. Default to 0.
         """
         if self.__mkdir_or_exist():
+            assert image.dtype == np.uint8
             drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             os.makedirs(self._img_save_dir, exist_ok=True)
             save_file_name = f'{name}_{step}.png'
@@ -212,17 +214,19 @@ class LocalVisBackend(BaseVisBackend):
 
     def add_scalar(self,
                    name: str,
-                   value: Union[int, float],
+                   value: Union[int, float, torch.Tensor, np.ndarray],
                    step: int = 0,
                    **kwargs) -> None:
         """Record the scalar data to disk.
 
         Args:
             name (str): The scalar identifier.
-            value (int, float): Value to save.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
         if self.__mkdir_or_exist():
+            if isinstance(value, torch.Tensor):
+                value = value.item()
             self._dump({
                 name: value,
                 'step': step
@@ -240,7 +244,7 @@ class LocalVisBackend(BaseVisBackend):
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
-                corresponding values.
+                corresponding values. The value must be dumped format.
             step (int): Global step value to record. Default to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the ``file_path`` file at the same time
@@ -249,6 +253,7 @@ class LocalVisBackend(BaseVisBackend):
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
+
         if self.__mkdir_or_exist():
             if file_path is not None:
                 assert file_path.split('.')[-1] == 'json'
@@ -291,6 +296,8 @@ class WandbVisBackend(BaseVisBackend):
         >>> wandb_vis_backend.add_config(cfg)
 
     Args:
+        save_dir (str, optional): The root directory to save the files
+            produced by the visualizer. Default to None.
         init_kwargs (dict, optional): wandb initialization
             input parameters. Default to None.
         commit: (bool, optional) Save the metrics dict to the wandb server
@@ -298,17 +305,31 @@ class WandbVisBackend(BaseVisBackend):
                 updates the current metrics dict with the row argument
                 and metrics won't be saved until `wandb.log` is called
                 with `commit=True`. Default to True.
-        save_dir (str, optional): The root directory to save the files
-            produced by the visualizer. Default to None.
     """
 
     def __init__(self,
+                 save_dir: Optional[str] = None,
                  init_kwargs: Optional[dict] = None,
-                 commit: Optional[bool] = True,
-                 save_dir: Optional[str] = None):
+                 commit: Optional[bool] = True):
         super(WandbVisBackend, self).__init__(save_dir)
+        self._init_kwargs = init_kwargs
         self._commit = commit
-        self._wandb = self._setup_env(init_kwargs)
+
+    def __mkdir_or_exist(self):
+        """If ``save_dir`` is None, the directory will not be created, and
+        ``add_xxx`` will have no effect."""
+        if self._save_dir is None:
+            return False
+
+        if self._is_created is False:
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+            if self._init_kwargs is None:
+                self._init_kwargs = {'dir': self._save_dir}
+            else:
+                self._init_kwargs.setdefault('dir', self._save_dir)
+            self._wandb = self.__setup_env(self._init_kwargs)
+            self._is_created = True
+        return True
 
     @property
     def experiment(self):
@@ -318,9 +339,12 @@ class WandbVisBackend(BaseVisBackend):
         write other data, such as writing a table, you can directly get the
         wandb backend through experiment.
         """
-        return self._wandb
+        if self.__mkdir_or_exist():
+            return self._wandb
+        else:
+            return None
 
-    def _setup_env(self, init_kwargs: Optional[dict] = None) -> Any:
+    def __setup_env(self, init_kwargs: dict) -> Any:
         """Setup env.
 
         Args:
@@ -334,17 +358,17 @@ class WandbVisBackend(BaseVisBackend):
         except ImportError:
             raise ImportError(
                 'Please run "pip install wandb" to install wandb')
-        if init_kwargs:
-            wandb.init(**init_kwargs)
-        else:
-            wandb.init()
 
+        wandb.init(**init_kwargs)
         return wandb
 
     def add_config(self, config: Config, **kwargs) -> None:
-        with tempfile.TemporaryDirectory() as temp_config_dir:
-            config.dump(os.path.join(temp_config_dir, 'config.py'))
-            self._wandb.save(os.path.join(temp_config_dir, 'config.py'))
+        if self.__mkdir_or_exist():
+            cfg_path = os.path.join(self._wandb.run.dir, 'config.py')
+            config.dump(cfg_path)
+            # Files under run.dir are automatically uploaded,
+            # so no need to manually call save.
+            # self._wandb.save(cfg_path)
 
     def add_image(self,
                   name: str,
@@ -357,23 +381,27 @@ class WandbVisBackend(BaseVisBackend):
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
                 should be RGB.
-            step (int): Global step value to record. Default to 0.
+            step (int): Useless parameter. Wandb does not
+                need this parameter. Default to 0.
         """
-        self._wandb.log({name: image}, commit=self._commit, step=step)
+        if self.__mkdir_or_exist():
+            self._wandb.log({name: image}, commit=self._commit)
 
     def add_scalar(self,
                    name: str,
-                   value: Union[int, float],
+                   value: Union[int, float, torch.Tensor, np.ndarray],
                    step: int = 0,
                    **kwargs) -> None:
         """Record the scalar data to wandb.
 
         Args:
             name (str): The scalar identifier.
-            value (int, float): Value to save.
-            step (int): Global step value to record. Default to 0.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Useless parameter. Wandb does not
+                need this parameter. Default to 0.
         """
-        self._wandb.log({name: value}, commit=self._commit, step=step)
+        if self.__mkdir_or_exist():
+            self._wandb.log({name: value}, commit=self._commit)
 
     def add_scalars(self,
                     scalar_dict: dict,
@@ -385,11 +413,13 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Useless parameter. Wandb does not
+                need this parameter. Default to 0.
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Default to None.
         """
-        self._wandb.log(scalar_dict, commit=self._commit, step=step)
+        if self.__mkdir_or_exist():
+            self._wandb.log(scalar_dict, commit=self._commit)
 
     def close(self) -> None:
         """close an opened wandb object."""
@@ -417,14 +447,10 @@ class TensorboardVisBackend(BaseVisBackend):
     Args:
         save_dir (str): The root directory to save the files
             produced by the backend. Default to None.
-        log_dir (str): Save directory location. Default to 'tf_logs'.
     """
 
-    def __init__(self,
-                 save_dir: Optional[str] = None,
-                 log_dir: str = 'tf_logs'):
+    def __init__(self, save_dir: Optional[str] = None):
         super(TensorboardVisBackend, self).__init__(save_dir)
-        self._log_dir = log_dir
 
     def __mkdir_or_exist(self):
         """If ``save_dir`` is None, the directory will not be created, and
@@ -434,15 +460,12 @@ class TensorboardVisBackend(BaseVisBackend):
 
         if self._is_created is False:
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-            self._tensorboard = self._setup_env(self._log_dir)
+            self._tensorboard = self.__setup_env()
             self._is_created = True
         return True
 
-    def _setup_env(self, log_dir: str) -> Any:
+    def __setup_env(self) -> Any:
         """Setup env.
-
-        Args:
-            log_dir (str): Save directory location.
 
         Return:
             :obj:`SummaryWriter`
@@ -461,13 +484,15 @@ class TensorboardVisBackend(BaseVisBackend):
                     'Please run "pip install future tensorboard" to install '
                     'the dependencies to use torch.utils.tensorboard '
                     '(applicable to PyTorch 1.1 or higher)')
-        self.log_dir = osp.join(self._save_dir, log_dir)  # type: ignore
-        return SummaryWriter(self.log_dir)
+        return SummaryWriter(self._save_dir)
 
     @property
     def experiment(self):
         """Return Tensorboard object."""
-        return self._tensorboard
+        if self.__mkdir_or_exist():
+            return self._tensorboard
+        else:
+            return None
 
     def add_config(self, config: Config, **kwargs) -> None:
         """Record the config to tensorboard.
@@ -496,18 +521,23 @@ class TensorboardVisBackend(BaseVisBackend):
 
     def add_scalar(self,
                    name: str,
-                   value: Union[int, float],
+                   value: Union[int, float, torch.Tensor, np.ndarray],
                    step: int = 0,
                    **kwargs) -> None:
         """Record the scalar data to tensorboard.
 
         Args:
             name (str): The scalar identifier.
-            value (int, float): Value to save.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
         if self.__mkdir_or_exist():
-            self._tensorboard.add_scalar(name, value, step)
+            if isinstance(value, (int, float, torch.Tensor, np.ndarray)):
+                self._tensorboard.add_scalar(name, value, step)
+            else:
+                warnings.warn(
+                    f'Got {type(value)}, but numpy array, torch tensor, '
+                    f'int or float are expected. skip it！')
 
     def add_scalars(self,
                     scalar_dict: dict,
@@ -529,11 +559,6 @@ class TensorboardVisBackend(BaseVisBackend):
         if self.__mkdir_or_exist():
             for key, value in scalar_dict.items():
                 self.add_scalar(key, value, step)
-
-    # TODO
-    def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
-                  **kwargs) -> None:
-        pass
 
     def close(self):
         """close an opened tensorboard object."""
