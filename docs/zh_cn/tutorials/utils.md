@@ -2,14 +2,14 @@
 
 ## 全局管理器（ManagerMixin）
 
-Runner 在训练过程中，难免会使用全局变量来共享信息，例如我们会在 model 中获取 全局的[logger](TODO) 来打印初始化信息；在 model 中获取 全局的[Visualizer](TODO) 来可视化预测结果、特征图；在 [Reigistry](TODO) 中获取 全局的 [DefaultScope](TODO) 来确定注册域。为了管理这些功能相似的模块，MMEngine 实现了管理器（ManagerMix）来统一全局变量的创建和获取方式。
+Runner 在训练过程中，难免会使用全局变量来共享信息，例如我们会在 model 中获取全局的 [logger](TODO) 来打印初始化信息；在 model 中获取全局的 [Visualizer](TODO) 来可视化预测结果、特征图；在 [Reigistry](TODO) 中获取全局的 [DefaultScope](TODO) 来确定注册域。为了管理这些功能相似的模块，MMEngine 实现了管理器（ManagerMix）来统一全局变量的创建和获取方式。
 
 ![ManagerMixin](https://user-images.githubusercontent.com/57566630/163429552-3c901fc3-9cc1-4b71-82b6-d051f452a538.png)
 
 ### 接口介绍
 
 - _instance_name：被创建的全局实例名
-- get_instance(name=‘’, **kwargs)：创建或者返回对应名字的的实例。
+- get_instance(name='', **kwargs)：创建或者返回对应名字的的实例。
 - get_current_instance()：返回最近被创建的实例。
 - instance_name:：获取对应实例的 name。
 
@@ -40,7 +40,7 @@ class CustomHook(Hook):
         GlobalClass.get_instance(runner.experiment_name, value=100)
 ```
 
-当我们调用子类的 get_instance 接口时，`ManagerMixin` 会根据名字来判断对应实例是否已经存在，进而创建/获取实例。如上例所示，当我们第一次调用  `GlobalClass.get_instance('mmengine', value=50)` 时，会创建一个名为 “mmengine” 的 `GlobalClass` 实例，其初始 value 为 50。为了方便后续介绍 `get_current_instance` 接口，这里我们创建了两个 `GlobalClass` 实例。
+当我们调用子类的 get_instance 接口时，`ManagerMixin` 会根据名字来判断对应实例是否已经存在，进而创建/获取实例。如上例所示，当我们第一次调用  `GlobalClass.get_instance('mmengine', value=50)` 时，会创建一个名为 "mmengine" 的 `GlobalClass` 实例，其初始 value 为 50。为了方便后续介绍 `get_current_instance` 接口，这里我们创建了两个 `GlobalClass` 实例。
 
 3. 在任意组件中访问该实例
 
@@ -55,4 +55,4 @@ class CustomModule(nn.Module):
         # value = GlobalClass.get_instance('mmengine', 1000).value  # mmengine 已经被创建，不能再接受额外参数
 ```
 
-在同一进程里，我们可以在不同组件中访问 `GlobalClass` 实例。例如我们在 `CustomModule` 中，调用 `get_instance`  和 `get_current_instance` 接口来获取对应名字的实例和最近被创建的实例。需要注意的是，由于 “mmengine”  实例已经被创建，再次调用时不能再传入额外参数，否则会报错。
+在同一进程里，我们可以在不同组件中访问 `GlobalClass` 实例。例如我们在 `CustomModule` 中，调用 `get_instance`  和 `get_current_instance` 接口来获取对应名字的实例和最近被创建的实例。需要注意的是，由于 "mmengine"  实例已经被创建，再次调用时不能再传入额外参数，否则会报错。
