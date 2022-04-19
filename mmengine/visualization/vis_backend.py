@@ -16,7 +16,7 @@ from mmengine.utils import TORCH_VERSION
 
 
 class BaseVisBackend(metaclass=ABCMeta):
-    """Base class for vis backend.
+    """Base class for visualization backend.
 
     All backends must inherit ``BaseVisBackend`` and implement
     the required functions.
@@ -32,11 +32,13 @@ class BaseVisBackend(metaclass=ABCMeta):
     @property
     @abstractmethod
     def experiment(self) -> Any:
-        """Return the experiment object associated with this vis backend.
+        """Return the experiment object associated with this visualization
+        backend.
 
-        The experiment attribute can get the visualizer backend, such as wandb,
-        tensorboard. If you want to write other data, such as writing a table,
-        you can directly get the visualizer backend through experiment.
+        The experiment attribute can get the visualization backend, such as
+        wandb, tensorboard. If you want to write other data, such as writing a
+        table, you can directly get the visualization backend through
+        experiment.
         """
         pass
 
@@ -112,7 +114,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
 @VISBACKENDS.register_module()
 class LocalVisBackend(BaseVisBackend):
-    """Local vis backend class.
+    """Local visualization backend class.
 
     It can write image, config, scalars, etc.
     to the local hard disk. You can get the drawing backend
@@ -153,7 +155,7 @@ class LocalVisBackend(BaseVisBackend):
         self._config_save_file = config_save_file
         self._scalar_save_file = scalar_save_file
 
-    def __mkdir_or_exist(self):
+    def __mkdir_and_init_backend_once(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
             self._img_save_dir = osp.join(
@@ -168,7 +170,7 @@ class LocalVisBackend(BaseVisBackend):
 
     @property
     def experiment(self) -> 'LocalVisBackend':
-        """Return the experiment object associated with this visualizer
+        """Return the experiment object associated with this visualization
         backend."""
         return self
 
@@ -179,7 +181,7 @@ class LocalVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         assert isinstance(config, Config)
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         config.dump(self._config_save_file)
 
     def add_image(self,
@@ -196,7 +198,7 @@ class LocalVisBackend(BaseVisBackend):
             step (int): Global step value to record. Default to 0.
         """
         assert image.dtype == np.uint8
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         os.makedirs(self._img_save_dir, exist_ok=True)
         save_file_name = f'{name}_{step}.png'
@@ -214,7 +216,7 @@ class LocalVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         if isinstance(value, torch.Tensor):
             value = value.item()
         self._dump({name: value, 'step': step}, self._scalar_save_file, 'json')
@@ -231,7 +233,8 @@ class LocalVisBackend(BaseVisBackend):
 
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
-                corresponding values. The value must be dumped format.
+                corresponding values. The value must be dumped
+                into json format.
             step (int): Global step value to record. Default to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the ``file_path`` file at the same time
@@ -241,7 +244,7 @@ class LocalVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
 
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         if file_path is not None:
             assert file_path.split('.')[-1] == 'json'
             new_save_file_path = osp.join(
@@ -269,7 +272,7 @@ class LocalVisBackend(BaseVisBackend):
 
 @VISBACKENDS.register_module()
 class WandbVisBackend(BaseVisBackend):
-    """Write various types of data to wandb.
+    """Wandb visualization backend class.
 
     Examples:
         >>> from mmengine.visualization import WandbVisBackend
@@ -302,7 +305,7 @@ class WandbVisBackend(BaseVisBackend):
         self._init_kwargs = init_kwargs
         self._commit = commit
 
-    def __mkdir_or_exist(self):
+    def __mkdir_and_init_backend_once(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
             if self._init_kwargs is None:
@@ -319,7 +322,7 @@ class WandbVisBackend(BaseVisBackend):
         write other data, such as writing a table, you can directly get the
         wandb backend through experiment.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         return self._wandb
 
     def __setup_env(self, init_kwargs: dict) -> Any:
@@ -341,7 +344,7 @@ class WandbVisBackend(BaseVisBackend):
         return wandb
 
     def add_config(self, config: Config, **kwargs) -> None:
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         cfg_path = os.path.join(self._wandb.run.dir, 'config.py')
         config.dump(cfg_path)
         # Files under run.dir are automatically uploaded,
@@ -362,7 +365,7 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Useless parameter. Wandb does not
                 need this parameter. Default to 0.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         self._wandb.log({name: image}, commit=self._commit)
 
     def add_scalar(self,
@@ -378,7 +381,7 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Useless parameter. Wandb does not
                 need this parameter. Default to 0.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         self._wandb.log({name: value}, commit=self._commit)
 
     def add_scalars(self,
@@ -396,7 +399,7 @@ class WandbVisBackend(BaseVisBackend):
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Default to None.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         self._wandb.log(scalar_dict, commit=self._commit)
 
     def close(self) -> None:
@@ -407,7 +410,9 @@ class WandbVisBackend(BaseVisBackend):
 
 @VISBACKENDS.register_module()
 class TensorboardVisBackend(BaseVisBackend):
-    """Tensorboard class. It can write images, config, scalars, etc. to a
+    """Tensorboard visualization backend class.
+
+    It can write images, config, scalars, etc. to a
     tensorboard file.
 
     Examples:
@@ -430,7 +435,7 @@ class TensorboardVisBackend(BaseVisBackend):
     def __init__(self, save_dir: str):
         super(TensorboardVisBackend, self).__init__(save_dir)
 
-    def __mkdir_or_exist(self):
+    def __mkdir_and_init_backend_once(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
             self._tensorboard = self.__setup_env()
@@ -460,7 +465,7 @@ class TensorboardVisBackend(BaseVisBackend):
     @property
     def experiment(self):
         """Return Tensorboard object."""
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         return self._tensorboard
 
     def add_config(self, config: Config, **kwargs) -> None:
@@ -469,7 +474,7 @@ class TensorboardVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         self._tensorboard.add_text('config', config.pretty_text)
 
     def add_image(self,
@@ -485,7 +490,7 @@ class TensorboardVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         self._tensorboard.add_image(name, image, step, dataformats='HWC')
 
     def add_scalar(self,
@@ -500,7 +505,7 @@ class TensorboardVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         if isinstance(value, (int, float, torch.Tensor, np.ndarray)):
             self._tensorboard.add_scalar(name, value, step)
         else:
@@ -524,7 +529,7 @@ class TensorboardVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        self.__mkdir_or_exist()
+        self.__mkdir_and_init_backend_once()
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step)
 
