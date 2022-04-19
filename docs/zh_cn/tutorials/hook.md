@@ -408,7 +408,7 @@ class CheckInvalidLossHook(Hook):
     def __init__(self, interval=50):
         self.interval = interval
 
-    def after_train_iter(self, runner, batch_idx, data_batch, outputs):
+    def after_train_iter(self, runner, batch_idx, data_batch=None, outputs=None):
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
