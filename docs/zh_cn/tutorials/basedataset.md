@@ -57,7 +57,7 @@ data
 
 数据集基类的初始化流程如下图所示：
 
-![image](https://user-images.githubusercontent.com/26813582/163172329-13830651-38d9-4253-b2c3-f7a056768b81.png)
+![image](https://user-images.githubusercontent.com/26813582/164159521-66da9fac-2e0c-4173-9acf-0ebab9682f3c.png)
 
 1. `get metainfo`：获取数据集的元信息，元信息有三种来源，优先级从高到低为：
 
@@ -77,7 +77,7 @@ data
 
 - `load data list`：读取与解析满足 OpenMMLab 2.0 数据集格式规范的标注文件，该步骤中会调用 `parse_data_info()` 方法，该方法负责解析标注文件里的每个原始数据；
 
-- `filter data` (可选)：根据 `filter_cfg` 过滤无用数据，比如不包含标注的样本等；默认不做过滤操作；
+- `filter data` (可选)：根据 `filter_cfg` 过滤无用数据，比如不包含标注的样本等；默认不做过滤操作，下游子类可以按自身所需对其进行重写；
 
 - `get subset` (可选)：根据给定的索引或整数值采样数据，比如只取前 10 个样本参与训练/测试；默认不采样数据，即使用全部数据样本；
 
@@ -219,7 +219,7 @@ class ToyVideoDataset(BaseDataset):
 
 1. 将不满足规范的标注文件转换成满足规范的标注文件，再通过上述方式使用数据集基类。
 
-2. 不对不满足规范的标注文件做任何处理，重载数据集基类的 `load_data_list(self, ann_file):` 函数，处理不满足规范的标注文件，并保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。
+2. 实现一个新的数据集类，继承自数据集基类，并且重载数据集基类的 `load_data_list(self, ann_file):` 函数，处理不满足规范的标注文件，并保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。
 
 ## 数据集基类的其它特性
 
