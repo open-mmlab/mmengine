@@ -86,16 +86,16 @@ class MMFormatter(logging.Formatter):
 
 
 class MMLogger(Logger, ManagerMixin):
-    """Formatted logger used to record message.
+    """Formatted logger used to record messages.
 
-    ``MMLogger`` can create formatted logger to log different level message and
-    get instance in the same way as ``ManagerMixin``. ``MMLogger`` has the
-    following features:
+    ``MMLogger`` can create formatted logger to log message with different
+    log levels and get instance in the same way as ``ManagerMixin``.
+    ``MMLogger`` has the following features:
 
     - Distributed log storage, ``MMLogger`` can choose whether to save log of
-      different ranks according to log_file.
-    - Log with different loglevel will have different colors and format when
-      displayed on terminal.
+      different ranks according to `log_file`.
+    - Message with different log levels will have different colors and format
+      when displayed on terminal.
 
     Note:
         - The `name` of logger and the ``instance_name`` of ``MMLogger`` could
