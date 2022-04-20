@@ -8,6 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as F
 from matplotlib.backend_bases import CloseEvent
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import (LineCollection, PatchCollection,
@@ -146,13 +147,13 @@ class Visualizer(ManagerMixin):
     """
 
     def __init__(
-        self,
-        name='visualizer',
-        image: Optional[np.ndarray] = None,
-        vis_backends: Optional[List[Dict]] = None,
-        save_dir: Optional[str] = None,
-        fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False, num='show')
+            self,
+            name='visualizer',
+            image: Optional[np.ndarray] = None,
+            vis_backends: Optional[List[Dict]] = None,
+            save_dir: Optional[str] = None,
+            fig_save_cfg=dict(frameon=False),
+            fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
         super(Visualizer, self).__init__(name)
         self._dataset_meta: Union[None, dict] = None
@@ -519,12 +520,12 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_lines(
-        self,
-        x_datas: Union[np.ndarray, torch.Tensor],
-        y_datas: Union[np.ndarray, torch.Tensor],
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
+            self,
+            x_datas: Union[np.ndarray, torch.Tensor],
+            y_datas: Union[np.ndarray, torch.Tensor],
+            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            line_styles: Union[str, List[str]] = '-',
+            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
 
@@ -580,14 +581,14 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_circles(
-        self,
-        center: Union[np.ndarray, torch.Tensor],
-        radius: Union[np.ndarray, torch.Tensor],
-        alpha: Union[float, int] = 0.8,
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+            self,
+            center: Union[np.ndarray, torch.Tensor],
+            radius: Union[np.ndarray, torch.Tensor],
+            alpha: Union[float, int] = 0.8,
+            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            line_styles: Union[str, List[str]] = '-',
+            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple circles.
 
@@ -661,13 +662,13 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_bboxes(
-        self,
-        bboxes: Union[np.ndarray, torch.Tensor],
-        alpha: Union[int, float] = 0.8,
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+            self,
+            bboxes: Union[np.ndarray, torch.Tensor],
+            alpha: Union[int, float] = 0.8,
+            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            line_styles: Union[str, List[str]] = '-',
+            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
@@ -725,14 +726,14 @@ class Visualizer(ManagerMixin):
             face_colors=face_colors)
 
     def draw_polygons(
-        self,
-        polygons: Union[Union[np.ndarray, torch.Tensor],
-                        List[Union[np.ndarray, torch.Tensor]]],
-        alpha: Union[int, float] = 0.8,
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+            self,
+            polygons: Union[Union[np.ndarray, torch.Tensor],
+                            List[Union[np.ndarray, torch.Tensor]]],
+            alpha: Union[int, float] = 0.8,
+            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            line_styles: Union[str, List[str]] = '-',
+            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
@@ -798,11 +799,11 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_binary_masks(
-        self,
-        binary_masks: Union[np.ndarray, torch.Tensor],
-        alphas: Union[float, List[float]] = 0.8,
-        colors: Union[str, tuple, List[str],
-                      List[tuple]] = 'g') -> 'Visualizer':
+            self,
+            binary_masks: Union[np.ndarray, torch.Tensor],
+            alphas: Union[float, List[float]] = 0.8,
+            colors: Union[str, tuple, List[str],
+                          List[tuple]] = 'g') -> 'Visualizer':
         """Draw single or multiple binary masks.
 
         Args:
@@ -828,7 +829,8 @@ class Visualizer(ManagerMixin):
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
-            1:], '`binary_marks` must have the same shpe with image'
+                                1:], '`binary_marks` must have ' \
+                                     'the same shape with image'
         binary_mask_len = binary_masks.shape[0]
 
         check_type_and_length('colors', colors, (str, tuple, list),
@@ -866,56 +868,90 @@ class Visualizer(ManagerMixin):
     @staticmethod
     def draw_featmap(featmap: torch.Tensor,
                      overlaid_image: Optional[np.ndarray] = None,
-                     overlaid_bboxes: Optional[np.ndarray] = None,
-                     channel_reduction: str = 'squeue_mean',
-                     topk: int = 10,
-                     arrangement: Tuple[int, int] = (5, 2),
+                     channel_reduction: Optional[str] = 'squeeze_mean',
+                     topk: int = 20,
+                     arrangement: Tuple[int, int] = (4, 5),
                      resize_shape: Optional[tuple] = None,
-                     alpha: float = 0.8) -> np.ndarray:
-        """Draw featmap. If img is not None, the final image will be the
-        weighted sum of img and featmap. It support the mode:
+                     alpha: float = 0.5) -> np.ndarray:
+        """Draw featmap.
 
-        - if mode is not None, it will compress tensor_chw to single channel
-          image and sum to image.
-        - if mode is None.
+        1. If `overlaid_image` is not None, the final output image will be the
+        weighted sum of img and featmap.
+        2. If `resize_shape` is specified, `featmap` and `overlaid_image`
+        are interpolated.
+        3. If `resize_shape` is None and `overlaid_image` is not None,
+        the feature map will be interpolated to the spatial size of the image
+        in the case where the spatial dimensions of `overlaid_image` and
+        `featmap` are different.
+        4. if `channel_reduction` is "squeeze_mean" and "select_max",
+        it will compress featmap to single channel image and weighted
+        sum to `overlaid_image`.
+        5.  if `channel_reduction` is None
 
-          - if topk <= 0, tensor_chw is assert to be one or three
-          channel and treated as image and will be sum to ``image``.
+          - if topk <= 0, featmap is assert to be one or three
+          channel and treated as image and will be weighted sum
+          to ``overlaid_image``.
           - if topk > 0, it will select topk channel to show by the sum of
-          each channel.
+          each channel. At the same time, you can specify the `arrangement`
+          to set the window layout.
 
         Args:
             featmap (torch.Tensor): The featmap to draw which format is
                 (C, H, W).
             overlaid_image (np.ndarray, optional): The overlaid image.
                 Default to None.
-            overlaid_bboxes (np.ndarray, optional): The overlaid bboxes.
-                Default to None.
             channel_reduction (str, optional): Reduce multiple channels to a
                 single channel. The optional value is 'squeeze_mean'
                 or 'select_max'. Defaults to 'squeeze_mean'.
-            topk (int): If mode is not None and topk > 0, it will select topk
-                channel to show by the sum of each channel. if topk <= 0,
-                tensor_chw is assert to be one or three. Defaults to 10.
-            arrangement (Tuple[int, int]): The arrangement of featmaps when
-                mode is not None and topk > 0. Defaults to (5, 2).
+            topk (int): If channel_reduction is not None and topk > 0,
+                it will select topk channel to show by the sum of each channel.
+                if topk <= 0, tensor_chw is assert to be one or three.
+                Defaults to 20.
+            arrangement (Tuple[int, int]): The arrangement of featmap when
+                channel_reduction is not None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
                 Default to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
-                Defaults to 0.8.
+                Defaults to 0.5.
 
         Returns:
-            np.ndarray: featmap.
+            np.ndarray: RGB image.
         """
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor '
                                           f' but got {type(featmap)}')
+        assert featmap.ndim == 3, f'Input dimension must be 3, ' \
+                                  f'but got {featmap.ndim}'
         featmap = featmap.detach().cpu()
-        assert featmap.ndim == 3, 'Input dimension must be 3'
+
         if overlaid_image is not None:
-            assert overlaid_image.shape[:2] == featmap.shape[1:]
             if overlaid_image.ndim == 2:
-                image = cv2.cvtColor(overlaid_image, cv2.COLOR_GRAY2RGB)
+                overlaid_image = cv2.cvtColor(overlaid_image,
+                                              cv2.COLOR_GRAY2RGB)
+
+            if overlaid_image.shape[:2] != featmap.shape[1:]:
+                warnings.warn(
+                    f'Since the spatial dimensions of '
+                    f'overlaid_image: {overlaid_image.shape[:2]} and '
+                    f'featmap: {featmap.shape[1:]} are not the same, '
+                    f'the feature map is interpolated. '
+                    f'This may cause mismatch problems ！')
+                if resize_shape is None:
+                    featmap = F.interpolate(
+                        featmap[None],
+                        overlaid_image.shape[:2],
+                        mode='bilinear',
+                        align_corners=False).squeeze(0)
+
+        if resize_shape is not None:
+            featmap = F.interpolate(
+                featmap[None],
+                resize_shape,
+                mode='bilinear',
+                align_corners=False).squeeze(0)
+            if overlaid_image is not None:
+                overlaid_image = cv2.resize(overlaid_image, resize_shape[::-1])
+
         if channel_reduction is not None:
             assert channel_reduction in [
                 'squeeze_mean', 'select_max'], \
@@ -923,39 +959,34 @@ class Visualizer(ManagerMixin):
                 f'but got {channel_reduction}'
             if channel_reduction == 'select_max':
                 feat_map, _ = torch.max(featmap, dim=0)
-            elif channel_reduction == 'squeeze_mean':
+            else:
                 feat_map = torch.mean(featmap, dim=0)
-            return convert_overlay_heatmap(feat_map, image, alpha)
-
-        if topk <= 0:
+            return convert_overlay_heatmap(feat_map, overlaid_image, alpha)
+        elif topk <= 0:
             featmap_channel = featmap.shape[0]
             assert featmap_channel in [
                 1, 3
             ], ('The input tensor channel dimension must be 1 or 3 '
                 'when topk is less than 1, but the channel '
                 f'dimension you input is {featmap_channel}, you can use the'
-                ' mode parameter or set topk greater than 0 to solve '
-                'the error')
-            if featmap_channel == 1:
-                return convert_overlay_heatmap(featmap[0], overlaid_image,
-                                               alpha)
-            else:
-                featmap = featmap.permute(1, 2, 0).numpy()
-                norm_img = cv2.normalize(featmap, None, 0, 255,
-                                         cv2.NORM_MINMAX)
-                heat_img = np.asarray(norm_img, dtype=np.uint8)
-                if overlaid_image is not None:
-                    heat_img = cv2.addWeighted(overlaid_image, 1 - alpha,
-                                               heat_img, alpha, 0)
-                return heat_img
+                ' channel_reduction parameter or set topk greater than '
+                '0 to solve the error')
+            return convert_overlay_heatmap(featmap, overlaid_image, alpha)
         else:
             row, col = arrangement
             channel, height, width = featmap.shape
-            assert row * col >= topk
-            sum_channel = torch.sum(featmap, dim=(1, 2))
+            assert row * col >= topk, 'The product of row and col in ' \
+                                      'the `arrangement` is less than ' \
+                                      'topk, please set the ' \
+                                      '`arrangement` correctly'
+
+            # Extract the feature map of topk
             topk = min(channel, topk)
-            _, indices = torch.topk(sum_channel, topk)
-            topk_tensor = featmap[indices]
+            sum_channel_featmap = torch.sum(featmap, dim=(1, 2))
+            _, indices = torch.topk(sum_channel_featmap, topk)
+            topk_featmap = featmap[indices]
+
+            # Set the window layout
             fig = Figure(frameon=False)
             fig.subplots_adjust(
                 left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
@@ -969,9 +1000,12 @@ class Visualizer(ManagerMixin):
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
+                axes.set_title(f'channel: {indices[i]}')
                 axes.imshow(
-                    convert_overlay_heatmap(topk_tensor[i], overlaid_image,
+                    convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
+
+            # get image
             s, (width, height) = canvas.print_to_buffer()
             buffer = np.frombuffer(s, dtype='uint8')
             img_rgba = buffer.reshape(height, width, 4)
