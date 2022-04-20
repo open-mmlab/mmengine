@@ -53,26 +53,25 @@ visualizer.show() # 可视化绘制结果
 @staticmethod
 def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
                  overlaid_image: Optional[np.ndarray] = None, # 如果同时输入了 image 数据，则特征图会叠加到 image 上绘制
-                 overlaid_bboxes: Optional[np.ndarray] = None, # 如果设置 bbox，则会同时绘制 bbox
                  channel_reduction: Optional[str] = 'squeeze_mean', # 多个通道压缩为单通道的策略
                  topk: int = 10, # 可选择激活度最高的 topk 个特征图显示
                  arrangement: Tuple[int, int] = (5, 2), # 多通道展开为多张图时候布局
                  resize_shape：Optional[tuple] = None, # 可以指定 resize_shape 参数来缩放特征图
-                 alpha: float = 0.3) -> np.ndarray: # 图片和特征图绘制的叠加比例
+                 alpha: float = 0.5) -> np.ndarray: # 图片和特征图绘制的叠加比例
 ```
 
 特征图可视化功能较多，目前不支持 Batch 输入，其功能可以归纳如下
 
-- 输入的 Tensor 一般是包括多个通道的，channel_reduction 参数可以将多个通道压缩为单通道，然后和图片或者 bboxes 进行叠加显示
-  - `squeeze_mean` 将输入的 C 维度采用 mean 函数压缩为一个通道，输出维度变成 (1,H,W)
-  - `select_max` 从输入的 C 维度中先在空间维度 sum，维度变成 (C,)，然后选择值最大的通道
+- 输入的 Tensor 一般是包括多个通道的，channel_reduction 参数可以将多个通道压缩为单通道，然后和图片进行叠加显示
+  - `squeeze_mean` 将输入的 C 维度采用 mean 函数压缩为一个通道，输出维度变成 (1, H, W)
+  - `select_max` 从输入的 C 维度中先在空间维度 sum，维度变成 (C, )，然后选择值最大的通道
   - `None` 表示不需要压缩，此时可以通过 topk 参数可选择激活度最高的 topk 个特征图显示
 
-- 在 channel_reduction 参数为 None 的情况下，topk 参数生效，其会按照激活度排序选择 topk 个通道，然后和图片或者 bboxes 进行叠加显示，并且此时会通过 arrangement 参数指定显示的布局
+- 在 channel_reduction 参数为 None 的情况下，topk 参数生效，其会按照激活度排序选择 topk 个通道，然后和图片进行叠加显示，并且此时会通过 arrangement 参数指定显示的布局
   - 如果 topk 不是 -1，则会按照激活度排序选择 topk 个通道显示
   - 如果 topk = -1，此时通道 C 必须是 1 或者 3 表示输入数据是图片，否则报错提示用户应该设置 `channel_reduction`来压缩通道。
 
-- 考虑到输入的特征图通常非常小，因此用户可以额外输入 `resize_shape` 参数，将特征图进行上采样进行可视化。需要注意的是**当 image 和 featmap 叠加显示时候，两者空间尺寸必须相同**
+- 考虑到输入的特征图通常非常小，因此用户可以额外输入 `resize_shape` 参数，将特征图进行上采样进行可视化。
 
 **(2) 存储相关接口**
 
@@ -162,19 +161,18 @@ feat_img = visualizer.draw_featmap(featmap, channel_reduction='select_max')
 visualizer.show(feat_img)
 ```
 
-叠加图片或者 bboxes 显示
+叠加图片显示
 
 ```python
 featmap = ... # CHW shape 的 tensor
-img = ... # shape 的 hw 必须和 featmap 一致
-bboxes = ...
+img = ... # 如果 featmap 和 img 空间尺寸不一致，内部会对 featmap 进行插值
 
 # 压缩
-feat_img = visualizer.draw_featmap(featmap, img, bboxes, channel_reduction='squeeze_mean')
+feat_img = visualizer.draw_featmap(featmap, img, channel_reduction='squeeze_mean')
 visualizer.show(feat_img)
 
 # 选择激活度最高的通道显示
-feat_img = visualizer.draw_featmap(featmap, img, bboxes, channel_reduction='select_max')
+feat_img = visualizer.draw_featmap(featmap, img, channel_reduction='select_max')
 visualizer.show(feat_img)
 ```
 
