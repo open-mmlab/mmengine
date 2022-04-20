@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, List, Optional, Union
+from typing import Any
 from unittest import TestCase
 
 import matplotlib.pyplot as plt
@@ -9,14 +9,14 @@ import pytest
 import torch
 import torch.nn as nn
 
-from mmengine import VISBACKENDS
+from mmengine import VISBACKENDS, Config
 from mmengine.visualization import Visualizer
 
 
 @VISBACKENDS.register_module()
 class MockVisBackend:
 
-    def __init__(self, save_dir: Optional[str] = None):
+    def __init__(self, save_dir: str):
         self._save_dir = save_dir
         self._close = False
 
@@ -24,33 +24,22 @@ class MockVisBackend:
     def experiment(self) -> Any:
         return self
 
-    def add_config(self, params_dict: dict, **kwargs) -> None:
+    def add_config(self, config, **kwargs) -> None:
         self._add_config = True
 
-    def add_graph(self, model: torch.nn.Module,
-                  input_tensor: Union[torch.Tensor,
-                                      List[torch.Tensor]], **kwargs) -> None:
-
+    def add_graph(self, model, data_batch, **kwargs) -> None:
         self._add_graph = True
 
-    def add_image(self,
-                  name: str,
-                  image: np.ndarray,
-                  step: int = 0,
-                  **kwargs) -> None:
+    def add_image(self, name, image, step=0, **kwargs) -> None:
         self._add_image = True
 
-    def add_scalar(self,
-                   name: str,
-                   value: Union[int, float],
-                   step: int = 0,
-                   **kwargs) -> None:
+    def add_scalar(self, name, value, step=0, **kwargs) -> None:
         self._add_scalar = True
 
     def add_scalars(self,
-                    scalar_dict: dict,
-                    step: int = 0,
-                    file_path: Optional[str] = None,
+                    scalar_dict,
+                    step=0,
+                    file_path=None,
                     **kwargs) -> None:
         self._add_scalars = True
 
@@ -70,22 +59,69 @@ class TestVisualizer(TestCase):
         self.image = np.random.randint(
             0, 256, size=(10, 10, 3)).astype('uint8')
         self.vis_backend_cfg = [
-            dict(type='MockVisBackend', name='mock1', save_dir='tmp'),
-            dict(type='MockVisBackend', name='mock2', save_dir='tmp')
+            dict(type='MockVisBackend', name='mock1'),
+            dict(type='MockVisBackend', name='mock2')
         ]
 
     def test_init(self):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
+        # test save_dir
+        with pytest.warns(
+                Warning,
+                match='Due to ``save_dir`` is None, vis backend does '
+                'not take effect, so there is no need to '
+                'initialize vis backend.'):
+            Visualizer()
+
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg))
+        assert visualizer.get_backend('mock1') is None
+
+        visualizer = Visualizer(
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         assert isinstance(visualizer.get_backend('mock1'), MockVisBackend)
         assert len(visualizer._vis_backends) == 2
 
-        # test global
+        # test empty list
+        with pytest.raises(AssertionError):
+            Visualizer(vis_backends=[], save_dir='temp_dir')
+
+        # test name
+        # If one of them has a name attribute, all backends must
+        # use the name attribute
+        with pytest.raises(RuntimeError):
+            Visualizer(
+                vis_backends=[
+                    dict(type='MockVisBackend'),
+                    dict(type='MockVisBackend', name='mock2')
+                ],
+                save_dir='temp_dir')
+
+        # The name fields cannot be the same
+        with pytest.raises(RuntimeError):
+            Visualizer(
+                vis_backends=[
+                    dict(type='MockVisBackend'),
+                    dict(type='MockVisBackend')
+                ],
+                save_dir='temp_dir')
+
+        with pytest.raises(RuntimeError):
+            Visualizer(
+                vis_backends=[
+                    dict(type='MockVisBackend', name='mock1'),
+                    dict(type='MockVisBackend', name='mock1')
+                ],
+                save_dir='temp_dir')
+
+        # test global init
         visualizer = Visualizer.get_instance(
-            'visualizer', vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            'visualizer',
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         assert len(visualizer._vis_backends) == 2
         visualizer_any = Visualizer.get_instance('visualizer')
         assert visualizer_any == visualizer
@@ -131,7 +167,9 @@ class TestVisualizer(TestCase):
 
     def test_close(self):
         visualizer = Visualizer(
-            image=self.image, vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            image=self.image,
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         fig_num = visualizer.fig_save_num
         assert fig_num in plt.get_fignums()
         for name in ['mock1', 'mock2']:
@@ -340,17 +378,48 @@ class TestVisualizer(TestCase):
     def test_draw_featmap(self):
         visualizer = Visualizer()
         image = np.random.randint(0, 256, size=(3, 3, 3), dtype='uint8')
+
+        # must be Tensor
+        with pytest.raises(
+                AssertionError,
+                match='`featmap` should be torch.Tensor, but got '
+                "<class 'numpy.ndarray'>"):
+            visualizer.draw_featmap(np.ones((3, 3, 3)))
+
         # test tensor format
-        with pytest.raises(AssertionError, match='Input dimension must be 3'):
+        with pytest.raises(
+                AssertionError, match='Input dimension must be 3, but got 4'):
             visualizer.draw_featmap(torch.randn(1, 1, 3, 3))
 
-        # test mode parameter
-        # mode only supports 'mean' and 'max'
+        # test overlaid_image shape
+        with pytest.warns(Warning):
+            visualizer.draw_featmap(torch.randn(1, 4, 3), overlaid_image=image)
+
+        # test resize_shape
+        featmap = visualizer.draw_featmap(
+            torch.randn(1, 4, 3), resize_shape=(6, 7))
+        assert featmap.shape[:2] == (6, 7)
+        featmap = visualizer.draw_featmap(
+            torch.randn(1, 4, 3), overlaid_image=image, resize_shape=(6, 7))
+        assert featmap.shape[:2] == (6, 7)
+
+        # test channel_reduction parameter
+        # mode only supports 'squeeze_mean' and 'select_max'
         with pytest.raises(AssertionError):
-            visualizer.draw_featmap(torch.randn(2, 3, 3), mode='xx')
-        # test tensor_chw and img have difference height and width
-        with pytest.raises(AssertionError):
-            visualizer.draw_featmap(torch.randn(2, 3, 3), mode='xx')
+            visualizer.draw_featmap(
+                torch.randn(2, 3, 3), channel_reduction='xx')
+
+        featmap = visualizer.draw_featmap(
+            torch.randn(2, 3, 3), channel_reduction='squeeze_mean')
+        assert featmap.shape[:2] == (3, 3)
+        featmap = visualizer.draw_featmap(
+            torch.randn(2, 3, 3), channel_reduction='select_max')
+        assert featmap.shape[:2] == (3, 3)
+        featmap = visualizer.draw_featmap(
+            torch.randn(2, 4, 3),
+            overlaid_image=image,
+            channel_reduction='select_max')
+        assert featmap.shape[:2] == (3, 3)
 
         # test topk parameter
         with pytest.raises(
@@ -358,36 +427,56 @@ class TestVisualizer(TestCase):
                 match='The input tensor channel dimension must be 1 or 3 '
                 'when topk is less than 1, but the channel '
                 'dimension you input is 6, you can use the '
-                'mode parameter or set topk greater than 0 to solve '
-                'the error'):
-            visualizer.draw_featmap(torch.randn(6, 3, 3), mode=None, topk=0)
+                'channel_reduction parameter or set topk '
+                'greater than 0 to solve the error'):
+            visualizer.draw_featmap(
+                torch.randn(6, 3, 3), channel_reduction=None, topk=0)
 
-        visualizer.draw_featmap(torch.randn(6, 3, 3), mode='mean')
-        visualizer.draw_featmap(torch.randn(1, 3, 3), mode='mean')
-        visualizer.draw_featmap(torch.randn(6, 3, 3), mode='max')
-        visualizer.draw_featmap(torch.randn(6, 3, 3), mode='max', topk=10)
-        visualizer.draw_featmap(torch.randn(1, 3, 3), mode=None, topk=-1)
-        visualizer.draw_featmap(
-            torch.randn(3, 3, 3), image=image, mode=None, topk=-1)
-        visualizer.draw_featmap(torch.randn(6, 3, 3), mode=None, topk=4)
-        visualizer.draw_featmap(
-            torch.randn(6, 3, 3), image=image, mode=None, topk=8)
+        featmap = visualizer.draw_featmap(
+            torch.randn(6, 3, 3), channel_reduction='select_max', topk=10)
+        assert featmap.shape[:2] == (3, 3)
+        featmap = visualizer.draw_featmap(
+            torch.randn(1, 4, 3), channel_reduction=None, topk=-1)
+        assert featmap.shape[:2] == (4, 3)
+
+        featmap = visualizer.draw_featmap(
+            torch.randn(3, 4, 3),
+            overlaid_image=image,
+            channel_reduction=None,
+            topk=-1)
+        assert featmap.shape[:2] == (3, 3)
+        featmap = visualizer.draw_featmap(
+            torch.randn(6, 3, 3),
+            channel_reduction=None,
+            topk=4,
+            arrangement=(2, 2))
+        assert featmap.shape[:2] == (6, 6)
+        featmap = visualizer.draw_featmap(
+            torch.randn(6, 3, 3),
+            channel_reduction=None,
+            topk=4,
+            arrangement=(1, 4))
+        assert featmap.shape[:2] == (3, 12)
+        with pytest.raises(
+                AssertionError,
+                match='The product of row and col in the `arrangement` '
+                'is less than topk, please set '
+                'the `arrangement` correctly'):
+            visualizer.draw_featmap(
+                torch.randn(6, 3, 3),
+                channel_reduction=None,
+                topk=4,
+                arrangement=(1, 2))
 
         # test gray
-        visualizer.draw_featmap(
+        featmap = visualizer.draw_featmap(
             torch.randn(6, 3, 3),
-            image=np.random.randint(0, 256, size=(3, 3), dtype='uint8'),
-            mode=None,
-            topk=8)
-
-        # test arrangement
-        with pytest.raises(AssertionError):
-            visualizer.draw_featmap(
-                torch.randn(10, 3, 3),
-                image=image,
-                mode=None,
-                topk=8,
-                arrangement=(2, 2))
+            overlaid_image=np.random.randint(
+                0, 256, size=(3, 3), dtype='uint8'),
+            channel_reduction=None,
+            topk=4,
+            arrangement=(2, 2))
+        assert featmap.shape[:2] == (6, 6)
 
     def test_chain_call(self):
         visualizer = Visualizer(image=self.image)
@@ -402,22 +491,26 @@ class TestVisualizer(TestCase):
 
     def test_get_backend(self):
         visualizer = Visualizer(
-            image=self.image, vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            image=self.image,
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         for name in ['mock1', 'mock2']:
             assert isinstance(visualizer.get_backend(name), MockVisBackend)
 
     def test_add_config(self):
         visualizer = Visualizer(
-            vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
 
-        params_dict = dict(lr=0.1, wd=0.2, mode='linear')
-        visualizer.add_config(params_dict)
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        visualizer.add_config(cfg)
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_config is True
 
     def test_add_graph(self):
         visualizer = Visualizer(
-            vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
 
         class Model(nn.Module):
 
@@ -435,7 +528,8 @@ class TestVisualizer(TestCase):
     def test_add_image(self):
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
         visualizer = Visualizer(
-            vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
 
         visualizer.add_image('img', image)
         for name in ['mock1', 'mock2']:
@@ -443,14 +537,16 @@ class TestVisualizer(TestCase):
 
     def test_add_scalar(self):
         visualizer = Visualizer(
-            vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         visualizer.add_scalar('map', 0.9, step=0)
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_scalar is True
 
     def test_add_scalars(self):
         visualizer = Visualizer(
-            vis_backends=copy.deepcopy(self.vis_backend_cfg))
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
         input_dict = {'map': 0.7, 'acc': 0.9}
         visualizer.add_scalars(input_dict)
         for name in ['mock1', 'mock2']:
@@ -467,9 +563,3 @@ class TestVisualizer(TestCase):
         visualizer2 = Visualizer.get_current_instance()
         visualizer3 = DetLocalVisualizer.get_current_instance()
         assert id(visualizer1) == id(visualizer2) == id(visualizer3)
-
-
-if __name__ == '__main__':
-    t = TestVisualizer()
-    t.setUp()
-    t.test_init()

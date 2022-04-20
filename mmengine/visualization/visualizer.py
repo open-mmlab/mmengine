@@ -94,7 +94,7 @@ class Visualizer(ManagerMixin):
         >>> vis = Visualizer(image=image)
         >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edge_colors='g')
         >>> vis.draw_bboxes(bbox=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
-        >>>                    edge_colors=['g', 'r'], is_filling=True)
+        >>>                    edge_colors=['g', 'r'])
         >>> vis.draw_lines(x_datas=np.array([1, 3]),
         >>>                y_datas=np.array([1, 3]),
         >>>                colors='r', line_widths=1)
@@ -109,25 +109,32 @@ class Visualizer(ManagerMixin):
         >>>                colors=['b', 'b'])
         >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
         >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
-        >>>                  radius=np.array[1, 2], colors=['g', 'r'],
-        >>>                  is_filling=True)
+        >>>                  radius=np.array[1, 2], colors=['g', 'r'])
         >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
         >>>                    edge_colors='g')
         >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
         >>>                        np.array([2, 2, 3, 2, 3, 3, 2, 3]],
-        >>>                   edge_colors=['g', 'r'], is_filling=True)
+        >>>                   edge_colors=['g', 'r'])
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
+        >>> heatmap = vis.draw_featmap(featmap, img,
+        >>>                            channel_reduction='select_max')
+        >>> heatmap = vis.draw_featmap(featmap, img, channel_reduction=None,
+        >>>                            topk=8, arrangement=(4, 2))
+        >>> heatmap = vis.draw_featmap(featmap, img, channel_reduction=None,
+        >>>                            topk=-1)
 
         >>> # chain calls
         >>> vis.draw_bboxes().draw_texts().draw_circle().draw_binary_masks()
 
-        >>> # Enhanced method
-        >>> vis = Visualizer(image=image)
-        >>> heatmap = vis.draw_featmap(tensor_chw, img, mode='mean')
-        >>> heatmap = vis.draw_featmap(tensor_chw, img, mode=None,
-        >>>                            topk=8, arrangement=(4, 2))
-        >>> heatmap = vis.draw_featmap(tensor_chw, img, mode=None,
-        >>>                            topk=-1)
+        >>> # Backend related methods
+        >>> vis = Visualizer(vis_backends=[dict(type='LocalVisBackend')],
+        >>>                                save_dir='temp_dir')
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> vis.add_config(cfg)
+        >>> image=np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        >>> vis.add_image('image',image)
+        >>> vis.add_scaler('mAP', 0.6)
+        >>> vis.add_scalars({'loss': 0.1,'acc':0.8})
 
         >>> # inherit
         >>> class DetLocalVisualizer(Visualizer):
@@ -147,13 +154,13 @@ class Visualizer(ManagerMixin):
     """
 
     def __init__(
-            self,
-            name='visualizer',
-            image: Optional[np.ndarray] = None,
-            vis_backends: Optional[List[Dict]] = None,
-            save_dir: Optional[str] = None,
-            fig_save_cfg=dict(frameon=False),
-            fig_show_cfg=dict(frameon=False, num='show')
+        self,
+        name='visualizer',
+        image: Optional[np.ndarray] = None,
+        vis_backends: Optional[List[Dict]] = None,
+        save_dir: Optional[str] = None,
+        fig_save_cfg=dict(frameon=False),
+        fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
         super(Visualizer, self).__init__(name)
         self._dataset_meta: Union[None, dict] = None
@@ -168,10 +175,22 @@ class Visualizer(ManagerMixin):
             names = [
                 vis_backend.get('name', None) for vis_backend in vis_backends
             ]
-            if None in names and len(set(names)) > 1:
-                raise RuntimeError('If one of them has a name attribute, '
-                                   'all backends must use the name attribute')
-            if None not in names and len(set(names)) == len(names):
+            if None in names:
+                if len(set(names)) > 1:
+                    raise RuntimeError(
+                        'If one of them has a name attribute, '
+                        'all backends must use the name attribute')
+                else:
+                    type_names = [
+                        vis_backend['type'] for vis_backend in vis_backends
+                    ]
+                    if len(set(type_names)) != len(type_names):
+                        raise RuntimeError(
+                            'The same vis backend cannot exist in '
+                            '`vis_backend` config. '
+                            'Please specify the name field.')
+
+            if None not in names and len(set(names)) != len(names):
                 raise RuntimeError('The name fields cannot be the same')
 
             timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
@@ -520,12 +539,12 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_lines(
-            self,
-            x_datas: Union[np.ndarray, torch.Tensor],
-            y_datas: Union[np.ndarray, torch.Tensor],
-            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            line_styles: Union[str, List[str]] = '-',
-            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
+        self,
+        x_datas: Union[np.ndarray, torch.Tensor],
+        y_datas: Union[np.ndarray, torch.Tensor],
+        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
 
@@ -581,14 +600,14 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_circles(
-            self,
-            center: Union[np.ndarray, torch.Tensor],
-            radius: Union[np.ndarray, torch.Tensor],
-            alpha: Union[float, int] = 0.8,
-            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            line_styles: Union[str, List[str]] = '-',
-            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+        self,
+        center: Union[np.ndarray, torch.Tensor],
+        radius: Union[np.ndarray, torch.Tensor],
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        alpha: Union[float, int] = 0.8,
     ) -> 'Visualizer':
         """Draw single or multiple circles.
 
@@ -597,8 +616,6 @@ class Visualizer(ManagerMixin):
                 each line' start and end points.
             radius (Union[np.ndarray, torch.Tensor]): The y coordinate of
                 each line' start and end points.
-            alpha (Union[int, float]): The transparency of circles.
-                Defaults to 0.8.
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
                 colors of circles. ``colors`` can have the same length with
                 lines or just single value. If ``colors`` is single value,
@@ -619,6 +636,8 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Default to None.
+            alpha (Union[int, float]): The transparency of circles.
+                Defaults to 0.8.
         """
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
@@ -662,21 +681,19 @@ class Visualizer(ManagerMixin):
         return self
 
     def draw_bboxes(
-            self,
-            bboxes: Union[np.ndarray, torch.Tensor],
-            alpha: Union[int, float] = 0.8,
-            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            line_styles: Union[str, List[str]] = '-',
-            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+        self,
+        bboxes: Union[np.ndarray, torch.Tensor],
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        alpha: Union[int, float] = 0.8,
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
         Args:
             bboxes (Union[np.ndarray, torch.Tensor]): The bboxes to draw with
                 the format of(x1,y1,x2,y2).
-            alpha (Union[int, float]): The transparency of bboxes.
-                Defaults to 0.8.
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
                 colors of bboxes. ``colors`` can have the same length with
                 lines or just single value. If ``colors`` is single value, all
@@ -697,6 +714,8 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Default to None.
+            alpha (Union[int, float]): The transparency of bboxes.
+                Defaults to 0.8.
         """
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
@@ -726,14 +745,14 @@ class Visualizer(ManagerMixin):
             face_colors=face_colors)
 
     def draw_polygons(
-            self,
-            polygons: Union[Union[np.ndarray, torch.Tensor],
-                            List[Union[np.ndarray, torch.Tensor]]],
-            alpha: Union[int, float] = 0.8,
-            edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            line_styles: Union[str, List[str]] = '-',
-            line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-            face_colors: Union[str, tuple, List[str], List[tuple]] = 'none'
+        self,
+        polygons: Union[Union[np.ndarray, torch.Tensor],
+                        List[Union[np.ndarray, torch.Tensor]]],
+        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        line_styles: Union[str, List[str]] = '-',
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        alpha: Union[int, float] = 0.8,
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
@@ -741,8 +760,6 @@ class Visualizer(ManagerMixin):
             polygons (Union[Union[np.ndarray, torch.Tensor],
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
-            alpha (Union[int, float]): The transparency of polygons.
-                Defaults to 0.8.
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
                 colors of polygons. ``colors`` can have the same length with
                 lines or just single value. If ``colors`` is single value,
@@ -763,6 +780,8 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Default to None.
+            alpha (Union[int, float]): The transparency of polygons.
+                Defaults to 0.8.
         """
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)
@@ -801,9 +820,8 @@ class Visualizer(ManagerMixin):
     def draw_binary_masks(
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
-            alphas: Union[float, List[float]] = 0.8,
-            colors: Union[str, tuple, List[str],
-                          List[tuple]] = 'g') -> 'Visualizer':
+            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+            alphas: Union[float, List[float]] = 0.8) -> 'Visualizer':
         """Draw single or multiple binary masks.
 
         Args:
@@ -811,13 +829,13 @@ class Visualizer(ManagerMixin):
                 with of shape (N, H, W), where H is the image height and W is
                 the image width. Each value in the array is either a 0 or 1
                 value of uint8 type.
-            alphas (Union[int, List[int]]): The transparency of masks.
-                Defaults to 0.8.
             colors (np.ndarray): The colors which binary_masks will convert to.
                 ``colors`` can have the same length with binary_masks or just
                 single value. If ``colors`` is single value, all the
                 binary_masks will convert to the same colors. The colors format
                 is RGB. Defaults to np.array([0, 255, 0]).
+            alphas (Union[int, List[int]]): The transparency of masks.
+                Defaults to 0.8.
         """
         check_type('binary_masks', binary_masks, (np.ndarray, torch.Tensor))
         binary_masks = tensor2ndarray(binary_masks)
@@ -922,7 +940,7 @@ class Visualizer(ManagerMixin):
             np.ndarray: RGB image.
         """
         assert isinstance(featmap,
-                          torch.Tensor), (f'`featmap` should be torch.Tensor '
+                          torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')
         assert featmap.ndim == 3, f'Input dimension must be 3, ' \
                                   f'but got {featmap.ndim}'
@@ -962,7 +980,9 @@ class Visualizer(ManagerMixin):
                 f'Mode only support "squeeze_mean", "select_max", ' \
                 f'but got {channel_reduction}'
             if channel_reduction == 'select_max':
-                feat_map, _ = torch.max(featmap, dim=0)
+                sum_channel_featmap = torch.sum(featmap, dim=(1, 2))
+                _, indices = torch.topk(sum_channel_featmap, 1)
+                feat_map = featmap[indices]
             else:
                 feat_map = torch.mean(featmap, dim=0)
             return convert_overlay_heatmap(feat_map, overlaid_image, alpha)
