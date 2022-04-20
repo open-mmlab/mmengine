@@ -11,7 +11,7 @@
 
 基于上述需求，OpenMMLab 2.0 引入了可视化对象 Visualizer 和各个可视化存储后端 VisBackend 如 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend` 等。此处的可视化不仅仅包括图片数据格式，还包括配置内容、标量和模型图等数据的可视化。
 
-- 为了方便调用，Visualizer 提供了包括存储的全部接口, 可视化存储后端 VisBackend 作为 Visualizer 的内部属性。在通常情况下用户直接调用 Visualizer 中提供的方法即可，无需手动调用存储后端
+- 为了方便调用，Visualizer 提供的接口实现了绘制和存储的功能。可视化存储后端 VisBackend 作为 Visualizer 的内部属性，会在需要的时候被 Visualizer 调用，将数据存到不同的后端
 - 考虑到绘制后会希望存储到多个后端，Visualizer 可以配置多个 VisBackend，当用户调用 Visualizer 的存储接口时候，Visualizer 内部会遍历的调用 VisBackend 存储接口
 
 两者的 UML 关系图如下
