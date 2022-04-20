@@ -269,7 +269,7 @@ class ToyRunner:
         self.log_processor.run()
 
 if __name__ == '__main__':
-    task = Runner('name')
+    task = ToyRunner('name')
     task.run()
     # Learning rate is 0.001
     # loss is 0.1
