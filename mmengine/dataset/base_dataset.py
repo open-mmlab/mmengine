@@ -149,7 +149,7 @@ class BaseDataset(Dataset):
         }
 
     Args:
-        ann_file (str): Annotation file path.
+        ann_file (str): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
         data_root (str, optional): The root directory for ``data_prefix`` and
@@ -208,7 +208,7 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str,
+                 ann_file: str = '',
                  metainfo: Optional[dict] = None,
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
