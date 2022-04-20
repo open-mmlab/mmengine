@@ -311,14 +311,14 @@ class Runner:
             self._experiment_name = self.timestamp
 
         self.logger = self.build_logger(log_level=log_level)
-        # Build message hub used for component interaction. message_hub can
-        # store log scalars for logging and runtime information, such as
-        # epoch, iter .etc. for those components which cannot access runner
-        # to get iter or epoch information. For example, model can get the
-        # latest created message_hub in constructor with
-        # `self.message_hub=MessageHub.get_latest_instance()` and get epoch
-        # by `cur_epoch = self.message_hub.get_info('epoch')`. See
-        # :obj:`MessageHub` and :obj:`ManagerMixin` for more details.
+        # Build `message_hub` for components interaction. `message_hub` can
+        # store log scalars(loss, learning rate) and runtime information
+        # (iter and epoch). Those components that do not have access to the
+        # runner can get iteration or epoch information from `message_hub`.
+        # For example, models can get the latest created `message_hub` by
+        # `self.message_hub=MessageHub.get_current_instance()`, and then get
+        # current epoch by `cur_epoch = self.message_hub.get_info('epoch')`.
+        # See :obj:`MessageHub` and :obj:`ManagerMixin` for more details.
         self.message_hub = self.build_message_hub()
         # writer used for writing log or visualizing all kinds of data
         self.writer = self.build_writer(writer)
@@ -416,7 +416,7 @@ class Runner:
 
     @epoch.setter
     def epoch(self, epoch: int):
-        """Update epoch and synchronize epoch in messagehub."""
+        """Update epoch and synchronize epoch in :attr:`message_hub`."""
         self._epoch = epoch
         # To allow components that cannot access runner to get current epoch.
         self.message_hub.update_info('epoch', epoch)
@@ -428,7 +428,7 @@ class Runner:
 
     @iter.setter
     def iter(self, iter: int):
-        """Update iter and synchronize iter in messagehub."""
+        """Update iter and synchronize iter in :attr:`message_hub`."""
         self._iter = iter
         # To allow components that cannot access runner to get current
         # iteration.
