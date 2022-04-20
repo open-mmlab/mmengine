@@ -875,23 +875,27 @@ class Visualizer(ManagerMixin):
                      alpha: float = 0.5) -> np.ndarray:
         """Draw featmap.
 
-        1. If `overlaid_image` is not None, the final output image will be the
+        - If `overlaid_image` is not None, the final output image will be the
         weighted sum of img and featmap.
-        2. If `resize_shape` is specified, `featmap` and `overlaid_image`
+
+        - If `resize_shape` is specified, `featmap` and `overlaid_image`
         are interpolated.
-        3. If `resize_shape` is None and `overlaid_image` is not None,
+
+        - If `resize_shape` is None and `overlaid_image` is not None,
         the feature map will be interpolated to the spatial size of the image
         in the case where the spatial dimensions of `overlaid_image` and
         `featmap` are different.
-        4. if `channel_reduction` is "squeeze_mean" and "select_max",
+
+        - If `channel_reduction` is "squeeze_mean" and "select_max",
         it will compress featmap to single channel image and weighted
         sum to `overlaid_image`.
-        5.  if `channel_reduction` is None
 
-          - if topk <= 0, featmap is assert to be one or three
+        -  if `channel_reduction` is None
+
+          - If topk <= 0, featmap is assert to be one or three
           channel and treated as image and will be weighted sum
           to ``overlaid_image``.
-          - if topk > 0, it will select topk channel to show by the sum of
+          - If topk > 0, it will select topk channel to show by the sum of
           each channel. At the same time, you can specify the `arrangement`
           to set the window layout.
 
@@ -933,22 +937,22 @@ class Visualizer(ManagerMixin):
                 warnings.warn(
                     f'Since the spatial dimensions of '
                     f'overlaid_image: {overlaid_image.shape[:2]} and '
-                    f'featmap: {featmap.shape[1:]} are not the same, '
-                    f'the feature map is interpolated. '
+                    f'featmap: {featmap.shape[1:]} are not same, '
+                    f'the feature map will be interpolated. '
                     f'This may cause mismatch problems ！')
                 if resize_shape is None:
                     featmap = F.interpolate(
                         featmap[None],
                         overlaid_image.shape[:2],
                         mode='bilinear',
-                        align_corners=False).squeeze(0)
+                        align_corners=False)[0]
 
         if resize_shape is not None:
             featmap = F.interpolate(
                 featmap[None],
                 resize_shape,
                 mode='bilinear',
-                align_corners=False).squeeze(0)
+                align_corners=False)[0]
             if overlaid_image is not None:
                 overlaid_image = cv2.resize(overlaid_image, resize_shape[::-1])
 
@@ -994,13 +998,11 @@ class Visualizer(ManagerMixin):
             fig.set_size_inches((width * col + 1e-2) / dpi,
                                 (height * row + 1e-2) / dpi)
             canvas = FigureCanvasAgg(fig)
-            fig.subplots_adjust(wspace=0, hspace=0)
-            fig.tight_layout(h_pad=0, w_pad=0)
 
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
-                axes.set_title(f'channel: {indices[i]}')
+                axes.text(2, 15, f'channel: {indices[i]}', fontsize=10)
                 axes.imshow(
                     convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
