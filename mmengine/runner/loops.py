@@ -77,7 +77,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
         # TODO, should move to LoggerHook
         for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_log(f'train/{key}', value)
+            self.runner.message_hub.update_scalar(f'train/{key}', value)
 
         self.runner.call_hook(
             'after_train_iter',
@@ -147,7 +147,7 @@ class IterBasedTrainLoop(BaseLoop):
 
         # TODO
         for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_log(f'train/{key}', value)
+            self.runner.message_hub.update_scalar(f'train/{key}', value)
 
         self.runner.call_hook(
             'after_train_iter',
@@ -195,7 +195,7 @@ class ValLoop(BaseLoop):
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         for key, value in metrics.items():
-            self.runner.message_hub.update_log(f'val/{key}', value)
+            self.runner.message_hub.update_scalar(f'val/{key}', value)
 
         self.runner.call_hook('after_val_epoch')
         self.runner.call_hook('after_val')
@@ -252,7 +252,7 @@ class TestLoop(BaseLoop):
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         for key, value in metrics.items():
-            self.runner.message_hub.update_log(f'test/{key}', value)
+            self.runner.message_hub.update_scalar(f'test/{key}', value)
 
         self.runner.call_hook('after_test_epoch')
         self.runner.call_hook('after_test')

@@ -370,7 +370,7 @@ class LoggerHook(Hook):
             dict: Statistical values of logs.
         """
         tag = OrderedDict()
-        log_buffers = runner.message_hub.log_buffers
+        log_buffers = runner.message_hub.log_scalars
         mode_log_buffers = OrderedDict()
         # Filter log_buffers which starts with `mode`.
         for prefix_key, log_buffer in log_buffers.items():
