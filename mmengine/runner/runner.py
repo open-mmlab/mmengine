@@ -311,7 +311,15 @@ class Runner:
             self._experiment_name = self.timestamp
 
         self.logger = self.build_logger(log_level=log_level)
-        # message hub used for component interaction
+        # Build `message_hub` for communication among components.
+        # `message_hub` can store log scalars (loss, learning rate) and
+        # runtime information (iter and epoch). Those components that do not
+        # have access to the runner can get iteration or epoch information
+        # from `message_hub`. For example, models can get the latest created
+        # `message_hub` by
+        # `self.message_hub=MessageHub.get_current_instance()` and then get
+        # current epoch by `cur_epoch = self.message_hub.get_info('epoch')`.
+        # See `MessageHub` and `ManagerMixin` for more details.
         self.message_hub = self.build_message_hub()
         # writer used for writing log or visualizing all kinds of data
         self.writer = self.build_writer(writer)
@@ -407,10 +415,25 @@ class Runner:
         """int: Current epoch."""
         return self._epoch
 
+    @epoch.setter
+    def epoch(self, epoch: int):
+        """Update epoch and synchronize epoch in :attr:`message_hub`."""
+        self._epoch = epoch
+        # To allow components that cannot access runner to get current epoch.
+        self.message_hub.update_info('epoch', epoch)
+
     @property
     def iter(self):
-        """int: Current epoch."""
+        """int: Current iteration."""
         return self._iter
+
+    @iter.setter
+    def iter(self, iter: int):
+        """Update iter and synchronize iter in :attr:`message_hub`."""
+        self._iter = iter
+        # To allow components that cannot access runner to get current
+        # iteration.
+        self.message_hub.update_info('iter', iter)
 
     @property
     def launcher(self):
