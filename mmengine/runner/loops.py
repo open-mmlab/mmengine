@@ -60,7 +60,7 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
-        self.runner._epoch += 1
+        self.runner.epoch += 1
 
     def run_iter(self, idx,
                  data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
@@ -85,7 +85,7 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=self.runner.outputs)
 
-        self.runner._iter += 1
+        self.runner.iter += 1
 
 
 @LOOPS.register_module()
@@ -154,7 +154,7 @@ class IterBasedTrainLoop(BaseLoop):
             batch_idx=self.runner._iter,
             data_batch=data_batch,
             outputs=self.runner.outputs)
-        self.runner._iter += 1
+        self.runner.iter += 1
 
 
 @LOOPS.register_module()

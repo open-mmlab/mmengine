@@ -19,7 +19,7 @@ class MessageHub(ManagerMixin):
     log information refers to the learning rate, loss, etc. of the model
     during training phase, which will be stored as ``HistoryBuffer``. The
     runtime information refers to the iter times, meta information of
-    runner etc. which will be overwritten by next update.
+    runner etc., which will be overwritten by next update.
 
     Args:
         name (str): Name of message hub used to get corresponding instance
