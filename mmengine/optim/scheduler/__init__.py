@@ -1,14 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .lr_scheduler import (ConstantLR, CosineAnnealingLR, ExponentialLR,
-                           LinearLR, MultiStepLR, StepLR)
+                           LinearLR, MultiStepLR, PolyLR, StepLR)
 from .momentum_scheduler import (ConstantMomentum, CosineAnnealingMomentum,
                                  ExponentialMomentum, LinearMomentum,
-                                 MultiStepMomentum, StepMomentum)
+                                 MultiStepMomentum, PolyMomentum, StepMomentum)
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
-                              MultiStepParamScheduler, StepParamScheduler,
-                              _ParamScheduler)
+                              MultiStepParamScheduler, PolyParamScheduler,
+                              StepParamScheduler, _ParamScheduler)
 
 __all__ = [
     'ConstantLR', 'CosineAnnealingLR', 'ExponentialLR', 'LinearLR',
@@ -16,5 +16,6 @@ __all__ = [
     'ExponentialMomentum', 'LinearMomentum', 'MultiStepMomentum',
     'StepMomentum', 'ConstantParamScheduler', 'CosineAnnealingParamScheduler',
     'ExponentialParamScheduler', 'LinearParamScheduler',
-    'MultiStepParamScheduler', 'StepParamScheduler', '_ParamScheduler'
+    'MultiStepParamScheduler', 'StepParamScheduler', '_ParamScheduler',
+    'PolyParamScheduler', 'PolyLR', 'PolyMomentum'
 ]
