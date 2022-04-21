@@ -66,15 +66,12 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
-        runner.iter = 10
-        batch_idx = 5
         logger_hook = LoggerHook(by_epoch=False)
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=5)
         # `cur_iter=10+1`, which cannot be exact division by
         # `logger_hook.interval`
         runner.log_processor.get_log_after_iter.assert_not_called()
-        runner.iter = 9
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=9)
         runner.log_processor.get_log_after_iter.assert_called()
 
         # Test LoggerHook by epoch.
@@ -83,12 +80,9 @@ class TestLoggerHook:
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
         # Only `batch_idx` will work.
-        runner.iter = 9
-        batch_idx = 10
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=10)
         runner.log_processor.get_log_after_iter.assert_not_called()
-        batch_idx = 9
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=9)
         runner.log_processor.get_log_after_iter.assert_called()
 
         # Test end of the epoch.
@@ -97,17 +91,17 @@ class TestLoggerHook:
             return_value=(dict(), 'log_str'))
         logger_hook = LoggerHook(ignore_last=False)
         runner.train_dataloader = [0] * 5
-        batch_idx = 4
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=4)
         runner.log_processor.get_log_after_iter.assert_called()
 
         # Test print exp_name
         runner = MagicMock()
-        runner.iter = 999
+        runner.log_processor.get_log_after_iter = MagicMock(
+            return_value=(dict(), 'log_str'))
         runner.meta = dict(exp_name='retinanet')
         runner.logger = MagicMock()
         logger_hook = LoggerHook()
-        logger_hook.after_train_iter(runner, batch_idx=batch_idx)
+        logger_hook.after_train_iter(runner, batch_idx=999)
         runner.logger.info.assert_called()
 
     def test_after_val_epoch(self):

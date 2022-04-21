@@ -233,7 +233,7 @@ class LogProcessor:
         """Collect log information to compose a dict according to mode.
 
         Args:
-            List[dict] (dict): A copy of ``self.custom_cfg`` with int
+            custom_cfg (List[dict]): A copy of ``self.custom_cfg`` with int
                 ``window_size``.
             runner (Runner): The runner of the training process.
             mode (str): 'train' or 'val', which means the prefix attached by
