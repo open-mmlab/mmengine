@@ -311,14 +311,15 @@ class Runner:
             self._experiment_name = self.timestamp
 
         self.logger = self.build_logger(log_level=log_level)
-        # Build `message_hub` for components interaction. `message_hub` can
-        # store log scalars(loss, learning rate) and runtime information
-        # (iter and epoch). Those components that do not have access to the
-        # runner can get iteration or epoch information from `message_hub`.
-        # For example, models can get the latest created `message_hub` by
-        # `self.message_hub=MessageHub.get_current_instance()`, and then get
+        # Build `message_hub` for communication among components.
+        # `message_hub` can store log scalars (loss, learning rate) and
+        # runtime information (iter and epoch). Those components that do not
+        # have access to the runner can get iteration or epoch information
+        # from `message_hub`. For example, models can get the latest created
+        # `message_hub` by
+        # `self.message_hub=MessageHub.get_current_instance()` and then get
         # current epoch by `cur_epoch = self.message_hub.get_info('epoch')`.
-        # See :obj:`MessageHub` and :obj:`ManagerMixin` for more details.
+        # See `MessageHub` and `ManagerMixin` for more details.
         self.message_hub = self.build_message_hub()
         # writer used for writing log or visualizing all kinds of data
         self.writer = self.build_writer(writer)
