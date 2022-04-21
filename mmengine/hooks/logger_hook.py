@@ -140,10 +140,10 @@ class LoggerHook(Hook):
             runner.logger.info(exp_info)
         if self.by_epoch and (self.every_n_inner_iters(batch_idx,
                                                        self.interval)):
-            tag, log_str = runner.log_processor.get_log(
+            tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
         elif not self.by_epoch and (self.every_n_iters(runner, self.interval)):
-            tag, log_str = runner.log_processor.get_log(
+            tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
         elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
               and not self.ignore_last):
@@ -151,7 +151,7 @@ class LoggerHook(Hook):
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
             # iterations will be recorded).
-            tag, log_str = runner.log_processor.get_log(
+            tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
         else:
             return
@@ -159,18 +159,69 @@ class LoggerHook(Hook):
         # TODO compatible with visualizer.
         runner.writer.add_scalars(tag, step=runner.iter + 1)
 
+    def after_val_iter(
+            self,
+            runner,
+            batch_idx: int,
+            data_batch: DATA_BATCH = None,
+            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
+        """Record validation logs.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[BaseDataElement], optional): Data from
+                dataloader. Defaults to None.
+            outputs (dict, optional): Outputs from model.
+                Defaults to None.
+        """
+        if self.every_n_inner_iters(batch_idx, self.interval):
+            tag, log_str = runner.log_processor.get_log_after_iter(
+                runner, batch_idx, 'val')
+            runner.logger.info(log_str)
+
+    def after_test_iter(
+            self,
+            runner,
+            batch_idx: int,
+            data_batch: DATA_BATCH = None,
+            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
+        """Record testing logs.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[BaseDataElement], optional): Data from
+                dataloader. Defaults to None.
+            outputs (dict, optional): Outputs from model.
+                Defaults to None.
+        """
+        if self.every_n_inner_iters(batch_idx, self.interval):
+            tag, log_str = runner.log_processor.get_log_after_iter(
+                runner, batch_idx, 'test')
+            runner.logger.info(log_str)
+
     def after_val_epoch(self, runner) -> None:
         """Record validation logs.
 
         Args:
             runner (Runner): The runner of the training process.
         """
-        tag, log_str = runner.log_processor.get_log(runner,
-                                                    len(runner.val_dataloader),
-                                                    'val')
+        tag, log_str = runner.log_processor.get_log_after_epoch(
+            runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
         # TODO compatible with visualizer.
         runner.writer.add_scalars(tag, step=runner.iter + 1)
+
+    def after_test_epoch(self, runner) -> None:
+        """Record testing logs.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        tag, log_str = runner.log_processor.get_log_after_epoch(
+            runner, len(runner.val_dataloader), 'test')
+        runner.logger.info(log_str)
 
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``

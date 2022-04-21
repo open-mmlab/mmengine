@@ -94,64 +94,28 @@ class LogProcessor:
         self.custom_cfg = custom_cfg if custom_cfg else []
         self._check_custom_cfg()
 
-    def get_log(self, runner, batch_idx: int, mode: str) -> Tuple[dict, str]:
-        """Get formatted log at training/validation/testing phase.
-
-        Format the log scalars stored in  ``runner.message_hub.log_scalars``
-        into log string(``log_str``) and log dictionary(``tag``).
-        ``MMLogger`` will output the ``log_str`` to terminal and save log
-        file locally. ``Visualizer`` will write ``tag`` into corresponding
-        backend defined in config file, such as local, tensorboard, wanbd .etc.
-
-        Note:
-            ``LogProcessor.get_log`` will be called in ``LoggerHook``.
-
-        Args:
-            runner (Runner): Runner of traning/testing/validation process.
-            batch_idx (int): The index of the current batch in the loop.
-            mode (str): Current mode of runner.
-
-        Returns:
-            Tuple[str, dict]: Formatted log string and log dictionary.
-        """
-        # Consider the `window_size` such as "epoch" and "global" will
-        # change with `runner.iter` Therefore, we should make a copy of
-        # `self.custom_cfg` to calculate specific window_size and keep
-        # `self.custom_cfg` unchanged.
-        custom_cfg = copy.deepcopy(self.custom_cfg)
-        # Overwrite ``window_size`` defined in  ``custom_cfg`` to int value.
-        self._parse_windows_size(custom_cfg, runner, batch_idx)
-        # tag is used to write log information to different backends.
-        tag = self._collect_scalars(custom_cfg, runner, mode)
-        # Get iter according to mode.
-        cur_iter = self._get_iter(runner, batch_idx=batch_idx)
-
-        if mode == 'train':
-            # Called by after_train_iter
-            log_str = self._get_train_log_str(runner, tag, cur_iter)
-        elif mode == 'val' or mode == 'test':
-            # Called by after_val_epoch or after_test_epoch
-            log_str = self._get_val_log_str(runner, tag, cur_iter)
-        else:
-            raise ValueError('mode must be train, val or test!')
-        return tag, log_str
-
-    def _get_train_log_str(self, runner, tag: dict, cur_iter: int) -> str:
-        """Format log string during training phases.
+    def get_log_after_iter(self, runner, batch_idx: int,
+                           mode: str) -> Tuple[dict, str]:
+        """Format log string after training, validation or testing epoch.
 
         Args:
             runner (Runner): The runner of training phase.
-            tag (dict): Statistical values of logs which will be written to the
-                diverse backends, such as local, tensorboard, wandb .etc.
-            cur_iter (int): Equals to batch_index if ``self.by_epoch==True``,
-                otherwise equals to ``runner.iter``.
+            batch_idx (int): The index of the current batch in the current
+                loop.
+            mode (str): Current mode of runner, train, test or val.
 
         Return:
-            str: Formatted log string which will be recorded by ``MMLogger``.
+            Tuple(dict, str): Formatted log dict/string which will be
+            recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
-        # The training log default defines `lr`, `momentum`, `time` and
-        # `data_time`. `log_tag` will pop these keys and loop other keys to
-        # `log_str`.
+        assert mode in ['train', 'test', 'val']
+        current_loop = self._get_cur_loop(runner, mode)
+        cur_iter = self._get_iter(runner, batch_idx=batch_idx)
+        # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
+        custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
+        # tag is used to write log information to different backends.
+        tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        # `log_tag` will pop 'lr' and loop other keys to `log_str`.
         log_tag = copy.deepcopy(tag)
         # Record learning rate.
         lr_str_list = []
@@ -161,74 +125,108 @@ class LogProcessor:
                 lr_str_list.append(f'{key}: {value:.3e}')
         lr_str = ' '.join(lr_str_list)
         # Format log header.
-        # by epoch: Epoch [4][100/1000]
-        # by iter:  Iter [100/100000]
-        # TODO Maybe should compatible with return validation loss.
+        # by_epoch == True
+        #   train/val: Epoch [5][5/10]  ...
+        #   test: Epoch [5/10]
+        # by_epoch == False
+        #  train: Epoch [5/10000] ... (divided by `max_iter`)
+        #  val/test: Epoch [5/2000] ... (divided by length of dataloader)
         if self.by_epoch:
-            cur_epoch = self._get_epoch(runner, 'train')
-            log_str = (f'Epoch [{cur_epoch}]'
-                       f'[{cur_iter}/{len(runner.train_dataloader)}]  ')
+            if mode in ['train', 'val']:
+                cur_epoch = self._get_epoch(runner, mode)
+                log_str = (f'Epoch({mode}) [{cur_epoch}]'
+                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
+            else:
+                log_str = (f'Epoch({mode}) '
+                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
         else:
-            log_str = f'Iter [{cur_iter}/{runner.train_loop.max_iters}]  '
+            if mode == 'train':
+                log_str = (f'Iter({mode}) '
+                           f'[{cur_iter}/{runner.train_loop.max_iters}]  ')
+            else:
+                log_str = (f'Iter({mode}) [{cur_iter}'
+                           f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
-        log_str += f'{lr_str}, '
+        log_str += f'{lr_str}  '
         # If IterTimerHook used in runner, eta, time, and data_time should be
         # recorded.
-        if all(item in tag for item in ['time', 'data_time']) and \
-                'eta' in runner.message_hub.runtime_info:
+        if (all(item in tag for item in ['time', 'data_time'])
+                and 'eta' in runner.message_hub.runtime_info):
             eta = runner.message_hub.get_info('eta')
             eta_str = str(datetime.timedelta(seconds=int(eta)))
-            log_str += f'eta: {eta_str}, '
-            log_str += f'time: {tag["time"]:.3f}, ' \
-                       f'data_time: {tag["data_time"]:.3f}, '
+            log_str += f'eta: {eta_str}  '
+            log_str += (f'time: {tag["time"]:.3f}  '
+                        f'data_time: {tag["data_time"]:.3f}  ')
             # Pop recorded keys
             log_tag.pop('time')
             log_tag.pop('data_time')
 
         # If cuda is available, the max memory occupied should be calculated.
         if torch.cuda.is_available():
-            log_str += f'memory: {self._get_max_memory(runner)}, '
+            log_str += f'memory: {self._get_max_memory(runner)}  '
         # Loop left keys to fill `log_str`.
-        log_items = []
-        for name, val in log_tag.items():
-            if isinstance(val, float):
-                val = f'{val:.4f}'
-            log_items.append(f'{name}: {val}')
-        log_str += ', '.join(log_items)
-        return log_str
+        if mode == 'train':
+            log_items = []
+            for name, val in log_tag.items():
+                if isinstance(val, float):
+                    val = f'{val:.4f}'
+                log_items.append(f'{name}: {val}')
+            log_str += '  '.join(log_items)
+        return tag, log_str
 
-    def _get_val_log_str(self, runner, tag: dict, cur_iter: int) -> str:
-        """Format log string during validation phases.
+    def get_log_after_epoch(self, runner, batch_idx: int,
+                            mode: str) -> Tuple[dict, str]:
+        """Format log string after validation or testing epoch.
 
         Args:
             runner (Runner): The runner of training phase.
-            tag (dict): Statistical values of logs which will be written to the
-                diverse backends, such as local, tensorboard, wandb .etc.
-            cur_iter (int): Equals to batch_index if ``self.by_epoch==True``,
-                otherwise equals to ``runner.iter``.
+            batch_idx (int): The index of the current batch in the current
+                loop.
+            mode (str): Current mode of runner.
 
         Return:
-            str: Formatted log string which will be recorded by ``MMLogger``.
+            Tuple(dict, str): Formatted log dict/string which will be
+            recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
-        eval_iter = len(runner.val_dataloader)
-        # val/test time
-        # here 1000 is the length of the val dataloader
-        # by epoch: Epoch[val] [4][1000]
-        # by iter: Iter[val] [4000][1000]
-        if self.by_epoch:
-            cur_epoch = self._get_epoch(runner, 'val')
-            # runner.epoch += 1 has been done before val workflow
-            log_str = f'Epoch(val) [{cur_epoch}][{eval_iter}]  '
-        else:
-            log_str = f'Iter(val) [{cur_iter}][{eval_iter}]  '
+        assert mode in [
+            'test', 'val'
+        ], ('`_get_metric_log_str` only accept val or test mode, but got '
+            f'{mode}')
+        cur_loop = self._get_cur_loop(runner, mode)
+        dataloader_len = len(cur_loop.dataloader)
 
+        custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
+        # tag is used to write log information to different backends.
+        tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        # validation log string needs cur epoch/iteration and max
+        # epochs/iterations. test log string only needs length of test
+        # dataloader.
+        cur_iter = self._get_iter(runner, batch_idx)
+        if self.by_epoch:
+            if mode == 'val':
+                cur_epoch = self._get_epoch(runner, mode)
+                log_str = (f'Epoch({mode}) [{cur_epoch}][{dataloader_len}/'
+                           f'{dataloader_len}]  ')
+            else:
+                log_str = (
+                    f'Epoch({mode}) [{dataloader_len}/{dataloader_len}]  ')
+
+        else:
+            if mode == 'val':
+                log_str = (f'Iter({mode}) [{cur_iter}/'
+                           f'{runner.train_loop.max_iters}]  ')
+            else:
+                log_str = (
+                    f'Iter({mode}) [{dataloader_len}/{dataloader_len}]  ')
         log_items = []
         for name, val in tag.items():
+            if name in ('time', 'data_time'):
+                continue
             if isinstance(val, float):
                 val = f'{val:.4f}'
             log_items.append(f'{name}: {val}')
-        log_str += ', '.join(log_items)
-        return log_str
+        log_str += '  '.join(log_items)
+        return tag, log_str
 
     def _collect_scalars(self, custom_cfg: List[dict], runner,
                          mode: str) -> dict:
@@ -299,26 +297,26 @@ class LogProcessor:
                                       dict(log_names=set(), log_counts=0))
                 check_dict[data_src]['log_names'].add(log_name)
                 check_dict[data_src]['log_counts'] += 1
-                assert len(check_dict[data_src]['log_names']) == \
-                       check_dict[data_src]['log_counts'], \
-                       f'If you want to statistic {data_src} with multiple ' \
-                       'statistics method, please check `log_name` is unique' \
-                       f'and {data_src} will not be overwritten twice. See ' \
-                       f'more information in the docstring of `LogProcessor`'
+                assert (len(
+                    check_dict[data_src]
+                    ['log_names']) == check_dict[data_src]['log_counts']), (
+                        f'If you want to statistic {data_src} with multiple '
+                        'statistics method, please check `log_name` is unique'
+                        f'and {data_src} will not be overwritten twice. See '
+                        f'more information in the docstring of `LogProcessor`')
 
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, custom_cfg: List[dict], runner,
-                            batch_idx: int) -> None:
+    def _parse_windows_size(self, runner, batch_idx: int) -> list:
         """Parse window_size defined in custom_cfg to int value.
 
         Args:
-            custom_cfg (List[dict]): A copy of ``self.custom_cfg``.
             runner (Runner): The runner of the training process.
             batch_idx (int): The iteration index of current dataloader.
         """
-        for log_cfg in custom_cfg:
+        custom_cfg_copy = copy.deepcopy(self.custom_cfg)
+        for log_cfg in custom_cfg_copy:
             window_size = log_cfg.get('window_size', None)
             if window_size is None or isinstance(window_size, int):
                 continue
@@ -330,6 +328,7 @@ class LogProcessor:
                 raise TypeError(
                     'window_size should be int, epoch or global, but got '
                     f'invalid {window_size}')
+        return custom_cfg_copy
 
     def _get_max_memory(self, runner) -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
@@ -371,7 +370,7 @@ class LogProcessor:
         """Get current epoch according to mode.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/validation process.
             mode (str): Current mode of runner, "train" or "val".
 
         Returns:
@@ -384,6 +383,25 @@ class LogProcessor:
             # runner.epoch += 1 has been done before validation
             epoch = runner.epoch
         else:
-            raise ValueError(f"runner mode should be 'train' or 'val', "
-                             f'but got {mode}')
+            raise ValueError(
+                f"runner mode should be 'train' or 'val', but got {mode}")
         return epoch
+
+    def _get_cur_loop(self, runner, mode: str):
+        """Get current loop according to mode.
+
+        Args:
+            runner (Runner): The runner of the training/validation/testing
+                process.
+            mode (str): Current mode of runner, "train", "val" or test.
+
+        Returns:
+            BaseLoop: Current loop of runner.
+        """
+        # returns type hint will occur circular import
+        if mode == 'train':
+            return runner.train_loop
+        elif mode == 'val':
+            return runner.val_loop
+        else:
+            return runner.test_loop
