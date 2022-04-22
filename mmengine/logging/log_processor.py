@@ -144,7 +144,7 @@ class LogProcessor:
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter}/{runner.train_loop.max_iters}]  ')
             else:
-                log_str = (f'Iter({mode}) [{cur_iter}'
+                log_str = (f'Iter({mode}) [{batch_idx+1}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
@@ -212,7 +212,7 @@ class LogProcessor:
                     f'Epoch({mode}) [{dataloader_len}/{dataloader_len}]  ')
 
         else:
-            if mode == 'val':
+            if mode == 'train':
                 log_str = (f'Iter({mode}) [{cur_iter}/'
                            f'{runner.train_loop.max_iters}]  ')
             else:

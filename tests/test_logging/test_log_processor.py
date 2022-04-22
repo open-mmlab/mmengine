@@ -111,10 +111,10 @@ class TestLogProcessor:
         else:
             if mode == 'train':
                 max_iters = self.runner.train_loop.max_iters
+                log_str = f'Iter({mode}) [11/{max_iters}]  '
             else:
                 max_iters = len(cur_loop.dataloader)
-
-            log_str = f'Iter({mode}) [11/{max_iters}]  '
+                log_str = f'Iter({mode}) [2/{max_iters}]  '
 
             if mode == 'train':
                 log_str += f"lr: {train_logs['lr']:.3e}  "

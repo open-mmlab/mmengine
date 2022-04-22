@@ -29,8 +29,6 @@ class LoggerHook(Hook):
     Args:
         interval (int): Logging interval (every k iterations).
             Defaults to 10.
-        by_epoch (bool): Whether to log messages by epoch. Defaults to
-            True.
         ignore_last (bool): Ignore the log of last iterations in each epoch if
             the number of remaining iterations is less than :attr:`interval`.
             Defaults to True.
@@ -63,7 +61,6 @@ class LoggerHook(Hook):
     def __init__(
         self,
         interval: int = 10,
-        by_epoch: bool = True,
         ignore_last: bool = True,
         interval_exp_name: int = 1000,
         out_dir: Optional[Union[str, Path]] = None,
@@ -74,7 +71,6 @@ class LoggerHook(Hook):
         self.interval = interval
         self.ignore_last = ignore_last
         self.interval_exp_name = interval_exp_name
-        self.by_epoch = by_epoch
 
         if out_dir is None and file_client_args is not None:
             raise ValueError(
@@ -133,9 +129,10 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        if self.every_n_iters(runner, self.interval_exp_name) or (
-                self.by_epoch
-                and self.end_of_epoch(runner.train_dataloader, batch_idx)):
+        # Print experiment name every n iterations.
+        if self.every_n_iters(runner,
+                              self.interval_exp_name) or (self.end_of_epoch(
+                                  runner.train_dataloader, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
         if self.every_n_inner_iters(batch_idx, self.interval):
