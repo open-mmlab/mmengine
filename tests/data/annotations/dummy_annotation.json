@@ -1,11 +1,11 @@
 {
-    "metadata":
+    "metainfo":
     {
       "dataset_type": "test_dataset",
       "task_name": "test_task",
       "empty_list": []
     },
-    "data_infos":
+    "data_list":
     [
       {
         "img_path": "test_img.jpg",
