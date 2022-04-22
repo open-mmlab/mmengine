@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader, Dataset
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
-from mmengine.hooks import (Hook, IterTimerHook, LoggerHook, OptimizerHook,
-                            ParamSchedulerHook)
+from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
+                            LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
@@ -25,7 +25,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import is_list_of
-from mmengine.visualization.writer import ComposedWriter
+from mmengine.visualization import Visualizer
 
 
 @MODELS.register_module()
@@ -36,7 +36,8 @@ class ToyModel(nn.Module):
         self.linear = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
-        inputs, labels = zip(*data_batch)
+        inputs, labels = zip(
+            *map(lambda x: (x['inputs'], x['data_sample']), data_batch))
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
@@ -67,7 +68,7 @@ class CustomModelWrapper(nn.Module):
 
 @DATASETS.register_module()
 class ToyDataset(Dataset):
-    META = dict()  # type: ignore
+    METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
     label = torch.ones(12)
 
@@ -75,7 +76,7 @@ class ToyDataset(Dataset):
         return self.data.size(0)
 
     def __getitem__(self, index):
-        return self.data[index], self.label[index]
+        return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
 @METRICS.register_module()
@@ -307,24 +308,24 @@ class TestRunner(TestCase):
         self.assertFalse(runner.distributed)
         self.assertFalse(runner.deterministic)
 
-        # 1.5 message_hub, logger and writer
+        # 1.5 message_hub, logger and visualizer
         # they are all not specified
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init12'
         runner = Runner(**cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertIsInstance(runner.message_hub, MessageHub)
-        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertIsInstance(runner.visualizer, Visualizer)
 
         # they are all specified
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init13'
         cfg.log_level = 'INFO'
-        cfg.writer = dict(name='test_writer')
+        cfg.visualizer = None
         runner = Runner(**cfg)
         self.assertIsInstance(runner.logger, MMLogger)
         self.assertIsInstance(runner.message_hub, MessageHub)
-        self.assertIsInstance(runner.writer, ComposedWriter)
+        self.assertIsInstance(runner.visualizer, Visualizer)
 
         assert runner.distributed is False
         assert runner.seed is not None
@@ -445,32 +446,34 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(TypeError, 'message_hub should be'):
             runner.build_message_hub('invalid-type')
 
-    def test_build_writer(self):
-        self.epoch_based_cfg.experiment_name = 'test_build_writer1'
+    def test_build_visualizer(self):
+        self.epoch_based_cfg.experiment_name = 'test_build_visualizer1'
         runner = Runner.from_cfg(self.epoch_based_cfg)
-        self.assertIsInstance(runner.writer, ComposedWriter)
-        self.assertEqual(runner.experiment_name, runner.writer.instance_name)
+        self.assertIsInstance(runner.visualizer, Visualizer)
+        self.assertEqual(runner.experiment_name,
+                         runner.visualizer.instance_name)
 
-        # input is a ComposedWriter object
+        # input is a Visualizer object
         self.assertEqual(
-            id(runner.build_writer(runner.writer)), id(runner.writer))
+            id(runner.build_visualizer(runner.visualizer)),
+            id(runner.visualizer))
 
         # input is a dict
-        writer_cfg = dict(name='test_build_writer2')
-        writer = runner.build_writer(writer_cfg)
-        self.assertIsInstance(writer, ComposedWriter)
-        self.assertEqual(writer.instance_name, 'test_build_writer2')
+        visualizer_cfg = dict(type='Visualizer', name='test_build_visualizer2')
+        visualizer = runner.build_visualizer(visualizer_cfg)
+        self.assertIsInstance(visualizer, Visualizer)
+        self.assertEqual(visualizer.instance_name, 'test_build_visualizer2')
 
         # input is a dict but does not contain name key
-        runner._experiment_name = 'test_build_writer3'
-        writer_cfg = dict()
-        writer = runner.build_writer(writer_cfg)
-        self.assertIsInstance(writer, ComposedWriter)
-        self.assertEqual(writer.instance_name, 'test_build_writer3')
+        runner._experiment_name = 'test_build_visualizer3'
+        visualizer_cfg = None
+        visualizer = runner.build_visualizer(visualizer_cfg)
+        self.assertIsInstance(visualizer, Visualizer)
+        self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')
 
         # input is not a valid type
-        with self.assertRaisesRegex(TypeError, 'writer should be'):
-            runner.build_writer('invalid-type')
+        with self.assertRaisesRegex(TypeError, 'visualizer should be'):
+            runner.build_visualizer('invalid-type')
 
     def test_default_scope(self):
         TOY_SCHEDULERS = Registry(
@@ -510,6 +513,25 @@ class TestRunner(TestCase):
         # input is a dict
         model = runner.build_model(dict(type='ToyModel1'))
         self.assertIsInstance(model, ToyModel1)
+
+        # test init weights
+        @MODELS.register_module()
+        class ToyModel2(ToyModel):
+
+            def __init__(self):
+                super().__init__()
+                self.initiailzed = False
+
+            def init_weights(self):
+                self.initiailzed = True
+
+        model = runner.build_model(dict(type='ToyModel2'))
+        self.assertTrue(model.initiailzed)
+
+        # test init weights with model object
+        _model = ToyModel2()
+        model = runner.build_model(_model)
+        self.assertFalse(model.initiailzed)
 
     def test_wrap_model(self):
         # TODO: test on distributed environment
@@ -897,33 +919,35 @@ class TestRunner(TestCase):
 
         # register five hooks by default
         runner.register_default_hooks()
-        self.assertEqual(len(runner._hooks), 5)
-        # the forth registered hook should be `ParamSchedulerHook`
-        self.assertTrue(isinstance(runner._hooks[3], ParamSchedulerHook))
+        self.assertEqual(len(runner._hooks), 6)
+        # the third registered hook should be `DistSamplerSeedHook`
+        self.assertTrue(isinstance(runner._hooks[2], DistSamplerSeedHook))
+        # the fifth registered hook should be `ParamSchedulerHook`
+        self.assertTrue(isinstance(runner._hooks[4], ParamSchedulerHook))
 
         runner._hooks = []
         # remove `ParamSchedulerHook` from default hooks
         runner.register_default_hooks(hooks=dict(timer=None))
-        self.assertEqual(len(runner._hooks), 4)
+        self.assertEqual(len(runner._hooks), 5)
         # `ParamSchedulerHook` was popped so the forth is `CheckpointHook`
-        self.assertTrue(isinstance(runner._hooks[3], CheckpointHook))
+        self.assertTrue(isinstance(runner._hooks[4], CheckpointHook))
 
         # add a new default hook
         runner._hooks = []
         runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
-        self.assertEqual(len(runner._hooks), 5)
+        self.assertEqual(len(runner._hooks), 6)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -933,9 +957,9 @@ class TestRunner(TestCase):
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
-        # five default hooks + custom hook (ToyHook)
-        self.assertEqual(len(runner._hooks), 6)
-        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
+        # six default hooks + custom hook (ToyHook)
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_loop(self):
         # test custom loop with additional hook
@@ -1057,9 +1081,34 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
-        # 2. test iter based
+        # 1.4 test auto resume
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_checkpoint4'
+        cfg.resume = True
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 3)
+        self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 1.5 test resume from a specified checkpoint
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint5'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'epoch_1.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 1)
+        self.assertEqual(runner.iter, 4)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2. test iter based
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint6'
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -1078,7 +1127,7 @@ class TestRunner(TestCase):
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint5'
+        cfg.experiment_name = 'test_checkpoint7'
         runner = Runner.from_cfg(cfg)
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
@@ -1087,11 +1136,36 @@ class TestRunner(TestCase):
 
         # 2.3 test `resume`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint6'
+        cfg.experiment_name = 'test_checkpoint8'
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.4 test auto resume
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint9'
+        cfg.resume = True
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 0)
+        self.assertEqual(runner.iter, 12)
+        self.assertTrue(runner._has_loaded)
+        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.5 test resume from a specified checkpoint
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint10'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        self.assertEqual(runner.epoch, 0)
+        self.assertEqual(runner.iter, 3)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)

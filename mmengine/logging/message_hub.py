@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 from collections import OrderedDict
 from typing import Any, Optional, Union
 
@@ -229,7 +228,8 @@ class MessageHub(ManagerMixin):
         Returns:
             OrderedDict: A copy of all runtime information.
         """
-        return copy.deepcopy(self._runtime_info)
+        # return copy.deepcopy(self._runtime_info)
+        return self._runtime_info
 
     def get_scalar(self, key: str) -> HistoryBuffer:
         """Get ``HistoryBuffer`` instance by key.
@@ -263,7 +263,10 @@ class MessageHub(ManagerMixin):
         if key not in self.runtime_info:
             raise KeyError(f'{key} is not found in Messagehub.log_buffers: '
                            f'instance name is: {MessageHub.instance_name}')
-        return copy.deepcopy(self._runtime_info[key])
+
+        # TODO： There are restrictions on objects that can be saved
+        # return copy.deepcopy(self._runtime_info[key])
+        return self._runtime_info[key]
 
     def _get_valid_value(self, key: str,
                          value: Union[torch.Tensor, np.ndarray, int, float]) \

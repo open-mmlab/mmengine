@@ -61,7 +61,6 @@ class TestLoggerHook:
         assert logger_hook.json_log_path == osp.join('work_dir',
                                                      'timestamp.log.json')
         assert logger_hook.start_iter == runner.iter
-        runner.writer.add_params.assert_called()
 
     def test_after_run(self, tmp_path):
         out_dir = tmp_path / 'out_dir'
@@ -111,7 +110,7 @@ class TestLoggerHook:
         # Test end of the epoch.
         logger_hook = LoggerHook(by_epoch=True, ignore_last=False)
         logger_hook._log_train = MagicMock()
-        runner.cur_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
         batch_idx = 4
         logger_hook.after_train_iter(runner, batch_idx=batch_idx)
         logger_hook._log_train.assert_called()
@@ -151,7 +150,7 @@ class TestLoggerHook:
         logger_hook._collect_info = MagicMock(return_value=train_infos)
         logger_hook._log_train(runner)
         # Verify that the correct variables have been written.
-        runner.writer.add_scalars.assert_called_with(
+        runner.visualizer.add_scalars.assert_called_with(
             train_infos, step=11, file_path='tmp.json')
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
@@ -161,7 +160,7 @@ class TestLoggerHook:
         eta_str = str(datetime.timedelta(seconds=int(eta_second)))
         if by_epoch:
             if torch.cuda.is_available():
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -170,7 +169,7 @@ class TestLoggerHook:
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
             else:
-                log_str = 'Epoch [2][2/5]\t' \
+                log_str = 'Epoch [2][2/5] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -180,7 +179,7 @@ class TestLoggerHook:
             assert out == log_str
         else:
             if torch.cuda.is_available():
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -189,7 +188,7 @@ class TestLoggerHook:
                           f'memory: 100, ' \
                           f"loss_cls: {train_infos['loss_cls']:.4f}\n"
             else:
-                log_str = 'Iter [11/50]\t' \
+                log_str = 'Iter [11/50] ' \
                           f"lr: {train_infos['lr']:.3e} " \
                           f"momentum: {train_infos['momentum']:.3e}, " \
                           f'eta: {eta_str}, ' \
@@ -209,14 +208,14 @@ class TestLoggerHook:
         logger_hook._log_val(runner)
         # Verify that the correct context have been logged.
         out, _ = capsys.readouterr()
-        runner.writer.add_scalars.assert_called_with(
+        runner.visualizer.add_scalars.assert_called_with(
             metric, step=11, file_path='tmp.json')
         if by_epoch:
-            assert out == 'Epoch(val) [1][5]\taccuracy: 0.9000, ' \
+            assert out == 'Epoch(val) [1][5] accuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
 
         else:
-            assert out == 'Iter(val) [5]\taccuracy: 0.9000, ' \
+            assert out == 'Iter(val) [5] accuracy: 0.9000, ' \
                           'data_time: 1.0000\n'
 
     def test_get_window_size(self):
@@ -341,7 +340,9 @@ class TestLoggerHook:
     def _setup_runner(self):
         runner = MagicMock()
         runner.epoch = 1
-        runner.cur_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
+        runner.val_loop.dataloader = [0] * 5
+        runner.test_loop.dataloader = [0] * 5
         runner.iter = 10
         runner.train_loop.max_iters = 50
         logger = logging.getLogger()
