@@ -87,6 +87,11 @@ class TestBaseDataset:
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/not_existed_annotation.json')
+        # Use the default value of ann_file, i.e., ''
+        with pytest.raises(FileNotFoundError):
+            self.dataset_type(
+                data_root=osp.join(osp.dirname(__file__), '../data/'),
+                data_prefix=dict(img='imgs'))
 
         # test the instantiation of self.base_dataset when the ann_file is
         # wrong

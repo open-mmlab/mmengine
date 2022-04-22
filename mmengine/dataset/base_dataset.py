@@ -118,12 +118,12 @@ class BaseDataset(Dataset):
     .. code-block:: none
 
         {
-            "metadata":
+            "metainfo":
             {
               "dataset_type": "test_dataset",
               "task_name": "test_task"
             },
-            "data_infos":
+            "data_list":
             [
               {
                 "img_path": "test_img.jpg",
@@ -149,7 +149,7 @@ class BaseDataset(Dataset):
         }
 
     Args:
-        ann_file (str): Annotation file path.
+        ann_file (str): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
         data_root (str, optional): The root directory for ``data_prefix`` and
@@ -208,7 +208,7 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str,
+                 ann_file: str = '',
                  metainfo: Optional[dict] = None,
                  data_root: Optional[str] = None,
                  data_prefix: dict = dict(img=None, ann=None),
@@ -232,7 +232,7 @@ class BaseDataset(Dataset):
         self.data_bytes: np.ndarray
 
         # Set meta information.
-        self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
+        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
         if self.data_root is not None:
@@ -429,21 +429,21 @@ class BaseDataset(Dataset):
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
-        if 'data_infos' not in annotations or 'metadata' not in annotations:
-            raise ValueError('Annotation must have data_infos and metadata '
+        if 'data_list' not in annotations or 'metainfo' not in annotations:
+            raise ValueError('Annotation must have data_list and metainfo '
                              'keys')
-        meta_data = annotations['metadata']
-        raw_data_infos = annotations['data_infos']
+        metainfo = annotations['metainfo']
+        raw_data_list = annotations['data_list']
 
         # Meta information load from annotation file will not influence the
         # existed meta information load from `BaseDataset.METAINFO` and
         # `metainfo` arguments defined in constructor.
-        for k, v in meta_data.items():
+        for k, v in metainfo.items():
             self._metainfo.setdefault(k, v)
 
         # load and parse data_infos.
         data_list = []
-        for raw_data_info in raw_data_infos:
+        for raw_data_info in raw_data_list:
             # parse raw data information to target format
             data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
@@ -467,11 +467,11 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
+    def _load_metainfo(cls, metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_metainfo (dict): Meta information dict. If ``in_metainfo``
+            metainfo (dict): Meta information dict. If ``metainfo``
                 contains existed filename, it will be parsed by
                 ``list_from_file``.
 
@@ -480,15 +480,15 @@ class BaseDataset(Dataset):
         """
         # `cls.METAINFO` will be overwritten by in_meta
         cls_metainfo = copy.deepcopy(cls.METAINFO)
-        if in_metainfo is None:
+        if metainfo is None:
             return cls_metainfo
-        if not isinstance(in_metainfo, dict):
+        if not isinstance(metainfo, dict):
             raise TypeError(
-                f'in_metainfo should be a dict, but got {type(in_metainfo)}')
+                f'metainfo should be a dict, but got {type(metainfo)}')
 
-        for k, v in in_metainfo.items():
+        for k, v in metainfo.items():
             if isinstance(v, str) and osp.isfile(v):
-                # if filename in in_metainfo, this key will be further parsed.
+                # if filename in metainfo, this key will be further parsed.
                 # nested filename will be ignored.
                 cls_metainfo[k] = list_from_file(v)
             else:
