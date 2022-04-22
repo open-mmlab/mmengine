@@ -165,9 +165,11 @@ class LogProcessor:
         if torch.cuda.is_available():
             log_str += f'memory: {self._get_max_memory(runner)}  '
         # Loop left keys to fill `log_str`.
-        if mode == 'train':
+        if mode in ('train', 'val'):
             log_items = []
             for name, val in log_tag.items():
+                if mode == 'val' and not name.startswith('loss'):
+                    continue
                 if isinstance(val, float):
                     val = f'{val:.4f}'
                 log_items.append(f'{name}: {val}')
