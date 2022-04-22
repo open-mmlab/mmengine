@@ -96,9 +96,7 @@ def all_reduce(data: Tensor,
         else:
             dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 
-        if input_device == backend_device:
-            data = data_on_device
-        else:
+        if input_device != backend_device:
             data_on_device = data_on_device.to(input_device)
             data.copy_(data_on_device)
 
@@ -315,9 +313,7 @@ def broadcast(data: Tensor,
 
         dist.broadcast(data_on_device, src, group)
 
-        if input_device == backend_device:
-            data = data_on_device
-        else:
+        if get_rank(group) != src and input_device != backend_device:
             data_on_device = data_on_device.to(input_device)
             data.copy_(data_on_device)
 
@@ -358,10 +354,9 @@ def sync_random_seed(group: Optional[dist.ProcessGroup] = None) -> int:
     backend_device = get_backend_device(group)
 
     if get_rank(group) == 0:
-        random_num = torch.tensor(
-            seed, dtype=torch.int32, device=backend_device)
+        random_num = torch.tensor(seed, dtype=torch.int32).to(backend_device)
     else:
-        random_num = torch.tensor(0, dtype=torch.int32, device=backend_device)
+        random_num = torch.tensor(0, dtype=torch.int32).to(backend_device)
 
     dist.broadcast(random_num, src=0, group=group)
 
@@ -1042,8 +1037,8 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         return result_part[:size]
 
     # gather all result part. Note that NCCL does not support gather so use
-    # all_gather instead.
-    part_list = all_gather(result_part)
+    # all_gather_object instead.
+    part_list = all_gather_object(result_part)
 
     if rank == 0:
         # sort the results
