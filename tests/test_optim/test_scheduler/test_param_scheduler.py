@@ -354,7 +354,7 @@ class TestParameterScheduler(TestCase):
             self.optimizer,
             param_name='lr',
             power=power,
-            min_lr=min_lr,
+            eta_min=min_lr,
             end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
@@ -427,9 +427,9 @@ class TestParameterScheduler(TestCase):
     def test_poly_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
             lambda: PolyParamScheduler(
-                self.optimizer, param_name='lr', power=0.5, min_lr=0.001),
+                self.optimizer, param_name='lr', power=0.5, eta_min=0.001),
             lambda: PolyParamScheduler(
-                self.optimizer, param_name='lr', power=0.8, min_lr=0.002),
+                self.optimizer, param_name='lr', power=0.8, eta_min=0.002),
             epochs=10)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):

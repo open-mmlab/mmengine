@@ -295,7 +295,7 @@ class TestLRScheduler(TestCase):
             epochs - iters)
         targets = [single_targets, [x * epochs for x in single_targets]]
         scheduler = PolyLR(
-            self.optimizer, power=power, min_lr=min_lr, end=iters + 1)
+            self.optimizer, power=power, eta_min=min_lr, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
@@ -348,8 +348,8 @@ class TestLRScheduler(TestCase):
 
     def test_poly_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
-            lambda: PolyLR(self.optimizer, power=0.5, min_lr=0.001),
-            lambda: PolyLR(self.optimizer, power=0.8, min_lr=0.002),
+            lambda: PolyLR(self.optimizer, power=0.5, eta_min=0.001),
+            lambda: PolyLR(self.optimizer, power=0.8, eta_min=0.002),
             epochs=10)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):

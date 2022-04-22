@@ -307,7 +307,7 @@ class PolyLR(PolyParamScheduler):
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
-        min_lr (float): The minimum learning rate at the end of scheduling.
+        eta_min (float): Minimum learning rate at the end of scheduling.
             Defaults to 0.
         power (float): The power of the polynomial. Defaults to 1.0.
         begin (int): Step at which to start updating the parameters.
@@ -324,7 +324,7 @@ class PolyLR(PolyParamScheduler):
 
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
-                 min_lr: float = 0,
+                 eta_min: float = 0,
                  power: float = 1,
                  begin: int = 0,
                  end: int = INF,
@@ -334,7 +334,7 @@ class PolyLR(PolyParamScheduler):
         super().__init__(
             optimizer,
             param_name='lr',
-            min_lr=min_lr,
+            eta_min=eta_min,
             power=power,
             begin=begin,
             end=end,

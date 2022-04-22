@@ -611,7 +611,7 @@ class PolyParamScheduler(_ParamScheduler):
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
-        min_lr (float): The minimum learning rate at the end of scheduling.
+        eta_min (float): Minimum parameter value at the end of scheduling.
             Defaults to 0.
         power (float): The power of the polynomial. Defaults to 1.0.
         begin (int): Step at which to start updating the parameters.
@@ -629,7 +629,7 @@ class PolyParamScheduler(_ParamScheduler):
     def __init__(self,
                  optimizer: Optimizer,
                  param_name: str,
-                 min_lr: float = 0,
+                 eta_min: float = 0,
                  power: float = 1.0,
                  begin: int = 0,
                  end: int = INF,
@@ -637,7 +637,7 @@ class PolyParamScheduler(_ParamScheduler):
                  by_epoch: bool = True,
                  verbose: bool = False):
 
-        self.min_lr = min_lr
+        self.eta_min = eta_min
         self.power = power
         self.total_iters = end - begin - 1
 
@@ -657,6 +657,6 @@ class PolyParamScheduler(_ParamScheduler):
                 group[self.param_name] for group in self.optimizer.param_groups
             ]
 
-        return [(group[self.param_name] - self.min_lr) *
+        return [(group[self.param_name] - self.eta_min) *
                 (1 - 1 / (self.total_iters - self.last_step + 1))**self.power +
-                self.min_lr for group in self.optimizer.param_groups]
+                self.eta_min for group in self.optimizer.param_groups]
