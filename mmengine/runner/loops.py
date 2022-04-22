@@ -60,7 +60,7 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
-        self.runner._epoch += 1
+        self.runner.epoch += 1
 
     def run_iter(self, idx,
                  data_batch: Sequence[Tuple[Any, BaseDataElement]]) -> None:
@@ -77,7 +77,7 @@ class EpochBasedTrainLoop(BaseLoop):
 
         # TODO, should move to LoggerHook
         for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_log(f'train/{key}', value)
+            self.runner.message_hub.update_scalar(f'train/{key}', value)
 
         self.runner.call_hook(
             'after_train_iter',
@@ -85,7 +85,7 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=self.runner.outputs)
 
-        self.runner._iter += 1
+        self.runner.iter += 1
 
 
 @LOOPS.register_module()
@@ -147,14 +147,14 @@ class IterBasedTrainLoop(BaseLoop):
 
         # TODO
         for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_log(f'train/{key}', value)
+            self.runner.message_hub.update_scalar(f'train/{key}', value)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self.runner._iter,
             data_batch=data_batch,
             outputs=self.runner.outputs)
-        self.runner._iter += 1
+        self.runner.iter += 1
 
 
 @LOOPS.register_module()
@@ -195,7 +195,7 @@ class ValLoop(BaseLoop):
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         for key, value in metrics.items():
-            self.runner.message_hub.update_log(f'val/{key}', value)
+            self.runner.message_hub.update_scalar(f'val/{key}', value)
 
         self.runner.call_hook('after_val_epoch')
         self.runner.call_hook('after_val')
@@ -252,7 +252,7 @@ class TestLoop(BaseLoop):
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         for key, value in metrics.items():
-            self.runner.message_hub.update_log(f'test/{key}', value)
+            self.runner.message_hub.update_scalar(f'test/{key}', value)
 
         self.runner.call_hook('after_test_epoch')
         self.runner.call_hook('after_test')

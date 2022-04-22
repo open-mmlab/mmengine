@@ -754,6 +754,9 @@ class TestRunner(TestCase):
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
 
+        assert runner.iter == runner.message_hub.get_info('iter')
+        assert runner.epoch == runner.message_hub.get_info('epoch')
+
         for result, target, in zip(epoch_results, epoch_targets):
             self.assertEqual(result, target)
         for result, target, in zip(iter_results, iter_targets):
@@ -786,6 +789,7 @@ class TestRunner(TestCase):
         runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
+        assert runner.iter == runner.message_hub.get_info('iter')
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)

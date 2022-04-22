@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
+import os.path as osp
 import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
@@ -8,7 +9,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from mmengine.utils import ManagerMixin
+from mmengine.utils import ManagerMixin, mkdir_or_exist
 
 
 class MMFormatter(logging.Formatter):
@@ -85,54 +86,134 @@ class MMFormatter(logging.Formatter):
 
 
 class MMLogger(Logger, ManagerMixin):
-    """The Logger manager which can create formatted logger and get specified
-    logger globally. MMLogger is created and accessed in the same way as
-    ManagerMixin.
+    """Formatted logger used to record messages.
+
+    ``MMLogger`` can create formatted logger to log message with different
+    log levels and get instance in the same way as ``ManagerMixin``.
+    ``MMLogger`` has the following features:
+
+    - Distributed log storage, ``MMLogger`` can choose whether to save log of
+      different ranks according to `log_file`.
+    - Message with different log levels will have different colors and format
+      when displayed on terminal.
+
+    Note:
+        - The `name` of logger and the ``instance_name`` of ``MMLogger`` could
+          be different. We can only get ``MMLogger`` instance by
+          ``MMLogger.get_instance`` but not ``logging.getLogger``. This feature
+          ensures ``MMLogger`` will not be incluenced by third-party logging
+          config.
+        - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
+          or error message without ``Handler``.
+        - If `log_file=/path/to/tmp.log`, all logs will be saved to
+          `/path/to/tmp/tmp.log`
+
+    Examples:
+        >>> logger = MMLogger.get_instance(name='MMLogger',
+        >>>                                logger_name='Logger')
+        >>> # Although logger has name attribute just like `logging.Logger`
+        >>> # We cannot get logger instance by `logging.getLogger`.
+        >>> assert logger.name == 'Logger'
+        >>> assert logger.instance_name = 'MMLogger'
+        >>> assert id(logger) != id(logging.getLogger('Logger'))
+        >>> # Get logger that do not store logs.
+        >>> logger1 = MMLogger.get_instance('logger1')
+        >>> # Get logger only save rank0 logs.
+        >>> logger2 = MMLogger.get_instance('logger2', log_file='out.log')
+        >>> # Get logger only save multiple ranks logs.
+        >>> logger3 = MMLogger.get_instance('logger3', log_file='out.log',
+        >>>                                 distributed=True)
 
     Args:
-        name (str): Logger name. Defaults to ''.
+        name (str): Global instance name.
+        logger_name (str): ``name`` attribute of ``Logging.Logger`` instance.
+            If `logger_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
-        log_level: The log level of the handler. Defaults to 'NOTSET'.
-        file_mode (str): The file mode used in opening log file.
-            Defaults to 'w'.
+        log_level (str): The log level of the handler and logger. Defaults to
+            "NOTSET".
+        file_mode (str): The file mode used to open log file. Defaults to 'w'.
+        distributed (bool): Whether to save distributed logs, Defaults to
+            false.
     """
 
     def __init__(self,
-                 name: str = '',
+                 name: str,
+                 logger_name='mmengine',
                  log_file: Optional[str] = None,
-                 log_level: str = 'NOTSET',
-                 file_mode: str = 'w'):
-        Logger.__init__(self, name)
+                 log_level: str = 'INFO',
+                 file_mode: str = 'w',
+                 distributed=False):
+        Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
         if dist.is_available() and dist.is_initialized():
             rank = dist.get_rank()
         else:
             rank = 0
-
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)
-        stream_handler.setFormatter(MMFormatter(color=True))
+        # `StreamHandler` record month, day, hour, minute, and second
+        # timestamp.
+        stream_handler.setFormatter(
+            MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
+        # Only rank0 `StreamHandler` will log messages below error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
 
         if log_file is not None:
+            # If `log_file=/path/to/tmp.log`, all logs will be saved to
+            # `/path/to/tmp/tmp.log`
+            log_dir = osp.dirname(log_file)
+            filename = osp.basename(log_file)
+            filename_list = filename.split('.')
+            sub_file_name = '.'.join(filename_list[:-1])
+            log_dir = osp.join(log_dir, sub_file_name)
+            mkdir_or_exist(log_dir)
+            log_file = osp.join(log_dir, filename)
             if rank != 0:
-                # rename `log_file` with rank prefix.
+                # rename `log_file` with rank suffix.
                 path_split = log_file.split(os.sep)
-                path_split[-1] = f'rank{rank}_{path_split[-1]}'
+                if '.' in path_split[-1]:
+                    filename_list = path_split[-1].split('.')
+                    filename_list[-2] = f'{filename_list[-2]}_rank{rank}'
+                    path_split[-1] = '.'.join(filename_list)
+                else:
+                    path_split[-1] = f'{path_split[-1]}_rank{rank}'
                 log_file = os.sep.join(path_split)
-            # Here, the default behaviour of the official logger is 'a'. Thus,
-            # we provide an interface to change the file mode to the default
-            # behaviour. `FileHandler` is not supported to have colors,
-            # otherwise it will appear garbled.
-            file_handler = logging.FileHandler(log_file, file_mode)
-            file_handler.setFormatter(MMFormatter(color=False))
-            file_handler.setLevel(log_level)
-            self.handlers.append(file_handler)
+            # Save multi-ranks logs if distributed is True. The logs of rank0
+            # will always be saved.
+            if rank == 0 or distributed:
+                # Here, the default behaviour of the official logger is 'a'.
+                # Thus, we provide an interface to change the file mode to
+                # the default behaviour. `FileHandler` is not supported to
+                # have colors, otherwise it will appear garbled.
+                file_handler = logging.FileHandler(log_file, file_mode)
+                # `StreamHandler` record year, month, day hour, minute,
+                # and second timestamp. file_handler will only record logs
+                # without color to avoid garbled code saved in files.
+                file_handler.setFormatter(
+                    MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
+                file_handler.setLevel(log_level)
+                self.handlers.append(file_handler)
+
+    def callHandlers(self, record: LogRecord) -> None:
+        """Pass a record to all relevant handlers.
+
+        Override ``callHandlers`` method in ``logging.Logger`` to avoid
+        multiple warning messages in DDP mode. Loop through all handlers of
+        the logger instance and its parents in the logger hierarchy. If no
+        handler was found, the record will not be output.
+
+        Args:
+            record (LogRecord): A ``LogRecord`` instance contains logged
+                message.
+        """
+        for handler in self.handlers:
+            if record.levelno >= handler.level:
+                handler.handle(record)
 
 
 def print_log(msg,
