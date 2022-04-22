@@ -151,7 +151,7 @@ class TestLogProcessor:
             if mode == 'test':
                 assert out == 'Iter(test) [5/5]  accuracy: 0.9000'
             else:
-                assert out == 'Iter(val) [11/50]  accuracy: 0.9000'
+                assert out == 'Iter(val) [10/10]  accuracy: 0.9000'
 
     def test_collect_scalars(self):
         custom_cfg = [
