@@ -179,6 +179,23 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is True
 
+    def test_draw_points(self):
+        visualizer = Visualizer(image=self.image)
+
+        with pytest.raises(TypeError):
+            visualizer.draw_points(positions=[1, 2])
+        with pytest.raises(AssertionError):
+            visualizer.draw_points(positions=np.array([1, 2, 3]))
+        # test color
+        visualizer.draw_points(
+            positions=torch.tensor([[1, 1], [3, 3]]),
+            colors=['g', (255, 255, 0)])
+        visualizer.draw_points(
+            positions=torch.tensor([[1, 1], [3, 3]]),
+            colors=['g', (255, 255, 0)],
+            marker='.',
+            sizes=[1, 5])
+
     def test_draw_texts(self):
         visualizer = Visualizer(image=self.image)
 
@@ -563,3 +580,8 @@ class TestVisualizer(TestCase):
         visualizer2 = Visualizer.get_current_instance()
         visualizer3 = DetLocalVisualizer.get_current_instance()
         assert id(visualizer1) == id(visualizer2) == id(visualizer3)
+
+    def test_data_info(self):
+        visualizer = Visualizer()
+        visualizer.dataset_meta = {'class': 'cat'}
+        assert visualizer.dataset_meta['class'] == 'cat'

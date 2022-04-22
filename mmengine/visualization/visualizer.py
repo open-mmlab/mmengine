@@ -9,11 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.backend_bases import CloseEvent
-from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import (LineCollection, PatchCollection,
                                     PolyCollection)
-from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 
 from mmengine.config import Config
@@ -21,10 +18,10 @@ from mmengine.data import BaseDataElement
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
-                                          color_val_matplotlib,
+                                          color_str2rgb, color_val_matplotlib,
                                           convert_overlay_heatmap,
-                                          str_color_to_rgb, tensor2ndarray,
-                                          value2list)
+                                          get_img_from_canvas, tensor2ndarray,
+                                          value2list, wait_continue)
 from mmengine.visualization.vis_backend import BaseVisBackend
 
 
@@ -163,7 +160,7 @@ class Visualizer(ManagerMixin):
         fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
         super(Visualizer, self).__init__(name)
-        self._dataset_meta: Union[None, dict] = None
+        self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
         if save_dir is None:
@@ -234,8 +231,14 @@ class Visualizer(ManagerMixin):
         """Show the drawn image.
 
         Args:
-            wait_time (int, optional): Delay in milliseconds. 0 is the special
+            drawn_img (np.ndarray, optional): The image to show. If drawn_img
+                is None, it will show the image got by Visualizer. Defaults
+                to None.
+            win_name (str):  The image title. Defaults to 'image'.
+            wait_time (int): Delay in milliseconds. 0 is the special
                 value that means "forever". Defaults to 0.
+            continue_key (str): The key for users to continue. Defaults to
+                the space key.
         """
         if self.is_inline:
             return
@@ -243,19 +246,14 @@ class Visualizer(ManagerMixin):
             (self.fig_show, self.ax_show,
              self.fig_show_num) = self._initialize_fig(self.fig_show_cfg)
         img = self.get_image() if drawn_img is None else drawn_img
-        # dpi = self.fig_show.get_dpi()
-        # height, width = img.shape[:2]
-        # self.fig_show.set_size_inches((width + 1e-2) / dpi,
-        #                               (height + 1e-2) / dpi)
         self.ax_show.cla()
         self.ax_show.axis(False)
-        # self.ax_show.set_title(win_name)
-        # self.fig_show.set_label(win_name)
-
+        self.fig_show.canvas.manager.set_window_title(win_name)  # type: ignore
         # Refresh canvas, necessary for Qt5 backend.
         self.ax_show.imshow(img)
         self.fig_show.canvas.draw()  # type: ignore
-        self._wait_continue(timeout=wait_time, continue_key=continue_key)
+        wait_continue(
+            self.fig_show, timeout=wait_time, continue_key=continue_key)
 
     def set_image(self, image: np.ndarray) -> None:
         """Set the image to draw.
@@ -289,12 +287,7 @@ class Visualizer(ManagerMixin):
             np.ndarray: the drawn image which channel is RGB.
         """
         assert self._image is not None, 'Please set image using `set_image`'
-        canvas = self.fig_save.canvas  # type: ignore
-        s, (width, height) = canvas.print_to_buffer()
-        buffer = np.frombuffer(s, dtype='uint8')
-        img_rgba = buffer.reshape(height, width, 4)
-        rgb, alpha = np.split(img_rgba, [3], axis=2)
-        return rgb.astype('uint8')
+        return get_img_from_canvas(self.fig_save.canvas)  # type: ignore
 
     def _initialize_fig(self, fig_cfg):
         fig = plt.figure(**fig_cfg)
@@ -332,60 +325,6 @@ class Visualizer(ManagerMixin):
                (position[..., 1] >= 0).all()
         return flag
 
-    def _wait_continue(self, timeout: int = 0, continue_key=' ') -> int:
-        """Show the image and wait for the user's input.
-
-        This implementation refers to
-        https://github.com/matplotlib/matplotlib/blob/v3.5.x/lib/matplotlib/_blocking_input.py
-
-        Args:
-            timeout (int): If positive, continue after ``timeout`` seconds.
-                Defaults to 0.
-            continue_key (str): The key for users to continue. Defaults to
-                the space key.
-
-        Returns:
-            int: If zero, means time out or the user pressed ``continue_key``,
-                and if one, means the user closed the show figure.
-        """  # noqa: E501
-        if self.is_inline:
-            # If use inline backend, interactive input and timeout is no use.
-            return 0
-
-        if self.fig_show.canvas.manager:  # type: ignore
-            # Ensure that the figure is shown
-            self.fig_show.show()  # type: ignore
-
-        while True:
-
-            # Connect the events to the handler function call.
-            event = None
-
-            def handler(ev):
-                # Set external event variable
-                nonlocal event
-                # Qt backend may fire two events at the same time,
-                # use a condition to avoid missing close event.
-                event = ev if not isinstance(event, CloseEvent) else event
-                self.fig_show.canvas.stop_event_loop()
-
-            cids = [
-                self.fig_show.canvas.mpl_connect(name, handler)  # type: ignore
-                for name in ('key_press_event', 'close_event')
-            ]
-
-            try:
-                self.fig_show.canvas.start_event_loop(timeout)  # type: ignore
-            finally:  # Run even on exception like ctrl-c.
-                # Disconnect the callbacks.
-                for cid in cids:
-                    self.fig_show.canvas.mpl_disconnect(cid)  # type: ignore
-
-            if isinstance(event, CloseEvent):
-                return 1  # Quit for close.
-            elif event is None or event.key == continue_key:
-                return 0  # Quit for continue.
-
     def draw_points(self,
                     positions: Union[np.ndarray, torch.Tensor],
                     colors: Union[str, tuple, List[str], List[tuple]] = 'g',
@@ -415,7 +354,7 @@ class Visualizer(ManagerMixin):
         assert positions.shape[-1] == 2, (
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
-        colors = color_val_matplotlib(colors)
+        colors = color_val_matplotlib(colors)  # type: ignore
         self.ax_save.scatter(
             positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
         return self
@@ -504,7 +443,7 @@ class Visualizer(ManagerMixin):
 
         check_type_and_length('colors', colors, (str, tuple, list), num_text)
         colors = value2list(colors, (str, tuple), num_text)
-        colors = color_val_matplotlib(colors)
+        colors = color_val_matplotlib(colors)  # type: ignore
 
         check_type_and_length('vertical_alignments', vertical_alignments,
                               (str, list), num_text)
@@ -584,7 +523,7 @@ class Visualizer(ManagerMixin):
         if len(x_datas.shape) == 1:
             x_datas = x_datas[None]
             y_datas = y_datas[None]
-        colors = color_val_matplotlib(colors)
+        colors = color_val_matplotlib(colors)  # type: ignore
         lines = np.concatenate(
             (x_datas.reshape(-1, 2, 1), y_datas.reshape(-1, 2, 1)), axis=-1)
         if not self._is_posion_valid(lines):
@@ -658,8 +597,8 @@ class Visualizer(ManagerMixin):
 
         center = center.tolist()
         radius = radius.tolist()
-        edge_colors = color_val_matplotlib(edge_colors)
-        face_colors = color_val_matplotlib(face_colors)
+        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+        face_colors = color_val_matplotlib(face_colors)  # type: ignore
         circles = []
         for i in range(len(center)):
             circles.append(Circle(tuple(center[i]), radius[i]))
@@ -784,8 +723,8 @@ class Visualizer(ManagerMixin):
                 Defaults to 0.8.
         """
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
-        edge_colors = color_val_matplotlib(edge_colors)
-        face_colors = color_val_matplotlib(face_colors)
+        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+        face_colors = color_val_matplotlib(face_colors)  # type: ignore
 
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -855,16 +794,14 @@ class Visualizer(ManagerMixin):
                               binary_mask_len)
         colors = value2list(colors, (str, tuple), binary_mask_len)
         colors = [
-            str_color_to_rgb(color) if isinstance(color, str) else color
+            color_str2rgb(color) if isinstance(color, str) else color
             for color in colors
         ]
         for color in colors:
             assert len(color) == 3
             for channel in color:
                 assert 0 <= channel <= 255  # type: ignore
-        colors = np.array(colors)
-        if colors.ndim == 1:  # type: ignore
-            colors = np.tile(colors, (binary_mask_len, 1))
+
         if isinstance(alphas, float):
             alphas = [alphas] * binary_mask_len
 
@@ -1010,15 +947,13 @@ class Visualizer(ManagerMixin):
             _, indices = torch.topk(sum_channel_featmap, topk)
             topk_featmap = featmap[indices]
 
+            fig = plt.figure(frameon=False)
             # Set the window layout
-            fig = Figure(frameon=False)
             fig.subplots_adjust(
                 left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
             dpi = fig.get_dpi()
             fig.set_size_inches((width * col + 1e-2) / dpi,
                                 (height * row + 1e-2) / dpi)
-            canvas = FigureCanvasAgg(fig)
-
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
@@ -1026,13 +961,7 @@ class Visualizer(ManagerMixin):
                 axes.imshow(
                     convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
-
-            # get image
-            s, (width, height) = canvas.print_to_buffer()
-            buffer = np.frombuffer(s, dtype='uint8')
-            img_rgba = buffer.reshape(height, width, 4)
-            rgb, alpha = np.split(img_rgba, [3], axis=2)
-            return rgb.astype('uint8')
+            return get_img_from_canvas(fig.canvas)
 
     def add_config(self, config: Config, **kwargs):
         """Record the config.

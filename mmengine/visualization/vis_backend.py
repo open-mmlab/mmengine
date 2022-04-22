@@ -1,9 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import functools
 import os
 import os.path as osp
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
 
 import cv2
 import numpy as np
@@ -13,6 +14,41 @@ from mmengine.config import Config
 from mmengine.fileio import dump
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import TORCH_VERSION
+
+
+def setup_env(old_func: Callable) -> Any:
+    """Those methods decorated by ``setup_env`` will be forced to call
+    ``full_init`` if the instance has not been fully initiated.
+
+    Args:
+        old_func (Callable): Decorated function, make sure the first arg is an
+            instance with ``full_init`` method.
+
+    Returns:
+        Any: Depends on old_func.
+    """
+
+    @functools.wraps(old_func)
+    def wrapper(obj: object, *args, **kwargs):
+        # The instance must have `full_init` method.
+        if not hasattr(obj, '_setup_env'):
+            raise AttributeError(f'{type(obj)} does not have _setup_env '
+                                 'method.')
+        # If instance does not have `_env_initialized` attribute or
+        # `_env_initialized` is False, call `_setup_env` and set
+        # `_env_initialized` to True
+        if not getattr(obj, '_env_initialized', False):
+            warnings.warn('Attribute `_env_initialized` is not defined in '
+                          f'{type(obj)} or `type(obj)._env_initialized is '
+                          'False, `_setup_env` will be called and '
+                          f'{type(obj)}._env_initialized will be set to '
+                          'True')
+            obj._setup_env()  # type: ignore
+            obj._env_initialized = True  # type: ignore
+
+        return old_func(obj, *args, **kwargs)
+
+    return wrapper
 
 
 class BaseVisBackend(metaclass=ABCMeta):
@@ -155,25 +191,27 @@ class LocalVisBackend(BaseVisBackend):
         self._config_save_file = config_save_file
         self._scalar_save_file = scalar_save_file
 
-    def __mkdir_and_init_backend_once(self):
+    def _setup_env(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-            self._img_save_dir = osp.join(
-                self._save_dir,  # type: ignore
-                self._img_save_dir)
-            self._config_save_file = osp.join(
-                self._save_dir,  # type: ignore
-                self._config_save_file)
-            self._scalar_save_file = osp.join(
-                self._save_dir,  # type: ignore
-                self._scalar_save_file)
+        self._img_save_dir = osp.join(
+            self._save_dir,  # type: ignore
+            self._img_save_dir)
+        self._config_save_file = osp.join(
+            self._save_dir,  # type: ignore
+            self._config_save_file)
+        self._scalar_save_file = osp.join(
+            self._save_dir,  # type: ignore
+            self._scalar_save_file)
 
-    @property
+    @property  # type: ignore
+    @setup_env
     def experiment(self) -> 'LocalVisBackend':
         """Return the experiment object associated with this visualization
         backend."""
         return self
 
+    @setup_env
     def add_config(self, config: Config, **kwargs) -> None:
         """Record the config to disk.
 
@@ -181,9 +219,9 @@ class LocalVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         assert isinstance(config, Config)
-        self.__mkdir_and_init_backend_once()
         config.dump(self._config_save_file)
 
+    @setup_env
     def add_image(self,
                   name: str,
                   image: np.array,
@@ -198,12 +236,12 @@ class LocalVisBackend(BaseVisBackend):
             step (int): Global step value to record. Default to 0.
         """
         assert image.dtype == np.uint8
-        self.__mkdir_and_init_backend_once()
         drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         os.makedirs(self._img_save_dir, exist_ok=True)
         save_file_name = f'{name}_{step}.png'
         cv2.imwrite(osp.join(self._img_save_dir, save_file_name), drawn_image)
 
+    @setup_env
     def add_scalar(self,
                    name: str,
                    value: Union[int, float, torch.Tensor, np.ndarray],
@@ -216,11 +254,11 @@ class LocalVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_and_init_backend_once()
         if isinstance(value, torch.Tensor):
             value = value.item()
         self._dump({name: value, 'step': step}, self._scalar_save_file, 'json')
 
+    @setup_env
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
@@ -244,7 +282,6 @@ class LocalVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         scalar_dict.setdefault('step', step)
 
-        self.__mkdir_and_init_backend_once()
         if file_path is not None:
             assert file_path.split('.')[-1] == 'json'
             new_save_file_path = osp.join(
@@ -305,16 +342,24 @@ class WandbVisBackend(BaseVisBackend):
         self._init_kwargs = init_kwargs
         self._commit = commit
 
-    def __mkdir_and_init_backend_once(self):
+    def _setup_env(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-            if self._init_kwargs is None:
-                self._init_kwargs = {'dir': self._save_dir}
-            else:
-                self._init_kwargs.setdefault('dir', self._save_dir)
-            self._wandb = self.__setup_env(self._init_kwargs)
+        if self._init_kwargs is None:
+            self._init_kwargs = {'dir': self._save_dir}
+        else:
+            self._init_kwargs.setdefault('dir', self._save_dir)
+        try:
+            import wandb
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install wandb" to install wandb')
 
-    @property
+        wandb.init(**self._init_kwargs)
+        self._wandb = wandb
+
+    @property  # type: ignore
+    @setup_env
     def experiment(self):
         """Return wandb object.
 
@@ -322,35 +367,17 @@ class WandbVisBackend(BaseVisBackend):
         write other data, such as writing a table, you can directly get the
         wandb backend through experiment.
         """
-        self.__mkdir_and_init_backend_once()
         return self._wandb
 
-    def __setup_env(self, init_kwargs: dict) -> Any:
-        """Setup env.
-
-        Args:
-            init_kwargs (dict): The init args.
-
-        Return:
-            :obj:`wandb`
-        """
-        try:
-            import wandb
-        except ImportError:
-            raise ImportError(
-                'Please run "pip install wandb" to install wandb')
-
-        wandb.init(**init_kwargs)
-        return wandb
-
+    @setup_env
     def add_config(self, config: Config, **kwargs) -> None:
-        self.__mkdir_and_init_backend_once()
         cfg_path = os.path.join(self._wandb.run.dir, 'config.py')
         config.dump(cfg_path)
         # Files under run.dir are automatically uploaded,
         # so no need to manually call save.
         # self._wandb.save(cfg_path)
 
+    @setup_env
     def add_image(self,
                   name: str,
                   image: np.ndarray,
@@ -365,9 +392,9 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Useless parameter. Wandb does not
                 need this parameter. Default to 0.
         """
-        self.__mkdir_and_init_backend_once()
         self._wandb.log({name: image}, commit=self._commit)
 
+    @setup_env
     def add_scalar(self,
                    name: str,
                    value: Union[int, float, torch.Tensor, np.ndarray],
@@ -381,9 +408,9 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Useless parameter. Wandb does not
                 need this parameter. Default to 0.
         """
-        self.__mkdir_and_init_backend_once()
         self._wandb.log({name: value}, commit=self._commit)
 
+    @setup_env
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
@@ -399,7 +426,6 @@ class WandbVisBackend(BaseVisBackend):
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Default to None.
         """
-        self.__mkdir_and_init_backend_once()
         self._wandb.log(scalar_dict, commit=self._commit)
 
     def close(self) -> None:
@@ -435,17 +461,9 @@ class TensorboardVisBackend(BaseVisBackend):
     def __init__(self, save_dir: str):
         super(TensorboardVisBackend, self).__init__(save_dir)
 
-    def __mkdir_and_init_backend_once(self):
+    def _setup_env(self):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-            self._tensorboard = self.__setup_env()
-
-    def __setup_env(self) -> Any:
-        """Setup env.
-
-        Return:
-            :obj:`SummaryWriter`
-        """
         if TORCH_VERSION == 'parrots':
             try:
                 from tensorboardX import SummaryWriter
@@ -460,23 +478,24 @@ class TensorboardVisBackend(BaseVisBackend):
                     'Please run "pip install future tensorboard" to install '
                     'the dependencies to use torch.utils.tensorboard '
                     '(applicable to PyTorch 1.1 or higher)')
-        return SummaryWriter(self._save_dir)
+        self._tensorboard = SummaryWriter(self._save_dir)
 
-    @property
+    @property  # type: ignore
+    @setup_env
     def experiment(self):
         """Return Tensorboard object."""
-        self.__mkdir_and_init_backend_once()
         return self._tensorboard
 
+    @setup_env
     def add_config(self, config: Config, **kwargs) -> None:
         """Record the config to tensorboard.
 
         Args:
             config (Config): The Config object
         """
-        self.__mkdir_and_init_backend_once()
         self._tensorboard.add_text('config', config.pretty_text)
 
+    @setup_env
     def add_image(self,
                   name: str,
                   image: np.ndarray,
@@ -490,9 +509,9 @@ class TensorboardVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_and_init_backend_once()
         self._tensorboard.add_image(name, image, step, dataformats='HWC')
 
+    @setup_env
     def add_scalar(self,
                    name: str,
                    value: Union[int, float, torch.Tensor, np.ndarray],
@@ -505,13 +524,13 @@ class TensorboardVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self.__mkdir_and_init_backend_once()
         if isinstance(value, (int, float, torch.Tensor, np.ndarray)):
             self._tensorboard.add_scalar(name, value, step)
         else:
             warnings.warn(f'Got {type(value)}, but numpy array, torch tensor, '
                           f'int or float are expected. skip it！')
 
+    @setup_env
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
@@ -529,7 +548,6 @@ class TensorboardVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        self.__mkdir_and_init_backend_once()
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step)
 
