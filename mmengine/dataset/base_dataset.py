@@ -232,7 +232,7 @@ class BaseDataset(Dataset):
         self.data_bytes: np.ndarray
 
         # Set meta information.
-        self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
+        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
         if self.data_root is not None:
@@ -467,7 +467,7 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _get_meta_info(cls, metainfo: dict = None) -> dict:
+    def _load_metainfo(cls, metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
