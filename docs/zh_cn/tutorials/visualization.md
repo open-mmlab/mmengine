@@ -37,7 +37,7 @@
 - [draw_binary_masks](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_binary_mask) 绘制单个或多个二值掩码
 - [draw_featmap](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.visualization.Visualizer.draw_featmap) 绘制特征图，静态方法
 
-以 draw 开头的接口表示绘制接口，默认都是用 matplotlib 绘制。除了 `draw_featmap` 外都可以链式调用，原因是该方法调用后可能会导致图片尺寸改变而无法保证链式调用的可行性。为了避免给用户带来困扰，将其设置为静态方法。
+上述接口除了 `draw_featmap` 外都可以链式调用，因为该方法调用后可能会导致图片尺寸发生改变。为了避免给用户带来困扰， `draw_featmap` 被设置为静态方法。
 
 当用户想先绘制边界框，在此基础上绘制文本，绘制线段的时候，可以通过链式调用实现：
 
@@ -71,7 +71,7 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
   - 如果 topk 不是 -1，则会按照激活度排序选择 topk 个通道显示
   - 如果 topk = -1，此时通道 C 必须是 1 或者 3 表示输入数据是图片，否则报错提示用户应该设置 `channel_reduction`来压缩通道。
 
-- 考虑到输入的特征图通常非常小，因此用户可以额外输入 `resize_shape` 参数，将特征图进行上采样进行可视化。
+- 考虑到输入的特征图通常非常小，函数支持输入 `resize_shape` 参数，方便将特征图进行上采样后进行可视化。
 
 **(2) 存储相关接口**
 
@@ -98,7 +98,7 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 
 **(1) 在任意位置获取 visualizer**
 
-为了确保可视化对象 Visualizer 能够在任何地方被调用，设计上将其继承自 `ManagerMixin` 类，转变为全局唯一对象，在实例化必须要通过 `visualizer.get_instance()` 方式来初始化才能具备全局唯一功能。后续可以在任意代码位置通过 `Visualizer.get_current_instance()` 来获取可视化对象。
+为了确保可视化对象 Visualizer 能够在任何地方被调用，设计上将其继承自 `ManagerMixin` 类，转变为全局唯一对象，用户初始化 `Visualizer` 时必须要调用 `visualizer.get_instance()` 方法才能使实例对象具备全局唯一性。一旦实例化完成，后续可以在任意代码位置通过 `Visualizer.get_current_instance()` 来获取可视化对象。
 
 以 MMDetection 为例，假设 `DetLocalVisualizer` 类继承自 `Visualizer`，并实现了 `add_datasample` 接口。配置文件写法为：
 
