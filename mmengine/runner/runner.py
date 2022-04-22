@@ -906,6 +906,8 @@ class Runner:
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
             dataset = DATASETS.build(dataset_cfg)
+            if hasattr(dataset, 'full_init'):
+                dataset.full_init()
         else:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
