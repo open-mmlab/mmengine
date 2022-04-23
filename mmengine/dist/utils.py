@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 import torch.multiprocessing as mp
 from torch import distributed as torch_dist
-from mmengine.utils import is_seq_of
+from torch.distributed import ProcessGroup
 
 _LOCAL_PROCESS_GROUP = None
 
@@ -18,7 +18,7 @@ def is_distributed() -> bool:
     return torch_dist.is_available() and torch_dist.is_initialized()
 
 
-def get_local_group() -> Optional[torch_dist.ProcessGroup]:
+def get_local_group() -> Optional[ProcessGroup]:
     """Return local process group."""
     if not is_distributed():
         return None
@@ -30,7 +30,7 @@ def get_local_group() -> Optional[torch_dist.ProcessGroup]:
     return _LOCAL_PROCESS_GROUP
 
 
-def get_default_group() -> Optional[torch_dist.ProcessGroup]:
+def get_default_group() -> Optional[ProcessGroup]:
     """Return default process group."""
 
     return torch_dist.distributed_c10d._get_default_group()
@@ -148,8 +148,7 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     _LOCAL_PROCESS_GROUP = torch_dist.new_group(ranks)
 
 
-def get_backend(
-        group: Optional[torch_dist.ProcessGroup] = None) -> Optional[str]:
+def get_backend(group: Optional[ProcessGroup] = None) -> Optional[str]:
     """Return the backend of the given process group.
 
     Note:
@@ -176,7 +175,7 @@ def get_backend(
         return None
 
 
-def get_world_size(group: Optional[torch_dist.ProcessGroup] = None) -> int:
+def get_world_size(group: Optional[ProcessGroup] = None) -> int:
     """Return the number of the given process group.
 
     Note:
@@ -201,7 +200,7 @@ def get_world_size(group: Optional[torch_dist.ProcessGroup] = None) -> int:
         return 1
 
 
-def get_rank(group: Optional[torch_dist.ProcessGroup] = None) -> int:
+def get_rank(group: Optional[ProcessGroup] = None) -> int:
     """Return the rank of the given process group.
 
     Rank is a unique identifier assigned to each process within a distributed
@@ -264,8 +263,7 @@ def get_local_rank() -> int:
     return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
 
 
-def get_dist_info(
-        group: Optional[torch_dist.ProcessGroup] = None) -> Tuple[int, int]:
+def get_dist_info(group: Optional[ProcessGroup] = None) -> Tuple[int, int]:
     """Get distributed information of the given process group.
 
     Note:
@@ -285,7 +283,7 @@ def get_dist_info(
     return rank, world_size
 
 
-def is_main_process(group: Optional[torch_dist.ProcessGroup] = None) -> bool:
+def is_main_process(group: Optional[ProcessGroup] = None) -> bool:
     """Whether the current rank of the given process group is equal to 0.
 
     Args:
@@ -317,7 +315,7 @@ def master_only(func: Callable) -> Callable:
     return wrapper
 
 
-def barrier(group: Optional[torch_dist.ProcessGroup] = None) -> None:
+def barrier(group: Optional[ProcessGroup] = None) -> None:
     """Synchronize all processes from the given process group.
 
     This collective blocks processes until the whole group enters this
@@ -341,25 +339,58 @@ def barrier(group: Optional[torch_dist.ProcessGroup] = None) -> None:
 def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
     """Return the device of ``data``.
 
+    If ``data`` is a sequence of Tensor, all items in ``data`` should have a
+    same device type.
+
+    If ``data`` is a dict whose values are Tensor, all values should have a
+    same device type.
+
     Args:
         data (Tensor or Sequence or dict): Inputs to be inferred the device.
 
     Returns:
         torch.device: The device of ``data``.
+
+    Examples:
+        >>> import torch
+        >>> from mmengine.dist import cast_data_device
+        >>> # data is a Tensor
+        >>> data = torch.tensor([0, 1])
+        >>> get_data_device(data)
+        device(type='cpu')
+        >>> # data is a list of Tensor
+        >>> data = [torch.tensor([0, 1]), torch.tensor([2, 3])]
+        >>> get_data_device(data)
+        device(type='cpu')
+        >>> # data is a dict
+        >>> data = {'key1': torch.tensor([0, 1]), 'key2': torch.tensor([0, 1])}
+        >>> get_data_device(data)
+        device(type='cpu')
     """
     if isinstance(data, Tensor):
         return data.device
-    elif isinstance(data, Sequence) and is_seq_of(data, Tensor):
+    elif isinstance(data, Sequence):
+        assert len(data) >= 1
+        for i in range(1, len(data)):
+            assert isinstance(data[i], Tensor)
+            assert data[i].device == data[i - 1].device
         return data[0].device
     elif isinstance(data, dict):
-        for value in data.values():
-            return value.device
+        assert len(data) >= 1
+        pre_key = None
+        for key in data:
+            assert isinstance(data[key], Tensor)
+            if pre_key is None:
+                pre_key = key
+            else:
+                assert data[key].device == data[pre_key].device
+        return data[pre_key].device
     else:
         raise TypeError('data should be a Tensor, sequence of tensor or dict, '
-                        f'but got {type(data)}')
+                        f'but got {data}')
 
 
-def get_backend_device(group: torch_dist.ProcessGroup) -> torch.device:
+def get_backend_device(group: ProcessGroup) -> torch.device:
     """Return the device of backend.
 
     Args:
@@ -392,9 +423,11 @@ def cast_data_device(data: Union[Tensor, List, dict],
     elif isinstance(data, list):
         return [cast_data_device(input, dst_type) for input in data]
     elif isinstance(data, dict):
-        return type(data)(
-            {k: cast_data_device(v, dst_type)
-             for k, v in data.items()})
+        output = {k: cast_data_device(v, dst_type) for k, v in data.items()}
+        # data may be a OrderedDict or other subclasses of dict.
+        # To ensure the type of input as same as output, we use `type(data)`
+        # to wrap the output
+        return type(data)(output)
     else:
         raise TypeError('data should be a Tensor, list of tensor or dict, '
-                        f'but got {type(data)}')
+                        f'but got {data}')
