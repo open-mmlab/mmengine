@@ -337,4 +337,4 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         # data is not a valid type
         with self.assertRaisesRegex(
                 TypeError, 'data should be a Tensor, list of tensor or dict'):
-            dist.cast_data_device(123)
+            dist.cast_data_device(123, expected_device)

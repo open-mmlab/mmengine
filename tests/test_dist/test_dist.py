@@ -327,6 +327,10 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
         device_types = ['cpu', 'cuda']
         for tensor_type, reduce_op, device_type in product(
                 tensor_types, reduce_ops, device_types):
+            # 'mean' op does not support torch.int64
+            if tensor_type == torch.int64 and reduce_op == 'mean':
+                continue
+
             if dist.get_rank() == 0:
                 data = torch.tensor([1, 2], dtype=tensor_type).to(device_type)
             else:
@@ -399,6 +403,10 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
         device_types = ['cpu', 'cuda']
         for tensor_type, reduce_op, device_type in product(
                 tensor_types, reduce_ops, device_types):
+            # 'mean' op does not support torch.int64
+            if tensor_type == torch.int64 and reduce_op == 'mean':
+                continue
+
             if dist.get_rank() == 0:
                 data = {
                     'key1':
