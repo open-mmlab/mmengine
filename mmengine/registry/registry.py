@@ -256,6 +256,10 @@ class Registry:
     def children(self):
         return self._children
 
+    @property
+    def root(self):
+        return self._get_root_registry()
+
     def _get_root_registry(self) -> 'Registry':
         """Return the root registry."""
         root = self
