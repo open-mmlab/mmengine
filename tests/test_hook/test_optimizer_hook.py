@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import torch
 from torch import nn
@@ -45,7 +45,7 @@ class TestOptimizerHook:
         model = Model()
         x = torch.rand(1, 1, 3, 3)
 
-        dummy_runner = Mock()
+        dummy_runner = MagicMock()
         dummy_runner.optimizer.zero_grad = Mock(return_value=None)
         dummy_runner.optimizer.step = Mock(return_value=None)
         dummy_runner.model = model

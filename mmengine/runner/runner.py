@@ -25,7 +25,7 @@ from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
                            sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
@@ -127,6 +127,8 @@ class Runner:
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
+        log_processor (dict, optional): A processor to format logs. Defaults to
+            None.
         log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
         writer (ComposedWriter or dict, optional): A ComposedWriter object or a
@@ -184,6 +186,7 @@ class Runner:
                     param_scheduler=dict(type='ParamSchedulerHook')),
                 launcher='none',
                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
+                log_processor=dict(window_size=20),
                 writer=dict(
                     name='composed_writer',
                     writers=[dict(type='LocalWriter', save_dir='temp_dir')])
@@ -218,6 +221,7 @@ class Runner:
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         log_level: str = 'INFO',
+        log_processor: Optional[Dict] = None,
         writer: Optional[Union[ComposedWriter, Dict]] = None,
         default_scope: Optional[str] = None,
         randomness: Dict = dict(seed=None),
@@ -310,6 +314,10 @@ class Runner:
         else:
             self._experiment_name = self.timestamp
 
+        log_processor = dict() if log_processor is None else log_processor
+        self.log_processor = LogProcessor(**log_processor)
+        # Since `get_instance` could return any subclass of ManagerMixin. The
+        # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
@@ -385,6 +393,7 @@ class Runner:
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),
             env_cfg=cfg.get('env_cfg'),  # type: ignore
+            log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
             writer=cfg.get('writer'),
             default_scope=cfg.get('default_scope'),

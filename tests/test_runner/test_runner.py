@@ -221,7 +221,7 @@ class TestRunner(TestCase):
         self.iter_based_cfg.default_hooks = dict(
             timer=dict(type='IterTimerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
-            logger=dict(type='LoggerHook', by_epoch=False),
+            logger=dict(type='LoggerHook'),
             optimizer=dict(type='OptimizerHook', grad_clip=None),
             param_scheduler=dict(type='ParamSchedulerHook'))
 

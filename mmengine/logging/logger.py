@@ -32,15 +32,15 @@ class MMFormatter(logging.Formatter):
         info_prefix = self._get_prefix('INFO', color)
         debug_prefix = self._get_prefix('DEBUG', color)
         # Config output format.
-        self.err_format = f'%(asctime)s - %(name)s - {error_prefix} - ' \
-                          f'%(pathname)s - %(funcName)s - %(lineno)d - ' \
-                          '%(message)s'
-        self.warn_format = f'%(asctime)s - %(name)s - {warn_prefix} - %(' \
-                           'message)s'
-        self.info_format = f'%(asctime)s - %(name)s - {info_prefix} - %(' \
-                           'message)s'
-        self.debug_format = f'%(asctime)s - %(name)s - {debug_prefix} - %(' \
-                            'message)s'
+        self.err_format = (f'%(asctime)s - %(name)s - {error_prefix} - '
+                           '%(pathname)s - %(funcName)s - %(lineno)d - '
+                           '%(message)s')
+        self.warn_format = (f'%(asctime)s - %(name)s - {warn_prefix} - %('
+                            'message)s')
+        self.info_format = (f'%(asctime)s - %(name)s - {info_prefix} - %('
+                            'message)s')
+        self.debug_format = (f'%(asctime)s - %(name)s - {debug_prefix} - %('
+                             'message)s')
 
     def _get_prefix(self, level: str, color: bool) -> str:
         """Get the prefix of the target log level.
