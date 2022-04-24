@@ -348,7 +348,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
 
         # data is a dict but not all values are Tensor
         data = {'key1': torch.tensor([0, 1]).to(expected_device), 'key2': 123}
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a dict but not all values have the same device type
@@ -408,7 +408,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         data = [torch.tensor([0, 1]), {'key': torch.tensor([2, 3])}]
         output = dist.cast_data_device(data, expected_device)
         self.assertEqual(output[0].device, expected_device)
-        self.assertEqual(output[1]['key'], expected_device)
+        self.assertEqual(output[1]['key'].device, expected_device)
 
         # data is a dict
         data = {'key1': torch.tensor([0, 1]), 'key2': torch.tensor([0, 1])}
