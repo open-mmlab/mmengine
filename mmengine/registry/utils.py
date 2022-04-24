@@ -34,8 +34,8 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
                 else:
                     registry_info[folder] = [name]
             if verbose:
-                print(f"Find {num_modules} modules in {scope}'s registry "
-                      f'{_registry.name}.')
+                print(f"Find {num_modules} modules in {scope}'s "
+                      f"'{_registry.name}' registry ")
             all_module_info.append(registry_info)
         else:
             return
@@ -72,5 +72,5 @@ def count_all_registered_modules(save_path=None, verbose: bool = True) -> dict:
     if save_path is not None:
         json_path = osp.join(save_path, 'modules_statistic_results.json')
         dump(scan_data, json_path, indent=2)
-        print(f'Result has been save to {json_path}')
+        print(f'Result has been saved to {json_path}')
     return scan_data
