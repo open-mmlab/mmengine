@@ -2,8 +2,8 @@
 import functools
 import os
 import subprocess
-from typing import Callable, Optional, Tuple, List, Sequence, Union
-
+from typing import Callable, Optional, Tuple, Union
+from collections import Mapping, Iterable
 import torch
 from torch import Tensor
 import torch.multiprocessing as mp
@@ -336,7 +336,7 @@ def barrier(group: Optional[ProcessGroup] = None) -> None:
         torch_dist.barrier(group)
 
 
-def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
+def get_data_device(data: Union[Tensor, Mapping, Iterable]) -> torch.device:
     """Return the device of ``data``.
 
     If ``data`` is a sequence of Tensor, all items in ``data`` should have a
@@ -369,32 +369,44 @@ def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
     """
     if isinstance(data, Tensor):
         return data.device
-    elif isinstance(data, (list, tuple)):
-        assert len(data) >= 1
-        for i in range(1, len(data)):
-            assert isinstance(data[i], Tensor)
-            assert data[i].device == data[i - 1].device
-        return data[0].device
-    elif isinstance(data, dict):
-        assert len(data) >= 1
-        pre_key = None
-        for key in data:
-            assert isinstance(data[key], Tensor)
-            if pre_key is None:
-                pre_key = key
+    elif isinstance(data, Mapping):
+        pre = None
+        for v in data.values():
+            cur = get_data_device(v)
+            if pre is None:
+                pre = cur
             else:
-                assert data[key].device == data[pre_key].device
-        return data[pre_key].device
+                if cur != pre:
+                    raise ValueError(
+                        'device type in data should be consistent, but got '
+                        f'{cur} and {pre}')
+        if pre is None:
+            raise ValueError('data should not be empty.')
+        return pre
+    elif isinstance(data, Iterable) and not isinstance(data, str):
+        pre = None
+        for item in data:
+            cur = get_data_device(item)
+            if pre is None:
+                pre = cur
+            else:
+                if cur != pre:
+                    raise ValueError(
+                        'device type in data should be consistent, but got '
+                        f'{cur} and {pre}')
+        if pre is None:
+            raise ValueError('data should not be empty.')
+        return pre
     else:
         raise TypeError('data should be a Tensor, sequence of tensor or dict, '
                         f'but got {data}')
 
 
-def get_backend_device(group: ProcessGroup) -> torch.device:
-    """Return the device of backend.
+def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
+    """Return the device for communication among groups.
 
     Args:
-        group (ProcessGroup): The process group to work on.
+        group (ProcessGroup, optional): The process group to work on.
 
     Returns:
         torch.device: The device of backend.
@@ -407,8 +419,9 @@ def get_backend_device(group: ProcessGroup) -> torch.device:
         return torch.device('cpu')
 
 
-def cast_data_device(data: Union[Tensor, List, dict],
-                     dst_type: torch.device) -> Union[Tensor, List, dict]:
+def cast_data_device(
+        data: Union[Tensor, Mapping, Iterable],
+        dst_type: torch.device) -> Union[Tensor, Mapping, Iterable]:
     """Recursively convert Tensor in ``data`` to ``dst_type``.
 
     Args:
@@ -420,14 +433,14 @@ def cast_data_device(data: Union[Tensor, List, dict],
     """
     if isinstance(data, Tensor):
         return data.to(dst_type)
-    elif isinstance(data, list):
-        return [cast_data_device(input, dst_type) for input in data]
-    elif isinstance(data, dict):
+    elif isinstance(data, Mapping):
         output = {k: cast_data_device(v, dst_type) for k, v in data.items()}
-        # data may be a OrderedDict or other subclasses of dict.
-        # To ensure the type of input as same as output, we use `type(data)`
+        # To ensure the type of output as same as input, we use `type(data)`
         # to wrap the output
-        return type(data)(output)
+        return type(data)(output)  # type: ignore
+    elif isinstance(data, Iterable) and not isinstance(data, str):
+        output = [cast_data_device(v, dst_type) for v in data]  # type: ignore
+        return type(data)(output)  # type: ignore
     else:
         raise TypeError('data should be a Tensor, list of tensor or dict, '
                         f'but got {data}')

@@ -13,7 +13,7 @@ from torch.distributed import ProcessGroup
 import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_default_group, barrier, get_data_device,
-                    get_backend_device, cast_data_device)
+                    get_comm_device, cast_data_device)
 from mmengine.utils import digit_version, TORCH_VERSION
 
 
@@ -83,7 +83,7 @@ def all_reduce(data: Tensor,
             group = get_default_group()
 
         input_device = get_data_device(data)
-        backend_device = get_backend_device(group)
+        backend_device = get_comm_device(group)
         if input_device == backend_device:
             data_on_device = data
         else:
@@ -160,7 +160,7 @@ def all_gather(data: Tensor,
         group = get_default_group()
 
     input_device = get_data_device(data)
-    backend_device = get_backend_device(group)
+    backend_device = get_comm_device(group)
     if input_device != backend_device:
         data = data.to(backend_device)
 
@@ -241,7 +241,7 @@ def gather(data: Tensor,
         group = get_default_group()
 
     input_device = get_data_device(data)
-    backend_device = get_backend_device(group)
+    backend_device = get_comm_device(group)
 
     if get_rank(group) == dst:
         gather_list = [
@@ -305,7 +305,7 @@ def broadcast(data: Tensor,
             group = get_default_group()
 
         input_device = get_data_device(data)
-        backend_device = get_backend_device(group)
+        backend_device = get_comm_device(group)
         if input_device == backend_device:
             data_on_device = data
         else:
@@ -351,7 +351,7 @@ def sync_random_seed(group: Optional[ProcessGroup] = None) -> int:
     if group is None:
         group = get_default_group()
 
-    backend_device = get_backend_device(group)
+    backend_device = get_comm_device(group)
 
     if get_rank(group) == 0:
         random_num = torch.tensor(seed, dtype=torch.int32).to(backend_device)

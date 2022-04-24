@@ -55,11 +55,21 @@ class TestUtils(TestCase):
 
         # data is a list but not all items are Tensor
         data = [torch.tensor([0, 1]), 123]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
+            dist.get_data_device(data)
+
+        # data is a list containing Tensor and a dict
+        data = [torch.tensor([0, 1]), {'key': torch.tensor([2, 3])}]
+        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+
+        # data is a list containing Tensor and a dict but the dict contains
+        # invalid type
+        data = [torch.tensor([0, 1]), {'key': '123'}]
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty list
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device([])
 
         # data is a dict
@@ -68,18 +78,27 @@ class TestUtils(TestCase):
 
         # data is a dict but not all values are Tensor
         data = {'key1': torch.tensor([0, 1]), 'key2': 123}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
+            dist.get_data_device(data)
+
+        # data is a dict and one of values is list of Tensor
+        data = {'key1': torch.tensor([0, 1]), 'key2': [torch.tensor([0, 1])]}
+        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+
+        # data is a dict and one of values is an invalid type
+        data = {'key1': torch.tensor([0, 1]), 'key2': ['123']}
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty dict
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device({})
 
         # data is not a valid type
         with self.assertRaisesRegex(
                 TypeError,
                 'data should be a Tensor, sequence of tensor or dict'):
-            dist.get_data_device(123)
+            dist.get_data_device('123')
 
 
 class TestUtilsWithGLOOBackend(MultiProcessTestCase):
@@ -158,11 +177,21 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
 
         # data is a list but not all items are Tensor
         data = [torch.tensor([0, 1]), 123]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
+            dist.get_data_device(data)
+
+        # data is a list containing Tensor and a dict
+        data = [torch.tensor([0, 1]), {'key': torch.tensor([2, 3])}]
+        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+
+        # data is a list containing Tensor and a dict but the dict contains
+        # invalid type
+        data = [torch.tensor([0, 1]), {'key': '123'}]
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty list
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device([])
 
         # data is a dict
@@ -171,23 +200,32 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
 
         # data is a dict but not all values are Tensor
         data = {'key1': torch.tensor([0, 1]), 'key2': 123}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
+            dist.get_data_device(data)
+
+        # data is a dict and one of values is list of Tensor
+        data = {'key1': torch.tensor([0, 1]), 'key2': [torch.tensor([0, 1])]}
+        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+
+        # data is a dict and one of values is an invalid type
+        data = {'key1': torch.tensor([0, 1]), 'key2': ['123']}
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty dict
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device({})
 
         # data is not a valid type
         with self.assertRaisesRegex(
                 TypeError,
                 'data should be a Tensor, sequence of tensor or dict'):
-            dist.get_data_device(123)
+            dist.get_data_device('123')
 
-    def test_get_backend_device(self):
+    def test_get_comm_device(self):
         self._init_dist_env(self.rank, self.world_size)
         group = dist.get_default_group()
-        assert dist.get_backend_device(group) == torch.device('cpu')
+        assert dist.get_comm_device(group) == torch.device('cpu')
 
 
 @unittest.skipIf(
@@ -260,60 +298,97 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
     def test_get_data_device(self):
         self._init_dist_env(self.rank, self.world_size)
 
+        expected_device = torch.device('cuda', torch.cuda.current_device())
+
         # data is a Tensor
-        data = torch.tensor([0, 1])
-        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+        data = torch.tensor([0, 1]).to(expected_device)
+        self.assertEqual(dist.get_data_device(data), expected_device)
 
         # data is a list of Tensor
-        data = [torch.tensor([0, 1]), torch.tensor([2, 3])]
-        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+        data = [
+            torch.tensor([0, 1]).to(expected_device),
+            torch.tensor([2, 3]).to(expected_device)
+        ]
+        self.assertEqual(dist.get_data_device(data), expected_device)
 
         # data is a list but not all items are Tensor
-        data = [torch.tensor([0, 1]), 123]
-        with self.assertRaises(AssertionError):
+        data = [torch.tensor([0, 1]).to(expected_device), 123]
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a list of Tensor but not all items have the same device type
-        data = [torch.tensor([0, 1]), torch.tensor([2, 3]).to('cuda')]
-        with self.assertRaises(AssertionError):
+        data = [torch.tensor([0, 1]), torch.tensor([2, 3]).to(expected_device)]
+        with self.assertRaises(ValueError):
+            dist.get_data_device(data)
+
+        # data is a list containing Tensor and a dict
+        data = [
+            torch.tensor([0, 1]).to(expected_device), {
+                'key': torch.tensor([2, 3]).to(expected_device)
+            }
+        ]
+        self.assertEqual(dist.get_data_device(data), expected_device)
+
+        # data is a list containing Tensor and a dict but the dict contains
+        # invalid type
+        data = [torch.tensor([0, 1]).to(expected_device), {'key': '123'}]
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty list
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device([])
 
         # data is a dict
-        data = {'key1': torch.tensor([0, 1]), 'key2': torch.tensor([0, 1])}
-        self.assertEqual(dist.get_data_device(data), torch.device('cpu'))
+        data = {
+            'key1': torch.tensor([0, 1]).to(expected_device),
+            'key2': torch.tensor([0, 1]).to(expected_device)
+        }
+        self.assertEqual(dist.get_data_device(data), expected_device)
 
         # data is a dict but not all values are Tensor
-        data = {'key1': torch.tensor([0, 1]), 'key2': 123}
-        with self.assertRaises(AssertionError):
+        data = {'key1': torch.tensor([0, 1]).to(expected_device), 'key2': 123}
+        with self.assertRaises(ValueError):
             dist.get_data_device(data)
 
         # data is a dict but not all values have the same device type
         data = {
             'key1': torch.tensor([0, 1]),
-            'key2': torch.tensor([0, 1]).to('cuda')
+            'key2': torch.tensor([0, 1]).to(expected_device)
         }
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
+            dist.get_data_device(data)
+
+        # data is a dict and one of values is list of Tensor
+        data = {
+            'key1': torch.tensor([0, 1]).to(expected_device),
+            'key2': [torch.tensor([0, 1]).to(expected_device)]
+        }
+        self.assertEqual(dist.get_data_device(data), expected_device)
+
+        # data is a dict and one of values is an invalid type
+        data = {
+            'key1': torch.tensor([0, 1]).to(expected_device),
+            'key2': ['123']
+        }
+        with self.assertRaises(TypeError):
             dist.get_data_device(data)
 
         # data is a empty dict
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             dist.get_data_device({})
 
         # data is not a valid type
         with self.assertRaisesRegex(
                 TypeError,
                 'data should be a Tensor, sequence of tensor or dict'):
-            dist.get_data_device(123)
+            dist.get_data_device('123')
 
-    def test_get_backend_device(self):
+    def test_get_comm_device(self):
         self._init_dist_env(self.rank, self.world_size)
         group = dist.get_default_group()
         expected = torch.device('cuda', torch.cuda.current_device())
-        self.assertEqual(dist.get_backend_device(group), expected)
+        self.assertEqual(dist.get_comm_device(group), expected)
 
     def test_cast_data_device(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -329,12 +404,24 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         for item in dist.cast_data_device(data, expected_device):
             self.assertEqual(item.device, expected_device)
 
+        # data is a list containing a Tensor and a dict
+        data = [torch.tensor([0, 1]), {'key': torch.tensor([2, 3])}]
+        output = dist.cast_data_device(data, expected_device)
+        self.assertEqual(output[0].device, expected_device)
+        self.assertEqual(output[1]['key'], expected_device)
+
         # data is a dict
         data = {'key1': torch.tensor([0, 1]), 'key2': torch.tensor([0, 1])}
         for value in dist.cast_data_device(data, expected_device).values():
             self.assertEqual(value.device, expected_device)
 
+        # data is a dict and one of values is list
+        data = {'key1': torch.tensor([0, 1]), 'key2': [torch.tensor([0, 1])]}
+        output = dist.cast_data_device(data, expected_device)
+        self.assertEqual(output['key1'].device, expected_device)
+        self.assertEqual(output['key2'].device, expected_device)
+
         # data is not a valid type
         with self.assertRaisesRegex(
                 TypeError, 'data should be a Tensor, list of tensor or dict'):
-            dist.cast_data_device(123, expected_device)
+            dist.cast_data_device('123', expected_device)
