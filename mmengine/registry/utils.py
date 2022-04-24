@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import datetime
 import os.path as osp
+from typing import Optional
 
 from mmengine.fileio import dump
 from . import root
@@ -46,12 +47,13 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
     return all_module_info
 
 
-def count_all_registered_modules(save_path=None, verbose: bool = True) -> dict:
+def count_all_registered_modules(save_path: Optional[str] = None,
+                                 verbose: bool = True) -> dict:
     """Scan all modules in MMEngine's root and child registries and dump to
     json.
 
     Args:
-        save_path (str): Path to save the json file.
+        save_path (str, optional): Path to save the json file.
         verbose (bool): Whether to print log. Default: True
     Returns:
         scan_data (dict): Statistic results of all registered modules.
