@@ -419,7 +419,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         data = {'key1': torch.tensor([0, 1]), 'key2': [torch.tensor([0, 1])]}
         output = dist.cast_data_device(data, expected_device)
         self.assertEqual(output['key1'].device, expected_device)
-        self.assertEqual(output['key2'].device, expected_device)
+        self.assertEqual(output['key2'][0].device, expected_device)
 
         # data is not a valid type
         with self.assertRaisesRegex(
