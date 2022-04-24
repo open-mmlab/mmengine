@@ -369,7 +369,7 @@ def get_data_device(data: Union[Tensor, Sequence, dict]) -> torch.device:
     """
     if isinstance(data, Tensor):
         return data.device
-    elif isinstance(data, Sequence):
+    elif isinstance(data, (list, tuple)):
         assert len(data) >= 1
         for i in range(1, len(data)):
             assert isinstance(data[i], Tensor)
