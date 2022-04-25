@@ -18,11 +18,11 @@ from mmengine.utils import TORCH_VERSION
 
 def setup_env(old_func: Callable) -> Any:
     """Those methods decorated by ``setup_env`` will be forced to call
-    ``full_init`` if the instance has not been fully initiated.
+    ``_setup_env`` if the instance has not been fully initiated.
 
     Args:
         old_func (Callable): Decorated function, make sure the first arg is an
-            instance with ``full_init`` method.
+            instance with ``_setup_env`` method.
 
     Returns:
         Any: Depends on old_func.
@@ -30,7 +30,7 @@ def setup_env(old_func: Callable) -> Any:
 
     @functools.wraps(old_func)
     def wrapper(obj: object, *args, **kwargs):
-        # The instance must have `full_init` method.
+        # The instance must have `_setup_env` method.
         if not hasattr(obj, '_setup_env'):
             raise AttributeError(f'{type(obj)} does not have _setup_env '
                                  'method.')
@@ -64,6 +64,7 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     def __init__(self, save_dir: str):
         self._save_dir = save_dir
+        self._env_initialized = False
 
     @property
     @abstractmethod
@@ -76,6 +77,11 @@ class BaseVisBackend(metaclass=ABCMeta):
         table, you can directly get the visualization backend through
         experiment.
         """
+        pass
+
+    @abstractmethod
+    def _setup_env(self) -> Any:
+        """Setup env for VisBackend."""
         pass
 
     def add_config(self, config: Config, **kwargs) -> None:
@@ -192,6 +198,7 @@ class LocalVisBackend(BaseVisBackend):
         self._scalar_save_file = scalar_save_file
 
     def _setup_env(self):
+        """Init save dir."""
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         self._img_save_dir = osp.join(
@@ -343,6 +350,7 @@ class WandbVisBackend(BaseVisBackend):
         self._commit = commit
 
     def _setup_env(self):
+        """Setup env for wandb."""
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         if self._init_kwargs is None:
@@ -462,6 +470,7 @@ class TensorboardVisBackend(BaseVisBackend):
         super(TensorboardVisBackend, self).__init__(save_dir)
 
     def _setup_env(self):
+        """Setup env for Tensorboard."""
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         if TORCH_VERSION == 'parrots':

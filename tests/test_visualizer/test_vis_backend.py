@@ -171,6 +171,12 @@ class TestTensorboardVisBackend:
         tensorboard_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8}, step=1)
         shutil.rmtree('temp_dir')
 
+    def test_close(self):
+        tensorboard_vis_backend = TensorboardVisBackend('temp_dir')
+        tensorboard_vis_backend._setup_env()
+        tensorboard_vis_backend.close()
+        shutil.rmtree('temp_dir')
+
 
 class TestWandbVisBackend:
     sys.modules['wandb'] = MagicMock()
@@ -215,4 +221,10 @@ class TestWandbVisBackend:
         # test append mode
         wandb_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
         wandb_vis_backend.add_scalars({'map': [0.8], 'acc': 0.8})
+        shutil.rmtree('temp_dir')
+
+    def test_close(self):
+        wandb_vis_backend = WandbVisBackend('temp_dir')
+        wandb_vis_backend._setup_env()
+        wandb_vis_backend.close()
         shutil.rmtree('temp_dir')
