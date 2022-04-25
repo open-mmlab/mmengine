@@ -25,7 +25,7 @@ from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
                            sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
@@ -127,6 +127,8 @@ class Runner:
             non-distributed environment will be launched.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
+        log_processor (dict, optional): A processor to format logs. Defaults to
+            None.
         log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
         visualizer (Visualizer or dict, optional): A Visualizer object or a
@@ -151,43 +153,44 @@ class Runner:
     Examples:
         >>> from mmengine import Runner
         >>> cfg = dict(
-                model=dict(type='ToyModel'),
-                work_dir='path/of/work_dir',
-                train_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=True),
-                    batch_size=1,
-                    num_workers=0),
-                val_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=False),
-                    batch_size=1,
-                    num_workers=0),
-                test_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=False),
-                    batch_size=1,
-                    num_workers=0),
-                optimizer=dict(type='SGD', lr=0.01),
-                param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
-                val_evaluator=dict(type='ToyEvaluator'),
-                test_evaluator=dict(type='ToyEvaluator'),
-                train_cfg=dict(by_epoch=True, max_epochs=3),
-                val_cfg=dict(interval=1),
-                test_cfg=dict(),
-                custom_hooks=[],
-                default_hooks=dict(
-                    timer=dict(type='IterTimerHook'),
-                    checkpoint=dict(type='CheckpointHook', interval=1),
-                    logger=dict(type='LoggerHook'),
-                    optimizer=dict(type='OptimizerHook', grad_clip=False),
-                    param_scheduler=dict(type='ParamSchedulerHook')),
-                launcher='none',
-                env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                visualizer=dict(type='Visualizer',
-                    vis_backends=[dict(type='LocalVisBackend',
-                                      save_dir='temp_dir')])
-            )
+        >>>     model=dict(type='ToyModel'),
+        >>>     work_dir='path/of/work_dir',
+        >>>     train_dataloader=dict(
+        >>>     dataset=dict(type='ToyDataset'),
+        >>>     sampler=dict(type='DefaultSampler', shuffle=True),
+        >>>     batch_size=1,
+        >>>     num_workers=0),
+        >>>     val_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>        batch_size=1,
+        >>>        num_workers=0),
+        >>>     test_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>         batch_size=1,
+        >>>         num_workers=0),
+        >>>     optimizer=dict(type='SGD', lr=0.01),
+        >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
+        >>>     val_evaluator=dict(type='ToyEvaluator'),
+        >>>     test_evaluator=dict(type='ToyEvaluator'),
+        >>>     train_cfg=dict(by_epoch=True, max_epochs=3),
+        >>>     val_cfg=dict(interval=1),
+        >>>     test_cfg=dict(),
+        >>>     custom_hooks=[],
+        >>>     default_hooks=dict(
+        >>>         timer=dict(type='IterTimerHook'),
+        >>>         checkpoint=dict(type='CheckpointHook', interval=1),
+        >>>         logger=dict(type='LoggerHook'),
+        >>>         optimizer=dict(type='OptimizerHook', grad_clip=False),
+        >>>         param_scheduler=dict(type='ParamSchedulerHook')),
+        >>>     launcher='none',
+        >>>     env_cfg=dict(dist_cfg=dict(backend='nccl')),
+        >>>     log_processor=dict(window_size=20),
+        >>>     visualizer=dict(type='Visualizer',
+        >>>     vis_backends=[dict(type='LocalVisBackend',
+        >>>                        save_dir='temp_dir')])
+        >>>    )
         >>> runner = Runner.from_cfg(cfg)
         >>> runner.train()
         >>> runner.test()
@@ -217,6 +220,7 @@ class Runner:
         resume: bool = False,
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
+        log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
         visualizer: Optional[Union[Visualizer, Dict]] = None,
         default_scope: Optional[str] = None,
@@ -309,14 +313,16 @@ class Runner:
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
-
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
             self._experiment_name, scope_name=default_scope)
-
+        # Build log processor to format message.
+        log_processor = dict() if log_processor is None else log_processor
+        self.log_processor = LogProcessor(**log_processor)
+        # Since `get_instance` could return any subclass of ManagerMixin. The
+        # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
-
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
         # runtime information (iter and epoch). Those components that do not
@@ -387,6 +393,7 @@ class Runner:
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),
             env_cfg=cfg.get('env_cfg'),  # type: ignore
+            log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
             visualizer=cfg.get('visualizer'),
             default_scope=cfg.get('default_scope'),
