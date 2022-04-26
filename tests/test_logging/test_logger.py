@@ -152,9 +152,13 @@ class TestLogger:
             print_log('welcome', logger='unknown')
 
     def test_get_instance(self):
+        # Test get root mmengine logger.
         MMLogger._instance_dict = dict()
         root_logger = MMLogger.get_current_instance()
         mmdet_logger = MMLogger.get_instance('mmdet')
         assert root_logger.name == mmdet_logger.name
         assert id(root_logger) != id(mmdet_logger)
         assert id(MMLogger.get_instance('mmengine')) == id(root_logger)
+        # Test original `get_current_instance` function.
+        MMLogger.get_instance('mmdet')
+        assert MMLogger.get_current_instance().instance_name == 'mmdet'

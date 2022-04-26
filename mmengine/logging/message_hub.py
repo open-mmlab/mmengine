@@ -84,7 +84,7 @@ class MessageHub(ManagerMixin):
     def get_current_instance(cls) -> 'MessageHub':
         """Get latest created ``MessageHub`` instance.
 
-        :obj:`MessageHub` can call :meth:`get_current_instance` without any
+        :obj:`MessageHub` can call :meth:`get_current_instance` before any
         instance has been created, and return a message hub with the instance
         name "mmengine".
 

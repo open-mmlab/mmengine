@@ -191,7 +191,7 @@ class MMLogger(Logger, ManagerMixin):
     def get_current_instance(cls) -> 'MMLogger':
         """Get latest created ``MMLogger`` instance.
 
-        :obj:`MMLogger` can call :meth:`get_current_instance` without any
+        :obj:`MMLogger` can call :meth:`get_current_instance` before any
         instance has been created, and return a logger with the instance name
         "mmengine".
 
