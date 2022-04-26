@@ -379,6 +379,11 @@ class WandbVisBackend(BaseVisBackend):
 
     @force_init_env
     def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to wandb.
+
+        Args:
+            config (Config): The Config object
+        """
         cfg_path = os.path.join(self._wandb.run.dir, 'config.py')
         config.dump(cfg_path)
         # Files under run.dir are automatically uploaded,

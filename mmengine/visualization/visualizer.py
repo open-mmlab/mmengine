@@ -214,10 +214,12 @@ class Visualizer(ManagerMixin):
 
     @property
     def dataset_meta(self) -> Optional[dict]:
+        """Optional[dict]: Meta info of the dataset."""
         return self._dataset_meta
 
     @dataset_meta.setter
     def dataset_meta(self, dataset_meta: dict) -> None:
+        """Set the dataset meta info to the Visualizer."""
         self._dataset_meta = dataset_meta
 
     def show(self,
@@ -1044,6 +1046,7 @@ class Visualizer(ManagerMixin):
                        show: bool = False,
                        wait_time: int = 0,
                        step: int = 0) -> None:
+        """Draw datasample."""
         pass
 
     def close(self) -> None:
