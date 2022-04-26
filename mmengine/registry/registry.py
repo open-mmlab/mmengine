@@ -108,7 +108,7 @@ def build_from_cfg(
         # Normal TypeError does not print class name.
         cls_location = '/'.join(obj_cls.__module__.split('.'))  # type: ignore
         raise type(e)(
-            f'class {obj_cls.__name__} in '  # type: ignore
+            f'class `{obj_cls.__name__}` in '  # type: ignore
             f'{cls_location}.py: {e}')
 
 
@@ -354,8 +354,9 @@ class Registry:
                 obj_cls = root.get(key)
         if obj_cls is not None:
             logger: MMLogger = MMLogger.get_current_instance()
-            logger.info(f'Get class {obj_cls.__name__} from "{registry_name}"'
-                        f' registry in "{scope_name}"')
+            logger.info(
+                f'Get class `{obj_cls.__name__}` from "{registry_name}"'
+                f' registry in "{scope_name}"')
         return obj_cls
 
     def _search_child(self, scope: str) -> Optional['Registry']:
