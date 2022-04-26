@@ -12,6 +12,7 @@ import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
@@ -99,7 +100,8 @@ class Config:
     Args:
         cfg_dict (dict, optional): A config dictionary. Defaults to None.
         cfg_text (str, optional): Text of config. Defaults to None.
-        filename (str, optional): Name of config file. Defaults to None.
+        filename (str or Path, optional): Name of config file.
+            Defaults to None.
 
     Examples:
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
@@ -123,7 +125,8 @@ class Config:
     def __init__(self,
                  cfg_dict: dict = None,
                  cfg_text: Optional[str] = None,
-                 filename: str = None):
+                 filename: Optional[Union[str, Path]] = None):
+        filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
         elif not isinstance(cfg_dict, dict):
@@ -145,13 +148,13 @@ class Config:
         super().__setattr__('_text', text)
 
     @staticmethod
-    def fromfile(filename: str,
+    def fromfile(filename: Union[str, Path],
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
-            filename (str): Name of config file.
+            filename (str or Path): Name of config file.
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
@@ -160,6 +163,7 @@ class Config:
         Returns:
             Config: Config instance built from config file.
         """
+        filename = str(filename) if isinstance(filename, Path) else filename
         cfg_dict, cfg_text = Config._file2dict(filename,
                                                use_predefined_variables)
         if import_custom_modules and cfg_dict.get('custom_imports', None):
@@ -675,32 +679,31 @@ class Config:
         super().__setattr__('_filename', _filename)
         super().__setattr__('_text', _text)
 
-    def dump(self, file: Optional[str] = None):
+    def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.
 
         Args:
-            file (str, optional): If not specified, then the object
+            file (str or Path, optional): If not specified, then the object
             is dumped to a str, otherwise to a file specified by the filename.
             Defaults to None.
 
         Returns:
             str or None: Config text.
         """
-        cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
-        if self.filename.endswith('.py'):
-            if file is None:
+        file = str(file) if isinstance(file, Path) else file
+        cfg_dict = super(Config, self).__getattribute__('_cfg_dict').to_dict()
+        if file is None:
+            if self.filename is None or self.filename.endswith('.py'):
                 return self.pretty_text
             else:
-                with open(file, 'w', encoding='utf-8') as f:
-                    f.write(self.pretty_text)
-                return None
-        else:
-            if file is None:
                 file_format = self.filename.split('.')[-1]
                 return dump(cfg_dict, file_format=file_format)
-            else:
-                dump(cfg_dict, file)
-                return None
+        elif file.endswith('.py'):
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write(self.pretty_text)
+        else:
+            file_format = file.split('.')[-1]
+            return dump(cfg_dict, file=file, file_format=file_format)
 
     def merge_from_dict(self,
                         options: dict,
