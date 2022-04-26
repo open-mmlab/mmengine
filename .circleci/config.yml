@@ -63,7 +63,7 @@ jobs:
 
   build_cu102:
     machine:
-      image: ubuntu-1604-cuda-10.1:201909-23  # the actual version of cuda is 10.2
+      image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
     steps:
       - checkout
