@@ -43,7 +43,7 @@ class ConcatDataset(_ConcatDataset):
                 self.datasets.append(dataset)
             else:
                 raise TypeError(
-                    'datasets should be sequence of dataset config or '
+                    'elements in datasets sequence should be config or '
                     f'`BaseDataset` instance, but got {type(dataset)}')
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
@@ -184,8 +184,9 @@ class RepeatDataset:
         elif isinstance(dataset, BaseDataset):
             self.dataset = dataset
         else:
-            raise TypeError('datasets should be sequence of dataset config or '
-                            f'`BaseDataset` instance, but got {type(dataset)}')
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.times = times
         self._metainfo = self.dataset.metainfo
 
@@ -321,8 +322,9 @@ class ClassBalancedDataset:
         elif isinstance(dataset, BaseDataset):
             self.dataset = dataset
         else:
-            raise TypeError('datasets should be sequence of dataset config or '
-                            f'`BaseDataset` instance, but got {type(dataset)}')
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.oversample_thr = oversample_thr
         self._metainfo = self.dataset.metainfo
 
