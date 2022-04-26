@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from .vis_backend import (BaseVisBackend, LocalVisBackend,
+                          TensorboardVisBackend, WandbVisBackend)
 from .visualizer import Visualizer
-from .writer import (BaseWriter, ComposedWriter, LocalWriter,
-                     TensorboardWriter, WandbWriter)
 
 __all__ = [
-    'Visualizer', 'BaseWriter', 'LocalWriter', 'WandbWriter',
-    'TensorboardWriter', 'ComposedWriter'
+    'Visualizer', 'BaseVisBackend', 'LocalVisBackend', 'WandbVisBackend',
+    'TensorboardVisBackend'
 ]

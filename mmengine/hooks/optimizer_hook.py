@@ -1,16 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 import torch
 from torch.nn.parameter import Parameter
 from torch.nn.utils import clip_grad
 
-from mmengine.data import BaseDataElement
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
+DATA_BATCH = Optional[Sequence[dict]]
 
 
 @HOOKS.register_module()
@@ -77,15 +76,17 @@ class OptimizerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional): Data
-                from dataloader. In order to keep this interface consistent
-                with other hooks, we keep ``data_batch`` here.
-                Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                In order to keep this interface consistent with other hooks,
+                we keep ``data_batch`` here. Defaults to None.
             outputs (dict, optional): Outputs from model.
                 In order to keep this interface consistent with other hooks,
                 we keep ``outputs`` here. Defaults to None.
         """
         runner.optimizer.zero_grad()
+        runner.message_hub.update_scalar(
+            'train/lr', runner.optimizer.param_groups[0]['lr'])
+
         if self.detect_anomalous_params:
             self.detect_anomalous_parameters(runner.outputs['loss'], runner)
         runner.outputs['loss'].backward()

@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
+DATA_BATCH = Optional[Sequence[dict]]
 
 
 class Hook:
@@ -174,8 +174,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
         """
         self._before_iter(
             runner, batch_idx=batch_idx, data_batch=data_batch, mode='train')
@@ -190,8 +190,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
         """
         self._before_iter(
             runner, batch_idx=batch_idx, data_batch=data_batch, mode='val')
@@ -206,8 +206,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the testing process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
         """
         self._before_iter(
             runner, batch_idx=batch_idx, data_batch=data_batch, mode='test')
@@ -223,8 +223,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
@@ -247,8 +247,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict or sequence, optional): Outputs from
                 model. Defaults to None.
         """
@@ -271,8 +271,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the training  process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
@@ -317,8 +317,8 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -337,8 +337,8 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (Sequence[BaseDataElement], optional): Outputs from model.
                 Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
@@ -358,11 +358,11 @@ class Hook:
         """
         return (runner.epoch + 1) % n == 0 if n > 0 else False
 
-    def every_n_inner_iters(self, inner_iter: int, n: int) -> bool:
+    def every_n_inner_iters(self, batch_idx: int, n: int) -> bool:
         """Test whether current inner iteration can be evenly divided by n.
 
         Args:
-            inner_iter (int): Current inner_iter of the training, validation
+            batch_idx (int): Current batch index of the training, validation
                 or testing loop.
             n (int): Whether current inner iteration can be evenly
                 divided by n.
@@ -371,7 +371,7 @@ class Hook:
             bool: Whether current inner iteration can be evenly
             divided by n.
         """
-        return (inner_iter + 1) % n == 0 if n > 0 else False
+        return (batch_idx + 1) % n == 0 if n > 0 else False
 
     def every_n_iters(self, runner, n: int) -> bool:
         """Test whether current iteration can be evenly divided by n.
@@ -387,19 +387,18 @@ class Hook:
         """
         return (runner.iter + 1) % n == 0 if n > 0 else False
 
-    def end_of_epoch(self, runner, batch_idx: int) -> bool:
+    def end_of_epoch(self, dataloader, batch_idx: int) -> bool:
         """Check whether the current iteration reaches the last iteration of
-        current dataloader.
+        the dataloader.
 
         Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
+            dataloader (Dataloader): The dataloader of the training,
+                validation or testing process.
             batch_idx (int): The index of the current batch in the loop.
-
         Returns:
             bool: Whether reaches the end of current epoch or not.
         """
-        return batch_idx + 1 == len(runner.cur_dataloader)
+        return batch_idx + 1 == len(dataloader)
 
     def is_last_train_epoch(self, runner) -> bool:
         """Test whether current epoch is the last train epoch.
@@ -418,10 +417,10 @@ class Hook:
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
+            mode (str): Current mode of runner. Defaults to 'train'.
 
         Returns:
             bool: Whether current iteration is the last iteration.
-            mode (str): Current mode of runner. Defaults to 'train'.
         """
         if mode == 'train':
             return runner.iter + 1 == runner.train_loop.max_iters

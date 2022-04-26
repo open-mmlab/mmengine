@@ -7,7 +7,8 @@ from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (INF, ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
-                              MultiStepParamScheduler, StepParamScheduler)
+                              MultiStepParamScheduler, PolyParamScheduler,
+                              StepParamScheduler)
 
 
 @PARAM_SCHEDULERS.register_module()
@@ -289,6 +290,52 @@ class StepMomentum(StepParamScheduler):
             param_name='momentum',
             step_size=step_size,
             gamma=gamma,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+
+@PARAM_SCHEDULERS.register_module()
+class PolyMomentum(PolyParamScheduler):
+    """Decays the momentum of each parameter group in a polynomial decay
+    scheme.
+
+    Notice that such decay can happen simultaneously with other changes to the
+    parameter value from outside this scheduler.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        eta_min (float): Minimum momentum at the end of scheduling.
+            Defaults to 0.
+        power (float): The power of the polynomial. Defaults to 1.0.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
+
+    def __init__(self,
+                 optimizer: torch.optim.Optimizer,
+                 eta_min: float = 0,
+                 power: float = 1,
+                 begin: int = 0,
+                 end: int = INF,
+                 last_step: int = -1,
+                 by_epoch: bool = True,
+                 verbose: bool = False):
+        super().__init__(
+            optimizer,
+            param_name='momentum',
+            eta_min=eta_min,
+            power=power,
             begin=begin,
             end=end,
             last_step=last_step,

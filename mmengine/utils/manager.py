@@ -71,6 +71,8 @@ class ManagerMixin(metaclass=ManagerMeta):
     """
 
     def __init__(self, name: str = '', **kwargs):
+        assert isinstance(name, str) and name, \
+            'name argument must be an non-empty string.'
         self._instance_name = name
 
     @classmethod
@@ -105,6 +107,10 @@ class ManagerMixin(metaclass=ManagerMeta):
         if name not in instance_dict:
             instance = cls(name=name, **kwargs)
             instance_dict[name] = instance
+        else:
+            assert not kwargs, (
+                f'{cls} instance named of {name} has been created, the method '
+                '`get_instance` should not access any other arguments')
         # Get latest instantiated instance or root instance.
         _release_lock()
         return instance_dict[name]
@@ -117,12 +123,12 @@ class ManagerMixin(metaclass=ManagerMeta):
         ``get_instance(xxx)`` at least once.
 
         Examples
-            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            >>> instance = GlobalAccessible.get_current_instance()
             AssertionError: At least one of name and current needs to be set
             >>> instance = GlobalAccessible.get_instance('name1')
             >>> instance.instance_name
             name1
-            >>> instance = GlobalAccessible.get_current_instance(current=True)
+            >>> instance = GlobalAccessible.get_current_instance()
             >>> instance.instance_name
             name1
 
@@ -132,9 +138,8 @@ class ManagerMixin(metaclass=ManagerMeta):
         _accquire_lock()
         if not cls._instance_dict:
             raise RuntimeError(
-                f'Before calling {cls.__name__}.get_instance('
-                'current=True), '
-                'you should call get_instance(name=xxx) at least once.')
+                f'Before calling {cls.__name__}.get_current_instance(), you '
+                'should call get_instance(name=xxx) at least once.')
         name = next(iter(reversed(cls._instance_dict)))
         _release_lock()
         return cls._instance_dict[name]

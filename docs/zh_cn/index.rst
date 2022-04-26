@@ -12,7 +12,7 @@
    tutorials/hook.md
    tutorials/optimizer.md
    tutorials/param_scheduler.md
-   tutorials/abstract_data_interface.md
+   tutorials/data_element.md
    tutorials/basedataset.md
    tutorials/evaluator.md
    tutorials/distributed.md
