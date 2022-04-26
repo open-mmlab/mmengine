@@ -194,6 +194,54 @@ a = {{_base_.model}}
 # 等价于 a = dict(type='ResNet', depth=50)
 ```
 
+## 配置文件的导出
+
+在启动训练脚本时，用户可能通过传参的方式来修改配置文件的部分字段，为此我们提供了 `dump`
+接口来导出更改后的配置文件。与读取配置文件类似，用户可以通过 `cfg.dump('config.xxx')` 来选择导出文件的格式。`dump`
+同样可以导出有继承关系的配置文件，导出的文件可以被独立使用，不再依赖于 `_base_` 中定义的文件。
+
+基于继承一节定义的 `resnet50.py`
+```python
+_base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
+model = dict(type='ResNet', depth=50)
+```
+
+我们将其加载后导出:
+```python
+cfg = Config.fromfile('resnet50.py')
+cfg.dump('resnet50_dump.py')
+```
+
+`resnet50_dump.py`
+
+```python
+optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+gpu_ids = [0, 1]
+model = dict(type='ResNet', depth=50)
+```
+类似的，我们可以导出 json、yaml 格式的配置文件
+
+`resnet50_dump.yaml`
+
+```yaml
+gpu_ids:
+- 0
+- 1
+model:
+  depth: 50
+  type: ResNet
+optimizer:
+  lr: 0.02
+  momentum: 0.9
+  type: SGD
+  weight_decay: 0.0001
+```
+
+`resnet50_dump.json`
+
+```json
+{"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "gpu_ids": [0, 1], "model": {"type": "ResNet", "depth": 50}}
+```
 ## 其他进阶用法
 
 这里介绍一下配置类的进阶用法，这些小技巧可能使用户开发和使用算法库更简单方便。
