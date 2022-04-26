@@ -49,7 +49,8 @@ class Evaluator:
         """
         _data_batch = []
         for data in data_batch:
-            if isinstance(data['data_sample'], BaseDataElement):
+            if isinstance(data, dict) and isinstance(data['data_sample'],
+                                                     BaseDataElement):
                 _data_batch.append(
                     dict(
                         inputs=data['inputs'],
