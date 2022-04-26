@@ -30,10 +30,10 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               DefaultScope)
+                               VISUALIZERS, DefaultScope)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
-from mmengine.visualization import ComposedWriter
+from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          get_state_dict, save_checkpoint, weights_to_cpu)
@@ -131,8 +131,8 @@ class Runner:
             None.
         log_level (int or str): The log level of MMLogger handlers.
             Defaults to 'INFO'.
-        writer (ComposedWriter or dict, optional): A ComposedWriter object or a
-            dict build ComposedWriter object. Defaults to None. If not
+        visualizer (Visualizer or dict, optional): A Visualizer object or a
+            dict build Visualizer object. Defaults to None. If not
             specified, default config will be used.
         default_scope (str, optional): Used to reset registries location.
             Defaults to None.
@@ -153,44 +153,44 @@ class Runner:
     Examples:
         >>> from mmengine import Runner
         >>> cfg = dict(
-                model=dict(type='ToyModel'),
-                work_dir='path/of/work_dir',
-                train_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=True),
-                    batch_size=1,
-                    num_workers=0),
-                val_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=False),
-                    batch_size=1,
-                    num_workers=0),
-                test_dataloader=dict(
-                    dataset=dict(type='ToyDataset'),
-                    sampler=dict(type='DefaultSampler', shuffle=False),
-                    batch_size=1,
-                    num_workers=0),
-                optimizer=dict(type='SGD', lr=0.01),
-                param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
-                val_evaluator=dict(type='ToyEvaluator'),
-                test_evaluator=dict(type='ToyEvaluator'),
-                train_cfg=dict(by_epoch=True, max_epochs=3),
-                val_cfg=dict(interval=1),
-                test_cfg=dict(),
-                custom_hooks=[],
-                default_hooks=dict(
-                    timer=dict(type='IterTimerHook'),
-                    checkpoint=dict(type='CheckpointHook', interval=1),
-                    logger=dict(type='LoggerHook'),
-                    optimizer=dict(type='OptimizerHook', grad_clip=False),
-                    param_scheduler=dict(type='ParamSchedulerHook')),
-                launcher='none',
-                env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                log_processor=dict(window_size=20),
-                writer=dict(
-                    name='composed_writer',
-                    writers=[dict(type='LocalWriter', save_dir='temp_dir')])
-            )
+        >>>     model=dict(type='ToyModel'),
+        >>>     work_dir='path/of/work_dir',
+        >>>     train_dataloader=dict(
+        >>>     dataset=dict(type='ToyDataset'),
+        >>>     sampler=dict(type='DefaultSampler', shuffle=True),
+        >>>     batch_size=1,
+        >>>     num_workers=0),
+        >>>     val_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>        batch_size=1,
+        >>>        num_workers=0),
+        >>>     test_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>         batch_size=1,
+        >>>         num_workers=0),
+        >>>     optimizer=dict(type='SGD', lr=0.01),
+        >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
+        >>>     val_evaluator=dict(type='ToyEvaluator'),
+        >>>     test_evaluator=dict(type='ToyEvaluator'),
+        >>>     train_cfg=dict(by_epoch=True, max_epochs=3),
+        >>>     val_cfg=dict(interval=1),
+        >>>     test_cfg=dict(),
+        >>>     custom_hooks=[],
+        >>>     default_hooks=dict(
+        >>>         timer=dict(type='IterTimerHook'),
+        >>>         checkpoint=dict(type='CheckpointHook', interval=1),
+        >>>         logger=dict(type='LoggerHook'),
+        >>>         optimizer=dict(type='OptimizerHook', grad_clip=False),
+        >>>         param_scheduler=dict(type='ParamSchedulerHook')),
+        >>>     launcher='none',
+        >>>     env_cfg=dict(dist_cfg=dict(backend='nccl')),
+        >>>     log_processor=dict(window_size=20),
+        >>>     visualizer=dict(type='Visualizer',
+        >>>     vis_backends=[dict(type='LocalVisBackend',
+        >>>                        save_dir='temp_dir')])
+        >>>    )
         >>> runner = Runner.from_cfg(cfg)
         >>> runner.train()
         >>> runner.test()
@@ -220,9 +220,9 @@ class Runner:
         resume: bool = False,
         launcher: str = 'none',
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
-        log_level: str = 'INFO',
         log_processor: Optional[Dict] = None,
-        writer: Optional[Union[ComposedWriter, Dict]] = None,
+        log_level: str = 'INFO',
+        visualizer: Optional[Union[Visualizer, Dict]] = None,
         default_scope: Optional[str] = None,
         randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
@@ -313,7 +313,11 @@ class Runner:
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
-
+        # Used to reset registries location. See :meth:`Registry.build` for
+        # more details.
+        self.default_scope = DefaultScope.get_instance(
+            self._experiment_name, scope_name=default_scope)
+        # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = LogProcessor(**log_processor)
         # Since `get_instance` could return any subclass of ManagerMixin. The
@@ -329,12 +333,8 @@ class Runner:
         # current epoch by `cur_epoch = self.message_hub.get_info('epoch')`.
         # See `MessageHub` and `ManagerMixin` for more details.
         self.message_hub = self.build_message_hub()
-        # writer used for writing log or visualizing all kinds of data
-        self.writer = self.build_writer(writer)
-        # Used to reset registries location. See :meth:`Registry.build` for
-        # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+        # visualizer used for writing log or visualizing all kinds of data
+        self.visualizer = self.build_visualizer(visualizer)
 
         self._load_from = load_from
         self._resume = resume
@@ -395,7 +395,7 @@ class Runner:
             env_cfg=cfg.get('env_cfg'),  # type: ignore
             log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
-            writer=cfg.get('writer'),
+            visualizer=cfg.get('visualizer'),
             default_scope=cfg.get('default_scope'),
             randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
@@ -655,40 +655,49 @@ class Runner:
 
         return MessageHub.get_instance(**message_hub)
 
-    def build_writer(
-        self,
-        writer: Optional[Union[ComposedWriter,
-                               Dict]] = None) -> ComposedWriter:
-        """Build a global asscessable ComposedWriter.
+    def build_visualizer(
+            self,
+            visualizer: Optional[Union[Visualizer,
+                                       Dict]] = None) -> Visualizer:
+        """Build a global asscessable Visualizer.
 
         Args:
-            writer (ComposedWriter or dict, optional): A ComposedWriter object
-                or a dict to build ComposedWriter object. If ``writer`` is a
-                ComposedWriter object, just returns itself. If not specified,
-                default config will be used to build ComposedWriter object.
+            visualizer (Visualizer or dict, optional): A Visualizer object
+                or a dict to build Visualizer object. If ``visualizer`` is a
+                Visualizer object, just returns itself. If not specified,
+                default config will be used to build Visualizer object.
                 Defaults to None.
 
         Returns:
-            ComposedWriter: A ComposedWriter object build from ``writer``.
+            Visualizer: A Visualizer object build from ``visualizer``.
         """
-        if isinstance(writer, ComposedWriter):
-            return writer
-        elif writer is None:
-            writer = dict(
+        if visualizer is None:
+            visualizer = dict(
                 name=self._experiment_name,
-                writers=[dict(type='LocalWriter', save_dir=self._work_dir)])
-        elif isinstance(writer, dict):
-            # ensure writer containing name key
-            writer.setdefault('name', self._experiment_name)
+                vis_backends=[
+                    dict(type='LocalVisBackend', save_dir=self._work_dir)
+                ])
+            return Visualizer.get_instance(**visualizer)
+
+        if isinstance(visualizer, Visualizer):
+            return visualizer
+
+        if isinstance(visualizer, dict):
+            # ensure visualizer containing name key
+            visualizer.setdefault('name', self._experiment_name)
+            visualizer.setdefault('save_dir', self._work_dir)
+            return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(
-                'writer should be ComposedWriter object, a dict or None, '
-                f'but got {writer}')
-
-        return ComposedWriter.get_instance(**writer)
+                'visualizer should be Visualizer object, a dict or None, '
+                f'but got {visualizer}')
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
+
+        If ``model`` is a dict, it will be used to build a nn.Module object
+        and initialize the weights if it has ``init_weights`` method.
+        Else, if ``model`` is a nn.Module object it will be returned directly.
 
         An example of ``model``::
 
@@ -705,7 +714,11 @@ class Runner:
         if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
-            return MODELS.build(model)
+            model = MODELS.build(model)
+            # init weights
+            if hasattr(model, 'init_weights'):
+                model.init_weights()
+            return model
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
@@ -900,6 +913,8 @@ class Runner:
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
             dataset = DATASETS.build(dataset_cfg)
+            if hasattr(dataset, 'full_init'):
+                dataset.full_init()
         else:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
@@ -914,6 +929,21 @@ class Runner:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
             sampler = sampler_cfg
+
+        # build batch sampler
+        batch_sampler_cfg = dataloader_cfg.pop('batch_sampler', None)
+        if batch_sampler_cfg is None:
+            batch_sampler = None
+        elif isinstance(batch_sampler_cfg, dict):
+            batch_sampler = DATA_SAMPLERS.build(
+                batch_sampler_cfg,
+                default_args=dict(
+                    sampler=sampler,
+                    batch_size=dataloader_cfg.pop('batch_size')))
+        else:
+            # fallback to raise error in dataloader
+            # if `batch_sampler_cfg` is not a valid type
+            batch_sampler = batch_sampler_cfg
 
         # build dataloader
         init_fn: Optional[partial]
@@ -933,8 +963,8 @@ class Runner:
         # in model.
         data_loader = DataLoader(
             dataset=dataset,
-            sampler=sampler,
-            batch_sampler=None,
+            sampler=sampler if batch_sampler is None else None,
+            batch_sampler=batch_sampler,
             collate_fn=pseudo_collate,
             worker_init_fn=init_fn,
             **dataloader_cfg)
@@ -1093,7 +1123,13 @@ class Runner:
         # decide to load from checkpoint or resume from checkpoint
         resume_from = None
         if self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
             resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(
+                f'Auto resumed from the latest checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
 
         if resume_from is not None:
             self.resume(resume_from)
@@ -1239,6 +1275,8 @@ class Runner:
         +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
         +----------------------+-------------------------+
+        | DistSamplerSeedHook  | NORMAL (40)             |
+        +----------------------+-------------------------+
         | LoggerHook           | BELOW_NORMAL (60)       |
         +----------------------+-------------------------+
         | ParamSchedulerHook   | LOW (70)                |
@@ -1252,6 +1290,7 @@ class Runner:
             default_hooks = dict(
                 optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
+                sampler_seed=dict(type='DistSamplerSeedHook'),
                 logger=dict(type='LoggerHook'),
                 param_scheduler=dict(type='ParamSchedulerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
@@ -1276,6 +1315,7 @@ class Runner:
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
+            sampler_seed=dict(type='DistSamplerSeedHook'),
         )
         if hooks is not None:
             for name, hook in hooks.items():
@@ -1417,8 +1457,13 @@ class Runner:
         # Add comments to describe the usage of `after_load_ckpt`
         self.call_hook('after_load_ckpt', checkpoint=checkpoint)
 
+        if is_model_wrapper(self.model):
+            model = self.model.module
+        else:
+            model = self.model
+
         checkpoint = _load_checkpoint_to_model(
-            self.model, checkpoint, strict, revise_keys=revise_keys)
+            model, checkpoint, strict, revise_keys=revise_keys)
 
         self._has_loaded = True
 

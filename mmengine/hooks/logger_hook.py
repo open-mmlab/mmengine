@@ -2,7 +2,7 @@
 import os
 import os.path as osp
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
 from mmengine.fileio import FileClient
@@ -10,7 +10,7 @@ from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
-DATA_BATCH = Optional[Sequence[Tuple[Any, BaseDataElement]]]
+DATA_BATCH = Optional[Sequence[dict]]
 
 
 @HOOKS.register_module()
@@ -110,9 +110,6 @@ class LoggerHook(Hook):
                                       f'{runner.timestamp}.log.json')
         self.yaml_log_path = osp.join(runner.work_dir,
                                       f'{runner.timestamp}.log.json')
-        # TODO Compatible with Visualizer.
-        if runner.meta is not None:
-            runner.writer.add_params(runner.meta, file_path=self.yaml_log_path)
 
     def after_train_iter(self,
                          runner,
@@ -124,8 +121,8 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
@@ -150,7 +147,7 @@ class LoggerHook(Hook):
             return
         runner.logger.info(log_str)
         # TODO compatible with visualizer.
-        runner.writer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
 
     def after_val_iter(
             self,
@@ -202,7 +199,7 @@ class LoggerHook(Hook):
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
         # TODO compatible with visualizer.
-        runner.writer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
 
     def after_test_epoch(self, runner) -> None:
         """Record testing logs after test epoch.

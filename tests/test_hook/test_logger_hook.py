@@ -37,7 +37,6 @@ class TestLoggerHook:
         assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
         assert logger_hook.json_log_path == osp.join('work_dir',
                                                      'timestamp.log.json')
-        runner.writer.add_params.assert_called()
 
     def test_after_run(self, tmp_path):
         # Test
@@ -112,7 +111,7 @@ class TestLoggerHook:
         logger_hook.after_val_epoch(runner)
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
-        runner.writer.add_scalars.assert_called()
+        runner.visualizer.add_scalars.assert_called()
 
     def test_after_test_epoch(self):
         logger_hook = LoggerHook()

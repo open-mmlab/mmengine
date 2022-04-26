@@ -5,6 +5,7 @@ import pytest
 
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import DefaultScope, Registry, build_from_cfg
+from mmengine.utils import ManagerMixin
 
 
 class TestRegistry:
@@ -482,3 +483,17 @@ def test_build_from_cfg(cfg_type):
                    "<class 'str'>")):
         cfg = cfg_type(dict(type='ResNet', depth=50))
         model = build_from_cfg(cfg, 'BACKBONES')
+
+    VISUALIZER = Registry('visualizer')
+
+    @VISUALIZER.register_module()
+    class Visualizer(ManagerMixin):
+
+        def __init__(self, name):
+            super().__init__(name)
+
+    with pytest.raises(RuntimeError):
+        Visualizer.get_current_instance()
+    cfg = dict(type='Visualizer', name='visualizer')
+    build_from_cfg(cfg, VISUALIZER)
+    Visualizer.get_current_instance()

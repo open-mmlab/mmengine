@@ -4,6 +4,14 @@ __version__ = '0.0.1'
 
 
 def parse_version_info(version_str):
+    """Parse the version information.
+
+    Args:
+        version_str (str): version string like '0.0.1'.
+
+    Returns:
+        tuple: version information contains major, minor, micro version.
+    """
     version_info = []
     for x in version_str.split('.'):
         if x.isdigit():

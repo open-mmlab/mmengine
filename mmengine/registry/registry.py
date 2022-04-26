@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
-from ..utils import is_seq_of
+from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -88,7 +88,13 @@ def build_from_cfg(
             f'type must be a str or valid type, but got {type(obj_type)}')
 
     try:
-        return obj_cls(**args)  # type: ignore
+        # If `obj_cls` inherits from `ManagerMixin`, it should be instantiated
+        # by `ManagerMixin.get_instance` to ensure that it can be accessed
+        # globally.
+        if issubclass(obj_cls, ManagerMixin):  # type: ignore
+            return obj_cls.get_instance(**args)  # type: ignore
+        else:
+            return obj_cls(**args)  # type: ignore
     except Exception as e:
         # Normal TypeError does not print class name.
         raise type(e)(f'{obj_cls.__name__}: {e}')  # type: ignore
