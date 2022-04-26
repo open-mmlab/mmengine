@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
-import time
 import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -190,9 +189,7 @@ class Visualizer(ManagerMixin):
             if None not in names and len(set(names)) != len(names):
                 raise RuntimeError('The name fields cannot be the same')
 
-            timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            save_dir = osp.join(save_dir,
-                                f'vis_data_{timestamp}')  # type: ignore
+            save_dir = osp.join(save_dir, 'vis_data')
 
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
@@ -289,14 +286,22 @@ class Visualizer(ManagerMixin):
         assert self._image is not None, 'Please set image using `set_image`'
         return get_img_from_canvas(self.fig_save.canvas)  # type: ignore
 
-    def _initialize_fig(self, fig_cfg):
+    def _initialize_fig(self, fig_cfg) -> tuple:
+        """Build figure according to fig_cfg.
+
+        Args:
+            fig_cfg (dict): The config to build figure.
+
+        Returns:
+             tuple: build figure, axes and fig number.
+        """
         fig = plt.figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
 
         # remove white edges by set subplot margin
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        return fig, ax, fig.number
+        return (fig, ax, fig.number)
 
     def get_backend(self, name) -> 'BaseVisBackend':
         """get vis backend by name.
