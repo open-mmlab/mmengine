@@ -8,6 +8,7 @@ TORCH_VERSION = torch.__version__
 
 
 def is_rocm_pytorch() -> bool:
+    """Check whether the PyTorch is compiled on ROCm."""
     is_rocm = False
     if TORCH_VERSION != 'parrots':
         try:
@@ -20,6 +21,7 @@ def is_rocm_pytorch() -> bool:
 
 
 def _get_cuda_home() -> Optional[str]:
+    """Obtain the path of CUDA home."""
     if TORCH_VERSION == 'parrots':
         from parrots.utils.build_extension import CUDA_HOME
     else:
@@ -32,6 +34,7 @@ def _get_cuda_home() -> Optional[str]:
 
 
 def get_build_config():
+    """Obtain the build information of PyTorch or Parrots."""
     if TORCH_VERSION == 'parrots':
         from parrots.config import get_build_info
         return get_build_info()
@@ -40,6 +43,8 @@ def get_build_config():
 
 
 def _get_conv() -> tuple:
+    """A wrapper to obtain base classes of Conv layers from PyTorch or
+    Parrots."""
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.conv import _ConvNd, _ConvTransposeMixin
     else:
@@ -48,6 +53,7 @@ def _get_conv() -> tuple:
 
 
 def _get_dataloader() -> tuple:
+    """A wrapper to obtain DataLoader class from PyTorch or Parrots."""
     if TORCH_VERSION == 'parrots':
         from torch.utils.data import DataLoader, PoolDataLoader
     else:
@@ -57,6 +63,7 @@ def _get_dataloader() -> tuple:
 
 
 def _get_extension():
+    """A wrapper to obtain extension class from PyTorch or Parrots."""
     if TORCH_VERSION == 'parrots':
         from parrots.utils.build_extension import BuildExtension, Extension
         CppExtension = partial(Extension, cuda=False)
@@ -68,6 +75,8 @@ def _get_extension():
 
 
 def _get_pool() -> tuple:
+    """A wrapper to obtain base classes of pooling layers from PyTorch or
+    Parrots."""
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.pool import (_AdaptiveAvgPoolNd,
                                              _AdaptiveMaxPoolNd, _AvgPoolNd,
@@ -80,6 +89,8 @@ def _get_pool() -> tuple:
 
 
 def _get_norm() -> tuple:
+    """A wrapper to obtain base classes of normalization layers from PyTorch or
+    Parrots."""
     if TORCH_VERSION == 'parrots':
         from parrots.nn.modules.batchnorm import _BatchNorm, _InstanceNorm
         SyncBatchNorm_ = torch.nn.SyncBatchNorm2d
