@@ -119,6 +119,12 @@ class _ParamScheduler:
 
         self.step()
 
+    @classmethod
+    def build_iter_based(cls, *args, **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        raise NotImplementedError
+
     def state_dict(self) -> dict:
         """Returns the state of the scheduler as a :class:`dict`.
 
@@ -310,6 +316,32 @@ class MultiStepParamScheduler(_ParamScheduler):
             last_step=last_step,
             by_epoch=by_epoch,
             verbose=verbose)
+
+    @classmethod
+    def build_iter_based(cls,
+                         *args,
+                         epoch_length: int,
+                         milestones: List[int],
+                         begin: int = 0,
+                         end: int = INF,
+                         by_epoch: bool = True,
+                         **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        by_epoch = False
+        milestones = [i * epoch_length for i in milestones]
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            milestones=milestones,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
 
     def _get_value(self):
         if self.last_step not in self.milestones:
