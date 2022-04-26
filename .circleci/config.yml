@@ -16,7 +16,9 @@ jobs:
             pre-commit install
       - run:
           name: Linting
-          command: pre-commit run --all-files
+          command: |
+            pre-commit run --all-files
+            git diff
       - run:
           name: Check docstring coverage
           command: |
@@ -63,7 +65,7 @@ jobs:
 
   build_cu102:
     machine:
-      image: ubuntu-1604-cuda-10.1:201909-23  # the actual version of cuda is 10.2
+      image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
     steps:
       - checkout
