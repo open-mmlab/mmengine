@@ -687,7 +687,7 @@ class Runner:
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
             visualizer.setdefault('name', self._experiment_name)
-            visualizer.setdefault('save_dir', self._work_dir)
+            visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(
