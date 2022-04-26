@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import functools
 import os
+import numpy as np
 import subprocess
 from typing import Callable, Optional, Tuple, Union
 from collections import Mapping, Iterable
@@ -420,27 +421,76 @@ def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
 
 
 def cast_data_device(
-        data: Union[Tensor, Mapping, Iterable],
-        dst_type: torch.device) -> Union[Tensor, Mapping, Iterable]:
-    """Recursively convert Tensor in ``data`` to ``dst_type``.
+    data: Union[Tensor, Mapping, Iterable],
+    device: torch.device,
+    out: Optional[Union[Tensor, Mapping, Iterable]] = None
+) -> Union[Tensor, Mapping, Iterable]:
+    """Recursively convert Tensor in ``data`` to ``device``.
+
+    If ``data`` has already on the ``device``, it will not be casted again.
 
     Args:
         data (Tensor or list or dict): Inputs to be casted.
-        dst_type (torch.device): Destination device type.
+        device (torch.device): Destination device type.
+        out (Tensor or list or dict, optional): If ``out`` is specified, its
+            value will be equal to ``data``. Defaults to None.
 
     Returns:
-        Tensor or list or dict: ``data`` was casted to ``dst_type``.
+        Tensor or list or dict: ``data`` was casted to ``device``.
     """
+    if out is not None:
+        if type(data) != type(out):
+            raise TypeError(
+                'out should be the same type with data, but got data is '
+                f'{type(data)} and out is {type(data)}')
+
     if isinstance(data, Tensor):
-        return data.to(dst_type)
+        if get_data_device(data) == device:
+            data_on_device = data
+        else:
+            data_on_device = data.to(device)
+
+        if out is not None:
+            # modify the value of out inplace
+            out.copy_(data_on_device)  # type: ignore
+
+        return data_on_device
     elif isinstance(data, Mapping):
-        output = {k: cast_data_device(v, dst_type) for k, v in data.items()}
+        data_on_device = {}
+        if out is not None:
+            data_len = len(data)
+            out_len = len(out)  # type: ignore
+            if data_len != out_len:
+                raise ValueError('length of data and out should be same, '
+                                 f'but got {data_len} and {out_len}')
+
+            for k, v in data.items():
+                data_on_device[k] = cast_data_device(v, device,
+                                                     out[k])  # type: ignore
+        else:
+            for k, v in data.items():
+                data_on_device[k] = cast_data_device(v, device)
+
+        if len(data_on_device) == 0:
+            raise ValueError('data should not be empty')
+
         # To ensure the type of output as same as input, we use `type(data)`
         # to wrap the output
-        return type(data)(output)  # type: ignore
-    elif isinstance(data, Iterable) and not isinstance(data, str):
-        output = [cast_data_device(v, dst_type) for v in data]  # type: ignore
-        return type(data)(output)  # type: ignore
+        return type(data)(data_on_device)  # type: ignore
+    elif isinstance(data, Iterable) and not isinstance(
+            data, str) and not isinstance(data, np.ndarray):
+        data_on_device = []
+        if out is not None:
+            for v1, v2 in zip(data, out):
+                data_on_device.append(cast_data_device(v1, device, v2))
+        else:
+            for v in data:
+                data_on_device.append(cast_data_device(v, device))
+
+        if len(data_on_device) == 0:
+            raise ValueError('data should not be empty')
+
+        return type(data)(data_on_device)  # type: ignore
     else:
         raise TypeError('data should be a Tensor, list of tensor or dict, '
                         f'but got {data}')

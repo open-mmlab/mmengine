@@ -84,22 +84,17 @@ def all_reduce(data: Tensor,
 
         input_device = get_data_device(data)
         backend_device = get_comm_device(group)
-        if input_device == backend_device:
-            data_on_device = data
-        else:
-            data_on_device = data.to(backend_device)
+        data_on_device = cast_data_device(data, backend_device)
 
         # pytorch does not support 'mean' operation so we fall back to support
         # it with 'sum' operation.
         if op.lower() == 'mean':
             torch_dist.all_reduce(data_on_device, _get_reduce_op('sum'), group)
-            data_on_device.div_(world_size)
+            data_on_device.div_(world_size)  # type: ignore
         else:
             torch_dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 
-        if input_device != backend_device:
-            data_on_device = data_on_device.to(input_device)
-            data.copy_(data_on_device)
+        cast_data_device(data_on_device, input_device, out=data)
 
 
 def all_gather(data: Tensor,
@@ -161,20 +156,16 @@ def all_gather(data: Tensor,
 
     input_device = get_data_device(data)
     backend_device = get_comm_device(group)
-    if input_device != backend_device:
-        data = data.to(backend_device)
+    data_on_device = cast_data_device(data, backend_device)
 
     gather_list = [
         torch.empty_like(data, device=backend_device)
         for _ in range(world_size)
     ]
 
-    torch_dist.all_gather(gather_list, data, group)
+    torch_dist.all_gather(gather_list, data_on_device, group)
 
-    if input_device != backend_device:
-        return cast_data_device(gather_list, input_device)  # type: ignore
-    else:
-        return gather_list
+    return cast_data_device(gather_list, input_device)  # type: ignore
 
 
 def gather(data: Tensor,
@@ -306,16 +297,12 @@ def broadcast(data: Tensor,
 
         input_device = get_data_device(data)
         backend_device = get_comm_device(group)
-        if input_device == backend_device:
-            data_on_device = data
-        else:
-            data_on_device = data.to(backend_device)
+        data_on_device = cast_data_device(data, backend_device)
 
         torch_dist.broadcast(data_on_device, src, group)
 
-        if get_rank(group) != src and input_device != backend_device:
-            data_on_device = data_on_device.to(input_device)
-            data.copy_(data_on_device)
+        if get_rank(group) != src:
+            cast_data_device(data_on_device, input_device, data)
 
 
 def sync_random_seed(group: Optional[ProcessGroup] = None) -> int:
