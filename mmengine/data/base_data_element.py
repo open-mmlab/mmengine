@@ -368,6 +368,11 @@ class BaseDataElement:
                 name=name, value=value, field_type='data', dtype=None)
 
     def __delattr__(self, item: str):
+        """delete the item in dataelement.
+
+        Args:
+            item (str): The key to delete.
+        """
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
                                  'private attribute, which is immutable. ')
@@ -406,8 +411,12 @@ class BaseDataElement:
             raise KeyError(f'{args[0]} is not contained in metainfo or data')
 
     def __contains__(self, item: str) -> bool:
-        return item in self._data_fields or \
-                    item in self._metainfo_fields
+        """Whether the item is in dataelement.
+
+        Args:
+            item (str): The key to inquire.
+        """
+        return item in self._data_fields or item in self._metainfo_fields
 
     def set_field(self,
                   value: Any,
@@ -507,6 +516,17 @@ class BaseDataElement:
     def __repr__(self) -> str:
 
         def _addindent(s_: str, num_spaces: int) -> str:
+            """This func is modified from `pytorch` https://github.com/pytorch/
+            pytorch/blob/b17b2b1cc7b017c3daaeff8cc7ec0f514d42ec37/torch/nn/modu
+            les/module.py#L29.
+
+            Args:
+                s_ (str): The string to add spaces.
+                num_spaces (int): The num of space to add.
+
+            Returns:
+                str: The string after add indent.
+            """
             s = s_.split('\n')
             # don't do anything for single-line stuff
             if len(s) == 1:
@@ -518,6 +538,14 @@ class BaseDataElement:
             return s  # type: ignore
 
         def dump(obj: Any) -> str:
+            """represent the object.
+
+            Args:
+                obj (Any): The obj to represent.
+
+            Returns:
+                str: The represented str .
+            """
             _repr = ''
             if isinstance(obj, dict):
                 for k, v in obj.items():
