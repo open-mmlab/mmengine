@@ -16,9 +16,7 @@ jobs:
             pre-commit install
       - run:
           name: Linting
-          command: |
-            pre-commit run --all-files
-            git diff
+          command: pre-commit run --all-files
       - run:
           name: Check docstring coverage
           command: |
