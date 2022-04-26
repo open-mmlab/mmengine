@@ -1,6 +1,3 @@
-import argparse
-import os
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -62,8 +59,8 @@ class Accuracy(BaseMetric):
 
     def process(self, data_batch, predictions):
         result = {
-            'pred': [data[1] for data in data_batch],
-            'gt': predictions,
+            'gt': [data[1] for data in data_batch],
+            'pred': predictions,
         }
         self.results.append(result)
 
@@ -72,20 +69,6 @@ class Accuracy(BaseMetric):
         gts = np.concatenate([res['gt'] for res in results])
         acc = (preds == gts).sum() / preds.size
         return {'accuracy': acc}
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train a classifier')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
-    parser.add_argument('--local_rank', type=int, default=0)
-    args = parser.parse_args()
-    if 'LOCAL_RANK' not in os.environ:
-        os.environ['LOCAL_RANK'] = str(args.local_rank)
-    return args
 
 
 def main():
@@ -106,8 +89,8 @@ def main():
             batch_size=64,
             num_workers=4),
         optimizer=dict(type='SGD', lr=0.001, momentum=0.9),
-        param_scheduler=dict(type='ConstantLR'),
-        train_cfg=dict(by_epoch=True, max_epochs=10),
+        param_scheduler=dict(type='ConstantLR', factor=1),
+        train_cfg=dict(by_epoch=True, max_epochs=5),
         val_dataloader=dict(
             dataset=test_dataset,
             sampler=dict(type='DefaultSampler', shuffle=False),
@@ -125,10 +108,7 @@ def main():
         env_cfg=dict(dist_cfg=dict(backend='nccl')),
     )
 
-    args = parse_args()
-
     cfg = Config(cfg)
-    cfg.launcher = args.launcher
     runner = Runner.from_cfg(cfg)
     runner.train()
     runner.test()
