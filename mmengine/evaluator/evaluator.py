@@ -29,12 +29,12 @@ class Evaluator:
 
     @property
     def dataset_meta(self) -> Optional[dict]:
-        """Get dataset meta."""
+        """Optional[dict]: Meta info of the dataset."""
         return self._dataset_meta
 
     @dataset_meta.setter
     def dataset_meta(self, dataset_meta: dict) -> None:
-        """Set dataset meta."""
+        """Set the dataset meta info to the evaluator and it's metrics."""
         self._dataset_meta = dataset_meta
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta

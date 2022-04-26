@@ -43,12 +43,12 @@ class BaseMetric(metaclass=ABCMeta):
 
     @property
     def dataset_meta(self) -> Optional[dict]:
-        """Get dataset meta."""
+        """Optional[dict]: Meta info of the dataset."""
         return self._dataset_meta
 
     @dataset_meta.setter
     def dataset_meta(self, dataset_meta: dict) -> None:
-        """Set dataset meta."""
+        """Set the dataset meta info to the metric."""
         self._dataset_meta = dataset_meta
 
     @abstractmethod
