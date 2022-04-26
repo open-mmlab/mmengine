@@ -80,6 +80,21 @@ class MessageHub(ManagerMixin):
                 ('Key in `resumed_keys` must contained in `log_scalars` or '
                  f'`runtime_info`, but got {key}')
 
+    @classmethod
+    def get_current_instance(cls) -> 'MessageHub':
+        """Get latest created ``MessageHub`` instance.
+
+        :obj:`MessageHub` can call :meth:`get_current_instance` without any
+        instance has been created, and return a logger with the instance name
+        "mmengine". This feature help components need
+
+        Returns:
+            MMLogger: Configured logger instance.
+        """
+        if not cls._instance_dict:
+            cls.get_instance('mmengine')
+        return super(MessageHub, cls).get_current_instance()
+
     def update_scalar(self,
                       key: str,
                       value: Union[int, float, np.ndarray, torch.Tensor],

@@ -112,3 +112,8 @@ class TestMessageHub:
 
         instance.get_info('iter')
         instance.get_scalar('loss')
+
+    def test_get_instance(self):
+        MessageHub._instance_dict = dict()
+        root_logger = MessageHub.get_current_instance()
+        assert id(MessageHub.get_instance('mmengine')) == id(root_logger)
