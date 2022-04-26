@@ -89,7 +89,7 @@ class MessageHub(ManagerMixin):
         name "mmengine".
 
         Returns:
-            MessageHub: Configured ``MessageHub`` instance.
+            MessageHub: Empty ``MessageHub`` instance.
         """
         if not cls._instance_dict:
             cls.get_instance('mmengine')
