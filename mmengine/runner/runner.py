@@ -261,10 +261,11 @@ class Runner:
             raise ValueError(
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
-        if not isinstance(param_scheduler, Sequence):
+        if param_scheduler is not None and not isinstance(
+                param_scheduler, Sequence):
             self.param_schedulers = [param_scheduler]
         else:
-            self.param_schedulers = param_scheduler
+            self.param_schedulers = param_scheduler  # type: ignore
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
