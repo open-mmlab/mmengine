@@ -193,7 +193,7 @@ class MMLogger(Logger, ManagerMixin):
 
         :obj:`MMLogger` can call :meth:`get_current_instance` without any
         instance has been created, and return a logger with the instance name
-        "mmengine". This feature help components need
+        "mmengine".
 
         Returns:
             MMLogger: Configured logger instance.

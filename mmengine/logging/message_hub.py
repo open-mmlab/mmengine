@@ -85,11 +85,11 @@ class MessageHub(ManagerMixin):
         """Get latest created ``MessageHub`` instance.
 
         :obj:`MessageHub` can call :meth:`get_current_instance` without any
-        instance has been created, and return a logger with the instance name
-        "mmengine". This feature help components need
+        instance has been created, and return a message hub with the instance
+        name "mmengine".
 
         Returns:
-            MMLogger: Configured logger instance.
+            MessageHub: Configured ``MessageHub`` instance.
         """
         if not cls._instance_dict:
             cls.get_instance('mmengine')
