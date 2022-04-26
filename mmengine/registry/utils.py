@@ -9,19 +9,19 @@ from .registry import Registry
 
 
 def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
-    """
-    Traverse the whole registry tree from any given node, and collect
+    """Traverse the whole registry tree from any given node, and collect
     information of all registered modules in this registry tree.
+
     Args:
         registry (Registry): a registry node in the registry tree.
         verbose (bool): Whether to print log. Default: True
 
     Returns:
-        all_module_info (list): Statistic results of all modules in each node
-            of the registry tree.
+        list: Statistic results of all modules in each node of the registry
+        tree.
     """
     root_registry = registry.root
-    all_module_info = []
+    modules_info = []
 
     def _dfs_registry(_registry):
         if isinstance(_registry, Registry):
@@ -37,18 +37,18 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
             if verbose:
                 print(f"Find {num_modules} modules in {scope}'s "
                       f"'{_registry.name}' registry ")
-            all_module_info.append(registry_info)
+            modules_info.append(registry_info)
         else:
             return
         for _, child in _registry.children.items():
             _dfs_registry(child)
 
     _dfs_registry(root_registry)
-    return all_module_info
+    return modules_info
 
 
-def count_all_registered_modules(save_path: Optional[str] = None,
-                                 verbose: bool = True) -> dict:
+def count_registered_modules(save_path: Optional[str] = None,
+                             verbose: bool = True) -> dict:
     """Scan all modules in MMEngine's root and child registries and dump to
     json.
 
@@ -56,7 +56,7 @@ def count_all_registered_modules(save_path: Optional[str] = None,
         save_path (str, optional): Path to save the json file.
         verbose (bool): Whether to print log. Default: True
     Returns:
-        scan_data (dict): Statistic results of all registered modules.
+        dict: Statistic results of all registered modules.
     """
     registries_info = {}
     # traverse all registries in MMEngine

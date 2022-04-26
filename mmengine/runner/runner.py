@@ -31,7 +31,7 @@ from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                VISUALIZERS, DefaultScope,
-                               count_all_registered_modules)
+                               count_registered_modules)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import Visualizer
@@ -326,7 +326,7 @@ class Runner:
         self.logger = self.build_logger(log_level=log_level)
 
         # collect information of all modules registered in the registries
-        registries_info = count_all_registered_modules(
+        registries_info = count_registered_modules(
             self.work_dir if self.rank == 0 else None, verbose=False)
         self.logger.debug(registries_info)
 

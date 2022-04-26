@@ -3,7 +3,7 @@ import os.path as osp
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from mmengine.registry import (Registry, count_all_registered_modules, root,
+from mmengine.registry import (Registry, count_registered_modules, root,
                                traverse_registry_tree)
 
 
@@ -44,7 +44,7 @@ class TestUtils(TestCase):
 
     def test_count_all_registered_modules(self):
         temp_dir = TemporaryDirectory()
-        results = count_all_registered_modules(temp_dir.name, verbose=True)
+        results = count_registered_modules(temp_dir.name, verbose=True)
         self.assertTrue(
             osp.exists(
                 osp.join(temp_dir.name, 'modules_statistic_results.json')))
@@ -56,7 +56,7 @@ class TestUtils(TestCase):
         temp_dir.cleanup()
 
         # test not saving results
-        count_all_registered_modules(save_path=None, verbose=False)
+        count_registered_modules(save_path=None, verbose=False)
         self.assertFalse(
             osp.exists(
                 osp.join(temp_dir.name, 'modules_statistic_results.json')))
