@@ -86,7 +86,7 @@ class TestMessageHub:
         assert loss_bbox.current() == 3
         assert loss_iou.mean() == 0.5
 
-        with pytest.raises(TypeError):
+        with pytest.raises(AssertionError):
             loss_dict = dict(error_type=[])
             message_hub.update_scalars(loss_dict)
 
