@@ -115,7 +115,7 @@ class TestMessageHub:
 
     def test_get_instance(self):
         # Test get root mmengine message hub.
-        MessageHub._instance_dict = dict()
+        MessageHub._instance_dict = OrderedDict()
         root_logger = MessageHub.get_current_instance()
         assert id(MessageHub.get_instance('mmengine')) == id(root_logger)
         # Test original `get_current_instance` function.

@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sys
+from collections import OrderedDict
 from unittest.mock import patch
 
 import pytest
@@ -153,7 +154,7 @@ class TestLogger:
 
     def test_get_instance(self):
         # Test get root mmengine logger.
-        MMLogger._instance_dict = dict()
+        MMLogger._instance_dict = OrderedDict()
         root_logger = MMLogger.get_current_instance()
         mmdet_logger = MMLogger.get_instance('mmdet')
         assert root_logger.name == mmdet_logger.name
