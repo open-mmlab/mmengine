@@ -333,7 +333,7 @@ class Registry:
             if real_key in self._module_dict:
                 obj_cls = self._module_dict[real_key]
 
-            if scope is None:
+            elif scope is None:
                 # try to get the target from its parent or ancestors
                 parent = self.parent
                 while parent is not None:
