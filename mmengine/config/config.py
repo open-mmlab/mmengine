@@ -12,8 +12,8 @@ import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from importlib import import_module
-from typing import Any, Optional, Sequence, Tuple, Union
 from pathlib import Path
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
