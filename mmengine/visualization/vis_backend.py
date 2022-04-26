@@ -18,7 +18,9 @@ from mmengine.utils import TORCH_VERSION
 
 def force_init_env(old_func: Callable) -> Any:
     """Those methods decorated by ``force_init_env`` will be forced to call
-    ``_init_env`` if the instance has not been fully initiated.
+    ``_init_env`` if the instance has not been fully initiated. This function
+    will decorated all the `add_xxx` method and `experiment` method, because
+    `VisBackend` is initialized only when used its API.
 
     Args:
         old_func (Callable): Decorated function, make sure the first arg is an

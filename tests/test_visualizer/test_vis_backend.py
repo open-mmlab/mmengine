@@ -173,7 +173,7 @@ class TestTensorboardVisBackend:
 
     def test_close(self):
         tensorboard_vis_backend = TensorboardVisBackend('temp_dir')
-        tensorboard_vis_backend._setup_env()
+        tensorboard_vis_backend._init_env()
         tensorboard_vis_backend.close()
         shutil.rmtree('temp_dir')
 
@@ -225,6 +225,6 @@ class TestWandbVisBackend:
 
     def test_close(self):
         wandb_vis_backend = WandbVisBackend('temp_dir')
-        wandb_vis_backend._setup_env()
+        wandb_vis_backend._init_env()
         wandb_vis_backend.close()
         shutil.rmtree('temp_dir')

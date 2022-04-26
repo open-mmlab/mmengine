@@ -19,7 +19,7 @@ from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,
                                           convert_overlay_heatmap,
-                                          get_img_from_canvas, tensor2ndarray,
+                                          img_from_canvas, tensor2ndarray,
                                           value2list, wait_continue)
 from mmengine.visualization.vis_backend import BaseVisBackend
 
@@ -163,9 +163,8 @@ class Visualizer(ManagerMixin):
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
         if save_dir is None:
-            warnings.warn('Due to ``save_dir`` is None, vis backend does '
-                          'not take effect, so there is no need to '
-                          'initialize vis backend.')
+            warnings.warn('`Visualizer` backend is not initialized '
+                          'because save_dir is None.')
         elif vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
             names = [
@@ -286,7 +285,7 @@ class Visualizer(ManagerMixin):
             np.ndarray: the drawn image which channel is RGB.
         """
         assert self._image is not None, 'Please set image using `set_image`'
-        return get_img_from_canvas(self.fig_save.canvas)  # type: ignore
+        return img_from_canvas(self.fig_save.canvas)  # type: ignore
 
     def _initialize_fig(self, fig_cfg) -> tuple:
         """Build figure according to fig_cfg.
@@ -968,7 +967,7 @@ class Visualizer(ManagerMixin):
                 axes.imshow(
                     convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
-            return get_img_from_canvas(fig.canvas)
+            return img_from_canvas(fig.canvas)
 
     def add_config(self, config: Config, **kwargs):
         """Record the config.

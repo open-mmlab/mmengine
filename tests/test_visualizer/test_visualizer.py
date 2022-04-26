@@ -70,9 +70,8 @@ class TestVisualizer(TestCase):
         # test save_dir
         with pytest.warns(
                 Warning,
-                match='Due to ``save_dir`` is None, vis backend does '
-                'not take effect, so there is no need to '
-                'initialize vis backend.'):
+                match='`Visualizer` backend is not initialized '
+                'because save_dir is None.'):
             Visualizer()
 
         visualizer = Visualizer(

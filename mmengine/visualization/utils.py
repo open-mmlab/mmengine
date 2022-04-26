@@ -226,7 +226,7 @@ def wait_continue(figure, timeout: int = 0, continue_key: str = ' ') -> int:
             return 0  # Quit for continue.
 
 
-def get_img_from_canvas(canvas: FigureCanvasAgg) -> np.ndarray:
+def img_from_canvas(canvas: FigureCanvasAgg) -> np.ndarray:
     """Get RGB image from ``FigureCanvasAgg``.
 
     Args:
