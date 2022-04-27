@@ -261,7 +261,10 @@ class Runner:
             raise ValueError(
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
-        if not isinstance(param_scheduler, Sequence):
+
+        if param_scheduler is None:
+            self.param_schedulers = []
+        elif not isinstance(param_scheduler, Sequence):
             self.param_schedulers = [param_scheduler]
         else:
             self.param_schedulers = param_scheduler
@@ -1022,8 +1025,9 @@ class Runner:
         #  because the latter depends on the former
         self.optimizer = self.build_optimizer(self.optimizer)
 
-        self.param_schedulers = self.build_param_scheduler(  # type: ignore
-            self.param_schedulers)  # type: ignore
+        if self.param_schedulers:
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
+                self.param_schedulers)  # type: ignore
 
         return loop  # type: ignore
 
