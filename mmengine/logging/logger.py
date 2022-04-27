@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
-import os.path as osp
 import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
@@ -9,7 +8,7 @@ from typing import Optional, Union
 import torch.distributed as dist
 from termcolor import colored
 
-from mmengine.utils import ManagerMixin, mkdir_or_exist
+from mmengine.utils import ManagerMixin
 
 
 class MMFormatter(logging.Formatter):
@@ -105,8 +104,6 @@ class MMLogger(Logger, ManagerMixin):
           config.
         - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
           or error message without ``Handler``.
-        - If `log_file=/path/to/tmp.log`, all logs will be saved to
-          `/path/to/tmp/tmp.log`
 
     Examples:
         >>> logger = MMLogger.get_instance(name='MMLogger',
@@ -164,15 +161,6 @@ class MMLogger(Logger, ManagerMixin):
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            # If `log_file=/path/to/tmp.log`, all logs will be saved to
-            # `/path/to/tmp/tmp.log`
-            log_dir = osp.dirname(log_file)
-            filename = osp.basename(log_file)
-            filename_list = filename.split('.')
-            sub_file_name = '.'.join(filename_list[:-1])
-            log_dir = osp.join(log_dir, sub_file_name)
-            mkdir_or_exist(log_dir)
-            log_file = osp.join(log_dir, filename)
             if rank != 0:
                 # rename `log_file` with rank suffix.
                 path_split = log_file.split(os.sep)
@@ -198,6 +186,21 @@ class MMLogger(Logger, ManagerMixin):
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
                 self.handlers.append(file_handler)
+
+    @classmethod
+    def get_current_instance(cls) -> 'MMLogger':
+        """Get latest created ``MMLogger`` instance.
+
+        :obj:`MMLogger` can call :meth:`get_current_instance` before any
+        instance has been created, and return a logger with the instance name
+        "mmengine".
+
+        Returns:
+            MMLogger: Configured logger instance.
+        """
+        if not cls._instance_dict:
+            cls.get_instance('mmengine')
+        return super(MMLogger, cls).get_current_instance()
 
     def callHandlers(self, record: LogRecord) -> None:
         """Pass a record to all relevant handlers.
