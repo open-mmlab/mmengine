@@ -35,6 +35,15 @@ class NaiveVisualizationHook(Hook):
 
     def _unpad(self, input: np.ndarray, unpad_shape: Tuple[int,
                                                            int]) -> np.ndarray:
+        """Unpad the input image.
+
+        Args:
+            input (np.ndarray): The image to unpad.
+            unpad_shape (tuple): The shape of image before padding.
+
+        Returns:
+            np.ndarray: The image before padding.
+        """
         unpad_width, unpad_height = unpad_shape
         unpad_image = input[:unpad_height, :unpad_width]
         return unpad_image

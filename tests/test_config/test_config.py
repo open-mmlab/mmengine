@@ -224,8 +224,26 @@ class TestConfig:
         pkl_cfg_filename = tmp_path / '_pickle.pkl'
         dump(cfg, pkl_cfg_filename)
         pkl_cfg = load(pkl_cfg_filename)
-
         assert pkl_cfg._cfg_dict == cfg._cfg_dict
+        # Test dump config from dict.
+        cfg_dict = dict(a=1, b=2)
+        cfg = Config(cfg_dict)
+        assert cfg.pretty_text == cfg.dump()
+        # Test dump python format config.
+        dump_file = tmp_path / 'dump_from_dict.py'
+        cfg.dump(dump_file)
+        with open(dump_file, 'r') as f:
+            assert f.read() == 'a = 1\nb = 2\n'
+        # Test dump json format config.
+        dump_file = tmp_path / 'dump_from_dict.json'
+        cfg.dump(dump_file)
+        with open(dump_file, 'r') as f:
+            assert f.read() == '{"a": 1, "b": 2}'
+        # Test dump yaml format config.
+        dump_file = tmp_path / 'dump_from_dict.yaml'
+        cfg.dump(dump_file)
+        with open(dump_file, 'r') as f:
+            assert f.read() == 'a: 1\nb: 2\n'
 
     def test_pretty_text(self, tmp_path):
         cfg_file = osp.join(

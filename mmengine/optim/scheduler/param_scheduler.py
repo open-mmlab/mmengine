@@ -256,6 +256,7 @@ class StepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if (self.last_step == 0) or (self.last_step % self.step_size != 0):
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -312,6 +313,7 @@ class MultiStepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step not in self.milestones:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -371,6 +373,7 @@ class ConstantParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.factor
@@ -429,6 +432,7 @@ class ExponentialParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -509,6 +513,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -585,7 +590,7 @@ class LinearParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
-
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.start_factor
@@ -651,7 +656,7 @@ class PolyParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
-
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
