@@ -444,6 +444,9 @@ def cast_data_device(
                 'out should be the same type with data, but got data is '
                 f'{type(data)} and out is {type(data)}')
 
+        if isinstance(out, set):
+            raise TypeError('out should not be a set')
+
     if isinstance(data, Tensor):
         if get_data_device(data) == device:
             data_on_device = data
