@@ -89,7 +89,6 @@ def main():
             batch_size=64,
             num_workers=4),
         optimizer=dict(type='SGD', lr=0.001, momentum=0.9),
-        param_scheduler=dict(type='ConstantLR', factor=1),
         train_cfg=dict(by_epoch=True, max_epochs=5),
         val_dataloader=dict(
             dataset=test_dataset,
