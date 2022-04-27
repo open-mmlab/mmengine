@@ -100,7 +100,7 @@ def color_val_matplotlib(
     Args:
         colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
     Returns:
-        (Union[str, tuple, List[Union[str, tuple]]]): A tuple of 3 normalized
+        Union[str, tuple, List[Union[str, tuple]]]: A tuple of 3 normalized
         floats indicating RGB channels.
     """
     if isinstance(colors, str):
