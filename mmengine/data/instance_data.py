@@ -68,6 +68,11 @@ class InstanceData(BaseDataElement):
 
     def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray,
                                                   list]):
+        """setattr is only used to set data.
+
+        the value must have the attribute of `__len__` and have the same length
+        of instancedata
+        """
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)
@@ -203,6 +208,7 @@ class InstanceData(BaseDataElement):
         return new_data  # type:ignore
 
     def __len__(self) -> int:
+        """The length of instance data."""
         if len(self._data_fields) > 0:
             return len(self.values()[0])
         else:
