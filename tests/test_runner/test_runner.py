@@ -345,7 +345,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.val_dataloader, dict)
         self.assertIsInstance(runner.test_dataloader, dict)
         self.assertIsInstance(runner.optimizer, dict)
-        self.assertIsInstance(runner.param_schedulers[0], dict)
+        self.assertIsInstance(runner.param_schedulers, dict)
 
         # After calling runner.train(),
         # train_dataloader and val_loader should be initialized but

@@ -261,11 +261,8 @@ class Runner:
             raise ValueError(
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
-        if param_scheduler is not None and not isinstance(
-                param_scheduler, Sequence):
-            self.param_schedulers = [param_scheduler]
-        else:
-            self.param_schedulers = param_scheduler  # type: ignore
+
+        self.param_schedulers = param_scheduler  # type: ignore
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -1423,8 +1420,8 @@ class Runner:
 
         # resume param scheduler
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)
+            self.param_schedulers = self.build_param_scheduler(
+                self.param_schedulers)  # type: ignore
 
             for cur_scheduler, ckpt_scheduler in zip(
                     self.param_schedulers, checkpoint['param_schedulers']):
@@ -1545,7 +1542,7 @@ class Runner:
         # save param scheduler state dict
         if save_param_scheduler:
             checkpoint['param_schedulers'] = []
-            for _scheduler in self.param_schedulers:
+            for _scheduler in self.param_schedulers:  # type: ignore
                 state_dict = _scheduler.state_dict()  # type: ignore
                 checkpoint['param_schedulers'].append(state_dict)
 
