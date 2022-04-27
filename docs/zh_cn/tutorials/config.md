@@ -224,7 +224,7 @@ model = dict(type='ResNet', depth=50)
 
 类似的，我们可以导出 json、yaml 格式的配置文件
 
-`resnet50_dump.yaml`
+`dumped_resnet50.yaml`
 
 ```yaml
 gpu_ids:
