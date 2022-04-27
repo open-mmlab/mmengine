@@ -243,7 +243,7 @@ optimizer:
 {"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "gpu_ids": [0, 1], "model": {"type": "ResNet", "depth": 50}}
 ```
 
-此外，`dump` 不仅能导出加载自文件的 `cfg`，还能导出加载自字典的 cfg
+此外，`dump` 不仅能导出加载自文件的 `cfg`，还能导出加载自字典的 `cfg`
 
 ```python
 cfg = Config(dict(a=1, b=2))
