@@ -684,8 +684,8 @@ class TestRunner(TestCase):
 
         # param_schedulers can be None
         cfg = dict(type='EpochBasedTrainLoop', max_epochs=3)
-        loop = runner.build_train_loop(cfg)
         runner.param_schedulers = None
+        loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
         # test custom training loop
