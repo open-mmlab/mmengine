@@ -31,10 +31,9 @@ class ParamSchedulerHook(Hook):
                 In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
-        if runner.param_schedulers is not None:
-            for scheduler in runner.param_schedulers:  # type: ignore
-                if not scheduler.by_epoch:
-                    scheduler.step()
+        for scheduler in runner.param_schedulers:  # type: ignore
+            if not scheduler.by_epoch:
+                scheduler.step()
 
     def after_train_epoch(self, runner) -> None:
         """Call step function for each scheduler after each epoch.
@@ -42,7 +41,6 @@ class ParamSchedulerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if runner.param_schedulers is not None:
-            for scheduler in runner.param_schedulers:  # type: ignore
-                if scheduler.by_epoch:
-                    scheduler.step()
+        for scheduler in runner.param_schedulers:  # type: ignore
+            if scheduler.by_epoch:
+                scheduler.step()
