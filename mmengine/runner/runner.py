@@ -316,6 +316,8 @@ class Runner:
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
+        self._log_dir = osp.join(self.work_dir, self.timestamp)
+        mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
@@ -628,7 +630,7 @@ class Runner:
             MMLogger: A MMLogger object build from ``logger``.
         """
         if log_file is None:
-            log_file = osp.join(self.work_dir, f'{self._experiment_name}.log')
+            log_file = osp.join(self._log_dir, f'{self._experiment_name}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
@@ -678,7 +680,7 @@ class Runner:
             visualizer = dict(
                 name=self._experiment_name,
                 vis_backends=[
-                    dict(type='LocalVisBackend', save_dir=self._work_dir)
+                    dict(type='LocalVisBackend', save_dir=self._log_dir)
                 ])
             return Visualizer.get_instance(**visualizer)
 
@@ -688,7 +690,7 @@ class Runner:
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
             visualizer.setdefault('name', self._experiment_name)
-            visualizer.setdefault('save_dir', self._work_dir)
+            visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(
