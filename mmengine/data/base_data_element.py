@@ -352,7 +352,7 @@ class BaseDataElement:
     @property
     def metainfo(self) -> dict:
         """dict: A dict contains metainfo of current data element."""
-        return {k: getattr(self, k) for k in self.metainfo_keys()}
+        return dict(self.metainfo_items())
 
     def __setattr__(self, name: str, value: Any):
         """setattr is only used to set data."""
