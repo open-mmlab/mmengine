@@ -31,31 +31,31 @@ prefix_to_backends = {'s3': MockPetrel}
 class TestCheckpointHook:
 
     @patch('file_client.FileClient._prefix_to_backends', prefix_to_backends)
-    def test_before_run(self):
+    def test_before_train(self):
         runner = Mock()
         runner.work_dir = './tmp'
 
         # the out_dir of the checkpoint hook is None
         checkpoint_hook = CheckpointHook(interval=1, by_epoch=True)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         assert checkpoint_hook.out_dir == runner.work_dir
 
         # the out_dir of the checkpoint hook is not None
         checkpoint_hook = CheckpointHook(
             interval=1, by_epoch=True, out_dir='test_dir')
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         assert checkpoint_hook.out_dir == 'test_dir/tmp'
 
         # create_symlink in args and create_symlink is True
         checkpoint_hook = CheckpointHook(
             interval=1, by_epoch=True, out_dir='test_dir', create_symlink=True)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         assert checkpoint_hook.args['create_symlink']
 
         runner.work_dir = 's3://path/of/file'
         checkpoint_hook = CheckpointHook(
             interval=1, by_epoch=True, create_symlink=True)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         assert not checkpoint_hook.args['create_symlink']
 
     def test_after_train_epoch(self):
@@ -67,7 +67,7 @@ class TestCheckpointHook:
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
         assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/epoch_10.pth'
@@ -81,7 +81,7 @@ class TestCheckpointHook:
         runner.epoch = 9
         runner.meta = dict()
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_epoch(runner)
         assert runner.meta.get('hook_msgs', None) is None
 
@@ -91,7 +91,7 @@ class TestCheckpointHook:
             os.system(f'touch {tempo_dir}/epoch_8.pth')
             checkpoint_hook = CheckpointHook(
                 interval=2, by_epoch=True, max_keep_ckpts=1)
-            checkpoint_hook.before_run(runner)
+            checkpoint_hook.before_train(runner)
             checkpoint_hook.after_train_epoch(runner)
             assert (runner.epoch + 1) % 2 == 0
             assert not os.path.exists(f'{tempo_dir}/epoch_8.pth')
@@ -106,13 +106,13 @@ class TestCheckpointHook:
 
         # by epoch is True
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert runner.meta.get('hook_msgs', None) is None
 
         # by epoch is False
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
-        checkpoint_hook.before_run(runner)
+        checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert (runner.iter + 1) % 2 == 0
         assert runner.meta['hook_msgs']['last_ckpt'] == './tmp/iter_10.pth'
@@ -129,6 +129,6 @@ class TestCheckpointHook:
             os.system(f'touch {tempo_dir}/iter_8.pth')
             checkpoint_hook = CheckpointHook(
                 interval=2, by_epoch=False, max_keep_ckpts=1)
-            checkpoint_hook.before_run(runner)
+            checkpoint_hook.before_train(runner)
             checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
             assert not os.path.exists(f'{tempo_dir}/iter_8.pth')
