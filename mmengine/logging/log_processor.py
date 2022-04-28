@@ -109,6 +109,8 @@ class LogProcessor:
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in ['train', 'test', 'val']
+        if mode == 'test':
+            print(111)
         current_loop = self._get_cur_loop(runner, mode)
         cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
@@ -252,7 +254,7 @@ class LogProcessor:
         # according to mode.
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
-                key = prefix_key.split('/')[-1]
+                key = prefix_key.partition('/')[-1]
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
