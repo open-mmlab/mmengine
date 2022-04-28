@@ -53,7 +53,7 @@ class LoggerHook(Hook):
             Defaults to None.
 
     Examples:
-        >>> # A simplest LoggerHook config.
+        >>> # The simplest LoggerHook config.
         >>> logger_hook_cfg = dict(interval=20)
     """
     priority = 'BELOW_NORMAL'
@@ -116,15 +116,14 @@ class LoggerHook(Hook):
                          batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
-        """Record training logs after training iteration.
+        """Record logs after training iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.
-            outputs (dict, optional): Outputs from model.
-                Defaults to None.
+            outputs (dict, optional): Outputs from model. Defaults to None.
         """
         # Print experiment name every n iterations.
         if self.every_n_iters(runner,
@@ -155,13 +154,14 @@ class LoggerHook(Hook):
             batch_idx: int,
             data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
-        """Record validation logs after validation iteration.
+        """Record logs after validation iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            runner (Runner): The runner of the validation process.
+            batch_idx (int): The index of the current batch in the validation
+                loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
@@ -175,13 +175,13 @@ class LoggerHook(Hook):
             batch_idx: int,
             data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
-        """Record testing logs after iteration.
+        """Record logs after testing iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            runner (Runner): The runner of the testing process.
+            batch_idx (int): The index of the current batch in the test loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
@@ -190,10 +190,10 @@ class LoggerHook(Hook):
             runner.logger.info(log_str)
 
     def after_val_epoch(self, runner) -> None:
-        """Record validation logs after validation epoch.
+        """Record logs after validation epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
@@ -202,10 +202,10 @@ class LoggerHook(Hook):
         runner.visualizer.add_scalars(tag, step=runner.iter + 1)
 
     def after_test_epoch(self, runner) -> None:
-        """Record testing logs after test epoch.
+        """Record logs after testing epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'test')
@@ -215,7 +215,8 @@ class LoggerHook(Hook):
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/testing/validation
+                process.
         """
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
