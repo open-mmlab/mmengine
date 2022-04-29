@@ -7,11 +7,85 @@ MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为算法模型
 - 清晰：封装的层次与逻辑清晰简单，抽象的定义与接口更加清晰，模块的拆分与边界更加清晰
 - 灵活：在统一的基础框架内，模块可以灵活拓展和插拔，支持各类型算法和学习范式，包括少样本和零样本学习，自监督、半监督、和弱监督学习，和模型的蒸馏、剪枝、与量化。
 
+## 样例
+
+以在 ImageNet-1k 数据集上训练一个 ResNet-50 模型为例，PyTorch 官方提供的 [imagenet-example](https://github.com/pytorch/examples/blob/main/imagenet/main.py) 需要 456 行代码，而使用 mmengine 仅需要不到 70 行。
+
+```python
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+from torchvision.models import resnet50
+
+from mmengine import Config, Runner
+
+
+train_dataset = torchvision.datasets.ImageFolder(
+    'data/images/train',
+    transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+    ]))
+test_dataset = torchvision.datasets.ImageFolder(
+    'data/images/val',
+    transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        normalize,
+    ])),
+
+runner = Runner(
+    model=resnet50(),
+    work_dir='./work_dir',
+    train_dataloader=dict(
+        dataset=train_dataset,
+        sampler=dict(type='DefaultSampler', shuffle=True),
+        batch_size=64,
+        num_workers=4),
+    optimizer=dict(type='SGD', lr=0.001, momentum=0.9),
+    train_cfg=dict(by_epoch=True, max_epochs=5),
+    val_dataloader=dict(
+        dataset=test_dataset,
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        batch_size=64,
+        num_workers=4),
+    val_cfg=dict(interval=2),
+    val_evaluator=dict(type='Accuracy'),
+    test_dataloader=dict(
+        dataset=test_dataset,
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        batch_size=64,
+        num_workers=4),
+    test_cfg=dict(),
+    test_evaluator=dict(type='Accuracy'),
+    launcher='slurm',
+    env_cfg=dict(dist_cfg=dict(backend='nccl')),
+    default_hooks=dict(
+        timer=dict(type='IterTimerHook'),
+        checkpoint=dict(type='CheckpointHook', interval=1),
+        logger=dict(type='LoggerHook'),
+        optimizer=dict(type='OptimizerHook', grad_clip=False),
+        param_scheduler=dict(type='ParamSchedulerHook')),
+)
+
+runner.train()
+runner.test()
+
+```
+
+上述代码主要构建了需要的模型（model）和数据加载器（dataloader），然后通过传入模型、数据集和配置，构建了执行器（Runner），调用 `runner.train()` 和 `runner.test()` 即可完成训练和测试。执行器
+
 ## 组件
 
 MMEngine 将算法模型训练、推理、测试和可视化过程中的各个组件进行了抽象，定义了如下几个组件和他们的相关接口，这些组件的关系如下图所示：
 
-![runner_modules](https://user-images.githubusercontent.com/40779233/165018333-c54a3405-a566-4de6-a1d5-f2a3a836bd41.jpeg)
+![runner_modules](https://user-images.githubusercontent.com/40779233/165875914-0bd10fdf-c432-4144-90bb-4b87493d1b05.jpeg)
 
 以下根据上图简述这些模块的功能与联系，用户可以通过各个组件的用户文档了解他们。
 
