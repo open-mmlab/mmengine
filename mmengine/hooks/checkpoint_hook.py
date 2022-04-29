@@ -78,7 +78,7 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if not self.out_dir:
+        if self.out_dir is None:
             self.out_dir = runner.work_dir
 
         self.file_client = FileClient.infer_client(self.file_client_args,
