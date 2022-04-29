@@ -86,6 +86,7 @@ class LoggerHook(Hook):
 
         self.keep_local = keep_local
         self.file_client_args = file_client_args
+        self.json_log_path: Optional[str] = None
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
@@ -106,10 +107,7 @@ class LoggerHook(Hook):
                 (f'Text logs will be saved to {self.out_dir} by '
                  f'{self.file_client.name} after the training process.'))
 
-        self.json_log_path = osp.join(runner.work_dir,
-                                      f'{runner.timestamp}.log.json')
-        self.yaml_log_path = osp.join(runner.work_dir,
-                                      f'{runner.timestamp}.log.json')
+        self.json_log_path = f'{runner.timestamp}.json'
 
     def after_train_iter(self,
                          runner,
@@ -145,8 +143,8 @@ class LoggerHook(Hook):
         else:
             return
         runner.logger.info(log_str)
-        # TODO compatible with visualizer.
-        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(
+            tag, step=runner.iter + 1, file_path=self.json_log_path)
 
     def after_val_iter(
             self,
@@ -165,7 +163,7 @@ class LoggerHook(Hook):
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
-            tag, log_str = runner.log_processor.get_log_after_iter(
+            _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'val')
             runner.logger.info(log_str)
 
@@ -185,7 +183,7 @@ class LoggerHook(Hook):
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
-            tag, log_str = runner.log_processor.get_log_after_iter(
+            _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'test')
             runner.logger.info(log_str)
 
@@ -198,8 +196,8 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
-        # TODO compatible with visualizer.
-        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(
+            tag, step=runner.iter, file_path=self.json_log_path)
 
     def after_test_epoch(self, runner) -> None:
         """Record logs after testing epoch.
@@ -207,7 +205,7 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the testing process.
         """
-        tag, log_str = runner.log_processor.get_log_after_epoch(
+        _, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'test')
         runner.logger.info(log_str)
 
@@ -221,8 +219,8 @@ class LoggerHook(Hook):
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
             return
-        for filename in scandir(runner.work_dir, self.out_suffix, True):
-            local_filepath = osp.join(runner.work_dir, filename)
+        for filename in scandir(runner._log_dir, self.out_suffix, True):
+            local_filepath = osp.join(runner._log_dir, filename)
             out_filepath = self.file_client.join_path(self.out_dir, filename)
             with open(local_filepath, 'r') as f:
                 self.file_client.put_text(f.read(), out_filepath)

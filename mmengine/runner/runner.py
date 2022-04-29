@@ -630,7 +630,7 @@ class Runner:
             MMLogger: A MMLogger object build from ``logger``.
         """
         if log_file is None:
-            log_file = osp.join(self._log_dir, f'{self._experiment_name}.log')
+            log_file = osp.join(self._log_dir, f'{self.timestamp}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
@@ -679,9 +679,8 @@ class Runner:
         if visualizer is None:
             visualizer = dict(
                 name=self._experiment_name,
-                vis_backends=[
-                    dict(type='LocalVisBackend', save_dir=self._log_dir)
-                ])
+                vis_backends=[dict(type='LocalVisBackend')],
+                save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
