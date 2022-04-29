@@ -7,10 +7,17 @@ import torch
 
 
 class BaseDataElement:
-    """A base data structure interface of OpenMMlab.
+    """A base data structure interface of OpenMMlab. The data in the algorithm
+    can be classified into data elements with different properties. The
+    groundtruth, the prediction and both groundtruth and prediction of an image
+    can be abstracted into data elements.Therefore, MMEngine defines the basic
+    class `BaseDataElement` and its basic functions such as create delete
+    update and retrieve. The repository based on `MMEngine` can define the data
+    element derived from `BasedataElement` as an abstract data interface
+    between the components of the library.
 
-    Data elements refer to predicted results or ground truth labels on a
-    task, such as predicted bboxes, instance masks, semantic
+    A typical data elements refer to predicted results or ground truth labels
+    on a task, such as predicted bboxes, instance masks, semantic
     segmentation masks, etc. Because groundtruth labels and predicted results
     often have similar properties (for example, the predicted bboxes and the
     groundtruth bboxes), MMEngine uses the same abstract data interface to
@@ -23,7 +30,23 @@ class BaseDataElement:
     ``BaseDataElement``, and implement ``InstanceData``, ``PixelData``, and
     ``LabelData`` inheriting from ``BaseDataElement`` to represent different
     types of ground truth labels or predictions.
-    They are used as interfaces between different commopenets.
+
+    Another common data element is sample data. A sample data consists of input
+    data (such as an image) and its annotations and predictions. In general,
+    an image can have multiple types of annotations and/or predictions at the
+    same time (for example, both pixel-level semantic segmentation annotations
+    and instance-level detection bboxes annotations). All labels and
+    predictions of a training sample are often passed between Dataset, Model,
+    Visualizer, and Evaluator components.In order to simplify the interface
+    between components, we can treat them as a large data element and
+    encapsulate them. Such data elements are generally called XXDataSample in
+    the OpenMMLab. Therefore, Similar to `nn.Module`, the `BaseDataElement`
+    allows `BaseDataElement` as its attribute. Such a class generally
+    encapsulates all the data of a sample in the algorithm library, and its
+    attributes generally are various types of data elements.For example,
+    MMDetection is assigned by the BaseDataElement to encapsulate all the data
+    elements of the sample labeling and prediction of a sample in the
+    algorithm library.
 
     The attributes in ``BaseDataElement`` are divided into two parts,
     the ``metainfo`` and the ``data`` respectively.
@@ -70,8 +93,8 @@ class BaseDataElement:
         >>> # new
         >>> gt_instances1 = gt_instance.new(
         ...                     metainfo=dict(img_id=1, img_shape=(640, 640)),
-        ...                     data=dict(bboxes=torch.rand((5, 4)),
-        ...                               scores=torch.rand((5,))))
+        ...                     bboxes=torch.rand((5, 4)),
+...                             scores=torch.rand((5,)))
         >>> gt_instances2 = gt_instances1.new()
 
         >>> # add and process property
@@ -241,8 +264,9 @@ class BaseDataElement:
         self.set_data(dict(instance.items()))
 
     def new(self,
-            metainfo: dict = None,
-            data: dict = None) -> 'BaseDataElement':
+            *,
+            metainfo: Optional[dict] = None,
+            **kwargs) -> 'BaseDataElement':
         """Return a new data element with same type. If ``metainfo`` and
         ``data`` are None, the new data element will have same metainfo and
         data. If metainfo or data is not None, the new result will overwrite it
@@ -263,8 +287,8 @@ class BaseDataElement:
             new_data.set_metainfo(metainfo)
         else:
             new_data.set_metainfo(dict(self.metainfo_items()))
-        if data is not None:
-            new_data.set_data(data)
+        if kwargs:
+            new_data.set_data(kwargs)
         else:
             new_data.set_data(dict(self.items()))
         return new_data
@@ -388,7 +412,6 @@ class BaseDataElement:
             self._data_fields.remove(item)
 
     # dict-like methods
-    __setitem__ = __setattr__
     __delitem__ = __delattr__
 
     def get(self, key, default=None) -> Any:
@@ -519,6 +542,7 @@ class BaseDataElement:
         }
 
     def __repr__(self) -> str:
+        """represent the object."""
 
         def _addindent(s_: str, num_spaces: int) -> str:
             """This func is modified from `pytorch` https://github.com/pytorch/
