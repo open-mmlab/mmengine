@@ -36,8 +36,7 @@ class TestLoggerHook:
         logger_hook = LoggerHook(out_dir='out_dir')
         logger_hook.before_run(runner)
         assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
-        assert logger_hook.json_log_path == osp.join(
-            runner._log_dir, f'{runner.timestamp}.json')
+        assert logger_hook.json_log_path == f'{runner.timestamp}.json'
 
     def test_after_run(self, tmp_path):
         # Test
