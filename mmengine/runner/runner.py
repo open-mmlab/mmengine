@@ -679,9 +679,8 @@ class Runner:
         if visualizer is None:
             visualizer = dict(
                 name=self._experiment_name,
-                vis_backends=[
-                    dict(type='LocalVisBackend', save_dir=self._log_dir)
-                ])
+                vis_backends=[dict(type='LocalVisBackend')],
+                save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
