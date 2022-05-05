@@ -281,6 +281,11 @@ class TestRegistry:
         assert HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
                           ) is LittlePedigreeSamoyed
 
+        # invalid keys
+        assert DOGS.get('GoldenRetrieverGoldenRetriever') is None
+        assert DOGS.get('samoyedddd.PedigreeSamoyed') is None
+        assert DOGS.get('little_samoyed.LittlePedigreeSamoyed') is None
+
     def test_search_child(self):
         #        Hierarchical Registry
         #                           DOGS

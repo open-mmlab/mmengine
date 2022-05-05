@@ -289,7 +289,7 @@ class Registry:
 
         Args:
             key (str): Name of the registered item, e.g., the class name in
-            string format.
+                string format.
 
         Returns:
             Type or None: Return the corresponding class if ``key`` exists,
@@ -335,6 +335,9 @@ class Registry:
                 return self._children[scope].get(real_key)
             else:
                 root = self._get_root_registry()
+                if scope != root._scope and scope not in root._children:
+                    return None
+
                 return root.get(key)
 
         return None
