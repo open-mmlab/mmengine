@@ -47,7 +47,8 @@ class TestParameterScheduler(TestCase):
 
     def test_invalid_optimizer(self):
         with self.assertRaisesRegex(TypeError, 'should be an Optimizer'):
-            StepParamScheduler('invalid_optimizer', 'lr', step_size=1)
+            StepParamScheduler(
+                'invalid_optimizer', step_size=1, param_name='lr')
 
     def test_overwrite_optimzer_step(self):
         # raise warning if the counter in optimizer.step() is overwritten
@@ -140,7 +141,8 @@ class TestParameterScheduler(TestCase):
     def test_get_last_value(self):
         epochs = 10
         targets = [[0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]]
-        scheduler = StepParamScheduler(self.optimizer, 'lr', 3, gamma=0.1)
+        scheduler = StepParamScheduler(
+            self.optimizer, param_name='lr', step_size=3, gamma=0.1)
         for epoch in range(epochs):
             result = scheduler.get_last_value()
             self.optimizer.step()

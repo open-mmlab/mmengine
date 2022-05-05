@@ -13,12 +13,6 @@ class MomentumSchedulerMixin:
     def __init__(self, optimizer, *args, **kwargs):
         super().__init__(optimizer, 'momentum', *args, **kwargs)
 
-    @classmethod
-    def build_iter_based(cls, optimizer, *args, **kwargs):
-        """Build an iter-based instance of this scheduler from an epoch-based
-        config."""
-        return super().build_iter_based(optimizer, 'momentum', *args, **kwargs)
-
 
 @PARAM_SCHEDULERS.register_module()
 class ConstantMomentum(MomentumSchedulerMixin, ConstantParamScheduler):

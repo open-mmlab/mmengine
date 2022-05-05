@@ -13,12 +13,6 @@ class LRSchedulerMixin:
     def __init__(self, optimizer, *args, **kwargs):
         super().__init__(optimizer, 'lr', *args, **kwargs)
 
-    @classmethod
-    def build_iter_based(cls, optimizer, *args, **kwargs):
-        """Build an iter-based instance of this scheduler from an epoch-based
-        config."""
-        return super().build_iter_based(optimizer, 'lr', *args, **kwargs)
-
 
 @PARAM_SCHEDULERS.register_module()
 class ConstantLR(LRSchedulerMixin, ConstantParamScheduler):
