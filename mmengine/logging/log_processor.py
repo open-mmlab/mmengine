@@ -168,7 +168,7 @@ class LogProcessor:
         if mode in ('train', 'val'):
             log_items = []
             for name, val in log_tag.items():
-                if mode == 'val' and not name.startswith('loss'):
+                if mode == 'val' and not name.startswith('val/loss'):
                     continue
                 if isinstance(val, float):
                     val = f'{val:.4f}'

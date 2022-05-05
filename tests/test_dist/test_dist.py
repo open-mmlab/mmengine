@@ -3,6 +3,7 @@ import os
 import os.path as osp
 import tempfile
 import unittest
+from itertools import product
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -247,6 +248,8 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
 
     def test_all_gather_object(self):
         self._init_dist_env(self.rank, self.world_size)
+
+        # data is a pickable python object
         if dist.get_rank() == 0:
             data = 'foo'
         else:
@@ -257,8 +260,21 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
 
         self.assertEqual(output, expected)
 
+        # data is a list of pickable python object
+        if dist.get_rank() == 0:
+            data = ['foo', {1: 2}]
+        else:
+            data = {2: 3}
+
+        expected = [['foo', {1: 2}], {2: 3}]
+        output = dist.all_gather_object(data)
+
+        self.assertEqual(output, expected)
+
     def test_gather_object(self):
         self._init_dist_env(self.rank, self.world_size)
+
+        # data is a pickable python object
         if dist.get_rank() == 0:
             data = 'foo'
         else:
@@ -268,6 +284,19 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
 
         if dist.get_rank() == 0:
             self.assertEqual(output, ['foo', {1: 2}])
+        else:
+            self.assertIsNone(output)
+
+        # data is a list of pickable python object
+        if dist.get_rank() == 0:
+            data = ['foo', {1: 2}]
+        else:
+            data = {2: 3}
+
+        output = dist.gather_object(data, dst=0)
+
+        if dist.get_rank() == 0:
+            self.assertEqual(output, [['foo', {1: 2}], {2: 3}])
         else:
             self.assertIsNone(output)
 
@@ -293,44 +322,59 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
     def test_all_reduce(self):
         self._init_dist_env(self.rank, self.world_size)
-        for tensor_type, reduce_op in zip([torch.int64, torch.float32],
-                                          ['sum', 'mean']):
+        tensor_types = [torch.int64, torch.float32]
+        reduce_ops = ['sum', 'mean']
+        device_types = ['cpu', 'cuda']
+        for tensor_type, reduce_op, device_type in product(
+                tensor_types, reduce_ops, device_types):
+            # 'mean' op does not support torch.int64
+            if tensor_type == torch.int64 and reduce_op == 'mean':
+                continue
+
             if dist.get_rank() == 0:
-                data = torch.tensor([1, 2], dtype=tensor_type).cuda()
+                data = torch.tensor([1, 2], dtype=tensor_type).to(device_type)
             else:
-                data = torch.tensor([3, 4], dtype=tensor_type).cuda()
+                data = torch.tensor([3, 4], dtype=tensor_type).to(device_type)
 
             if reduce_op == 'sum':
-                expected = torch.tensor([4, 6], dtype=tensor_type).cuda()
+                expected = torch.tensor([4, 6],
+                                        dtype=tensor_type).to(device_type)
             else:
-                expected = torch.tensor([2, 3], dtype=tensor_type).cuda()
+                expected = torch.tensor([2, 3],
+                                        dtype=tensor_type).to(device_type)
 
             dist.all_reduce(data, reduce_op)
             self.assertTrue(torch.allclose(data, expected))
 
     def test_all_gather(self):
         self._init_dist_env(self.rank, self.world_size)
-        if dist.get_rank() == 0:
-            data = torch.tensor([0, 1]).cuda()
-        else:
-            data = torch.tensor([1, 2]).cuda()
+        for device_type in ('cpu', 'cuda'):
+            if dist.get_rank() == 0:
+                data = torch.tensor([0, 1]).to(device_type)
+            else:
+                data = torch.tensor([1, 2]).to(device_type)
 
-        expected = [torch.tensor([0, 1]).cuda(), torch.tensor([1, 2]).cuda()]
+            expected = [
+                torch.tensor([0, 1]).to(device_type),
+                torch.tensor([1, 2]).to(device_type)
+            ]
 
-        output = dist.all_gather(data)
-        self.assertTrue(
-            torch.allclose(output[dist.get_rank()], expected[dist.get_rank()]))
+            output = dist.all_gather(data)
+            self.assertTrue(
+                torch.allclose(output[dist.get_rank()],
+                               expected[dist.get_rank()]))
 
     def test_broadcast_dist(self):
         self._init_dist_env(self.rank, self.world_size)
-        if dist.get_rank() == 0:
-            data = torch.tensor([0, 1]).cuda()
-        else:
-            data = torch.tensor([1, 2]).cuda()
+        for device_type in ('cpu', 'cuda'):
+            if dist.get_rank() == 0:
+                data = torch.tensor([0, 1]).to(device_type)
+            else:
+                data = torch.tensor([1, 2]).to(device_type)
 
-        expected = torch.tensor([0, 1]).cuda()
-        dist.broadcast(data, 0)
-        assert torch.allclose(data, expected)
+            expected = torch.tensor([0, 1]).to(device_type)
+            dist.broadcast(data, 0)
+            assert torch.allclose(data, expected)
 
     def test_sync_random_seed(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -354,28 +398,43 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
     def test_all_reduce_dict(self):
         self._init_dist_env(self.rank, self.world_size)
-        for tensor_type, reduce_op in zip([torch.int64, torch.float32],
-                                          ['sum', 'mean']):
+        tensor_types = [torch.int64, torch.float32]
+        reduce_ops = ['sum', 'mean']
+        device_types = ['cpu', 'cuda']
+        for tensor_type, reduce_op, device_type in product(
+                tensor_types, reduce_ops, device_types):
+            # 'mean' op does not support torch.int64
+            if tensor_type == torch.int64 and reduce_op == 'mean':
+                continue
+
             if dist.get_rank() == 0:
                 data = {
-                    'key1': torch.tensor([0, 1], dtype=tensor_type).cuda(),
-                    'key2': torch.tensor([1, 2], dtype=tensor_type).cuda(),
+                    'key1':
+                    torch.tensor([0, 1], dtype=tensor_type).to(device_type),
+                    'key2':
+                    torch.tensor([1, 2], dtype=tensor_type).to(device_type),
                 }
             else:
                 data = {
-                    'key1': torch.tensor([2, 3], dtype=tensor_type).cuda(),
-                    'key2': torch.tensor([3, 4], dtype=tensor_type).cuda(),
+                    'key1':
+                    torch.tensor([2, 3], dtype=tensor_type).to(device_type),
+                    'key2':
+                    torch.tensor([3, 4], dtype=tensor_type).to(device_type),
                 }
 
             if reduce_op == 'sum':
                 expected = {
-                    'key1': torch.tensor([2, 4], dtype=tensor_type).cuda(),
-                    'key2': torch.tensor([4, 6], dtype=tensor_type).cuda(),
+                    'key1':
+                    torch.tensor([2, 4], dtype=tensor_type).to(device_type),
+                    'key2':
+                    torch.tensor([4, 6], dtype=tensor_type).to(device_type),
                 }
             else:
                 expected = {
-                    'key1': torch.tensor([1, 2], dtype=tensor_type).cuda(),
-                    'key2': torch.tensor([2, 3], dtype=tensor_type).cuda(),
+                    'key1':
+                    torch.tensor([1, 2], dtype=tensor_type).to(device_type),
+                    'key2':
+                    torch.tensor([2, 3], dtype=tensor_type).to(device_type),
                 }
 
             dist.all_reduce_dict(data, reduce_op)
@@ -385,30 +444,43 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
         # `torch.cat` in torch1.5 can not concatenate different types so we
         # fallback to convert them all to float type.
-        if digit_version(TORCH_VERSION) == digit_version('1.5.0'):
-            if dist.get_rank() == 0:
-                data = {
-                    'key1': torch.tensor([0, 1], dtype=torch.float32).cuda(),
-                    'key2': torch.tensor([1, 2], dtype=torch.int32).cuda(),
+        for device_type in ('cpu', 'cuda'):
+            if digit_version(TORCH_VERSION) == digit_version('1.5.0'):
+                if dist.get_rank() == 0:
+                    data = {
+                        'key1':
+                        torch.tensor([0, 1],
+                                     dtype=torch.float32).to(device_type),
+                        'key2':
+                        torch.tensor([1, 2],
+                                     dtype=torch.int32).to(device_type),
+                    }
+                else:
+                    data = {
+                        'key1':
+                        torch.tensor([2, 3],
+                                     dtype=torch.float32).to(device_type),
+                        'key2':
+                        torch.tensor([3, 4],
+                                     dtype=torch.int32).to(device_type),
+                    }
+
+                expected = {
+                    'key1':
+                    torch.tensor([2, 4], dtype=torch.float32).to(device_type),
+                    'key2':
+                    torch.tensor([4, 6], dtype=torch.float32).to(device_type),
                 }
-            else:
-                data = {
-                    'key1': torch.tensor([2, 3], dtype=torch.float32).cuda(),
-                    'key2': torch.tensor([3, 4], dtype=torch.int32).cuda(),
-                }
 
-            expected = {
-                'key1': torch.tensor([2, 4], dtype=torch.float32).cuda(),
-                'key2': torch.tensor([4, 6], dtype=torch.float32).cuda(),
-            }
+                dist.all_reduce_dict(data, 'sum')
 
-            dist.all_reduce_dict(data, 'sum')
-
-            for key in data:
-                assert torch.allclose(data[key], expected[key])
+                for key in data:
+                    assert torch.allclose(data[key], expected[key])
 
     def test_all_gather_object(self):
         self._init_dist_env(self.rank, self.world_size)
+
+        # data is a pickable python object
         if dist.get_rank() == 0:
             data = 'foo'
         else:
@@ -419,8 +491,21 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
         self.assertEqual(output, expected)
 
+        # data is a list of pickable python object
+        if dist.get_rank() == 0:
+            data = ['foo', {1: 2}]
+        else:
+            data = {2: 3}
+
+        expected = [['foo', {1: 2}], {2: 3}]
+        output = dist.all_gather_object(data)
+
+        self.assertEqual(output, expected)
+
     def test_collect_results(self):
         self._init_dist_env(self.rank, self.world_size)
+
+        # 1. test `device` and `tmpdir` parameters
         if dist.get_rank() == 0:
             data = ['foo', {1: 2}]
         else:
@@ -430,14 +515,14 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
         expected = ['foo', 24, {1: 2}, {'a': 'b'}]
 
-        # test `device=cpu`
+        # 1.1 test `device=cpu` and `tmpdir` is None
         output = dist.collect_results(data, size, device='cpu')
         if dist.get_rank() == 0:
             self.assertEqual(output, expected)
         else:
             self.assertIsNone(output)
 
-        # test `device=cpu` and `tmpdir is not None`
+        # 1.2 test `device=cpu` and `tmpdir` is not None
         tmpdir = tempfile.mkdtemp()
         # broadcast tmpdir to all ranks to make it consistent
         object_list = [tmpdir]
@@ -453,7 +538,31 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
             # object_list[0] will be removed by `dist.collect_results`
             self.assertFalse(osp.exists(object_list[0]))
 
-        # test `device=gpu`
+        # 1.3 test `device=gpu`
+        output = dist.collect_results(data, size, device='gpu')
+        if dist.get_rank() == 0:
+            self.assertEqual(output, expected)
+        else:
+            self.assertIsNone(output)
+
+        # 2. test `size` parameter
+        if dist.get_rank() == 0:
+            data = ['foo', {1: 2}]
+        else:
+            data = [24, {'a': 'b'}]
+
+        size = 3
+
+        expected = ['foo', 24, {1: 2}]
+
+        # 2.1 test `device=cpu` and `tmpdir` is None
+        output = dist.collect_results(data, size, device='cpu')
+        if dist.get_rank() == 0:
+            self.assertEqual(output, expected)
+        else:
+            self.assertIsNone(output)
+
+        # 2.2 test `device=gpu`
         output = dist.collect_results(data, size, device='gpu')
         if dist.get_rank() == 0:
             self.assertEqual(output, expected)

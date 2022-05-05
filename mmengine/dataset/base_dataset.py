@@ -293,7 +293,7 @@ class BaseDataset(Dataset):
         if self._fully_initialized:
             return
         # load data information
-        self.data_list = self.load_data_list(self.ann_file)
+        self.data_list = self.load_data_list()
         # filter illegal data, such as data that has no annotations.
         self.data_list = self.filter_data()
         # Get subset data according to indices.
@@ -408,8 +408,8 @@ class BaseDataset(Dataset):
         raise Exception(f'Cannot find valid image after {self.max_refetch}! '
                         'Please check your image path and pipeline')
 
-    def load_data_list(self, ann_file: str) -> List[dict]:
-        """Load annotations from an annotation file.
+    def load_data_list(self) -> List[dict]:
+        """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
@@ -417,15 +417,13 @@ class BaseDataset(Dataset):
         information of annotation file will be overwritten :attr:`METAINFO`
         and ``metainfo`` argument of constructor.
 
-        Args:
-            ann_file (str): Absolute annotation file path if ``self.root=None``
-                or relative path if ``self.root=/path/to/data/``.
-
         Returns:
             list[dict]: A list of annotation.
         """  # noqa: E501
-        check_file_exist(ann_file)
-        annotations = load(ann_file)
+        # `self.ann_file` denotes the absolute annotation file path if
+        # `self.root=None` or relative path if `self.root=/path/to/data/`.
+        check_file_exist(self.ann_file)
+        annotations = load(self.ann_file)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')

@@ -1,22 +1,25 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import functools
 import os
+import numpy as np
 import subprocess
-from typing import Callable, Optional, Tuple
-
+from typing import Callable, Optional, Tuple, Union
+from collections import Mapping, Iterable
 import torch
+from torch import Tensor
 import torch.multiprocessing as mp
-from torch import distributed as dist
+from torch import distributed as torch_dist
+from torch.distributed import ProcessGroup
 
 _LOCAL_PROCESS_GROUP = None
 
 
 def is_distributed() -> bool:
     """Return True if distributed environment has been initialized."""
-    return dist.is_available() and dist.is_initialized()
+    return torch_dist.is_available() and torch_dist.is_initialized()
 
 
-def get_local_group() -> Optional[dist.ProcessGroup]:
+def get_local_group() -> Optional[ProcessGroup]:
     """Return local process group."""
     if not is_distributed():
         return None
@@ -28,10 +31,10 @@ def get_local_group() -> Optional[dist.ProcessGroup]:
     return _LOCAL_PROCESS_GROUP
 
 
-def get_default_group() -> Optional[dist.ProcessGroup]:
+def get_default_group() -> Optional[ProcessGroup]:
     """Return default process group."""
 
-    return dist.distributed_c10d._get_default_group()
+    return torch_dist.distributed_c10d._get_default_group()
 
 
 def init_dist(launcher, backend='nccl', **kwargs) -> None:
@@ -68,7 +71,7 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
     rank = int(os.environ['RANK'])
     num_gpus = torch.cuda.device_count()
     torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    torch_dist.init_process_group(backend=backend, **kwargs)
 
 
 def _init_dist_mpi(backend, **kwargs) -> None:
@@ -83,7 +86,7 @@ def _init_dist_mpi(backend, **kwargs) -> None:
     rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
     num_gpus = torch.cuda.device_count()
     torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    torch_dist.init_process_group(backend=backend, **kwargs)
 
 
 def _init_dist_slurm(backend, port=None) -> None:
@@ -120,7 +123,7 @@ def _init_dist_slurm(backend, port=None) -> None:
     os.environ['WORLD_SIZE'] = str(ntasks)
     os.environ['LOCAL_RANK'] = str(proc_id % num_gpus)
     os.environ['RANK'] = str(proc_id)
-    dist.init_process_group(backend=backend)
+    torch_dist.init_process_group(backend=backend)
 
 
 def init_local_group(node_rank: int, num_gpus_per_node: int):
@@ -143,10 +146,10 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     ranks = list(
         range(node_rank * num_gpus_per_node,
               (node_rank + 1) * num_gpus_per_node))
-    _LOCAL_PROCESS_GROUP = dist.new_group(ranks)
+    _LOCAL_PROCESS_GROUP = torch_dist.new_group(ranks)
 
 
-def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
+def get_backend(group: Optional[ProcessGroup] = None) -> Optional[str]:
     """Return the backend of the given process group.
 
     Note:
@@ -168,12 +171,12 @@ def get_backend(group: Optional[dist.ProcessGroup] = None) -> Optional[str]:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_backend(group)
+        return torch_dist.get_backend(group)
     else:
         return None
 
 
-def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
+def get_world_size(group: Optional[ProcessGroup] = None) -> int:
     """Return the number of the given process group.
 
     Note:
@@ -193,12 +196,12 @@ def get_world_size(group: Optional[dist.ProcessGroup] = None) -> int:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_world_size(group)
+        return torch_dist.get_world_size(group)
     else:
         return 1
 
 
-def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
+def get_rank(group: Optional[ProcessGroup] = None) -> int:
     """Return the rank of the given process group.
 
     Rank is a unique identifier assigned to each process within a distributed
@@ -222,7 +225,7 @@ def get_rank(group: Optional[dist.ProcessGroup] = None) -> int:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        return dist.get_rank(group)
+        return torch_dist.get_rank(group)
     else:
         return 0
 
@@ -241,7 +244,7 @@ def get_local_size() -> int:
         raise RuntimeError('Local process group is not created, please use '
                            '`init_local_group` to setup local process group.')
 
-    return dist.get_world_size(_LOCAL_PROCESS_GROUP)
+    return torch_dist.get_world_size(_LOCAL_PROCESS_GROUP)
 
 
 def get_local_rank() -> int:
@@ -258,11 +261,10 @@ def get_local_rank() -> int:
         raise RuntimeError('Local process group is not created, please use '
                            '`init_local_group` to setup local process group.')
 
-    return dist.get_rank(_LOCAL_PROCESS_GROUP)
+    return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
 
 
-def get_dist_info(
-        group: Optional[dist.ProcessGroup] = None) -> Tuple[int, int]:
+def get_dist_info(group: Optional[ProcessGroup] = None) -> Tuple[int, int]:
     """Get distributed information of the given process group.
 
     Note:
@@ -282,7 +284,7 @@ def get_dist_info(
     return rank, world_size
 
 
-def is_main_process(group: Optional[dist.ProcessGroup] = None) -> bool:
+def is_main_process(group: Optional[ProcessGroup] = None) -> bool:
     """Whether the current rank of the given process group is equal to 0.
 
     Args:
@@ -314,7 +316,7 @@ def master_only(func: Callable) -> Callable:
     return wrapper
 
 
-def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
+def barrier(group: Optional[ProcessGroup] = None) -> None:
     """Synchronize all processes from the given process group.
 
     This collective blocks processes until the whole group enters this
@@ -332,4 +334,166 @@ def barrier(group: Optional[dist.ProcessGroup] = None) -> None:
         # passing in None for group argument
         if group is None:
             group = get_default_group()
-        dist.barrier(group)
+        torch_dist.barrier(group)
+
+
+def get_data_device(data: Union[Tensor, Mapping, Iterable]) -> torch.device:
+    """Return the device of ``data``.
+
+    If ``data`` is a sequence of Tensor, all items in ``data`` should have a
+    same device type.
+
+    If ``data`` is a dict whose values are Tensor, all values should have a
+    same device type.
+
+    Args:
+        data (Tensor or Sequence or dict): Inputs to be inferred the device.
+
+    Returns:
+        torch.device: The device of ``data``.
+
+    Examples:
+        >>> import torch
+        >>> from mmengine.dist import cast_data_device
+        >>> # data is a Tensor
+        >>> data = torch.tensor([0, 1])
+        >>> get_data_device(data)
+        device(type='cpu')
+        >>> # data is a list of Tensor
+        >>> data = [torch.tensor([0, 1]), torch.tensor([2, 3])]
+        >>> get_data_device(data)
+        device(type='cpu')
+        >>> # data is a dict
+        >>> data = {'key1': torch.tensor([0, 1]), 'key2': torch.tensor([0, 1])}
+        >>> get_data_device(data)
+        device(type='cpu')
+    """
+    if isinstance(data, Tensor):
+        return data.device
+    elif isinstance(data, Mapping):
+        pre = None
+        for v in data.values():
+            cur = get_data_device(v)
+            if pre is None:
+                pre = cur
+            else:
+                if cur != pre:
+                    raise ValueError(
+                        'device type in data should be consistent, but got '
+                        f'{cur} and {pre}')
+        if pre is None:
+            raise ValueError('data should not be empty.')
+        return pre
+    elif isinstance(data, Iterable) and not isinstance(data, str):
+        pre = None
+        for item in data:
+            cur = get_data_device(item)
+            if pre is None:
+                pre = cur
+            else:
+                if cur != pre:
+                    raise ValueError(
+                        'device type in data should be consistent, but got '
+                        f'{cur} and {pre}')
+        if pre is None:
+            raise ValueError('data should not be empty.')
+        return pre
+    else:
+        raise TypeError('data should be a Tensor, sequence of tensor or dict, '
+                        f'but got {data}')
+
+
+def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
+    """Return the device for communication among groups.
+
+    Args:
+        group (ProcessGroup, optional): The process group to work on.
+
+    Returns:
+        torch.device: The device of backend.
+    """
+    backend = get_backend(group)
+    if backend == torch_dist.Backend.NCCL:
+        return torch.device('cuda', torch.cuda.current_device())
+    else:
+        # GLOO and MPI backends use cpu device by default
+        return torch.device('cpu')
+
+
+def cast_data_device(
+    data: Union[Tensor, Mapping, Iterable],
+    device: torch.device,
+    out: Optional[Union[Tensor, Mapping, Iterable]] = None
+) -> Union[Tensor, Mapping, Iterable]:
+    """Recursively convert Tensor in ``data`` to ``device``.
+
+    If ``data`` has already on the ``device``, it will not be casted again.
+
+    Args:
+        data (Tensor or list or dict): Inputs to be casted.
+        device (torch.device): Destination device type.
+        out (Tensor or list or dict, optional): If ``out`` is specified, its
+            value will be equal to ``data``. Defaults to None.
+
+    Returns:
+        Tensor or list or dict: ``data`` was casted to ``device``.
+    """
+    if out is not None:
+        if type(data) != type(out):
+            raise TypeError(
+                'out should be the same type with data, but got data is '
+                f'{type(data)} and out is {type(data)}')
+
+        if isinstance(out, set):
+            raise TypeError('out should not be a set')
+
+    if isinstance(data, Tensor):
+        if get_data_device(data) == device:
+            data_on_device = data
+        else:
+            data_on_device = data.to(device)
+
+        if out is not None:
+            # modify the value of out inplace
+            out.copy_(data_on_device)  # type: ignore
+
+        return data_on_device
+    elif isinstance(data, Mapping):
+        data_on_device = {}
+        if out is not None:
+            data_len = len(data)
+            out_len = len(out)  # type: ignore
+            if data_len != out_len:
+                raise ValueError('length of data and out should be same, '
+                                 f'but got {data_len} and {out_len}')
+
+            for k, v in data.items():
+                data_on_device[k] = cast_data_device(v, device,
+                                                     out[k])  # type: ignore
+        else:
+            for k, v in data.items():
+                data_on_device[k] = cast_data_device(v, device)
+
+        if len(data_on_device) == 0:
+            raise ValueError('data should not be empty')
+
+        # To ensure the type of output as same as input, we use `type(data)`
+        # to wrap the output
+        return type(data)(data_on_device)  # type: ignore
+    elif isinstance(data, Iterable) and not isinstance(
+            data, str) and not isinstance(data, np.ndarray):
+        data_on_device = []
+        if out is not None:
+            for v1, v2 in zip(data, out):
+                data_on_device.append(cast_data_device(v1, device, v2))
+        else:
+            for v in data:
+                data_on_device.append(cast_data_device(v, device))
+
+        if len(data_on_device) == 0:
+            raise ValueError('data should not be empty')
+
+        return type(data)(data_on_device)  # type: ignore
+    else:
+        raise TypeError('data should be a Tensor, list of tensor or dict, '
+                        f'but got {data}')

@@ -256,6 +256,7 @@ class StepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if (self.last_step == 0) or (self.last_step % self.step_size != 0):
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -312,6 +313,7 @@ class MultiStepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step not in self.milestones:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -371,6 +373,7 @@ class ConstantParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.factor
@@ -429,6 +432,7 @@ class ExponentialParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -509,6 +513,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -534,6 +539,7 @@ class LinearParamScheduler(_ParamScheduler):
 
     Notice that such decay can happen simultaneously with other changes to the
     parameter value from outside this scheduler.
+
     Args:
         optimizer (Optimizer): Wrapped optimizer.
         start_factor (float): The number we multiply parameter value in the
@@ -584,7 +590,7 @@ class LinearParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     def _get_value(self):
-
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.start_factor
@@ -598,3 +604,64 @@ class LinearParamScheduler(_ParamScheduler):
               (self.end_factor - self.start_factor)))
             for group in self.optimizer.param_groups
         ]
+
+
+@PARAM_SCHEDULERS.register_module()
+class PolyParamScheduler(_ParamScheduler):
+    """Decays the parameter value of each parameter group in a polynomial decay
+    scheme.
+
+    Notice that such decay can happen simultaneously with other changes to the
+    parameter value from outside this scheduler.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        eta_min (float): Minimum parameter value at the end of scheduling.
+            Defaults to 0.
+        power (float): The power of the polynomial. Defaults to 1.0.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
+
+    def __init__(self,
+                 optimizer: Optimizer,
+                 param_name: str,
+                 eta_min: float = 0,
+                 power: float = 1.0,
+                 begin: int = 0,
+                 end: int = INF,
+                 last_step: int = -1,
+                 by_epoch: bool = True,
+                 verbose: bool = False):
+
+        self.eta_min = eta_min
+        self.power = power
+        self.total_iters = end - begin - 1
+
+        super().__init__(
+            optimizer,
+            param_name=param_name,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+    def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
+        if self.last_step == 0:
+            return [
+                group[self.param_name] for group in self.optimizer.param_groups
+            ]
+
+        return [(group[self.param_name] - self.eta_min) *
+                (1 - 1 / (self.total_iters - self.last_step + 1))**self.power +
+                self.eta_min for group in self.optimizer.param_groups]

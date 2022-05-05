@@ -8,9 +8,11 @@ from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
+from mmengine.registry import DATASETS
 from .base_dataset import BaseDataset, force_full_init
 
 
+@DATASETS.register_module()
 class ConcatDataset(_ConcatDataset):
     """A wrapper of concatenated dataset.
 
@@ -24,19 +26,28 @@ class ConcatDataset(_ConcatDataset):
         arguments for wrapped dataset which inherit from ``BaseDataset``.
 
     Args:
-        datasets (Sequence[BaseDataset]): A list of datasets which will be
-            concatenated.
+        datasets (Sequence[BaseDataset] or Sequence[dict]): A list of datasets
+            which will be concatenated.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
-                 datasets: Sequence[BaseDataset],
+                 datasets: Sequence[Union[BaseDataset, dict]],
                  lazy_init: bool = False):
+        self.datasets: List[BaseDataset] = []
+        for i, dataset in enumerate(datasets):
+            if isinstance(dataset, dict):
+                self.datasets.append(DATASETS.build(dataset))
+            elif isinstance(dataset, BaseDataset):
+                self.datasets.append(dataset)
+            else:
+                raise TypeError(
+                    'elements in datasets sequence should be config or '
+                    f'`BaseDataset` instance, but got {type(dataset)}')
         # Only use metainfo of first dataset.
-        self._metainfo = datasets[0].metainfo
-        self.datasets = datasets  # type: ignore
-        for i, dataset in enumerate(datasets, 1):
+        self._metainfo = self.datasets[0].metainfo
+        for i, dataset in enumerate(self.datasets, 1):
             if self._metainfo != dataset.metainfo:
                 raise ValueError(
                     f'The meta information of the {i}-th dataset does not '
@@ -140,6 +151,7 @@ class ConcatDataset(_ConcatDataset):
             'dataset first and then use `ConcatDataset`.')
 
 
+@DATASETS.register_module()
 class RepeatDataset:
     """A wrapper of repeated dataset.
 
@@ -156,19 +168,27 @@ class RepeatDataset:
         arguments for wrapped dataset which inherit from ``BaseDataset``.
 
     Args:
-        dataset (BaseDataset): The dataset to be repeated.
+        dataset (BaseDataset or dict): The dataset to be repeated.
         times (int): Repeat times.
         lazy_init (bool): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
-                 dataset: BaseDataset,
+                 dataset: Union[BaseDataset, dict],
                  times: int,
                  lazy_init: bool = False):
-        self.dataset = dataset
+        self.dataset: BaseDataset
+        if isinstance(dataset, dict):
+            self.dataset = DATASETS.build(dataset)
+        elif isinstance(dataset, BaseDataset):
+            self.dataset = dataset
+        else:
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.times = times
-        self._metainfo = dataset.metainfo
+        self._metainfo = self.dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
@@ -283,7 +303,7 @@ class ClassBalancedDataset:
         ``BaseDataset``.
 
     Args:
-        dataset (BaseDataset): The dataset to be repeated.
+        dataset (BaseDataset or dict): The dataset to be repeated.
         oversample_thr (float): frequency threshold below which data is
             repeated. For categories with ``f_c >= oversample_thr``, there is
             no oversampling. For categories with ``f_c < oversample_thr``, the
@@ -294,12 +314,19 @@ class ClassBalancedDataset:
     """
 
     def __init__(self,
-                 dataset: BaseDataset,
+                 dataset: Union[BaseDataset, dict],
                  oversample_thr: float,
                  lazy_init: bool = False):
-        self.dataset = dataset
+        if isinstance(dataset, dict):
+            self.dataset = DATASETS.build(dataset)
+        elif isinstance(dataset, BaseDataset):
+            self.dataset = dataset
+        else:
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.oversample_thr = oversample_thr
-        self._metainfo = dataset.metainfo
+        self._metainfo = self.dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
