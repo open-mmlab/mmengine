@@ -335,7 +335,10 @@ class Registry:
                 return self._children[scope].get(real_key)
             else:
                 root = self._get_root_registry()
+
                 if scope != root._scope and scope not in root._children:
+                    # If not returns None directly, `root.get(key)` will
+                    # recursively call itself until RecursionError is thrown.
                     return None
 
                 return root.get(key)
