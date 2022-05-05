@@ -295,10 +295,13 @@ class LogProcessor:
                 data_src = log_cfg['data_src']
                 log_name = log_cfg.get('log_name', data_src)
                 assert log_name not in check_set, (
-                    f'If you want to statistic {data_src} with multiple '
-                    'statistics method, please check `log_name` is unique'
-                    f'and {data_src} will not be overwritten twice. See '
-                    f'more information in the docstring of `LogProcessor`')
+                    f'Found duplicate {log_name} for {data_src}. Please check'
+                    'your `custom_cfg` for `log_processor`. You should '
+                    f'neither define duplicate `{log_name}` for {data_src} '
+                    f'nor do not define any {log_name} for multiple '
+                    f'{data_src}, See more information in the docstring of '
+                    'LogProcessor')
+
                 check_set.add(log_name)
 
         _check_repeated_log_name()

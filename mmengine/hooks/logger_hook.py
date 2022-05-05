@@ -20,7 +20,7 @@ class LoggerHook(Hook):
 
     ``LoggerHook`` is used to record logs formatted by ``LogProcessor`` during
     training/validation/testing phase. It is used to control following
-    behaviers:
+    behaviors:
 
     - The frequency of logs update in terminal, local, tensorboad wandb.etc.
     - The frequency of show experiment information in terminal.
@@ -41,10 +41,10 @@ class LoggerHook(Hook):
              of ``out_dir`` and the last level directory of
             ``runner.work_dir``. For example, if the input ``our_dir`` is
             ``./tmp`` and ``runner.work_dir`` is ``./work_dir/cur_exp``,
-            then the log will be saved in ``./tmp/cur_exp``. Deafule to None.
-        out_suffix (Tuple[str] or str): Those filenames ending with
-            ``out_suffix`` will be copied to ``out_dir``. Defaults to
-            ('.log.json', '.log', '.py').
+            then the log will be saved in ``./tmp/cur_exp``. Defaults to None.
+        out_suffix (Tuple[str] or str): Those files in ``runner._log_dir``
+            ending with ``out_suffix`` will be copied to ``out_dir``. Defaults
+            to ('json', '.log', '.py').
         keep_local (bool): Whether to keep local logs in the local machine
             when :attr:`out_dir` is specified. If False, the local log will be
             removed. Defaults to True.
@@ -64,7 +64,8 @@ class LoggerHook(Hook):
         ignore_last: bool = True,
         interval_exp_name: int = 1000,
         out_dir: Optional[Union[str, Path]] = None,
-        out_suffix: Union[Sequence[str], str] = ('.log.json', '.log', '.py'),
+        out_suffix: Union[Sequence[str],
+                          str] = ('.json', '.log', '.py', 'yaml'),
         keep_local: bool = True,
         file_client_args: Optional[dict] = None,
     ):
