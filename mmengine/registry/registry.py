@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
+from ..logging.logger import MMLogger
 from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
@@ -92,12 +93,23 @@ def build_from_cfg(
         # by `ManagerMixin.get_instance` to ensure that it can be accessed
         # globally.
         if issubclass(obj_cls, ManagerMixin):  # type: ignore
-            return obj_cls.get_instance(**args)  # type: ignore
+            obj = obj_cls.get_instance(**args)  # type: ignore
         else:
-            return obj_cls(**args)  # type: ignore
+            obj = obj_cls(**args)  # type: ignore
+
+        logger: MMLogger = MMLogger.get_current_instance()
+        logger.info(
+            f'An `{obj_cls.__name__}` instance is built from '  # type: ignore
+            f'registry, its implementation can be found in '
+            f'{obj_cls.__module__}')  # type: ignore
+        return obj
+
     except Exception as e:
         # Normal TypeError does not print class name.
-        raise type(e)(f'{obj_cls.__name__}: {e}')  # type: ignore
+        cls_location = '/'.join(obj_cls.__module__.split('.'))  # type: ignore
+        raise type(e)(
+            f'class `{obj_cls.__name__}` in '  # type: ignore
+            f'{cls_location}.py: {e}')
 
 
 class Registry:
@@ -317,27 +329,39 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
         scope, real_key = self.split_scope_key(key)
+        obj_cls = None
+        registry_name = self.name
+        scope_name = self.scope
         if scope is None or scope == self._scope:
             # get from self
             if real_key in self._module_dict:
-                return self._module_dict[real_key]
+                obj_cls = self._module_dict[real_key]
 
-            if scope is None:
+            elif scope is None:
                 # try to get the target from its parent or ancestors
                 parent = self.parent
                 while parent is not None:
                     if real_key in parent._module_dict:
-                        return parent._module_dict[real_key]
+                        obj_cls = parent._module_dict[real_key]
+                        registry_name = parent.name
+                        scope_name = parent.scope
+                        break
                     parent = parent.parent
         else:
             # get from self._children
             if scope in self._children:
-                return self._children[scope].get(real_key)
+                obj_cls = self._children[scope].get(real_key)
+                registry_name = self._children[scope].name
+                scope_name = scope
             else:
                 root = self._get_root_registry()
-                return root.get(key)
-
-        return None
+                obj_cls = root.get(key)
+        if obj_cls is not None:
+            logger: MMLogger = MMLogger.get_current_instance()
+            logger.info(
+                f'Get class `{obj_cls.__name__}` from "{registry_name}"'
+                f' registry in "{scope_name}"')
+        return obj_cls
 
     def _search_child(self, scope: str) -> Optional['Registry']:
         """Depth-first search for the corresponding registry in its children.
@@ -387,16 +411,19 @@ class Registry:
         # get the global default scope
         default_scope = DefaultScope.get_current_instance()
         if default_scope is not None:
+            scope_name = default_scope.scope_name
             root = self._get_root_registry()
-            registry = root._search_child(default_scope.scope_name)
+            registry = root._search_child(scope_name)
             if registry is None:
                 # if `default_scope` can not be found, fallback to use self
                 warnings.warn(
-                    f'Failed to search registry named "{default_scope}". '
-                    'As a workaround, the current registry is used to build '
-                    'instance. This may cause unexpected failure when running '
-                    'the built modules. Please check whether '
-                    f'"{default_scope}" is a correct scope.')
+                    f'Failed to search registry with scope "{scope_name}" in '
+                    f'the "{root.name}" registry tree. '
+                    f'As a workaround, the current "{self.name}" registry in '
+                    f'"{self.scope}" is used to build instance. This may '
+                    f'cause unexpected failure when running the built '
+                    f'modules. Please check whether "{scope_name}" is a '
+                    f'correct scope, or whether the registry is initialized.')
                 registry = self
         else:
             registry = self
