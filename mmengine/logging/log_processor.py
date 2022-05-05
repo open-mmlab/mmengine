@@ -109,8 +109,6 @@ class LogProcessor:
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in ['train', 'test', 'val']
-        if mode == 'test':
-            print(111)
         current_loop = self._get_cur_loop(runner, mode)
         cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
