@@ -21,8 +21,8 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
-from mmengine.dist import (broadcast, get_dist_info, init_dist, master_only,
-                           sync_random_seed)
+from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
+                           master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
@@ -776,7 +776,9 @@ class Runner:
 
         return model
 
-    def build_optimizer(self, optimizer: Union[Optimizer, Dict]) -> Optimizer:
+    @staticmethod
+    def build_optimizer(model: nn.Module, optimizer: Union[Optimizer,
+                                                           Dict]) -> Optimizer:
         """Build optimizer.
 
         An example of ``optimizer``::
@@ -784,6 +786,7 @@ class Runner:
             optimizer = dict(type='SGD', lr=0.01)
 
         Args:
+            model (nn.Module): Model to be optimized.
             optimizer (Optimizer or dict): An Optimizer object or a dict to
                 build Optimizer object. If ``optimizer`` is an Optimizer
                 object, just returns itself.
@@ -794,15 +797,16 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            optimizer = build_optimizer(self.model, optimizer)
+            optimizer = build_optimizer(model, optimizer)
             return optimizer
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
                             f'but got {optimizer}')
 
+    @staticmethod
     def build_param_scheduler(
-        self, scheduler: Union[_ParamScheduler, Dict,
-                               List]) -> List[_ParamScheduler]:
+        optimizer: Optimizer, scheduler: Union[_ParamScheduler, Dict,
+                                               List]) -> List[_ParamScheduler]:
         """Build parameter schedulers.
 
         Examples of ``scheduler``::
@@ -816,6 +820,7 @@ class Runner:
             ]
 
         Args:
+            optimizer (Optimizer): Optimizer passed to ParamScheduler.
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
 
@@ -823,11 +828,9 @@ class Runner:
             list[:obj:`_ParamScheduler`]: List of parameter schedulers build
             from ``scheduler``.
         """
-        if not isinstance(self.optimizer, Optimizer):
-            raise RuntimeError(
-                '`build_optimizer` should be called before'
-                '`build_param_scheduler` because the latter depends on the '
-                'former')
+        if not isinstance(optimizer, Optimizer):
+            raise TypeError('optimizer should be an Optimizer object, '
+                            f'but got {optimizer}')
 
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
@@ -841,8 +844,7 @@ class Runner:
             elif isinstance(_scheduler, dict):
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
-                        _scheduler,
-                        default_args=dict(optimizer=self.optimizer)))
+                        _scheduler, default_args=dict(optimizer=optimizer)))
             else:
                 raise TypeError(
                     '_scheduler should be a _ParamScheduler object or dict, '
@@ -850,8 +852,9 @@ class Runner:
 
         return param_schedulers
 
+    @staticmethod
     def build_evaluator(
-            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
+            evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
@@ -865,9 +868,8 @@ class Runner:
             ]
 
         Args:
-            evaluator (Evaluator or dict or list):
-                An Evaluator object or a config dict or list of config dict
-                used to build an Evaluator.
+            evaluator (Evaluator or dict or list): An Evaluator object or a
+                config dict or list of config dict used to build an Evaluator.
 
         Returns:
             Evaluator: Evaluator build from ``evaluator``.
@@ -881,8 +883,9 @@ class Runner:
                 'evaluator should be one of dict, list of dict, and Evaluator'
                 f', but got {evaluator}')
 
-    def build_dataloader(self, dataloader: Union[DataLoader,
-                                                 Dict]) -> DataLoader:
+    @staticmethod
+    def build_dataloader(dataloader: Union[DataLoader, Dict],
+                         seed: Optional[int] = None) -> DataLoader:
         """Build dataloader.
 
         The method builds three components:
@@ -904,6 +907,7 @@ class Runner:
             dataloader (DataLoader or dict): A Dataloader object or a dict to
                 build Dataloader object. If ``dataloader`` is a Dataloader
                 object, just returns itself.
+            seed (int, optional): Random seed. Defaults to None.
 
         Returns:
             Dataloader: DataLoader build from ``dataloader_cfg``.
@@ -951,12 +955,12 @@ class Runner:
 
         # build dataloader
         init_fn: Optional[partial]
-        if self.seed is not None:
+        if seed is not None:
             init_fn = partial(
                 worker_init_fn,
                 num_workers=dataloader_cfg.get('num_workers'),
-                rank=self.rank,
-                seed=self.seed)
+                rank=get_rank(),
+                seed=seed)
         else:
             init_fn = None
 
@@ -1024,11 +1028,11 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
-        self.optimizer = self.build_optimizer(self.optimizer)
+        self.optimizer = self.build_optimizer(self.model, self.optimizer)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
+                self.optimizer, self.param_schedulers)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1421,7 +1425,7 @@ class Runner:
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
-            self.optimizer = self.build_optimizer(self.optimizer)
+            self.optimizer = self.build_optimizer(self.model, self.optimizer)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
         # resume param scheduler
