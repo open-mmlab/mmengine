@@ -169,11 +169,16 @@ class TestInstanceData(TestCase):
         bool_numpy_instance_data = instance_data[bool_numpy]
         assert len(bool_numpy_instance_data) == bool_numpy.sum()
 
-        # with out cat
+        # without cat
         instance_data.polygons = TmpObjectWithoutCat(
             np.arange(25).reshape((5, -1)).tolist())
         bool_numpy = np.random.rand(5) > 0.5
-        with pytest.raises(ValueError):
+        with pytest.raises(
+                ValueError,
+                match=('The type of `polygons` is '
+                       f'`{type(instance_data.polygons)}`, '
+                       'which has no attribute of `cat`, so it is not '
+                       f'support slice with `bool`')):
             bool_numpy_instance_data = instance_data[bool_numpy]
 
     def test_cat(self):
@@ -203,7 +208,11 @@ class TestInstanceData(TestCase):
         instance_data_1.polygons = TmpObjectWithoutCat(
             np.arange(25).reshape((5, -1)).tolist())
         instance_data_2 = instance_data_1.clone()
-        with pytest.raises(ValueError):
+        with pytest.raises(
+                ValueError,
+                match=('The type of `polygons` is '
+                       f'`{type(instance_data_1.polygons)}` '
+                       'which has no attribute of `cat`')):
             cat_instance_data = InstanceData.cat(
                 [instance_data_1, instance_data_2])
 

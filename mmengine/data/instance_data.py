@@ -21,9 +21,9 @@ class InstanceData(BaseDataElement):
     Subclass of :class:`BaseDataElement`. All value in `data_fields`
     should have the same length. This design refer to
     https://github.com/facebookresearch/detectron2/blob/master/detectron2/structures/instances.py # noqa E501
-    InstanceData also support extra functions: `index`, `slice` and `cat` for data field. The type of value
+    InstanceData also support extra functions: ``index``, ``slice`` and ``cat`` for data field. The type of value
     in data field can be base data structure such as `torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`,
-    also it can be custom data structure, if it has the attributes of `__len__`, `__getitem__` and `cat`.
+    and can be customized data structure that has ``__len__``, ``__getitem__`` and ``cat`` attributes.
     Examples:
         >>> # custom data structure
         >>> class TmpObject:
@@ -224,8 +224,9 @@ class InstanceData(BaseDataElement):
                     new_data[k] = new_value
                 else:
                     raise ValueError(
-                        f'{k} has no attribute of `cat`, so it is not '
-                        f'support slice with {type(item)}')
+                        f'The type of `{k}` is `{type(v)}`, which has no '
+                        'attribute of `cat`, so it is not '
+                        f'support slice with `bool`')
 
         else:
             # item is a slice
@@ -284,7 +285,8 @@ class InstanceData(BaseDataElement):
                 new_values = v0.cat(values)
             else:
                 raise ValueError(
-                    f'Can not concat the {k} which is a {type(v0)}')
+                    f'The type of `{k}` is `{type(v0)}` which has no '
+                    'attribute of `cat`')
             new_data[k] = new_values
         return new_data  # type:ignore
 

@@ -7,7 +7,7 @@ import torch
 
 
 class BaseDataElement:
-    """A base data structure interface of OpenMMlab. The data in the algorithm
+    """A base data structure interface of OpenMMLab. The data in the algorithm
     can be classified into data elements with different properties. The
     groundtruth, the prediction and both groundtruth and prediction of an image
     can be abstracted into data elements.Therefore, MMEngine defines the basic
@@ -276,8 +276,9 @@ class BaseDataElement:
             metainfo (dict, optional): A dict contains the meta information
                 of image, such as ``img_shape``, ``scale_factor``, etc.
                 Defaults to None.
-            data (dict, optional): A dict contains annotations of image or
-                model predictions. Defaults to None.
+            kwargs (dict): A dict contains annotations of image or
+                model predictions.
+
         Returns:
             BaseDataElement: a new data element with same type.
         """
