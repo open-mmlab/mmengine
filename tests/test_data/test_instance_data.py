@@ -177,7 +177,7 @@ class TestInstanceData(TestCase):
                 ValueError,
                 match=('The type of `polygons` is '
                        f'`{type(instance_data.polygons)}`, '
-                       'which has no attribute of `cat`, so it is not '
+                       'which has no attribute of `cat`, so it does not '
                        f'support slice with `bool`')):
             bool_numpy_instance_data = instance_data[bool_numpy]
 

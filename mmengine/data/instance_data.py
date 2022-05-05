@@ -24,6 +24,7 @@ class InstanceData(BaseDataElement):
     InstanceData also support extra functions: ``index``, ``slice`` and ``cat`` for data field. The type of value
     in data field can be base data structure such as `torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`,
     and can be customized data structure that has ``__len__``, ``__getitem__`` and ``cat`` attributes.
+
     Examples:
         >>> # custom data structure
         >>> class TmpObject:
@@ -225,7 +226,7 @@ class InstanceData(BaseDataElement):
                 else:
                     raise ValueError(
                         f'The type of `{k}` is `{type(v)}`, which has no '
-                        'attribute of `cat`, so it is not '
+                        'attribute of `cat`, so it does not '
                         f'support slice with `bool`')
 
         else:

@@ -7,14 +7,8 @@ import torch
 
 
 class BaseDataElement:
-    """A base data structure interface of OpenMMLab. The data in the algorithm
-    can be classified into data elements with different properties. The
-    groundtruth, the prediction and both groundtruth and prediction of an image
-    can be abstracted into data elements.Therefore, MMEngine defines the basic
-    class `BaseDataElement` and its basic functions such as create delete
-    update and retrieve. The repository based on `MMEngine` can define the data
-    element derived from `BasedataElement` as an abstract data interface
-    between the components of the library.
+    """A base data interface that supports Tensor-like and dict-like
+    operations.
 
     A typical data elements refer to predicted results or ground truth labels
     on a task, such as predicted bboxes, instance masks, semantic
@@ -37,13 +31,13 @@ class BaseDataElement:
     same time (for example, both pixel-level semantic segmentation annotations
     and instance-level detection bboxes annotations). All labels and
     predictions of a training sample are often passed between Dataset, Model,
-    Visualizer, and Evaluator components.In order to simplify the interface
+    Visualizer, and Evaluator components. In order to simplify the interface
     between components, we can treat them as a large data element and
     encapsulate them. Such data elements are generally called XXDataSample in
     the OpenMMLab. Therefore, Similar to `nn.Module`, the `BaseDataElement`
     allows `BaseDataElement` as its attribute. Such a class generally
     encapsulates all the data of a sample in the algorithm library, and its
-    attributes generally are various types of data elements.For example,
+    attributes generally are various types of data elements. For example,
     MMDetection is assigned by the BaseDataElement to encapsulate all the data
     elements of the sample labeling and prediction of a sample in the
     algorithm library.
