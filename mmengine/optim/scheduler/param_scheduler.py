@@ -119,12 +119,6 @@ class _ParamScheduler:
 
         self.step()
 
-    @classmethod
-    def build_iter_based(cls, *args, **kwargs):
-        """Build an iter-based instance of this scheduler from an epoch-based
-        config."""
-        raise NotImplementedError
-
     def state_dict(self) -> dict:
         """Returns the state of the scheduler as a :class:`dict`.
 
@@ -261,6 +255,41 @@ class StepParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         step_size: int,
+                         gamma: float = 0.1,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        step_size = step_size * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            step_size=step_size,
+            gamma=gamma,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
     def _get_value(self):
         if (self.last_step == 0) or (self.last_step % self.step_size != 0):
             return [
@@ -319,29 +348,38 @@ class MultiStepParamScheduler(_ParamScheduler):
 
     @classmethod
     def build_iter_based(cls,
-                         *args,
-                         epoch_length: int,
+                         optimizer: Optimizer,
+                         param_name: str,
                          milestones: List[int],
+                         gamma: float = 0.1,
                          begin: int = 0,
                          end: int = INF,
+                         last_step: int = -1,
                          by_epoch: bool = True,
-                         **kwargs):
+                         verbose: bool = False,
+                         epoch_length: int = None):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
                          'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
         by_epoch = False
         milestones = [i * epoch_length for i in milestones]
         begin = begin * epoch_length
         if end != INF:
             end = end * epoch_length
         return cls(
-            *args,
+            optimizer=optimizer,
+            param_name=param_name,
             milestones=milestones,
+            gamma=gamma,
             begin=begin,
             end=end,
+            last_step=last_step,
             by_epoch=by_epoch,
-            **kwargs)
+            verbose=verbose)
 
     def _get_value(self):
         if self.last_step not in self.milestones:
@@ -402,6 +440,38 @@ class ConstantParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         factor: float = 1.0 / 3,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            factor=factor,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
     def _get_value(self):
         if self.last_step == 0:
             return [
@@ -454,6 +524,38 @@ class ExponentialParamScheduler(_ParamScheduler):
         super().__init__(
             optimizer,
             param_name=param_name,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         gamma: float,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            gamma=gamma,
             begin=begin,
             end=end,
             last_step=last_step,
@@ -540,6 +642,41 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         T_max: int,
+                         eta_min: float = 0.,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        T_max = T_max * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            T_max=T_max,
+            eta_min=eta_min,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
     def _get_value(self):
         if self.last_step == 0:
             return [
@@ -616,6 +753,40 @@ class LinearParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         start_factor: float = 1.0 / 3,
+                         end_factor: float = 1.0,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            start_factor=start_factor,
+            end_factor=end_factor,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
     def _get_value(self):
 
         if self.last_step == 0:
@@ -676,6 +847,40 @@ class PolyParamScheduler(_ParamScheduler):
         super().__init__(
             optimizer,
             param_name=param_name,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+    @classmethod
+    def build_iter_based(cls,
+                         optimizer: Optimizer,
+                         param_name: str,
+                         eta_min: float = 0,
+                         power: float = 1.0,
+                         begin: int = 0,
+                         end: int = INF,
+                         last_step: int = -1,
+                         by_epoch: bool = True,
+                         verbose: bool = False,
+                         epoch_length: int = None):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            optimizer=optimizer,
+            param_name=param_name,
+            eta_min=eta_min,
+            power=power,
             begin=begin,
             end=end,
             last_step=last_step,
