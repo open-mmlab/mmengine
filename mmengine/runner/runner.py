@@ -30,7 +30,8 @@ from mmengine.model import is_model_wrapper
 from mmengine.optim import _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               VISUALIZERS, DefaultScope)
+                               VISUALIZERS, DefaultScope,
+                               count_registered_modules)
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import Visualizer
@@ -316,6 +317,8 @@ class Runner:
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
+        self._log_dir = osp.join(self.work_dir, self.timestamp)
+        mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
@@ -326,6 +329,12 @@ class Runner:
         # Since `get_instance` could return any subclass of ManagerMixin. The
         # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
+
+        # collect information of all modules registered in the registries
+        registries_info = count_registered_modules(
+            self.work_dir if self.rank == 0 else None, verbose=False)
+        self.logger.debug(registries_info)
+
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
         # runtime information (iter and epoch). Those components that do not
@@ -628,7 +637,7 @@ class Runner:
             MMLogger: A MMLogger object build from ``logger``.
         """
         if log_file is None:
-            log_file = osp.join(self.work_dir, f'{self._experiment_name}.log')
+            log_file = osp.join(self._log_dir, f'{self._experiment_name}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
@@ -677,9 +686,8 @@ class Runner:
         if visualizer is None:
             visualizer = dict(
                 name=self._experiment_name,
-                vis_backends=[
-                    dict(type='LocalVisBackend', save_dir=self._work_dir)
-                ])
+                vis_backends=[dict(type='LocalVisBackend')],
+                save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
@@ -688,7 +696,7 @@ class Runner:
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
             visualizer.setdefault('name', self._experiment_name)
-            visualizer.setdefault('save_dir', self._work_dir)
+            visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(

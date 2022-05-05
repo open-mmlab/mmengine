@@ -423,6 +423,16 @@ class TestBaseDataElement(TestCase):
         instances = BaseDataElement(metainfo=metainfo, **data)
         dict_instances = instances.to_dict()
         # test convert BaseDataElement to dict
+        for k in instances.all_keys():
+            # all keys in instances should be in dict_instances
+            assert k in dict_instances
         assert isinstance(dict_instances, dict)
+        # sub data element should also be converted to dict
         assert isinstance(dict_instances['gt_instances'], dict)
         assert isinstance(dict_instances['pred_instances'], dict)
+
+    def test_metainfo(self):
+        # test metainfo property
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo=metainfo, **data)
+        self.assertDictEqual(instances.metainfo, metainfo)

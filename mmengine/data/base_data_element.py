@@ -349,6 +349,11 @@ class BaseDataElement:
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
 
+    @property
+    def metainfo(self) -> dict:
+        """dict: A dict contains metainfo of current data element."""
+        return dict(self.metainfo_items())
+
     def __setattr__(self, name: str, value: Any):
         """setattr is only used to set data."""
         if name in ('_metainfo_fields', '_data_fields'):
@@ -510,7 +515,7 @@ class BaseDataElement:
         """Convert BaseDataElement to dict."""
         return {
             k: v.to_dict() if isinstance(v, BaseDataElement) else v
-            for k, v in self.items()
+            for k, v in self.all_items()
         }
 
     def __repr__(self) -> str:
