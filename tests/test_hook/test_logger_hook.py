@@ -95,7 +95,7 @@ class TestLoggerHook:
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
         logger_hook = LoggerHook(ignore_last=False)
-        runner.train_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
         logger_hook.after_train_iter(runner, batch_idx=4)
         runner.log_processor.get_log_after_iter.assert_called()
 
