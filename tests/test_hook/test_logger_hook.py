@@ -15,7 +15,7 @@ class TestLoggerHook:
         assert logger_hook.interval == 10
         assert logger_hook.ignore_last
         assert logger_hook.interval_exp_name == 1000
-        assert logger_hook.out_suffix == ('.log.json', '.log', '.py')
+        assert logger_hook.out_suffix == ('.json', '.log', '.py', 'yaml')
         assert logger_hook.keep_local
         assert logger_hook.file_client_args is None
         assert isinstance(logger_hook.file_client.client, HardDiskBackend)
@@ -29,36 +29,42 @@ class TestLoggerHook:
     def test_before_run(self):
         runner = MagicMock()
         runner.iter = 10
-        runner.timestamp = 'timestamp'
+        runner.timestamp = '20220429'
+        runner._log_dir = f'work_dir/{runner.timestamp}'
         runner.work_dir = 'work_dir'
         runner.logger = MagicMock()
         logger_hook = LoggerHook(out_dir='out_dir')
         logger_hook.before_run(runner)
         assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
-        assert logger_hook.json_log_path == osp.join('work_dir',
-                                                     'timestamp.log.json')
+        assert logger_hook.json_log_path == f'{runner.timestamp}.json'
 
     def test_after_run(self, tmp_path):
         # Test
+        timestamp = '20220429'
         out_dir = tmp_path / 'out_dir'
         out_dir.mkdir()
         work_dir = tmp_path / 'work_dir'
         work_dir.mkdir()
-        work_dir_json = work_dir / 'tmp.log.json'
+        log_dir = work_dir / timestamp
+        log_dir.mkdir()
+        log_dir_json = log_dir / 'tmp.log.json'
         runner = MagicMock()
-        runner.work_dir = work_dir
+        runner._log_dir = str(log_dir)
+        runner.timestamp = timestamp
+        runner.work_dir = str(work_dir)
         # Test without out_dir.
         logger_hook = LoggerHook()
         logger_hook.after_run(runner)
         # Test with out_dir and make sure json file has been moved to out_dir.
-        json_f = open(work_dir_json, 'w')
+        json_f = open(log_dir_json, 'w')
         json_f.close()
-        logger_hook = LoggerHook(out_dir=str(tmp_path), keep_local=False)
+        logger_hook = LoggerHook(out_dir=str(out_dir), keep_local=False)
         logger_hook.out_dir = str(out_dir)
+        logger_hook.before_run(runner)
         logger_hook.after_run(runner)
         # Verify that the file has been moved to `out_dir`.
-        assert not osp.exists(str(work_dir_json))
-        assert osp.exists(str(out_dir / 'tmp.log.json'))
+        assert not osp.exists(str(log_dir_json))
+        assert osp.exists(str(out_dir / 'work_dir' / 'tmp.log.json'))
 
     def test_after_train_iter(self):
         # Test LoggerHook by iter.
@@ -89,7 +95,7 @@ class TestLoggerHook:
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
         logger_hook = LoggerHook(ignore_last=False)
-        runner.train_dataloader = [0] * 5
+        runner.train_loop.dataloader = [0] * 5
         logger_hook.after_train_iter(runner, batch_idx=4)
         runner.log_processor.get_log_after_iter.assert_called()
 
