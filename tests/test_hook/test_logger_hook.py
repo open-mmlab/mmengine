@@ -15,7 +15,7 @@ class TestLoggerHook:
         assert logger_hook.interval == 10
         assert logger_hook.ignore_last
         assert logger_hook.interval_exp_name == 1000
-        assert logger_hook.out_suffix == ('.log.json', '.log', '.py')
+        assert logger_hook.out_suffix == ('.json', '.log', '.py', 'yaml')
         assert logger_hook.keep_local
         assert logger_hook.file_client_args is None
         assert isinstance(logger_hook.file_client.client, HardDiskBackend)
