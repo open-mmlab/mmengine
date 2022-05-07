@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, Iterator, Optional, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -411,7 +411,7 @@ class BaseDataElement:
 
     def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
-        return self.__dict__.get(key, default)
+        return getattr(self, key, default)
 
     def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
@@ -444,7 +444,7 @@ class BaseDataElement:
     def set_field(self,
                   value: Any,
                   name: str,
-                  dtype: Optional[Type] = None,
+                  dtype: Optional[Union[Type, Tuple[Type, ...]]] = None,
                   field_type: str = 'data') -> None:
         """Special method for set union field, used as property.setter
         functions."""
