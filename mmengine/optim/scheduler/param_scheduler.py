@@ -256,14 +256,14 @@ class StepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         step_size,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              step_size,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -341,14 +341,14 @@ class MultiStepParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         milestones,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              milestones,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -429,13 +429,13 @@ class ConstantParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -508,13 +508,13 @@ class ExponentialParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -609,14 +609,14 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         T_max,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              T_max,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -714,13 +714,13 @@ class LinearParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
@@ -801,13 +801,13 @@ class PolyParamScheduler(_ParamScheduler):
             verbose=verbose)
 
     @classmethod
-    def build_iter_based(cls,
-                         *args,
-                         begin=0,
-                         end=INF,
-                         by_epoch=True,
-                         epoch_length=None,
-                         **kwargs):
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
         """Build an iter-based instance of this scheduler from an epoch-based
         config."""
         assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \

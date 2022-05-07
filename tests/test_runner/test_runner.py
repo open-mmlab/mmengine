@@ -607,7 +607,8 @@ class TestRunner(TestCase):
             type='MultiStepLR', milestones=[1, 2], convert_to_iter_based=True)
         with self.assertRaisesRegex(
                 AssertionError,
-                'Scheduler can only be converted when train loop is built'):
+                'Scheduler can only be converted to iter-based when '
+                'train loop is built.'):
             param_schedulers = runner.build_param_scheduler(cfg)
 
         # convert epoch-based to iter-based scheduler

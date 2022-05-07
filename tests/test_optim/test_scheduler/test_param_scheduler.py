@@ -437,7 +437,7 @@ class TestParameterScheduler(TestCase):
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
         with self.assertRaises(AssertionError):
-            scheduler = StepParamScheduler.build_iter_based(
+            scheduler = StepParamScheduler.build_iter_from_epoch(
                 self.optimizer,
                 param_name='momentum',
                 gamma=0.1,
@@ -453,7 +453,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = StepParamScheduler.build_iter_based(
+        scheduler = StepParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='momentum',
             gamma=0.1,
@@ -477,7 +477,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = MultiStepParamScheduler.build_iter_based(
+        scheduler = MultiStepParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             gamma=0.1,
@@ -496,7 +496,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = ConstantParamScheduler.build_iter_based(
+        scheduler = ConstantParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             factor=1.0 / 2,
@@ -517,7 +517,7 @@ class TestParameterScheduler(TestCase):
         single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
             epochs * epoch_length - iters)
         targets = [single_targets, [x * epochs for x in single_targets]]
-        scheduler = LinearParamScheduler.build_iter_based(
+        scheduler = LinearParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             start_factor=start_factor,
@@ -536,7 +536,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = ExponentialParamScheduler.build_iter_based(
+        scheduler = ExponentialParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             gamma=0.9,
@@ -557,7 +557,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = CosineAnnealingParamScheduler.build_iter_based(
+        scheduler = CosineAnnealingParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             T_max=t,
@@ -582,7 +582,7 @@ class TestParameterScheduler(TestCase):
             single_targets,
             [x * epochs * epoch_length for x in single_targets]
         ]
-        scheduler = PolyParamScheduler.build_iter_based(
+        scheduler = PolyParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
             power=power,
