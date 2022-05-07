@@ -150,7 +150,6 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch=data_batch)
         # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
-        self.runner.outputs['num_samples'] = len(data_batch)
 
         self.runner.call_hook(
             'after_train_iter',
