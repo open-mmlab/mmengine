@@ -79,7 +79,6 @@ class EpochBasedTrainLoop(BaseLoop):
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be a dict containing one or multiple loss tensors
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
-        self.runner.outputs['num_samples'] = len(data_batch)
 
         self.runner.call_hook(
             'after_train_iter',

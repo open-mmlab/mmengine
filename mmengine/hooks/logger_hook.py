@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
-from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
@@ -125,10 +124,10 @@ class LoggerHook(Hook):
                 Defaults to None.
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
-        if isinstance(outputs, OrderedDict):
+        if outputs is not None and data_batch is not None:
             for key, value in outputs['log_vars'].items():
                 runner.message_hub.update_scalar(f'train/{key}', value,
-                                                 outputs['num_samples'])
+                                                 len(data_batch))
         # Print experiment name every n iterations.
         if self.every_n_iters(runner,
                               self.interval_exp_name) or (self.end_of_epoch(
