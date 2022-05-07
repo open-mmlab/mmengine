@@ -402,7 +402,7 @@ from mmengine.registry import DATASETS
 
 
 @DATASETS.register_module()
-class WrapBaseDataset:
+class ExampleDatasetWrapper:
 
     def __init__(self, dataset, lazy_init = False, ...):
         # 构建原数据集（self.dataset）
