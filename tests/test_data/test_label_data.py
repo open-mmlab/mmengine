@@ -34,12 +34,12 @@ class TestLabelData(TestCase):
         label_data.item = item
         label_data.num_classes = 10
         label_data.to_onehot()
-        assert tuple(label_data.item.shape) == (item.shape[0], 10)
+        assert tuple(label_data.item.shape) == (10, )
 
         item = torch.arange(0, 9)
         label_data.item = item
         label_data.to_onehot()
-        assert tuple(label_data.item.shape) == (item.shape[0], 10)
+        assert tuple(label_data.item.shape) == (10, )
 
     def test_to_label(self):
         label_data = LabelData()

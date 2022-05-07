@@ -3,7 +3,6 @@
 from typing import Union
 
 import torch
-import torch.nn.functional as F
 
 from .base_data_element import BaseDataElement
 
@@ -40,18 +39,21 @@ class LabelData(BaseDataElement):
     def to_onehot(self) -> None:
         """convert `item` to onehot.
 
-        The `number_classes` must be set.
+        The `num_classes` must be set.
         """
         assert 'item' in self, 'please set `item`'
-        assert 'num_classes' in self, 'please set `number_classes`'
-        self.item = F.one_hot(self.item, self.num_classes)
+        assert 'num_classes' in self, 'please set `num_classes`'
+        item = torch.zeros((self.num_classes, ), dtype=torch.int64)
+        item[self.item] = 1
+        self.item = item
 
     def to_label(self) -> None:
         """Convert `item` to label if its type is onehot."""
-        if (isinstance(self.item, torch.Tensor) and self.item.ndim == 2
-                and self.item.shape[1] == self.num_classes
+        if (isinstance(self.item, torch.Tensor) and self.item.ndim == 1
+                and self.item.shape[0] == self.num_classes
                 and self.item.max().item() <= 1
                 and self.item.min().item() >= 0):
-            self.item = self.item.argmax(dim=1)
+            self.item = self.item.nonzero().squeeze()
         else:
-            raise ValueError('item is not onehot and can not convert to label')
+            raise ValueError(
+                '`item` is not onehot and can not convert to label')
