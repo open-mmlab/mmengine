@@ -32,6 +32,15 @@ class LabelData(BaseDataElement):
         del self._item  # type: ignore
 
     def to_onehot(self, num_classes: Optional[int] = None) -> None:
+        """convert `item` to onehot in place. If num_classes is None,
+        `num_classes` must in `LabelData.metainfo_keys()`
+
+        Args:
+            num_classes (Optional[int]): The number of classes.
+        """
+        self.item = self.get_onehot(num_classes=num_classes)
+
+    def get_onehot(self, num_classes: Optional[int] = None) -> torch.Tensor:
         """convert `item` to onehot. If num_classes is None, `num_classes` must
         in `LabelData.metainfo_keys()`
 
@@ -43,27 +52,29 @@ class LabelData(BaseDataElement):
             self.set_field(
                 num_classes, 'num_classes', dtype=int, field_type='metainfo')
         assert 'num_classes' in self.metainfo_keys(), (
-            'Please set `num_classes` with '
-            '`.set_metainfo({num_classes=num_classes})` '
+            'Please provide `num_classes` in metainfo at first '
             'or pass `num_classes` parameter')
         item = torch.zeros(
             (self.num_classes, ),  # type: ignore
             dtype=torch.int64)
         assert self.item.max().item() < self.num_classes  # type: ignore
         item[self.item] = 1
-        self.item = item
+        return item
 
     def to_label(self) -> None:
+        """Convert `item` to label in place if its type is onehot."""
+        self.item = self.get_label()
+
+    def get_label(self) -> torch.Tensor:
         """Convert `item` to label if its type is onehot."""
         assert 'num_classes' in self.metainfo_keys(), (
-            'Please set `num_classes` with '
-            '`.set_metainfo({num_classes=num_classes})`')
+            'Please provide `num_classes` in metainfo at first')
         assert 'item' in self and isinstance(self.item, torch.Tensor)
         if (isinstance(self.item, torch.Tensor) and self.item.ndim == 1
                 and self.item.shape[0] == self.num_classes  # type: ignore
                 and self.item.max().item() <= 1
                 and self.item.min().item() >= 0):
-            self.item = self.item.nonzero().squeeze()
+            return self.item.nonzero().squeeze()
         else:
             raise ValueError(
                 '`item` is not onehot and can not convert to label')
