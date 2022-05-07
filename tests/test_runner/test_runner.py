@@ -405,8 +405,6 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg=cfg)
         self.epoch_based_cfg.filename
         assert osp.exists(osp.join(runner.work_dir, f'{runner.timestamp}.py'))
-        import time
-        time.sleep(1)
         # dump config from file.
         with tempfile.TemporaryDirectory() as temp_config_dir:
             temp_config_file = tempfile.NamedTemporaryFile(
