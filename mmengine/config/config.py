@@ -7,6 +7,7 @@ import platform
 import shutil
 import sys
 import tempfile
+import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
@@ -167,7 +168,10 @@ class Config:
         cfg_dict, cfg_text = Config._file2dict(filename,
                                                use_predefined_variables)
         if import_custom_modules and cfg_dict.get('custom_imports', None):
-            import_modules_from_strings(**cfg_dict['custom_imports'])
+            try:
+                import_modules_from_strings(**cfg_dict['custom_imports'])
+            except ImportError as e:
+                raise ImportError('Failed to custom import!') from e
         return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
 
     @staticmethod
@@ -396,7 +400,9 @@ class Config:
                 cfg_dict = {
                     name: value
                     for name, value in mod.__dict__.items()
-                    if not name.startswith('__')
+                    if not any((name.startswith('__'),
+                                isinstance(value, types.ModuleType),
+                                isinstance(value, types.FunctionType)))
                 }
                 # delete imported module
                 del sys.modules[temp_module_name]
@@ -409,13 +415,13 @@ class Config:
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                'in the future.'
+                          'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                    'instead.'
+                               'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                    f'{deprecation_info["reference"]}'
+                               f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
@@ -558,7 +564,7 @@ class Config:
 
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
-                v_str = f"'{v}'"
+                v_str = repr(v)
             else:
                 v_str = str(v)
 
@@ -673,6 +679,13 @@ class Config:
 
         return other
 
+    def __copy__(self):
+        cls = self.__class__
+        other = cls.__new__(cls)
+        other.__dict__.update(self.__dict__)
+
+        return other
+
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
         _cfg_dict, _filename, _text = state
         super().__setattr__('_cfg_dict', _cfg_dict)
@@ -776,6 +789,8 @@ class DictAction(Action):
             pass
         if val.lower() in ['true', 'false']:
             return True if val.lower() == 'true' else False
+        if val == 'None':
+            return None
         return val
 
     @staticmethod

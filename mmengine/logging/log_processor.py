@@ -181,7 +181,7 @@ class LogProcessor:
         """Format log string after validation or testing epoch.
 
         Args:
-            runner (Runner): The runner of training phase.
+            runner (Runner): The runner of validation/testing phase.
             batch_idx (int): The index of the current batch in the current
                 loop.
             mode (str): Current mode of runner.
@@ -200,10 +200,12 @@ class LogProcessor:
         custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
         # tag is used to write log information to different backends.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode)
-        # validation log string needs cur epoch/iteration and max
-        # epochs/iterations. test log string only needs length of test
-        # dataloader.
-        cur_iter = self._get_iter(runner, batch_idx)
+        # By epoch:
+        #     Epoch(val) [10][1000/1000]  ...
+        #     Epoch(test) [1000/1000] ...
+        # By iteration:
+        #     Iteration(val) [1000/1000]  ...
+        #     Iteration(test) [1000/1000]  ...
         if self.by_epoch:
             if mode == 'val':
                 cur_epoch = self._get_epoch(runner, mode)
@@ -214,12 +216,9 @@ class LogProcessor:
                     f'Epoch({mode}) [{dataloader_len}/{dataloader_len}]  ')
 
         else:
-            if mode == 'train':
-                log_str = (f'Iter({mode}) [{cur_iter}/'
-                           f'{runner.train_loop.max_iters}]  ')
-            else:
-                log_str = (
-                    f'Iter({mode}) [{dataloader_len}/{dataloader_len}]  ')
+            log_str = (f'Iter({mode}) [{dataloader_len}/{dataloader_len}]  ')
+        # `time` and `data_time` will not be recorded in after epoch log
+        # message.
         log_items = []
         for name, val in tag.items():
             if name in ('time', 'data_time'):
@@ -237,9 +236,9 @@ class LogProcessor:
         Args:
             custom_cfg (List[dict]): A copy of ``self.custom_cfg`` with int
                 ``window_size``.
-            runner (Runner): The runner of the training process.
-            mode (str): 'train' or 'val', which means the prefix attached by
-                runner.
+            runner (Runner): The runner of the training/testing/validation
+                process.
+            mode (str): Current mode of runner.
 
         Returns:
             dict: Statistical values of logs.
@@ -253,7 +252,7 @@ class LogProcessor:
         # according to mode.
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
-                key = prefix_key.split('/')[-1]
+                key = prefix_key.partition('/')[-1]
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
@@ -287,25 +286,23 @@ class LogProcessor:
                         ' is False.'
 
         def _check_repeated_log_name():
-            check_dict = dict()
             # The `log_name` of the same data_src should not be repeated.
             # If `log_name` is not specified, `data_src` will be overwritten.
             # But only allowed to be overwritten once.
+            check_set = set()
             for log_cfg in self.custom_cfg:
                 assert 'data_src' in log_cfg
                 data_src = log_cfg['data_src']
                 log_name = log_cfg.get('log_name', data_src)
-                check_dict.setdefault(data_src,
-                                      dict(log_names=set(), log_counts=0))
-                check_dict[data_src]['log_names'].add(log_name)
-                check_dict[data_src]['log_counts'] += 1
-                assert (len(
-                    check_dict[data_src]
-                    ['log_names']) == check_dict[data_src]['log_counts']), (
-                        f'If you want to statistic {data_src} with multiple '
-                        'statistics method, please check `log_name` is unique'
-                        f'and {data_src} will not be overwritten twice. See '
-                        f'more information in the docstring of `LogProcessor`')
+                assert log_name not in check_set, (
+                    f'Found duplicate {log_name} for {data_src}. Please check'
+                    'your `custom_cfg` for `log_processor`. You should '
+                    f'neither define duplicate `{log_name}` for {data_src} '
+                    f'nor do not define any {log_name} for multiple '
+                    f'{data_src}, See more information in the docstring of '
+                    'LogProcessor')
+
+                check_set.add(log_name)
 
         _check_repeated_log_name()
         _check_window_size()
@@ -314,7 +311,8 @@ class LogProcessor:
         """Parse window_size defined in custom_cfg to int value.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/testing/validation
+                process.
             batch_idx (int): The iteration index of current dataloader.
         """
         custom_cfg_copy = copy.deepcopy(self.custom_cfg)
@@ -337,7 +335,8 @@ class LogProcessor:
         for a given device.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/testing/validation
+                process.
 
         Returns:
             The maximum GPU memory occupied by tensors in megabytes for a given
@@ -352,11 +351,12 @@ class LogProcessor:
         return int(mem_mb.item())
 
     def _get_iter(self, runner, batch_idx: int = None) -> int:
-        """Get current training iteration step.
+        """Get current iteration index.
 
         Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int, optional): The interaction index of current
+            runner (Runner): The runner of the training/testing/validation
+                process.
+            batch_idx (int, optional): The iteration index of current
                 dataloader. Defaults to None.
 
         Returns:
@@ -372,8 +372,9 @@ class LogProcessor:
         """Get current epoch according to mode.
 
         Args:
-            runner (Runner): The runner of the training/validation process.
-            mode (str): Current mode of runner, "train" or "val".
+            runner (Runner): The runner of the training/testing/validation
+                process.
+            mode (str): Current mode of runner.
 
         Returns:
             int: The current epoch.
@@ -395,7 +396,7 @@ class LogProcessor:
         Args:
             runner (Runner): The runner of the training/validation/testing
                 process.
-            mode (str): Current mode of runner, "train", "val" or test.
+            mode (str): Current mode of runner.
 
         Returns:
             BaseLoop: Current loop of runner.

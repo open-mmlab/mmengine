@@ -6,7 +6,6 @@ import numpy as np
 import torch
 
 from mmengine.utils import ManagerMixin
-from mmengine.visualization.utils import check_type
 from .history_buffer import HistoryBuffer
 
 
@@ -80,6 +79,21 @@ class MessageHub(ManagerMixin):
                 ('Key in `resumed_keys` must contained in `log_scalars` or '
                  f'`runtime_info`, but got {key}')
 
+    @classmethod
+    def get_current_instance(cls) -> 'MessageHub':
+        """Get latest created ``MessageHub`` instance.
+
+        :obj:`MessageHub` can call :meth:`get_current_instance` before any
+        instance has been created, and return a message hub with the instance
+        name "mmengine".
+
+        Returns:
+            MessageHub: Empty ``MessageHub`` instance.
+        """
+        if not cls._instance_dict:
+            cls.get_instance('mmengine')
+        return super(MessageHub, cls).get_current_instance()
+
     def update_scalar(self,
                       key: str,
                       value: Union[int, float, np.ndarray, torch.Tensor],
@@ -116,7 +130,7 @@ class MessageHub(ManagerMixin):
                 could be resumed. Defaults to True.
         """
         self._set_resumed_keys(key, resumed)
-        checked_value = self._get_valid_value(key, value)
+        checked_value = self._get_valid_value(value)
         assert isinstance(count, int), (
             f'The type of count must be int. but got {type(count): {count}}')
         if key in self._log_scalars:
@@ -153,13 +167,11 @@ class MessageHub(ManagerMixin):
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
                     f'value must be defined in {log_val}'
-                count = self._get_valid_value(log_name,
-                                              log_val.get('count', 1))
-                checked_value = self._get_valid_value(log_name,
-                                                      log_val['value'])
+                count = self._get_valid_value(log_val.get('count', 1))
+                checked_value = self._get_valid_value(log_val['value'])
             else:
                 count = 1
-                checked_value = self._get_valid_value(log_name, log_val)
+                checked_value = self._get_valid_value(log_val)
             assert isinstance(count,
                               int), ('The type of count must be int. but got '
                                      f'{type(count): {count}}')
@@ -268,13 +280,12 @@ class MessageHub(ManagerMixin):
         # return copy.deepcopy(self._runtime_info[key])
         return self._runtime_info[key]
 
-    def _get_valid_value(self, key: str,
-                         value: Union[torch.Tensor, np.ndarray, int, float]) \
+    def _get_valid_value(
+            self, value: Union[torch.Tensor, np.ndarray, int, float]) \
             -> Union[int, float]:
         """Convert value to python built-in type.
 
         Args:
-            key (str): name of log.
             value (torch.Tensor or np.ndarray or int or float): value of log.
 
         Returns:
@@ -287,7 +298,7 @@ class MessageHub(ManagerMixin):
             assert value.numel() == 1
             value = value.item()
         else:
-            check_type(key, value, (int, float))
+            assert isinstance(value, (int, float))
         return value  # type: ignore
 
     def __getstate__(self):

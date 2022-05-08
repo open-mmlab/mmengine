@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import itertools
+from collections.abc import Sized
 from typing import List, Union
 
 import numpy as np
@@ -7,8 +8,9 @@ import torch
 
 from .base_data_element import BaseDataElement
 
-IndexType = Union[str, slice, int, torch.LongTensor, torch.cuda.LongTensor,
-                  torch.BoolTensor, torch.cuda.BoolTensor, np.long, np.bool]
+IndexType = Union[str, slice, int, list, torch.LongTensor,
+                  torch.cuda.LongTensor, torch.BoolTensor,
+                  torch.cuda.BoolTensor, np.ndarray]
 
 
 # Modified from
@@ -19,8 +21,37 @@ class InstanceData(BaseDataElement):
     Subclass of :class:`BaseDataElement`. All value in `data_fields`
     should have the same length. This design refer to
     https://github.com/facebookresearch/detectron2/blob/master/detectron2/structures/instances.py # noqa E501
+    InstanceData also support extra functions: ``index``, ``slice`` and ``cat`` for data field. The type of value
+    in data field can be base data structure such as `torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`,
+    and can be customized data structure that has ``__len__``, ``__getitem__`` and ``cat`` attributes.
 
     Examples:
+        >>> # custom data structure
+        >>> class TmpObject:
+        ...     def __init__(self, tmp) -> None:
+        ...         assert isinstance(tmp, list)
+        ...         self.tmp = tmp
+        ...     def __len__(self):
+        ...         return len(self.tmp)
+        ...     def __getitem__(self, item):
+        ...         if type(item) == int:
+        ...             if item >= len(self) or item < -len(self):  # type:ignore
+        ...                 raise IndexError(f'Index {item} out of range!')
+        ...             else:
+        ...                 # keep the dimension
+        ...                 item = slice(item, None, len(self))
+        ...         return TmpObject(self.tmp[item])
+        ...     @staticmethod
+        ...     def cat(tmp_objs):
+        ...         assert all(isinstance(results, TmpObject) for results in tmp_objs)
+        ...         if len(tmp_objs) == 1:
+        ...             return tmp_objs[0]
+        ...         tmp_list = [tmp_obj.tmp for tmp_obj in tmp_objs]
+        ...         tmp_list = list(itertools.chain(*tmp_list))
+        ...         new_data = TmpObject(tmp_list)
+        ...         return new_data
+        ...     def __repr__(self):
+        ...         return str(self.tmp)
         >>> from mmengine.data import InstanceData
         >>> import numpy as np
         >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
@@ -30,44 +61,69 @@ class InstanceData(BaseDataElement):
         >>> instance_data.det_labels = torch.LongTensor([2, 3])
         >>> instance_data["det_scores"] = torch.Tensor([0.8, 0.7])
         >>> instance_data.bboxes = torch.rand((2, 4))
+        >>> instance_data.polygons = TmpObject([[1, 2, 3, 4], [5, 6, 7, 8]])
         >>> len(instance_data)
-        4
+        2
         >>> print(instance_data)
         <InstanceData(
-
             META INFORMATION
             pad_shape: (800, 1196, 3)
             img_shape: (800, 1216, 3)
-
             DATA FIELDS
             det_labels: tensor([2, 3])
             det_scores: tensor([0.8, 0.7000])
             bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188],
                 [0.8101, 0.3105, 0.5123, 0.6263]])
+            polygons: [[1, 2, 3, 4], [5, 6, 7, 8]]
             ) at 0x7fb492de6280>
         >>> sorted_results = instance_data[instance_data.det_scores.sort().indices]
         >>> sorted_results.det_scores
         tensor([0.7000, 0.8000])
         >>> print(instance_data[instance_data.det_scores > 0.75])
         <InstanceData(
-
             META INFORMATION
             pad_shape: (800, 1216, 3)
             img_shape: (800, 1196, 3)
-
             DATA FIELDS
-            det_labels: tensor([0])
-            bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188]])
+            det_labels: tensor([2])
+            masks: [[11, 21, 31, 41]]
             det_scores: tensor([0.8000])
-        ) at 0x7fb5cf6e2790>
-        >>> instance_data[instance_data.det_scores > 0.75].det_labels
-        tensor([0])
-        >>> instance_data[instance_data.det_scores > 0.75].det_scores
-        tensor([0.8000])
+            bboxes: tensor([[0.9308, 0.4000, 0.6077, 0.5554]])
+            polygons: [[1, 2, 3, 4]]
+        ) at 0x7f64ecf0ec40>
+        >>> print(instance_data[instance_data.det_scores > 1])
+        <InstanceData(
+            META INFORMATION
+            pad_shape: (800, 1216, 3)
+            img_shape: (800, 1196, 3)
+            DATA FIELDS
+            det_labels: tensor([], dtype=torch.int64)
+            masks: []
+            det_scores: tensor([])
+            bboxes: tensor([], size=(0, 4))
+            polygons: [[]]
+        ) at 0x7f660a6a7f70>
+        >>> print(instance_data.cat([instance_data, instance_data]))
+        <InstanceData(
+            META INFORMATION
+            img_shape: (800, 1196, 3)
+            pad_shape: (800, 1216, 3)
+            DATA FIELDS
+            det_labels: tensor([2, 3, 2, 3])
+            bboxes: tensor([[0.7404, 0.6332, 0.1684, 0.9961],
+                        [0.2837, 0.8112, 0.5416, 0.2810],
+                        [0.7404, 0.6332, 0.1684, 0.9961],
+                        [0.2837, 0.8112, 0.5416, 0.2810]])
+            data:
+            polygons: [[1, 2, 3, 4], [5, 6, 7, 8],
+                       [1, 2, 3, 4], [5, 6, 7, 8]]
+            det_scores: tensor([0.8000, 0.7000, 0.8000, 0.7000])
+            masks: [[11, 21, 31, 41], [51, 61, 71, 81],
+                    [11, 21, 31, 41], [51, 61, 71, 81]]
+        ) at 0x7f203542feb0>
     """
 
-    def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray,
-                                                  list]):
+    def __setattr__(self, name: str, value: Sized):
         """setattr is only used to set data.
 
         the value must have the attribute of `__len__` and have the same length
@@ -82,9 +138,8 @@ class InstanceData(BaseDataElement):
                     f'private attribute, which is immutable. ')
 
         else:
-            assert isinstance(value, (torch.Tensor, np.ndarray, list)), \
-                f'Can set {type(value)}, only support' \
-                f' {(torch.Tensor, np.ndarray, list)}'
+            assert isinstance(value,
+                              Sized), 'value must contain `_len__` attribute'
 
             if len(self) > 0:
                 assert len(value) == len(self), f'the length of ' \
@@ -94,6 +149,8 @@ class InstanceData(BaseDataElement):
                                                 f':obj:`InstanceData` ' \
                                                 f'{len(self)} '
             super().__setattr__(name, value)
+
+    __setitem__ = __setattr__
 
     def __getitem__(self, item: IndexType) -> 'InstanceData':
         """
@@ -105,11 +162,13 @@ class InstanceData(BaseDataElement):
         Returns:
             obj:`InstanceData`: Corresponding values.
         """
-        assert len(self) > 0, ' This is a empty instance'
-
+        if isinstance(item, list):
+            item = np.array(item)
+        if isinstance(item, np.ndarray):
+            item = torch.from_numpy(item)
         assert isinstance(
             item, (str, slice, int, torch.LongTensor, torch.cuda.LongTensor,
-                   torch.BoolTensor, torch.cuda.BoolTensor, np.bool, np.long))
+                   torch.BoolTensor, torch.cuda.BoolTensor))
 
         if isinstance(item, str):
             return getattr(self, item)
@@ -121,7 +180,7 @@ class InstanceData(BaseDataElement):
                 # keep the dimension
                 item = slice(item, None, len(self))
 
-        new_data = self.new(data={})
+        new_data = self.__class__(metainfo=self.metainfo)
         if isinstance(item, torch.Tensor):
             assert item.dim() == 1, 'Only support to get the' \
                                     ' values along the first dimension.'
@@ -140,17 +199,36 @@ class InstanceData(BaseDataElement):
                     new_data[k] = v[item]
                 elif isinstance(v, np.ndarray):
                     new_data[k] = v[item.cpu().numpy()]
-                elif isinstance(v, list):
-                    r_list = []
+                elif isinstance(
+                        v, (str, list, tuple)) or (hasattr(v, '__getitem__')
+                                                   and hasattr(v, 'cat')):
                     # convert to indexes from boolTensor
                     if isinstance(item,
                                   (torch.BoolTensor, torch.cuda.BoolTensor)):
-                        indexes = torch.nonzero(item).view(-1)
+                        indexes = torch.nonzero(item).view(
+                            -1).cpu().numpy().tolist()
                     else:
-                        indexes = item
-                    for index in indexes:
-                        r_list.append(v[index])
-                    new_data[k] = r_list
+                        indexes = item.cpu().numpy().tolist()
+                    slice_list = []
+                    if indexes:
+                        for index in indexes:
+                            slice_list.append(slice(index, None, len(v)))
+                    else:
+                        slice_list.append(slice(None, 0, None))
+                    r_list = [v[s] for s in slice_list]
+                    if isinstance(v, (str, list, tuple)):
+                        new_value = r_list[0]
+                        for r in r_list[1:]:
+                            new_value = new_value + r
+                    else:
+                        new_value = v.cat(r_list)
+                    new_data[k] = new_value
+                else:
+                    raise ValueError(
+                        f'The type of `{k}` is `{type(v)}`, which has no '
+                        'attribute of `cat`, so it does not '
+                        f'support slice with `bool`')
+
         else:
             # item is a slice
             for k, v in self.items():
@@ -191,24 +269,30 @@ class InstanceData(BaseDataElement):
                                            'elements in `instances_list` ' \
                                            'have the exact same key '
 
-        new_data = instances_list[0].new(data={})
+        new_data = instances_list[0].__class__(
+            metainfo=instances_list[0].metainfo)
         for k in instances_list[0].keys():
             values = [results[k] for results in instances_list]
             v0 = values[0]
             if isinstance(v0, torch.Tensor):
-                values = torch.cat(values, dim=0)
+                new_values = torch.cat(values, dim=0)
             elif isinstance(v0, np.ndarray):
-                values = np.concatenate(values, axis=0)
-            elif isinstance(v0, list):
-                values = list(itertools.chain(*values))
+                new_values = np.concatenate(values, axis=0)
+            elif isinstance(v0, (str, list, tuple)):
+                new_values = v0[:]
+                for v in values[1:]:
+                    new_values += v
+            elif hasattr(v0, 'cat'):
+                new_values = v0.cat(values)
             else:
                 raise ValueError(
-                    f'Can not concat the {k} which is a {type(v0)}')
-            new_data[k] = values
+                    f'The type of `{k}` is `{type(v0)}` which has no '
+                    'attribute of `cat`')
+            new_data[k] = new_values
         return new_data  # type:ignore
 
     def __len__(self) -> int:
-        """The length of instance data."""
+        """int: the length of InstanceData"""
         if len(self._data_fields) > 0:
             return len(self.values()[0])
         else:

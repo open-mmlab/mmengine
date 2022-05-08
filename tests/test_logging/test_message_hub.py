@@ -86,7 +86,7 @@ class TestMessageHub:
         assert loss_bbox.current() == 3
         assert loss_iou.mean() == 0.5
 
-        with pytest.raises(TypeError):
+        with pytest.raises(AssertionError):
             loss_dict = dict(error_type=[])
             message_hub.update_scalars(loss_dict)
 
@@ -112,3 +112,12 @@ class TestMessageHub:
 
         instance.get_info('iter')
         instance.get_scalar('loss')
+
+    def test_get_instance(self):
+        # Test get root mmengine message hub.
+        MessageHub._instance_dict = OrderedDict()
+        root_logger = MessageHub.get_current_instance()
+        assert id(MessageHub.get_instance('mmengine')) == id(root_logger)
+        # Test original `get_current_instance` function.
+        MessageHub.get_instance('mmdet')
+        assert MessageHub.get_current_instance().instance_name == 'mmdet'

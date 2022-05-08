@@ -20,7 +20,7 @@ class LoggerHook(Hook):
 
     ``LoggerHook`` is used to record logs formatted by ``LogProcessor`` during
     training/validation/testing phase. It is used to control following
-    behaviers:
+    behaviors:
 
     - The frequency of logs update in terminal, local, tensorboad wandb.etc.
     - The frequency of show experiment information in terminal.
@@ -41,10 +41,10 @@ class LoggerHook(Hook):
              of ``out_dir`` and the last level directory of
             ``runner.work_dir``. For example, if the input ``our_dir`` is
             ``./tmp`` and ``runner.work_dir`` is ``./work_dir/cur_exp``,
-            then the log will be saved in ``./tmp/cur_exp``. Deafule to None.
-        out_suffix (Tuple[str] or str): Those filenames ending with
-            ``out_suffix`` will be copied to ``out_dir``. Defaults to
-            ('.log.json', '.log', '.py').
+            then the log will be saved in ``./tmp/cur_exp``. Defaults to None.
+        out_suffix (Tuple[str] or str): Those files in ``runner._log_dir``
+            ending with ``out_suffix`` will be copied to ``out_dir``. Defaults
+            to ('json', '.log', '.py').
         keep_local (bool): Whether to keep local logs in the local machine
             when :attr:`out_dir` is specified. If False, the local log will be
             removed. Defaults to True.
@@ -53,7 +53,7 @@ class LoggerHook(Hook):
             Defaults to None.
 
     Examples:
-        >>> # A simplest LoggerHook config.
+        >>> # The simplest LoggerHook config.
         >>> logger_hook_cfg = dict(interval=20)
     """
     priority = 'BELOW_NORMAL'
@@ -64,7 +64,8 @@ class LoggerHook(Hook):
         ignore_last: bool = True,
         interval_exp_name: int = 1000,
         out_dir: Optional[Union[str, Path]] = None,
-        out_suffix: Union[Sequence[str], str] = ('.log.json', '.log', '.py'),
+        out_suffix: Union[Sequence[str],
+                          str] = ('.json', '.log', '.py', 'yaml'),
         keep_local: bool = True,
         file_client_args: Optional[dict] = None,
     ):
@@ -86,6 +87,7 @@ class LoggerHook(Hook):
 
         self.keep_local = keep_local
         self.file_client_args = file_client_args
+        self.json_log_path: Optional[str] = None
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
@@ -106,36 +108,32 @@ class LoggerHook(Hook):
                 (f'Text logs will be saved to {self.out_dir} by '
                  f'{self.file_client.name} after the training process.'))
 
-        self.json_log_path = osp.join(runner.work_dir,
-                                      f'{runner.timestamp}.log.json')
-        self.yaml_log_path = osp.join(runner.work_dir,
-                                      f'{runner.timestamp}.log.json')
+        self.json_log_path = f'{runner.timestamp}.json'
 
     def after_train_iter(self,
                          runner,
                          batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
-        """Record training logs after training iteration.
+        """Record logs after training iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.
-            outputs (dict, optional): Outputs from model.
-                Defaults to None.
+            outputs (dict, optional): Outputs from model. Defaults to None.
         """
         # Print experiment name every n iterations.
         if self.every_n_iters(runner,
                               self.interval_exp_name) or (self.end_of_epoch(
-                                  runner.train_dataloader, batch_idx)):
+                                  runner.train_loop.dataloader, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
         if self.every_n_inner_iters(batch_idx, self.interval):
             tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
-        elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
+        elif (self.end_of_epoch(runner.train_loop.dataloader, batch_idx)
               and not self.ignore_last):
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
@@ -146,8 +144,8 @@ class LoggerHook(Hook):
         else:
             return
         runner.logger.info(log_str)
-        # TODO compatible with visualizer.
-        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(
+            tag, step=runner.iter + 1, file_path=self.json_log_path)
 
     def after_val_iter(
             self,
@@ -155,17 +153,18 @@ class LoggerHook(Hook):
             batch_idx: int,
             data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
-        """Record validation logs after validation iteration.
+        """Record logs after validation iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            runner (Runner): The runner of the validation process.
+            batch_idx (int): The index of the current batch in the validation
+                loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
-            tag, log_str = runner.log_processor.get_log_after_iter(
+            _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'val')
             runner.logger.info(log_str)
 
@@ -175,39 +174,39 @@ class LoggerHook(Hook):
             batch_idx: int,
             data_batch: DATA_BATCH = None,
             outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
-        """Record testing logs after iteration.
+        """Record logs after testing iteration.
 
         Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[Tuple[Any, BaseDataElement]], optional):
-                Data from dataloader. Defaults to None.
+            runner (Runner): The runner of the testing process.
+            batch_idx (int): The index of the current batch in the test loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
-            tag, log_str = runner.log_processor.get_log_after_iter(
+            _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'test')
             runner.logger.info(log_str)
 
     def after_val_epoch(self, runner) -> None:
-        """Record validation logs after validation epoch.
+        """Record logs after validation epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the validation process.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
-        # TODO compatible with visualizer.
-        runner.visualizer.add_scalars(tag, step=runner.iter + 1)
+        runner.visualizer.add_scalars(
+            tag, step=runner.iter, file_path=self.json_log_path)
 
     def after_test_epoch(self, runner) -> None:
-        """Record testing logs after test epoch.
+        """Record logs after testing epoch.
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the testing process.
         """
-        tag, log_str = runner.log_processor.get_log_after_epoch(
+        _, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'test')
         runner.logger.info(log_str)
 
@@ -215,13 +214,14 @@ class LoggerHook(Hook):
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
         Args:
-            runner (Runner): The runner of the training process.
+            runner (Runner): The runner of the training/testing/validation
+                process.
         """
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
             return
-        for filename in scandir(runner.work_dir, self.out_suffix, True):
-            local_filepath = osp.join(runner.work_dir, filename)
+        for filename in scandir(runner._log_dir, self.out_suffix, True):
+            local_filepath = osp.join(runner._log_dir, filename)
             out_filepath = self.file_client.join_path(self.out_dir, filename)
             with open(local_filepath, 'r') as f:
                 self.file_client.put_text(f.read(), out_filepath)
