@@ -155,7 +155,7 @@ class BaseDataset(Dataset):
         data_root (str, optional): The root directory for ``data_prefix`` and
             ``ann_file``. Defaults to None.
         data_prefix (dict, optional): Prefix for training data. Defaults to
-            dict(img=None, ann=None).
+            dict(img_path=None, ann=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
@@ -526,7 +526,7 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not osp.isabs(self.ann_file):
+        if not osp.isabs(self.ann_file) and self.ann_file:
             self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
