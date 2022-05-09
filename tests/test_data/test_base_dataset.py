@@ -152,10 +152,14 @@ class TestBaseDataset:
 
     def test_parse_data_info(self):
         BaseDataset.parse_data_info = self.ori_parse_data_info
-        BaseDataset(
+        data_root = osp.join(osp.dirname(__file__), '../data/')
+        dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img_path='imgs'),
             ann_file='annotations/dummy_annotation.json')
+        data_info = dataset.get_data_info(0)
+        assert data_info['img_path'] == osp.join(data_root, 'imgs',
+                                                 'test_img.jpg')
 
     def test_meta(self):
         # test dataset.metainfo with setting the metainfo from annotation file
