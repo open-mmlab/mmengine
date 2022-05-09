@@ -1,15 +1,22 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import functools
 import os
-import numpy as np
 import subprocess
 from typing import Callable, Optional, Tuple, Union
-from collections import Mapping, Iterable
+
+import numpy as np
 import torch
-from torch import Tensor
 import torch.multiprocessing as mp
+from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
+
+try:
+    # for python < 3.10
+    from collections import Iterable, Mapping
+except ImportError:
+    # for python >= 3.10
+    from collections.abc import Iterable, Mapping
 
 _LOCAL_PROCESS_GROUP = None
 
