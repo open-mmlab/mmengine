@@ -39,11 +39,13 @@ class TestBaseDataset:
             filename='test_img.jpg', height=604, width=640, sample_idx=0)
         self.imgs = torch.rand((2, 3, 32, 32))
         self.ori_meta = BaseDataset.METAINFO
+        self.ori_parse_data_info = BaseDataset.parse_data_info
         BaseDataset.parse_data_info = MagicMock(return_value=self.data_info)
         self.pipeline = MagicMock(return_value=dict(imgs=self.imgs))
 
     def teardown(self):
         BaseDataset.METAINFO = self.ori_meta
+        BaseDataset.parse_data_info = self.ori_parse_data_info
 
     def test_init(self):
         # test the instantiation of self.base_dataset
@@ -147,6 +149,13 @@ class TestBaseDataset:
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/dummy_annotation.json')
+
+    def test_parse_data_info(self):
+        BaseDataset.parse_data_info = self.ori_parse_data_info
+        BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json')
 
     def test_meta(self):
         # test dataset.metainfo with setting the metainfo from annotation file

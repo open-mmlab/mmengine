@@ -211,7 +211,7 @@ class BaseDataset(Dataset):
                  ann_file: str = '',
                  metainfo: Optional[dict] = None,
                  data_root: Optional[str] = None,
-                 data_prefix: dict = dict(img=None, ann=None),
+                 data_prefix: dict = dict(img_path=None, seg_path=None),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
@@ -330,6 +330,12 @@ class BaseDataset(Dataset):
         Returns:
             list or list[dict]: Parsed annotation.
         """
+        for prefix_key, prefix in self.data_prefix.items():
+            assert prefix_key in raw_data_info, (
+                f'raw_data_info: {raw_data_info} dose not contain prefix key'
+                f'{prefix_key}, please check your data_prefix.')
+            raw_data_info[prefix_key] = osp.join(prefix,
+                                                 raw_data_info[prefix_key])
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
