@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
 from typing import List, Sequence, Union
 
 import numpy as np
@@ -8,18 +9,18 @@ from .base_data_element import BaseDataElement
 
 
 class PixelData(BaseDataElement):
-    """Data structure for instance-level annnotations or predictions.
+    """Data structure for pixel-level annnotations or predictions.
 
-    Subclass of :class:`BaseDataElement`. All value in `data_fields` should
-    have the same spatial shape (height, width).
+    All value in `data_fields` of `PixelData` have the following requirements:
+
+    - All value must be 3-dimension.
+    - The order of value's dimension is channel, height and width.
+    - Values must have same height and width.
     """
 
     def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray]):
-        """setattr is only used to set data.
-
-        the value must have the same spatial shape (height, width) with
-        `PixelData`
-        """
+        """if the dimension of value is 2 and its shape meet the demand, it
+        will automatically expend its channel-dimension."""
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)
@@ -41,6 +42,13 @@ class PixelData(BaseDataElement):
                     f' the length of this '
                     f':obj:`PixelData` '
                     f'{self.shape} ')
+            assert value.ndim in [
+                2, 3
+            ], f'The dim of value must be 2 or 3, but got {value.ndim}'
+            if value.ndim == 2:
+                value = value[None]
+                warnings.warn(f'The shape of value will convert from '
+                              f'{value.shape[-2:]} to {value.shape}')
             super().__setattr__(name, value)
 
     # TODO torch.Long/bool

@@ -37,8 +37,15 @@ class TestPixelData(TestCase):
         with self.assertRaises(AssertionError):
             pixel_data.map2 = torch.randint(0, 255, (3, 21, 41))
 
+        # The shape in PixelData must be the same
+        with self.assertRaises(AssertionError):
+            pixel_data.map2 = torch.randint(0, 255, (1, 3, 20, 40))
+
         pixel_data.map2 = torch.randint(0, 255, (3, 20, 40))
         assert 'map2' in pixel_data
+
+        pixel_data.map3 = torch.randint(0, 255, (20, 40))
+        assert tuple(pixel_data.map3.shape) == (1, 20, 40)
 
     def test_getitem(self):
         pixel_data = PixelData()
@@ -67,8 +74,3 @@ class TestPixelData(TestCase):
         assert pixel_data.shape == (20, 40)
         pixel_data = PixelData()
         assert pixel_data.shape is None
-
-
-if __name__ == '__main__':
-    t = TestPixelData()
-    t.test_getitem()
