@@ -20,7 +20,14 @@ class PixelData(BaseDataElement):
 
     def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray]):
         """if the dimension of value is 2 and its shape meet the demand, it
-        will automatically expend its channel-dimension."""
+        will automatically expend its channel-dimension.
+
+        Args:
+            name (str): The key to access the value, stored in `PixelData`.
+            value (Union[torch.Tensor, np.ndarray]): The value to store in.
+                The type of value must be  `torch.Tensor` or `np.ndarray`,
+                and its shape must meet the requirements of `PixelData`.
+        """
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)

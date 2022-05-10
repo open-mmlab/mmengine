@@ -241,7 +241,7 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
-            self.set_field(name=k, value=v, field_type='data', dtype=None)
+            setattr(self, k, v)
 
     def update(self, instance: 'BaseDataElement') -> None:
         """The update() method updates the BaseDataElement with the elements
