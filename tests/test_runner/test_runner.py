@@ -603,6 +603,28 @@ class TestRunner(TestCase):
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
         self.assertIsInstance(param_schedulers[1], StepLR)
 
+        # train loop should be built before convert scheduler
+        cfg = dict(
+            type='MultiStepLR', milestones=[1, 2], convert_to_iter_based=True)
+        with self.assertRaisesRegex(
+                AssertionError,
+                'Scheduler can only be converted to iter-based when '
+                'train loop is built.'):
+            param_schedulers = runner.build_param_scheduler(cfg)
+
+        # convert epoch-based to iter-based scheduler
+        cfg = dict(
+            type='MultiStepLR',
+            milestones=[1, 2],
+            begin=1,
+            end=7,
+            convert_to_iter_based=True)
+        runner.train_loop = runner.build_train_loop(runner.train_loop)
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertFalse(param_schedulers[0].by_epoch)
+        self.assertEqual(param_schedulers[0].begin, 4)
+        self.assertEqual(param_schedulers[0].end, 28)
+
     def test_build_evaluator(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_evaluator'
