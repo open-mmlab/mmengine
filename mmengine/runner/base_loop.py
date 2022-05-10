@@ -35,19 +35,21 @@ class BaseLoop(metaclass=ABCMeta):
     def run(self) -> None:
         """Execute loop."""
 
-    def _parse_losses(self, losses: Dict[str, torch.Tensor]):
-        """Parse the raw outputs (losses) of the network.
+    def _parse_losses(self, losses: Dict[str, torch.Tensor]) -> dict:
+        """Parse the loss of the network.
 
         Args:
-            losses (dict): Raw output of the network, which usually contain
-                losses and other necessary information.
+            losses (Dict[str, torch.Tensor]): losses of the network during
+                training phase, which consists of :obj:`torch.Tensor` with
+                corresponding keys.
 
         Returns:
-            tuple[Tensor, dict]: (loss, log_vars), loss is the loss tensor \
-                which may be a weighted sum of all losses, log_vars contains \
-                all the variables to be sent to the logger.
+            dict: loss dict with key ``loss`` and ``log_var``. ``loss`` means
+            the loss tensor which is a weighted sum of all losses, and
+            ``log_vars`` is a dict which contains all variables sent to the
+            logger.
         """
-        # Deprecated model output.
+        # Deprecated model output format.
         if 'log_vars' in losses:
             return losses
 
