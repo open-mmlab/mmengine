@@ -78,7 +78,8 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be a dict containing one or multiple loss tensors
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+        losses = self.runner.model(data_batch, return_loss=True)
+        self.runner.outputs = self._parse_losses(losses)
 
         self.runner.call_hook(
             'after_train_iter',
@@ -149,8 +150,8 @@ class IterBasedTrainLoop(BaseLoop):
             batch_idx=self.runner._iter,
             data_batch=data_batch)
         # outputs should be a dict containing loss tensor
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
-
+        losses = self.runner.model(data_batch, return_loss=True)
+        self.runner.outputs = self._parse_losses(losses)
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self.runner._iter,
