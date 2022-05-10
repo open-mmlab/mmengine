@@ -398,23 +398,8 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
-    def test_dump_config(self):
-        # dump config from dict.
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_dump1'
-        runner = Runner.from_cfg(cfg=cfg)
-        self.epoch_based_cfg.filename
-        assert osp.exists(osp.join(runner.work_dir, f'{runner.timestamp}.py'))
-        # dump config from file.
-        with tempfile.TemporaryDirectory() as temp_config_dir:
-            temp_config_file = tempfile.NamedTemporaryFile(
-                dir=temp_config_dir, suffix='.py')
-            file_cfg = Config(
-                self.epoch_based_cfg._cfg_dict, filename=temp_config_file.name)
-            file_cfg.experiment_name = 'test_dump2'
-            runner = Runner.from_cfg(cfg=file_cfg)
-            assert osp.exists(
-                osp.join(runner.work_dir, osp.basename(temp_config_file.name)))
+        # 5. test `dump_config`
+        # TODO
 
     def test_from_cfg(self):
         runner = Runner.from_cfg(cfg=self.epoch_based_cfg)
