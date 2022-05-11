@@ -33,11 +33,11 @@ class TestPixelData(TestCase):
         with self.assertRaises(AssertionError):
             pixel_data.v = 'value'
 
-        # The shape in PixelData must be the same
+        # The width and height must be the same
         with self.assertRaises(AssertionError):
             pixel_data.map2 = torch.randint(0, 255, (3, 21, 41))
 
-        # The shape in PixelData must be the same
+        # The dimension must be 3 or 2
         with self.assertRaises(AssertionError):
             pixel_data.map2 = torch.randint(0, 255, (1, 3, 20, 40))
 
