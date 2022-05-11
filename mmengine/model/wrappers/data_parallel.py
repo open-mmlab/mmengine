@@ -11,6 +11,10 @@ from mmengine.utils import TORCH_VERSION, digit_version
 
 MODEL_WRAPPERS.register_module(module=DataParallel)
 MODEL_WRAPPERS.register_module(module=DistributedDataParallel)
+if ('parrots' not in TORCH_VERSION
+            and digit_version(TORCH_VERSION) >= digit_version('1.11.0')):
+    from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel
+    MODEL_WRAPPERS.register_module(module=FullyShardedDataParallel)
 
 
 @MODEL_WRAPPERS.register_module()
