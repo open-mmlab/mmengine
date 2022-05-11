@@ -4,8 +4,7 @@ from typing import Optional, Union
 
 import torch
 
-# from .base_data_element import BaseDataElement
-from mmengine.data import BaseDataElement
+from .base_data_element import BaseDataElement
 
 
 class LabelData(BaseDataElement):
@@ -36,45 +35,70 @@ class LabelData(BaseDataElement):
         `num_classes` must in `LabelData.metainfo_keys()`
 
         Args:
-            num_classes (Optional[int]): The number of classes.
+            num_classes (int, optional): The number of classes. Defaults
+                to None.
         """
-        self.item = self.get_onehot(num_classes=num_classes)
+        if num_classes is None:
+            assert 'num_classes' in self.metainfo_keys(), (
+                'Please provide `num_classes` in metainfo at first')
+            num_classes = self.num_classes  # type: ignore
+        assert 'item' in self, 'Please set `item` in `LabelData` at first'
+        self.item = self.get_onehot(self.item, num_classes=num_classes)
 
-    def get_onehot(self, num_classes: Optional[int] = None) -> torch.Tensor:
-        """convert `item` to onehot. If num_classes is None, `num_classes` must
-        in `LabelData.metainfo_keys()`
+    def get_onehot(self,
+                   item: Optional[torch.Tensor] = None,
+                   num_classes: Optional[int] = None) -> torch.Tensor:
+        """Convert `item` to onehot, when `item` is not None, Otherwise convert
+        `self.item` to onehot. If `item` is None, `item` must be set in
+        `LabelData` at first. If num_classes is None, `num_classes` must be in
+        `LabelData.metainfo_keys()`
 
         Args:
-            num_classes (Optional[int]): The number of classes.
+            item (torch.Tensor, optional): The value to convert to onehot.
+                Defaults to None.
+            num_classes (int, optional): The number of classes. Defaults
+                to None.
+
+        Return:
+            (torch.Tensor): the onehot results.
         """
-        assert 'item' in self and isinstance(self.item, torch.Tensor)
-        if num_classes is not None:
-            self.set_field(
-                num_classes, 'num_classes', dtype=int, field_type='metainfo')
-        assert 'num_classes' in self.metainfo_keys(), (
-            'Please provide `num_classes` in metainfo at first '
-            'or pass `num_classes` parameter')
-        item = torch.zeros(
-            (self.num_classes, ),  # type: ignore
-            dtype=torch.int64)
-        assert self.item.max().item() < self.num_classes  # type: ignore
-        item[self.item] = 1
-        return item
+        if item is None:
+            assert 'item' in self, 'Please set `item` in `LabelData` at first'
+            item = self.item
+        assert isinstance(item, torch.Tensor)
+        if num_classes is None:
+            assert 'num_classes' in self.metainfo_keys(), (
+                'Please provide `num_classes` in metainfo at first '
+                'or pass `num_classes` parameter')
+            num_classes = self.num_classes  # type: ignore
+        new_item = torch.zeros((num_classes, ), dtype=torch.int64)
+        assert item.max().item() < num_classes
+        new_item[item] = 1
+        return new_item
 
     def to_label(self) -> None:
         """Convert `item` to label in place if its type is onehot."""
-        self.item = self.get_label()
+        assert 'item' in self, 'Please set `item` in `LabelData` at first'
+        self.item = self.get_label(self.item)
 
-    def get_label(self) -> torch.Tensor:
-        """Convert `item` to label if its type is onehot."""
-        assert 'num_classes' in self.metainfo_keys(), (
-            'Please provide `num_classes` in metainfo at first')
-        assert 'item' in self and isinstance(self.item, torch.Tensor)
-        if (isinstance(self.item, torch.Tensor) and self.item.ndim == 1
-                and self.item.shape[0] == self.num_classes  # type: ignore
-                and self.item.max().item() <= 1
-                and self.item.min().item() >= 0):
-            return self.item.nonzero().squeeze()
+    def get_label(self, item: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Convert `item` to label if its type is onehot.
+
+        Args:
+            item (torch.Tensor, optional): The value to convert to label.
+                if it is None, it will convert `self.item` to label.
+                Defaults to None.
+
+        Return:
+            (torch.Tensor): the label results.
+        """
+        if item is None:
+            assert 'item' in self, 'Please set `item` in `LabelData` at first'
+            item = self.item
+        assert isinstance(item, torch.Tensor)
+        if (item.ndim == 1 and item.max().item() <= 1
+                and item.min().item() >= 0):
+            return item.nonzero().squeeze()
         else:
             raise ValueError(
                 '`item` is not onehot and can not convert to label')

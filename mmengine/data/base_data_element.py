@@ -223,11 +223,6 @@ class BaseDataElement:
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
         meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
-            if k in self._data_fields:
-                raise AttributeError(f'`{k}` is used in data,'
-                                     'which is immutable. If you want to'
-                                     'change the key in data, please use'
-                                     'set_data')
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
@@ -241,6 +236,10 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
+            # The reason not to use `self.set_field` is that the set_data
+            # can set property method,, which mean
+            # `xx.set_data(dict(metainfo=value))` is same as
+            # `xx.metainfo=value`
             setattr(self, k, v)
 
     def update(self, instance: 'BaseDataElement') -> None:
@@ -382,12 +381,6 @@ class BaseDataElement:
                 raise AttributeError(f'{name} has been used as a '
                                      'private attribute, which is immutable. ')
         else:
-            if name in self._metainfo_fields:
-                raise AttributeError(
-                    f'`{name}` is used in meta information.'
-                    'if you want to change the key in metainfo, please use'
-                    '`set_metainfo(dict(name=value))`')
-
             self.set_field(
                 name=name, value=value, field_type='data', dtype=None)
 
@@ -411,6 +404,9 @@ class BaseDataElement:
 
     def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
+        # The reason not to use self.__dict__.get(key, default) is that
+        # the `get` can get property method, which mean
+        # `xx.get('metainfo', None)` is same as `xx.metainfo`
         return getattr(self, key, default)
 
     def pop(self, *args) -> Any:
@@ -454,11 +450,21 @@ class BaseDataElement:
                 value,
                 dtype), f'{value} should be a {dtype} but got {type(value)}'
 
-        super().__setattr__(name, value)
         if field_type == 'metainfo':
+            if name in self._data_fields:
+                raise AttributeError(f'`{name}` is used in data,'
+                                     'which is immutable. If you want to'
+                                     'change the key in data, please use'
+                                     '`set_data` or just `xx.name = value`')
             self._metainfo_fields.add(name)
         else:
+            if name in self._metainfo_fields:
+                raise AttributeError(
+                    f'`{name}` is used in meta information.'
+                    'if you want to change the key in metainfo, please use'
+                    '`set_metainfo(dict(name=value))`')
             self._data_fields.add(name)
+        super().__setattr__(name, value)
 
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataElement':

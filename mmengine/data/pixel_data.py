@@ -16,6 +16,31 @@ class PixelData(BaseDataElement):
     - All value must be 3-dimension.
     - The order of value's dimension is channel, height and width.
     - Values must have same height and width.
+
+    Examples:
+        >>> metainfo = dict(
+        ...     img_id=random.randint(0, 100),
+        ...     img_shape=(random.randint(400, 600), random.randint(400, 600)))
+        >>> image = np.random.randint(0, 255, (4, 20, 40))
+        >>> featmap = torch.randint(0, 255, (10, 20, 40))
+        >>> pixel_data = PixelData(metainfo=metainfo,
+        ...                        image=image,
+        ...                        featmap=featmap)
+        >>> print(pixel_data)
+        >>> (20, 40)
+
+        >>> # slice
+        >>> slice_data = pixel_data[10:20, 20:40]
+        >>> assert slice_data.shape == (10, 10)
+        >>> slice_data = pixel_data[10, 20]
+        >>> assert slice_data.shape == (1, 1)
+
+        >>> # set
+        >>> pixel_data.map3 = torch.randint(0, 255, (20, 40))
+        >>> assert tuple(pixel_data.map3.shape) == (1, 20, 40)
+        >>> with self.assertRaises(AssertionError):
+        ...     # The dimension must be 3 or 2
+        ...     pixel_data.map2 = torch.randint(0, 255, (1, 3, 20, 40))
     """
 
     def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray]):

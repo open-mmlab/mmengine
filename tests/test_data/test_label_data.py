@@ -21,6 +21,36 @@ class TestLabelData(TestCase):
             label_data.item = 1
         label_data.item = 'hello world'
 
+    def test_get_onehot(self):
+        label_data = LabelData()
+        item = torch.tensor([1], dtype=torch.int64)
+        num_classes = 10
+        onehot = label_data.get_onehot(item=item, num_classes=num_classes)
+        assert tuple(onehot.shape) == (10, )
+        # num_classes is None and LabelData.num_classes not set
+        with pytest.raises(AssertionError):
+            onehot = label_data.get_onehot(item=item)
+        label_data.set_metainfo(dict(num_classes=num_classes))
+        onehot = label_data.get_onehot(item=item)
+        assert tuple(onehot.shape) == (10, )
+
+        # item is None and LabelData.item not set
+        with pytest.raises(AssertionError):
+            onehot = label_data.get_onehot()
+        label_data.item = item
+        onehot = label_data.get_onehot()
+        assert tuple(onehot.shape) == (10, )
+
+        # item is not onehot
+        with pytest.raises(AssertionError):
+            label_data.item = 'item'
+            label_data.get_onehot()
+
+        # item'max bigger than num_classes
+        with pytest.raises(AssertionError):
+            label_data.item = torch.tensor([11], dtype=torch.int64)
+            label_data.get_onehot()
+
     def test_to_onehot(self):
         label_data = LabelData()
         item = torch.tensor([1], dtype=torch.int64)
@@ -62,31 +92,44 @@ class TestLabelData(TestCase):
         label_data.to_onehot(10)
         assert tuple(label_data.item.shape) == (10, )
 
-    def test_to_label(self):
+    def test_get_label(self):
         label_data = LabelData()
-        item = torch.tensor([1], dtype=torch.int64)
-
-        # without num_classes
-        with pytest.raises(AssertionError):
-            label_data.to_label()
 
         # item is None
         with pytest.raises(AssertionError):
-            label_data.set_metainfo(dict(num_classes=10))
-            label_data.to_label()
+            label_data.get_label()
 
         # item is not onehot
         with pytest.raises(
                 ValueError,
                 match='`item` is not onehot and can not convert to label'):
-            label_data.item = item
-            label_data.set_metainfo(dict(num_classes=10))
-            label_data.to_label()
+            label_data.get_label(item=torch.tensor([2], dtype=torch.int64))
+
+        with pytest.raises(AssertionError):
+            label_data.get_label(item='item')
+
+        item = torch.arange(0, 9)
+        onehot = label_data.get_onehot(item=item, num_classes=10)
+        label = label_data.get_label(onehot)
+        assert (label == item).all()
+
+    def test_to_label(self):
+        label_data = LabelData()
+        item = torch.tensor([1], dtype=torch.int64)
+
+        # item is None
+        with pytest.raises(AssertionError):
+            label_data.get_label()
 
         # item is not onehot
+        with pytest.raises(
+                ValueError,
+                match='`item` is not onehot and can not convert to label'):
+            label_data.item = torch.tensor([2], dtype=torch.int64)
+            label_data.to_label()
+
         with pytest.raises(AssertionError):
             label_data.item = 'item'
-            label_data.set_metainfo(dict(num_classes=10))
             label_data.to_label()
 
         item = torch.arange(0, 9)
