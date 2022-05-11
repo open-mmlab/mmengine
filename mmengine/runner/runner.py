@@ -776,9 +776,7 @@ class Runner:
 
         return model
 
-    @staticmethod
-    def build_optimizer(model: nn.Module, optimizer: Union[Optimizer,
-                                                           Dict]) -> Optimizer:
+    def build_optimizer(self, optimizer: Union[Optimizer, Dict]) -> Optimizer:
         """Build optimizer.
 
         An example of ``optimizer``::
@@ -786,7 +784,6 @@ class Runner:
             optimizer = dict(type='SGD', lr=0.01)
 
         Args:
-            model (nn.Module): Model to be optimized.
             optimizer (Optimizer or dict): An Optimizer object or a dict to
                 build Optimizer object. If ``optimizer`` is an Optimizer
                 object, just returns itself.
@@ -797,16 +794,15 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            optimizer = build_optimizer(model, optimizer)
+            optimizer = build_optimizer(self.model, optimizer)
             return optimizer
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
                             f'but got {optimizer}')
 
-    @staticmethod
     def build_param_scheduler(
-        optimizer: Optimizer, scheduler: Union[_ParamScheduler, Dict,
-                                               List]) -> List[_ParamScheduler]:
+        self, scheduler: Union[_ParamScheduler, Dict,
+                               List]) -> List[_ParamScheduler]:
         """Build parameter schedulers.
 
         Examples of ``scheduler``::
@@ -820,7 +816,6 @@ class Runner:
             ]
 
         Args:
-            optimizer (Optimizer): Optimizer passed to ParamScheduler.
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
 
@@ -828,9 +823,11 @@ class Runner:
             list[:obj:`_ParamScheduler`]: List of parameter schedulers build
             from ``scheduler``.
         """
-        if not isinstance(optimizer, Optimizer):
-            raise TypeError('optimizer should be an Optimizer object, '
-                            f'but got {optimizer}')
+        if not isinstance(self.optimizer, Optimizer):
+            raise RuntimeError(
+                '`build_optimizer` should be called before'
+                '`build_param_scheduler` because the latter depends on the '
+                'former')
 
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
@@ -844,7 +841,8 @@ class Runner:
             elif isinstance(_scheduler, dict):
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
-                        _scheduler, default_args=dict(optimizer=optimizer)))
+                        _scheduler,
+                        default_args=dict(optimizer=self.optimizer)))
             else:
                 raise TypeError(
                     '_scheduler should be a _ParamScheduler object or dict, '
@@ -852,9 +850,8 @@ class Runner:
 
         return param_schedulers
 
-    @staticmethod
     def build_evaluator(
-            evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
+            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
@@ -1028,11 +1025,11 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
-        self.optimizer = self.build_optimizer(self.model, self.optimizer)
+        self.optimizer = self.build_optimizer(self.optimizer)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.optimizer, self.param_schedulers)  # type: ignore
+                self.param_schedulers)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1425,7 +1422,7 @@ class Runner:
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
-            self.optimizer = self.build_optimizer(self.model, self.optimizer)
+            self.optimizer = self.build_optimizer(self.optimizer)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
         # resume param scheduler
