@@ -99,6 +99,19 @@ class TestDist(TestCase):
         output = dist.collect_results(data, size, device='gpu')
         self.assertEqual(output, expected)
 
+    def test_all_reduce_params(self):
+        for tensor_type, reduce_op in zip([torch.int64, torch.float32],
+                                          ['sum', 'mean']):
+            data = (
+                torch.tensor([0, 1], dtype=tensor_type) for _ in range(100))
+            expected = (
+                torch.tensor([0, 1], dtype=tensor_type) for _ in range(100))
+
+            dist.all_reduce_params(data, op=reduce_op)
+
+            for item1, item2 in zip(data, expected):
+                self.assertEquals(item1, item2)
+
 
 class TestDistWithGLOOBackend(MultiProcessTestCase):
 

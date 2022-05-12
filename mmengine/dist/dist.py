@@ -1041,8 +1041,10 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         return None
 
 
-def _allreduce_coalesced(tensors: List[torch.Tensor],
-                         bucket_size_mb: int = -1) -> None:
+def _all_reduce_coalesced(tensors: List[torch.Tensor],
+                          bucket_size_mb: int = -1,
+                          op: str = 'sum',
+                          group: Optional[ProcessGroup] = None) -> None:
     """All-reduce a sequence of tensors as a whole.
 
     Args:
@@ -1050,6 +1052,11 @@ def _allreduce_coalesced(tensors: List[torch.Tensor],
             all-reduced.
         bucket_size_mb (int): The limit of each chunk in megabytes
             for grouping tensors into chunks. Defaults to -1.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
     """
     if bucket_size_mb > 0:
         bucket_size_bytes = bucket_size_mb * 1024 * 1024
@@ -1065,15 +1072,17 @@ def _allreduce_coalesced(tensors: List[torch.Tensor],
 
     for bucket in buckets:
         flat_tensors = _flatten_dense_tensors(bucket)
-        all_reduce(flat_tensors, op='mean')
+        all_reduce(flat_tensors, op=op, group=group)
         for tensor, synced in zip(
                 bucket, _unflatten_dense_tensors(flat_tensors, bucket)):
             tensor.copy_(synced)
 
 
-def allreduce_params(params: Generator[torch.Tensor, None, None],
-                     coalesce: bool = True,
-                     bucket_size_mb: int = -1) -> None:
+def all_reduce_params(params: Generator[torch.Tensor, None, None],
+                      coalesce: bool = True,
+                      bucket_size_mb: int = -1,
+                      op: str = 'sum',
+                      group: Optional[ProcessGroup] = None) -> None:
     """All-reduce parameters.
 
     Args:
@@ -1083,13 +1092,18 @@ def allreduce_params(params: Generator[torch.Tensor, None, None],
             Defaults to True.
         bucket_size_mb (int, optional): Size of bucket, the unit is MB.
             Defaults to -1.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
     """
-    world_size = get_world_size()
+    world_size = get_world_size(group)
     if world_size == 1:
         return
     params_data = [param.data for param in params]
     if coalesce:
-        _allreduce_coalesced(params_data, bucket_size_mb)
+        _all_reduce_coalesced(params_data, bucket_size_mb, op=op, group=group)
     else:
         for tensor in params_data:
-            all_reduce(tensor, op='mean')
+            all_reduce(tensor, op=op, group=group)

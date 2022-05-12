@@ -21,4 +21,4 @@ class SyncBuffersHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if self.distributed:
-            dist.allreduce_params(runner.model.buffers())
+            dist.all_reduce_params(runner.model.buffers(), op='mean')
