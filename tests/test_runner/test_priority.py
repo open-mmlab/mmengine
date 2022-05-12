@@ -9,10 +9,10 @@ def test_get_priority():
     # `priority` is a integer
     assert get_priority(10) == 10
     # `priority` is a integer but it exceeds the valid ranges
-    with pytest.raises(ValueError, 'priority must be between 0 and 100'):
-        get_priority(0)
-    with pytest.raises(ValueError, 'priority must be between 0 and 100'):
-        get_priority(100)
+    with pytest.raises(ValueError, match='priority must be between 0 and 100'):
+        get_priority(-1)
+    with pytest.raises(ValueError, match='priority must be between 0 and 100'):
+        get_priority(101)
 
     # `priority` is a Priority enum value
     assert get_priority(Priority.HIGHEST) == 0
@@ -23,6 +23,7 @@ def test_get_priority():
     assert get_priority('LOWEST') == 100
 
     # `priority` is an invalid type
-    with pytest.raises(ValueError,
-                       'priority must be an integer or Priority enum value'):
+    with pytest.raises(
+            TypeError,
+            match='priority must be an integer or Priority enum value'):
         get_priority([10])
