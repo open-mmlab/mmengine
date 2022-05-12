@@ -255,6 +255,35 @@ class StepParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              step_size,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        step_size = step_size * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            step_size=step_size,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
+
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
         if (self.last_step == 0) or (self.last_step % self.step_size != 0):
@@ -311,6 +340,35 @@ class MultiStepParamScheduler(_ParamScheduler):
             last_step=last_step,
             by_epoch=by_epoch,
             verbose=verbose)
+
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              milestones,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        milestones = [i * epoch_length for i in milestones]
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            milestones=milestones,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -372,6 +430,27 @@ class ConstantParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
@@ -430,6 +509,27 @@ class ExponentialParamScheduler(_ParamScheduler):
             last_step=last_step,
             by_epoch=by_epoch,
             verbose=verbose)
+
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -512,6 +612,35 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              T_max,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        T_max = T_max * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            T_max=T_max,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
+
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
@@ -589,6 +718,27 @@ class LinearParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
@@ -654,6 +804,27 @@ class PolyParamScheduler(_ParamScheduler):
             last_step=last_step,
             by_epoch=by_epoch,
             verbose=verbose)
+
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""

@@ -214,7 +214,8 @@ class TestConfig:
         text_cfg_filename = tmp_path / '_text_config.py'
         cfg.dump(text_cfg_filename)
         text_cfg = Config.fromfile(text_cfg_filename)
-
+        assert text_cfg.str_item_7 == osp.join(osp.expanduser('~'), 'folder')
+        assert text_cfg.str_item_8 == 'string with \tescape\\ characters\n'
         assert text_cfg._cfg_dict == cfg._cfg_dict
 
         cfg_file = osp.join(self.data_path,
@@ -668,5 +669,17 @@ class TestConfig:
         assert isinstance(new_cfg, Config)
         assert new_cfg._cfg_dict == cfg._cfg_dict
         assert new_cfg._cfg_dict is not cfg._cfg_dict
+        assert new_cfg._filename == cfg._filename
+        assert new_cfg._text == cfg._text
+
+    def test_copy(self):
+        cfg_file = osp.join(self.data_path, 'config',
+                            'py_config/test_dump_pickle_support.py')
+        cfg = Config.fromfile(cfg_file)
+        new_cfg = copy.copy(cfg)
+
+        assert isinstance(new_cfg, Config)
+        assert new_cfg._cfg_dict == cfg._cfg_dict
+        assert new_cfg._cfg_dict is cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text

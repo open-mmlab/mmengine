@@ -64,7 +64,9 @@ class Runner:
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
             a dict used for build a model.
-        work_dir (str): The working directory to save checkpoints and logs.
+        work_dir (str): The working directory to save checkpoints. The logs
+            will be saved in the subdirectory of `work_dir` named
+            :attr:`timestamp`.
         train_dataloader (Dataloader or dict, optional): A dataloader object or
             a dict to build a dataloader. If ``None`` is given, it means
             skipping training steps. Defaults to None.
@@ -634,7 +636,7 @@ class Runner:
             MMLogger: A MMLogger object build from ``logger``.
         """
         if log_file is None:
-            log_file = osp.join(self._log_dir, f'{self._experiment_name}.log')
+            log_file = osp.join(self._log_dir, f'{self.timestamp}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
@@ -843,10 +845,29 @@ class Runner:
             if isinstance(_scheduler, _ParamScheduler):
                 param_schedulers.append(_scheduler)
             elif isinstance(_scheduler, dict):
-                param_schedulers.append(
-                    PARAM_SCHEDULERS.build(
-                        _scheduler,
-                        default_args=dict(optimizer=self.optimizer)))
+                convert_to_iter = _scheduler.pop('convert_to_iter_based',
+                                                 False)
+                if convert_to_iter:
+                    assert _scheduler.get(
+                        'by_epoch', True
+                    ), 'only epoch-based parameter scheduler can be ' \
+                       'converted to iter-based'
+                    assert isinstance(self.train_loop, BaseLoop), \
+                        'Scheduler can only be converted to iter-based ' \
+                        'when train loop is built.'
+                    cls = PARAM_SCHEDULERS.get(_scheduler.pop('type'))
+                    param_schedulers.append(
+                        cls.build_iter_from_epoch(  # type: ignore
+                            optimizer=self.optimizer,
+                            **_scheduler,
+                            epoch_length=len(
+                                self.train_loop.dataloader),  # type: ignore
+                        ))
+                else:
+                    param_schedulers.append(
+                        PARAM_SCHEDULERS.build(
+                            _scheduler,
+                            default_args=dict(optimizer=self.optimizer)))
             else:
                 raise TypeError(
                     '_scheduler should be a _ParamScheduler object or dict, '

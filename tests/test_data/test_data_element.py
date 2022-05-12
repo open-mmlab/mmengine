@@ -112,7 +112,7 @@ class TestBaseDataElement(TestCase):
 
         # test new() with arguments
         metainfo, data = self.setup_data()
-        new_instances = instances.new(metainfo=metainfo, data=data)
+        new_instances = instances.new(metainfo=metainfo, **data)
         assert type(new_instances) == type(instances)
         assert id(new_instances.gt_instances) != id(instances.gt_instances)
         _, new_data = self.setup_data()

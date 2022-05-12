@@ -69,7 +69,7 @@ class CheckpointHook(Hook):
         self.args = kwargs
         self.file_client_args = file_client_args
 
-    def before_run(self, runner) -> None:
+    def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
         This function will get the appropriate file client, and the directory
@@ -78,12 +78,11 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if not self.out_dir:
+        if self.out_dir is None:
             self.out_dir = runner.work_dir
 
         self.file_client = FileClient.infer_client(self.file_client_args,
                                                    self.out_dir)
-
         # if `self.out_dir` is not equal to `runner.work_dir`, it means that
         # `self.out_dir` is set so the final `self.out_dir` is the
         # concatenation of `self.out_dir` and the last level directory of
@@ -186,8 +185,7 @@ class CheckpointHook(Hook):
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.
-            outputs (dict, optional): Outputs from model.
-                Defaults to None.
+            outputs (dict, optional): Outputs from model. Defaults to None.
         """
         if self.by_epoch:
             return

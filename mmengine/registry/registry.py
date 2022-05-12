@@ -301,7 +301,7 @@ class Registry:
 
         Args:
             key (str): Name of the registered item, e.g., the class name in
-            string format.
+                string format.
 
         Returns:
             Type or None: Return the corresponding class if ``key`` exists,
@@ -355,7 +355,14 @@ class Registry:
                 scope_name = scope
             else:
                 root = self._get_root_registry()
-                obj_cls = root.get(key)
+
+                if scope != root._scope and scope not in root._children:
+                    # If not skip directly, `root.get(key)` will recursively
+                    # call itself until RecursionError is thrown.
+                    pass
+                else:
+                    obj_cls = root.get(key)
+
         if obj_cls is not None:
             logger: MMLogger = MMLogger.get_current_instance()
             logger.info(

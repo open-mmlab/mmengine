@@ -281,6 +281,16 @@ class TestRegistry:
         assert HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
                           ) is LittlePedigreeSamoyed
 
+        # invalid keys
+        # GoldenRetrieverererer can not be found at LITTLE_HOUNDS modules
+        assert LITTLE_HOUNDS.get('GoldenRetrieverererer') is None
+        # samoyedddd is not a child of DOGS
+        assert DOGS.get('samoyedddd.PedigreeSamoyed') is None
+        # samoyed is a child of DOGS but LittlePedigreeSamoyed can not be found
+        # at SAMOYEDS modules
+        assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
+        assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
+
     def test_search_child(self):
         #        Hierarchical Registry
         #                           DOGS
