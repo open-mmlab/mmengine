@@ -19,9 +19,9 @@ class BaseLoop(metaclass=ABCMeta):
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
-
         if isinstance(dataloader, dict):
-            self.dataloader = runner.build_dataloader(dataloader)
+            self.dataloader = runner.build_dataloader(
+                dataloader, seed=runner.seed)
         else:
             self.dataloader = dataloader
 
