@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, List, Optional, Tuple, Dict, Generator
+from typing import Any, List, Optional, Tuple, Dict, Generator, Union
 from collections import OrderedDict
 import shutil
 import pickle
@@ -808,7 +808,7 @@ def gather_object(data: Any,
     the object must be picklable in order to be gathered.
 
     Note:
-        ``NCCL backend`` dost not support ``gather_object``.
+        ``NCCL backend`` does not support ``gather_object``.
 
     Note:
         Unlike PyTorch ``torch.distributed.gather_object``,
@@ -1078,7 +1078,7 @@ def _all_reduce_coalesced(tensors: List[torch.Tensor],
             tensor.copy_(synced)
 
 
-def all_reduce_params(params: Generator[torch.Tensor, None, None],
+def all_reduce_params(params: Union[List, Generator[torch.Tensor, None, None]],
                       coalesce: bool = True,
                       bucket_size_mb: int = -1,
                       op: str = 'sum',
@@ -1086,8 +1086,8 @@ def all_reduce_params(params: Generator[torch.Tensor, None, None],
     """All-reduce parameters.
 
     Args:
-        params (Generator[torch.Tensor, None, None]): List of parameters or
-            buffers of a model.
+        params (List or Generator[torch.Tensor, None, None]): List of
+            parameters or buffers of a model.
         coalesce (bool, optional): Whether to reduce parameters as a whole.
             Defaults to True.
         bucket_size_mb (int, optional): Size of bucket, the unit is MB.
@@ -1097,6 +1097,27 @@ def all_reduce_params(params: Generator[torch.Tensor, None, None],
             'bxor'.
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.
+
+    Examples:
+        >>> import torch
+        >>> import mmengine.dist as dist
+
+        >>> # non-distributed environment
+        >>> data = [torch.arange(2), torch.arange(3)]
+        >>> dist.all_reduce_params(data)
+        >>> data
+            [tensor([0, 1]), tensor([0, 1, 2])]
+
+        >>> # distributed environment
+        >>> # We have 2 process groups, 2 ranks.
+        >>> if dist.get_rank() == 0:
+        ...     data = [torch.tensor([1, 2]), torch.tensor([3, 4])]
+        ... else:
+        ...     data = [torch.tensor([2, 3]), torch.tensor([4, 5])]
+
+        >>> dist.all_reduce_params(data)
+        >>> data
+            [torch.tensor([3, 5]), torch.tensor([7, 9])]
     """
     world_size = get_world_size(group)
     if world_size == 1:
