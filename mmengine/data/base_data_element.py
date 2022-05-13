@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, Iterator, Optional, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -223,11 +223,6 @@ class BaseDataElement:
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
         meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
-            if k in self._data_fields:
-                raise AttributeError(f'`{k}` is used in data,'
-                                     'which is immutable. If you want to'
-                                     'change the key in data, please use'
-                                     'set_data')
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
@@ -241,7 +236,9 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
-            self.set_field(name=k, value=v, field_type='data', dtype=None)
+            # Use `setattr()` rather than `self.set_field` to allow `set_data`
+            # to set property method.
+            setattr(self, k, v)
 
     def update(self, instance: 'BaseDataElement') -> None:
         """The update() method updates the BaseDataElement with the elements
@@ -382,12 +379,6 @@ class BaseDataElement:
                 raise AttributeError(f'{name} has been used as a '
                                      'private attribute, which is immutable. ')
         else:
-            if name in self._metainfo_fields:
-                raise AttributeError(
-                    f'`{name}` is used in meta information.'
-                    'if you want to change the key in metainfo, please use'
-                    '`set_metainfo(dict(name=value))`')
-
             self.set_field(
                 name=name, value=value, field_type='data', dtype=None)
 
@@ -411,7 +402,9 @@ class BaseDataElement:
 
     def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
-        return self.__dict__.get(key, default)
+        # Use `getattr()` rather than `self.__dict__.get()` to allow getting
+        # properties.
+        return getattr(self, key, default)
 
     def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
@@ -444,7 +437,7 @@ class BaseDataElement:
     def set_field(self,
                   value: Any,
                   name: str,
-                  dtype: Optional[Type] = None,
+                  dtype: Optional[Union[Type, Tuple[Type, ...]]] = None,
                   field_type: str = 'data') -> None:
         """Special method for set union field, used as property.setter
         functions."""
@@ -454,11 +447,19 @@ class BaseDataElement:
                 value,
                 dtype), f'{value} should be a {dtype} but got {type(value)}'
 
-        super().__setattr__(name, value)
         if field_type == 'metainfo':
+            if name in self._data_fields:
+                raise AttributeError(
+                    f'Cannot set {name} to be a field of metainfo '
+                    f'because {name} is already a data field')
             self._metainfo_fields.add(name)
         else:
+            if name in self._metainfo_fields:
+                raise AttributeError(
+                    f'Cannot set {name} to be a field of data '
+                    f'because {name} is already a metainfo field')
             self._data_fields.add(name)
+        super().__setattr__(name, value)
 
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataElement':
