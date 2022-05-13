@@ -8,7 +8,9 @@ jobs:
       - checkout
       - run:
           name: Linting
-          command: pre-commit run --all-files
+          command: |
+            pip install pre-commit
+            pre-commit run --all-files
       - run:
           name: Check docstring coverage
           command: |
