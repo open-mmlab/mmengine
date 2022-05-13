@@ -40,7 +40,7 @@ class TestConfig:
         cfg = Config(cfg_dict, filename=cfg_file)
         assert isinstance(cfg, Config)
         assert cfg.filename == cfg_file
-        assert cfg.text == open(cfg_file, 'r').read()
+        assert cfg.text == open(cfg_file).read()
 
         cfg_file = osp.join(
             self.data_path,
@@ -71,7 +71,7 @@ class TestConfig:
         file_format = osp.splitext(filename)[-1]
         in_cfg = Config.fromfile(cfg_file)
 
-        cfg_str = open(cfg_file, 'r').read()
+        cfg_str = open(cfg_file).read()
         out_cfg = Config.fromstring(cfg_str, file_format)
         assert in_cfg._cfg_dict == out_cfg._cfg_dict
 
@@ -194,7 +194,7 @@ class TestConfig:
 
         cfg.dump(dump_py)
         assert cfg.dump() == cfg.pretty_text
-        assert open(dump_py, 'r').read() == cfg.pretty_text
+        assert open(dump_py).read() == cfg.pretty_text
 
         # test dump json/yaml.
         file_path = 'config/json_config/simple.config.json'
@@ -233,17 +233,17 @@ class TestConfig:
         # Test dump python format config.
         dump_file = tmp_path / 'dump_from_dict.py'
         cfg.dump(dump_file)
-        with open(dump_file, 'r') as f:
+        with open(dump_file) as f:
             assert f.read() == 'a = 1\nb = 2\n'
         # Test dump json format config.
         dump_file = tmp_path / 'dump_from_dict.json'
         cfg.dump(dump_file)
-        with open(dump_file, 'r') as f:
+        with open(dump_file) as f:
             assert f.read() == '{"a": 1, "b": 2}'
         # Test dump yaml format config.
         dump_file = tmp_path / 'dump_from_dict.yaml'
         cfg.dump(dump_file)
-        with open(dump_file, 'r') as f:
+        with open(dump_file) as f:
             assert f.read() == 'a: 1\nb: 2\n'
 
     def test_pretty_text(self, tmp_path):
@@ -264,7 +264,7 @@ class TestConfig:
         tmp_txt = tmp_path / 'tmp.txt'
         with open(tmp_txt, 'w') as f:
             print(cfg, file=f)
-        with open(tmp_txt, 'r') as f:
+        with open(tmp_txt) as f:
             assert f.read().strip() == f'Config (path: {cfg.filename}): ' \
                                f'{cfg._cfg_dict.__repr__()}'
 
@@ -346,7 +346,7 @@ class TestConfig:
             f.write(cfg_text)
         Config._substitute_predefined_vars(cfg, substituted_cfg)
 
-        with open(substituted_cfg, 'r') as f:
+        with open(substituted_cfg) as f:
             assert f.read() == expected_text
 
     def test_pre_substitute_base_vars(self, tmp_path):

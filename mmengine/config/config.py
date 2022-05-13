@@ -142,7 +142,7 @@ class Config:
         if cfg_text:
             text = cfg_text
         elif filename:
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 text = f.read()
         else:
             text = ''
@@ -187,7 +187,7 @@ class Config:
             Config: Config object generated from ``cfg_str``.
         """
         if file_format not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
+            raise OSError('Only py/yml/yaml/json type are supported now!')
         if file_format != '.py' and 'dict(' in cfg_str:
             # check if users specify a wrong suffix for python
             warnings.warn(
@@ -217,7 +217,7 @@ class Config:
         Args:
             filename (str): Filename of python config file.
         """
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             content = f.read()
         try:
             ast.parse(content)
@@ -275,7 +275,7 @@ class Config:
             fileBasename=file_basename,
             fileBasenameNoExtension=file_basename_no_extension,
             fileExtname=file_extname)
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             config_file = f.read()
         for key, value in support_templates.items():
             regexp = r'\{\{\s*' + str(key) + r'\s*\}\}'
@@ -298,7 +298,7 @@ class Config:
         Returns:
             dict: A dictionary contains variables in base config.
         """
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             config_file = f.read()
         base_var_dict = {}
         regexp = r'\{\{\s*' + BASE_KEY + r'\.([\w\.]+)\s*\}\}'
@@ -373,7 +373,7 @@ class Config:
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
         if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
+            raise OSError('Only py/yml/yaml/json type are supported now!')
 
         with tempfile.TemporaryDirectory() as temp_config_dir:
             temp_config_file = tempfile.NamedTemporaryFile(
@@ -425,7 +425,7 @@ class Config:
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
@@ -704,7 +704,7 @@ class Config:
             str or None: Config text.
         """
         file = str(file) if isinstance(file, Path) else file
-        cfg_dict = super(Config, self).__getattribute__('_cfg_dict').to_dict()
+        cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
         if file is None:
             if self.filename is None or self.filename.endswith('.py'):
                 return self.pretty_text

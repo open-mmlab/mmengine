@@ -89,7 +89,7 @@ class TestLogger:
         logger = MMLogger.get_instance(
             instance_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
-        with open(tmp_path / 'tmp_file.log', 'r') as f:
+        with open(tmp_path / 'tmp_file.log') as f:
             log_text = f.read()
             match = re.fullmatch(
                 self.file_handler_regex_time +

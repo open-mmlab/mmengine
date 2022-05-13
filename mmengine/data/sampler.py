@@ -154,8 +154,7 @@ class InfiniteSampler(Sampler):
 
     def __iter__(self) -> Iterator[int]:
         """Iterate the indices."""
-        for idx in self.indices:
-            yield idx
+        yield from self.indices
 
     def __len__(self) -> int:
         """Length of base dataset."""
