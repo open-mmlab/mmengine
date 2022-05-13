@@ -794,7 +794,7 @@ class Runner:
 
         Args:
             optimizer (Optimizer or dict): An Optimizer object or a dict to
-                build Optimizer object. If ``optimizer`` is an Optimizer
+                build Optimizer objects. If ``optimizer`` is an Optimizer
                 object, just returns itself.
 
         Returns:
@@ -803,11 +803,55 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            optimizer = build_optimizer(self.model, optimizer)
-            return optimizer
+            if 'type' in optimizer:
+                # build an optimizer
+                optimizer = build_optimizer(self.model, optimizer)
+                return optimizer
+            else:
+                # build multiple optimizers
+                optimizers = dict()
+                for name, _optimizer in optimizer.items():
+                    optimizers[name] = self.build_optimizer(_optimizer)
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
                             f'but got {optimizer}')
+
+    def _build_param_scheduler(self, schedulers, optimizer):
+        param_schedulers = []
+        for scheduler in schedulers:
+            _scheduler = copy.deepcopy(scheduler)
+            if isinstance(_scheduler, _ParamScheduler):
+                param_schedulers.append(_scheduler)
+            elif isinstance(_scheduler, dict):
+                convert_to_iter = _scheduler.pop('convert_to_iter_based',
+                                                 False)
+                if convert_to_iter:
+                    assert _scheduler.get(
+                        'by_epoch',
+                        True), ('only epoch-based parameter scheduler can be '
+                                'converted to iter-based')
+                    assert isinstance(self.train_loop, BaseLoop), \
+                        'Scheduler can only be converted to iter-based ' \
+                        'when train loop is built.'
+                    cls = PARAM_SCHEDULERS.get(_scheduler.pop('type'))
+                    param_schedulers.append(
+                        cls.build_iter_from_epoch(  # type: ignore
+                            optimizer=self.optimizer,
+                            **_scheduler,
+                            epoch_length=len(
+                                self.train_loop.dataloader),  # type: ignore
+                        ))
+                else:
+                    param_schedulers.append(
+                        PARAM_SCHEDULERS.build(
+                            _scheduler,
+                            default_args=dict(optimizer=optimizer)))
+            else:
+                raise TypeError(
+                    '_scheduler should be a _ParamScheduler object or dict, '
+                    f'but got {_scheduler}')
+
+        return param_schedulers
 
     def build_param_scheduler(
         self, scheduler: Union[_ParamScheduler, Dict,
@@ -832,49 +876,27 @@ class Runner:
             list[:obj:`_ParamScheduler`]: List of parameter schedulers build
             from ``scheduler``.
         """
-        if not isinstance(self.optimizer, Optimizer):
-            raise RuntimeError(
-                '`build_optimizer` should be called before'
-                '`build_param_scheduler` because the latter depends on the '
-                'former')
-
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
         else:
             schedulers = scheduler
 
         param_schedulers = []
-        for _scheduler in schedulers:
-            if isinstance(_scheduler, _ParamScheduler):
-                param_schedulers.append(_scheduler)
-            elif isinstance(_scheduler, dict):
-                convert_to_iter = _scheduler.pop('convert_to_iter_based',
-                                                 False)
-                if convert_to_iter:
-                    assert _scheduler.get(
-                        'by_epoch', True
-                    ), 'only epoch-based parameter scheduler can be ' \
-                       'converted to iter-based'
-                    assert isinstance(self.train_loop, BaseLoop), \
-                        'Scheduler can only be converted to iter-based ' \
-                        'when train loop is built.'
-                    cls = PARAM_SCHEDULERS.get(_scheduler.pop('type'))
-                    param_schedulers.append(
-                        cls.build_iter_from_epoch(  # type: ignore
-                            optimizer=self.optimizer,
-                            **_scheduler,
-                            epoch_length=len(
-                                self.train_loop.dataloader),  # type: ignore
-                        ))
-                else:
-                    param_schedulers.append(
-                        PARAM_SCHEDULERS.build(
-                            _scheduler,
-                            default_args=dict(optimizer=self.optimizer)))
-            else:
-                raise TypeError(
-                    '_scheduler should be a _ParamScheduler object or dict, '
-                    f'but got {_scheduler}')
+
+        if isinstance(self.optimizer, Optimizer):
+            _param_schedulers = self._build_param_scheduler(
+                schedulers, self.optimizer)
+            param_schedulers.extend(_param_schedulers)
+        else:
+            for optimizer in self.optimizer.values():  # type: ignore
+                if not isinstance(optimizer, Optimizer):
+                    raise RuntimeError(
+                        '`build_optimizer` should be called before'
+                        '`build_param_scheduler` because the latter depends '
+                        'on the former')
+                _param_schedulers = self._build_param_scheduler(
+                    schedulers, optimizer)
+                param_schedulers.extend(_param_schedulers)
 
         return param_schedulers
 
