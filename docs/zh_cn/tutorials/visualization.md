@@ -63,11 +63,13 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 特征图可视化功能较多，目前不支持 Batch 输入，其功能可以归纳如下
 
 - 输入的 Tensor 一般是包括多个通道的，channel_reduction 参数可以将多个通道压缩为单通道，然后和图片进行叠加显示
+
   - `squeeze_mean` 将输入的 C 维度采用 mean 函数压缩为一个通道，输出维度变成 (1, H, W)
   - `select_max` 从输入的 C 维度中先在空间维度 sum，维度变成 (C, )，然后选择值最大的通道
   - `None` 表示不需要压缩，此时可以通过 topk 参数可选择激活度最高的 topk 个特征图显示
 
 - 在 channel_reduction 参数为 None 的情况下，topk 参数生效，其会按照激活度排序选择 topk 个通道，然后和图片进行叠加显示，并且此时会通过 arrangement 参数指定显示的布局
+
   - 如果 topk 不是 -1，则会按照激活度排序选择 topk 个通道显示
   - 如果 topk = -1，此时通道 C 必须是 1 或者 3 表示输入数据是图片，否则报错提示用户应该设置 `channel_reduction`来压缩通道。
 
@@ -107,6 +109,7 @@ vis_backends = [dict(type='LocalVisBackend')]
 visualizer = dict(
     type='DetLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 ```
+
 ```python
 # 内部会调用 get_instance() 进行全局唯一实例化
 VISUALIZERS.build(cfg.visualizer)
