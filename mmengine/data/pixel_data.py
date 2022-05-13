@@ -11,11 +11,11 @@ from .base_data_element import BaseDataElement
 class PixelData(BaseDataElement):
     """Data structure for pixel-level annnotations or predictions.
 
-    All value in `data_fields` of `PixelData` have the following requirements:
+    All data items in ``data_fields`` of ``PixelData`` meet the following
+    requirements:
 
-    - All value must be 3-dimension.
-    - The order of value's dimension is channel, height and width.
-    - Values must have same height and width.
+    - They all have 3 dimensions in orders of channel, height, and width.
+    - They should have the same height and width.
 
     Examples:
         >>> metainfo = dict(
@@ -44,7 +44,9 @@ class PixelData(BaseDataElement):
     """
 
     def __setattr__(self, name: str, value: Union[torch.Tensor, np.ndarray]):
-        """if the dimension of value is 2 and its shape meet the demand, it
+        """Set attributes of ``PixelData``.
+
+        If the dimension of value is 2 and its shape meet the demand, it
         will automatically expend its channel-dimension.
 
         Args:
@@ -106,13 +108,16 @@ class PixelData(BaseDataElement):
                 elif isinstance(single_item, slice):
                     tmp_item.insert(0, single_item)
                 else:
-                    raise TypeError
+                    raise TypeError(
+                        'The type of element in input must be int or slice, '
+                        f'but got {type(single_item)}')
             tmp_item.insert(0, slice(None, None, None))
             item = tuple(tmp_item)
             for k, v in self.items():
                 setattr(new_data, k, v[item])
         else:
-            raise TypeError
+            raise TypeError(
+                f'Unsupported type {type(item)} for slicing PixelData')
         return new_data
 
     @property

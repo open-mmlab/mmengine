@@ -236,10 +236,8 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
-            # The reason not to use `self.set_field` is that the set_data
-            # can set property method,, which mean
-            # `xx.set_data(dict(metainfo=value))` is same as
-            # `xx.metainfo=value`
+            # Use `setattr()` rather than `self.set_field` to allow `set_data`
+            # to set property method.
             setattr(self, k, v)
 
     def update(self, instance: 'BaseDataElement') -> None:
@@ -404,9 +402,8 @@ class BaseDataElement:
 
     def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
-        # The reason not to use self.__dict__.get(key, default) is that
-        # the `get` can get property method, which mean
-        # `xx.get('metainfo', None)` is same as `xx.metainfo`
+        # Use `getattr()` rather than `self.__dict__.get()` to allow getting
+        # properties.
         return getattr(self, key, default)
 
     def pop(self, *args) -> Any:
@@ -452,17 +449,15 @@ class BaseDataElement:
 
         if field_type == 'metainfo':
             if name in self._data_fields:
-                raise AttributeError(f'`{name}` is used in data,'
-                                     'which is immutable. If you want to'
-                                     'change the key in data, please use'
-                                     '`set_data` or just `xx.name = value`')
+                raise AttributeError(
+                    f'Cannot set {name} to be a field of metainfo '
+                    f'because {name} is already a data field')
             self._metainfo_fields.add(name)
         else:
             if name in self._metainfo_fields:
                 raise AttributeError(
-                    f'`{name}` is used in meta information.'
-                    'if you want to change the key in metainfo, please use'
-                    '`set_metainfo(dict(name=value))`')
+                    f'Cannot set {name} to be a field of data '
+                    f'because {name} is already a metainfo field')
             self._data_fields.add(name)
         super().__setattr__(name, value)
 

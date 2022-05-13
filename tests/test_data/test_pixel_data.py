@@ -60,13 +60,20 @@ class TestPixelData(TestCase):
 
         # must be tuple
         item = torch.Tensor([1, 2, 3, 4])
-        with pytest.raises(TypeError):
+        with pytest.raises(
+                TypeError,
+                match=f'Unsupported type {type(item)} for slicing PixelData'):
             pixel_data[item]
         item = 1
-        with pytest.raises(TypeError):
+        with pytest.raises(
+                TypeError,
+                match=f'Unsupported type {type(item)} for slicing PixelData'):
             pixel_data[item]
         item = (5.5, 5)
-        with pytest.raises(TypeError):
+        with pytest.raises(
+                TypeError,
+                match=('The type of element in input must be int or slice, '
+                       f'but got {type(item[0])}')):
             pixel_data[item]
 
     def test_shape(self):
