@@ -819,10 +819,10 @@ class Runner:
     def _build_param_scheduler(self, schedulers, optimizer):
         param_schedulers = []
         for scheduler in schedulers:
-            _scheduler = copy.deepcopy(scheduler)
-            if isinstance(_scheduler, _ParamScheduler):
-                param_schedulers.append(_scheduler)
-            elif isinstance(_scheduler, dict):
+            if isinstance(scheduler, _ParamScheduler):
+                param_schedulers.append(scheduler)
+            elif isinstance(scheduler, dict):
+                _scheduler = copy.deepcopy(scheduler)
                 convert_to_iter = _scheduler.pop('convert_to_iter_based',
                                                  False)
                 if convert_to_iter:
