@@ -5,6 +5,7 @@ from typing import Dict, List, Sequence, Union
 import torch
 from torch.utils.data import DataLoader
 
+import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
@@ -22,11 +23,16 @@ class EpochBasedTrainLoop(BaseLoop):
         max_epoch (int): Total training epochs.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 max_epochs: int) -> None:
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 max_epochs: int,
+                 optimizer_warpper: optim_wrapper._BaseOptimizerWrapper,
+                 ) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
+        self.optimizer_warpper = optimizer_warpper
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo

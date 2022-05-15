@@ -9,6 +9,7 @@ from typing import Callable, List
 from torch.optim import Optimizer
 
 from mmengine.registry import PARAM_SCHEDULERS
+from ..optimizer.optimizer_wrapper import _BaseOptimizerWrapper
 
 INF = int(1e9)
 
@@ -40,7 +41,7 @@ class _ParamScheduler:
     """  # noqa: E501
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  begin: int = 0,
                  end: int = INF,
@@ -235,7 +236,7 @@ class StepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  step_size: int,
                  gamma: float = 0.1,
@@ -292,7 +293,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  milestones: List[int],
                  gamma: float = 0.1,
@@ -349,7 +350,7 @@ class ConstantParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  factor: float = 1.0 / 3,
                  begin: int = 0,
@@ -413,7 +414,7 @@ class ExponentialParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  gamma: float,
                  begin: int = 0,
@@ -492,7 +493,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  T_max: int,
                  eta_min: float = 0.,
@@ -560,7 +561,7 @@ class LinearParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  start_factor: float = 1.0 / 3,
                  end_factor: float = 1.0,
@@ -632,7 +633,7 @@ class PolyParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: _BaseOptimizerWrapper,
                  param_name: str,
                  eta_min: float = 0,
                  power: float = 1.0,
