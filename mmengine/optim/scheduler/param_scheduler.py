@@ -4,7 +4,7 @@ import warnings
 import weakref
 from collections import Counter
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Union
 
 from torch.optim import Optimizer
 
@@ -41,7 +41,7 @@ class _ParamScheduler:
     """  # noqa: E501
 
     def __init__(self,
-                 optimizer: _BaseOptimizerWrapper,
+                 optimizer: Union[_BaseOptimizerWrapper, Optimizer],
                  param_name: str,
                  begin: int = 0,
                  end: int = INF,
@@ -50,7 +50,7 @@ class _ParamScheduler:
                  verbose: bool = False):
 
         # Attach optimizer
-        if not isinstance(optimizer, Optimizer):
+        if not isinstance(optimizer, (Optimizer, _BaseOptimizerWrapper)):
             raise TypeError('``optimizer`` should be an Optimizer,'
                             'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer

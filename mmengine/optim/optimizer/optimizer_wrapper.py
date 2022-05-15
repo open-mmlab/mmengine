@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Optional
 
@@ -6,7 +7,7 @@ import torch.nn as nn
 from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
-import mmengine.logging as logging
+from mmengine.logging import MessageHub, MMLogger
 
 
 class _BaseOptimizerWrapper(metaclass=ABCMeta):
@@ -15,8 +16,8 @@ class _BaseOptimizerWrapper(metaclass=ABCMeta):
         self.model = model
         self.optimizer = optimizer
         self.grad_clip = grad_clip
-        self.logger = logging.MMLogger.get_cur_instance()
-        self.messge_hub = logging.Messagehub.get_cur_instance()
+        self.logger = MMLogger.get_current_instance()
+        self.messge_hub = MessageHub.get_current_instance()
 
     @abstractmethod
     def optimizer_step(self, loss):
@@ -74,7 +75,8 @@ class _BaseOptimizerWrapper(metaclass=ABCMeta):
         Returns:
             _type_: _description_
         """
-    
+
+    @property
     def param_groups(self):
         return self.optimizer.param_groups
 
@@ -108,7 +110,8 @@ class _OptimizerWrapper(_BaseOptimizerWrapper):
     def optimizer_step(self, loss: torch.Tensor = None) -> None:
         self.zero_grad()
         self.backward(loss)
-        self.grad_clips()
+        if self.grad_clip:
+            self.grad_clips()
         self.optimizer.step()
 
     def backward(self, loss):
@@ -123,8 +126,7 @@ class _OptimizerWrapper(_BaseOptimizerWrapper):
         self.optimizer.step()
 
     def grad_clips(self):
-        if self.grad_clip is not None:
-            grad_norm = self.clip_grads(self.model.parameters())
+        grad_norm = self.clip_grads(self.model.parameters())
         if grad_norm is not None:
             self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
 
