@@ -23,16 +23,13 @@ class EpochBasedTrainLoop(BaseLoop):
         max_epoch (int): Total training epochs.
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 max_epochs: int,
-                 optimizer_warpper: optim_wrapper._BaseOptimizerWrapper,
-                 ) -> None:
+    def __init__(
+            self, runner, dataloader: Union[DataLoader, Dict], max_epochs: int,
+            optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
-        self.optimizer_warpper = optimizer_warpper
+        self.optimizer_wrapper = optimizer_wrapper
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -83,15 +80,11 @@ class EpochBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be a dict containing one or multiple loss tensors
-        losses = self.runner.model(data_batch, return_loss=True)
-        self.runner.outputs = self._parse_losses(losses)
-
-        self.runner.call_hook(
-            'after_train_iter',
-            batch_idx=idx,
-            data_batch=data_batch,
-            outputs=self.runner.outputs)
+        self.runner.message_hub.update_info(
+            'train_logs',
+            self.runner.model(
+                data_batch, mode='train', optimizer=self.optimizer_wrapper))
+        self.runner.call_hook('after_train_iter', batch_idx=idx)
 
         self.runner.iter += 1
 
@@ -107,9 +100,11 @@ class IterBasedTrainLoop(BaseLoop):
         max_iter (int): Total training iterations.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 max_iters: int) -> None:
+    def __init__(
+            self, runner, dataloader: Union[DataLoader, Dict], max_iters: int,
+            optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper) -> None:
         super().__init__(runner, dataloader)
+        self.optimizer_wrapper = optimizer_wrapper
         self._max_iters = max_iters
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
@@ -156,13 +151,14 @@ class IterBasedTrainLoop(BaseLoop):
             batch_idx=self.runner._iter,
             data_batch=data_batch)
         # outputs should be a dict containing loss tensor
-        losses = self.runner.model(data_batch, return_loss=True)
-        self.runner.outputs = self._parse_losses(losses)
+        self.runner.message_hub.update_info(
+            'train_logs',
+            self.runner.model(
+                data_batch, mode='train', optimizer=self.optimizer_wrapper))
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self.runner._iter,
-            data_batch=data_batch,
-            outputs=self.runner.outputs)
+            data_batch=data_batch)
         self.runner.iter += 1
 
 
@@ -209,9 +205,8 @@ class ValLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'val/{key}', value)
+        self.runner.message_hub.update_info(
+            'val_logs', self.evaluator.evaluate(len(self.dataloader.dataset)))
 
         self.runner.call_hook('after_val_epoch')
         self.runner.call_hook('after_val')
@@ -227,7 +222,8 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        outputs = self.runner.model(data_batch)
+        outputs = self.runner.model(
+            data_batch, mode='val', return_val_loss=False)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
             'after_val_iter',
@@ -274,9 +270,9 @@ class TestLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'test/{key}', value)
+
+        self.runner.message_hub.update_info(
+            'test_logs', self.evaluator.evaluate(len(self.dataloader.dataset)))
 
         self.runner.call_hook('after_test_epoch')
         self.runner.call_hook('after_test')
@@ -291,7 +287,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model(data_batch)
+        predictions = self.runner.model(data_batch, mode='test')
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',

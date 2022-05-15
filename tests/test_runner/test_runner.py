@@ -11,6 +11,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.optim import SGD
 from torch.utils.data import DataLoader, Dataset
 
+import mmengine.model.wrappers.model_wrapper as model_wrapper
+import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
@@ -18,6 +20,7 @@ from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
                             LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
+from mmengine.model import BaseModel
 from mmengine.optim.scheduler import MultiStepLR, StepLR
 from mmengine.registry import (DATASETS, HOOKS, LOOPS, METRICS, MODEL_WRAPPERS,
                                MODELS, PARAM_SCHEDULERS, Registry)
@@ -29,25 +32,20 @@ from mmengine.visualization import Visualizer
 
 
 @MODELS.register_module()
-class ToyModel(nn.Module):
+class ToyModel(BaseModel):
 
     def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(2, 1)
+        self.conv = nn.Conv2d(3, 1, 3)
 
-    def forward(self, data_batch, return_loss=False):
-        inputs, labels = [], []
-        for x in data_batch:
-            inputs.append(x['inputs'])
-            labels.append(x['data_sample'])
-
+    def forward(self, inputs, labels, return_loss=False):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
-        outputs = self.linear(inputs)
+        outputs = self.conv(inputs)
         if return_loss:
             loss = (labels - outputs).sum()
-            outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
+            outputs = dict(loss=loss)
             return outputs
         else:
             outputs = dict(log_vars=dict(a=1, b=0.5))
@@ -72,7 +70,7 @@ class CustomModelWrapper(nn.Module):
 @DATASETS.register_module()
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
-    data = torch.randn(12, 2)
+    data = torch.randn(12, 3, 3, 3)
     label = torch.ones(12)
 
     def __len__(self):
@@ -131,9 +129,10 @@ class ToyHook2(Hook):
 @LOOPS.register_module()
 class CustomTrainLoop(BaseLoop):
 
-    def __init__(self, runner, dataloader, max_epochs):
+    def __init__(self, runner, dataloader, max_epochs, optimizer_wrapper):
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
+        self.optimizer_wrapper = optimizer_wrapper
 
     def run(self) -> None:
         pass
@@ -209,7 +208,6 @@ class TestRunner(TestCase):
                 timer=dict(type='IterTimerHook'),
                 checkpoint=dict(type='CheckpointHook', interval=1),
                 logger=dict(type='LoggerHook'),
-                optimizer=dict(type='OptimizerHook', grad_clip=None),
                 param_scheduler=dict(type='ParamSchedulerHook')),
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
@@ -226,7 +224,6 @@ class TestRunner(TestCase):
             timer=dict(type='IterTimerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
             logger=dict(type='LoggerHook'),
-            optimizer=dict(type='OptimizerHook', grad_clip=None),
             param_scheduler=dict(type='ParamSchedulerHook'))
 
     def tearDown(self):
@@ -354,7 +351,9 @@ class TestRunner(TestCase):
 
         self.assertIsInstance(runner.train_loop, BaseLoop)
         self.assertIsInstance(runner.train_loop.dataloader, DataLoader)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner.optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner.val_loop, BaseLoop)
         self.assertIsInstance(runner.val_loop.dataloader, DataLoader)
@@ -503,7 +502,7 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_model'
         runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, ToyModel)
+        self.assertIsInstance(runner.model, model_wrapper._ModelWrapper)
 
         # input should be a nn.Module object or dict
         with self.assertRaisesRegex(TypeError, 'model should be'):
@@ -546,43 +545,57 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
-    def test_build_optimizer(self):
+    def test_build_optimizer_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_optimizer'
+        cfg.experiment_name = 'test_build_optimizer_wrapper'
         runner = Runner.from_cfg(cfg)
 
         # input should be an Optimizer object or dict
         with self.assertRaisesRegex(TypeError, 'optimizer should be'):
-            runner.build_optimizer('invalid-type')
+            runner.build_optimizer_wrapper('invalid-type')
+
+        # input is an _OptimizerWrapper object
+        _optimizer = optim_wrapper._OptimizerWrapper(
+            runner.base_model, SGD(runner.model.parameters(), lr=0.01))
+        optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
+        self.assertIsInstance(optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
+        self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
         # input is an Optimizer object
         _optimizer = SGD(runner.model.parameters(), lr=0.01)
-        optimizer = runner.build_optimizer(_optimizer)
-        self.assertEqual(id(_optimizer), id(optimizer))
+        optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
+        self.assertIsInstance(optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
+        self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
         # input is a dict
-        optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
-        self.assertIsInstance(optimizer, SGD)
+        optimizer_wrapper = runner.build_optimizer_wrapper(
+            dict(type='SGD', lr=0.01))
+        self.assertIsInstance(optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
+        self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_param_scheduler'
         runner = Runner.from_cfg(cfg)
-
         # `build_optimizer` should be called before `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
-        runner.optimizer = None
+        runner.optimizer_wrapper = None
         with self.assertRaisesRegex(RuntimeError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
-        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+        runner.optimizer_wrapper = runner.build_optimizer_wrapper(
+            dict(type='SGD', lr=0.01))
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertIsInstance(param_schedulers, list)
         self.assertEqual(len(param_schedulers), 1)
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
 
         # input is a ParamScheduler object
-        param_scheduler = MultiStepLR(runner.optimizer, milestones=[1, 2])
+        param_scheduler = MultiStepLR(
+            runner.optimizer_wrapper, milestones=[1, 2])
         param_schedulers = runner.build_param_scheduler(param_scheduler)
         self.assertEqual(id(param_schedulers[0]), id(param_scheduler))
 
@@ -929,35 +942,35 @@ class TestRunner(TestCase):
 
         # register five hooks by default
         runner.register_default_hooks()
-        self.assertEqual(len(runner._hooks), 6)
+        self.assertEqual(len(runner._hooks), 5)
         # the third registered hook should be `DistSamplerSeedHook`
-        self.assertTrue(isinstance(runner._hooks[2], DistSamplerSeedHook))
+        self.assertTrue(isinstance(runner._hooks[1], DistSamplerSeedHook))
         # the fifth registered hook should be `ParamSchedulerHook`
-        self.assertTrue(isinstance(runner._hooks[4], ParamSchedulerHook))
+        self.assertTrue(isinstance(runner._hooks[3], ParamSchedulerHook))
 
         runner._hooks = []
-        # remove `ParamSchedulerHook` from default hooks
+        # remove `IterTimerHook` from default hooks
         runner.register_default_hooks(hooks=dict(timer=None))
-        self.assertEqual(len(runner._hooks), 5)
+        self.assertEqual(len(runner._hooks), 4)
         # `ParamSchedulerHook` was popped so the forth is `CheckpointHook`
-        self.assertTrue(isinstance(runner._hooks[4], CheckpointHook))
+        self.assertTrue(isinstance(runner._hooks[3], CheckpointHook))
 
         # add a new default hook
         runner._hooks = []
         runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        self.assertEqual(len(runner._hooks), 6)
+        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
-        self.assertEqual(len(runner._hooks), 6)
+        self.assertEqual(len(runner._hooks), 5)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        self.assertEqual(len(runner._hooks), 6)
+        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -968,8 +981,8 @@ class TestRunner(TestCase):
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
         # six default hooks + custom hook (ToyHook)
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        self.assertEqual(len(runner._hooks), 6)
+        self.assertTrue(isinstance(runner._hooks[5], ToyHook))
 
     def test_custom_loop(self):
         # test custom loop with additional hook
@@ -978,12 +991,16 @@ class TestRunner(TestCase):
             """Custom train loop with additional warmup stage."""
 
             def __init__(self, runner, dataloader, max_iters, warmup_loader,
-                         max_warmup_iters):
+                         max_warmup_iters, optimizer_wrapper):
                 super().__init__(
-                    runner=runner, dataloader=dataloader, max_iters=max_iters)
+                    runner=runner,
+                    dataloader=dataloader,
+                    max_iters=max_iters,
+                    optimizer_wrapper=optimizer_wrapper)
                 self.warmup_loader = self.runner.build_dataloader(
                     warmup_loader)
                 self.max_warmup_iters = max_warmup_iters
+                self.optimizer_wrapper = optimizer_wrapper
 
             def run(self):
                 self.runner.call_hook('before_train')
@@ -1005,12 +1022,14 @@ class TestRunner(TestCase):
             def warmup_iter(self, data_batch):
                 self.runner.call_hook(
                     'before_warmup_iter', data_batch=data_batch)
-                self.runner.outputs = self.runner.model(
-                    data_batch, return_loss=True)
+                self.runner.message_hub.update_info(
+                    'train_logs',
+                    self.runner.model(
+                        data_batch,
+                        mode='train',
+                        optimizer=self.optimizer_wrapper))
                 self.runner.call_hook(
-                    'after_warmup_iter',
-                    data_batch=data_batch,
-                    outputs=self.runner.outputs)
+                    'after_warmup_iter', data_batch=data_batch)
 
         before_warmup_iter_results = []
         after_warmup_iter_results = []
@@ -1088,7 +1107,8 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.4 test auto resume
@@ -1100,7 +1120,8 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper,
+                              optim_wrapper._BaseOptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.5 test resume from a specified checkpoint
@@ -1113,7 +1134,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 1)
         self.assertEqual(runner.iter, 4)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2. test iter based
@@ -1152,7 +1173,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.4 test auto resume
@@ -1164,7 +1185,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.5 test resume from a specified checkpoint
@@ -1177,5 +1198,5 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 3)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)

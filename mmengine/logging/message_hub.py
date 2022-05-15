@@ -263,18 +263,19 @@ class MessageHub(ManagerMixin):
                            f'instance name is: {MessageHub.instance_name}')
         return self.log_scalars[key]
 
-    def get_info(self, key: str) -> Any:
+    def get_info(self, key: str, default: Optional[Any] = None) -> Any:
         """Get runtime information by key.
 
         Args:
             key (str): Key of runtime information.
+            default (Any, optional): return default value if runtime
+                information does not contain the corresponding key.
 
         Returns:
             Any: A copy of corresponding runtime information if the key exists.
         """
         if key not in self.runtime_info:
-            raise KeyError(f'{key} is not found in Messagehub.log_buffers: '
-                           f'instance name is: {MessageHub.instance_name}')
+            return default
 
         # TODO： There are restrictions on objects that can be saved
         # return copy.deepcopy(self._runtime_info[key])

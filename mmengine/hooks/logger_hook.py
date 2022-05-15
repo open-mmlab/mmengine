@@ -4,6 +4,8 @@ import os.path as osp
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
+import torch
+
 from mmengine.data import BaseDataElement
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
@@ -124,6 +126,7 @@ class LoggerHook(Hook):
                 Defaults to None.
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
+        self._update_logs(runner, 'train')
         if outputs is not None and data_batch is not None:
             for key, value in outputs['log_vars'].items():
                 runner.message_hub.update_scalar(f'train/{key}', value)
@@ -166,6 +169,7 @@ class LoggerHook(Hook):
                 Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
+        self._update_logs(runner, 'val')
         if self.every_n_inner_iters(batch_idx, self.interval):
             _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'val')
@@ -186,6 +190,7 @@ class LoggerHook(Hook):
                 Defaults to None.
             outputs (sequence, optional): Outputs from model. Defaults to None.
         """
+        self._update_logs(runner, 'test')
         if self.every_n_inner_iters(batch_idx, self.interval):
             _, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'test')
@@ -197,6 +202,7 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the validation process.
         """
+        self._update_logs(runner, 'val')
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
@@ -209,6 +215,7 @@ class LoggerHook(Hook):
         Args:
             runner (Runner): The runner of the testing process.
         """
+        self._update_logs(runner, 'test')
         _, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'test')
         runner.logger.info(log_str)
@@ -237,3 +244,14 @@ class LoggerHook(Hook):
                 os.remove(local_filepath)
                 runner.logger.info((f'{local_filepath} was removed due to the '
                                     '`self.keep_local=False`'))
+
+    def _update_logs(self, runner, mode):
+        assert mode in ('train', 'test', 'val')
+        log_infos = runner.message_hub.get_info(f'{mode}_logs')
+        if log_infos is None:
+            log_infos = dict()
+        runner.message_hub.update_info(f'{mode}_logs', dict())
+        for key, value in log_infos.items():
+            if isinstance(value, torch.Tensor):
+                value = value.item()
+            runner.message_hub.update_scalar(f'{mode}/{key}', value)

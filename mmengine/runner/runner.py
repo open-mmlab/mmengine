@@ -19,6 +19,7 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
+import mmengine.model.wrappers.model_wrapper as model_wrapper
 import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
@@ -357,10 +358,10 @@ class Runner:
         self._has_loaded = False
 
         # build a model
-        self.model = self.build_model(model)
+        self.base_model = self.build_model(model)
         # wrap model
         self.model = self.wrap_model(
-            self.cfg.get('model_wrapper_cfg'), self.model)
+            self.cfg.get('model_wrapper_cfg'), self.base_model)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
@@ -772,17 +773,19 @@ class Runner:
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
                 model = DistributedDataParallel(
-                    self.model.cuda(),
+                    model_wrapper._ModelWrapper(self.base_model),
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
             else:
                 # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
                 if torch.cuda.is_available():
-                    model = model.cuda()
+                    model = model_wrapper._ModelWrapper(self.base_model)
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(model=self.model))
+                model_wrapper_cfg,
+                default_args=dict(
+                    model=model_wrapper._ModelWrapper(self.base_model)))
 
         return model
 
@@ -794,7 +797,7 @@ class Runner:
             optimizer_cls = optim_wrapper._OptimizerWrapper
 
         optimizer_wrapper = optimizer_cls(
-            model=self.model, optimizer=optimizer, **optimizer_update_cfg)
+            model=self.base_model, optimizer=optimizer, **optimizer_update_cfg)
         return optimizer_wrapper
 
     def build_optimizer_wrapper(
@@ -808,14 +811,17 @@ class Runner:
             optimizer = dict(type='SGD', lr=0.01)
 
         Args:
-            optimizer (Optimizer or dict): An Optimizer object or a dict to
-                build Optimizer object. If ``optimizer`` is an Optimizer
-                object, just returns itself.
+            optimizer (Optimizer, _BaseOptimizerWrapper or dict): 
+                An Optimizer object or a dict to build Optimizer object.
+                If ``optimizer`` is an Optimizer object, just returns itself.
 
         Returns:
-            Optimizer: Optimizer build from ``optimizer_cfg``.
+            _BaseOptimizerWrapper: Optimizer build from ``optimizer_cfg``.
         """
-        if isinstance(optimizer, Optimizer):
+        if isinstance(optimizer, optim_wrapper._BaseOptimizerWrapper):
+            return optimizer
+        elif isinstance(optimizer, Optimizer):
+            optimizer = self.get_optimizer_wrapper(optimizer)
             return optimizer
         elif isinstance(optimizer, dict):
             optimizer = build_optimizer(self.model, optimizer)
@@ -1036,6 +1042,7 @@ class Runner:
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
 
         if 'type' in loop_cfg:
+            loop_cfg['optimizer_wrapper'] = self.optimizer_wrapper
             loop = LOOPS.build(
                 loop_cfg,
                 default_args=dict(
@@ -1308,8 +1315,6 @@ class Runner:
         +----------------------+-------------------------+
         | Hooks                | Priority                |
         +======================+=========================+
-        | OptimizerHook        | HIGH (30)               |
-        +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
         +----------------------+-------------------------+
         | DistSamplerSeedHook  | NORMAL (40)             |
@@ -1347,7 +1352,6 @@ class Runner:
                 to be registered.
         """
         default_hooks: dict = dict(
-            optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
@@ -1495,13 +1499,8 @@ class Runner:
         # Add comments to describe the usage of `after_load_ckpt`
         self.call_hook('after_load_ckpt', checkpoint=checkpoint)
 
-        if is_model_wrapper(self.model):
-            model = self.model.module
-        else:
-            model = self.model
-
         checkpoint = _load_checkpoint_to_model(
-            model, checkpoint, strict, revise_keys=revise_keys)
+            self.base_model, checkpoint, strict, revise_keys=revise_keys)
 
         self._has_loaded = True
 
@@ -1556,18 +1555,14 @@ class Runner:
 
         filepath = osp.join(out_dir, filename)
 
-        if hasattr(self.model, 'CLASSES') and self.model.CLASSES is not None:
+        if (hasattr(self.base_model, 'CLASSES')
+                and self.base_model.CLASSES is not None):
             # save class name to the meta
-            meta.update(CLASSES=self.model.CLASSES)
-
-        if is_model_wrapper(self.model):
-            model = self.model.module
-        else:
-            model = self.model
+            meta.update(CLASSES=self.base_model.CLASSES)
 
         checkpoint = {
             'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model))
+            'state_dict': weights_to_cpu(get_state_dict(self.base_model))
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
