@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Optional
@@ -112,7 +113,7 @@ class _OptimizerWrapper(_BaseOptimizerWrapper):
         self.backward(loss)
         if self.grad_clip:
             self.grad_clips()
-        self.optimizer.step()
+        self.step()
 
     def backward(self, loss):
         if self.detect_anomalous_params:
@@ -132,7 +133,7 @@ class _OptimizerWrapper(_BaseOptimizerWrapper):
 
     def detect_anomalous_parameters(self, loss: torch.Tensor) -> None:
         """Detect anomalous parameters that are not included in the graph.
-    
+
         Args:
             loss (torch.Tensor): The loss of current iteration.
         """

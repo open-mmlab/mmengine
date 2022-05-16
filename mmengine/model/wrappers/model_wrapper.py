@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 
 import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper

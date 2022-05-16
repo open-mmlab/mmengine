@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, List, Optional, Union
@@ -24,9 +25,9 @@ class BaseModel(nn.Module):
         self._fp16_enabled = False
         pixel_mean = preprocess_cfg.get('pixel_mean', [127.5, 127.5, 127.5])
         pixel_std = preprocess_cfg.get('pixel_std', [127.5, 127.5, 127.5])
-        self.register_buffer("pixel_mean",
+        self.register_buffer('pixel_mean',
                              torch.tensor(pixel_mean).view(-1, 1, 1), False)
-        self.register_buffer("pixel_std",
+        self.register_buffer('pixel_std',
                              torch.tensor(pixel_std).view(-1, 1, 1), False)
         self.size_divisor = preprocess_cfg.get('size_divisor', 1)
 
@@ -39,6 +40,15 @@ class BaseModel(nn.Module):
         self, data: List[dict],
         optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper
     ) -> Dict[str, torch.Tensor]:
+        """_summary_
+
+        Args:
+            data (List[dict]): _description_
+            optimizer_wrapper (optim_wrapper._BaseOptimizerWrapper): _description_
+
+        Returns:
+            Dict[str, torch.Tensor]: _description_
+        """
         inputs, data_sample = self.preprocess(data)
         losses = self(inputs, data_sample, return_loss=True)
         parsed_losses, log_vars = self._parse_losses(losses)
@@ -46,14 +56,39 @@ class BaseModel(nn.Module):
         return log_vars
 
     def val_step(self, data: List[dict], return_loss) -> List[InstanceData]:
+        """_summary_
+
+        Args:
+            data (List[dict]): _description_
+            return_loss (_type_): _description_
+
+        Returns:
+            List[InstanceData]: _description_
+        """
         inputs, data_sample = self.preprocess(data)
         return self(inputs, data_sample, return_loss=return_loss)
 
     def test_step(self, data: List[dict]) -> List[InstanceData]:
+        """_summary_
+
+        Args:
+            data (List[dict]): _description_
+
+        Returns:
+            List[InstanceData]: _description_
+        """
         inputs, data_sample = self.preprocess(data)
         return self(inputs, data_sample, return_loss=False)
 
     def preprocess(self, data: Union[List[dict], torch.Tensor]):
+        """_summary_
+
+        Args:
+            data (Union[List[dict], torch.Tensor]): _description_
+
+        Returns:
+            _type_: _description_
+        """
         inputs: List[torch.Tensor] = []
         data_samples: List[InstanceData] = []
         if isinstance(data, list):
@@ -71,7 +106,7 @@ class BaseModel(nn.Module):
         image_size = [torch.as_tensor(input.shape[-2:]) for input in inputs]
         max_size = torch.stack(image_size).max(0).values
         max_h, max_w = (max_size + (self.size_divisor - 1)).div(
-            self.size_divisor, rounding_mode="floor") * self.size_divisor
+            self.size_divisor, rounding_mode='floor') * self.size_divisor
         for idx, size in enumerate(image_size):
             h, w = size
             pad_h, pad_w = max_h - h, max_w - w
@@ -79,8 +114,9 @@ class BaseModel(nn.Module):
                 (inputs[idx].to(self.pixel_mean.device) - self.pixel_mean) /
                 self.pixel_std)
             inputs[idx] = F.pad(inputs[idx], (0, pad_w, 0, pad_h))
+        inputs = torch.stack(inputs, dim=0)
         if self.to_rgb:
-            assert input.shape[1] == 3
+            assert inputs.shape[1] == 3
             inputs = inputs[:, [2, 1, 0], ...]
         return inputs, data_samples
 
@@ -113,6 +149,7 @@ class BaseModel(nn.Module):
         return loss, log_vars
 
     def register_get_feature_hook(self):
+        """_summary_"""
 
         def get_feat_hook(self, module_name, module, inputs, outputs):
             self.feature_dict[module_name] = outputs
@@ -124,12 +161,27 @@ class BaseModel(nn.Module):
 
     @property
     def feats_dict(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return self._feats_dict
 
     def forward_trace(self):
-        """_summary_
-        """
+        """_summary_"""
 
     def forward(self):
+        """_summary_"""
+
+    def forward_train(self,
+                      inputs: torch.Tensor,
+                      data_samples: List[InstanceData],
+                      return_loss=False):
         """_summary_
+
+        Args:
+            inputs (torch.Tensor): _description_
+            data_samples (List[InstanceData]): _description_
+            return_loss (bool, optional): _description_. Defaults to False.
         """

@@ -797,7 +797,7 @@ class Runner:
             optimizer_cls = optim_wrapper._OptimizerWrapper
 
         optimizer_wrapper = optimizer_cls(
-            model=self.base_model, optimizer=optimizer, **optimizer_update_cfg)
+            model=self.model, optimizer=optimizer, **optimizer_update_cfg)
         return optimizer_wrapper
 
     def build_optimizer_wrapper(
@@ -811,7 +811,7 @@ class Runner:
             optimizer = dict(type='SGD', lr=0.01)
 
         Args:
-            optimizer (Optimizer, _BaseOptimizerWrapper or dict): 
+            optimizer (Optimizer, _BaseOptimizerWrapper or dict):
                 An Optimizer object or a dict to build Optimizer object.
                 If ``optimizer`` is an Optimizer object, just returns itself.
 
