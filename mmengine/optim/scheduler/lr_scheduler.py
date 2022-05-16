@@ -1,18 +1,21 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List
-
-import torch
-
 from mmengine.registry import PARAM_SCHEDULERS
-from .param_scheduler import (INF, ConstantParamScheduler,
+from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, PolyParamScheduler,
                               StepParamScheduler)
 
 
+class LRSchedulerMixin:
+    """A mixin class for learning rate schedulers."""
+
+    def __init__(self, optimizer, *args, **kwargs):
+        super().__init__(optimizer, 'lr', *args, **kwargs)
+
+
 @PARAM_SCHEDULERS.register_module()
-class ConstantLR(ConstantParamScheduler):
+class ConstantLR(LRSchedulerMixin, ConstantParamScheduler):
     """Decays the learning rate value of each parameter group by a small
     constant factor until the number of epoch reaches a pre-defined milestone:
     ``end``. Notice that such decay can happen simultaneously with other
@@ -34,27 +37,9 @@ class ConstantLR(ConstantParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 factor: float = 1.0 / 3,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            factor=factor,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class CosineAnnealingLR(CosineAnnealingParamScheduler):
+class CosineAnnealingLR(LRSchedulerMixin, CosineAnnealingParamScheduler):
     r"""Set the learning rate of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
     :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
@@ -101,29 +86,9 @@ class CosineAnnealingLR(CosineAnnealingParamScheduler):
         https://arxiv.org/abs/1608.03983
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 T_max: int,
-                 eta_min: int = 0,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            T_max=T_max,
-            eta_min=eta_min,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class ExponentialLR(ExponentialParamScheduler):
+class ExponentialLR(LRSchedulerMixin, ExponentialParamScheduler):
     """Decays the learning rate of each parameter group by gamma every epoch.
 
     Args:
@@ -141,27 +106,9 @@ class ExponentialLR(ExponentialParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 gamma: float,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            gamma=gamma,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class LinearLR(LinearParamScheduler):
+class LinearLR(LRSchedulerMixin, LinearParamScheduler):
     """Decays the learning rate of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
     milestone: ``end``.
@@ -187,29 +134,9 @@ class LinearLR(LinearParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 start_factor: float = 1.0 / 3,
-                 end_factor: float = 1.0,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            start_factor=start_factor,
-            end_factor=end_factor,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class MultiStepLR(MultiStepParamScheduler):
+class MultiStepLR(LRSchedulerMixin, MultiStepParamScheduler):
     """Decays the specified learning rate in each parameter group by gamma once
     the number of epoch reaches one of the milestones. Notice that such decay
     can happen simultaneously with other changes to the learning rate from
@@ -232,29 +159,9 @@ class MultiStepLR(MultiStepParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 milestones: List[int],
-                 gamma: float = 0.1,
-                 last_step: int = -1,
-                 begin: int = 0,
-                 end: int = INF,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            milestones=milestones,
-            gamma=gamma,
-            last_step=last_step,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class StepLR(StepParamScheduler):
+class StepLR(LRSchedulerMixin, StepParamScheduler):
     """Decays the learning rate of each parameter group by gamma every
     step_size epochs. Notice that such decay can happen simultaneously with
     other changes to the learning rate from outside this scheduler.
@@ -276,29 +183,9 @@ class StepLR(StepParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 step_size: int,
-                 gamma: float = 0.1,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            step_size=step_size,
-            gamma=gamma,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class PolyLR(PolyParamScheduler):
+class PolyLR(LRSchedulerMixin, PolyParamScheduler):
     """Decays the learning rate of each parameter group in a polynomial decay
     scheme.
 
@@ -321,23 +208,3 @@ class PolyLR(PolyParamScheduler):
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """
-
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 eta_min: float = 0,
-                 power: float = 1,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='lr',
-            eta_min=eta_min,
-            power=power,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)

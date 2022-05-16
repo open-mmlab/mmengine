@@ -1,18 +1,21 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List
-
-import torch
-
 from mmengine.registry import PARAM_SCHEDULERS
-from .param_scheduler import (INF, ConstantParamScheduler,
+from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, PolyParamScheduler,
                               StepParamScheduler)
 
 
+class MomentumSchedulerMixin:
+    """A mixin class for momentum schedulers."""
+
+    def __init__(self, optimizer, *args, **kwargs):
+        super().__init__(optimizer, 'momentum', *args, **kwargs)
+
+
 @PARAM_SCHEDULERS.register_module()
-class ConstantMomentum(ConstantParamScheduler):
+class ConstantMomentum(MomentumSchedulerMixin, ConstantParamScheduler):
     """Decays the momentum value of each parameter group by a small constant
     factor until the number of epoch reaches a pre-defined milestone: ``end``.
     Notice that such decay can happen simultaneously with other changes to the
@@ -34,27 +37,10 @@ class ConstantMomentum(ConstantParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 factor: float = 1.0 / 3,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            factor=factor,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
+class CosineAnnealingMomentum(MomentumSchedulerMixin,
+                              CosineAnnealingParamScheduler):
     r"""Set the momentum of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial value and
     :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
@@ -101,29 +87,9 @@ class CosineAnnealingMomentum(CosineAnnealingParamScheduler):
         https://arxiv.org/abs/1608.03983
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 T_max: int,
-                 eta_min: int = 0,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            T_max=T_max,
-            eta_min=eta_min,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class ExponentialMomentum(ExponentialParamScheduler):
+class ExponentialMomentum(MomentumSchedulerMixin, ExponentialParamScheduler):
     """Decays the momentum of each parameter group by gamma every epoch.
 
     Args:
@@ -141,27 +107,9 @@ class ExponentialMomentum(ExponentialParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 gamma: float,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            gamma=gamma,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class LinearMomentum(LinearParamScheduler):
+class LinearMomentum(MomentumSchedulerMixin, LinearParamScheduler):
     """Decays the momentum of each parameter group by linearly changing
     small multiplicative factor until the number of epoch reaches a pre-defined
     milestone: ``end``.
@@ -187,29 +135,9 @@ class LinearMomentum(LinearParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 start_factor: float = 1.0 / 3,
-                 end_factor: float = 1.0,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            start_factor=start_factor,
-            end_factor=end_factor,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class MultiStepMomentum(MultiStepParamScheduler):
+class MultiStepMomentum(MomentumSchedulerMixin, MultiStepParamScheduler):
     """Decays the specified momentum in each parameter group by gamma once the
     number of epoch reaches one of the milestones. Notice that such decay can
     happen simultaneously with other changes to the momentum from outside this
@@ -232,29 +160,9 @@ class MultiStepMomentum(MultiStepParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 milestones: List[int],
-                 gamma: float = 0.1,
-                 last_step: int = -1,
-                 begin: int = 0,
-                 end: int = INF,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            milestones=milestones,
-            gamma=gamma,
-            last_step=last_step,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class StepMomentum(StepParamScheduler):
+class StepMomentum(MomentumSchedulerMixin, StepParamScheduler):
     """Decays the momentum of each parameter group by gamma every step_size
     epochs. Notice that such decay can happen simultaneously with other changes
     to the momentum from outside this scheduler.
@@ -276,29 +184,9 @@ class StepMomentum(StepParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 step_size: int,
-                 gamma: float = 0.1,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            step_size=step_size,
-            gamma=gamma,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
-
 
 @PARAM_SCHEDULERS.register_module()
-class PolyMomentum(PolyParamScheduler):
+class PolyMomentum(MomentumSchedulerMixin, PolyParamScheduler):
     """Decays the momentum of each parameter group in a polynomial decay
     scheme.
 
@@ -321,23 +209,3 @@ class PolyMomentum(PolyParamScheduler):
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """
-
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 eta_min: float = 0,
-                 power: float = 1,
-                 begin: int = 0,
-                 end: int = INF,
-                 last_step: int = -1,
-                 by_epoch: bool = True,
-                 verbose: bool = False):
-        super().__init__(
-            optimizer,
-            param_name='momentum',
-            eta_min=eta_min,
-            power=power,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
