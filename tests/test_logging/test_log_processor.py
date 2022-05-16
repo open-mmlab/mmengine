@@ -110,7 +110,7 @@ class TestLogProcessor:
             assert out == log_str
         else:
             if mode == 'train':
-                max_iters = self.runner.train_loop.max_iters
+                max_iters = self.runner.max_iters
                 log_str = f'Iter({mode}) [11/{max_iters}]  '
             else:
                 max_iters = len(cur_loop.dataloader)
@@ -227,7 +227,10 @@ class TestLogProcessor:
         runner = MagicMock()
         runner.epoch = 1
         runner.iter = 10
-        runner.train_loop.max_iters = 50
+        runner.max_iters = 50
+        runner.train_dataloader = [0] * 20
+        runner.val_dataloader = [0] * 10
+        runner.test_dataloader = [0] * 5
         runner.train_loop.dataloader = [0] * 20
         runner.val_loop.dataloader = [0] * 10
         runner.test_loop.dataloader = [0] * 5

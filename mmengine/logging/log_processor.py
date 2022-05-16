@@ -142,7 +142,7 @@ class LogProcessor:
         else:
             if mode == 'train':
                 log_str = (f'Iter({mode}) '
-                           f'[{cur_iter}/{runner.train_loop.max_iters}]  ')
+                           f'[{cur_iter}/{runner.max_iters}]  ')
             else:
                 log_str = (f'Iter({mode}) [{batch_idx+1}'
                            f'/{len(current_loop.dataloader)}]  ')

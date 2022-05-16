@@ -127,13 +127,13 @@ class LoggerHook(Hook):
         # Print experiment name every n iterations.
         if self.every_n_iters(runner,
                               self.interval_exp_name) or (self.end_of_epoch(
-                                  runner.train_loop.dataloader, batch_idx)):
+                                  runner.train_dataloader, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
         if self.every_n_inner_iters(batch_idx, self.interval):
             tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
-        elif (self.end_of_epoch(runner.train_loop.dataloader, batch_idx)
+        elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
               and not self.ignore_last):
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will

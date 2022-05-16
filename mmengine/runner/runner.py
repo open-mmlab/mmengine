@@ -244,9 +244,6 @@ class Runner:
         else:
             self.cfg = Config(dict())
 
-        self._epoch = 0
-        self._iter = 0
-
         # lazy initialization
         training_related = [train_dataloader, train_cfg, optimizer]
         if not (all(item is None for item in training_related)
@@ -436,29 +433,24 @@ class Runner:
         return self._work_dir
 
     @property
+    def max_epochs(self):
+        """int: Total epochs to train model."""
+        return self.train_loop.max_epochs
+
+    @property
+    def max_iters(self):
+        """int: Total iterations to train model."""
+        return self.train_loop.max_iters
+
+    @property
     def epoch(self):
         """int: Current epoch."""
-        return self._epoch
-
-    @epoch.setter
-    def epoch(self, epoch: int):
-        """Update epoch and synchronize epoch in :attr:`message_hub`."""
-        self._epoch = epoch
-        # To allow components that cannot access runner to get current epoch.
-        self.message_hub.update_info('epoch', epoch)
+        return self.train_loop.epoch
 
     @property
     def iter(self):
         """int: Current iteration."""
-        return self._iter
-
-    @iter.setter
-    def iter(self, iter: int):
-        """Update iter and synchronize iter in :attr:`message_hub`."""
-        self._iter = iter
-        # To allow components that cannot access runner to get current
-        # iteration.
-        self.message_hub.update_info('iter', iter)
+        return self.train_loop.iter
 
     @property
     def launcher(self):
@@ -551,6 +543,11 @@ class Runner:
     def test_evaluator(self):
         """:obj:`Evaluator`: An evaluator for testing."""
         return self.test_loop.evaluator
+
+    @property
+    def val_interval(self):
+        """int: Interval to run validation during training."""
+        return self.val_loop.interval
 
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
@@ -1477,8 +1474,8 @@ class Runner:
             checkpoint = self.load_checkpoint(
                 filename, map_location=map_location)
 
-        self._epoch = checkpoint['meta']['epoch']
-        self._iter = checkpoint['meta']['iter']
+        self.train_loop._epoch = checkpoint['meta']['epoch']
+        self.train_loop._iter = checkpoint['meta']['iter']
 
         if self.meta is None:
             self.meta = {}
@@ -1519,7 +1516,7 @@ class Runner:
 
         self._has_loaded = True
 
-        self.logger.info(f'resumed epoch: {self._epoch}, iter: {self._iter}')
+        self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
 
     def load_checkpoint(self,
                         filename: str,
@@ -1597,13 +1594,13 @@ class Runner:
             meta.update(self.meta)
 
         if by_epoch:
-            # self._epoch increments 1 after
+            # self.epoch increments 1 after
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
-            # `epoch` should be `self_epoch + 1`
-            meta.update(epoch=self._epoch + 1, iter=self._iter)
+            # `epoch` should be `self.epoch + 1`
+            meta.update(epoch=self.epoch + 1, iter=self.iter)
         else:
-            meta.update(epoch=self._epoch, iter=self._iter + 1)
+            meta.update(epoch=self.epoch, iter=self.iter + 1)
 
         filepath = osp.join(out_dir, filename)
 
