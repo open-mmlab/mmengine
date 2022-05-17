@@ -222,7 +222,7 @@ class BaseDataset(Dataset):
 
         self.data_root = data_root
         self.data_prefix = copy.copy(data_prefix)
-        self._ann_file = ann_file
+        self.ann_file = ann_file
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
         self.serialize_data = serialize_data
@@ -415,7 +415,7 @@ class BaseDataset(Dataset):
                         'Please check your image path and pipeline')
 
     def load_data_list(self) -> List[dict]:
-        """Load annotations from an annotation file named as ``self._ann_file``
+        """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
@@ -426,9 +426,9 @@ class BaseDataset(Dataset):
         Returns:
             list[dict]: A list of annotation.
         """  # noqa: E501
-        # `self._ann_file` denotes the absolute annotation file path if
+        # `self.ann_file` denotes the absolute annotation file path if
         # `self.root=None` or relative path if `self.root=/path/to/data/`.
-        annotations = load(self._ann_file)
+        annotations = load(self.ann_file)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
@@ -501,26 +501,26 @@ class BaseDataset(Dataset):
 
     def _join_prefix(self):
         """Join ``self.data_root`` with ``self.data_prefix`` and
-        ``self._ann_file``.
+        ``self.ann_file``.
 
         Examples:
             >>> # self.data_prefix contains relative paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='d/e/')
-            >>> self._ann_file = 'f'
+            >>> self.ann_file = 'f'
             >>> self._join_prefix()
             >>> self.data_prefix
             dict(img='a/b/c/d/e')
-            >>> self._ann_file
+            >>> self.ann_file
             'a/b/c/f'
             >>> # self.data_prefix contains absolute paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='/d/e/')
-            >>> self._ann_file = 'f'
+            >>> self.ann_file = 'f'
             >>> self._join_prefix()
             >>> self.data_prefix
             dict(img='/d/e')
-            >>> self._ann_file
+            >>> self.ann_file
             'a/b/c/f'
         """
         # Automatically join annotation file path with `self.root` if
