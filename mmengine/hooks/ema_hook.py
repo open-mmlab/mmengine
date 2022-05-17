@@ -1,0 +1,89 @@
+# Copyright (c) OpenMMLab. All rights reserved.
+import itertools
+
+from mmengine.hooks import Hook
+from mmengine.model import is_model_wrapper
+from mmengine.registry import MODELS
+
+
+class EMAHook(Hook):
+    """A Hook to apply Exponential Moving Average (EMA) on the model during
+    training.
+
+    EMAHook takes priority over CheckpointHook. Note, the original model
+    parameters are actually saved in ema field after train.
+
+    Args:
+        ema_type (str): The type of EMA strategy to use.
+    """
+
+    def __init__(self, ema_type: str = 'LinearWarmupEMA', **kwargs):
+        self.ema_cfg = dict(type=ema_type, **kwargs)
+
+    def before_run(self, runner):
+        """To resume model with it's ema parameters more friendly.
+
+        Register ema parameter as ``named_buffer`` to model.
+        """
+        model = runner.model
+        if is_model_wrapper(model):
+            model = model.module
+        self.src_model = model
+        self.ema_model = MODELS.build(
+            self.ema_cfg, default_args=dict(model=self.src_model))
+
+    def after_train_iter(self,
+                         runner,
+                         batch_idx,
+                         data_batch=None,
+                         outputs=None) -> None:
+        """Update ema parameter."""
+        self.ema_model.update_parameters(self.src_model)
+
+    def before_val_epoch(self, runner):
+        """We load parameter values from ema model to source model before
+        validation."""
+        self._swap_ema_parameters()
+
+    def after_val_epoch(self, runner):
+        """We recover source model's parameter from ema model after
+        validation."""
+        self._swap_ema_parameters()
+
+    def before_test_epoch(self, runner):
+        """We load parameter values from ema model to source model before
+        test."""
+        self._swap_ema_parameters()
+
+    def after_test_epoch(self, runner):
+        """We recover source model's parameter from ema model after test."""
+        self._swap_ema_parameters()
+
+    def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
+        """Save ema parameters to checkpoint."""
+        # save ema parameters to the source model's state dict so that we can
+        # directly load the averaged model weights for deployment.
+        self._swap_ema_parameters()
+        checkpoint['ema_state_dict'] = self.ema_model.state_dict()
+        self._swap_ema_parameters()
+
+    def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
+        """Resume ema parameters from checkpoint."""
+        self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
+        self._swap_ema_parameters()
+
+    def _swap_ema_parameters(self):
+        """Swap the parameter of model with ema_model."""
+        avg_param = (
+            itertools.chain(self.ema_model.module.parameters(),
+                            self.ema_model.module.buffers())
+            if self.ema_model.update_buffers else
+            self.ema_model.module.parameters())
+        src_param = (
+            itertools.chain(self.src_model.parameters(),
+                            self.src_model.buffers())
+            if self.ema_model.update_buffers else self.src_model.parameters())
+        for p_avg, p_src in zip(avg_param, src_param):
+            tmp = p_avg.data.clone()
+            p_avg.data.copy_(p_src.data)
+            p_src.data.copy_(tmp)

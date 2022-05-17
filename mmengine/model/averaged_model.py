@@ -158,8 +158,8 @@ class ExponentialMovingAverage(AveragedModel):
 
 
 @MODELS.register_module()
-class LinearMomentumEMA(ExponentialMovingAverage):
-    """EMAHook using linear momentum strategy.
+class LinearWarmupEMA(ExponentialMovingAverage):
+    """Exponential moving average (EMA) with linear warmup momentum strategy.
 
     Args:
         warm_up (int): During first warm_up steps, we may use smaller decay
