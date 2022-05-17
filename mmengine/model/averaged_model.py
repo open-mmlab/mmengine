@@ -22,6 +22,19 @@ class BaseAveragedModel(nn.Module):
     parameters of the :attr:`model`.
     The code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/optim/swa_utils.py
 
+    In mmengine, we provide two ways to use the model averaging:
+    1. Use the model averaging module in hook:
+        We provide an EMAHook to apply the model averaging during training.
+        Add ``custom_hooks=[dict(type='EMAHook')]`` to the config or the runner.
+        The hook is implemented in mmengine/hooks/ema_hook.py
+
+    2. Use the model averaging module directly in the algorithm. Take the ema
+       teacher in semi-supervise as an example:
+        >>> from mmengine.model import ExponentialMovingAverage
+        >>> student = ResNet(depth=50)
+        >>> # use ema model as teacher
+        >>> ema_teacher = ExponentialMovingAverage(student)
+
     Args:
         model (nn.Module): The model to be averaged.
         interval (int): Interval between two updates. Defaults to 1.
@@ -171,7 +184,7 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
 @MODELS.register_module()
 class LinearWarmupEMA(ExponentialMovingAverage):
-    """Exponential moving average (EMA) with linear warmup momentum strategy.
+    """Exponential moving average (EMA) with linear momentum strategy.
 
     Args:
         warm_up (int): During first warm_up steps, we may use smaller decay

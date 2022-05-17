@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 
 from mmengine.hooks import EMAHook
-from mmengine.model import LinearWarmupEMA
+from mmengine.model import ExponentialMovingAverage
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
 from mmengine.runner import Runner
 
@@ -88,7 +88,8 @@ class TestEMAHook(TestCase):
         runner.train()
         for hook in runner.hooks:
             if isinstance(hook, EMAHook):
-                self.assertTrue(isinstance(hook.ema_model, LinearWarmupEMA))
+                self.assertTrue(
+                    isinstance(hook.ema_model, ExponentialMovingAverage))
 
         self.assertTrue(
             osp.exists(osp.join(self.temp_dir.name, 'epoch_2.pth')))
