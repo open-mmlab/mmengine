@@ -8,8 +8,8 @@ Runner 在训练过程中，难免会使用全局变量来共享信息，例如�
 
 ### 接口介绍
 
-- _instance_name：被创建的全局实例名
-- get_instance(name='', **kwargs)：创建或者返回对应名字的的实例。
+- \_instance_name：被创建的全局实例名
+- get_instance(name='', \*\*kwargs)：创建或者返回对应名字的的实例。
 - get_current_instance()：返回最近被创建的实例。
 - instance_name:：获取对应实例的 name。
 
