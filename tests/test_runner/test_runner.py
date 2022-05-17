@@ -11,8 +11,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.optim import SGD
 from torch.utils.data import DataLoader, Dataset
 
-import mmengine.model.wrappers.model_wrapper as model_wrapper
-import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
+from mmengine.model import ModelWrapper
+from mmengine.optim import OptimizerWrapper
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
@@ -39,9 +39,7 @@ class ToyModel(BaseModel):
         self.conv = nn.Conv2d(3, 1, 3)
 
     def forward(self, inputs, labels, return_loss=False):
-        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        inputs = torch.stack(inputs).to(device)
-        labels = torch.stack(labels).to(device)
+        labels = torch.stack(labels)
         outputs = self.conv(inputs)
         if return_loss:
             loss = (labels - outputs).sum()
@@ -129,10 +127,10 @@ class ToyHook2(Hook):
 @LOOPS.register_module()
 class CustomTrainLoop(BaseLoop):
 
-    def __init__(self, runner, dataloader, max_epochs, optimizer_wrapper):
+    def __init__(self, runner, dataloader, max_epochs):
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
-        self.optimizer_wrapper = optimizer_wrapper
+        self.max_iters = len(dataloader) * max_epochs
 
     def run(self) -> None:
         pass
@@ -353,7 +351,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.train_loop.dataloader, DataLoader)
         self.assertIsInstance(runner.optimizer, dict)
         self.assertIsInstance(runner.optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner.val_loop, BaseLoop)
         self.assertIsInstance(runner.val_loop.dataloader, DataLoader)
@@ -502,7 +500,7 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_model'
         runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, model_wrapper._ModelWrapper)
+        self.assertIsInstance(runner.model, ModelWrapper)
 
         # input should be a nn.Module object or dict
         with self.assertRaisesRegex(TypeError, 'model should be'):
@@ -555,25 +553,25 @@ class TestRunner(TestCase):
             runner.build_optimizer_wrapper('invalid-type')
 
         # input is an _OptimizerWrapper object
-        _optimizer = optim_wrapper._OptimizerWrapper(
+        _optimizer = OptimizerWrapper(
             runner.base_model, SGD(runner.model.parameters(), lr=0.01))
         optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
         self.assertIsInstance(optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
         # input is an Optimizer object
         _optimizer = SGD(runner.model.parameters(), lr=0.01)
         optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
         self.assertIsInstance(optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
         # input is a dict
         optimizer_wrapper = runner.build_optimizer_wrapper(
             dict(type='SGD', lr=0.01))
         self.assertIsInstance(optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(optimizer_wrapper.optimizer, SGD)
 
     def test_build_param_scheduler(self):
@@ -1013,16 +1011,14 @@ class TestRunner(TestCase):
             """Custom train loop with additional warmup stage."""
 
             def __init__(self, runner, dataloader, max_iters, warmup_loader,
-                         max_warmup_iters, optimizer_wrapper):
+                         max_warmup_iters):
                 super().__init__(
                     runner=runner,
                     dataloader=dataloader,
-                    max_iters=max_iters,
-                    optimizer_wrapper=optimizer_wrapper)
+                    max_iters=max_iters)
                 self.warmup_loader = self.runner.build_dataloader(
                     warmup_loader)
                 self.max_warmup_iters = max_warmup_iters
-                self.optimizer_wrapper = optimizer_wrapper
 
             def run(self):
                 self.runner.call_hook('before_train')
@@ -1049,7 +1045,7 @@ class TestRunner(TestCase):
                     self.runner.model(
                         data_batch,
                         mode='train',
-                        optimizer=self.optimizer_wrapper))
+                        optimizer=self.runner.optimizer_wrapper))
                 self.runner.call_hook(
                     'after_warmup_iter', data_batch=data_batch)
 
@@ -1130,7 +1126,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.4 test auto resume
@@ -1143,7 +1139,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optimizer_wrapper,
-                              optim_wrapper._BaseOptimizerWrapper)
+                              OptimizerWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.5 test resume from a specified checkpoint

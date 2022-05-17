@@ -19,8 +19,8 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
-import mmengine.model.wrappers.model_wrapper as model_wrapper
-import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
+from mmengine.model import ModelWrapper
+from mmengine.optim import OptimizerWrapper
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
@@ -773,19 +773,19 @@ class Runner:
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
                 model = DistributedDataParallel(
-                    model_wrapper._ModelWrapper(self.base_model),
+                    ModelWrapper(self.base_model),
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
             else:
                 # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
                 if torch.cuda.is_available():
-                    model = model_wrapper._ModelWrapper(self.base_model)
+                    model = ModelWrapper(self.base_model)
         else:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg,
                 default_args=dict(
-                    model=model_wrapper._ModelWrapper(self.base_model)))
+                    model=ModelWrapper(self.base_model)))
 
         return model
 
@@ -794,7 +794,7 @@ class Runner:
 
         backend = optimizer_update_cfg.pop('backend', 'native')
         if backend == 'native':
-            optimizer_cls = optim_wrapper._OptimizerWrapper
+            optimizer_cls = OptimizerWrapper
 
         optimizer_wrapper = optimizer_cls(
             model=self.model, optimizer=optimizer, **optimizer_update_cfg)
@@ -803,7 +803,7 @@ class Runner:
     def build_optimizer_wrapper(
         self,
         optimizer: Union[Optimizer, Dict],
-    ) -> optim_wrapper._BaseOptimizerWrapper:
+    ) -> OptimizerWrapper:
         """Build optimizer warpper.
 
         An example of ``optimizer``::
@@ -818,7 +818,7 @@ class Runner:
         Returns:
             _BaseOptimizerWrapper: Optimizer build from ``optimizer_cfg``.
         """
-        if isinstance(optimizer, optim_wrapper._BaseOptimizerWrapper):
+        if isinstance(optimizer, OptimizerWrapper):
             return optimizer
         elif isinstance(optimizer, Optimizer):
             optimizer = self.get_optimizer_wrapper(optimizer)
@@ -855,7 +855,7 @@ class Runner:
             from ``scheduler``.
         """
         if not isinstance(self.optimizer_wrapper,
-                          optim_wrapper._BaseOptimizerWrapper):
+                          OptimizerWrapper):
             raise RuntimeError(
                 '`build_optimizer_wrapper` should be called before'
                 '`build_param_scheduler` because the latter depends on the '
@@ -1063,7 +1063,6 @@ class Runner:
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
 
         if 'type' in loop_cfg:
-            loop_cfg['optimizer_wrapper'] = self.optimizer_wrapper
             loop = LOOPS.build(
                 loop_cfg,
                 default_args=dict(
@@ -1074,14 +1073,12 @@ class Runner:
                 loop = EpochBasedTrainLoop(
                     **loop_cfg,
                     runner=self,
-                    dataloader=self.train_dataloader,
-                    optimizer_wrapper=self.optimizer_wrapper)
+                    dataloader=self.train_dataloader)
             else:
                 loop = IterBasedTrainLoop(
                     **loop_cfg,
                     runner=self,
-                    dataloader=self.train_dataloader,
-                    optimizer_wrapper=self.optimizer_wrapper)
+                    dataloader=self.train_dataloader)
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
@@ -1089,7 +1086,7 @@ class Runner:
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
-
+        self.message_hub.update_info('max_iters', loop.max_iters)
         return loop  # type: ignore
 
     def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
@@ -1588,7 +1585,7 @@ class Runner:
         # save optimizer state dict to checkpoint
         if save_optimizer:
             if isinstance(self.optimizer_wrapper,
-                          optim_wrapper._BaseOptimizerWrapper):
+                          OptimizerWrapper):
                 checkpoint['optimizer'] = self.optimizer_wrapper.state_dict()
             else:  # TODO
                 raise TypeError(

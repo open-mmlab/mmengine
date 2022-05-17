@@ -1,13 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
+from mmengine.optim import OptimizerWrapper
 from mmengine.data import InstanceData
 
 
@@ -34,17 +34,17 @@ class BaseModel(nn.Module):
         self._feats_dict = dict()
         if feat_keys:
             for feat_key in feat_keys:
-                self.feature_dict[feat_key] = None
+                self._feats_dict[feat_key] = None
 
     def train_step(
         self, data: List[dict],
-        optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper
+        optimizer_wrapper: OptimizerWrapper
     ) -> Dict[str, torch.Tensor]:
         """_summary_
 
         Args:
             data (List[dict]): _description_
-            optimizer_wrapper (optim_wrapper._BaseOptimizerWrapper): _description_
+            optimizer_wrapper (OptimizerWrapper): _description_
 
         Returns:
             Dict[str, torch.Tensor]: _description_
@@ -97,10 +97,10 @@ class BaseModel(nn.Module):
                 data_samples.append(item['data_sample'].to(
                     self.pixel_mean.device))
         else:
-            # data should be HWC format image.
+            # data should be CHW format image.
             assert isinstance(data, torch.Tensor)
             assert len(data.shape) == 3
-            inputs = data.unsqueeze(0)
+            inputs = [data]
             data_samples = None
 
         image_size = [torch.as_tensor(input.shape[-2:]) for input in inputs]
@@ -120,7 +120,8 @@ class BaseModel(nn.Module):
             inputs = inputs[:, [2, 1, 0], ...]
         return inputs, data_samples
 
-    def _parse_losses(self, losses):
+    def _parse_losses(self, losses: Dict[str, torch.Tensor]
+                      ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Parse the raw outputs (losses) of the network.
 
         Args:
@@ -152,9 +153,9 @@ class BaseModel(nn.Module):
         """_summary_"""
 
         def get_feat_hook(self, module_name, module, inputs, outputs):
-            self.feature_dict[module_name] = outputs
+            self._feats_dict[module_name] = outputs
 
-        for module_keys in self.feature_dict.keys():
+        for module_keys in self._feats_dict.keys():
             assert module_keys in self._modules
             get_feat_hook_fn = partial(get_feat_hook, self, module_keys)
             getattr(self, module_keys).register_forward_hook(get_feat_hook_fn)
@@ -171,7 +172,9 @@ class BaseModel(nn.Module):
     def forward_trace(self):
         """_summary_"""
 
-    def forward(self):
+    def forward(self,
+                inputs: torch.Tensor,
+                data_samples: List[InstanceData]) -> Dict[str, torch.Tensor]:
         """_summary_"""
 
     def forward_train(self,
@@ -184,4 +187,26 @@ class BaseModel(nn.Module):
             inputs (torch.Tensor): _description_
             data_samples (List[InstanceData]): _description_
             return_loss (bool, optional): _description_. Defaults to False.
+        """
+
+    def predict(self, feats: torch.Tensor, data_samples: List[InstanceData]):
+        """
+
+        Args:
+            feats:
+            data_samples:
+
+        Returns:
+
+        """
+
+    def loss(self, feats: torch.Tensor, data_samples: List[InstanceData]):
+        """
+
+        Args:
+            feats:
+            data_samples:
+
+        Returns:
+
         """

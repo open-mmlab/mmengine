@@ -5,7 +5,7 @@ from typing import Dict, List, Sequence, Union
 import torch
 from torch.utils.data import DataLoader
 
-import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
+from mmengine.optim import OptimizerWrapper
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
@@ -24,12 +24,11 @@ class EpochBasedTrainLoop(BaseLoop):
     """
 
     def __init__(
-            self, runner, dataloader: Union[DataLoader, Dict], max_epochs: int,
-            optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper) -> None:
+            self, runner, dataloader: Union[DataLoader, Dict], max_epochs: int
+    ) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
-        self.optimizer_wrapper = optimizer_wrapper
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -83,7 +82,9 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.message_hub.update_info(
             'train_logs',
             self.runner.model(
-                data_batch, mode='train', optimizer=self.optimizer_wrapper))
+                data_batch,
+                mode='train',
+                optimizer=self.runner.optimizer_wrapper))
         self.runner.call_hook('after_train_iter', batch_idx=idx)
 
         self.runner.iter += 1
@@ -101,10 +102,9 @@ class IterBasedTrainLoop(BaseLoop):
     """
 
     def __init__(
-            self, runner, dataloader: Union[DataLoader, Dict], max_iters: int,
-            optimizer_wrapper: optim_wrapper._BaseOptimizerWrapper) -> None:
+            self, runner, dataloader: Union[DataLoader, Dict], max_iters: int
+    ) -> None:
         super().__init__(runner, dataloader)
-        self.optimizer_wrapper = optimizer_wrapper
         self._max_iters = max_iters
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
@@ -154,7 +154,9 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.message_hub.update_info(
             'train_logs',
             self.runner.model(
-                data_batch, mode='train', optimizer=self.optimizer_wrapper))
+                data_batch,
+                mode='train',
+                optimizer=self.runner.optimizer_wrapper))
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self.runner._iter,

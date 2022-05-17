@@ -1,11 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from typing import List, Union, Dict
+
+import torch
 import torch.nn as nn
 
-import mmengine.optim.optimizer.optimizer_wrapper as optim_wrapper
+from mmengine.optim import OptimizerWrapper
+from mmengine.data import InstanceData
 from ..base_model import BaseModel
 
 
-class _ModelWrapper(nn.Module):
+class ModelWrapper(nn.Module):
     """_summary_
 
     Args:
@@ -17,10 +21,11 @@ class _ModelWrapper(nn.Module):
         self.module = module.cuda()
 
     def forward(self,
-                data: dict,
+                data: List[dict],
                 mode: str,
-                optimizer: optim_wrapper._OptimizerWrapper = None,
-                return_val_loss=False):
+                optimizer: OptimizerWrapper = None,
+                return_val_loss: bool = False
+                ) -> Union[Dict[str, torch.Tensor], List[InstanceData]]:
         assert mode in ('train', 'val', 'test')
         if isinstance(self.module, BaseModel):
             if mode == 'train':

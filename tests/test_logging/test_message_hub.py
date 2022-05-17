@@ -104,10 +104,8 @@ class TestMessageHub:
         obj = pickle.dumps(message_hub)
         instance = pickle.loads(obj)
 
-        with pytest.raises(KeyError):
-            instance.get_info('feat')
-        with pytest.raises(KeyError):
-            instance.get_info('lr')
+        assert instance.get_info('feat') is None
+        assert instance.get_info('lr') is None
 
         instance.get_info('iter')
         instance.get_scalar('loss')

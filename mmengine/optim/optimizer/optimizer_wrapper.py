@@ -1,137 +1,144 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from abc import ABCMeta, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Iterable
 
 import torch
 import torch.nn as nn
 from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
+from torch.nn.modules.batchnorm import _BatchNorm
 
 from mmengine.logging import MessageHub, MMLogger
 
 
-class _BaseOptimizerWrapper(metaclass=ABCMeta):
+class OptimizerWrapper:
+    """
 
-    def __init__(self, model, optimizer, grad_clip) -> None:
-        self.model = model
-        self.optimizer = optimizer
-        self.grad_clip = grad_clip
-        self.logger = MMLogger.get_current_instance()
-        self.messge_hub = MessageHub.get_current_instance()
-
-    @abstractmethod
-    def optimizer_step(self, loss):
-        """_summary_
-
-        Args:
-            loss (torch.Tensor): _description_
-
-        Returns:
-            _type_: _description_
-        """
-
-    @abstractmethod
-    def backward(self, loss):
-        """_summary_
-
-            Returns:
-                _type_: _description_
-        """
-
-    @abstractmethod
-    def zero_grad(self, loss):
-        """_summary_
-
-        Args:
-            loss (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-
-    @abstractmethod
-    def grad_clips(self):
-        """_summary_
-
-        Returns:
-            _type_: _description_
-        """
-
-    @abstractmethod
-    def state_dict(self):
-        """_summary_
-
-        Returns:
-            _type_: _description_
-        """
-
-    @abstractmethod
-    def load_state_dict(self, state_dict: dict):
-        """_summary_
-
-        Args:
-            state_dict (dict): _description_
-
-        Returns:
-            _type_: _description_
-        """
-
-    @property
-    def param_groups(self):
-        return self.optimizer.param_groups
-
-
-class _OptimizerWrapper(_BaseOptimizerWrapper):
+    """
 
     def __init__(self,
                  model: nn.Module,
                  optimizer: Optimizer,
-                 grad_clip=None,
-                 detect_anomalous_params=None):
-        super().__init__(model, optimizer, grad_clip)
+                 cumulative_iters: int = 1,
+                 grad_clip: Optional[dict] = None,
+                 detect_anomalous_params: bool = False):
+        self.model = model
+        self.optimizer = optimizer
+        self.grad_clip = grad_clip
+        self.logger = MMLogger.get_current_instance()
+        self.message_hub = MessageHub.get_current_instance()
+        self.cumulative_iters = cumulative_iters
         self.detect_anomalous_params = detect_anomalous_params
+        self.initialized = False
 
-    def clip_grads(self, params: List[nn.Parameter]) -> Optional[torch.Tensor]:
-        """Clip the gradients of parameters.
+    def _init(self):
+        cur_iter = self.message_hub.get_info('iter', 0)
+        max_iters = self.message_hub.get_info('max_iters')
+        if cur_iter % self.cumulative_iters != 0:
+            self.logger.warning(
+                'Resume iter number is not divisible by cumulative_iters in '
+                'GradientCumulativeOptimizerHook, which means the gradient of '
+                'some iters is lost and the result may be influenced slightly.'
+            )
+
+        if self._has_batch_norm(self.model) and self.cumulative_iters > 1:
+            self.logger.warning(
+                'Gradient accumulative may slightly decrease '
+                'performance if the model has BatchNorm layers.')
+
+        residual_iters = max_iters - cur_iter
+
+        self.divisible_iters = (
+                residual_iters // self.cumulative_iters * self.cumulative_iters)
+        self.remainder_iters = residual_iters - self.divisible_iters
+
+        self.initialized = True
+        self.zero_grad()
+
+    def _has_batch_norm(self, model: nn.Module) -> bool:
+        """
 
         Args:
-            params (list[Parameter]): Model's parameters.
+            model:
 
         Returns:
-            Optional[torch.Tensor]: Total norm of the parameters if there is
-            at least one param requiring gradient, else None.
-        """
-        params = list(
-            filter(lambda p: p.requires_grad and p.grad is not None, params))
-        if len(params) > 0:
-            return clip_grad.clip_grad_norm_(params, **self.grad_clip)
-        return None
 
-    def optimizer_step(self, loss: torch.Tensor = None) -> None:
-        self.zero_grad()
+        """
+        if isinstance(model, _BatchNorm):
+            return True
+        for m in model.children():
+            if self._has_batch_norm(m):
+                return True
+        return False
+
+    def optimizer_step(self, loss: torch.Tensor) -> None:
+        """
+
+        Args:
+            loss:
+
+        Returns:
+
+        """
+        if not self.initialized:
+            self._init()
+
+        cur_iter = self.message_hub.get_info('iter', 0)
+        max_iters = self.message_hub.get_info('max_iters', 0)
+
+        if cur_iter < self.divisible_iters:
+            loss_factor = self.cumulative_iters
+        else:
+            loss_factor = self.remainder_iters
+
+        loss = loss / loss_factor
         self.backward(loss)
-        if self.grad_clip:
-            self.grad_clips()
-        self.step()
+        if ((cur_iter + 1) % self.cumulative_iters == 0 or
+                cur_iter + 1 == max_iters):
+            self.step()
+            self.zero_grad()
 
     def backward(self, loss):
+        """
+
+        Args:
+            loss:
+
+        Returns:
+
+        """
         if self.detect_anomalous_params:
-            self.detect_anomalous_parameters(loss)
+            self._detect_anomalous_params(loss)
         loss.backward()
 
     def zero_grad(self):
+        """"""
         self.optimizer.zero_grad()
 
     def step(self):
+        """"""
+        if self.grad_clip:
+            self._clip_grads()
         self.optimizer.step()
 
-    def grad_clips(self):
-        grad_norm = self.clip_grads(self.model.parameters())
-        if grad_norm is not None:
+    def _clip_grads(self):
+        """Clip the gradients of parameters.
+
+         Args:
+             params (list[Parameter]): Model's parameters.
+
+         Returns:
+             Optional[torch.Tensor]: Total norm of the parameters if there is
+             at least one param requiring gradient, else None.
+         """
+        params = list(
+            filter(lambda p: p.requires_grad and p.grad is not None,
+                   self.model.parameters()))
+        if len(params) > 0:
+            grad_norm = clip_grad.clip_grad_norm_(params, **self.grad_clip)
             self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
 
-    def detect_anomalous_parameters(self, loss: torch.Tensor) -> None:
+    def _detect_anomalous_params(self, loss: torch.Tensor) -> None:
         """Detect anomalous parameters that are not included in the graph.
 
         Args:
@@ -159,10 +166,14 @@ class _OptimizerWrapper(_BaseOptimizerWrapper):
                 self.logger.log(
                     level=logging.ERROR,
                     msg=f'{n} with shape {p.size()} is not '
-                    f'in the computational graph \n')
+                        f'in the computational graph \n')
 
     def state_dict(self):
         return self.optimizer.state_dict()
 
     def load_state_dict(self, state_dict):
         self.optimizer.load_state_dict(state_dict)
+
+    @property
+    def param_groups(self):
+        return self.optimizer.param_groups
