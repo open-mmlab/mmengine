@@ -11,7 +11,7 @@ from torch import Tensor
 from mmengine.registry import MODELS
 
 
-class AveragedModel(nn.Module):
+class BaseAveragedModel(nn.Module):
     """A base class for averaging model weights.
 
     Weight averaging, such as SWA and EMA, is a widely used technique for
@@ -37,7 +37,7 @@ class AveragedModel(nn.Module):
                  interval: int = 1,
                  device: Optional[torch.device] = None,
                  update_buffers: bool = False) -> None:
-        super(AveragedModel, self).__init__()
+        super().__init__()
         self.module = deepcopy(model)
         self.interval = interval
         if device is not None:
@@ -72,7 +72,7 @@ class AveragedModel(nn.Module):
         Args:
             model (nn.Module): The model whose parameters will be
         """
-        if self.steps % self.interval != 0:
+        if self.steps % self.interval == 0:
             avg_param = (
                 itertools.chain(self.module.parameters(),
                                 self.module.buffers())
@@ -81,7 +81,7 @@ class AveragedModel(nn.Module):
                 itertools.chain(model.parameters(), model.buffers())
                 if self.update_buffers else model.parameters())
             for p_avg, p_src in zip(avg_param, src_param):
-                device = p_src.device
+                device = p_avg.device
                 p_src_ = p_src.detach().to(device)
                 if self.steps == 0:
                     p_avg.detach().copy_(p_src_)
@@ -93,8 +93,14 @@ class AveragedModel(nn.Module):
 
 
 @MODELS.register_module()
-class StochasticWeightAverage(AveragedModel):
-    """Implements the stochastic weight average (SWA) of the model."""
+class StochasticWeightAverage(BaseAveragedModel):
+    """Implements the stochastic weight averaging (SWA) of the model.
+
+    Stochastic Weight Averaging was proposed in `Averaging Weights Leads to
+    Wider Optima and Better Generalization` by Pavel Izmailov, Dmitrii
+    Podoprikhin, Timur Garipov, Dmitry Vetrov and Andrew Gordon Wilson (UAI
+    2018). https://arxiv.org/abs/1803.05407
+    """
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
                  steps: int) -> Tensor:
@@ -114,8 +120,15 @@ class StochasticWeightAverage(AveragedModel):
 
 
 @MODELS.register_module()
-class ExponentialMovingAverage(AveragedModel):
+class ExponentialMovingAverage(BaseAveragedModel):
     """Implements the exponential moving average (EMA) of the model.
+
+    All parameters are update by the formula as below:
+
+        .. math::
+
+            Xema\_{t+1} = (1 - \text{momentum}) \times
+            Xema\_{t} +  \text{momentum} \times X_t
 
     Args:
         model (nn.Module): The model to be averaged.
@@ -129,7 +142,7 @@ class ExponentialMovingAverage(AveragedModel):
         update_buffers (bool): if True, it will compute running averages for
             both the parameters and the buffers of the model. Defaults to
             False.
-    """
+    """  # noqa: W605
 
     def __init__(self,
                  model: nn.Module,
@@ -166,8 +179,8 @@ class LinearWarmupEMA(ExponentialMovingAverage):
             to update ema parameters more slowly. Defaults to 100.
     """
 
-    def __init__(self, warmup=100, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, model, warmup=100, **kwargs):
+        super().__init__(model=model, **kwargs)
         self.warmup = warmup
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
@@ -184,5 +197,5 @@ class LinearWarmupEMA(ExponentialMovingAverage):
             Tensor: The averaged parameters.
         """
         momentum = min(self.momentum**self.interval,
-                       (1 + self.steps) / (self.warm_up + self.steps))
+                       (1 + self.steps) / (self.warmup + self.steps))
         return averaged_param * (1 - momentum) + source_param * momentum
