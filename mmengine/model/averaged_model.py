@@ -58,7 +58,6 @@ class BaseAveragedModel(nn.Module):
             steps (int): The number of times the parameters have been
                 updated.
         """
-        raise NotImplementedError
 
     def forward(self, *args, **kwargs):
         """Forward method of the averaged model."""

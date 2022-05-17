@@ -1,11 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import itertools
 
-from mmengine.hooks import Hook
 from mmengine.model import is_model_wrapper
-from mmengine.registry import MODELS
+from mmengine.registry import HOOKS, MODELS
+from .hook import Hook
 
 
+@HOOKS.register_module()
 class EMAHook(Hook):
     """A Hook to apply Exponential Moving Average (EMA) on the model during
     training.

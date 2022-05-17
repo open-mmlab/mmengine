@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .checkpoint_hook import CheckpointHook
+from .ema_hook import EMAHook
 from .empty_cache_hook import EmptyCacheHook
 from .hook import Hook
 from .iter_timer_hook import IterTimerHook
@@ -13,5 +14,5 @@ from .sync_buffer_hook import SyncBuffersHook
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'OptimizerHook', 'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook',
-    'LoggerHook', 'NaiveVisualizationHook'
+    'LoggerHook', 'NaiveVisualizationHook', 'EMAHook'
 ]
