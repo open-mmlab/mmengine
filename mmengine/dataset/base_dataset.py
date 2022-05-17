@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 
 from mmengine.fileio import list_from_file, load
 from mmengine.registry import TRANSFORMS
-from mmengine.utils import check_file_exist
+from mmengine.utils import is_abs
 
 
 class Compose:
@@ -222,14 +222,14 @@ class BaseDataset(Dataset):
 
         self.data_root = data_root
         self.data_prefix = copy.copy(data_prefix)
-        self.ann_file = ann_file
+        self._ann_file = ann_file
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
         self.serialize_data = serialize_data
         self.test_mode = test_mode
         self.max_refetch = max_refetch
-        self.data_list: List[dict] = []
-        self.data_bytes: np.ndarray
+        self._data_list: List[dict] = []
+        self._data_bytes: np.ndarray
 
         # Set meta information.
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
@@ -256,13 +256,13 @@ class BaseDataset(Dataset):
             dict: The idx-th annotation of the dataset.
         """
         if self.serialize_data:
-            start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
-            end_addr = self.data_address[idx].item()
+            start_addr = 0 if idx == 0 else self._data_address[idx - 1].item()
+            end_addr = self._data_address[idx].item()
             bytes = memoryview(
-                self.data_bytes[start_addr:end_addr])  # type: ignore
+                self._data_bytes[start_addr:end_addr])  # type: ignore
             data_info = pickle.loads(bytes)  # type: ignore
         else:
-            data_info = self.data_list[idx]
+            data_info = self._data_list[idx]
         # Some codebase needs `sample_idx` of data information. Here we convert
         # the idx to a positive number and save it in data information.
         if idx >= 0:
@@ -287,22 +287,22 @@ class BaseDataset(Dataset):
             - filter data information: Filter annotations according to
               filter_cfg.
             - slice_data: Slice dataset according to ``self._indices``
-            - serialize_data: Serialize ``self.data_list`` if
+            - serialize_data: Serialize ``self._data_list`` if
             ``self.serialize_data`` is True.
         """
         if self._fully_initialized:
             return
         # load data information
-        self.data_list = self.load_data_list()
+        self._data_list = self.load_data_list()
         # filter illegal data, such as data that has no annotations.
-        self.data_list = self.filter_data()
+        self._data_list = self.filter_data()
         # Get subset data according to indices.
         if self._indices is not None:
-            self.data_list = self._get_unserialized_subset(self._indices)
+            self._data_list = self._get_unserialized_subset(self._indices)
 
         # serialize data_list
         if self.serialize_data:
-            self.data_bytes, self.data_address = self._serialize_data()
+            self._data_bytes, self._data_address = self._serialize_data()
 
         self._fully_initialized = True
 
@@ -348,7 +348,7 @@ class BaseDataset(Dataset):
         Returns:
             list[int]: Filtered results.
         """
-        return self.data_list
+        return self._data_list
 
     def get_cat_ids(self, idx: int) -> List[int]:
         """Get category ids by index. Dataset wrapped by ClassBalancedDataset
@@ -376,7 +376,7 @@ class BaseDataset(Dataset):
          the maximum limit of refetech is reached.
 
         Args:
-            idx (int): The index of self.data_list.
+            idx (int): The index of self._data_list.
 
         Returns:
             dict: The idx-th image and data information of dataset after
@@ -415,7 +415,7 @@ class BaseDataset(Dataset):
                         'Please check your image path and pipeline')
 
     def load_data_list(self) -> List[dict]:
-        """Load annotations from an annotation file named as ``self.ann_file``
+        """Load annotations from an annotation file named as ``self._ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
@@ -426,10 +426,9 @@ class BaseDataset(Dataset):
         Returns:
             list[dict]: A list of annotation.
         """  # noqa: E501
-        # `self.ann_file` denotes the absolute annotation file path if
+        # `self._ann_file` denotes the absolute annotation file path if
         # `self.root=None` or relative path if `self.root=/path/to/data/`.
-        check_file_exist(self.ann_file)
-        annotations = load(self.ann_file)
+        annotations = load(self._ann_file)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
@@ -502,31 +501,31 @@ class BaseDataset(Dataset):
 
     def _join_prefix(self):
         """Join ``self.data_root`` with ``self.data_prefix`` and
-        ``self.ann_file``.
+        ``self._ann_file``.
 
         Examples:
             >>> # self.data_prefix contains relative paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='d/e/')
-            >>> self.ann_file = 'f'
+            >>> self._ann_file = 'f'
             >>> self._join_prefix()
             >>> self.data_prefix
             dict(img='a/b/c/d/e')
-            >>> self.ann_file
+            >>> self._ann_file
             'a/b/c/f'
             >>> # self.data_prefix contains absolute paths
             >>> self.data_root = 'a/b/c'
             >>> self.data_prefix = dict(img='/d/e/')
-            >>> self.ann_file = 'f'
+            >>> self._ann_file = 'f'
             >>> self._join_prefix()
             >>> self.data_prefix
             dict(img='/d/e')
-            >>> self.ann_file
+            >>> self._ann_file
             'a/b/c/f'
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not osp.isabs(self.ann_file) and self.ann_file:
+        if not is_abs(self.ann_file) and self.ann_file:
             self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
@@ -534,9 +533,11 @@ class BaseDataset(Dataset):
             if prefix is None:
                 self.data_prefix[data_key] = self.data_root
             elif isinstance(prefix, str):
-                if not osp.isabs(prefix):
+                if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
+                else:
+                    self.data_prefix[data_key] = prefix
             else:
                 raise TypeError('prefix should be a string or None, but got '
                                 f'{type(prefix)}')
@@ -579,10 +580,10 @@ class BaseDataset(Dataset):
         # Get subset of data from serialized data or data information sequence
         # according to `self.serialize_data`.
         if self.serialize_data:
-            self.data_bytes, self.data_address = \
+            self._data_bytes, self._data_address = \
                 self._get_serialized_subset(indices)
         else:
-            self.data_list = self._get_unserialized_subset(indices)
+            self._data_list = self._get_unserialized_subset(indices)
 
     @force_full_init
     def get_subset(self, indices: Union[Sequence[int], int]) -> 'BaseDataset':
@@ -632,11 +633,11 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             data_bytes, data_address = \
                 self._get_serialized_subset(indices)
-            sub_dataset.data_bytes = data_bytes.copy()
-            sub_dataset.data_address = data_address.copy()
+            sub_dataset._data_bytes = data_bytes.copy()
+            sub_dataset._data_address = data_address.copy()
         else:
             data_list = self._get_unserialized_subset(indices)
-            sub_dataset.data_list = copy.deepcopy(data_list)
+            sub_dataset._data_list = copy.deepcopy(data_list)
         return sub_dataset
 
     def _get_serialized_subset(self, indices: Union[Sequence[int], int]) \
@@ -658,25 +659,25 @@ class BaseDataset(Dataset):
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
             if indices >= 0:
-                assert indices < len(self.data_address), \
+                assert indices < len(self._data_address), \
                     f'{indices} is out of dataset length({len(self)}'
                 # Return the first few data information.
-                end_addr = self.data_address[indices - 1].item() \
+                end_addr = self._data_address[indices - 1].item() \
                     if indices > 0 else 0
                 # Slicing operation of `np.ndarray` does not trigger a memory
                 # copy.
-                sub_data_bytes = self.data_bytes[:end_addr]
+                sub_data_bytes = self._data_bytes[:end_addr]
                 # Since the buffer size of first few data information is not
                 # changed,
-                sub_data_address = self.data_address[:indices]
+                sub_data_address = self._data_address[:indices]
             else:
-                assert -indices <= len(self.data_address), \
+                assert -indices <= len(self._data_address), \
                     f'{indices} is out of dataset length({len(self)}'
                 # Return the last few data information.
-                ignored_bytes_size = self.data_address[indices - 1]
-                start_addr = self.data_address[indices - 1].item()
-                sub_data_bytes = self.data_bytes[start_addr:]
-                sub_data_address = self.data_address[indices:]
+                ignored_bytes_size = self._data_address[indices - 1]
+                start_addr = self._data_address[indices - 1].item()
+                sub_data_bytes = self._data_bytes[start_addr:]
+                sub_data_address = self._data_address[indices:]
                 sub_data_address = sub_data_address - ignored_bytes_size
         elif isinstance(indices, Sequence):
             sub_data_bytes = []
@@ -684,10 +685,10 @@ class BaseDataset(Dataset):
             for idx in indices:
                 assert len(self) > idx >= -len(self)
                 start_addr = 0 if idx == 0 else \
-                    self.data_address[idx - 1].item()
-                end_addr = self.data_address[idx].item()
+                    self._data_address[idx - 1].item()
+                end_addr = self._data_address[idx].item()
                 # Get data information by address.
-                sub_data_bytes.append(self.data_bytes[start_addr:end_addr])
+                sub_data_bytes.append(self._data_bytes[start_addr:end_addr])
                 # Get data information size.
                 sub_data_address.append(end_addr - start_addr)
             # Handle indices is an empty list.
@@ -719,15 +720,15 @@ class BaseDataset(Dataset):
         if isinstance(indices, int):
             if indices >= 0:
                 # Return the first few data information.
-                sub_data_list = self.data_list[:indices]
+                sub_data_list = self._data_list[:indices]
             else:
                 # Return the last few data information.
-                sub_data_list = self.data_list[indices:]
+                sub_data_list = self._data_list[indices:]
         elif isinstance(indices, Sequence):
             # Return the data information according to given indices.
             subdata_list = []
             for idx in indices:
-                subdata_list.append(self.data_list[idx])
+                subdata_list.append(self._data_list[idx])
             sub_data_list = subdata_list
         else:
             raise TypeError('indices should be a int or sequence of int, '
@@ -735,7 +736,7 @@ class BaseDataset(Dataset):
         return sub_data_list
 
     def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Serialize ``self.data_list`` to save memory when launching multiple
+        """Serialize ``self._data_list`` to save memory when launching multiple
         workers in data loading. This function will be called in ``full_init``.
 
         Hold memory using serialized objects, and data loader workers can use
@@ -751,16 +752,16 @@ class BaseDataset(Dataset):
             return np.frombuffer(buffer, dtype=np.uint8)
 
         # Serialize data information list avoid making multiple copies of
-        # `self.data_list` when iterate `import torch.utils.data.dataloader`
+        # `self._data_list` when iterate `import torch.utils.data.dataloader`
         # with multiple workers.
-        data_list = [_serialize(x) for x in self.data_list]
+        data_list = [_serialize(x) for x in self._data_list]
         address_list = np.asarray([len(x) for x in data_list], dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
         # TODO Check if np.concatenate is necessary
         data_bytes = np.concatenate(data_list)
         # Empty cache for preventing making multiple copies of
         # `self.data_info` when loading data multi-processes.
-        self.data_list.clear()
+        self._data_list.clear()
         gc.collect()
         return data_bytes, data_address
 
@@ -793,9 +794,9 @@ class BaseDataset(Dataset):
             int: The length of filtered dataset.
         """
         if self.serialize_data:
-            return len(self.data_address)
+            return len(self._data_address)
         else:
-            return len(self.data_list)
+            return len(self._data_list)
 
     def _copy_without_annotation(self, memo=dict()) -> 'BaseDataset':
         """Deepcopy for all attributes other than ``data_list``,
