@@ -183,12 +183,14 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
 
 @MODELS.register_module()
-class LinearWarmupEMA(ExponentialMovingAverage):
-    """Exponential moving average (EMA) with linear momentum strategy.
+class MomentumWarmupEMA(ExponentialMovingAverage):
+    """Exponential moving average (EMA) with momentum warm up strategy.
 
     Args:
-        warm_up (int): During first warm_up steps, we may use smaller decay
-            to update ema parameters more slowly. Defaults to 100.
+        warmup (int): Use a larger momentum early in training and gradually
+            transition to a smaller value to warm up the ema model. The
+            momentum is calculated as max(momentum, warmup / (warmup + steps))
+            Defaults to 100.
     """
 
     def __init__(self, model, warmup=100, **kwargs):
@@ -208,6 +210,5 @@ class LinearWarmupEMA(ExponentialMovingAverage):
         Returns:
             Tensor: The averaged parameters.
         """
-        momentum = min(self.momentum**self.interval,
-                       (1 + self.steps) / (self.warmup + self.steps))
+        momentum = max(self.momentum, self.warmup / (self.warmup + self.steps))
         return averaged_param * (1 - momentum) + source_param * momentum

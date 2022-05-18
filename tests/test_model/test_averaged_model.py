@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import torch
 
-from mmengine.model import (ExponentialMovingAverage, LinearWarmupEMA,
+from mmengine.model import (ExponentialMovingAverage, MomentumWarmupEMA,
                             StochasticWeightAverage)
 from mmengine.testing import assert_allclose
 
@@ -121,17 +121,20 @@ class TestAveragedModel(TestCase):
 
         ema_model = ExponentialMovingAverage(
             model, momentum=momentum, update_buffers=True)
-        model_params = itertools.chain(model.parameters(), model.buffers())
         averaged_params = [
-            torch.zeros_like(param) for param in model_params
+            torch.zeros_like(param)
+            for param in itertools.chain(model.parameters(), model.buffers())
             if param.size() != torch.Size([])
         ]
         n_updates = 10
         for i in range(n_updates):
             updated_averaged_params = []
-            for p, p_avg in zip(model_params, averaged_params):
-                if p.size() == torch.Size([]):
-                    continue
+            params = [
+                param for param in itertools.chain(model.parameters(),
+                                                   model.buffers())
+                if param.size() != torch.Size([])
+            ]
+            for p, p_avg in zip(params, averaged_params):
                 p.detach().add_(torch.randn_like(p))
                 if i == 0:
                     updated_averaged_params.append(p.clone())
@@ -141,51 +144,58 @@ class TestAveragedModel(TestCase):
             ema_model.update_parameters(model)
             averaged_params = updated_averaged_params
 
-        for p_target, p_ema in zip(
-                averaged_params,
-                itertools.chain(ema_model.module.parameters(),
-                                ema_model.module.buffers())):
+        ema_params = [
+            param for param in itertools.chain(ema_model.module.parameters(),
+                                               ema_model.module.buffers())
+            if param.size() != torch.Size([])
+        ]
+        for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
 
-    def test_linear_warmup_ema(self):
-        # Test EMA with linear warmup.
+    def test_linear_momentum_ema(self):
+        # Test EMA with momentum warmup.
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3),
             torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
         momentum = 0.1
         warmup = 4
 
-        ema_model = LinearWarmupEMA(
-            model, momentum=momentum, warmup=warmup, update_buffers=True)
-        model_params = itertools.chain(model.parameters(), model.buffers())
+        ema_model = MomentumWarmupEMA(
+            model, warmup=warmup, momentum=momentum, update_buffers=True)
         averaged_params = [
-            torch.zeros_like(param) for param in model_params
+            torch.zeros_like(param)
+            for param in itertools.chain(model.parameters(), model.buffers())
             if param.size() != torch.Size([])
         ]
         n_updates = 10
         for i in range(n_updates):
             updated_averaged_params = []
-            for p, p_avg in zip(model_params, averaged_params):
-                if p.size() == torch.Size([]):
-                    continue
+            params = [
+                param for param in itertools.chain(model.parameters(),
+                                                   model.buffers())
+                if param.size() != torch.Size([])
+            ]
+            for p, p_avg in zip(params, averaged_params):
                 p.detach().add_(torch.randn_like(p))
                 if i == 0:
                     updated_averaged_params.append(p.clone())
                 else:
-                    m = min(momentum, (1 + i) / (warmup + i))
+                    m = max(momentum, warmup / (warmup + i))
                     updated_averaged_params.append(
                         (p_avg * (1 - m) + p * m).clone())
             ema_model.update_parameters(model)
             averaged_params = updated_averaged_params
 
-        for p_target, p_ema in zip(
-                averaged_params,
-                itertools.chain(ema_model.module.parameters(),
-                                ema_model.module.buffers())):
+        ema_params = [
+            param for param in itertools.chain(ema_model.module.parameters(),
+                                               ema_model.module.buffers())
+            if param.size() != torch.Size([])
+        ]
+        for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
 
-    def test_linear_warmup_ema_with_interval(self):
-        # Test EMA with linear warmup.
+    def test_linear_momentum_ema_with_interval(self):
+        # Test EMA with momentum warmup and interval
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3),
             torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
@@ -193,35 +203,42 @@ class TestAveragedModel(TestCase):
         warmup = 4
         interval = 3
 
-        ema_model = LinearWarmupEMA(
+        ema_model = MomentumWarmupEMA(
             model,
-            momentum=momentum,
             warmup=warmup,
+            momentum=momentum,
             interval=interval,
             update_buffers=True)
-        model_params = itertools.chain(model.parameters(), model.buffers())
         averaged_params = [
-            torch.zeros_like(param) for param in model_params
+            torch.zeros_like(param)
+            for param in itertools.chain(model.parameters(), model.buffers())
             if param.size() != torch.Size([])
         ]
         n_updates = 10
         for i in range(n_updates):
             updated_averaged_params = []
-            for p, p_avg in zip(model_params, averaged_params):
-                if p.size() == torch.Size([]):
-                    continue
+            params = [
+                param for param in itertools.chain(model.parameters(),
+                                                   model.buffers())
+                if param.size() != torch.Size([])
+            ]
+            for p, p_avg in zip(params, averaged_params):
                 p.detach().add_(torch.randn_like(p))
-                if i == 0 or i % interval != 0:
+                if i == 0:
                     updated_averaged_params.append(p.clone())
-                else:
-                    m = min(momentum**interval, (1 + i) / (warmup + i))
+                elif i % interval == 0:
+                    m = max(momentum, warmup / (warmup + i))
                     updated_averaged_params.append(
                         (p_avg * (1 - m) + p * m).clone())
+                else:
+                    updated_averaged_params.append(p_avg.clone())
             ema_model.update_parameters(model)
             averaged_params = updated_averaged_params
 
-        for p_target, p_ema in zip(
-                averaged_params,
-                itertools.chain(ema_model.module.parameters(),
-                                ema_model.module.buffers())):
+        ema_params = [
+            param for param in itertools.chain(ema_model.module.parameters(),
+                                               ema_model.module.buffers())
+            if param.size() != torch.Size([])
+        ]
+        for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
