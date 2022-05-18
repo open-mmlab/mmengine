@@ -1171,9 +1171,6 @@ class Runner:
             loop (BaseLoop or dict): A test loop or a dict to build test loop.
                 If ``loop`` is a test loop object, just returns itself.
 
-        Args:
-            loop_cfg (dict): Config to build test loop.
-
         Returns:
             :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """

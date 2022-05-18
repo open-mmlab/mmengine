@@ -62,11 +62,11 @@ class EpochBasedTrainLoop(BaseLoop):
         """Launch training."""
         self.runner.call_hook('before_train')
 
-        while self.runner.epoch < self._max_epochs:
+        while self._epoch < self._max_epochs:
             self.run_epoch()
 
-            if (self.runner.val_loop is not None and
-                    self.runner.epoch % self.runner.val_loop.interval == 0):
+            if (self.runner.val_loop is not None
+                    and self._epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -164,14 +164,14 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        while self.runner.iter < self._max_iters:
+        while self._iter < self._max_iters:
             self.runner.model.train()
 
             data_batch = next(self.dataloader)
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None
-                    and self.runner.iter % self.runner.val_loop.interval == 0):
+                    and self._iter % self.runner.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
