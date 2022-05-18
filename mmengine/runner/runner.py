@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.model import ModelWrapper
-from mmengine.optim import OptimizerWrapper
+from mmengine.optim import OptimizerWrapper, AmpOptimizerWrapper
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
@@ -795,6 +795,9 @@ class Runner:
         backend = optimizer_update_cfg.pop('backend', 'native')
         if backend == 'native':
             optimizer_cls = OptimizerWrapper
+        elif backend == 'amp':
+            optimizer_cls = AmpOptimizerWrapper
+            self.base_model.fp16_enabled = True
 
         optimizer_wrapper = optimizer_cls(
             model=self.model, optimizer=optimizer, **optimizer_update_cfg)

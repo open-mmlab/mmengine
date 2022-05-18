@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .optimizer import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
                         DefaultOptimizerConstructor, build_optimizer,
-                        OptimizerWrapper)
+                        OptimizerWrapper, AmpOptimizerWrapper)
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
                         CosineAnnealingParamScheduler, ExponentialLR,
@@ -19,5 +19,5 @@ __all__ = [
     'MultiStepMomentum', 'StepMomentum', 'ConstantParamScheduler',
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
-    '_ParamScheduler', 'OptimizerWrapper'
+    '_ParamScheduler', 'OptimizerWrapper', 'AmpOptimizerWrapper'
 ]

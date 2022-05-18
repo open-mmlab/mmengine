@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 from torch.nn.modules.batchnorm import _BatchNorm
+from torch.cuda.amp import GradScaler
 
 from mmengine.logging import MessageHub, MMLogger
 
@@ -71,6 +72,14 @@ class OptimizerWrapper:
                 return True
         return False
 
+    def prepare_loss(self, cur_iter, loss):
+        if cur_iter < self.divisible_iters:
+            loss_factor = self.cumulative_iters
+        else:
+            loss_factor = self.remainder_iters
+        loss = loss / loss_factor
+        return loss
+
     def optimizer_step(self, loss: torch.Tensor) -> None:
         """
 
@@ -80,27 +89,26 @@ class OptimizerWrapper:
         Returns:
 
         """
+        cur_iter = self.message_hub.get_info('iter', 0)
+        max_iters = self.message_hub.get_info('max_iters', 0)
         if not self.initialized:
             self._init()
 
-        cur_iter = self.message_hub.get_info('iter', 0)
-        max_iters = self.message_hub.get_info('max_iters', 0)
-
-        if cur_iter < self.divisible_iters:
-            loss_factor = self.cumulative_iters
-        else:
-            loss_factor = self.remainder_iters
-
-        loss = loss / loss_factor
+        loss = self.prepare_loss(cur_iter, loss)
         self.backward(loss)
-        if ((cur_iter + 1) % self.cumulative_iters == 0 or
-                cur_iter + 1 == max_iters):
-            self.step()
-            self.zero_grad()
+        if self._should_update(cur_iter, max_iters):
+            self._update_model()
+
+    def _should_update(self, cur_iter, max_iters):
+        return ((cur_iter + 1) % self.cumulative_iters == 0 or
+                cur_iter + 1 == max_iters)
+
+    def _update_model(self):
+        self.step()
+        self.zero_grad()
 
     def backward(self, loss):
         """
-
         Args:
             loss:
 
@@ -177,3 +185,49 @@ class OptimizerWrapper:
     @property
     def param_groups(self):
         return self.optimizer.param_groups
+
+
+class AmpOptimizerWrapper(OptimizerWrapper):
+    def __init__(self,
+                 loss_scale=512.,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self._scale_update_param = None
+        if loss_scale == 'dynamic':
+            self.loss_scaler = GradScaler()
+        elif isinstance(loss_scale, float):
+            self._scale_update_param = loss_scale
+            self.loss_scaler = GradScaler(init_scale=loss_scale)
+        elif isinstance(loss_scale, dict):
+            self.loss_scaler = GradScaler(**loss_scale)
+        else:
+            raise ValueError('loss_scale must be of type float, dict, or '
+                             f'"dynamic", got {loss_scale}')
+
+    def zero_grad(self):
+        # clear grads of last iteration
+        self.model.zero_grad()
+        self.optimizer.zero_grad()
+
+    def backward(self, loss):
+        if self.detect_anomalous_params:
+            self._detect_anomalous_params(loss)
+        self.loss_scaler.scale(loss).backward()
+        self.loss_scaler.unscale_(self.optimizer)
+
+    def step(self):
+        if self.grad_clip:
+            self._clip_grads()
+        self.loss_scaler.step(self.optimizer)
+        self.loss_scaler.update(self._scale_update_param)
+
+    def state_dict(self):
+        # save state_dict of loss_scaler
+        self.message_hub.update_info('loss_scalar',
+                                     self.loss_scaler.state_dict())
+        return self.optimizer.state_dict()
+
+    def load_state_dict(self, state_dict):
+        scaler_state_dict = self.message_hub.get_info['loss_scalar']
+        self.loss_scaler.load_state_dict(scaler_state_dict)
+        self.optimizer.load_state_dict(state_dict)

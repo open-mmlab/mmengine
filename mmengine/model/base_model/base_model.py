@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 from mmengine.optim import OptimizerWrapper
 from mmengine.data import InstanceData
+from mmcv.runner import auto_fp16
 
 
 class BaseModel(nn.Module):
@@ -171,6 +172,7 @@ class BaseModel(nn.Module):
 
     def forward_trace(self):
         """_summary_"""
+
 
     def forward(self,
                 inputs: torch.Tensor,
