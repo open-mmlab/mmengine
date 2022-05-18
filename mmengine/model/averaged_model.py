@@ -183,19 +183,19 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
 
 @MODELS.register_module()
-class MomentumWarmupEMA(ExponentialMovingAverage):
-    """Exponential moving average (EMA) with momentum warm up strategy.
+class MomentumAnnealingEMA(ExponentialMovingAverage):
+    """Exponential moving average (EMA) with momentum annealing strategy.
 
     Args:
-        warmup (int): Use a larger momentum early in training and gradually
-            transition to a smaller value to warm up the ema model. The
-            momentum is calculated as max(momentum, warmup / (warmup + steps))
+        gamma (int): Use a larger momentum early in training and gradually
+            annealing to a smaller value to update the ema model smoothly. The
+            momentum is calculated as max(momentum, gamma / (gamma + steps))
             Defaults to 100.
     """
 
-    def __init__(self, model, warmup=100, **kwargs):
+    def __init__(self, model, gamma=100, **kwargs):
         super().__init__(model=model, **kwargs)
-        self.warmup = warmup
+        self.gamma = gamma
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
                  steps: int) -> Tensor:
@@ -210,5 +210,5 @@ class MomentumWarmupEMA(ExponentialMovingAverage):
         Returns:
             Tensor: The averaged parameters.
         """
-        momentum = max(self.momentum, self.warmup / (self.warmup + self.steps))
+        momentum = max(self.momentum, self.gamma / (self.gamma + self.steps))
         return averaged_param * (1 - momentum) + source_param * momentum

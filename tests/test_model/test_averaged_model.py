@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import torch
 
-from mmengine.model import (ExponentialMovingAverage, MomentumWarmupEMA,
+from mmengine.model import (ExponentialMovingAverage, MomentumAnnealingEMA,
                             StochasticWeightAverage)
 from mmengine.testing import assert_allclose
 
@@ -152,16 +152,16 @@ class TestAveragedModel(TestCase):
         for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
 
-    def test_linear_momentum_ema(self):
-        # Test EMA with momentum warmup.
+    def test_momentum_annealing_ema(self):
+        # Test EMA with momentum annealing.
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3),
             torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
         momentum = 0.1
-        warmup = 4
+        gamma = 4
 
-        ema_model = MomentumWarmupEMA(
-            model, warmup=warmup, momentum=momentum, update_buffers=True)
+        ema_model = MomentumAnnealingEMA(
+            model, gamma=gamma, momentum=momentum, update_buffers=True)
         averaged_params = [
             torch.zeros_like(param)
             for param in itertools.chain(model.parameters(), model.buffers())
@@ -180,7 +180,7 @@ class TestAveragedModel(TestCase):
                 if i == 0:
                     updated_averaged_params.append(p.clone())
                 else:
-                    m = max(momentum, warmup / (warmup + i))
+                    m = max(momentum, gamma / (gamma + i))
                     updated_averaged_params.append(
                         (p_avg * (1 - m) + p * m).clone())
             ema_model.update_parameters(model)
@@ -194,18 +194,18 @@ class TestAveragedModel(TestCase):
         for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
 
-    def test_linear_momentum_ema_with_interval(self):
-        # Test EMA with momentum warmup and interval
+    def test_momentum_annealing_ema_with_interval(self):
+        # Test EMA with momentum annealing and interval
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3),
             torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
         momentum = 0.1
-        warmup = 4
+        gamma = 4
         interval = 3
 
-        ema_model = MomentumWarmupEMA(
+        ema_model = MomentumAnnealingEMA(
             model,
-            warmup=warmup,
+            gamma=gamma,
             momentum=momentum,
             interval=interval,
             update_buffers=True)
@@ -227,7 +227,7 @@ class TestAveragedModel(TestCase):
                 if i == 0:
                     updated_averaged_params.append(p.clone())
                 elif i % interval == 0:
-                    m = max(momentum, warmup / (warmup + i))
+                    m = max(momentum, gamma / (gamma + i))
                     updated_averaged_params.append(
                         (p_avg * (1 - m) + p * m).clone())
                 else:
