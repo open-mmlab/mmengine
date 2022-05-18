@@ -159,7 +159,7 @@ class ExponentialMovingAverage(BaseAveragedModel):
     def __init__(self,
                  model: nn.Module,
                  momentum: float = 0.0002,
-                 interval=1,
+                 interval: int = 1,
                  device: Optional[torch.device] = None,
                  update_buffers: bool = False) -> None:
         super().__init__(model, interval, device, update_buffers)
@@ -190,14 +190,35 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
 
     Args:
         model (nn.Module): The model to be averaged.
+        momentum (float): The momentum used for updating ema parameter.
+            Ema's parameter are updated with the formula:
+           `averaged_param = (1-momentum) * averaged_param + momentum *
+           source_param`. Defaults to 0.0002.
         gamma (int): Use a larger momentum early in training and gradually
             annealing to a smaller value to update the ema model smoothly. The
             momentum is calculated as max(momentum, gamma / (gamma + steps))
             Defaults to 100.
+        interval (int): Interval between two updates. Defaults to 1.
+        device (torch.device, optional): If provided, the averaged model will
+            be stored on the :attr:`device`. Defaults to None.
+        update_buffers (bool): if True, it will compute running averages for
+            both the parameters and the buffers of the model. Defaults to
+            False.
     """
 
-    def __init__(self, model: nn.Module, gamma: int = 100, **kwargs):
-        super().__init__(model=model, **kwargs)
+    def __init__(self,
+                 model: nn.Module,
+                 momentum: float = 0.0002,
+                 gamma: int = 100,
+                 interval: int = 1,
+                 device: Optional[torch.device] = None,
+                 update_buffers: bool = False) -> None:
+        super().__init__(
+            model=model,
+            momentum=momentum,
+            interval=interval,
+            device=device,
+            update_buffers=update_buffers)
         assert gamma > 0, f'gamma must be greater than 0, but got {gamma}'
         self.gamma = gamma
 
