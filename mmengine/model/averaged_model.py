@@ -163,6 +163,8 @@ class ExponentialMovingAverage(BaseAveragedModel):
                  device: Optional[torch.device] = None,
                  update_buffers: bool = False) -> None:
         super().__init__(model, interval, device, update_buffers)
+        assert 0.0 < momentum < 1.0, 'momentum must be in range (0.0, 1.0)'\
+                                     f'but got {momentum}'
         self.momentum = momentum
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
@@ -196,6 +198,7 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
 
     def __init__(self, model: nn.Module, gamma: int = 100, **kwargs):
         super().__init__(model=model, **kwargs)
+        assert gamma > 0, f'gamma must be greater than 0, but got {gamma}'
         self.gamma = gamma
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,

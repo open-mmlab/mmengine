@@ -87,7 +87,13 @@ class TestAveragedModel(TestCase):
         self.assertTrue(averaged_model.steps == averaged_model2.steps)
 
     def test_ema(self):
-        # Test EMA
+        # test invalid momentum
+        with self.assertRaisesRegex(AssertionError,
+                                    'momentum must be in range'):
+            model = torch.nn.Sequential(
+                torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+            ExponentialMovingAverage(model, momentum=3)
+        # test EMA
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
         momentum = 0.1
@@ -153,10 +159,15 @@ class TestAveragedModel(TestCase):
             assert_allclose(p_target, p_ema)
 
     def test_momentum_annealing_ema(self):
-        # Test EMA with momentum annealing.
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3),
             torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
+        # Test invalid gamma
+        with self.assertRaisesRegex(AssertionError,
+                                    'gamma must be greater than 0'):
+            MomentumAnnealingEMA(model, gamma=-1)
+
+        # Test EMA with momentum annealing.
         momentum = 0.1
         gamma = 4
 
