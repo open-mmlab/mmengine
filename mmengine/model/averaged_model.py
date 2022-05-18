@@ -82,7 +82,7 @@ class BaseAveragedModel(nn.Module):
         parameters.
 
         Args:
-            model (nn.Module): The model whose parameters will be
+            model (nn.Module): The model whose parameters will be averaged.
         """
         if self.steps % self.interval == 0:
             avg_param = (
@@ -187,13 +187,14 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
     """Exponential moving average (EMA) with momentum annealing strategy.
 
     Args:
+        model (nn.Module): The model to be averaged.
         gamma (int): Use a larger momentum early in training and gradually
             annealing to a smaller value to update the ema model smoothly. The
             momentum is calculated as max(momentum, gamma / (gamma + steps))
             Defaults to 100.
     """
 
-    def __init__(self, model, gamma=100, **kwargs):
+    def __init__(self, model: nn.Module, gamma: int = 100, **kwargs):
         super().__init__(model=model, **kwargs)
         self.gamma = gamma
 
