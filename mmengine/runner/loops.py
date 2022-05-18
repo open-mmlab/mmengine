@@ -19,7 +19,7 @@ class EpochBasedTrainLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        max_epoch (int): Total training epochs.
+        max_epochs (int): Total training epochs.
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict],
@@ -27,6 +27,8 @@ class EpochBasedTrainLoop(BaseLoop):
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
+        self._epoch = 0
+        self._iter = 0
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -46,15 +48,25 @@ class EpochBasedTrainLoop(BaseLoop):
         """int: Total iterations to train model."""
         return self._max_iters
 
+    @property
+    def epoch(self):
+        """int: Current epoch."""
+        return self._epoch
+
+    @property
+    def iter(self):
+        """int: Current iteration."""
+        return self._iter
+
     def run(self) -> None:
         """Launch training."""
         self.runner.call_hook('before_train')
 
-        while self.runner._epoch < self._max_epochs:
+        while self._epoch < self._max_epochs:
             self.run_epoch()
 
-            if (self.runner.val_loop is not None and
-                    self.runner._epoch % self.runner.val_loop.interval == 0):
+            if (self.runner.val_loop is not None
+                    and self._epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -67,7 +79,9 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
-        self.runner.epoch += 1
+        self._epoch += 1
+        # To allow components that cannot access runner to get current epoch.
+        self.runner.message_hub.update_info('epoch', self._epoch)
 
     def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
         """Iterate one min-batch.
@@ -90,7 +104,10 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=self.runner.outputs)
 
-        self.runner.iter += 1
+        self._iter += 1
+        # To allow components that cannot access runner to get current
+        # iteration.
+        self.runner.message_hub.update_info('iter', self._iter)
 
 
 @LOOPS.register_module()
@@ -101,13 +118,16 @@ class IterBasedTrainLoop(BaseLoop):
         runner (Runner): A reference of runner.
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
-        max_iter (int): Total training iterations.
+        max_iters (int): Total training iterations.
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict],
                  max_iters: int) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
+        self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
+        self._epoch = 0
+        self._iter = 0
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -119,9 +139,24 @@ class IterBasedTrainLoop(BaseLoop):
         self.dataloader = iter(self.dataloader)
 
     @property
+    def max_epochs(self):
+        """int: Total epochs to train model."""
+        return self._max_epochs
+
+    @property
     def max_iters(self):
         """int: Total iterations to train model."""
         return self._max_iters
+
+    @property
+    def epoch(self):
+        """int: Current epoch."""
+        return self._epoch
+
+    @property
+    def iter(self):
+        """int: Current iteration."""
+        return self._iter
 
     def run(self) -> None:
         """Launch training."""
@@ -129,14 +164,14 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        while self.runner._iter < self._max_iters:
+        while self._iter < self._max_iters:
             self.runner.model.train()
 
             data_batch = next(self.dataloader)
             self.run_iter(data_batch)
 
-            if (self.runner.val_loop is not None and
-                    self.runner._iter % self.runner.val_loop.interval == 0):
+            if (self.runner.val_loop is not None
+                    and self._iter % self.runner.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
@@ -149,9 +184,7 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
         self.runner.call_hook(
-            'before_train_iter',
-            batch_idx=self.runner._iter,
-            data_batch=data_batch)
+            'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
@@ -161,10 +194,13 @@ class IterBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook(
             'after_train_iter',
-            batch_idx=self.runner._iter,
+            batch_idx=self._iter,
             data_batch=data_batch,
             outputs=self.runner.outputs)
-        self.runner.iter += 1
+        self._iter += 1
+        # To allow components that cannot access runner to get current
+        # iteration.
+        self.runner.message_hub.update_info('iter', self._iter)
 
 
 @LOOPS.register_module()

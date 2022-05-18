@@ -409,25 +409,15 @@ class Hook:
         Returns:
             bool: Whether reaches the end of training epoch.
         """
-        return runner.epoch + 1 == runner.train_loop.max_epochs
+        return runner.epoch + 1 == runner.max_epochs
 
-    def is_last_iter(self, runner, mode='train') -> bool:
-        """Test whether current iteration is the last iteration.
+    def is_last_train_iter(self, runner) -> bool:
+        """Test whether current iteration is the last train iteration.
 
         Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
-            mode (str): Current mode of runner. Defaults to 'train'.
+            runner (Runner): The runner of the training process.
 
         Returns:
-            bool: Whether current iteration is the last iteration.
+            bool: Whether current iteration is the last train iteration.
         """
-        if mode == 'train':
-            return runner.iter + 1 == runner.train_loop.max_iters
-        elif mode == 'val':
-            return runner.iter + 1 == runner.val_loop.max_iters
-        elif mode == 'test':
-            return runner.iter + 1 == runner.test_loop.max_iters
-        else:
-            raise ValueError('mode should be train, val or test but got'
-                             f'{mode}')
+        return runner.iter + 1 == runner.max_iters

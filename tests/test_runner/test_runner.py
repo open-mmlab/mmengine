@@ -341,9 +341,9 @@ class TestRunner(TestCase):
         self.assertEqual(runner.model_name, 'ToyModel')
 
         # 3. test lazy initialization
-        self.assertIsInstance(runner.train_dataloader, dict)
-        self.assertIsInstance(runner.val_dataloader, dict)
-        self.assertIsInstance(runner.test_dataloader, dict)
+        self.assertIsInstance(runner._train_dataloader, dict)
+        self.assertIsInstance(runner._val_dataloader, dict)
+        self.assertIsInstance(runner._test_dataloader, dict)
         self.assertIsInstance(runner.optimizer, dict)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 
@@ -352,20 +352,20 @@ class TestRunner(TestCase):
         # test_dataloader should also be dict
         runner.train()
 
-        self.assertIsInstance(runner.train_loop, BaseLoop)
-        self.assertIsInstance(runner.train_loop.dataloader, DataLoader)
+        self.assertIsInstance(runner._train_loop, BaseLoop)
+        self.assertIsInstance(runner.train_dataloader, DataLoader)
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
-        self.assertIsInstance(runner.val_loop, BaseLoop)
-        self.assertIsInstance(runner.val_loop.dataloader, DataLoader)
-        self.assertIsInstance(runner.val_loop.evaluator, Evaluator)
+        self.assertIsInstance(runner._val_loop, BaseLoop)
+        self.assertIsInstance(runner._val_loop.dataloader, DataLoader)
+        self.assertIsInstance(runner._val_loop.evaluator, Evaluator)
 
         # After calling runner.test(), test_dataloader should be initialized
-        self.assertIsInstance(runner.test_loop, dict)
+        self.assertIsInstance(runner._test_loop, dict)
         runner.test()
-        self.assertIsInstance(runner.test_loop, BaseLoop)
-        self.assertIsInstance(runner.test_loop.dataloader, DataLoader)
-        self.assertIsInstance(runner.test_loop.evaluator, Evaluator)
+        self.assertIsInstance(runner._test_loop, BaseLoop)
+        self.assertIsInstance(runner._test_loop.dataloader, DataLoader)
+        self.assertIsInstance(runner._test_loop.evaluator, Evaluator)
 
         # 4. initialize runner with objects rather than config
         model = ToyModel()
@@ -637,7 +637,7 @@ class TestRunner(TestCase):
             begin=1,
             end=7,
             convert_to_iter_based=True)
-        runner.train_loop = runner.build_train_loop(runner.train_loop)
+        runner._train_loop = runner.build_train_loop(runner.train_loop)
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertFalse(param_schedulers[0].by_epoch)
         self.assertEqual(param_schedulers[0].begin, 4)

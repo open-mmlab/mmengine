@@ -199,9 +199,9 @@ class Runner:
         >>> runner.test()
     """
     cfg: Config
-    train_loop: Optional[Union[BaseLoop, Dict]]
-    val_loop: Optional[Union[BaseLoop, Dict]]
-    test_loop: Optional[Union[BaseLoop, Dict]]
+    _train_loop: Optional[Union[BaseLoop, Dict]]
+    _val_loop: Optional[Union[BaseLoop, Dict]]
+    _test_loop: Optional[Union[BaseLoop, Dict]]
 
     def __init__(
         self,
@@ -244,9 +244,6 @@ class Runner:
         else:
             self.cfg = Config(dict())
 
-        self._epoch = 0
-        self._iter = 0
-
         # lazy initialization
         training_related = [train_dataloader, train_cfg, optimizer]
         if not (all(item is None for item in training_related)
@@ -257,8 +254,8 @@ class Runner:
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optimizer={optimizer}.')
-        self.train_dataloader = train_dataloader
-        self.train_loop = train_cfg
+        self._train_dataloader = train_dataloader
+        self._train_loop = train_cfg
         self.optimizer = optimizer
 
         # If there is no need to adjust learning rate, momentum or other
@@ -284,9 +281,9 @@ class Runner:
                 'all None or not None, but got '
                 f'val_dataloader={val_dataloader}, val_cfg={val_cfg}, '
                 f'val_evaluator={val_evaluator}')
-        self.val_dataloader = val_dataloader
-        self.val_loop = val_cfg
-        self.val_evaluator = val_evaluator
+        self._val_dataloader = val_dataloader
+        self._val_loop = val_cfg
+        self._val_evaluator = val_evaluator
 
         test_related = [test_dataloader, test_cfg, test_evaluator]
         if not (all(item is None for item in test_related)
@@ -296,9 +293,9 @@ class Runner:
                 'either all None or not None, but got '
                 f'test_dataloader={test_dataloader}, test_cfg={test_cfg}, '
                 f'test_evaluator={test_evaluator}')
-        self.test_dataloader = test_dataloader
-        self.test_loop = test_cfg
-        self.test_evaluator = test_evaluator
+        self._test_dataloader = test_dataloader
+        self._test_loop = test_cfg
+        self._test_evaluator = test_evaluator
 
         self._launcher = launcher
         if self._launcher == 'none':
@@ -436,29 +433,24 @@ class Runner:
         return self._work_dir
 
     @property
+    def max_epochs(self):
+        """int: Total epochs to train model."""
+        return self.train_loop.max_epochs
+
+    @property
+    def max_iters(self):
+        """int: Total iterations to train model."""
+        return self.train_loop.max_iters
+
+    @property
     def epoch(self):
         """int: Current epoch."""
-        return self._epoch
-
-    @epoch.setter
-    def epoch(self, epoch: int):
-        """Update epoch and synchronize epoch in :attr:`message_hub`."""
-        self._epoch = epoch
-        # To allow components that cannot access runner to get current epoch.
-        self.message_hub.update_info('epoch', epoch)
+        return self.train_loop.epoch
 
     @property
     def iter(self):
         """int: Current iteration."""
-        return self._iter
-
-    @iter.setter
-    def iter(self, iter: int):
-        """Update iter and synchronize iter in :attr:`message_hub`."""
-        self._iter = iter
-        # To allow components that cannot access runner to get current
-        # iteration.
-        self.message_hub.update_info('iter', iter)
+        return self.train_loop.iter
 
     @property
     def launcher(self):
@@ -499,6 +491,63 @@ class Runner:
     def hooks(self):
         """list[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
+
+    @property
+    def train_loop(self):
+        """:obj:`BaseLoop`: A loop to run training."""
+        if isinstance(self._train_loop, BaseLoop) or self._train_loop is None:
+            return self._train_loop
+        else:
+            self._train_loop = self.build_train_loop(self._train_loop)
+            return self._train_loop
+
+    @property
+    def val_loop(self):
+        """:obj:`BaseLoop`: A loop to run validation."""
+        if isinstance(self._val_loop, BaseLoop) or self._val_loop is None:
+            return self._val_loop
+        else:
+            self._val_loop = self.build_val_loop(self._val_loop)
+            return self._val_loop
+
+    @property
+    def test_loop(self):
+        """:obj:`BaseLoop`: A loop to run testing."""
+        if isinstance(self._test_loop, BaseLoop) or self._test_loop is None:
+            return self._test_loop
+        else:
+            self._test_loop = self.build_test_loop(self._test_loop)
+            return self._test_loop
+
+    @property
+    def train_dataloader(self):
+        """The data loader for training."""
+        return self.train_loop.dataloader
+
+    @property
+    def val_dataloader(self):
+        """The data loader for validation."""
+        return self.val_loop.dataloader
+
+    @property
+    def test_dataloader(self):
+        """The data loader for testing."""
+        return self.test_loop.dataloader
+
+    @property
+    def val_evaluator(self):
+        """:obj:`Evaluator`: An evaluator for validation."""
+        return self.val_loop.evaluator
+
+    @property
+    def test_evaluator(self):
+        """:obj:`Evaluator`: An evaluator for testing."""
+        return self.test_loop.evaluator
+
+    @property
+    def val_interval(self):
+        """int: Interval to run validation during training."""
+        return self.val_loop.interval
 
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
@@ -857,7 +906,7 @@ class Runner:
                         'by_epoch', True
                     ), 'only epoch-based parameter scheduler can be ' \
                        'converted to iter-based'
-                    assert isinstance(self.train_loop, BaseLoop), \
+                    assert isinstance(self._train_loop, BaseLoop), \
                         'Scheduler can only be converted to iter-based ' \
                         'when train loop is built.'
                     cls = PARAM_SCHEDULERS.get(_scheduler.pop('type'))
@@ -866,7 +915,7 @@ class Runner:
                             optimizer=self.optimizer,
                             **_scheduler,
                             epoch_length=len(
-                                self.train_loop.dataloader),  # type: ignore
+                                self.train_dataloader),  # type: ignore
                         ))
                 else:
                     param_schedulers.append(
@@ -1043,15 +1092,15 @@ class Runner:
             loop = LOOPS.build(
                 loop_cfg,
                 default_args=dict(
-                    runner=self, dataloader=self.train_dataloader))
+                    runner=self, dataloader=self._train_dataloader))
         else:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
                 loop = EpochBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self.train_dataloader)
+                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
             else:
                 loop = IterBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self.train_dataloader)
+                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
@@ -1095,13 +1144,13 @@ class Runner:
                 loop_cfg,
                 default_args=dict(
                     runner=self,
-                    dataloader=self.val_dataloader,
-                    evaluator=self.val_evaluator))
+                    dataloader=self._val_dataloader,
+                    evaluator=self._val_evaluator))
         else:
             loop = ValLoop(
                 runner=self,
-                dataloader=self.val_dataloader,
-                evaluator=self.val_evaluator,  # type: ignore
+                dataloader=self._val_dataloader,
+                evaluator=self._val_evaluator,  # type: ignore
                 **loop_cfg,
             )  # type: ignore
 
@@ -1122,9 +1171,6 @@ class Runner:
             loop (BaseLoop or dict): A test loop or a dict to build test loop.
                 If ``loop`` is a test loop object, just returns itself.
 
-        Args:
-            loop_cfg (dict): Config to build test loop.
-
         Returns:
             :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """
@@ -1141,13 +1187,13 @@ class Runner:
                 loop_cfg,
                 default_args=dict(
                     runner=self,
-                    dataloader=self.test_dataloader,
-                    evaluator=self.test_evaluator))
+                    dataloader=self._test_dataloader,
+                    evaluator=self._test_evaluator))
         else:
             loop = TestLoop(
                 runner=self,
-                dataloader=self.test_dataloader,
-                evaluator=self.test_evaluator)  # type: ignore
+                dataloader=self._test_dataloader,
+                evaluator=self._test_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1176,18 +1222,19 @@ class Runner:
 
     def train(self) -> None:
         """Launch training."""
-        if self.train_loop is None:
+        if self._train_loop is None:
             raise RuntimeError(
-                '`self.train_loop` should not be None when calling train '
+                '`self._train_loop` should not be None when calling train '
                 'method. Please provide `train_dataloader`, `train_cfg`, '
                 '`optimizer` and `param_scheduler` arguments when '
                 'initializing runner.')
 
-        self.train_loop = self.build_train_loop(
-            self.train_loop)  # type: ignore
+        self._train_loop = self.build_train_loop(
+            self._train_loop)  # type: ignore
 
-        if self.val_loop is not None:
-            self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
+        if self._val_loop is not None:
+            self._val_loop = self.build_val_loop(
+                self._val_loop)  # type: ignore
 
         self.load_or_resume()
 
@@ -1198,13 +1245,13 @@ class Runner:
 
     def val(self) -> None:
         """Launch validation."""
-        if self.val_loop is None:
+        if self._val_loop is None:
             raise RuntimeError(
-                '`self.val_loop` should not be None when calling val method.'
+                '`self._val_loop` should not be None when calling val method.'
                 'Please provide `val_dataloader`, `val_cfg` and '
                 '`val_evaluator` arguments when initializing runner.')
 
-        self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
+        self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
         self.load_or_resume()
 
@@ -1214,13 +1261,13 @@ class Runner:
 
     def test(self) -> None:
         """Launch test."""
-        if self.test_loop is None:
+        if self._test_loop is None:
             raise RuntimeError(
-                '`self.test_loop` should not be None when calling test method.'
-                'Please provide `test_dataloader`, `test_cfg` and '
+                '`self._test_loop` should not be None when calling test '
+                'method. Please provide `test_dataloader`, `test_cfg` and '
                 '`test_evaluator` arguments when initializing runner.')
 
-        self.test_loop = self.build_test_loop(self.test_loop)  # type: ignore
+        self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
         self.load_or_resume()
 
@@ -1424,8 +1471,8 @@ class Runner:
             checkpoint = self.load_checkpoint(
                 filename, map_location=map_location)
 
-        self._epoch = checkpoint['meta']['epoch']
-        self._iter = checkpoint['meta']['iter']
+        self.train_loop._epoch = checkpoint['meta']['epoch']
+        self.train_loop._iter = checkpoint['meta']['iter']
 
         if self.meta is None:
             self.meta = {}
@@ -1466,7 +1513,7 @@ class Runner:
 
         self._has_loaded = True
 
-        self.logger.info(f'resumed epoch: {self._epoch}, iter: {self._iter}')
+        self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
 
     def load_checkpoint(self,
                         filename: str,
@@ -1544,13 +1591,13 @@ class Runner:
             meta.update(self.meta)
 
         if by_epoch:
-            # self._epoch increments 1 after
+            # self.epoch increments 1 after
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
-            # `epoch` should be `self_epoch + 1`
-            meta.update(epoch=self._epoch + 1, iter=self._iter)
+            # `epoch` should be `self.epoch + 1`
+            meta.update(epoch=self.epoch + 1, iter=self.iter)
         else:
-            meta.update(epoch=self._epoch, iter=self._iter + 1)
+            meta.update(epoch=self.epoch, iter=self.iter + 1)
 
         filepath = osp.join(out_dir, filename)
 

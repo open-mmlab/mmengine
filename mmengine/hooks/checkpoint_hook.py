@@ -194,7 +194,8 @@ class CheckpointHook(Hook):
         # 1. every ``self.interval`` iterations
         # 2. reach the last iteration of training
         if self.every_n_iters(runner, self.interval) or \
-                (self.save_last and self.is_last_iter(runner, mode='train')):
+                (self.save_last and
+                 self.is_last_train_iter(runner)):
             runner.logger.info(
                 f'Saving checkpoint at {runner.iter + 1} iterations')
             self._save_checkpoint(runner)
