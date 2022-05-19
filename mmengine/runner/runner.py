@@ -579,9 +579,6 @@ class Runner:
         self._rank, self._world_size = get_dist_info()
 
         timestamp = torch.tensor(time.time(), dtype=torch.float64)
-        # TODO: handled by broadcast
-        if self._world_size > 1 and torch.cuda.is_available():
-            timestamp = timestamp.cuda()
         # broadcast timestamp from 0 process to other processes
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',

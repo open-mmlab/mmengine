@@ -5,9 +5,9 @@ import sys
 from logging import Logger, LogRecord
 from typing import Optional, Union
 
-import torch.distributed as dist
 from termcolor import colored
 
+from mmengine import dist
 from mmengine.utils import ManagerMixin
 
 
@@ -144,10 +144,8 @@ class MMLogger(Logger, ManagerMixin):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-        if dist.is_available() and dist.is_initialized():
-            rank = dist.get_rank()
-        else:
-            rank = 0
+        rank = dist.get_rank()
+
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
         stream_handler = logging.StreamHandler(stream=sys.stdout)
