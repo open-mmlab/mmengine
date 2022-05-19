@@ -66,7 +66,7 @@ class DefaultScope(ManagerMixin):
         """
         _accquire_lock()
         if cls._instance_dict:
-            instance = super(DefaultScope, cls).get_current_instance()
+            instance = super().get_current_instance()
         else:
             instance = None
         _release_lock()

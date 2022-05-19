@@ -198,7 +198,7 @@ class MMLogger(Logger, ManagerMixin):
         """
         if not cls._instance_dict:
             cls.get_instance('mmengine')
-        return super(MMLogger, cls).get_current_instance()
+        return super().get_current_instance()
 
     def callHandlers(self, record: LogRecord) -> None:
         """Pass a record to all relevant handlers.

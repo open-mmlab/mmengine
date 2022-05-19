@@ -159,7 +159,7 @@ class Visualizer(ManagerMixin):
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False, num='show')
     ) -> None:
-        super(Visualizer, self).__init__(name)
+        super().__init__(name)
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 

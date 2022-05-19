@@ -92,7 +92,7 @@ class MessageHub(ManagerMixin):
         """
         if not cls._instance_dict:
             cls.get_instance('mmengine')
-        return super(MessageHub, cls).get_current_instance()
+        return super().get_current_instance()
 
     def update_scalar(self,
                       key: str,

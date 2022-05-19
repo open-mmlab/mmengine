@@ -204,8 +204,8 @@ class TestUtils(TestCase):
                                     'out should be the same type with data'):
             dist.cast_data_device(data, expected_device, out=out)
 
-        data = set([0, 1])
-        out = set([2, 3])
+        data = {0, 1}
+        out = {2, 3}
         with self.assertRaisesRegex(TypeError, 'out should not be a set'):
             dist.cast_data_device(data, expected_device, out=out)
 
@@ -602,7 +602,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
                                     'out should be the same type with data'):
             dist.cast_data_device(data, expected_device, out=out)
 
-        data = set([0, 1])
-        out = set([2, 3])
+        data = {0, 1}
+        out = {2, 3}
         with self.assertRaisesRegex(TypeError, 'out should not be a set'):
             dist.cast_data_device(data, expected_device, out=out)

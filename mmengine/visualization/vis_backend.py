@@ -194,7 +194,7 @@ class LocalVisBackend(BaseVisBackend):
                  scalar_save_file: str = 'scalars.json'):
         assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
-        super(LocalVisBackend, self).__init__(save_dir)
+        super().__init__(save_dir)
         self._img_save_dir = img_save_dir
         self._config_save_file = config_save_file
         self._scalar_save_file = scalar_save_file
@@ -347,7 +347,7 @@ class WandbVisBackend(BaseVisBackend):
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  commit: Optional[bool] = True):
-        super(WandbVisBackend, self).__init__(save_dir)
+        super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._commit = commit
 
@@ -474,7 +474,7 @@ class TensorboardVisBackend(BaseVisBackend):
     """
 
     def __init__(self, save_dir: str):
-        super(TensorboardVisBackend, self).__init__(save_dir)
+        super().__init__(save_dir)
 
     def _init_env(self):
         """Setup env for Tensorboard."""

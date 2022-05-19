@@ -260,7 +260,7 @@ class InstanceData(BaseDataElement):
         field_keys_list = [
             instances.all_keys() for instances in instances_list
         ]
-        assert len(set([len(field_keys) for field_keys in field_keys_list])) \
+        assert len({len(field_keys) for field_keys in field_keys_list}) \
                == 1 and len(set(itertools.chain(*field_keys_list))) \
                == len(field_keys_list[0]), 'There are different keys in ' \
                                            '`instances_list`, which may ' \

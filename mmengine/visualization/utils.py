@@ -132,7 +132,7 @@ def color_str2rgb(color: str) -> tuple:
         tuple: RGB color.
     """
     rgb_color: tuple = matplotlib.colors.to_rgb(color)
-    rgb_color = tuple([int(c * 255) for c in rgb_color])
+    rgb_color = tuple(int(c * 255) for c in rgb_color)
     return rgb_color
 
 
