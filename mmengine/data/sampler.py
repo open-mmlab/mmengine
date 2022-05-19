@@ -154,7 +154,6 @@ class InfiniteSampler(Sampler):
 
     def __iter__(self) -> Iterator[int]:
         """Iterate the indices."""
-        # yield from self.indices
         yield from self.indices
 
     def __len__(self) -> int:
