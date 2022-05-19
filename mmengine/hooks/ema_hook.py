@@ -12,8 +12,10 @@ class EMAHook(Hook):
     """A Hook to apply Exponential Moving Average (EMA) on the model during
     training.
 
-    EMAHook takes priority over CheckpointHook. Note, the original model
-    parameters are actually saved in ema field after train.
+    Note:
+        - EMAHook takes priority over CheckpointHook.
+        - The original model parameters are actually saved in ema field after
+          train.
 
     Args:
         ema_type (str): The type of EMA strategy to use. You can find the
@@ -71,6 +73,8 @@ class EMAHook(Hook):
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Resume ema parameters from checkpoint."""
         self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
+        # The original model parameters are actually saved in ema field.
+        # swap the weights back to resume ema state.
         self._swap_ema_parameters()
 
     def _swap_ema_parameters(self) -> None:

@@ -1189,7 +1189,10 @@ class Runner:
 
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
+
         self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
 
@@ -1204,7 +1207,10 @@ class Runner:
         self.val_loop = self.build_val_loop(self.val_loop)  # type: ignore
 
         self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
+
         self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
 
@@ -1219,7 +1225,10 @@ class Runner:
         self.test_loop = self.build_test_loop(self.test_loop)  # type: ignore
 
         self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
+
         self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
 

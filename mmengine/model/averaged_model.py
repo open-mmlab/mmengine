@@ -109,9 +109,9 @@ class StochasticWeightAverage(BaseAveragedModel):
     """Implements the stochastic weight averaging (SWA) of the model.
 
     Stochastic Weight Averaging was proposed in `Averaging Weights Leads to
-    Wider Optima and Better Generalization` by Pavel Izmailov, Dmitrii
-    Podoprikhin, Timur Garipov, Dmitry Vetrov and Andrew Gordon Wilson (UAI
-    2018). https://arxiv.org/abs/1803.05407
+    Wider Optima and Better Generalization, UAI 2018.
+    <https://arxiv.org/abs/1803.05407>`_ by Pavel Izmailov, Dmitrii
+    Podoprikhin, Timur Garipov, Dmitry Vetrov and Andrew Gordon Wilson.
     """
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
@@ -135,7 +135,7 @@ class StochasticWeightAverage(BaseAveragedModel):
 class ExponentialMovingAverage(BaseAveragedModel):
     """Implements the exponential moving average (EMA) of the model.
 
-    All parameters are update by the formula as below:
+    All parameters are updated by the formula as below:
 
         .. math::
 
