@@ -1233,10 +1233,12 @@ class Runner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        self.load_or_resume()
-
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
+        self.load_or_resume()
+
         self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
 
@@ -1250,9 +1252,11 @@ class Runner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
+        self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
-        self.call_hook('before_run')
         self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
 
@@ -1266,9 +1270,11 @@ class Runner:
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
+        self.call_hook('before_run')
+
+        # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
-        self.call_hook('before_run')
         self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
 
@@ -1535,7 +1541,7 @@ class Runner:
         checkpoint = _load_checkpoint(filename, map_location=map_location)
 
         # Add comments to describe the usage of `after_load_ckpt`
-        self.call_hook('after_load_ckpt', checkpoint=checkpoint)
+        self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
         if is_model_wrapper(self.model):
             model = self.model.module
@@ -1627,8 +1633,7 @@ class Runner:
                 state_dict = _scheduler.state_dict()  # type: ignore
                 checkpoint['param_schedulers'].append(state_dict)
 
-        self.call_hook('before_save_ckpt', checkpoint=checkpoint)
-
+        self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
         # in some environments, `os.symlink` is not supported, you may need to
         # set `create_symlink` to False
