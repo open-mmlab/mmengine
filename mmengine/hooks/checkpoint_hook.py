@@ -193,7 +193,7 @@ class CheckpointHook(Hook):
         # save checkpoint for following cases:
         # 1. every ``self.interval`` iterations
         # 2. reach the last iteration of training
-        if self.every_n_iters(runner, self.interval) or \
+        if self.every_n_train_iters(runner, self.interval) or \
                 (self.save_last and
                  self.is_last_train_iter(runner)):
             runner.logger.info(

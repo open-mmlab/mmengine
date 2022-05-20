@@ -23,10 +23,10 @@ class TestIterTimerHook(TestCase):
         assert self.hook.time_sec_tot == 0
         assert self.hook.start_iter == 0
 
-    def test_before_run(self):
+    def test_before_train(self):
         runner = MagicMock()
         runner.iter = 1
-        self.hook.before_run(runner)
+        self.hook.before_train(runner)
         assert self.hook.start_iter == 1
 
     def test_before_epoch(self):

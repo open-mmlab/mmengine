@@ -64,7 +64,7 @@ class NaiveVisualizationHook(Hook):
             outputs (Sequence[BaseDataElement], optional): Outputs from model.
                 Defaults to None.
         """
-        if self.every_n_iters(runner, self._interval):
+        if self.every_n_inner_iters(batch_idx, self._interval):
             for data, output in zip(data_batch, outputs):  # type: ignore
                 input = data['inputs']
                 data_sample = data['data_sample']

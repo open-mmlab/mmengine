@@ -125,9 +125,9 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
         # Print experiment name every n iterations.
-        if self.every_n_iters(runner,
-                              self.interval_exp_name) or (self.end_of_epoch(
-                                  runner.train_dataloader, batch_idx)):
+        if self.every_n_train_iters(
+                runner, self.interval_exp_name) or (self.end_of_epoch(
+                    runner.train_dataloader, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
         if self.every_n_inner_iters(batch_idx, self.interval):
@@ -207,7 +207,7 @@ class LoggerHook(Hook):
             runner (Runner): The runner of the testing process.
         """
         _, log_str = runner.log_processor.get_log_after_epoch(
-            runner, len(runner.val_dataloader), 'test')
+            runner, len(runner.test_dataloader), 'test')
         runner.logger.info(log_str)
 
     def after_run(self, runner) -> None:

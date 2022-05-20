@@ -139,8 +139,8 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
         .. math::
 
-            Xema\_{t+1} = (1 - \text{momentum}) \times
-            Xema\_{t} +  \text{momentum} \times X_t
+            Xema\\_{t+1} = (1 - \text{momentum}) \times
+            Xema\\_{t} +  \text{momentum} \times X_t
 
     Args:
         model (nn.Module): The model to be averaged.
