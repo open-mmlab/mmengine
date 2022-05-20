@@ -885,7 +885,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.val()
 
-    def test_individually_val(self):
+        # test run val without train and test components
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_individually_val'
         cfg.pop('train_dataloader')
@@ -895,7 +895,6 @@ class TestRunner(TestCase):
         cfg.pop('test_dataloader')
         cfg.pop('test_cfg')
         cfg.pop('test_evaluator')
-
         runner = Runner.from_cfg(cfg)
         runner.val()
 
@@ -914,7 +913,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.test()
 
-    def test_individually_test(self):
+        # test run test without train and test components
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_individually_test'
         cfg.pop('train_dataloader')
@@ -924,7 +923,6 @@ class TestRunner(TestCase):
         cfg.pop('val_dataloader')
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
-
         runner = Runner.from_cfg(cfg)
         runner.test()
 

@@ -23,7 +23,8 @@ class IterTimerHook(Hook):
         self.start_iter = 0
 
     def before_train(self, runner) -> None:
-        """Synchronize the number of iterations with the runner.
+        """Synchronize the number of iterations with the runner after resuming
+        from checkpoints.
 
         Args:
             runner: The runner of the training, validation or testing
