@@ -21,26 +21,27 @@ class TimeCounter:
         logger (MMLogger, optional): Formatted logger used to record messages.
                 Defaults to None.
 
-        Examples:
-            >>> import time
-            >>> from mmengine.utils import TimeCounter
-            >>> @TimeCounter()
-            ... def fun1():
-            ...     time.sleep(0.1)
-            ... fun1()
-            [fun1]-1-times per count: 100.0 ms
+    Examples:
+        >>> import time
+        >>> from mmengine.utils import TimeCounter
+        >>> @TimeCounter()
+        ... def fun1():
+        ...     time.sleep(0.1)
+        ... fun1()
+        [fun1]-1-times per count: 100.0 ms
 
-            >>> @@TimeCounter(log_interval=2, tag='fun')
-            ... def fun2():
-            ...    time.sleep(0.2)
-            >>> for _ in range(3):
-            ...    fun2()
-            [fun]-2-times per count: 200.0 ms
+        >>> @@TimeCounter(log_interval=2, tag='fun')
+        ... def fun2():
+        ...    time.sleep(0.2)
+        >>> for _ in range(3):
+        ...    fun2()
+        [fun]-2-times per count: 200.0 ms
 
-            >>> with TimeCounter(tag='fun3'):
-            ...      time.sleep(0.3)
-            [fun3]-1-times per count: 300.0 ms
+        >>> with TimeCounter(tag='fun3'):
+        ...      time.sleep(0.3)
+        [fun3]-1-times per count: 300.0 ms
     """
+
     instance_dict: dict = dict()
 
     def __new__(cls,
