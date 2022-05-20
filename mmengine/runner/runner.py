@@ -435,22 +435,34 @@ class Runner:
     @property
     def max_epochs(self):
         """int: Total epochs to train model."""
-        return self.train_loop.max_epochs
+        if isinstance(self.train_loop, BaseLoop):
+            return self.train_loop.max_epochs
+        else:
+            return 0
 
     @property
     def max_iters(self):
         """int: Total iterations to train model."""
-        return self.train_loop.max_iters
+        if isinstance(self.train_loop, BaseLoop):
+            return self.train_loop.max_iters
+        else:
+            return 0
 
     @property
     def epoch(self):
         """int: Current epoch."""
-        return self.train_loop.epoch
+        if isinstance(self.train_loop, BaseLoop):
+            return self.train_loop.epoch
+        else:
+            return 0
 
     @property
     def iter(self):
         """int: Current iteration."""
-        return self.train_loop.iter
+        if isinstance(self.train_loop, BaseLoop):
+            return self.train_loop.iter
+        else:
+            return 0
 
     @property
     def launcher(self):

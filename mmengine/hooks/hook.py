@@ -373,8 +373,8 @@ class Hook:
         """
         return (batch_idx + 1) % n == 0 if n > 0 else False
 
-    def every_n_iters(self, runner, n: int) -> bool:
-        """Test whether current iteration can be evenly divided by n.
+    def every_n_train_iters(self, runner, n: int) -> bool:
+        """Test whether current training iteration can be evenly divided by n.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
