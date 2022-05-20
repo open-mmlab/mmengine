@@ -859,7 +859,7 @@ class Runner:
                                  optimizer_wrapper: dict) -> OptimizerWrapper:
         optimizer_wrapper_cls = OPTIMIZER_WRAPPERS.get(
             optimizer_wrapper.pop('type'))
-
+        self.optimizer_wrapper_cls = optimizer_wrapper_cls
         return optimizer_wrapper_cls(  # type: ignore
             model=self.model,
             optimizer=optimizer,
@@ -1315,7 +1315,7 @@ class Runner:
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
         # run under precision
-        with self.optimizer_wrapper.precision_context():  # type: ignore
+        with self.optimizer_wrapper_cls.precision_context():  # type: ignore
             self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
 

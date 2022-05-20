@@ -51,6 +51,10 @@ class OptimizerWrapper:
         self.logger = MMLogger.get_current_instance()
         self.message_hub = MessageHub.get_current_instance()
         self.cumulative_iters = cumulative_iters
+        if not isinstance(model, DistributedDataParallel):
+            assert not detect_anomalous_params, (
+                'detect_anomalous_params is only valid for '
+                f'DistributedDataParallel, but got {type(model)}')
         self.detect_anomalous_params = detect_anomalous_params
         self.initialized = False
 
@@ -132,7 +136,8 @@ class OptimizerWrapper:
 
     @contextmanager
     def gradient_accumulative_context(self):
-        self._parse_cumulative_iters()
+        if not self.initialized:
+            self._parse_cumulative_iters()
         cur_iter = self.message_hub.get_info('iter', 0)
         max_iters = self.message_hub.get_info('max_iters', 0)
         if not self._should_update(cur_iter, max_iters):
@@ -140,6 +145,7 @@ class OptimizerWrapper:
         else:
             yield
 
+    @staticmethod
     @contextmanager
     def precision_context(self):
         yield
@@ -264,7 +270,6 @@ class AmpOptimizerWrapper(OptimizerWrapper):
 
     def zero_grad(self):
         # clear grads of last iteration
-        self.model.zero_grad()
         self.optimizer.zero_grad()
 
     def backward(self, loss):
@@ -290,6 +295,7 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         self.loss_scaler.load_state_dict(scaler_state_dict)
         self.optimizer.load_state_dict(state_dict)
 
+    @staticmethod
     @contextmanager
     def precision_context_manager(self):
         with torch.autocast('cuda'):
