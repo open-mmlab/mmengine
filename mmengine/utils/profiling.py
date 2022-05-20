@@ -111,7 +111,7 @@ def context_timer(name,
             Defaults to None.
 
     Examples:
-        >>> from mmdet.utils import context_timer
+        >>> from mmengine.utils import context_timer
         >>> def fun():
         ...     with context_timer(name='func1'):
         ...         time.sleep(1)
