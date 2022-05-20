@@ -142,12 +142,12 @@ class TestHook:
             else:
                 assert not return_val
 
-    def test_every_n_iters(self):
+    def test_every_n_train_iters(self):
         hook = Hook()
         runner = Mock()
         for i in range(100):
             runner.iter = i
-            return_val = hook.every_n_iters(runner, 3)
+            return_val = hook.every_n_train_iters(runner, 3)
             if (i + 1) % 3 == 0:
                 assert return_val
             else:

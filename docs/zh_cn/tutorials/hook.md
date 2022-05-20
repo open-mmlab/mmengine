@@ -393,6 +393,7 @@ import torch
 from mmengine import HOOKS
 from mmengine.hooks import Hook
 
+
 @HOOKS.register_module()
 class CheckInvalidLossHook(Hook):
     """Check invalid loss hook.
@@ -412,16 +413,16 @@ class CheckInvalidLossHook(Hook):
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
-        Args:
-            runner (Runner): The runner of the training process.
+         Args:
+             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        if self.every_n_iters(runner, self.interval):
-            assert torch.isfinite(runner.outputs['loss']), \
+        if self.every_n_train_iters(runner, self.interval):
+            assert torch.isfinite(runner.outputs['loss']),\
                 runner.logger.info('loss become infinite or NaN!')
 ```
 
