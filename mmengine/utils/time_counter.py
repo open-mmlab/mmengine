@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import time
-import warnings
 from typing import Optional, Union
 
 import torch
@@ -42,24 +41,31 @@ class TimeCounter:
             ...      time.sleep(0.3)
             [fun3]-1-times per count: 300.0 ms
     """
+    instance_dict: dict = dict()
 
-    def __init__(self,
-                 log_interval: int = 1,
-                 warmup_interval: int = 1,
-                 with_sync: bool = True,
-                 tag: Optional[str] = None,
-                 logger: Optional[MMLogger] = None):
+    def __new__(cls,
+                log_interval: int = 1,
+                warmup_interval: int = 1,
+                with_sync: bool = True,
+                tag: Optional[str] = None,
+                logger: Optional[MMLogger] = None):
         assert warmup_interval >= 1
-        self.log_interval = log_interval
-        self.warmup_interval = warmup_interval
-        self.with_sync = with_sync
-        self.with_sync = with_sync
-        self.tag = tag
-        self.logger = logger
+        if tag is not None and tag in cls.instance_dict:
+            return cls.instance_dict[tag]
 
-        self.__count = 0
-        self.__pure_inf_time = 0.
-        self.__start_time = 0.
+        cls.log_interval = log_interval
+        cls.warmup_interval = warmup_interval
+        cls.with_sync = with_sync
+        cls.tag = tag
+        cls.logger = logger
+
+        cls.__count = 0
+        cls.__pure_inf_time = 0.
+        cls.__start_time = 0.
+
+        instance = super().__new__(cls)
+        cls.instance_dict[tag] = instance
+        return instance
 
     @master_only
     def __call__(self, fn):
@@ -87,11 +93,10 @@ class TimeCounter:
 
     @master_only
     def __enter__(self):
-        if self.tag is None:
-            self.tag = 'default'
-            warnings.warn('In order to clearly distinguish printing '
-                          'information in different contexts, please specify '
-                          'the tag parameter')
+        assert self.tag is not None, 'In order to clearly distinguish ' \
+                                     'printing information in different ' \
+                                     'contexts, please specify the ' \
+                                     'tag parameter'
 
         self.__count += 1
 
