@@ -91,18 +91,13 @@ class EpochBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be a dict containing one or multiple loss tensors
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
-
-        # TODO, should move to LoggerHook
-        for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_scalar(f'train/{key}', value)
-
-        self.runner.call_hook(
-            'after_train_iter',
-            batch_idx=idx,
-            data_batch=data_batch,
-            outputs=self.runner.outputs)
+        self.runner.message_hub.update_info(
+            'train_logs',
+            self.runner.model(
+                data_batch,
+                mode='train',
+                optimizer_wrapper=self.runner.optimizer_wrapper))
+        self.runner.call_hook('after_train_iter', batch_idx=idx)
 
         self._iter += 1
         # To allow components that cannot access runner to get current
@@ -186,17 +181,14 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # outputs should be a dict containing loss tensor
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
-
-        # TODO
-        for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_scalar(f'train/{key}', value)
-
+        self.runner.message_hub.update_info(
+            'train_logs',
+            self.runner.model(
+                data_batch,
+                mode='train',
+                optimizer_wrapper=self.runner.optimizer_wrapper))
         self.runner.call_hook(
-            'after_train_iter',
-            batch_idx=self._iter,
-            data_batch=data_batch,
-            outputs=self.runner.outputs)
+            'after_train_iter', batch_idx=self._iter, data_batch=data_batch)
         self._iter += 1
         # To allow components that cannot access runner to get current
         # iteration.
@@ -246,9 +238,8 @@ class ValLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'val/{key}', value)
+        self.runner.message_hub.update_info(
+            'val_logs', self.evaluator.evaluate(len(self.dataloader.dataset)))
 
         self.runner.call_hook('after_val_epoch')
         self.runner.call_hook('after_val')
@@ -264,7 +255,8 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        outputs = self.runner.model(data_batch)
+        outputs = self.runner.model(
+            data_batch, mode='val', return_val_loss=False)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
             'after_val_iter',
@@ -311,9 +303,9 @@ class TestLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'test/{key}', value)
+
+        self.runner.message_hub.update_info(
+            'test_logs', self.evaluator.evaluate(len(self.dataloader.dataset)))
 
         self.runner.call_hook('after_test_epoch')
         self.runner.call_hook('after_test')
@@ -328,7 +320,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model(data_batch)
+        predictions = self.runner.model(data_batch, mode='test')
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',

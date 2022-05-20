@@ -5,10 +5,10 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    find_latest_checkpoint, has_method,
                    import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
-                   iter_cast, list_cast, mmcv_full_available,
+                   iter_cast, list_cast, merge_dict, mmcv_full_available,
                    requires_executable, requires_package, slice_list,
-                   to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
-                   tuple_cast)
+                   stack_batch, to_1tuple, to_2tuple, to_3tuple, to_4tuple,
+                   to_ntuple, tuple_cast)
 from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
                    scandir, symlink)
@@ -23,5 +23,6 @@ __all__ = [
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
-    'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin'
+    'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin', 'merge_dict',
+    'stack_batch'
 ]
