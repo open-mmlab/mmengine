@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
-from typing import List
+from typing import List, Union
 
 import torch
 import torch.nn as nn
@@ -30,7 +30,8 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def build_optimizer(model: nn.Module, cfg: dict) -> torch.optim.Optimizer:
+def build_optimizer(model: nn.Module,
+                    cfg: dict) -> Union[dict, torch.optim.Optimizer]:
     """Build function of optimizer.
 
     If ``constructor`` is set in the ``cfg``, this method will build an
@@ -45,7 +46,8 @@ def build_optimizer(model: nn.Module, cfg: dict) -> torch.optim.Optimizer:
             reset the current registry. Defaults to None.
 
     Returns:
-        torch.optim.Optimizer: The built optimizer.
+        dict or torch.optim.Optimizer: The built optimizer or dict of
+        optimizer.
     """
     optimizer_cfg = copy.deepcopy(cfg)
     constructor_type = optimizer_cfg.pop('constructor',

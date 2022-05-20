@@ -45,3 +45,5 @@ TASK_UTILS = Registry('task util')
 VISUALIZERS = Registry('visualizer')
 # manage visualizer backend
 VISBACKENDS = Registry('vis_backend')
+
+OPTIMIZER_WRAPPERS = Registry('optimizer_wrapper')

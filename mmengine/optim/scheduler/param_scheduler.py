@@ -4,10 +4,11 @@ import warnings
 import weakref
 from collections import Counter
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Union
 
 from torch.optim import Optimizer
 
+from mmengine.optim import OptimizerWrapper
 from mmengine.registry import PARAM_SCHEDULERS
 
 INF = int(1e9)
@@ -23,7 +24,7 @@ class _ParamScheduler:
     https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimizerWrapper or Optimizer): Wrapped optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
         begin (int): Step at which to start updating the parameters.
@@ -40,7 +41,7 @@ class _ParamScheduler:
     """  # noqa: E501
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[OptimizerWrapper, Optimizer],
                  param_name: str,
                  begin: int = 0,
                  end: int = INF,
@@ -49,7 +50,7 @@ class _ParamScheduler:
                  verbose: bool = False):
 
         # Attach optimizer
-        if not isinstance(optimizer, Optimizer):
+        if not isinstance(optimizer, (Optimizer, OptimizerWrapper)):
             raise TypeError('``optimizer`` should be an Optimizer,'
                             'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer
@@ -111,8 +112,8 @@ class _ParamScheduler:
             return wrapper
 
         # add counter to optimizer
-        self.optimizer.step = with_counter(self.optimizer.step)
-        self.optimizer._global_step = -1
+        self.optimizer.step = with_counter(self.optimizer.step)  # type: ignore
+        self.optimizer._global_step = -1  # type: ignore
 
         self._global_step = -1
         self.verbose = verbose
@@ -218,7 +219,7 @@ class StepParamScheduler(_ParamScheduler):
     other changes to the parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimizerWrapper or Optimizer): Wrapped optimizer.
         step_size (int): Period of parameter value decay.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -235,7 +236,7 @@ class StepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[OptimizerWrapper, Optimizer],
                  param_name: str,
                  step_size: int,
                  gamma: float = 0.1,
@@ -304,7 +305,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimizerWrapper or Optimizer): Wrapped optimizer.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -321,7 +322,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[OptimizerWrapper, Optimizer],
                  param_name: str,
                  milestones: List[int],
                  gamma: float = 0.1,
@@ -391,7 +392,8 @@ class ConstantParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+            optimizer.
         factor (float): The number we multiply parameter value until the
             milestone. Defaults to 1./3.
         begin (int): Step at which to start updating the parameters.
@@ -407,7 +409,7 @@ class ConstantParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[OptimizerWrapper, Optimizer],
                  param_name: str,
                  factor: float = 1.0 / 3,
                  begin: int = 0,
@@ -477,7 +479,8 @@ class ExponentialParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every epoch.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+            optimizer.
         gamma (float): Multiplicative factor of parameter value decay.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
@@ -492,7 +495,7 @@ class ExponentialParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[OptimizerWrapper, Optimizer],
                  param_name: str,
                  gamma: float,
                  begin: int = 0,
@@ -573,7 +576,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     only implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+            optimizer.
         T_max (int): Maximum number of iterations.
         eta_min (float): Minimum parameter value. Defaults to 0.
         begin (int): Step at which to start updating the parameters.
@@ -592,7 +596,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[Optimizer, OptimizerWrapper],
                  param_name: str,
                  T_max: int,
                  eta_min: float = 0.,
@@ -670,7 +674,8 @@ class LinearParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+            optimizer.
         start_factor (float): The number we multiply parameter value in the
             first epoch. The multiplication factor changes towards end_factor
             in the following epochs. Defaults to 1./3.
@@ -689,7 +694,7 @@ class LinearParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[Optimizer, OptimizerWrapper],
                  param_name: str,
                  start_factor: float = 1.0 / 3,
                  end_factor: float = 1.0,
@@ -765,7 +770,8 @@ class PolyParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+            optimizer.
         eta_min (float): Minimum parameter value at the end of scheduling.
             Defaults to 0.
         power (float): The power of the polynomial. Defaults to 1.0.
@@ -782,7 +788,7 @@ class PolyParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[Optimizer, OptimizerWrapper],
                  param_name: str,
                  eta_min: float = 0,
                  power: float = 1.0,
