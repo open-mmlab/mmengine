@@ -396,34 +396,34 @@ from mmengine.hooks import Hook
 
 @HOOKS.register_module()
 class CheckInvalidLossHook(Hook):
-  """Check invalid loss hook.
+    """Check invalid loss hook.
 
-  This hook will regularly check whether the loss is valid
-  during training.
-
-  Args:
-      interval (int): Checking interval (every k iterations).
-          Defaults to 50.
-  """
-
-  def __init__(self, interval=50):
-    self.interval = interval
-
-  def after_train_iter(self, runner, batch_idx, data_batch=None, outputs=None):
-    """All subclasses should override this method, if they need any
-    operations after each training iteration.
+    This hook will regularly check whether the loss is valid
+    during training.
 
     Args:
-        runner (Runner): The runner of the training process.
-        batch_idx (int): The index of the current batch in the train loop.
-        data_batch (Sequence[dict], optional): Data from dataloader.
-            Defaults to None.
-        outputs (dict, optional): Outputs from model.
-            Defaults to None.
+        interval (int): Checking interval (every k iterations).
+            Defaults to 50.
     """
-    if self.every_n_train_iters(runner, self.interval):
-      assert torch.isfinite(runner.outputs['loss']),
-        runner.logger.info('loss become infinite or NaN!')
+
+    def __init__(self, interval=50):
+        self.interval = interval
+
+    def after_train_iter(self, runner, batch_idx, data_batch=None, outputs=None):
+        """All subclasses should override this method, if they need any
+        operations after each training iteration.
+
+         Args:
+             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
+            outputs (dict, optional): Outputs from model.
+                Defaults to None.
+        """
+        if self.every_n_train_iters(runner, self.interval):
+            assert torch.isfinite(runner.outputs['loss']),\
+                runner.logger.info('loss become infinite or NaN!')
 ```
 
 我们只需将钩子的配置传给执行器的 custom_hooks 的参数，执行器初始化的时候会注册钩子，
