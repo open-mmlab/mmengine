@@ -1578,7 +1578,7 @@ class Runner:
             if isinstance(self.param_schedulers, dict):
                 for name, schedulers in self.param_schedulers.items():
                     for scheduler, ckpt_scheduler in zip(
-                            schedulers, checkpoint['param_schedulers']):
+                            schedulers, checkpoint['param_schedulers'][name]):
                         scheduler.load_state_dict(ckpt_scheduler)
             else:
                 for scheduler, ckpt_scheduler in zip(
@@ -1692,7 +1692,7 @@ class Runner:
         if save_optimizer:
             if isinstance(self.optimizer, Optimizer):
                 checkpoint['optimizer'] = self.optimizer.state_dict()
-            elif isinstance(self.optimizer, Optimizer):
+            elif isinstance(self.optimizer, dict):
                 checkpoint['optimizer'] = dict()
                 for name, optimizer in self.optimizer.items():
                     checkpoint['optimizer'][name] = optimizer.state_dict()

@@ -1187,7 +1187,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
-        # 1.1 test `save_checkpoint` which called by `CheckpointHook`
+        # 1.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'epoch_3.pth')
         self.assertTrue(osp.exists(path))
         self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
@@ -1245,13 +1245,48 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
+        # 1.6 multiple optimizers
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_checkpoint6'
+        cfg.optimizer = dict(
+            key1=dict(type='SGD', lr=0.01),
+            key2=dict(type='Adam', lr=0.02),
+        )
+        # disable OptimizerHook and ParamSchedulerHook because them only work
+        # with one optimizer
+        cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        path = osp.join(self.temp_dir, 'epoch_3.pth')
+        self.assertTrue(osp.exists(path))
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_checkpoint7'
+        cfg.optimizer = dict(
+            key1=dict(type='SGD', lr=0.01),
+            key2=dict(type='Adam', lr=0.02),
+        )
+        # disable OptimizerHook and ParamSchedulerHook because them only work
+        # with one optimizer
+        cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
+        runner = Runner.from_cfg(cfg)
+        runner.resume(path)
+        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner.optimizer['key1'], SGD)
+        self.assertIsInstance(runner.optimizer['key2'], Adam)
+        self.assertIsInstance(runner.param_schedulers, dict)
+        self.assertEqual(len(runner.param_schedulers['key1']), 1)
+        self.assertIsInstance(runner.param_schedulers['key1'][0], MultiStepLR)
+        self.assertEqual(len(runner.param_schedulers['key2']), 1)
+        self.assertIsInstance(runner.param_schedulers['key2'][0], MultiStepLR)
+
         # 2. test iter based
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint6'
+        cfg.experiment_name = 'test_checkpoint8'
         runner = Runner.from_cfg(cfg)
         runner.train()
 
-        # 2.1 test `save_checkpoint` which called by `CheckpointHook`
+        # 2.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
         self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
@@ -1266,7 +1301,7 @@ class TestRunner(TestCase):
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint7'
+        cfg.experiment_name = 'test_checkpoint9'
         runner = Runner.from_cfg(cfg)
         runner.load_checkpoint(path)
         self.assertEqual(runner.epoch, 0)
@@ -1275,7 +1310,7 @@ class TestRunner(TestCase):
 
         # 2.3 test `resume`
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint8'
+        cfg.experiment_name = 'test_checkpoint10'
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 0)
@@ -1286,7 +1321,7 @@ class TestRunner(TestCase):
 
         # 2.4 test auto resume
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint9'
+        cfg.experiment_name = 'test_checkpoint11'
         cfg.resume = True
         runner = Runner.from_cfg(cfg)
         runner.load_or_resume()
@@ -1298,7 +1333,7 @@ class TestRunner(TestCase):
 
         # 2.5 test resume from a specified checkpoint
         cfg = copy.deepcopy(self.iter_based_cfg)
-        cfg.experiment_name = 'test_checkpoint10'
+        cfg.experiment_name = 'test_checkpoint12'
         cfg.resume = True
         cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
         runner = Runner.from_cfg(cfg)
