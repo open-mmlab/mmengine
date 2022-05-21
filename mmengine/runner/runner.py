@@ -1161,15 +1161,6 @@ class Runner:
             else:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, runner=self, dataloader=self._train_dataloader)
-
-        # `build_optimizer` should be called before `build_param_scheduler`
-        #  because the latter depends on the former
-        self.optimizer = self.build_optimizer(self.optimizer)
-
-        if self.param_schedulers:
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
-
         return loop  # type: ignore
 
     def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
@@ -1291,6 +1282,14 @@ class Runner:
 
         self._train_loop = self.build_train_loop(
             self._train_loop)  # type: ignore
+
+        # `build_optimizer` should be called before `build_param_scheduler`
+        #  because the latter depends on the former
+        self.optimizer = self.build_optimizer(self.optimizer)
+
+        if self.param_schedulers:
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
+                self.param_schedulers)  # type: ignore
 
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
