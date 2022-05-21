@@ -917,7 +917,7 @@ class Runner:
                         'by_epoch',
                         True), ('only epoch-based parameter scheduler can be '
                                 'converted to iter-based')
-                    assert isinstance(self.train_loop, BaseLoop), \
+                    assert isinstance(self._train_loop, BaseLoop), \
                         'Scheduler can only be converted to iter-based ' \
                         'when train loop is built.'
                     cls = PARAM_SCHEDULERS.get(_scheduler.pop('type'))
@@ -926,7 +926,7 @@ class Runner:
                             optimizer=self.optimizer,
                             **_scheduler,
                             epoch_length=len(
-                                self.train_loop.dataloader),  # type: ignore
+                                self.train_dataloader),  # type: ignore
                         ))
                 else:
                     param_schedulers.append(
