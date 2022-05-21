@@ -208,6 +208,7 @@ MMEngine 中的默认执行器能够完成大部分的深度学习任务，但�
 
 在 MMEngine 中，我们将任务的执行流程抽象成循环（Loop），因为大部分的深度学习任务执行流程都可以归纳为模型在一组或多组数据上进行循环迭代。
 MMEngine 内提供了四种默认的循环：
+
 - EpochBasedTrainLoop 基于轮次的训练循环
 - IterBasedTrainLoop 基于迭代次数的训练循环
 - ValLoop 标准的验证循环

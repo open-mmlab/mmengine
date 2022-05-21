@@ -39,11 +39,13 @@ class TestBaseDataset:
             filename='test_img.jpg', height=604, width=640, sample_idx=0)
         self.imgs = torch.rand((2, 3, 32, 32))
         self.ori_meta = BaseDataset.METAINFO
+        self.ori_parse_data_info = BaseDataset.parse_data_info
         BaseDataset.parse_data_info = MagicMock(return_value=self.data_info)
         self.pipeline = MagicMock(return_value=dict(imgs=self.imgs))
 
     def teardown(self):
         BaseDataset.METAINFO = self.ori_meta
+        BaseDataset.parse_data_info = self.ori_parse_data_info
 
     def test_init(self):
         # test the instantiation of self.base_dataset
@@ -83,7 +85,6 @@ class TestBaseDataset:
             lazy_init=True)
         assert not dataset._fully_initialized
         assert not dataset.data_list
-
         # test the instantiation of self.base_dataset if ann_file is not
         # existed.
         with pytest.raises(FileNotFoundError):
@@ -147,6 +148,15 @@ class TestBaseDataset:
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/dummy_annotation.json')
+        # test the instantiation of self.base_dataset without `ann_file`
+        BaseDataset.parse_data_info = self.ori_parse_data_info
+        dataset = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img='imgs'),
+            ann_file='',
+            serialize_data=False,
+            lazy_init=True)
+        assert not dataset.ann_file
 
     def test_meta(self):
         # test dataset.metainfo with setting the metainfo from annotation file
@@ -369,6 +379,16 @@ class TestBaseDataset:
             assert dataset.get_data_info(0) == self.data_info
             assert dataset._fully_initialized
             assert hasattr(dataset, 'data_list')
+        # Test parse_data_info with `data_prefix`
+        BaseDataset.parse_data_info = self.ori_parse_data_info
+        data_root = osp.join(osp.dirname(__file__), '../data/')
+        dataset = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json')
+        data_info = dataset.get_data_info(0)
+        assert data_info['img_path'] == osp.join(data_root, 'imgs',
+                                                 'test_img.jpg')
 
     def test_force_full_init(self):
         with pytest.raises(AttributeError):

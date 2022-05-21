@@ -105,8 +105,8 @@ class LoggerHook(Hook):
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
             self.out_dir = self.file_client.join_path(self.out_dir, basename)
             runner.logger.info(
-                (f'Text logs will be saved to {self.out_dir} by '
-                 f'{self.file_client.name} after the training process.'))
+                f'Text logs will be saved to {self.out_dir} by '
+                f'{self.file_client.name} after the training process.')
 
         self.json_log_path = f'{runner.timestamp}.json'
 
@@ -125,15 +125,15 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
         # Print experiment name every n iterations.
-        if self.every_n_iters(runner,
-                              self.interval_exp_name) or (self.end_of_epoch(
-                                  runner.train_loop.dataloader, batch_idx)):
+        if self.every_n_train_iters(
+                runner, self.interval_exp_name) or (self.end_of_epoch(
+                    runner.train_dataloader, batch_idx)):
             exp_info = f'Exp name: {runner.experiment_name}'
             runner.logger.info(exp_info)
         if self.every_n_inner_iters(batch_idx, self.interval):
             tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
-        elif (self.end_of_epoch(runner.train_loop.dataloader, batch_idx)
+        elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
               and not self.ignore_last):
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
@@ -207,7 +207,7 @@ class LoggerHook(Hook):
             runner (Runner): The runner of the testing process.
         """
         _, log_str = runner.log_processor.get_log_after_epoch(
-            runner, len(runner.val_dataloader), 'test')
+            runner, len(runner.test_dataloader), 'test')
         runner.logger.info(log_str)
 
     def after_run(self, runner) -> None:
@@ -223,14 +223,14 @@ class LoggerHook(Hook):
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
             out_filepath = self.file_client.join_path(self.out_dir, filename)
-            with open(local_filepath, 'r') as f:
+            with open(local_filepath) as f:
                 self.file_client.put_text(f.read(), out_filepath)
 
             runner.logger.info(
-                (f'The file {local_filepath} has been uploaded to '
-                 f'{out_filepath}.'))
+                f'The file {local_filepath} has been uploaded to '
+                f'{out_filepath}.')
 
             if not self.keep_local:
                 os.remove(local_filepath)
-                runner.logger.info((f'{local_filepath} was removed due to the '
-                                    '`self.keep_local=False`'))
+                runner.logger.info(f'{local_filepath} was removed due to the '
+                                   '`self.keep_local=False`')

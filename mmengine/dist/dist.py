@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, List, Optional, Tuple, Dict
+from typing import Any, List, Optional, Tuple, Dict, Generator, Union
+from collections import OrderedDict
 import shutil
 import pickle
 import numpy as np
@@ -7,6 +8,8 @@ import tempfile
 import torch
 import os.path as osp
 from torch import Tensor
+from torch._utils import (_flatten_dense_tensors, _take_tensors,
+                          _unflatten_dense_tensors)
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
 
@@ -805,7 +808,7 @@ def gather_object(data: Any,
     the object must be picklable in order to be gathered.
 
     Note:
-        ``NCCL backend`` dost not support ``gather_object``.
+        ``NCCL backend`` does not support ``gather_object``.
 
     Note:
         Unlike PyTorch ``torch.distributed.gather_object``,
@@ -1036,3 +1039,92 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         return ordered_results
     else:
         return None
+
+
+def _all_reduce_coalesced(tensors: List[torch.Tensor],
+                          bucket_size_mb: int = -1,
+                          op: str = 'sum',
+                          group: Optional[ProcessGroup] = None) -> None:
+    """All-reduce a sequence of tensors as a whole.
+
+    Args:
+        tensors (List[torch.Tensor]): A sequence of tensors to be
+            all-reduced.
+        bucket_size_mb (int): The limit of each chunk in megabytes
+            for grouping tensors into chunks. Defaults to -1.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
+    """
+    if bucket_size_mb > 0:
+        bucket_size_bytes = bucket_size_mb * 1024 * 1024
+        buckets = _take_tensors(tensors, bucket_size_bytes)
+    else:
+        buckets = OrderedDict()
+        for tensor in tensors:
+            tp = tensor.type()
+            if tp not in buckets:
+                buckets[tp] = []
+            buckets[tp].append(tensor)
+        buckets = buckets.values()
+
+    for bucket in buckets:
+        flat_tensors = _flatten_dense_tensors(bucket)
+        all_reduce(flat_tensors, op=op, group=group)
+        for tensor, synced in zip(
+                bucket, _unflatten_dense_tensors(flat_tensors, bucket)):
+            tensor.copy_(synced)
+
+
+def all_reduce_params(params: Union[List, Generator[torch.Tensor, None, None]],
+                      coalesce: bool = True,
+                      bucket_size_mb: int = -1,
+                      op: str = 'sum',
+                      group: Optional[ProcessGroup] = None) -> None:
+    """All-reduce parameters.
+
+    Args:
+        params (List or Generator[torch.Tensor, None, None]): List of
+            parameters or buffers of a model.
+        coalesce (bool, optional): Whether to reduce parameters as a whole.
+            Defaults to True.
+        bucket_size_mb (int, optional): Size of bucket, the unit is MB.
+            Defaults to -1.
+        op (str): Operation to reduce data. Defaults to 'sum'. Optional values
+            are 'sum', 'mean' and 'produce', 'min', 'max', 'band', 'bor' and
+            'bxor'.
+        group (ProcessGroup, optional): The process group to work on. If None,
+            the default process group will be used. Defaults to None.
+
+    Examples:
+        >>> import torch
+        >>> import mmengine.dist as dist
+
+        >>> # non-distributed environment
+        >>> data = [torch.arange(2), torch.arange(3)]
+        >>> dist.all_reduce_params(data)
+        >>> data
+            [tensor([0, 1]), tensor([0, 1, 2])]
+
+        >>> # distributed environment
+        >>> # We have 2 process groups, 2 ranks.
+        >>> if dist.get_rank() == 0:
+        ...     data = [torch.tensor([1, 2]), torch.tensor([3, 4])]
+        ... else:
+        ...     data = [torch.tensor([2, 3]), torch.tensor([4, 5])]
+
+        >>> dist.all_reduce_params(data)
+        >>> data
+            [torch.tensor([3, 5]), torch.tensor([7, 9])]
+    """
+    world_size = get_world_size(group)
+    if world_size == 1:
+        return
+    params_data = [param.data for param in params]
+    if coalesce:
+        _all_reduce_coalesced(params_data, bucket_size_mb, op=op, group=group)
+    else:
+        for tensor in params_data:
+            all_reduce(tensor, op=op, group=group)

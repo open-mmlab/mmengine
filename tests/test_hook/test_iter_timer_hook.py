@@ -23,10 +23,10 @@ class TestIterTimerHook(TestCase):
         assert self.hook.time_sec_tot == 0
         assert self.hook.start_iter == 0
 
-    def test_before_run(self):
+    def test_before_train(self):
         runner = MagicMock()
         runner.iter = 1
-        self.hook.before_run(runner)
+        self.hook.before_train(runner)
         assert self.hook.start_iter == 1
 
     def test_before_epoch(self):
@@ -49,10 +49,10 @@ class TestIterTimerHook(TestCase):
         runner = MagicMock()
         runner.log_buffer = dict()
         runner.log_processor.window_size = 10
-        runner.train_loop.max_iters = 100
+        runner.max_iters = 100
         runner.iter = 0
-        runner.test_loop.dataloader = [0] * 20
-        runner.val_loop.dataloader = [0] * 20
+        runner.test_dataloader = [0] * 20
+        runner.val_dataloader = [0] * 20
         self.hook._before_epoch(runner)
         self.hook.before_run(runner)
         self.hook._after_iter(runner, batch_idx=1)

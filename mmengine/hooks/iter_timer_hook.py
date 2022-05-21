@@ -22,8 +22,9 @@ class IterTimerHook(Hook):
         self.time_sec_tot = 0
         self.start_iter = 0
 
-    def before_run(self, runner) -> None:
-        """Synchronize the number of iterations with the runner.
+    def before_train(self, runner) -> None:
+        """Synchronize the number of iterations with the runner after resuming
+        from checkpoints.
 
         Args:
             runner: The runner of the training, validation or testing
@@ -98,14 +99,13 @@ class IterTimerHook(Hook):
                 time_sec_avg = self.time_sec_tot / (
                     runner.iter - self.start_iter + 1)
                 # Calculate eta.
-                eta_sec = time_sec_avg * (
-                    runner.train_loop.max_iters - runner.iter - 1)
+                eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
                 runner.message_hub.update_info('eta', eta_sec)
             else:
                 if mode == 'val':
-                    cur_dataloader = runner.val_loop.dataloader
+                    cur_dataloader = runner.val_dataloader
                 else:
-                    cur_dataloader = runner.test_loop.dataloader
+                    cur_dataloader = runner.test_dataloader
 
                 eta_sec = iter_time * (len(cur_dataloader) - batch_idx - 1)
                 runner.message_hub.update_info('eta', eta_sec)

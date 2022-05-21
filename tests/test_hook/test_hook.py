@@ -1,8 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest.mock import Mock
 
-import pytest
-
 from mmengine.hooks import Hook
 
 
@@ -144,12 +142,12 @@ class TestHook:
             else:
                 assert not return_val
 
-    def test_every_n_iters(self):
+    def test_every_n_train_iters(self):
         hook = Hook()
         runner = Mock()
         for i in range(100):
             runner.iter = i
-            return_val = hook.every_n_iters(runner, 3)
+            return_val = hook.every_n_train_iters(runner, 3)
             if (i + 1) % 3 == 0:
                 assert return_val
             else:
@@ -176,33 +174,21 @@ class TestHook:
 
         # last epoch
         runner.epoch = 1
-        runner.train_loop.max_epochs = 2
+        runner.max_epochs = 2
         return_val = hook.is_last_train_epoch(runner)
         assert return_val
 
         # not the last epoch
-        runner.train_loop.max_epochs = 0
+        runner.max_epochs = 0
         return_val = hook.is_last_train_epoch(runner)
         assert not return_val
 
-    def test_is_last_iter(self):
+    def test_is_last_train_iter(self):
         hook = Hook()
         runner = Mock()
 
         # last iter
         runner.iter = 1
-        runner.train_loop.max_iters = 2
-        return_val = hook.is_last_iter(runner)
+        runner.max_iters = 2
+        return_val = hook.is_last_train_iter(runner)
         assert return_val
-
-        # not the last iter
-        runner.val_loop.max_iters = 0
-        return_val = hook.is_last_iter(runner, mode='val')
-        assert not return_val
-
-        runner.test_loop.max_iters = 0
-        return_val = hook.is_last_iter(runner, mode='test')
-        assert not return_val
-
-        with pytest.raises(ValueError):
-            hook.is_last_iter(runner, mode='error_mode')

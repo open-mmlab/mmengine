@@ -192,21 +192,21 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **默认钩子**
 
-| 名称      |      用途      |  优先级 |
-|:----------:|:-------------:|:------:|
-| OptimizerHook | 反向传播以及参数更新 | HIGH (30) |
-| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
-| SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
-| EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
-| IterTimerHook | 统计迭代耗时 | NORMAL (50) |
-| LoggerHook | 打印日志 | BELOW_NORMAL (60) |
-| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | LOW (70) |
-| CheckpointHook | 按指定间隔保存权重 | VERY_LOW (90) |
+|         名称          |             用途              |        优先级        |
+| :-----------------: | :-------------------------: | :---------------: |
+|    OptimizerHook    |         反向传播以及参数更新          |     HIGH (30)     |
+| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效  |    NORMAL (50)    |
+|   SyncBuffersHook   |        同步模型的 buffer         |    NORMAL (50)    |
+|   EmptyCacheHook    |      PyTorch CUDA 缓存清理      |    NORMAL (50)    |
+|    IterTimerHook    |           统计迭代耗时            |    NORMAL (50)    |
+|     LoggerHook      |            打印日志             | BELOW_NORMAL (60) |
+| ParamSchedulerHook  | 调用 ParamScheduler 的 step 方法 |     LOW (70)      |
+|   CheckpointHook    |          按指定间隔保存权重          |   VERY_LOW (90)   |
 
 **自定义钩子**
 
-| 名称      |      用途      |  优先级 |
-|:----------:|:-------------:|:------:|
+|       名称       | 用途  |     优先级      |
+| :------------: | :-: | :----------: |
 | VisualizerHook | 可视化 | LOWEST (100) |
 
 ```{note}
@@ -282,7 +282,7 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 `OptimizerHook` 包含一些 optimizer 相关的操作：
 
 - 梯度清零 runner.optimizer.zero_grad()
-- 反向传播 runner.output['loss'].backward()
+- 反向传播 runner.output\['loss'\].backward()
 - 梯度截断 clip_grads（可选）
 - 参数更新 runner.optimizer.step()
 
@@ -295,7 +295,7 @@ HOOKS.build(optimizer_config)
 
 使用以上配置即可实现在 Trainer 中完成梯度清零、反向传播以及参数更新。
 
-如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm\_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
 
 ```python
 optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_type=2))
@@ -393,6 +393,7 @@ import torch
 from mmengine import HOOKS
 from mmengine.hooks import Hook
 
+
 @HOOKS.register_module()
 class CheckInvalidLossHook(Hook):
     """Check invalid loss hook.
@@ -412,16 +413,16 @@ class CheckInvalidLossHook(Hook):
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
-        Args:
-            runner (Runner): The runner of the training process.
+         Args:
+             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.
             outputs (dict, optional): Outputs from model.
                 Defaults to None.
         """
-        if self.every_n_iters(runner, self.interval):
-            assert torch.isfinite(runner.outputs['loss']), \
+        if self.every_n_train_iters(runner, self.interval):
+            assert torch.isfinite(runner.outputs['loss']),\
                 runner.logger.info('loss become infinite or NaN!')
 ```
 

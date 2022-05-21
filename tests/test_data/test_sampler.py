@@ -98,7 +98,8 @@ class TestInfiniteSampler(TestCase):
         sampler = InfiniteSampler(self.dataset, shuffle=False)
         self.assertEqual(len(sampler), self.data_length)
         self.assertEqual(sampler.size, self.data_length)
-        items = [next(iter(sampler)) for _ in range(self.data_length * 2)]
+        sampler_iter = iter(sampler)
+        items = [next(sampler_iter) for _ in range(self.data_length * 2)]
         self.assertEqual(items, list(range(self.data_length)) * 2)
 
     @patch('mmengine.data.sampler.get_dist_info', return_value=(2, 3))
@@ -112,7 +113,9 @@ class TestInfiniteSampler(TestCase):
         self.assertEqual(len(sampler), self.data_length)
         self.assertEqual(sampler.size, self.data_length)
         targets = (list(range(self.data_length)) * 2)[2::3]
-        samples = [next(iter(sampler)) for _ in range(len(targets))]
+        sampler_iter = iter(sampler)
+        samples = [next(sampler_iter) for _ in range(len(targets))]
+        print(samples)
         self.assertEqual(samples, targets)
 
     @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))

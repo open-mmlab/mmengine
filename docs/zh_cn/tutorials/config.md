@@ -254,6 +254,7 @@ cfg.dump('demo.py')
 ```
 
 `demo.py`
+
 ```python
 a=1
 b=2
