@@ -852,16 +852,50 @@ class Runner:
     def build_optimizer(
         self, optimizer: Union[Optimizer, Dict]
     ) -> Union[Optimizer, Dict[str, Optimizer]]:
-        """Build optimizer.
-
-        An example of ``optimizer``::
-
-            optimizer = dict(type='SGD', lr=0.01)
+        """Build an optimizer or multiple optimizers.
 
         Args:
             optimizer (Optimizer or dict): An Optimizer object or a dict to
                 build Optimizer objects. If ``optimizer`` is an Optimizer
                 object, just returns itself.
+
+        Examples:
+            >>> # build an optimizer
+            >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
+            >>> optimizer = runner.build_optimizer(optim_cfg)
+            >>> optimizer
+            SGD (
+            Parameter Group 0
+                dampening: 0
+                lr: 0.01
+                momentum: 0
+                nesterov: False
+                weight_decay: 0
+            )
+
+            >>> # build multiple optimizers
+            >>> optim_cfg = dict(
+            ...    dict(type='SGD', lr=0.01),
+            ...    dict(type='SGD', lr=0.02)
+            ... )
+            >>> optimizer = runner.build_optimizer(optim_cfg)
+            >>> optimizer
+            {'key1': SGD (
+            Parameter Group 0
+                dampening: 0
+                lr: 0.01
+                momentum: 0
+                nesterov: False
+                weight_decay: 0
+            ),
+            'key2': SGD (
+            Parameter Group 0
+                dampening: 0
+                lr: 0.02
+                momentum: 0
+                nesterov: False
+                weight_decay: 0
+            )}
 
         Returns:
             Optimizer or dict[str, Optimizer]: Optimizer build from
@@ -945,23 +979,63 @@ class Runner:
                                    List]) -> ParamSchedulerType:
         """Build parameter schedulers.
 
-        Examples of ``scheduler``::
+        The combination of optimizers and schedulers have five cases:
 
-            scheduler = dict(type='MultiStepLR', milestones=[1, 2])
-
-            # scheduler can also be a list of dict
-            scheduler = [
-                dict(type='MultiStepLR', milestones=[1, 2]),
-                dict(type='StepLR', step_size=1)
-            ]
+        - one optimizer and one scheduler: Use one optimizer to optimize model
+          and one scheduler to update optimizer's parameters.
+        - one optimizer and multiple schedulers: Use one optimizer to optimize
+          model and multiple schedulers to update optimizers's parameters in
+          order.
+        - multiple optimizers and one scheduler: Use multiple optimizers to
+          optimize different parts of model and all optimizers share the same
+          scheduler config but correspond to different scheduler objects.
+          This case is commonly used in GAN.
+        - multiple optimizers and multiple schedulers: Use multiple optimizers
+          to optimize different parts of model and all optimizers share the
+          same scheduler configs but  correspond to different scheduler
+          objects. What the different with previous case is that each optimizer
+          in this case has multiple schedulers.
+          This case is commonly used in GAN.
+        - multiple optimizers and corresponding schedulers: Use multiple
+          optimizers to optimize different parts of model and each optimizer
+          have a corresponding scheduler configs.
+          This case is commonly used in GAN.
 
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
 
+        Examples:
+            >>> # build one scheduler
+            >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
+            >>> runner.optimizer = runner.build_optimizer(optim_cfg)
+            >>> scheduler_cfg = dict(type='MultiStepLR', milestones=[1, 2])
+            >>> schedulers = runner.build_param_scheduler(scheduler_cfg)
+            >>> schedulers
+            [<mmengine.optim.scheduler.lr_scheduler.MultiStepLR at 0x7f70f6966290>]  # noqa: E501
+
+            >>> # build multiple schedulers
+            >>> scheduler_cfg = [
+            ...    dict(type='MultiStepLR', milestones=[1, 2]),
+            ...    dict(type='StepLR', step_size=1)
+            ... ]
+            >>> schedulers = runner.build_param_scheduler(scheduler_cfg)
+            >>> schedulers
+            [<mmengine.optim.scheduler.lr_scheduler.MultiStepLR at 0x7f70f60dd3d0>,  # noqa: E501
+            <mmengine.optim.scheduler.lr_scheduler.StepLR at 0x7f70f6eb6150>]
+
+        Above examples only show the case of one optimizer and one scheduler or
+        multiple shedulers. If you want to know how to set parameter scheduler
+        when using multiple optimizers, you can find more examples
+        `optimizer-docs`_.
+
         Returns:
             list[_ParamScheduler] or dict[str, list[_ParamScheduler]]: List of
-            parameter schedulers build from ``scheduler``.
+            parameter schedulers or a dictionary contains list of parameter
+            schedulers build from ``scheduler``.
+
+        .. _optimizer-docs:
+           https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
         """
         param_schedulers: ParamSchedulerType
         if isinstance(self.optimizer, Optimizer):
@@ -980,7 +1054,7 @@ class Runner:
 
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
-                    # object or a config to build ParaScheduler objects
+                    # object or a config to build ParamScheduler objects
                     param_schedulers[name] = self._build_param_scheduler(
                         scheduler[name], optimizer)
                 else:
@@ -1210,7 +1284,7 @@ class Runner:
     def build_test_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
         """Build test loop.
 
-        Examples of ``loop``:
+        Examples of ``loop``::
 
             # `TestLoop` will be used
             loop = dict()
