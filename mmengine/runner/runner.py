@@ -877,8 +877,8 @@ class Runner:
             else:
                 # build multiple optimizers
                 optimizers = dict()
-                for name, _optimizer in optimizer.items():
-                    optimizers[name] = self.build_optimizer(_optimizer)
+                for name, optimizer in optimizer.items():
+                    optimizers[name] = self.build_optimizer(optimizer)
                 return optimizers
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '

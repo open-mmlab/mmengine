@@ -8,7 +8,7 @@ from unittest import TestCase
 import torch
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
@@ -33,7 +33,8 @@ class ToyModel(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(2, 1)
+        self.linear1 = nn.Linear(2, 2)
+        self.linear2 = nn.Linear(2, 1)
 
     def forward(self, data_batch, return_loss=False):
         inputs, labels = [], []
@@ -44,7 +45,8 @@ class ToyModel(nn.Module):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
-        outputs = self.linear(inputs)
+        outputs = self.linear1(inputs)
+        outputs = self.linear2(outputs)
         if return_loss:
             loss = (labels - outputs).sum()
             outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
@@ -573,14 +575,35 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(TypeError, 'optimizer should be'):
             runner.build_optimizer('invalid-type')
 
-        # input is an Optimizer object
+        # 1. test one optimizer
+        # 1.1 input is an Optimizer object
         _optimizer = SGD(runner.model.parameters(), lr=0.01)
         optimizer = runner.build_optimizer(_optimizer)
         self.assertEqual(id(_optimizer), id(optimizer))
 
-        # input is a dict
+        # 1.2 input is a dict
         optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
         self.assertIsInstance(optimizer, SGD)
+
+        # 2. test multiple optmizers
+        # 2.1 input is a dict which contains multiple optimizers
+        optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
+        optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
+        optim_cfg = dict(key1=optimizer1, key2=optimizer2)
+        optimizer = runner.build_optimizer(optim_cfg)
+        self.assertIsInstance(optimizer, dict)
+        self.assertIsInstance(optimizer['key1'], SGD)
+        self.assertIsInstance(optimizer['key2'], Adam)
+
+        # 2.2 input is a dict which contains multiple configs
+        optim_cfg = dict(
+            key1=dict(type='SGD', lr=0.01),
+            key2=dict(type='Adam', lr=0.02),
+        )
+        optimizer = runner.build_optimizer(optim_cfg)
+        self.assertIsInstance(optimizer, dict)
+        self.assertIsInstance(optimizer['key1'], SGD)
+        self.assertIsInstance(optimizer['key2'], Adam)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -589,22 +612,30 @@ class TestRunner(TestCase):
 
         # `build_optimizer` should be called before `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
-        runner.optimizer = None
+        runner.optimizer = dict(
+            key1=dict(type='SGD', lr=0.01),
+            key2=dict(type='Adam', lr=0.02),
+        )
         with self.assertRaisesRegex(RuntimeError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
         runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
-        param_schedulers = runner.build_param_scheduler(cfg)
-        self.assertIsInstance(param_schedulers, list)
+
+        # 1. test one optimizer and one parameter scheduler
+        # 1.1 input is a ParamScheduler object
+        param_scheduler = MultiStepLR(runner.optimizer, milestones=[1, 2])
+        param_schedulers = runner.build_param_scheduler(param_scheduler)
+        self.assertEqual(len(param_schedulers), 1)
+        self.assertEqual(id(param_schedulers[0]), id(param_scheduler))
+
+        # 1.2 input is a dict
+        cfg = dict(type='MultiStepLR', milestones=[1, 2])
+        param_schedulers = runner.build_param_scheduler(param_scheduler)
         self.assertEqual(len(param_schedulers), 1)
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
 
-        # input is a ParamScheduler object
-        param_scheduler = MultiStepLR(runner.optimizer, milestones=[1, 2])
-        param_schedulers = runner.build_param_scheduler(param_scheduler)
-        self.assertEqual(id(param_schedulers[0]), id(param_scheduler))
-
-        # input is a list of dict
+        # 2. test one optimizer and list of parameter schedulers
+        # 2.1 input is a list of dict
         cfg = [
             dict(type='MultiStepLR', milestones=[1, 2]),
             dict(type='StepLR', step_size=1)
@@ -614,14 +645,46 @@ class TestRunner(TestCase):
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
         self.assertIsInstance(param_schedulers[1], StepLR)
 
-        # input is a list and some items are ParamScheduler objects
+        # 2.2 input is a list and some items are ParamScheduler objects
         cfg = [param_scheduler, dict(type='StepLR', step_size=1)]
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertEqual(len(param_schedulers), 2)
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
         self.assertIsInstance(param_schedulers[1], StepLR)
 
-        # train loop should be built before convert scheduler
+        # 3. test multiple optimizers and list of parameter schedulers
+        optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
+        optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
+        optim_cfg = dict(key1=optimizer1, key2=optimizer2)
+        runner.optimizer = runner.build_optimizer(optim_cfg)
+        cfg = [
+            dict(type='MultiStepLR', milestones=[1, 2]),
+            dict(type='StepLR', step_size=1)
+        ]
+        param_schedulers = runner.build_param_scheduler(cfg)
+        print(param_schedulers)
+        self.assertIsInstance(param_schedulers, dict)
+        self.assertEqual(len(param_schedulers), 2)
+        self.assertEqual(len(param_schedulers['key1']), 2)
+        self.assertEqual(len(param_schedulers['key2']), 2)
+
+        # 4. test multiple optimizers and multiple parameter shceduers
+        cfg = dict(
+            key1=dict(type='MultiStepLR', milestones=[1, 2]),
+            key2=[
+                dict(type='MultiStepLR', milestones=[1, 2]),
+                dict(type='StepLR', step_size=1)
+            ])
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertIsInstance(param_schedulers, dict)
+        self.assertEqual(len(param_schedulers), 2)
+        self.assertEqual(len(param_schedulers['key1']), 1)
+        self.assertEqual(len(param_schedulers['key2']), 2)
+
+        # 5. test converting epoch-based scheduler to iter-based
+        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+
+        # 5.1 train loop should be built before converting scheduler
         cfg = dict(
             type='MultiStepLR', milestones=[1, 2], convert_to_iter_based=True)
         with self.assertRaisesRegex(
@@ -630,7 +693,7 @@ class TestRunner(TestCase):
                 'train loop is built.'):
             param_schedulers = runner.build_param_scheduler(cfg)
 
-        # convert epoch-based to iter-based scheduler
+        # 5.2 convert epoch-based to iter-based scheduler
         cfg = dict(
             type='MultiStepLR',
             milestones=[1, 2],
