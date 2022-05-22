@@ -1142,10 +1142,7 @@ class Runner:
             raise TypeError(
                 f'loop should be a Loop object or dict, but got {loop}')
 
-        self.optimizer_wrapper = self.build_optimizer_wrapper(
-            self.optimizer, self.optimizer_wrapper)
         loop_cfg = copy.deepcopy(loop)
-
         if 'type' in loop_cfg and 'by_epoch' in loop_cfg:
             raise RuntimeError(
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
@@ -1166,6 +1163,8 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
+        self.optimizer_wrapper = self.build_optimizer_wrapper(
+            self.optimizer, self.optimizer_wrapper)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -1291,14 +1290,6 @@ class Runner:
 
         self._train_loop = self.build_train_loop(
             self._train_loop)  # type: ignore
-
-        # `build_optimizer` should be called before `build_param_scheduler`
-        #  because the latter depends on the former
-        self.optimizer = self.build_optimizer(self.optimizer)
-
-        if self.param_schedulers:
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
 
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(

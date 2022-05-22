@@ -128,7 +128,7 @@ class MultiProcessTestCase(TestCase):
                 try:
                     pickle.dumps(value)
                     pickleble_dict[key] = value
-                except pickle.PickleError:
+                except Exception:
                     pass
             process = proc(
                 target=self.__class__._run,

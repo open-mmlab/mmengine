@@ -34,6 +34,9 @@ class ParamSchedulerHook(Hook):
         for scheduler in runner.param_schedulers:  # type: ignore
             if not scheduler.by_epoch:
                 scheduler.step()
+        runner.message_hub.update_scalar(
+            'train/lr',
+            runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
 
     def after_train_epoch(self, runner) -> None:
         """Call step function for each scheduler after each epoch.
@@ -44,3 +47,6 @@ class ParamSchedulerHook(Hook):
         for scheduler in runner.param_schedulers:  # type: ignore
             if scheduler.by_epoch:
                 scheduler.step()
+        runner.message_hub.update_scalar(
+            'train/lr',
+            runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
