@@ -18,7 +18,7 @@ from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
                             LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.model import BaseModel, ModelWrapper
+from mmengine.model import BaseModel
 from mmengine.optim import OptimizerWrapper
 from mmengine.optim.scheduler import MultiStepLR, StepLR
 from mmengine.registry import (DATASETS, HOOKS, LOOPS, METRICS, MODEL_WRAPPERS,
@@ -518,7 +518,6 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_model'
         runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, ModelWrapper)
 
         # input should be a nn.Module object or dict
         with self.assertRaisesRegex(TypeError, 'model should be'):
@@ -1087,9 +1086,8 @@ class TestRunner(TestCase):
                     'before_warmup_iter', data_batch=data_batch)
                 self.runner.message_hub.update_info(
                     'train_logs',
-                    self.runner.model(
+                    self.runner.model.train_step(
                         data_batch,
-                        mode='train',
                         optimizer_wrapper=self.runner.optimizer_wrapper))
                 self.runner.call_hook(
                     'after_warmup_iter', data_batch=data_batch)

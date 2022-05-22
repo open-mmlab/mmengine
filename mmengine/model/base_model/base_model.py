@@ -148,9 +148,9 @@ class BaseModel(nn.Module):
         """_summary_"""
 
         def get_feat_hook(self, module_name, module, inputs, outputs):
-            self._feats_dict[module_name] = outputs
+            self.feats_dict[module_name] = outputs
 
-        for module_keys in self._feats_dict.keys():
+        for module_keys in self.feats_dict.keys():
             assert module_keys in self._modules
             get_feat_hook_fn = partial(get_feat_hook, self, module_keys)
             getattr(self, module_keys).register_forward_hook(get_feat_hook_fn)

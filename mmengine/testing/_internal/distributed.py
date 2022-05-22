@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # Copyright (c) https://github.com/pytorch/pytorch
 # Modified from https://github.com/pytorch/pytorch/blob/master/torch/testing/_internal/common_distributed.py  # noqa: E501
-
 import faulthandler
 import logging
 import multiprocessing
+import pickle
 import sys
 import tempfile
 import threading
@@ -123,11 +123,18 @@ class MultiProcessTestCase(TestCase):
         self.processes = []
         for rank in range(int(self.world_size)):
             parent_conn, child_conn = torch.multiprocessing.Pipe()
+            pickleble_dict = dict()
+            for key, value in self.__dict__.items():
+                try:
+                    pickle.dumps(value)
+                    pickleble_dict[key] = value
+                except pickle.PickleError:
+                    pass
             process = proc(
                 target=self.__class__._run,
                 name='process ' + str(rank),
-                args=(rank, self._current_test_name(), self.file_name,
-                      child_conn),
+                args=(pickleble_dict, rank, self._current_test_name(),
+                      self.file_name, child_conn),
             )
             process.start()
             self.pid_to_pipe[process.pid] = parent_conn
@@ -166,10 +173,10 @@ class MultiProcessTestCase(TestCase):
                 return
 
     @classmethod
-    def _run(cls, rank: int, test_name: str, file_name: str,
+    def _run(cls, instance_buffer, rank: int, test_name: str, file_name: str,
              parent_pipe) -> None:
         self = cls(test_name)
-
+        self.__dict__.update(instance_buffer)
         self.rank = rank
         self.file_name = file_name
         self.run_test(test_name, parent_pipe)

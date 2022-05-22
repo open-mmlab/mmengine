@@ -14,7 +14,6 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn.parallel import DistributedDataParallel
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
@@ -26,7 +25,7 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.model import ModelWrapper, is_model_wrapper
+from mmengine.model import MMDistributedDataParallel, is_model_wrapper
 from mmengine.optim import OptimizerWrapper, _ParamScheduler, build_optimizer
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, OPTIMIZER_WRAPPERS,
@@ -368,10 +367,7 @@ class Runner:
             self.cfg.get('model_wrapper_cfg'), self.base_model)
 
         # get model name from the model class
-        if hasattr(self.model, 'module'):
-            self._model_name = self.base_model.__class__.__name__
-        else:
-            self._model_name = self.base_model.__name__
+        self._model_name = self.base_model._get_name()
 
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
@@ -839,19 +835,18 @@ class Runner:
                                                       False)
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
-                model = DistributedDataParallel(
-                    ModelWrapper(self.base_model),
+                model = MMDistributedDataParallel(
+                    self.base_model.cuda(),
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
             else:
                 # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
                 if torch.cuda.is_available():
-                    model = ModelWrapper(self.base_model)
+                    model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg,
-                default_args=dict(module=ModelWrapper(self.base_model)))
+                model_wrapper_cfg, default_args=dict(module=self.base_model))
 
         return model
 

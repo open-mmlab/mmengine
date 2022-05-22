@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from contextlib import contextmanager
-from typing import Optional
+from contextlib import ExitStack, contextmanager
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
@@ -45,6 +45,8 @@ class OptimizerWrapper:
                  cumulative_iters: int = 1,
                  grad_clip: Optional[dict] = None,
                  detect_anomalous_params: bool = False):
+        assert cumulative_iters > 0, (
+            'cumulative_iters at least greater than or equal to 1')
         self.model = model
         self.optimizer = optimizer
         self.grad_clip = grad_clip
@@ -82,6 +84,10 @@ class OptimizerWrapper:
             loss_factor = self.cumulative_iters
         else:
             loss_factor = self.remainder_iters
+        assert loss_factor != 0, (
+            'loss_factor should not be zero! This error could happened when '
+            'message_hub update with an error `iter` or `max_iters`, please'
+            'check your loop')
         loss = loss / loss_factor
         return loss
 
@@ -136,27 +142,28 @@ class OptimizerWrapper:
 
     @contextmanager
     def gradient_accumulative_context(self):
-        if not self.initialized:
-            self._parse_cumulative_iters()
-        cur_iter = self.message_hub.get_info('iter', 0)
-        max_iters = self.message_hub.get_info('max_iters', 0)
-        if not self._should_update(cur_iter, max_iters):
-            yield self.block_backward_sync()
+        if self.cumulative_iters == 1:
+            yield None
         else:
-            yield
+            if not self.initialized:
+                self._parse_cumulative_iters()
+            cur_iter = self.message_hub.get_info('iter', 0)
+            max_iters = self.message_hub.get_info('max_iters', 0)
+            if not self._should_update(cur_iter, max_iters):
+                with self.block_backward_sync():
+                    yield None
+            else:
+                yield None
 
-    @staticmethod
+    @classmethod
     @contextmanager
-    def precision_context(self):
-        yield
+    def precision_context(cls):
+        yield None
 
     def sync_grads(self):
-        assert isinstance(self.model, DistributedDataParallel), (
-            'sync grads should only be called in ddp mode')
-        assert not self.require_backward_grad_sync, (
-            'please call sync_grads in the context of block_backward_sync')
         for param in self.model.parameters():
-            all_reduce(param.grad, 'mean')
+            if param.grad is not None:
+                all_reduce(param.grad, 'mean')
 
     def _clip_grads(self):
         """Clip the gradients of parameters.
@@ -206,8 +213,11 @@ class OptimizerWrapper:
                     f'in the computational graph \n')
 
     def _parse_cumulative_iters(self):
-        cur_iter = self.message_hub.get_info('iter', 0)
+        cur_iter = self.message_hub.get_info('iter')
         max_iters = self.message_hub.get_info('max_iters')
+        assert cur_iter is not None and max_iters is not None, (
+            'iter or max_iters has not been defined in message_hub!'
+            'please check you `Runner implementation`')
 
         if cur_iter % self.cumulative_iters != 0:
             self.logger.warning(
@@ -265,8 +275,8 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         elif isinstance(loss_scale, dict):
             self.loss_scaler = GradScaler(**loss_scale)
         else:
-            raise ValueError('loss_scale must be of type float, dict, or '
-                             f'"dynamic", got {loss_scale}')
+            raise TypeError('loss_scale must be of type float, dict, or '
+                            f'"dynamic", got {loss_scale}')
 
     def zero_grad(self):
         # clear grads of last iteration
@@ -291,12 +301,44 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         return self.optimizer.state_dict()
 
     def load_state_dict(self, state_dict):
-        scaler_state_dict = self.message_hub.get_info['loss_scalar']
+        scaler_state_dict = self.message_hub.get_info('loss_scalar')
         self.loss_scaler.load_state_dict(scaler_state_dict)
         self.optimizer.load_state_dict(state_dict)
 
-    @staticmethod
+    @classmethod
     @contextmanager
-    def precision_context_manager(self):
-        with torch.autocast('cuda'):
-            yield
+    def precision_context(cls):
+        if torch.cuda.is_available():
+            with torch.autocast('cuda'):
+                yield None
+        else:
+            with torch.autocast('cpu'):
+                yield None
+
+
+@contextmanager
+def gradient_accumulative_context(optimizer_wrapper: Union[dict,
+                                                           OptimizerWrapper]):
+    """Avoid unnecessary gradient synchronization during gradient accumulation.
+
+    Args:
+        optimizer_wrapper:
+
+    Returns:
+    """
+    if isinstance(optimizer_wrapper, OptimizerWrapper):
+        with optimizer_wrapper.gradient_accumulative_context():
+            yield None
+    # If `optimizer_wrapper` is a dict, we should make sure all
+    # `optimizer_wrapper` have the same `cumulative_iters`, and they will
+    # have the same gradient accumulative behavior.
+    elif isinstance(optimizer_wrapper, dict):
+        optimizer_wrapper_list = list(optimizer_wrapper.values())
+        with ExitStack() as stack:
+            for optim_wrapper in optimizer_wrapper_list:
+                stack.enter_context(
+                    optim_wrapper.gradient_accumulative_context())
+            yield None
+    else:
+        raise TypeError('optimizer_wrapper should be `OptimizerWrapper`,'
+                        f'but got {type(optimizer_wrapper)}')

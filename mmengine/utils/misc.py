@@ -534,8 +534,8 @@ def stack_batch(tensors, size_divisor=0, pad_value=0):
        Tensor: The 4D-tensor.
     """
     assert isinstance(tensors, list)
-    assert len(set([tensor.ndim for tensor in tensors])) == 1
-    assert len(set([tensor.shape[:-2] for tensor in tensors])) == 1
+    assert len({tensor.ndim for tensor in tensors}) == 1
+    assert len({tensor.shape[:-2] for tensor in tensors}) == 1
 
     tensor_sizes = [(tensor.shape[-2], tensor.shape[-1]) for tensor in tensors]
     max_size = np.stack(tensor_sizes).max(0)
