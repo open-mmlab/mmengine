@@ -47,9 +47,9 @@ class TimeCounter:
 
     log_interval: int
     warmup_interval: int
+    logger: Optional[MMLogger]
     __count: int
     __pure_inf_time: float
-    logger: Optional[MMLogger]
 
     def __new__(cls,
                 log_interval: int = 1,
