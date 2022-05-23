@@ -584,8 +584,8 @@ class Runner:
 
         if env_cfg.get('mp_cfg') is not None:
             set_multi_processing(
-                **env_cfg.get('mp_cfg'),
-                distributed=self.distributed)  # type: ignore
+                **env_cfg.get('mp_cfg'),  # type: ignore
+                distributed=self.distributed)
 
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and env_cfg.get('dist_cfg') is not None:
