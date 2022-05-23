@@ -9,8 +9,9 @@ from mmengine.logging import MMLogger, print_log
 
 
 class TimeCounter:
-    """A tool for counting function or method average time. You can use it as a
-    decorator or context manager to calculate the average time.
+    """A tool that counts the average running time of a function or a method.
+    Users can use it as a decorator or context manager to calculate the average
+    running time of code blocks.
 
     Args:
         log_interval (int): The interval of logging. Defaults to 1.
@@ -28,18 +29,18 @@ class TimeCounter:
         ... def fun1():
         ...     time.sleep(0.1)
         ... fun1()
-        [fun1]-1-times per count: 100.0 ms
+        [fun1]-time per run averaged in the past 1 runs: 100.0 ms
 
         >>> @@TimeCounter(log_interval=2, tag='fun')
         ... def fun2():
         ...    time.sleep(0.2)
         >>> for _ in range(3):
         ...    fun2()
-        [fun]-2-times per count: 200.0 ms
+        [fun]-time per run averaged in the past 2 runs: 200.0 ms
 
         >>> with TimeCounter(tag='fun3'):
         ...      time.sleep(0.3)
-        [fun3]-1-times per count: 300.0 ms
+        [fun3]-time per run averaged in the past 1 runs: 300.0 ms
     """
 
     instance_dict: dict = dict()
@@ -121,5 +122,6 @@ class TimeCounter:
                 times_per_count = 1000 * self.__pure_inf_time / (
                     self.__count - self.warmup_interval + 1)
                 print_log(
-                    f'[{self.tag}]-{self.__count}-times per count: '
-                    f'{times_per_count:.1f} ms', self.logger)
+                    f'[{self.tag}]-time per run averaged in the past '
+                    f'{self.__count} runs: {times_per_count:.1f} ms',
+                    self.logger)
