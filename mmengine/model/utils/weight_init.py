@@ -10,9 +10,7 @@ import torch.nn as nn
 from torch import Tensor
 
 from mmengine.logging.logger import MMLogger,print_log
-from mmengine.registry import Registry,build_from_cfg
-
-INITIALIZERS = Registry('initializer')
+from mmengine.registry import build_from_cfg,WEIGHT_INITIALIZERS
 
 
 def update_init_info(module, init_info):
@@ -161,7 +159,7 @@ class BaseInit(object):
         return info
 
 
-@INITIALIZERS.register_module(name='Constant')
+@WEIGHT_INITIALIZERS.register_module(name='Constant')
 class ConstantInit(BaseInit):
     """Initialize module parameters with constant values.
 
@@ -198,7 +196,7 @@ class ConstantInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='Xavier')
+@WEIGHT_INITIALIZERS.register_module(name='Xavier')
 class XavierInit(BaseInit):
     r"""Initialize module parameters with values according to the method
     described in `Understanding the difficulty of training deep feedforward
@@ -242,7 +240,7 @@ class XavierInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='Normal')
+@WEIGHT_INITIALIZERS.register_module(name='Normal')
 class NormalInit(BaseInit):
     r"""Initialize module parameters with the values drawn from the normal
     distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
@@ -285,7 +283,7 @@ class NormalInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='TruncNormal')
+@WEIGHT_INITIALIZERS.register_module(name='TruncNormal')
 class TruncNormalInit(BaseInit):
     r"""Initialize module parameters with the values drawn from the normal
     distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)` with values
@@ -340,7 +338,7 @@ class TruncNormalInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='Uniform')
+@WEIGHT_INITIALIZERS.register_module(name='Uniform')
 class UniformInit(BaseInit):
     r"""Initialize module parameters with values drawn from the uniform
     distribution :math:`\mathcal{U}(a, b)`.
@@ -383,7 +381,7 @@ class UniformInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='Kaiming')
+@WEIGHT_INITIALIZERS.register_module(name='Kaiming')
 class KaimingInit(BaseInit):
     r"""Initialize module parameters with the values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
@@ -446,7 +444,7 @@ class KaimingInit(BaseInit):
         return info
 
 
-@INITIALIZERS.register_module(name='Caffe2Xavier')
+@WEIGHT_INITIALIZERS.register_module(name='Caffe2Xavier')
 class Caffe2XavierInit(KaimingInit):
     # `XavierFill` in Caffe2 corresponds to `kaiming_uniform_` in PyTorch
     # Acknowledgment to FAIR's internal code
@@ -462,7 +460,7 @@ class Caffe2XavierInit(KaimingInit):
         super().__call__(module)
 
 
-@INITIALIZERS.register_module(name='Pretrained')
+@WEIGHT_INITIALIZERS.register_module(name='Pretrained')
 class PretrainedInit(object):
     """Initialize module by loading a pretrained model.
 
@@ -511,7 +509,7 @@ class PretrainedInit(object):
 
 
 def _initialize(module, cfg, wholemodule=False):
-    func = build_from_cfg(cfg, INITIALIZERS)
+    func = build_from_cfg(cfg, WEIGHT_INITIALIZERS)
     # wholemodule flag is for override mode, there is no layer key in override
     # and initializer will give init values for the whole module with the name
     # in override.
