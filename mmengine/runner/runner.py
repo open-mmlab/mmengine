@@ -921,7 +921,7 @@ class Runner:
     def _build_param_scheduler(self, scheduler: Union[_ParamScheduler, Dict,
                                                       List],
                                optimizer: Optimizer) -> List[_ParamScheduler]:
-        """Build parameter schedulers.
+        """Build parameter schedulers for a single optimizer.
 
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
@@ -982,19 +982,19 @@ class Runner:
         The combination of optimizers and schedulers have five cases:
 
         - one optimizer and one scheduler: Use one optimizer to optimize model
-          and one scheduler to update optimizer's parameters.
+          and one scheduler to update optimizer's hyper-parameters.
         - one optimizer and multiple schedulers: Use one optimizer to optimize
-          model and multiple schedulers to update optimizers's parameters in
-          order.
+          model and multiple schedulers to update optimizers's hyper-parameters
+          in order.
         - multiple optimizers and one scheduler: Use multiple optimizers to
           optimize different parts of model and all optimizers share the same
           scheduler config but correspond to different scheduler objects.
           This case is commonly used in GAN.
         - multiple optimizers and multiple schedulers: Use multiple optimizers
           to optimize different parts of model and all optimizers share the
-          same scheduler configs but  correspond to different scheduler
-          objects. What the different with previous case is that each optimizer
-          in this case has multiple schedulers.
+          same scheduler configs but correspond to different scheduler objects.
+          What the different with previous case is that each optimizer in this
+          case has multiple schedulers.
           This case is commonly used in GAN.
         - multiple optimizers and corresponding schedulers: Use multiple
           optimizers to optimize different parts of model and each optimizer
