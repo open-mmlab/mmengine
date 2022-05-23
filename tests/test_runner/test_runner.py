@@ -1252,7 +1252,7 @@ class TestRunner(TestCase):
             key1=dict(type='SGD', lr=0.01),
             key2=dict(type='Adam', lr=0.02),
         )
-        # disable OptimizerHook and ParamSchedulerHook because them only work
+        # disable OptimizerHook and ParamSchedulerHook because they only work
         # with one optimizer
         cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
         runner = Runner.from_cfg(cfg)
@@ -1266,7 +1266,7 @@ class TestRunner(TestCase):
             key1=dict(type='SGD', lr=0.01),
             key2=dict(type='Adam', lr=0.02),
         )
-        # disable OptimizerHook and ParamSchedulerHook because them only work
+        # disable OptimizerHook and ParamSchedulerHook because they only work
         # with one optimizer
         cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
         runner = Runner.from_cfg(cfg)
