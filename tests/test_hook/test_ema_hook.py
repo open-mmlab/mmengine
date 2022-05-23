@@ -26,7 +26,7 @@ class ToyModel(BaseModel):
         outputs = self.linear(inputs)
         if return_loss:
             loss = (labels - outputs).sum()
-            outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
+            outputs = dict(loss=loss)
             return outputs
         else:
             outputs = dict(log_vars=dict(a=1, b=0.5))
@@ -115,8 +115,8 @@ class TestEMAHook(TestCase):
                 super().__init__()
                 self.module = model
 
-            def forward(self, *args, **kwargs):
-                return self.module(*args, **kwargs)
+            def test_step(self, *args, **kwargs):
+                return self.module.test_step(*args, **kwargs)
 
         # with model wrapper
         runner = Runner(

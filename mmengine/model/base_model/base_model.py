@@ -196,19 +196,3 @@ class BaseModel(nn.Module):
         Returns:
 
         """
-
-    # TODO
-    def aug_test(self):
-        """
-
-        Returns:
-
-        """
-
-    # TODO
-    def preprocess_aug(self):
-        """
-
-        Returns:
-
-        """
