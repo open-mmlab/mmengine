@@ -45,6 +45,12 @@ class TimeCounter:
 
     instance_dict: dict = dict()
 
+    log_interval: int
+    warmup_interval: int
+    __count: int
+    __pure_inf_time: float
+    logger: Optional[MMLogger]
+
     def __new__(cls,
                 log_interval: int = 1,
                 warmup_interval: int = 1,
