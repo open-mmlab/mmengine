@@ -33,7 +33,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, is_list_of, symlink)
+                            find_latest_checkpoint, is_list_of,
+                            set_multi_processing, symlink)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -582,7 +583,9 @@ class Runner:
             torch.backends.cudnn.benchmark = True
 
         if env_cfg.get('mp_cfg') is not None:
-            self._set_multi_processing(**env_cfg.get('mp_cfg'))  # type: ignore
+            set_multi_processing(
+                **env_cfg.get('mp_cfg'),
+                distributed=self.distributed)  # type: ignore
 
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and env_cfg.get('dist_cfg') is not None:
