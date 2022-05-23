@@ -1,20 +1,20 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
+import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
-import unittest
-import os
 
 import torch
-import torch.nn as nn
-from torch.optim import SGD
 import torch.distributed as torch_dist
+import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
+from torch.optim import SGD
 
-from mmengine.testing._internal import MultiProcessTestCase
 from mmengine import MessageHub, MMLogger
-from mmengine.optim import OptimizerWrapper, AmpOptimizerWrapper
 from mmengine.dist import all_gather
+from mmengine.optim import AmpOptimizerWrapper, OptimizerWrapper
 from mmengine.testing import assert_allclose
+from mmengine.testing._internal import MultiProcessTestCase
 
 
 class ToyModel(nn.Module):
@@ -295,7 +295,8 @@ class TestAmpOptimizerWrapper(TestCase):
 
         # Test with dict loss_scale.
         amp_optim_wrapper = AmpOptimizerWrapper(
-            dict(init_scale=1, growth_factor=2), model=self.model,
+            dict(init_scale=1, growth_factor=2),
+            model=self.model,
             optimizer=self.optimizer)
         self.assertEqual(amp_optim_wrapper.loss_scaler._init_scale, 1)
         self.assertEqual(amp_optim_wrapper.loss_scaler._growth_factor, 2)
@@ -328,8 +329,7 @@ class TestAmpOptimizerWrapper(TestCase):
     def test_backward(self):
         for detect_anomalous_params in (True, False):
             amp_optim_wrapper = AmpOptimizerWrapper(
-                model=self.model,
-                optimizer=self.optimizer)
+                model=self.model, optimizer=self.optimizer)
             amp_optim_wrapper.detect_anomalous_params = detect_anomalous_params
             loss_scaler = MagicMock()
             scale_return = MagicMock()
@@ -344,26 +344,24 @@ class TestAmpOptimizerWrapper(TestCase):
 
     def test_state_dict(self):
         amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model,
-            optimizer=self.optimizer)
+            model=self.model, optimizer=self.optimizer)
         state_dict = amp_optim_wrapper.state_dict()
-        self.assertEqual(MessageHub.get_current_instance().get_info(
-            'loss_scalar'), amp_optim_wrapper.loss_scaler.state_dict())
+        self.assertEqual(
+            MessageHub.get_current_instance().get_info('loss_scalar'),
+            amp_optim_wrapper.loss_scaler.state_dict())
         self.assertEqual(state_dict, self.optimizer.state_dict())
 
     def test_load_state_dict(self):
         amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model,
-            optimizer=self.optimizer)
+            model=self.model, optimizer=self.optimizer)
         amp_optim_wrapper.loss_scaler = MagicMock()
         optimizer = SGD(self.model.parameters(), lr=0.1)
-        MessageHub.get_current_instance().update_info(
-            'loss_scalar', dict(scale=1))
+        MessageHub.get_current_instance().update_info('loss_scalar',
+                                                      dict(scale=1))
         amp_optim_wrapper.load_state_dict(optimizer.state_dict())
 
         amp_optim_wrapper.loss_scaler.load_state_dict.assert_called_with(
-            dict(scale=1)
-        )
+            dict(scale=1))
         self.assertEqual(amp_optim_wrapper.optimizer.state_dict(),
                          optimizer.state_dict())
 
@@ -374,6 +372,3 @@ class TestAmpOptimizerWrapper(TestCase):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)
-
-
-

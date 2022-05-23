@@ -44,10 +44,11 @@ class TestBaseModel(TestCase):
 
     def test_preprocess(self):
         # Test `pad_value`, `to_rgb`, `pad_size_divisor`.
-        preprocess_cfg = dict(to_rgb=True,
-                              pad_size_divisor=16,
-                              pad_value=10,
-                              pixel_std=[1, 2, 3])
+        preprocess_cfg = dict(
+            to_rgb=True,
+            pad_size_divisor=16,
+            pad_value=10,
+            pixel_std=[1, 2, 3])
         model = BaseModel(preprocess_cfg)
         inputs1 = torch.randn(3, 10, 10)
         inputs2 = torch.randn(3, 15, 15)

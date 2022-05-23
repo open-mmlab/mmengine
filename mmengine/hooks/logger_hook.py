@@ -127,9 +127,6 @@ class LoggerHook(Hook):
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
         self._update_logs(runner, 'train')
-        if outputs is not None and data_batch is not None:
-            for key, value in outputs['log_vars'].items():
-                runner.message_hub.update_scalar(f'train/{key}', value)
         # Print experiment name every n iterations.
         if self.every_n_train_iters(
                 runner, self.interval_exp_name) or (self.end_of_epoch(

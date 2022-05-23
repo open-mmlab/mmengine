@@ -1,21 +1,20 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
-from unittest.mock import MagicMock
-import unittest
 import os
+import unittest
+from unittest.mock import MagicMock
 
 import torch
-from torch.optim import SGD
-import torch.nn as nn
 import torch.distributed as torch_dist
+import torch.nn as nn
+from torch.optim import SGD
 
+from mmengine.dist import all_gather
+from mmengine.logging import MessageHub
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             MMSeporateDDPWrapper)
 from mmengine.optim import OptimizerWrapper
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
-from mmengine.dist import all_gather
-from mmengine.logging import MessageHub
 
 
 class ToyModel(BaseModel):
@@ -35,6 +34,7 @@ class ToyModel(BaseModel):
 
 
 class ComplexModel(nn.Module):
+
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 1, 1)
@@ -57,14 +57,14 @@ class ComplexModel(nn.Module):
 
 
 class TestModelWrapper(MultiProcessTestCase):
+
     def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        message_hub = MessageHub.get_instance(
-            'TestModelWrapper')
+        message_hub = MessageHub.get_instance('TestModelWrapper')
         message_hub.update_info('iter', 0)
         message_hub.update_info('max_iters', 100)
         # Test `optimizer_wrapper` is a instance of `OptimizerWrapper`
@@ -84,8 +84,7 @@ class TestModelWrapper(MultiProcessTestCase):
         # divided by `optimizer_wrapper.cumulative_iters`
         optimizer_wrapper.cumulative_iters = 3
         with self.assertRaises(AssertionError):
-            ddp_model.train_step(
-                [data], optimizer_wrapper=optimizer_wrapper)
+            ddp_model.train_step([data], optimizer_wrapper=optimizer_wrapper)
             all_grads = all_gather(model.conv1.weight.grad)
             assert_allclose(all_grads[0], all_grads[1])
 
@@ -126,13 +125,14 @@ class TestModelWrapper(MultiProcessTestCase):
         torch_dist.init_process_group(
             backend='gloo', rank=rank, world_size=world_size)
 
+
 @unittest.skipIf(
-        not torch.cuda.is_available(), reason='cuda should be available')
+    not torch.cuda.is_available(), reason='cuda should be available')
 class TestDynamicDDP(TestModelWrapper):
+
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        message_hub = MessageHub.get_instance(
-            'TestDynamicDDP')
+        message_hub = MessageHub.get_instance('TestDynamicDDP')
         message_hub.update_info('iter', 0)
         message_hub.update_info('max_iters', 100)
         # Test `optimizer_wrapper` is a dict. In this case,
@@ -144,8 +144,9 @@ class TestDynamicDDP(TestModelWrapper):
         optimizer2 = SGD(model.conv1.parameters(), lr=0.2)
         optimizer_wrapper1 = OptimizerWrapper(model.conv1, optimizer1, 1)
         optimizer_wrapper2 = OptimizerWrapper(model.conv2, optimizer2, 2)
-        optimizer_wrapper = dict(optimizer_wrapper1=optimizer_wrapper1,
-                                 optimizer_wrapper2=optimizer_wrapper2)
+        optimizer_wrapper = dict(
+            optimizer_wrapper1=optimizer_wrapper1,
+            optimizer_wrapper2=optimizer_wrapper2)
         data = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
 
         # Automatically sync grads of `optimizer_wrapper1` since
