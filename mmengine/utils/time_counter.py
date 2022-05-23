@@ -55,18 +55,19 @@ class TimeCounter:
         if tag is not None and tag in cls.instance_dict:
             return cls.instance_dict[tag]
 
-        cls.log_interval = log_interval
-        cls.warmup_interval = warmup_interval
-        cls.with_sync = with_sync
-        cls.tag = tag
-        cls.logger = logger
-
-        cls.__count = 0
-        cls.__pure_inf_time = 0.
-        cls.__start_time = 0.
-
         instance = super().__new__(cls)
         cls.instance_dict[tag] = instance
+
+        instance.log_interval = log_interval
+        instance.warmup_interval = warmup_interval
+        instance.with_sync = with_sync
+        instance.tag = tag
+        instance.logger = logger
+
+        instance.__count = 0
+        instance.__pure_inf_time = 0.
+        instance.__start_time = 0.
+
         return instance
 
     @master_only
