@@ -580,13 +580,13 @@ class Runner:
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
-        if env_cfg.get('mp_cfg') is not None:
-            mp_cfg: dict = env_cfg.get('mp_cfg', {})
-            set_multi_processing(**mp_cfg, distributed=self.distributed)
+        mp_cfg: dict = env_cfg.get('mp_cfg', {})
+        set_multi_processing(**mp_cfg, distributed=self.distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if self.distributed and env_cfg.get('dist_cfg') is not None:
-            init_dist(self.launcher, **env_cfg.get('dist_cfg'))  # type: ignore
+        if self.distributed:
+            dist_cfg: dict = env_cfg.get('dist_cfg', {})
+            init_dist(self.launcher, **dist_cfg)
 
         self._rank, self._world_size = get_dist_info()
 
