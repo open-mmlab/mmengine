@@ -45,3 +45,6 @@ TASK_UTILS = Registry('task util')
 VISUALIZERS = Registry('visualizer')
 # manage visualizer backend
 VISBACKENDS = Registry('vis_backend')
+
+# manage logprocessor
+LOG_PROCESSOR = Registry('log_processor')
