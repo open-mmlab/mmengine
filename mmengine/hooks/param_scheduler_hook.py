@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Optional, Sequence
 
+from mmengine.optim import OptimizerWrapper
 from mmengine.registry import HOOKS
 from .hook import Hook
 
@@ -34,9 +35,15 @@ class ParamSchedulerHook(Hook):
         for scheduler in runner.param_schedulers:  # type: ignore
             if not scheduler.by_epoch:
                 scheduler.step()
-        runner.message_hub.update_scalar(
-            'train/lr',
-            runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
+
+        if isinstance(runner.optimizer_wrapper, OptimizerWrapper):
+            runner.message_hub.update_scalar(
+                'train/lr',
+                runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
+        else:
+            optimizer_wrapper = next(iter(runner.optimizer_wrapper.values()))
+            runner.message_hub.update_scalar(
+                'train/lr', optimizer_wrapper.optimizer.param_groups[0]['lr'])
 
     def after_train_epoch(self, runner) -> None:
         """Call step function for each scheduler after each epoch.
@@ -47,6 +54,12 @@ class ParamSchedulerHook(Hook):
         for scheduler in runner.param_schedulers:  # type: ignore
             if scheduler.by_epoch:
                 scheduler.step()
-        runner.message_hub.update_scalar(
-            'train/lr',
-            runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
+
+        if isinstance(runner.optimizer_wrapper, OptimizerWrapper):
+            runner.message_hub.update_scalar(
+                'train/lr',
+                runner.optimizer_wrapper.optimizer.param_groups[0]['lr'])
+        else:
+            optimizer_wrapper = next(iter(runner.optimizer_wrapper.values()))
+            runner.message_hub.update_scalar(
+                'train/lr', optimizer_wrapper.optimizer.param_groups[0]['lr'])

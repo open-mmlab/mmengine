@@ -9,25 +9,19 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 
 from mmengine.hooks import EMAHook
-from mmengine.model import ExponentialMovingAverage
+from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
 from mmengine.runner import Runner
 
 
-class ToyModel(nn.Module):
+class ToyModel(BaseModel):
 
     def __init__(self):
         super().__init__()
         self.linear = nn.Linear(2, 1)
 
-    def forward(self, data_batch, return_loss=False):
-        inputs, labels = [], []
-        for x in data_batch:
-            inputs.append(x['inputs'])
-            labels.append(x['data_sample'])
-
+    def forward(self, inputs, labels, return_loss=False):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        inputs = torch.stack(inputs).to(device)
         labels = torch.stack(labels).to(device)
         outputs = self.linear(inputs)
         if return_loss:

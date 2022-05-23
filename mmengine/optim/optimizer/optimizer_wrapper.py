@@ -280,6 +280,7 @@ class AmpOptimizerWrapper(OptimizerWrapper):
 
     def zero_grad(self):
         # clear grads of last iteration
+        self.model.zero_grad()
         self.optimizer.zero_grad()
 
     def backward(self, loss):

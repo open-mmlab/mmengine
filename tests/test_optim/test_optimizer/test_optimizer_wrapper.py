@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
+from torch.cuda.amp import GradScaler
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import SGD
 
@@ -285,21 +286,20 @@ class TestAmpOptimizerWrapper(TestCase):
         # Test with default arguments.
         amp_optim_wrapper = AmpOptimizerWrapper(
             model=self.model, optimizer=self.optimizer)
-        self.assertEqual(amp_optim_wrapper._scale_update_param, 512.)
-        self.assertEqual(amp_optim_wrapper.loss_scaler._init_scale, 512.)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dynamic.
         amp_optim_wrapper = AmpOptimizerWrapper(
             'dynamic', model=self.model, optimizer=self.optimizer)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dict loss_scale.
         amp_optim_wrapper = AmpOptimizerWrapper(
             dict(init_scale=1, growth_factor=2),
             model=self.model,
             optimizer=self.optimizer)
-        self.assertEqual(amp_optim_wrapper.loss_scaler._init_scale, 1)
-        self.assertEqual(amp_optim_wrapper.loss_scaler._growth_factor, 2)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         with self.assertRaises(TypeError):
             AmpOptimizerWrapper(
@@ -336,7 +336,6 @@ class TestAmpOptimizerWrapper(TestCase):
             scale_fn = MagicMock(return_value=scale_return)
             loss_scaler.scale = scale_fn
             amp_optim_wrapper.loss_scaler = loss_scaler
-            amp_optim_wrapper._amp_optim_wrapper = MagicMock()
             amp_optim_wrapper._detect_anomalous_params = MagicMock()
             amp_optim_wrapper.backward(1)
             loss_scaler.scale.assert_called_with(1)
