@@ -127,6 +127,10 @@ class ToyHook2(Hook):
     def after_train_epoch(self, runner):
         pass
 
+@HOOKS.register_module()
+class ToyHook3(Hook):
+    def before_train_iter(self, runner, data_batch):
+        pass
 
 @LOOPS.register_module()
 class CustomTrainLoop(BaseLoop):
@@ -869,6 +873,15 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
+
+        # 4. test unexpected argument in `call_hook`
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train4'
+        runner = Runner.from_cfg(cfg)
+        custom_hooks = [dict(type='ToyHook3')]
+        runner.register_custom_hooks(custom_hooks)
+        with self.assertRaisesRegex(TypeError, 'got an unexpected keyword argument'):
+            runner.train()
 
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
