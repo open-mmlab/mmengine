@@ -4,6 +4,9 @@ repos:
     rev: 3.8.3
     hooks:
       - id: flake8
+        additional_dependencies:
+          - flake8-docstrings == 1.6.0
+        args: [--config=setup.cfg, --docstring-convention=google]
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
