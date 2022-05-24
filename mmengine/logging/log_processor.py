@@ -3,8 +3,10 @@ import copy
 import datetime
 from collections import OrderedDict
 from typing import List, Optional, Tuple
-from mmengine.registry import LOG_PROCESSOR
+
 import torch
+
+from mmengine.registry import LOG_PROCESSOR
 
 
 @LOG_PROCESSOR.register_module()

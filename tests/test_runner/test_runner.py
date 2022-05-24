@@ -17,10 +17,11 @@ from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
                             LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
-from mmengine.logging import MessageHub, MMLogger, LogProcessor
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
-from mmengine.registry import (DATASETS, HOOKS, LOOPS, METRICS, MODEL_WRAPPERS,
-                               MODELS, PARAM_SCHEDULERS, Registry, LOG_PROCESSOR)
+from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSOR, LOOPS, METRICS,
+                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -174,14 +175,12 @@ class CustomTestLoop(BaseLoop):
 @LOG_PROCESSOR.register_module()
 class CustomLogProcessor(LogProcessor):
 
-    def __init__(self,
-                 window_size=10,
-                 by_epoch=True,
-                 custom_cfg=None):
+    def __init__(self, window_size=10, by_epoch=True, custom_cfg=None):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self._check_custom_cfg()
+
 
 def collate_fn(data_batch):
     return data_batch
@@ -819,7 +818,8 @@ class TestRunner(TestCase):
         self.assertIsInstance(log_processor, LogProcessor)
 
         # input is a LogProcessor object
-        self.assertEqual(id(runner.build_log_processor(log_processor)), id(log_processor))
+        self.assertEqual(
+            id(runner.build_log_processor(log_processor)), id(log_processor))
 
         # test custom validation log_processor
         cfg = dict(type='CustomLogProcessor')

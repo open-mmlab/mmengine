@@ -1198,7 +1198,8 @@ class Runner:
 
         return loop  # type: ignore
 
-    def build_log_processor(self, log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
+    def build_log_processor(
+            self, log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
         """Build test log_processor.
 
         Examples of ``log_processor``:
@@ -1210,17 +1211,20 @@ class Runner:
             log_processor = dict(type='CustomLogProcessor')
 
         Args:
-            log_processor (LogProcessor or dict): A log processor or a dict to build log processor.
-                If ``log_processor`` is a log processor object, just returns itself.
+            log_processor (LogProcessor or dict): A log processor or a dict
+            to build log processor. If ``log_processor`` is a log processor
+            object, just returns itself.
 
         Returns:
-            :obj:`LogProcessor`: Log processor object build from ``log_processor_cfg``.
+            :obj:`LogProcessor`: Log processor object build from
+            ``log_processor_cfg``.
         """
         if isinstance(log_processor, LogProcessor):
             return log_processor
         elif not isinstance(log_processor, dict):
             raise TypeError(
-                f'log processor should be a LogProcessor object or dict, but got {log_processor}')
+                'log processor should be a LogProcessor object or dict, but'
+                f'got {log_processor}')
 
         log_processor_cfg = copy.deepcopy(log_processor)  # type: ignore
 
