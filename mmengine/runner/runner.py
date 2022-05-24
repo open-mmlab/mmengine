@@ -875,12 +875,20 @@ class Runner:
 
             >>> # build multiple optimizers
             >>> optim_cfg = dict(
-            ...    dict(type='SGD', lr=0.01),
-            ...    dict(type='SGD', lr=0.02)
+            ...    generator=dict(
+            ...        type='SGD',
+            ...        lr=0.01,
+            ...        constructor='MultipleOptimizerConstructor',
+            ...    ),
+            ...    discriminator=dict(
+            ...        type='SGD',
+            ...        lr=0.02,
+            ...        constructor='MultipleOptimizerConstructor',
+            ...    )
             ... )
             >>> optimizer = runner.build_optimizer(optim_cfg)
             >>> optimizer
-            {'key1': SGD (
+            {'generator': SGD (
             Parameter Group 0
                 dampening: 0
                 lr: 0.01
@@ -888,7 +896,7 @@ class Runner:
                 nesterov: False
                 weight_decay: 0
             ),
-            'key2': SGD (
+            'discriminator': SGD (
             Parameter Group 0
                 dampening: 0
                 lr: 0.02
@@ -897,9 +905,18 @@ class Runner:
                 weight_decay: 0
             )}
 
+        Important:
+            If you build multiple optimizers, you must implement a
+            MultipleOptimizerConstructor which should collects parameters
+            passed to corresponding optimizers. More details about how to
+            custom OptimizerConstructor can be found at `optimizer-docs`_.
+
         Returns:
             Optimizer or dict[str, Optimizer]: Optimizer build from
             ``optimizer``.
+
+        .. _optimizer-docs:
+           https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
         """
         if isinstance(optimizer, Optimizer):
             return optimizer
