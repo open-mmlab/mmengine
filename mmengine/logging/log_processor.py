@@ -6,7 +6,10 @@ from typing import List, Optional, Tuple
 
 import torch
 
+from mmengine.registry import LOG_PROCESSOR
 
+
+@LOG_PROCESSOR.register_module()
 class LogProcessor:
     """A log processor used to format log information collected from
     ``runner.message_hub.log_scalars``.

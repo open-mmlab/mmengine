@@ -6,7 +6,6 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
-from ..logging.logger import MMLogger
 from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
@@ -46,6 +45,9 @@ def build_from_cfg(
     Returns:
         object: The constructed object.
     """
+    # Avoid circular import
+    from ..logging.logger import MMLogger
+
     if not isinstance(cfg, (dict, ConfigDict, Config)):
         raise TypeError(
             f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}')
@@ -328,6 +330,9 @@ class Registry:
             >>> # `get` from its sibling registries
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
+        # Avoid circular import
+        from ..logging.logger import MMLogger
+
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
         registry_name = self.name

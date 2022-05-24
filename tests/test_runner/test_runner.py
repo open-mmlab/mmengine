@@ -17,10 +17,11 @@ from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
                             LoggerHook, OptimizerHook, ParamSchedulerHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
-from mmengine.registry import (DATASETS, HOOKS, LOOPS, METRICS, MODEL_WRAPPERS,
-                               MODELS, PARAM_SCHEDULERS, Registry)
+from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSOR, LOOPS, METRICS,
+                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -169,6 +170,16 @@ class CustomTestLoop(BaseLoop):
 
     def run(self) -> None:
         pass
+
+
+@LOG_PROCESSOR.register_module()
+class CustomLogProcessor(LogProcessor):
+
+    def __init__(self, window_size=10, by_epoch=True, custom_cfg=None):
+        self.window_size = window_size
+        self.by_epoch = by_epoch
+        self.custom_cfg = custom_cfg if custom_cfg else []
+        self._check_custom_cfg()
 
 
 def collate_fn(data_batch):
@@ -786,6 +797,34 @@ class TestRunner(TestCase):
         cfg = dict(type='CustomTestLoop')
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, CustomTestLoop)
+
+    def test_build_log_processor(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_build_log_processor'
+        runner = Runner.from_cfg(cfg)
+
+        # input should be a LogProcessor object or dict
+        with self.assertRaisesRegex(TypeError, 'should be'):
+            runner.build_log_processor('invalid-type')
+
+        # input is a dict and contains type key
+        cfg = dict(type='LogProcessor')
+        log_processor = runner.build_log_processor(cfg)
+        self.assertIsInstance(log_processor, LogProcessor)
+
+        # input is a dict but does not contain type key
+        cfg = dict()
+        log_processor = runner.build_log_processor(cfg)
+        self.assertIsInstance(log_processor, LogProcessor)
+
+        # input is a LogProcessor object
+        self.assertEqual(
+            id(runner.build_log_processor(log_processor)), id(log_processor))
+
+        # test custom validation log_processor
+        cfg = dict(type='CustomLogProcessor')
+        log_processor = runner.build_log_processor(cfg)
+        self.assertIsInstance(log_processor, CustomLogProcessor)
 
     def test_train(self):
         # 1. test `self.train_loop` is None

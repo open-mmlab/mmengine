@@ -32,6 +32,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                VISUALIZERS, DefaultScope,
                                count_registered_modules)
+from mmengine.registry.root import LOG_PROCESSOR
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of, symlink)
 from mmengine.visualization import Visualizer
@@ -326,7 +327,7 @@ class Runner:
             self._experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
-        self.log_processor = LogProcessor(**log_processor)
+        self.log_processor = self.build_log_processor(log_processor)
         # Since `get_instance` could return any subclass of ManagerMixin. The
         # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
@@ -1196,6 +1197,43 @@ class Runner:
                 evaluator=self._test_evaluator)  # type: ignore
 
         return loop  # type: ignore
+
+    def build_log_processor(
+            self, log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
+        """Build test log_processor.
+
+        Examples of ``log_processor``:
+
+            # `LogProcessor` will be used
+            log_processor = dict()
+
+            # custom log_processor
+            log_processor = dict(type='CustomLogProcessor')
+
+        Args:
+            log_processor (LogProcessor or dict): A log processor or a dict
+            to build log processor. If ``log_processor`` is a log processor
+            object, just returns itself.
+
+        Returns:
+            :obj:`LogProcessor`: Log processor object build from
+            ``log_processor_cfg``.
+        """
+        if isinstance(log_processor, LogProcessor):
+            return log_processor
+        elif not isinstance(log_processor, dict):
+            raise TypeError(
+                'log processor should be a LogProcessor object or dict, but'
+                f'got {log_processor}')
+
+        log_processor_cfg = copy.deepcopy(log_processor)  # type: ignore
+
+        if 'type' in log_processor_cfg:
+            log_processor = LOG_PROCESSOR.build(log_processor_cfg)
+        else:
+            log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
+
+        return log_processor  # type: ignore
 
     def load_or_resume(self) -> None:
         """load or resume checkpoint."""
