@@ -1,7 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import multiprocessing as mp
-import os
 import os.path as osp
 import platform
 import random
@@ -34,7 +32,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSOR
 from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, is_list_of, symlink)
+                            find_latest_checkpoint, is_list_of,
+                            set_multi_processing, symlink)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -582,12 +581,13 @@ class Runner:
         if env_cfg.get('cudnn_benchmark'):
             torch.backends.cudnn.benchmark = True
 
-        if env_cfg.get('mp_cfg') is not None:
-            self._set_multi_processing(**env_cfg.get('mp_cfg'))  # type: ignore
+        mp_cfg: dict = env_cfg.get('mp_cfg', {})
+        set_multi_processing(**mp_cfg, distributed=self.distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if self.distributed and env_cfg.get('dist_cfg') is not None:
-            init_dist(self.launcher, **env_cfg.get('dist_cfg'))  # type: ignore
+        if self.distributed:
+            dist_cfg: dict = env_cfg.get('dist_cfg', {})
+            init_dist(self.launcher, **dist_cfg)
 
         self._rank, self._world_size = get_dist_info()
 
@@ -596,59 +596,6 @@ class Runner:
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
-
-    def _set_multi_processing(self,
-                              mp_start_method: str = 'fork',
-                              opencv_num_threads: int = 0) -> None:
-        """Set multi-processing related environment.
-
-        Args:
-            mp_start_method (str): Set the method which should be used to start
-                child processes. Defaults to 'fork'.
-            opencv_num_threads (int): Number of threads for opencv.
-                Defaults to 0.
-        """
-        # set multi-process start method as `fork` to speed up the training
-        if platform.system() != 'Windows':
-            current_method = mp.get_start_method(allow_none=True)
-            if (current_method is not None
-                    and current_method != mp_start_method):
-                warnings.warn(
-                    f'Multi-processing start method `{mp_start_method}` is '
-                    f'different from the previous setting `{current_method}`.'
-                    f'It will be force set to `{mp_start_method}`. You can '
-                    'change this behavior by changing `mp_start_method` in '
-                    'your config.')
-            mp.set_start_method(mp_start_method, force=True)
-
-        try:
-            import cv2
-
-            # disable opencv multithreading to avoid system being overloaded
-            cv2.setNumThreads(opencv_num_threads)
-        except ImportError:
-            pass
-
-        # setup OMP threads
-        # This code is referred from https://github.com/pytorch/pytorch/blob/master/torch/distributed/run.py  # noqa
-        if 'OMP_NUM_THREADS' not in os.environ and self.distributed:
-            omp_num_threads = 1
-            warnings.warn(
-                'Setting OMP_NUM_THREADS environment variable for each process'
-                f' to be {omp_num_threads} in default, to avoid your system '
-                'being overloaded, please further tune the variable for '
-                'optimal performance in your application as needed.')
-            os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
-
-        # setup MKL threads
-        if 'MKL_NUM_THREADS' not in os.environ and self.distributed:
-            mkl_num_threads = 1
-            warnings.warn(
-                'Setting MKL_NUM_THREADS environment variable for each process'
-                f' to be {mkl_num_threads} in default, to avoid your system '
-                'being overloaded, please further tune the variable for '
-                'optimal performance in your application as needed.')
-            os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
 
     def set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.

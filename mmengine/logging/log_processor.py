@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 import torch
 
+from mmengine.device import get_max_cuda_memory
 from mmengine.registry import LOG_PROCESSOR
 
 
@@ -345,13 +346,9 @@ class LogProcessor:
             The maximum GPU memory occupied by tensors in megabytes for a given
             device.
         """
+
         device = getattr(runner.model, 'output_device', None)
-        mem = torch.cuda.max_memory_allocated(device=device)
-        mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
-                              dtype=torch.int,
-                              device=device)
-        torch.cuda.reset_peak_memory_stats()
-        return int(mem_mb.item())
+        return get_max_cuda_memory(device)
 
     def _get_iter(self, runner, batch_idx: int = None) -> int:
         """Get current iteration index.
