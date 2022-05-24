@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple
 
 import torch
 
-
 from mmengine.device import get_max_cuda_memory
 from mmengine.registry import LOG_PROCESSOR
 
