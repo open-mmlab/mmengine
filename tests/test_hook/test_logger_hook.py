@@ -114,7 +114,7 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log_after_epoch = MagicMock(
             return_value=(dict(), 'string'))
-        logger_hook.after_val_epoch(runner)
+        logger_hook.after_val_epoch(runner, {'acc': 0.8})
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
         runner.visualizer.add_scalars.assert_called()
@@ -124,7 +124,7 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log_after_epoch = MagicMock(
             return_value=(dict(), 'log_str'))
-        logger_hook.after_test_epoch(runner)
+        logger_hook.after_test_epoch(runner, {'acc': 0.8})
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
 

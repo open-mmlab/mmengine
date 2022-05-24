@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import itertools
-from typing import Optional
+from typing import Dict, Optional
 
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
@@ -22,6 +22,8 @@ class EMAHook(Hook):
             supported strategies in ``mmengine.model.averaged_model``.
             Defaults to 'ExponentialMovingAverage'
     """
+
+    priority = 'NORMAL'
 
     def __init__(self, ema_type: str = 'ExponentialMovingAverage', **kwargs):
         self.ema_cfg = dict(type=ema_type, **kwargs)
@@ -48,7 +50,7 @@ class EMAHook(Hook):
         validation."""
         self._swap_ema_parameters()
 
-    def after_val_epoch(self, runner) -> None:
+    def after_val_epoch(self, runner, metrics: Dict[str, float]) -> None:
         """We recover source model's parameter from ema model after
         validation."""
         self._swap_ema_parameters()
@@ -58,7 +60,7 @@ class EMAHook(Hook):
         test."""
         self._swap_ema_parameters()
 
-    def after_test_epoch(self, runner) -> None:
+    def after_test_epoch(self, runner, metrics: Dict[str, float]) -> None:
         """We recover source model's parameter from ema model after test."""
         self._swap_ema_parameters()
 

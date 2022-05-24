@@ -1368,6 +1368,8 @@ class Runner:
         +----------------------+-------------------------+
         | Hooks                | Priority                |
         +======================+=========================+
+        | RuntimeInfoHook      | VERY_HIGH (10)          |
+        +----------------------+-------------------------+
         | OptimizerHook        | HIGH (30)               |
         +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
@@ -1385,6 +1387,7 @@ class Runner:
         default::
 
             default_hooks = dict(
+                runtime_info=dict(type='RuntimeInfoHook'),
                 optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
                 sampler_seed=dict(type='DistSamplerSeedHook'),
@@ -1407,6 +1410,7 @@ class Runner:
                 to be registered.
         """
         default_hooks: dict = dict(
+            runtime_info=dict(type='RuntimeInfoHook'),
             optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
