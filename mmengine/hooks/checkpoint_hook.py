@@ -44,6 +44,26 @@ class CheckpointHook(Hook):
             Defaults to -1, which means unlimited.
         save_last (bool): Whether to force the last checkpoint to be
             saved regardless of interval. Defaults to True.
+        save_best (str, optional): If a metric is specified, it would measure
+            the best checkpoint during evaluation. The information about best
+            checkpoint would be saved in ``runner.meta['hook_msgs']`` to keep
+            best score value and best checkpoint path, which will be also
+            loaded when resume checkpoint. Options are the evaluation metrics
+            on the test dataset. e.g., ``bbox_mAP``, ``segm_mAP`` for bbox
+            detection and instance segmentation. ``AR@100`` for proposal
+            recall. If ``save_best`` is ``auto``, the first key of the returned
+            ``OrderedDict`` result will be used. Default: None.
+        rule (str | None, optional): Comparison rule for best score. If set to
+            None, it will infer a reasonable rule. Keys such as 'acc', 'top'
+            .etc will be inferred by 'greater' rule. Keys contain 'loss' will
+            be inferred by 'less' rule. Options are 'greater', 'less', None.
+            Default: None.
+        greater_keys (List[str] | None, optional): Metric keys that will be
+            inferred by 'greater' comparison rule. If ``None``,
+            _default_greater_keys will be used. (default: ``None``)
+        less_keys (List[str] | None, optional): Metric keys that will be
+            inferred by 'less' comparison rule. If ``None``, _default_less_keys
+            will be used. (default: ``None``)
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Defaults to None.
