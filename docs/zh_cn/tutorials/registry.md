@@ -229,7 +229,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
 - VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
 - WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`
-- LOG_PROCESSOR: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
+- LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 

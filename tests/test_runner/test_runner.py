@@ -19,7 +19,7 @@ from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.optim.scheduler import MultiStepLR, StepLR
-from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSOR, LOOPS, METRICS,
+from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
@@ -172,7 +172,7 @@ class CustomTestLoop(BaseLoop):
         pass
 
 
-@LOG_PROCESSOR.register_module()
+@LOG_PROCESSORS.register_module()
 class CustomLogProcessor(LogProcessor):
 
     def __init__(self, window_size=10, by_epoch=True, custom_cfg=None):

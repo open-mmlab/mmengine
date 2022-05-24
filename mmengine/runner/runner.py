@@ -30,7 +30,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                VISUALIZERS, DefaultScope,
                                count_registered_modules)
-from mmengine.registry.root import LOG_PROCESSOR
+from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version,
                             find_latest_checkpoint, is_list_of,
                             set_multi_processing, symlink)
@@ -1176,7 +1176,7 @@ class Runner:
         log_processor_cfg = copy.deepcopy(log_processor)  # type: ignore
 
         if 'type' in log_processor_cfg:
-            log_processor = LOG_PROCESSOR.build(log_processor_cfg)
+            log_processor = LOG_PROCESSORS.build(log_processor_cfg)
         else:
             log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
 
