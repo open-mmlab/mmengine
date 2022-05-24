@@ -127,10 +127,13 @@ class ToyHook2(Hook):
     def after_train_epoch(self, runner):
         pass
 
+
 @HOOKS.register_module()
 class ToyHook3(Hook):
+
     def before_train_iter(self, runner, data_batch):
         pass
+
 
 @LOOPS.register_module()
 class CustomTrainLoop(BaseLoop):
@@ -874,15 +877,6 @@ class TestRunner(TestCase):
         for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
 
-        # 4. test unexpected argument in `call_hook`
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_train4'
-        runner = Runner.from_cfg(cfg)
-        custom_hooks = [dict(type='ToyHook3')]
-        runner.register_custom_hooks(custom_hooks)
-        with self.assertRaisesRegex(TypeError, 'got an unexpected keyword argument'):
-            runner.train()
-
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
@@ -1029,7 +1023,7 @@ class TestRunner(TestCase):
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_custom_hooks'
+        cfg.experiment_name = 'test_custom_hooks1'
         runner = Runner.from_cfg(cfg)
 
         self.assertEqual(len(runner._hooks), 6)
@@ -1037,6 +1031,18 @@ class TestRunner(TestCase):
         runner.register_custom_hooks(custom_hooks)
         self.assertEqual(len(runner._hooks), 7)
         self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+
+        # test unexpected argument in `call_hook`
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_custom_hooks2'
+        runner = Runner.from_cfg(cfg)
+        custom_hooks = [dict(type='ToyHook3')]
+        runner.register_custom_hooks(custom_hooks)
+        with self.assertRaisesRegex(
+                TypeError,
+                r"got an unexpected keyword argument 'batch_idx' in "
+                r'<test_runner.ToyHook3 object at \w+>'):
+            runner.train()
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
