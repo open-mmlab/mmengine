@@ -2,11 +2,14 @@
 import os.path as osp
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
+from collections import OrderedDict
+from math import inf
 
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
+from mmengine.utils import is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]
@@ -49,6 +52,19 @@ class CheckpointHook(Hook):
 
     priority = 'VERY_LOW'
 
+    # save best logic
+    # Since the key for determine greater or less is related to the downstream
+    # tasks, downstream repos may need to overwrite the following inner
+    # variable accordingly.
+
+    rule_map = {'greater': lambda x, y: x > y, 'less': lambda x, y: x < y}
+    init_value_map = {'greater': -inf, 'less': inf}
+    _default_greater_keys = [
+        'acc', 'top', 'AR@', 'auc', 'precision', 'mAP', 'mDice', 'mIoU',
+        'mAcc', 'aAcc'
+    ]
+    _default_less_keys = ['loss']
+
     def __init__(self,
                  interval: int = -1,
                  by_epoch: bool = True,
@@ -57,6 +73,10 @@ class CheckpointHook(Hook):
                  out_dir: Optional[Union[str, Path]] = None,
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
+                 save_best: Optional[str] = None,
+                 rule: Optional[str] = None,
+                 greater_keys: Optional[Sequence[str]]=None,
+                 less_keys: Optional[Sequence[str]]=None,
                  file_client_args: Optional[dict] = None,
                  **kwargs) -> None:
         self.interval = interval
@@ -68,6 +88,82 @@ class CheckpointHook(Hook):
         self.save_last = save_last
         self.args = kwargs
         self.file_client_args = file_client_args
+
+        # save best logic
+        assert isinstance(save_best, str) or save_best is None, \
+            '""save_best"" should be a str or None ' \
+            f'rather than {type(save_best)}'
+        self.save_best = save_best
+
+        if greater_keys is None:
+            self.greater_keys = self._default_greater_keys
+        else:
+            if not isinstance(greater_keys, (list, tuple)):
+                greater_keys = (greater_keys, )
+            assert is_seq_of(greater_keys, str)
+            self.greater_keys = greater_keys
+
+        if less_keys is None:
+            self.less_keys = self._default_less_keys
+        else:
+            if not isinstance(less_keys, (list, tuple)):
+                less_keys = (less_keys, )
+            assert is_seq_of(less_keys, str)
+            self.less_keys = less_keys
+
+        if self.save_best is not None:
+            self.best_ckpt_path = None
+            self._init_rule(rule, self.save_best)
+
+    def _init_rule(self,rule,key_indicator) -> None:
+        """Initialize rule, key_indicator, comparison_func, and best score.
+
+        Here is the rule to determine which rule is used for key indicator
+        when the rule is not specific (note that the key indicator matching
+        is case-insensitive):
+        1. If the key indicator is in ``self.greater_keys``, the rule will be
+           specified as 'greater'.
+        2. Or if the key indicator is in ``self.less_keys``, the rule will be
+           specified as 'less'.
+        3. Or if any one item in ``self.greater_keys`` is a substring of
+            key_indicator , the rule will be specified as 'greater'.
+        4. Or if any one item in ``self.less_keys`` is a substring of
+            key_indicator , the rule will be specified as 'less'.
+
+        Args:
+            rule (str | None): Comparison rule for best score.
+            key_indicator (str | None): Key indicator to determine the
+                comparison rule.
+        """
+        if rule not in self.rule_map and rule is not None:
+            raise KeyError(f'rule must be greater, less or None, '
+                           f'but got {rule}.')
+
+        if rule is None:
+            if key_indicator != 'auto':
+                # `_lc` here means we use the lower case of keys for
+                # case-insensitive matching
+                key_indicator_lc = key_indicator.lower()
+                greater_keys = [key.lower() for key in self.greater_keys]
+                less_keys = [key.lower() for key in self.less_keys]
+
+                if key_indicator_lc in greater_keys:
+                    rule = 'greater'
+                elif key_indicator_lc in less_keys:
+                    rule = 'less'
+                elif any(key in key_indicator_lc for key in greater_keys):
+                    rule = 'greater'
+                elif any(key in key_indicator_lc for key in less_keys):
+                    rule = 'less'
+                else:
+                    raise ValueError(f'Cannot infer the rule for key '
+                                     f'{key_indicator}, thus a specific rule '
+                                     f'must be specified.')
+        self.rule = rule
+        self.key_indicator = key_indicator
+        if self.rule is not None:
+            self.compare_func = self.rule_map[self.rule]
+
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
@@ -94,6 +190,14 @@ class CheckpointHook(Hook):
 
         runner.logger.info(f'Checkpoints will be saved to {self.out_dir} by '
                            f'{self.file_client.name}.')
+
+        if self.save_best is not None:
+            if runner.meta is None:
+                warnings.warn('runner.meta is None. Creating an empty one.')
+                runner.meta = dict()
+            runner.meta.setdefault('hook_msgs', dict())
+            self.best_ckpt_path = runner.meta['hook_msgs'].get(
+                'best_ckpt', None)
 
         # disable the create_symlink option because some file backends do not
         # allow to create a symlink
@@ -126,6 +230,26 @@ class CheckpointHook(Hook):
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
             self._save_checkpoint(runner)
 
+    
+    def _get_metric_score(self,runner):
+        eval_res = OrderedDict()
+        for k,v in runner.message_hub.log_scalars.items():
+            if k.startswith('val'):
+                val_metric_key = k.split('/')[-1]
+                eval_res[val_metric_key] = v.current()
+        
+        if len(eval_res) == 0:
+            warnings.warn(
+                'Since `eval_res` is an empty dict, the behavior to save '
+                'the best checkpoint will be skipped in this evaluation.')
+            return None
+        
+        if self.key_indicator == 'auto':
+            self._init_rule(self.rule, list(eval_res.keys())[0])
+
+        return eval_res[self.key_indicator]
+
+
     @master_only
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -136,10 +260,12 @@ class CheckpointHook(Hook):
         if self.by_epoch:
             ckpt_filename = self.args.get(
                 'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
+            cur_type, cur_time = 'epoch', runner.epoch + 1
         else:
             ckpt_filename = self.args.get(
                 'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-
+            cur_type, cur_time = 'iter', runner.iter + 1
+            
         runner.save_checkpoint(
             self.out_dir,
             filename=ckpt_filename,
@@ -153,6 +279,42 @@ class CheckpointHook(Hook):
             runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
                 self.out_dir, ckpt_filename)
 
+        # save best logic
+        if self.save_best:
+            best_score = runner.meta['hook_msgs'].get(
+                'best_score',self.init_value_map[self.rule]
+            )
+            # get score from messagehub
+            key_score = self._get_metric_score(runner)
+            if key_score and self.compare_func(key_score,best_score):
+                best_score = key_score
+                runner.meta['hook_msgs']['best_score'] = best_score
+
+                if self.best_ckpt_path and self.file_client.isfile(
+                    self.best_ckpt_path):
+                    self.file_client.remove(self.best_ckpt_path)
+                    runner.logger.info(
+                        f'The previous best checkpoint {self.best_ckpt_path} was '
+                        'removed')
+
+                    best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}.pth'
+                    self.best_ckpt_path = self.file_client.join_path(
+                        self.out_dir, best_ckpt_name)
+                    runner.meta['hook_msgs']['best_ckpt'] = self.best_ckpt_path
+                    runner.save_checkpoint(
+                        self.out_dir,
+                        filename=best_ckpt_name,
+                        save_optimizer=False,
+                        save_param_scheduler=False,
+                        by_epoch=False,
+                        create_symlink=False,
+                        **self.args)
+                    runner.logger.info(
+                        f'Now best checkpoint is saved as {best_ckpt_name}.')
+                    runner.logger.info(
+                        f'Best {self.key_indicator} is {best_score:0.4f} '
+                        f'at {cur_time} {cur_type}.')
+                    
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
