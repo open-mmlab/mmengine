@@ -1032,6 +1032,7 @@ class TestRunner(TestCase):
         self.assertEqual(len(runner._hooks), 7)
         self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
+    def test_call_hook(self):
         # test unexpected argument in `call_hook`
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks2'
