@@ -1,8 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from cProfile import run
 import os
 import os.path as osp
+from typing import runtime_checkable
+import pytest
+import torch
+import torch.nn as nn
+
 from unittest.mock import Mock, patch
 
+from mmengine.runner.runner import Runner
 from mmengine.hooks import CheckpointHook
 
 
@@ -20,6 +27,21 @@ class MockPetrel:
     @property
     def allow_symlink(self):
         return self._allow_symlink
+
+class MockModel(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.param = nn.Parameter(torch.tensor([1.0]))
+
+    def forward(self, x, **kwargs):
+        return self.param * x
+
+    def train_step(self, data_batch, optimizer, **kwargs):
+        return {'loss': torch.sum(self(data_batch['x']))}
+
+    def val_step(self, data_batch, optimizer, **kwargs):
+        return {'loss': torch.sum(self(data_batch['x']))}
 
 
 prefix_to_backends = {'s3': MockPetrel}
@@ -57,6 +79,114 @@ class TestCheckpointHook:
             interval=1, by_epoch=True, create_symlink=True)
         checkpoint_hook.before_train(runner)
         assert not checkpoint_hook.args['create_symlink']
+
+    def test_save_best(self,tmp_path):
+        if not hasattr(self,'runner'):
+            mock_model = MockModel()
+            self.runner = Runner(model=mock_model,work_dir = str(tmp_path))
+        runner = self.runner
+        # save_best is acc
+        with pytest.raises(ValueError):
+            # key_indicator must be valid when rule_map is None
+            CheckpointHook(interval=2, by_epoch=True,save_best='unsupport')
+
+        with pytest.raises(KeyError):
+            # rule must be in keys of rule_map
+            CheckpointHook(interval=2, by_epoch=True,save_best='auto', rule='unsupport')
+
+        # if eval_res is an empty dict, print a warning information
+        with pytest.warns(UserWarning) as record_warnings:
+            eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='auto')
+            # runner.register_hook(eval_hook)
+            # runner.val()
+            eval_hook._get_metric_score(runner)
+        # Since there will be many warnings thrown, we just need to check if the
+        # expected exceptions are thrown
+        expected_message = ('Since `eval_res` is an empty dict, the behavior to '
+                            'save the best checkpoint will be skipped in this '
+                            'evaluation.')
+        for warning in record_warnings:
+            if str(warning.message) == expected_message:
+                break
+        else:
+            assert False
+
+        # if save_best is None,no best_ckpt meta should be stored
+        optimizer = torch.optim.SGD(mock_model.parameters(), lr=0.001, momentum=0.9)
+        runner.optimizer = optimizer
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best=None)
+        eval_hook.before_train(runner)
+        eval_hook._save_checkpoint(runner)
+        assert runner.meta is None or 'best_score' not in runner.meta[
+            'hook_msgs']
+        assert runner.meta is None or 'best_ckpt' not in runner.meta[
+            'hook_msgs']
+
+        # when `save_best` is set to `auto`, first metric will be used.
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='auto')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar(f'val/acc',0.5)
+        runner.message_hub.update_scalar(f'val/map',0.3)
+        eval_hook._save_checkpoint(runner)
+        best_ckpt_name = 'best_acc_epoch_1.pth'
+        best_ckpt_path = eval_hook.file_client.join_path(eval_hook.out_dir, \
+                                                            best_ckpt_name)
+        assert eval_hook.key_indicator == 'acc'
+        assert eval_hook.rule == 'greater'
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 0.5
+        assert 'best_ckpt' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_ckpt'] == best_ckpt_path
+
+        
+        # same as above,but file name needs to be `iter_x.pth`
+        eval_hook = CheckpointHook(interval=2, by_epoch=False,save_best='auto')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar(f'val/acc',0.7)
+        eval_hook._save_checkpoint(runner)
+        best_ckpt_name = 'best_acc_iter_1.pth'
+        best_ckpt_path = eval_hook.file_client.join_path(eval_hook.out_dir, \
+                                                            best_ckpt_name)
+        assert 'best_ckpt' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_ckpt'] == best_ckpt_path
+
+        # when `save_best` is set to `acc`, it should update greater value
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='acc')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar('val/acc',0.8)
+        eval_hook._save_checkpoint(runner)
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 0.8
+
+        # when `save_best` is set to `loss`, it should update less value
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='loss')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar('val/loss',0.8)
+        eval_hook._save_checkpoint(runner)
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 0.8
+        runner.message_hub.update_scalar('val/loss',0.5)
+        eval_hook._save_checkpoint(runner)
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 0.5
+
+        # when `rule` is set to `less`,then it should update less value
+        # no matter what `save_best` is
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='acc',rule='less')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar('val/acc',0.3)
+        eval_hook._save_checkpoint(runner)
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 0.3
+
+        # when `rule` is set to `greater`,then it should update greater value
+        # no matter what `save_best` is
+        eval_hook = CheckpointHook(interval=2, by_epoch=True,save_best='loss',rule='greater')
+        eval_hook.before_train(runner)
+        runner.message_hub.update_scalar('val/loss',1.0)
+        eval_hook._save_checkpoint(runner)
+        assert 'best_score' in runner.meta['hook_msgs'] and \
+            runner.meta['hook_msgs']['best_score'] == 1.0
 
     def test_after_train_epoch(self, tmp_path):
         runner = Mock()

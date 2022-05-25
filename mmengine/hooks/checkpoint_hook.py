@@ -301,11 +301,13 @@ class CheckpointHook(Hook):
 
         # save best logic
         if self.save_best:
+            # get score from messagehub
+            # notice `_get_metirc_score` helps to infer
+            # self.rule when self.save_best is `auto`
+            key_score = self._get_metric_score(runner)
             best_score = runner.meta['hook_msgs'].get(
                 'best_score',self.init_value_map[self.rule]
             )
-            # get score from messagehub
-            key_score = self._get_metric_score(runner)
             if key_score and self.compare_func(key_score,best_score):
                 best_score = key_score
                 runner.meta['hook_msgs']['best_score'] = best_score
@@ -317,23 +319,22 @@ class CheckpointHook(Hook):
                         f'The previous best checkpoint {self.best_ckpt_path} was '
                         'removed')
 
-                    best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}.pth'
-                    self.best_ckpt_path = self.file_client.join_path(
-                        self.out_dir, best_ckpt_name)
-                    runner.meta['hook_msgs']['best_ckpt'] = self.best_ckpt_path
-                    runner.save_checkpoint(
-                        self.out_dir,
-                        filename=best_ckpt_name,
-                        save_optimizer=False,
-                        save_param_scheduler=False,
-                        by_epoch=False,
-                        create_symlink=False,
-                        **self.args)
-                    runner.logger.info(
-                        f'Now best checkpoint is saved as {best_ckpt_name}.')
-                    runner.logger.info(
-                        f'Best {self.key_indicator} is {best_score:0.4f} '
-                        f'at {cur_time} {cur_type}.')
+                best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
+                self.best_ckpt_path = self.file_client.join_path(
+                    self.out_dir, best_ckpt_name)
+                runner.meta['hook_msgs']['best_ckpt'] = self.best_ckpt_path
+                runner.save_checkpoint(
+                    self.out_dir,
+                    filename=best_ckpt_name,
+                    save_optimizer=False,
+                    save_param_scheduler=False,
+                    by_epoch=False,
+                    create_symlink=False)
+                runner.logger.info(
+                    f'Now best checkpoint is saved as {best_ckpt_name}.')
+                runner.logger.info(
+                    f'Best {self.key_indicator} is {best_score:0.4f} '
+                    f'at {cur_time} {cur_type}.')
                     
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
