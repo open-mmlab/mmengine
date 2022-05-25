@@ -1023,7 +1023,7 @@ class TestRunner(TestCase):
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_custom_hooks1'
+        cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
         self.assertEqual(len(runner._hooks), 6)
@@ -1035,7 +1035,7 @@ class TestRunner(TestCase):
     def test_call_hook(self):
         # test unexpected argument in `call_hook`
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_custom_hooks2'
+        cfg.experiment_name = 'test_call_hook'
         runner = Runner.from_cfg(cfg)
         custom_hooks = [dict(type='ToyHook3')]
         runner.register_custom_hooks(custom_hooks)
