@@ -11,6 +11,44 @@ from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
 
+def build_runner(runner: Union[str, Type],
+                 registry: 'Registry') -> Optional[Type]:
+    """Build a Runner Class.
+    Examples:
+        >>> from mmengine import Registry, build_runner
+        >>> RUNNERS = Registry('runners', build_runner)
+        >>> @RUNNERS.register_module()
+        >>> class CustomRunner(Runner):
+        >>>     def setup_env(env_cfg):
+        >>>         pass
+        >>> runner='CustomRunner'
+        >>> custom_runner = RUNNERS.build(runner)
+
+    Args:
+        runner (str or Runner): Str of runner type or custom runner class.
+        registry (:obj:`Registry`): The registry to search the type from.
+
+    Returns:
+        Type or None: Return the corresponding class, otherwise return None.
+    """
+    if isinstance(runner, str):
+        runner_cls = registry.get(runner)
+        if runner_cls is None:
+            raise KeyError(
+                f'{runner} is not in the {registry.name} registry. '
+                f'Please check whether the value of `{runner}` is correct or'
+                ' it was registered as expected. More details can be found at'
+                ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+            )
+        else:
+            return runner_cls
+    elif inspect.isclass(runner):
+        return runner
+    else:
+        raise TypeError(
+            f'type must be a str or valid type, but got {type(runner)}')
+
+
 def build_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: 'Registry',
