@@ -1032,7 +1032,6 @@ class Runner:
                 batch_sampler_cfg,
                 default_args=dict(
                     sampler=sampler,
-                    seed=seed,
                     batch_size=dataloader_cfg.pop('batch_size')))
         else:
             # fallback to raise error in dataloader
