@@ -875,17 +875,10 @@ class Runner:
 
             >>> # build multiple optimizers
             >>> optim_cfg = dict(
-            ...    generator=dict(
-            ...        type='SGD',
-            ...        lr=0.01,
-            ...        constructor='MultipleOptimizerConstructor',
-            ...    ),
-            ...    discriminator=dict(
-            ...        type='SGD',
-            ...        lr=0.02,
-            ...        constructor='MultipleOptimizerConstructor',
-            ...    )
-            ... )
+            ...    generator=dict(type='SGD', lr=0.01),
+            ...    discriminator=dict(type='Adam',lr=0.02)
+            ...    constructor='MultipleOptimizerConstructor',
+            ...)
             >>> optimizer = runner.build_optimizer(optim_cfg)
             >>> optimizer
             {'generator': SGD (
@@ -907,9 +900,9 @@ class Runner:
 
         Important:
             If you build multiple optimizers, you must implement a
-            MultipleOptimizerConstructor which should collects parameters
+            MultipleOptimizerConstructor which should choose parameters
             passed to corresponding optimizers. More details about how to
-            custom OptimizerConstructor can be found at `optimizer-docs`_.
+            customize OptimizerConstructor can be found at `optimizer-docs`_.
 
         Returns:
             Optimizer or dict[str, Optimizer]: Optimizer build from
@@ -921,16 +914,16 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
-            if 'type' in optimizer:
-                # build an optimizer
-                optimizer = build_optimizer(self.model, optimizer)
+            if 'type' not in optimizer and 'constructor' not in optimizer:
+                for name, optim in optimizer.items():
+                    if not isinstance(optim, Optimizer):
+                        raise ValueError(
+                            'each item mush be an optimizer object when "type"'
+                            ' and "constructor" are not in optimizer, '
+                            f'but got {name}={optim}')
                 return optimizer
-            else:
-                # build multiple optimizers
-                optimizers = dict()
-                for name, optimizer in optimizer.items():
-                    optimizers[name] = self.build_optimizer(optimizer)
-                return optimizers
+
+            return build_optimizer(self.model, optimizer)
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
                             f'but got {optimizer}')
