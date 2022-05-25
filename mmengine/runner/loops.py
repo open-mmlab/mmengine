@@ -66,7 +66,8 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_epoch()
 
             if (self.runner.val_loop is not None
-                    and self._epoch >= self.runner.val_loop.begin and self._epoch % self.runner.val_loop.interval == 0):
+                    and self._epoch >= self.runner.val_loop.begin
+                    and self._epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -171,7 +172,8 @@ class IterBasedTrainLoop(BaseLoop):
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None
-                    and self._iter >= self.runner.val_loop.begin and self._iter % self.runner.val_loop.val_interval == 0):
+                    and self._iter >= self.runner.val_loop.begin
+                    and self._iter % self.runner.val_loop.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
