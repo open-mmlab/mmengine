@@ -48,22 +48,22 @@ class CheckpointHook(Hook):
             the best checkpoint during evaluation. The information about best
             checkpoint would be saved in ``runner.meta['hook_msgs']`` to keep
             best score value and best checkpoint path, which will be also
-            loaded when resume checkpoint. Options are the evaluation metrics
+            loaded when resuming checkpoint. Options are the evaluation metrics
             on the test dataset. e.g., ``bbox_mAP``, ``segm_mAP`` for bbox
             detection and instance segmentation. ``AR@100`` for proposal
             recall. If ``save_best`` is ``auto``, the first key of the returned
-            ``OrderedDict`` result will be used. Default: None.
-        rule (str | None, optional): Comparison rule for best score. If set to
+            ``OrderedDict`` result will be used. Defaults to None.
+        rule (str, optional): Comparison rule for best score. If set to
             None, it will infer a reasonable rule. Keys such as 'acc', 'top'
             .etc will be inferred by 'greater' rule. Keys contain 'loss' will
             be inferred by 'less' rule. Options are 'greater', 'less', None.
-            Default: None.
-        greater_keys (List[str] | None, optional): Metric keys that will be
+            Defaults to None.
+        greater_keys (List[str], optional): Metric keys that will be
             inferred by 'greater' comparison rule. If ``None``,
-            _default_greater_keys will be used. (default: ``None``)
-        less_keys (List[str] | None, optional): Metric keys that will be
+            _default_greater_keys will be used. Defaults to None.
+        less_keys (List[str], optional): Metric keys that will be
             inferred by 'less' comparison rule. If ``None``, _default_less_keys
-            will be used. (default: ``None``)
+            will be used. Defaults to None.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Defaults to None.
@@ -72,10 +72,10 @@ class CheckpointHook(Hook):
 
     priority = 'VERY_LOW'
 
-    # save best logic
-    # Since the key for determine greater or less is related to the downstream
-    # tasks, downstream repos may need to overwrite the following inner
-    # variable accordingly.
+    # logic to save best checkpoints
+    # Since the key for determining greater or less is related to the downstream
+    # tasks, downstream repositories may need to overwrite the following inner
+    # variables accordingly.
 
     rule_map = {'greater': lambda x, y: x > y, 'less': lambda x, y: x < y}
     init_value_map = {'greater': -inf, 'less': inf}
@@ -111,7 +111,7 @@ class CheckpointHook(Hook):
 
         # save best logic
         assert isinstance(save_best, str) or save_best is None, \
-            '""save_best"" should be a str or None ' \
+            '"save_best" should be a str or None ' \
             f'rather than {type(save_best)}'
         self.save_best = save_best
 
@@ -135,12 +135,13 @@ class CheckpointHook(Hook):
             self.best_ckpt_path = None
             self._init_rule(rule, self.save_best)
 
-    def _init_rule(self,rule,key_indicator) -> None:
+    def _init_rule(self, rule, key_indicator) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score.
 
         Here is the rule to determine which rule is used for key indicator
         when the rule is not specific (note that the key indicator matching
         is case-insensitive):
+
         1. If the key indicator is in ``self.greater_keys``, the rule will be
            specified as 'greater'.
         2. Or if the key indicator is in ``self.less_keys``, the rule will be
@@ -176,9 +177,9 @@ class CheckpointHook(Hook):
                 elif any(key in key_indicator_lc for key in less_keys):
                     rule = 'less'
                 else:
-                    raise ValueError(f'Cannot infer the rule for key '
+                    raise ValueError('Cannot infer the rule for key '
                                      f'{key_indicator}, thus a specific rule '
-                                     f'must be specified.')
+                                     'must be specified.')
         self.rule = rule
         self.key_indicator = key_indicator
         if self.rule is not None:
