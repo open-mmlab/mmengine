@@ -172,7 +172,7 @@ class IterBasedTrainLoop(BaseLoop):
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None
-                    and self._iter >= self.runner.val_loop.begin
+                    and self._iter >= self.runner.val_begin
                     and self._iter % self.runner.val_interval == 0):
                 self.runner.val_loop.run()
 
