@@ -5,6 +5,7 @@ import shutil
 import tempfile
 from unittest import TestCase
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
@@ -693,10 +694,12 @@ class TestRunner(TestCase):
             sampler=dict(type='DefaultSampler', shuffle=True),
             batch_size=1,
             num_workers=0)
-        dataloader = runner.build_dataloader(cfg)
+        seed = np.random.randint(2**31)
+        dataloader = runner.build_dataloader(cfg, seed=seed)
         self.assertIsInstance(dataloader, DataLoader)
         self.assertIsInstance(dataloader.dataset, ToyDataset)
         self.assertIsInstance(dataloader.sampler, DefaultSampler)
+        self.assertEqual(dataloader.sampler.seed, seed)
 
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
