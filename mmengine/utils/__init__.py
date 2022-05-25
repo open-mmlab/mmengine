@@ -13,8 +13,10 @@ from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
                    scandir, symlink)
 from .setup_env import set_multi_processing
-from .time_counter import TimeCounter
 from .version_utils import digit_version, get_git_hash
+
+# TODO: creates intractable circular import issues
+# from .time_counter import TimeCounter
 
 __all__ = [
     'is_str', 'iter_cast', 'list_cast', 'tuple_cast', 'is_seq_of',
@@ -26,5 +28,5 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin',
-    'set_multi_processing', 'TimeCounter'
+    'set_multi_processing'
 ]
