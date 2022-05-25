@@ -825,7 +825,8 @@ class Runner:
             >>> optim_cfg = dict(
             ...    generator=dict(type='SGD', lr=0.01),
             ...    discriminator=dict(type='Adam',lr=0.02)
-            ...    constructor='MultipleOptimizerConstructor',
+            ...    # need to customize a multiple optimizer constructor
+            ...    constructor='CustomizedMultipleOptimizersConstructor',
             ...)
             >>> optimizer = runner.build_optimizer(optim_cfg)
             >>> optimizer
@@ -847,7 +848,7 @@ class Runner:
             )}
 
         Important:
-            If you build multiple optimizers, you must implement a
+            If you build multiple optimizers, you need to implement a
             MultipleOptimizerConstructor which should choose parameters
             passed to corresponding optimizers. More details about how to
             customize OptimizerConstructor can be found at `optimizer-docs`_.
