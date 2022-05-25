@@ -66,7 +66,7 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_epoch()
 
             if (self.runner.val_loop is not None
-                    and self._epoch % self.runner.val_loop.interval == 0):
+                    and self._epoch >= self.runner.val_loop.begin and self._epoch % self.runner.val_loop.interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -171,7 +171,7 @@ class IterBasedTrainLoop(BaseLoop):
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None
-                    and self._iter % self.runner.val_interval == 0):
+                    and self._iter >= self.runner.val_loop.begin and self._iter % self.runner.val_loop.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
@@ -213,13 +213,15 @@ class ValLoop(BaseLoop):
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
         interval (int): Validation interval. Defaults to 1.
+        begin (int): The epoch/iteration that begins validating. Default to 0.
     """
 
     def __init__(self,
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
-                 interval: int = 1) -> None:
+                 interval: int = 1,
+                 begin: int = 0) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -236,6 +238,7 @@ class ValLoop(BaseLoop):
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
         self.interval = interval
+        self.begin = begin
 
     def run(self):
         """Launch validation."""
