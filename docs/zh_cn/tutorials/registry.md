@@ -210,7 +210,7 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 17 个根注册器：
+为了方便跨库调用，MMEngine 提供了 18 个根注册器：
 
 - RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -229,6 +229,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
 - VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
 - WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`
+- LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 

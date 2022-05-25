@@ -17,7 +17,8 @@ import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_default_group, barrier, get_data_device,
                     get_comm_device, cast_data_device)
-from mmengine.utils import digit_version, TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
+from mmengine.utils.parrots_wrapper import TORCH_VERSION
 
 
 def _get_reduce_op(name: str) -> torch_dist.ReduceOp:
