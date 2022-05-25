@@ -1017,7 +1017,7 @@ class Runner:
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg, default_args=dict(dataset=dataset))
+                sampler_cfg, default_args=dict(dataset=dataset, seed=seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -1032,6 +1032,7 @@ class Runner:
                 batch_sampler_cfg,
                 default_args=dict(
                     sampler=sampler,
+                    seed=seed,
                     batch_size=dataloader_cfg.pop('batch_size')))
         else:
             # fallback to raise error in dataloader
