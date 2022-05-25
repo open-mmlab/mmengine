@@ -47,4 +47,4 @@ VISUALIZERS = Registry('visualizer')
 VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
-LOG_PROCESSOR = Registry('log_processor')
+LOG_PROCESSORS = Registry('log_processor')

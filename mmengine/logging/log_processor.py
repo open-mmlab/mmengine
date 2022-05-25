@@ -7,10 +7,10 @@ from typing import List, Optional, Tuple
 import torch
 
 from mmengine.device import get_max_cuda_memory
-from mmengine.registry import LOG_PROCESSOR
+from mmengine.registry import LOG_PROCESSORS
 
 
-@LOG_PROCESSOR.register_module()
+@LOG_PROCESSORS.register_module()  # type: ignore
 class LogProcessor:
     """A log processor used to format log information collected from
     ``runner.message_hub.log_scalars``.

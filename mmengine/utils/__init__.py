@@ -15,6 +15,9 @@ from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
 from .setup_env import set_multi_processing
 from .version_utils import digit_version, get_git_hash
 
+# TODO: creates intractable circular import issues
+# from .time_counter import TimeCounter
+
 __all__ = [
     'is_str', 'iter_cast', 'list_cast', 'tuple_cast', 'is_seq_of',
     'is_list_of', 'is_tuple_of', 'slice_list', 'concat_list',
