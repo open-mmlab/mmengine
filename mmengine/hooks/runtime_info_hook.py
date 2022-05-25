@@ -40,6 +40,8 @@ class RuntimeInfoHook(Hook):
                           data_batch: DATA_BATCH = None) -> None:
         """Update current iter information before every iteration."""
         runner.message_hub.update_info('iter', runner.iter)
+        runner.message_hub.update_scalar(
+            'train/lr', runner.optimizer.param_groups[0]['lr'])
 
     def after_train_iter(self,
                          runner,
