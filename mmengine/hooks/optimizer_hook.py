@@ -94,9 +94,9 @@ class OptimizerHook(Hook):
         if self.grad_clip is not None:
             grad_norm = self.clip_grads(runner.model.parameters())
             if grad_norm is not None:
-                # Add grad norm to the logger
-                runner.log_buffer.update({'grad_norm': float(grad_norm)},
-                                         runner.outputs['num_samples'])
+                # Add grad norm to the message_hub
+                runner.message_hub.update_scalar(
+                        'grad_norm', float(grad_norm),runner.outputs['num_samples'])
         runner.optimizer.step()
 
     def detect_anomalous_parameters(self, loss: torch.Tensor, runner) -> None:
