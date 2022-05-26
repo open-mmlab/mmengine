@@ -51,12 +51,12 @@ class TestRuntimeInfoHook(TestCase):
             'runtime_info_hook_test_before_train_iter')
         runner = Mock()
         runner.iter = 9
-        runner.optimizer.param_groups = [{'lr': 13.3}]
+        runner.optimizer.param_groups = [{'lr': 0.01}]
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
-        hook.before_train_iter(runner, batch_idx=2, data_batch={})
+        hook.before_train_iter(runner, batch_idx=2, data_batch=None)
         self.assertEqual(message_hub.get_info('iter'), 9)
-        self.assertEqual(message_hub.get_scalar('train/lr').current(), 13.3)
+        self.assertEqual(message_hub.get_scalar('train/lr').current(), 0.01)
 
     def test_after_train_iter(self):
         message_hub = MessageHub.get_instance(
@@ -67,7 +67,7 @@ class TestRuntimeInfoHook(TestCase):
         hook.after_train_iter(
             runner,
             batch_idx=2,
-            data_batch={},
+            data_batch=None,
             outputs={'log_vars': {
                 'loss_cls': 1.111
             }})
