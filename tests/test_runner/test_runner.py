@@ -213,7 +213,7 @@ class TestRunner(TestCase):
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=0),
             test_cfg=dict(),
             custom_hooks=[],
             default_hooks=dict(
@@ -397,7 +397,7 @@ class TestRunner(TestCase):
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=0),
             val_dataloader=val_dataloader,
             val_evaluator=ToyMetric1(),
             test_cfg=dict(),
@@ -754,12 +754,12 @@ class TestRunner(TestCase):
             runner.build_test_loop('invalid-type')
 
         # input is a dict and contains type key
-        cfg = dict(type='ValLoop', interval=1)
+        cfg = dict(type='ValLoop', interval=1, begin=0)
         loop = runner.build_test_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
         # input is a dict but does not contain type key
-        cfg = dict(interval=1)
+        cfg = dict(interval=1, begin=0)
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 

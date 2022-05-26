@@ -215,7 +215,7 @@ class ValLoop(BaseLoop):
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
         interval (int): Validation interval. Defaults to 1.
-        begin (int): The epoch/iteration that begins validating. Default to 0.
+        begin (int): The epoch/iteration that begins validating. Defaults to 0.
     """
 
     def __init__(self,
