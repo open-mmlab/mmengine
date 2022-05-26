@@ -1340,13 +1340,17 @@ class TestRunner(TestCase):
             linear2=dict(type='Adam', lr=0.02),
             constructor='ToyMultipleOptimizerConstructor',
         )
-        # disable OptimizerHook and ParamSchedulerHook because they only work
-        # with one optimizer
-        cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
+        # disable OptimizerHook because it only works with one optimizer
+        cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.train()
         path = osp.join(self.temp_dir, 'epoch_3.pth')
         self.assertTrue(osp.exists(path))
+        self.assertEqual(runner.optimizer['linear1'].param_groups[0]['lr'],
+                         0.0001)
+        self.assertIsInstance(runner.optimizer['linear2'], Adam)
+        self.assertEqual(runner.optimizer['linear2'].param_groups[0]['lr'],
+                         0.0002)
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint7'
@@ -1356,16 +1360,16 @@ class TestRunner(TestCase):
             constructor='ToyMultipleOptimizerConstructor',
         )
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
-        cfg.default_hooks = dict(optimizer=None, param_scheduler=None)
+        cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertIsInstance(runner.optimizer, dict)
         self.assertIsInstance(runner.optimizer['linear1'], SGD)
         self.assertEqual(runner.optimizer['linear1'].param_groups[0]['lr'],
-                         0.01)
+                         0.0001)
         self.assertIsInstance(runner.optimizer['linear2'], Adam)
         self.assertEqual(runner.optimizer['linear2'].param_groups[0]['lr'],
-                         0.02)
+                         0.0002)
         self.assertIsInstance(runner.param_schedulers, dict)
         self.assertEqual(len(runner.param_schedulers['linear1']), 1)
         self.assertIsInstance(runner.param_schedulers['linear1'][0],

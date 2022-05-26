@@ -848,10 +848,10 @@ class Runner:
             )}
 
         Important:
-            If you build multiple optimizers, you need to implement a
-            MultipleOptimizerConstructor which should choose parameters
-            passed to corresponding optimizers. More details about how to
-            customize OptimizerConstructor can be found at `optimizer-docs`_.
+            If you need to build multiple optimizers, you should implement a
+            MultipleOptimizerConstructor which gets parameters passed to
+            corresponding optimizers. More details about how to customize
+            OptimizerConstructor can be found at `optimizer-docs`_.
 
         Returns:
             Optimizer or dict[str, Optimizer]: Optimizer build from
