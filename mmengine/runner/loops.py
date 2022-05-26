@@ -80,8 +80,6 @@ class EpochBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook('after_train_epoch')
         self._epoch += 1
-        # To allow components that cannot access runner to get current epoch.
-        self.runner.message_hub.update_info('epoch', self._epoch)
 
     def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
         """Iterate one min-batch.
@@ -94,10 +92,6 @@ class EpochBasedTrainLoop(BaseLoop):
         # outputs should be a dict containing one or multiple loss tensors
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
-        # TODO, should move to LoggerHook
-        for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_scalar(f'train/{key}', value)
-
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=idx,
@@ -105,9 +99,6 @@ class EpochBasedTrainLoop(BaseLoop):
             outputs=self.runner.outputs)
 
         self._iter += 1
-        # To allow components that cannot access runner to get current
-        # iteration.
-        self.runner.message_hub.update_info('iter', self._iter)
 
 
 @LOOPS.register_module()
@@ -188,19 +179,12 @@ class IterBasedTrainLoop(BaseLoop):
         # outputs should be a dict containing loss tensor
         self.runner.outputs = self.runner.model(data_batch, return_loss=True)
 
-        # TODO
-        for key, value in self.runner.outputs['log_vars'].items():
-            self.runner.message_hub.update_scalar(f'train/{key}', value)
-
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self._iter,
             data_batch=data_batch,
             outputs=self.runner.outputs)
         self._iter += 1
-        # To allow components that cannot access runner to get current
-        # iteration.
-        self.runner.message_hub.update_info('iter', self._iter)
 
 
 @LOOPS.register_module()
@@ -247,10 +231,8 @@ class ValLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'val/{key}', value)
 
-        self.runner.call_hook('after_val_epoch')
+        self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
 
     @torch.no_grad()
@@ -312,10 +294,8 @@ class TestLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        for key, value in metrics.items():
-            self.runner.message_hub.update_scalar(f'test/{key}', value)
 
-        self.runner.call_hook('after_test_epoch')
+        self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
 
     @torch.no_grad()

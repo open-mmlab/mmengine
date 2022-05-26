@@ -84,9 +84,6 @@ class OptimizerHook(Hook):
                 we keep ``outputs`` here. Defaults to None.
         """
         runner.optimizer.zero_grad()
-        runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer.param_groups[0]['lr'])
-
         if self.detect_anomalous_params:
             self.detect_anomalous_parameters(runner.outputs['loss'], runner)
         runner.outputs['loss'].backward()

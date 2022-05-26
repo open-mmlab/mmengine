@@ -194,6 +194,7 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 |         名称          |             用途              |        优先级        |
 | :-----------------: | :-------------------------: | :---------------: |
+|   RuntimeInfoHook   |    向 message hub 更新运行时信息    |  VERY_HIGH (10)   |
 |    OptimizerHook    |         反向传播以及参数更新          |     HIGH (30)     |
 | DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效  |    NORMAL (50)    |
 |   SyncBuffersHook   |        同步模型的 buffer         |    NORMAL (50)    |
@@ -219,12 +220,13 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 from mmengine import Runner
 
 default_hooks = dict(
-    optimizer=dict(type='OptimizerHook'),
-    timer=dict(type='IterTimerHook',
+    runtime_info=dict(type='RuntimeInfoHook'),
+    optimizer=dict(type='OptimizerHook', grad_clip=None),
+    timer=dict(type='IterTimerHook'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
-    logger=dict(type='TextLoggerHook'),
-    param_scheduler=dict(type='ParamSchedulerHook')),
-    checkpoint=dict(type='CheckpointHook', interval=1)
+    logger=dict(type='LoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', interval=1),
 )
 
 custom_hooks = [
@@ -380,6 +382,11 @@ config = dict(type='EmptyCacheHook', before_epoch=False, after_epoch=True, after
 ```python
 config = dict(type='SyncBuffersHook')
 ```
+
+### RuntimeInfoHook
+
+`RuntimeInfoHook` 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
+以便其他无法访问执行器的模块能够获取到这些信息。
 
 ## 添加自定义钩子
 
