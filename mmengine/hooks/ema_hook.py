@@ -50,7 +50,9 @@ class EMAHook(Hook):
         validation."""
         self._swap_ema_parameters()
 
-    def after_val_epoch(self, runner, metrics: Dict[str, float]) -> None:
+    def after_val_epoch(self,
+                        runner,
+                        metrics: Optional[Dict[str, float]] = None) -> None:
         """We recover source model's parameter from ema model after
         validation."""
         self._swap_ema_parameters()
@@ -60,7 +62,9 @@ class EMAHook(Hook):
         test."""
         self._swap_ema_parameters()
 
-    def after_test_epoch(self, runner, metrics: Dict[str, float]) -> None:
+    def after_test_epoch(self,
+                         runner,
+                         metrics: Optional[Dict[str, float]] = None) -> None:
         """We recover source model's parameter from ema model after test."""
         self._swap_ema_parameters()
 

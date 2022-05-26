@@ -188,14 +188,17 @@ class LoggerHook(Hook):
                 runner, batch_idx, 'test')
             runner.logger.info(log_str)
 
-    def after_val_epoch(self, runner, metrics: Dict[str, float]) -> None:
-        """Record logs after validation epoch.
+    def after_val_epoch(self,
+                        runner,
+                        metrics: Optional[Dict[str, float]] = None) -> None:
+        """All subclasses should override this method, if they need any
+        operations after each validation epoch.
 
         Args:
             runner (Runner): The runner of the validation process.
-            metrics (Dict[str, float]): Evaluation results of all metrics
-                on validation dataset. The keys are the names of the metrics,
-                and the values are corresponding results.
+            metrics (Dict[str, float], optional): Evaluation results of all
+                metrics on validation dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
@@ -203,14 +206,17 @@ class LoggerHook(Hook):
         runner.visualizer.add_scalars(
             tag, step=runner.iter, file_path=self.json_log_path)
 
-    def after_test_epoch(self, runner, metrics: Dict[str, float]) -> None:
-        """Record logs after testing epoch.
+    def after_test_epoch(self,
+                         runner,
+                         metrics: Optional[Dict[str, float]] = None) -> None:
+        """All subclasses should override this method, if they need any
+        operations after each test epoch.
 
         Args:
             runner (Runner): The runner of the testing process.
-            metrics (Dict[str, float]): Evaluation results of all metrics
-                on test dataset. The keys are the names of the metrics, and
-                the values are corresponding results.
+            metrics (Dict[str, float], optional): Evaluation results of all
+                metrics on test dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
         """
         _, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test')
