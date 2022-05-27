@@ -821,10 +821,10 @@ class Runner:
             if 'autoscalelr_cfg' in optimizer:
                 autoscalelr_cfg = optimizer.pop('autoscalelr_cfg')
                 if autoscalelr_cfg.get('enable', False):
-                    if isinstance(self._train_dataloader, dict):
-                        bs = self._train_dataloader['batch_size']
-                    elif isinstance(self._train_dataloader, DataLoader):
-                        bs = self._train_dataloader.batch_size
+                    dataloader: Union[DataLoader,
+                                      Dict] = self._train_dataloader
+                    bs = dataloader.batch_size if isinstance(
+                        dataloader, DataLoader) else dataloader['batch_size']
                     real_bs = get_world_size() * bs
                     base_bs = autoscalelr_cfg['base_batch_size']
                     self.logger.info(
