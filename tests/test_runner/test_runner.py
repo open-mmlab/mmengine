@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
+from mmengine.dist import get_world_size
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
                             LoggerHook, OptimizerHook, ParamSchedulerHook)
@@ -598,6 +599,19 @@ class TestRunner(TestCase):
         # input is a dict
         optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
         self.assertIsInstance(optimizer, SGD)
+
+        # input is a dict with `autoscalelr_cfg`
+        # disable auto scale lr function
+        _cfg = dict(base_batch_size=16, enable=False)
+        optimizer_cfg = dict(type='SGD', lr=0.01, autoscalelr_cfg=_cfg)
+        optimizer = runner.build_optimizer(optimizer_cfg)
+        self.assertEqual(optimizer.defaults['lr'], 0.01)
+        # enable auto scale lr function
+        _cfg = dict(base_batch_size=16, enable=True)
+        optimizer_cfg = dict(type='SGD', lr=0.01, autoscalelr_cfg=_cfg)
+        optimizer = runner.build_optimizer(optimizer_cfg)
+        real_bs = get_world_size() * cfg.train_dataloader['batch_size']
+        self.assertEqual(optimizer.defaults['lr'], (real_bs / 16) * 0.01)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

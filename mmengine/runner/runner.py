@@ -19,8 +19,8 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
-from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           master_only, sync_random_seed)
+from mmengine.dist import (broadcast, get_dist_info, get_rank, get_world_size,
+                           init_dist, master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
@@ -817,6 +817,26 @@ class Runner:
         if isinstance(optimizer, Optimizer):
             return optimizer
         elif isinstance(optimizer, dict):
+            # automatically scale lr based on the real batch size
+            if 'autoscalelr_cfg' in optimizer:
+                autoscalelr_cfg = optimizer.pop('autoscalelr_cfg')
+                if autoscalelr_cfg.get('enable', False):
+                    if isinstance(self._train_dataloader, dict):
+                        bs = self._train_dataloader['batch_size']
+                    elif isinstance(self._train_dataloader, DataLoader):
+                        bs = self._train_dataloader.batch_size
+                    real_bs = get_world_size() * bs
+                    base_bs = autoscalelr_cfg['base_batch_size']
+                    self.logger.info(
+                        f'LR is set based on batch size being {base_bs}, '
+                        f'while the training batch size is {real_bs}')
+
+                    # linear scaling rule in https://arxiv.org/abs/1706.02677
+                    scaled_lr = (real_bs / base_bs) * optimizer['lr']
+                    self.logger.info('LR has been automatically scaled from '
+                                     f"{optimizer['lr']} to {scaled_lr}.")
+                    optimizer['lr'] = scaled_lr
+
             optimizer = build_optimizer(self.model, optimizer)
             return optimizer
         else:
