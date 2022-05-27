@@ -938,27 +938,22 @@ class Runner:
                                    List]) -> ParamSchedulerType:
         """Build parameter schedulers.
 
-        The combination of optimizers and schedulers have five cases:
+        ``build_param_scheduler`` should be called after ``build_optimizer``
+        because the building logic will change according to the number of
+        optimizers built by the runner. The cases are as below:
 
-        - one optimizer and one scheduler: Use one optimizer to optimize model
-          and one scheduler to update optimizer's hyper-parameters.
-        - one optimizer and multiple schedulers: Use one optimizer to optimize
-          model and multiple schedulers to update optimizers's hyper-parameters
-          in order.
-        - multiple optimizers and one scheduler: Use multiple optimizers to
-          optimize different parts of model and all optimizers share the same
-          scheduler config but correspond to different scheduler objects.
-          This case is commonly used in GAN.
-        - multiple optimizers and multiple schedulers: Use multiple optimizers
-          to optimize different parts of model and all optimizers share the
-          same scheduler configs but correspond to different scheduler objects.
-          What the different with previous case is that each optimizer in this
-          case has multiple schedulers.
-          This case is commonly used in GAN.
-        - multiple optimizers and corresponding schedulers: Use multiple
-          optimizers to optimize different parts of model and each optimizer
-          have a corresponding scheduler configs.
-          This case is commonly used in GAN.
+        - Single optimizer: When only one optimizer is built and used in the
+          runner, ``build_param_scheduler`` will return a list of
+          parameter schedulers.
+        - Multiple optimizers: When two or more optimizers are build and used
+          in runner, ``build_param_scheduler`` will return a dict containing
+          the same keys with multiple optimizers and each value is a list of
+          parameter schedulers. Note that, if you want different optimizers to
+          use different parameter shedulers to update optimizer's
+          hyper-parameters, the input parameter ``scheduler`` also needs to be
+          a dict and its key are consistent with multiple optimizers.
+          Otherwise, the same parameter schedulers will be used to update
+          optimizer's hyper-parameters.
 
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
@@ -983,9 +978,9 @@ class Runner:
             [<mmengine.optim.scheduler.lr_scheduler.MultiStepLR at 0x7f70f60dd3d0>,  # noqa: E501
             <mmengine.optim.scheduler.lr_scheduler.StepLR at 0x7f70f6eb6150>]
 
-        Above examples only show the case of one optimizer and one scheduler or
-        multiple shedulers. If you want to know how to set parameter scheduler
-        when using multiple optimizers, you can find more examples
+        Above examples only provide the case of one optimizer and one scheduler
+        or multiple shedulers. If you want to know how to set parameter
+        scheduler when using multiple optimizers, you can find more examples
         `optimizer-docs`_.
 
         Returns:
