@@ -951,7 +951,7 @@ class Runner:
         - Single optimizer: When only one optimizer is built and used in the
           runner, ``build_param_scheduler`` will return a list of
           parameter schedulers.
-        - Multiple optimizers: When two or more optimizers are build and used
+        - Multiple optimizers: When two or more optimizers are built and used
           in runner, ``build_param_scheduler`` will return a dict containing
           the same keys with multiple optimizers and each value is a list of
           parameter schedulers. Note that, if you want different optimizers to

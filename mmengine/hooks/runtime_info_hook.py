@@ -44,7 +44,7 @@ class RuntimeInfoHook(Hook):
         if isinstance(runner.optimizer, dict):
             for name, optimizer in runner.optimizer.items():
                 runner.message_hub.update_scalar(
-                    f'train/optim:{name}/lr', optimizer.param_groups[0]['lr'])
+                    f'train/{name}.lr', optimizer.param_groups[0]['lr'])
         else:
             runner.message_hub.update_scalar(
                 'train/lr', runner.optimizer.param_groups[0]['lr'])

@@ -74,9 +74,9 @@ class TestRuntimeInfoHook(TestCase):
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
         self.assertEqual(message_hub.get_info('iter'), 9)
         self.assertEqual(
-            message_hub.get_scalar('train/optim:key1/lr').current(), 0.01)
+            message_hub.get_scalar('train/key1.lr').current(), 0.01)
         self.assertEqual(
-            message_hub.get_scalar('train/optim:key2/lr').current(), 0.02)
+            message_hub.get_scalar('train/key2.lr').current(), 0.02)
 
     def test_after_train_iter(self):
         message_hub = MessageHub.get_instance(
