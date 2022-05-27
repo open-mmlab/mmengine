@@ -48,3 +48,6 @@ VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
 LOG_PROCESSORS = Registry('log_processor')
+
+# manage optimizer wrapper
+OPTIMIZER_WRAPPERS = Registry('optimizer_wrapper')

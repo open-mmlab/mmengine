@@ -46,12 +46,12 @@ class ToyModel2(nn.Module):
 class TestOptimizerWrapper(MultiProcessTestCase):
 
     def setUp(self) -> None:
-        self.model = ToyModel()
-        self.optimizer = SGD(self.model.parameters(), lr=0.1)
         super().setUp()
         self._spawn_processes()
 
     def run_test(self, test_name: str, parent_pipe) -> None:
+        self.model = ToyModel()
+        self.optimizer = SGD(self.model.parameters(), lr=0.1)
         self.logger = MMLogger.get_instance('test_optimizer_wrapper')
         self.message_hub = MessageHub.get_instance('test_optim_wrapper_init')
         super().run_test(test_name, parent_pipe)
@@ -261,90 +261,104 @@ class TestAmpOptimizerWrapper(TestCase):
 
     def test_init(self):
         # Test with default arguments.
-        amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model, optimizer=self.optimizer)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        self.assertIsInstance(amp_optim_wrapper.loss_scalar, GradScaler)
 
         # Test with dynamic.
         amp_optim_wrapper = AmpOptimizerWrapper(
-            'dynamic', model=self.model, optimizer=self.optimizer)
+            'dynamic', optimizer=self.optimizer)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        self.assertIsInstance(amp_optim_wrapper.loss_scalar, GradScaler)
 
         # Test with dict loss_scale.
         amp_optim_wrapper = AmpOptimizerWrapper(
             dict(init_scale=1, growth_factor=2),
-            model=self.model,
             optimizer=self.optimizer)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        self.assertIsInstance(amp_optim_wrapper.loss_scalar, GradScaler)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         with self.assertRaises(TypeError):
             AmpOptimizerWrapper(
-                model=self.model,
                 optimizer=self.optimizer,
                 loss_scale='unknown',
                 detect_anomalous_params=False)
 
-    def test_zero_grad(self):
-        optimizer = MagicMock()
-        amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model, optimizer=optimizer)
-        amp_optim_wrapper.zero_grad()
-        optimizer.zero_grad.assert_called()
-
     def test_step(self):
         optimizer = MagicMock()
-        amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model, optimizer=optimizer)
-        amp_optim_wrapper.loss_scaler = MagicMock()
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=optimizer)
+        amp_optim_wrapper.loss_scalar = MagicMock()
         amp_optim_wrapper.step()
-        amp_optim_wrapper.loss_scaler.step.assert_called_with(
+        amp_optim_wrapper.loss_scalar.step.assert_called_with(
             amp_optim_wrapper.optimizer)
-        amp_optim_wrapper.loss_scaler.update.assert_called_with(
+        amp_optim_wrapper.loss_scalar.update.assert_called_with(
             amp_optim_wrapper._scale_update_param)
 
     def test_backward(self):
         for detect_anomalous_params in (True, False):
-            amp_optim_wrapper = AmpOptimizerWrapper(
-                model=self.model, optimizer=self.optimizer)
+            amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
             amp_optim_wrapper.detect_anomalous_params = detect_anomalous_params
-            loss_scaler = MagicMock()
+            loss_scalar = MagicMock()
             scale_return = MagicMock()
             scale_fn = MagicMock(return_value=scale_return)
-            loss_scaler.scale = scale_fn
-            amp_optim_wrapper.loss_scaler = loss_scaler
+            loss_scalar.scale = scale_fn
+            amp_optim_wrapper.loss_scalar = loss_scalar
             amp_optim_wrapper._detect_anomalous_params = MagicMock()
-            amp_optim_wrapper.backward(1)
-            loss_scaler.scale.assert_called_with(1)
-            scale_return.backward.assert_called_with()
-
-    def test_state_dict(self):
-        amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model, optimizer=self.optimizer)
-        state_dict = amp_optim_wrapper.state_dict()
-        self.assertEqual(
-            MessageHub.get_current_instance().get_info('loss_scalar'),
-            amp_optim_wrapper.loss_scaler.state_dict())
-        self.assertEqual(state_dict, self.optimizer.state_dict())
-
-    def test_load_state_dict(self):
-        amp_optim_wrapper = AmpOptimizerWrapper(
-            model=self.model, optimizer=self.optimizer)
-        amp_optim_wrapper.loss_scaler = MagicMock()
-        optimizer = SGD(self.model.parameters(), lr=0.1)
-        MessageHub.get_current_instance().update_info('loss_scalar',
-                                                      dict(scale=1))
-        amp_optim_wrapper.load_state_dict(optimizer.state_dict())
-
-        amp_optim_wrapper.loss_scaler.load_state_dict.assert_called_with(
-            dict(scale=1))
-        self.assertEqual(amp_optim_wrapper.optimizer.state_dict(),
-                         optimizer.state_dict())
+            if not detect_anomalous_params:
+                amp_optim_wrapper.backward(1)
+                loss_scalar.scale.assert_called_with(1)
+                scale_return.backward.assert_called_with()
+            else:
+                with self.assertRaises(AssertionError):
+                    amp_optim_wrapper.backward(1)
 
     @unittest.skipIf(
         not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
-    def test_precision_context_manager(self):
-        with AmpOptimizerWrapper.precision_context():
+    def test_state_dict(self):
+        self.model = self.model.cuda()
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        with amp_optim_wrapper.precision_context():
+            loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
+            amp_optim_wrapper.update_params(loss)
+            state_dict = amp_optim_wrapper.state_dict()
+            optim_state_dict = dict()
+            scalar_state_dict = dict()
+            for key, value in state_dict.items():
+                if key.startswith('loss_scalar.'):
+                    scalar_state_dict[key.replace('loss_scalar.', '')] = value
+                else:
+                    optim_state_dict[key] = value
+            self.assertDictEqual(optim_state_dict,
+                                 amp_optim_wrapper.optimizer.state_dict())
+            self.assertDictEqual(scalar_state_dict,
+                                 amp_optim_wrapper.loss_scalar.state_dict())
+
+    @unittest.skipIf(
+        not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
+    def test_load_state_dict(self):
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        self.model = self.model.cuda()
+        # Test load from optimizer
+        optimizer = SGD(self.model.parameters(), lr=0.1)
+        amp_optim_wrapper.load_state_dict(optimizer.state_dict())
+
+        self.assertDictEqual(optimizer.state_dict(),
+                             amp_optim_wrapper.optimizer.state_dict())
+        # Test load from optimizer_wrapper
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper_ = AmpOptimizerWrapper(
+            optimizer=SGD(self.model.parameters(), lr=0.1))
+        amp_optim_wrapper_.load_state_dict(amp_optim_wrapper.state_dict())
+        self.assertDictEqual(amp_optim_wrapper.optimizer.state_dict(),
+                             amp_optim_wrapper_.optimizer.state_dict())
+        self.assertDictEqual(amp_optim_wrapper.loss_scalar.state_dict(),
+                             amp_optim_wrapper_.loss_scalar.state_dict())
+
+
+
+    @unittest.skipIf(
+        not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
+    def test_precision_context(self):
+        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        with amp_optim_wrapper.precision_context():
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)

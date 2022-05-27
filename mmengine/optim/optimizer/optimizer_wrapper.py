@@ -349,18 +349,18 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':
-            self.loss_scaler = GradScaler()
+            self.loss_scalar = GradScaler()
         elif isinstance(loss_scale, float):
             self._scale_update_param = loss_scale
-            self.loss_scaler = GradScaler(init_scale=loss_scale)
+            self.loss_scalar = GradScaler(init_scale=loss_scale)
         elif isinstance(loss_scale, dict):
-            self.loss_scaler = GradScaler(**loss_scale)
+            self.loss_scalar = GradScaler(**loss_scale)
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", got {loss_scale}')
 
     def backward(self, loss: torch.Tensor, model: Optional[nn.Module] = None):
-        """Perform gradient backpropagation with :attr:`loss_scaler`.
+        """Perform gradient backpropagation with :attr:`loss_scalar`.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
@@ -369,35 +369,35 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         if self.detect_anomalous_params:
             assert model is not None
             self._detect_anomalous_params(loss, model)
-        self.loss_scaler.scale(loss).backward()
-        self.loss_scaler.unscale_(self.optimizer)
+        self.loss_scalar.scale(loss).backward()
+        self.loss_scalar.unscale_(self.optimizer)
 
     def step(self):
-        """Update parameters with :attr:`loss_scaler`."""
+        """Update parameters with :attr:`loss_scalar`."""
         if self.grad_clip:
             self._clip_grads()
-        self.loss_scaler.step(self.optimizer)
-        self.loss_scaler.update(self._scale_update_param)
+        self.loss_scalar.step(self.optimizer)
+        self.loss_scalar.update(self._scale_update_param)
 
     def state_dict(self) -> dict:
-        """Get the state dict of :attr:`optimizer` and :attr:`loss_scaler`. The
-        key of :attr:`loss_scaler` will be added with the prefix
+        """Get the state dict of :attr:`optimizer` and :attr:`loss_scalar`. The
+        key of :attr:`loss_scalar` will be added with the prefix
         "loss_scalar.".
 
         Returns:
-            dict: The merged state dict of :attr:`loss_scaler` and
+            dict: The merged state dict of :attr:`loss_scalar` and
             :attr:`optimizer`.
         """
-        # save state_dict of loss_scaler
+        # save state_dict of loss_scalar
         optim_state_dict = self.optimizer.state_dict()
-        for key, value in self.loss_scalar.state_dict():
+        for key, value in self.loss_scalar.state_dict().items():
             key = f'loss_scalar.{key}'
             optim_state_dict[key] = value
         return optim_state_dict
 
     def load_state_dict(self, state_dict: dict):
         """Load and parse the state dict of :attr:`optimizer` and
-        :attr:`loss_scaler`.
+        :attr:`loss_scalar`.
 
         If state_dict contains the key starts with "loss_scalar.", the
         :attr:`loss_scalar` will load the corresponding keys. Otherwise only
@@ -413,7 +413,9 @@ class AmpOptimizerWrapper(OptimizerWrapper):
                 ori_key = key.replace('loss_scalar.', '')
                 loss_scalar_dict[ori_key] = state_dict.pop(key)
 
-        self.loss_scaler.load_state_dict(loss_scalar_dict)
+        # Load an empty loss_scalar_dict will raise RuntimeError.
+        if loss_scalar_dict:
+            self.loss_scalar.load_state_dict(loss_scalar_dict)
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
