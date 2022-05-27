@@ -84,9 +84,6 @@ class OptimizerHook(Hook):
                 we keep ``outputs`` here. Defaults to None.
         """
         runner.optimizer.zero_grad()
-        runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer.param_groups[0]['lr'])
-
         if self.detect_anomalous_params:
             self.detect_anomalous_parameters(runner.outputs['loss'], runner)
         runner.outputs['loss'].backward()
@@ -95,8 +92,8 @@ class OptimizerHook(Hook):
             grad_norm = self.clip_grads(runner.model.parameters())
             if grad_norm is not None:
                 # Add grad norm to the logger
-                runner.log_buffer.update({'grad_norm': float(grad_norm)},
-                                         runner.outputs['num_samples'])
+                runner.message_hub.update_scalar('train/grad_norm',
+                                                 float(grad_norm))
         runner.optimizer.step()
 
     def detect_anomalous_parameters(self, loss: torch.Tensor, runner) -> None:

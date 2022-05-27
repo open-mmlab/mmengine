@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
 
@@ -146,21 +146,31 @@ class Hook:
         """
         self._after_epoch(runner, mode='train')
 
-    def after_val_epoch(self, runner) -> None:
+    def after_val_epoch(self,
+                        runner,
+                        metrics: Optional[Dict[str, float]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation epoch.
 
         Args:
             runner (Runner): The runner of the validation process.
+            metrics (Dict[str, float], optional): Evaluation results of all
+                metrics on validation dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
         """
         self._after_epoch(runner, mode='val')
 
-    def after_test_epoch(self, runner) -> None:
+    def after_test_epoch(self,
+                         runner,
+                         metrics: Optional[Dict[str, float]] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test epoch.
 
         Args:
             runner (Runner): The runner of the testing process.
+            metrics (Dict[str, float], optional): Evaluation results of all
+                metrics on test dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
         """
         self._after_epoch(runner, mode='test')
 
