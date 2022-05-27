@@ -430,29 +430,37 @@ class AmpOptimizerWrapper(OptimizerWrapper):
 
 
 @contextmanager
-def gradient_accumulative_context(
-        optimizer_wrapper: Union[dict, OptimizerWrapper]) -> None:
-    """A context manager that enables ``gradient_accumulation`` context of
-    multiple optimizers.
+def multi_optims_gradient_accumulation(
+        optimizer_wrapper: Union[dict, OptimizerWrapper],
+        model: nn.Module,
+        cur_iter: int,
+        max_iters: int) -> None:
+    """A context manager that enables ``gradient_accumulation`` context
+    compatible with multiple optimizer wrappers.
+
+    If ``optimizer_wrapper`` is a :obj:`OptimizerWrapper` instance,
+    the ``gradient_accumulation`` context will be enabled.
+    If ``optimizer_wrapper`` is a dictionary of ``OptimizerWrapper``, enable
+    an empty context. The ``gradient_accumulation`` should be enabled in
+    ``train_step`` of :obj:`BaseModel`
 
     Args:
         optimizer_wrapper (dict or OptimizerWrapper): Single or multiple
             OptimizerWrapper instances which need to enable
             ``gradient_accumulation`` context.
+        model (nn.Module): The training model.
+        cur_iter (int): current training iteration.
+        max_iters (int): Maximum training iteration.
     """
     if isinstance(optimizer_wrapper, OptimizerWrapper):
-        with optimizer_wrapper.gradient_accumulative_context():
+        with optimizer_wrapper.gradient_accumulation(
+                model, cur_iter, max_iters):
             yield None
     # If `optimizer_wrapper` is a dict, we should make sure all
     # `optimizer_wrapper` have the same `cumulative_iters`, and they will
     # have the same gradient accumulative behavior.
     elif isinstance(optimizer_wrapper, dict):
-        optimizer_wrapper_list = list(optimizer_wrapper.values())
-        with ExitStack() as stack:
-            for optim_wrapper in optimizer_wrapper_list:
-                stack.enter_context(
-                    optim_wrapper.gradient_accumulative_context())
-            yield None
+        yield None
     else:
         raise TypeError('optimizer_wrapper should be `OptimizerWrapper`,'
                         f'but got {type(optimizer_wrapper)}')

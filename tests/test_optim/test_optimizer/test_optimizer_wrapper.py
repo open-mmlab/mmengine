@@ -13,7 +13,8 @@ from torch.optim import SGD
 
 from mmengine import MessageHub, MMLogger
 from mmengine.dist import all_gather
-from mmengine.optim import AmpOptimizerWrapper, OptimizerWrapper
+from mmengine.optim import (AmpOptimizerWrapper, OptimizerWrapper,
+                            multi_optims_gradient_accumulation)
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 
@@ -239,6 +240,38 @@ class TestOptimizerWrapper(MultiProcessTestCase):
         with optimizer_wrapper.precision_context():
             pass
 
+    def test_multi_optims_gradient_accumulation(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ToyModel2()
+        ddp_model = DistributedDataParallel(model)
+        optimizer = SGD(model.parameters(), lr=0.1)
+        optimizer_wrapper = OptimizerWrapper(optimizer, cumulative_iters=3)
+        data = torch.randn(1, 1, 1, 1) * self.rank
+        # Test do not sync grads
+        with multi_optims_gradient_accumulation(
+                optimizer_wrapper, ddp_model, 0, 100):
+            loss = ddp_model(data)
+            optimizer_wrapper.update_params(loss)
+            all_grads = all_gather(model.conv.weight.grad)
+            with self.assertRaises(AssertionError):
+                assert_allclose(all_grads[0], all_grads[1])
+
+        # Test sync grads
+        with multi_optims_gradient_accumulation(
+                optimizer_wrapper, ddp_model, 2, 100):
+            loss = ddp_model(data)
+            optimizer_wrapper.update_params(loss)
+            all_grads = all_gather(model.conv.weight.grad)
+            assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
+
+        # Test sync grads if optimizer_wrapper is a dict
+        with multi_optims_gradient_accumulation(
+                dict(optim=optimizer_wrapper), ddp_model, 2, 100):
+            loss = ddp_model(data)
+            optimizer_wrapper.update_params(loss)
+            all_grads = all_gather(model.conv.weight.grad)
+            assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
+
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
         os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -352,8 +385,6 @@ class TestAmpOptimizerWrapper(TestCase):
         self.assertDictEqual(amp_optim_wrapper.loss_scalar.state_dict(),
                              amp_optim_wrapper_.loss_scalar.state_dict())
 
-
-
     @unittest.skipIf(
         not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
     def test_precision_context(self):
@@ -362,3 +393,4 @@ class TestAmpOptimizerWrapper(TestCase):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)
+

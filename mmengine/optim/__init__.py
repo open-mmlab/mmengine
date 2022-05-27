@@ -2,7 +2,7 @@
 from .optimizer import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimizerWrapper, DefaultOptimizerConstructor,
                         OptimizerWrapper, build_optimizer,
-                        gradient_accumulative_context)
+                        multi_optims_gradient_accumulation)
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
                         CosineAnnealingParamScheduler, ExponentialLR,
@@ -21,5 +21,5 @@ __all__ = [
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
     '_ParamScheduler', 'OptimizerWrapper', 'AmpOptimizerWrapper',
-    'gradient_accumulative_context'
+    'multi_optims_gradient_accumulation'
 ]
