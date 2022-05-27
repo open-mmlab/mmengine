@@ -561,6 +561,12 @@ class Runner:
         """int: Interval to run validation during training."""
         return self.val_loop.interval
 
+    @property
+    def val_begin(self):
+        """int: The epoch/iteration to start running validation during
+        training."""
+        return self.val_loop.begin
+
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
