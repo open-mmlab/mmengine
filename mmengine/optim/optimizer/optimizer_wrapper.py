@@ -25,17 +25,16 @@ class OptimizerWrapper:
     provides simplified interface for commonly used training techniques,
     such as gradient accumulative and grad clips.
 
-    Warnings:
-        ``gradient_accumulation`` must be enabled if you want to use
-        gradient accumulation. Otherwise even if ``cumulative_iters`` is set,
-        ``OptimizerWrapper`` will not perform gradient accumulation.
-
     Args:
         optimizer (Optimizer): Optimizer used to update model parameters.
         cumulative_iters (int): Number of gradient accumulation. Defaults to 1.
         grad_clip (dict, optional): Configuration of gradient cropping.
         detect_anomalous_params (bool): Whether to detect anomalous
             parameters. Only used in debug mode. Defaults to False.
+
+    Warnings:
+        If ``cumulative_iters`` is larger than 1, :meth:`update_params` must be
+        called in the context of ``gradient_accumulation``.
 
     Examples:
         OptimizerWrapper config sample
@@ -59,7 +58,6 @@ class OptimizerWrapper:
         >>>         loss = model(data)
         >>>         optimizer_wrapper.update_params(loss)
     """
-
     def __init__(self,
                  optimizer: Optimizer,
                  cumulative_iters: int = 1,
@@ -92,7 +90,7 @@ class OptimizerWrapper:
                 model in gradient_acc
         """
         if self.cumulative_iters > 1:
-            # gradient accumulation must be performed in the context of
+            # gradient accumulation must be called in the context of
             # ``gradient_accumulation``.
             assert hasattr(self, 'divisible_iters'), (
                 'gradient accumulation must be performed in the context of'
@@ -361,12 +359,7 @@ class AmpOptimizerWrapper(OptimizerWrapper):
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", got {loss_scale}')
 
-    def zero_grad(self):
-        """clear grads of last iteration."""
-        self.model.zero_grad()
-        self.optimizer.zero_grad()
-
-    def backward(self, loss, model):
+    def backward(self, loss: torch.Tensor, model: Optional[nn.Module] = None):
         """Perform gradient backpropagation with :attr:`loss_scaler`.
 
         Args:
@@ -374,7 +367,8 @@ class AmpOptimizerWrapper(OptimizerWrapper):
             model (nn.Module): The training model.
         """
         if self.detect_anomalous_params:
-            self._detect_anomalous_params(loss)
+            assert model is not None
+            self._detect_anomalous_params(loss, model)
         self.loss_scaler.scale(loss).backward()
         self.loss_scaler.unscale_(self.optimizer)
 
