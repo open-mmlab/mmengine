@@ -312,6 +312,12 @@ def broadcast(data: Tensor,
 def sync_random_seed(group: Optional[ProcessGroup] = None) -> int:
     """Synchronize a random seed to all processes.
 
+    In distributed sampling, different ranks should sample non-overlapped
+    data in the dataset. Therefore, this function is used to make sure that
+    each rank shuffles the data indices in the same order based
+    on the same seed. Then different ranks could use different indices
+    to select non-overlapped data from the same data list.
+
     Args:
         group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used. Defaults to None.

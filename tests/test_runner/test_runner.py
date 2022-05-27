@@ -5,6 +5,7 @@ import shutil
 import tempfile
 from unittest import TestCase
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
@@ -243,15 +244,18 @@ class TestRunner(TestCase):
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=1),
             test_cfg=dict(),
             custom_hooks=[],
             default_hooks=dict(
-                timer=dict(type='IterTimerHook'),
-                checkpoint=dict(type='CheckpointHook', interval=1),
-                logger=dict(type='LoggerHook'),
+                runtime_info=dict(type='RuntimeInfoHook'),
                 optimizer=dict(type='OptimizerHook', grad_clip=None),
-                param_scheduler=dict(type='ParamSchedulerHook')),
+                timer=dict(type='IterTimerHook'),
+                logger=dict(type='LoggerHook'),
+                param_scheduler=dict(type='ParamSchedulerHook'),
+                checkpoint=dict(
+                    type='CheckpointHook', interval=1, by_epoch=True),
+                sampler_seed=dict(type='DistSamplerSeedHook')),
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
         )
@@ -264,11 +268,13 @@ class TestRunner(TestCase):
             num_workers=0)
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
-            timer=dict(type='IterTimerHook'),
-            checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
-            logger=dict(type='LoggerHook'),
+            runtime_info=dict(type='RuntimeInfoHook'),
             optimizer=dict(type='OptimizerHook', grad_clip=None),
-            param_scheduler=dict(type='ParamSchedulerHook'))
+            timer=dict(type='IterTimerHook'),
+            logger=dict(type='LoggerHook'),
+            param_scheduler=dict(type='ParamSchedulerHook'),
+            checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
+            sampler_seed=dict(type='DistSamplerSeedHook'))
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
@@ -427,7 +433,7 @@ class TestRunner(TestCase):
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=1),
             val_dataloader=val_dataloader,
             val_evaluator=ToyMetric1(),
             test_cfg=dict(),
@@ -793,10 +799,12 @@ class TestRunner(TestCase):
             sampler=dict(type='DefaultSampler', shuffle=True),
             batch_size=1,
             num_workers=0)
-        dataloader = runner.build_dataloader(cfg)
+        seed = np.random.randint(2**31)
+        dataloader = runner.build_dataloader(cfg, seed=seed)
         self.assertIsInstance(dataloader, DataLoader)
         self.assertIsInstance(dataloader.dataset, ToyDataset)
         self.assertIsInstance(dataloader.sampler, DefaultSampler)
+        self.assertEqual(dataloader.sampler.seed, seed)
 
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -854,12 +862,12 @@ class TestRunner(TestCase):
             runner.build_test_loop('invalid-type')
 
         # input is a dict and contains type key
-        cfg = dict(type='ValLoop', interval=1)
+        cfg = dict(type='ValLoop', interval=1, begin=1)
         loop = runner.build_test_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
         # input is a dict but does not contain type key
-        cfg = dict(interval=1)
+        cfg = dict(interval=1, begin=1)
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
@@ -938,13 +946,16 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.train()
 
-        # 2. test iter and epoch counter of EpochBasedTrainLoop
+        # 2. test iter and epoch counter of EpochBasedTrainLoop and timing of
+        # running ValLoop
         epoch_results = []
         epoch_targets = [i for i in range(3)]
         iter_results = []
         iter_targets = [i for i in range(4 * 3)]
         batch_idx_results = []
         batch_idx_targets = [i for i in range(4)] * 3  # train and val
+        val_epoch_results = []
+        val_epoch_targets = [i for i in range(2, 4)]
 
         @HOOKS.register_module()
         class TestEpochHook(Hook):
@@ -956,17 +967,18 @@ class TestRunner(TestCase):
                 iter_results.append(runner.iter)
                 batch_idx_results.append(batch_idx)
 
+            def before_val_epoch(self, runner):
+                val_epoch_results.append(runner.epoch)
+
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train2'
         cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
+        cfg.val_cfg = dict(begin=2)
         runner = Runner.from_cfg(cfg)
 
         runner.train()
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
-
-        assert runner.iter == runner.message_hub.get_info('iter')
-        assert runner.epoch == runner.message_hub.get_info('epoch')
 
         for result, target, in zip(epoch_results, epoch_targets):
             self.assertEqual(result, target)
@@ -974,13 +986,20 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
+        for result, target, in zip(val_epoch_results, val_epoch_targets):
+            self.assertEqual(result, target)
 
-        # 3. test iter and epoch counter of IterBasedTrainLoop
+        # 3. test iter and epoch counter of IterBasedTrainLoop and timing of
+        # running ValLoop
         epoch_results = []
         iter_results = []
         batch_idx_results = []
+        val_iter_results = []
+        val_batch_idx_results = []
         iter_targets = [i for i in range(12)]
         batch_idx_targets = [i for i in range(12)]
+        val_iter_targets = [i for i in range(4, 12)]
+        val_batch_idx_targets = [i for i in range(4)] * 2
 
         @HOOKS.register_module()
         class TestIterHook(Hook):
@@ -992,21 +1011,29 @@ class TestRunner(TestCase):
                 iter_results.append(runner.iter)
                 batch_idx_results.append(batch_idx)
 
+            def before_val_iter(self, runner, batch_idx, data_batch=None):
+                val_epoch_results.append(runner.iter)
+                val_batch_idx_results.append(batch_idx)
+
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train3'
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.val_cfg = dict(interval=4)
+        cfg.val_cfg = dict(interval=4, begin=4)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
-        assert runner.iter == runner.message_hub.get_info('iter')
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)
         for result, target, in zip(iter_results, iter_targets):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_iter_results, val_iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_batch_idx_results,
+                                   val_batch_idx_targets):
             self.assertEqual(result, target)
 
     def test_val(self):
@@ -1132,37 +1159,37 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner._hooks = []
 
-        # register five hooks by default
+        # register 7 hooks by default
         runner.register_default_hooks()
-        self.assertEqual(len(runner._hooks), 6)
+        self.assertEqual(len(runner._hooks), 7)
         # the third registered hook should be `DistSamplerSeedHook`
-        self.assertTrue(isinstance(runner._hooks[2], DistSamplerSeedHook))
+        self.assertTrue(isinstance(runner._hooks[3], DistSamplerSeedHook))
         # the fifth registered hook should be `ParamSchedulerHook`
-        self.assertTrue(isinstance(runner._hooks[4], ParamSchedulerHook))
+        self.assertTrue(isinstance(runner._hooks[5], ParamSchedulerHook))
 
         runner._hooks = []
         # remove `ParamSchedulerHook` from default hooks
         runner.register_default_hooks(hooks=dict(timer=None))
-        self.assertEqual(len(runner._hooks), 5)
-        # `ParamSchedulerHook` was popped so the forth is `CheckpointHook`
-        self.assertTrue(isinstance(runner._hooks[4], CheckpointHook))
+        self.assertEqual(len(runner._hooks), 6)
+        # `ParamSchedulerHook` was popped so the fifth is `CheckpointHook`
+        self.assertTrue(isinstance(runner._hooks[5], CheckpointHook))
 
         # add a new default hook
         runner._hooks = []
         runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        self.assertEqual(len(runner._hooks), 8)
+        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
-        self.assertEqual(len(runner._hooks), 6)
+        self.assertEqual(len(runner._hooks), 7)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        self.assertEqual(len(runner._hooks), 8)
+        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1172,9 +1199,9 @@ class TestRunner(TestCase):
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
-        # six default hooks + custom hook (ToyHook)
-        self.assertEqual(len(runner._hooks), 7)
-        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
+        # 7 default hooks + custom hook (ToyHook)
+        self.assertEqual(len(runner._hooks), 8)
+        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
     def test_custom_loop(self):
         # test custom loop with additional hook

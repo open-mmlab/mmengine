@@ -74,12 +74,12 @@ class TestHook:
     def test_after_val_epoch(self):
         hook = Hook()
         runner = Mock()
-        hook.after_val_epoch(runner)
+        hook.after_val_epoch(runner, {})
 
     def test_after_test_epoch(self):
         hook = Hook()
         runner = Mock()
-        hook.after_test_epoch(runner)
+        hook.after_test_epoch(runner, {})
 
     def test_before_train_iter(self):
         hook = Hook()

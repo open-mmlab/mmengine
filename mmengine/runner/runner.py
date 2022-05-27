@@ -565,6 +565,12 @@ class Runner:
         """int: Interval to run validation during training."""
         return self.val_loop.interval
 
+    @property
+    def val_begin(self):
+        """int: The epoch/iteration to start running validation during
+        training."""
+        return self.val_loop.begin
+
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
 
@@ -1096,7 +1102,7 @@ class Runner:
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg, default_args=dict(dataset=dataset))
+                sampler_cfg, default_args=dict(dataset=dataset, seed=seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -1484,6 +1490,8 @@ class Runner:
         +----------------------+-------------------------+
         | Hooks                | Priority                |
         +======================+=========================+
+        | RuntimeInfoHook      | VERY_HIGH (10)          |
+        +----------------------+-------------------------+
         | OptimizerHook        | HIGH (30)               |
         +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
@@ -1501,6 +1509,7 @@ class Runner:
         default::
 
             default_hooks = dict(
+                runtime_info=dict(type='RuntimeInfoHook'),
                 optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
                 sampler_seed=dict(type='DistSamplerSeedHook'),
@@ -1523,6 +1532,7 @@ class Runner:
                 to be registered.
         """
         default_hooks: dict = dict(
+            runtime_info=dict(type='RuntimeInfoHook'),
             optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
