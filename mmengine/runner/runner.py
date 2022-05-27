@@ -563,7 +563,7 @@ class Runner:
 
     @property
     def val_begin(self):
-        """int: The epoch/iteration beginning to run validation during
+        """int: The epoch/iteration to start running validation during
         training."""
         return self.val_loop.begin
 
