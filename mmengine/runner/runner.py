@@ -1296,6 +1296,9 @@ class Runner:
             fn_name (str): The function name in each hook to be called, such as
                 "before_train_epoch".
             **kwargs: Keyword arguments passed to hook.
+
+        Raises:
+            TypeError: if Hook got unexpected arguments.
         """
         for hook in self._hooks:
             # support adding additional custom hook methods

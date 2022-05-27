@@ -1035,15 +1035,25 @@ class TestRunner(TestCase):
     def test_call_hook(self):
         # test unexpected argument in `call_hook`
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_call_hook'
+        cfg.experiment_name = 'test_call_hook1'
         runner = Runner.from_cfg(cfg)
+        runner._hooks = []
         custom_hooks = [dict(type='ToyHook3')]
         runner.register_custom_hooks(custom_hooks)
         with self.assertRaisesRegex(
                 TypeError,
                 r"got an unexpected keyword argument 'batch_idx' in "
                 r'<test_runner.ToyHook3 object at \w+>'):
-            runner.train()
+            runner.call_hook('before_train_iter', batch_idx=0, data_batch=None)
+
+        # test call hook with expected arguments
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_call_hook2'
+        runner = Runner.from_cfg(cfg)
+        runner._hooks = []
+        custom_hooks = [dict(type='ToyHook3')]
+        runner.register_custom_hooks(custom_hooks)
+        runner.call_hook('before_train_iter', data_batch=None)
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
