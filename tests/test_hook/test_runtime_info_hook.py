@@ -51,7 +51,7 @@ class TestRuntimeInfoHook(TestCase):
             'runtime_info_hook_test_before_train_iter')
         runner = Mock()
         runner.iter = 9
-        runner.optimizer.param_groups = [{'lr': 0.01}]
+        runner.optimizer_wrapper.param_groups = [{'lr': 0.01}]
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)

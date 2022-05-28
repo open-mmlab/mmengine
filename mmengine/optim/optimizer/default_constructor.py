@@ -6,9 +6,11 @@ import torch
 import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
-from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
+from mmengine.registry import (OPTIMIZER_CONSTRUCTORS, OPTIMIZER_WRAPPERS,
+                               OPTIMIZERS)
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
+from .optimizer_wrapper import OptimizerWrapper
 
 
 @OPTIMIZER_CONSTRUCTORS.register_module()
@@ -241,19 +243,22 @@ class DefaultOptimizerConstructor:
                 prefix=child_prefix,
                 is_dcn_module=is_dcn_module)
 
-    def __call__(self, model: nn.Module) -> torch.optim.Optimizer:
+    def __call__(self, model: nn.Module) -> OptimizerWrapper:
         if hasattr(model, 'module'):
             model = model.module
 
         optimizer_cfg = self.optimizer_cfg.copy()
+        optimizer_wrapper_cfg = optimizer_cfg.pop(
+            'optimizer_wrapper', dict(type='OptimizerWrapper'))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()
-            return OPTIMIZERS.build(optimizer_cfg)
-
-        # set param-wise lr and weight decay recursively
-        params: List = []
-        self.add_params(params, model)
-        optimizer_cfg['params'] = params
-
-        return OPTIMIZERS.build(optimizer_cfg)
+            optimizer = OPTIMIZERS.build(optimizer_cfg)
+        else:
+            # set param-wise lr and weight decay recursively
+            params: List = []
+            self.add_params(params, model)
+            optimizer_cfg['params'] = params
+            optimizer = OPTIMIZERS.build(optimizer_cfg)
+        return OPTIMIZER_WRAPPERS.build(
+            optimizer_wrapper_cfg, default_args=dict(optimizer=optimizer))

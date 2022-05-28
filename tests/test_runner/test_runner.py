@@ -16,10 +16,10 @@ from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (DistSamplerSeedHook, Hook, IterTimerHook,
-                            LoggerHook, OptimizerHook, ParamSchedulerHook)
+                            LoggerHook, ParamSchedulerHook, RuntimeInfoHook)
 from mmengine.hooks.checkpoint_hook import CheckpointHook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.optim.scheduler import MultiStepLR, StepLR
+from mmengine.optim import MultiStepLR, OptimizerWrapper, StepLR
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                Registry)
@@ -371,7 +371,8 @@ class TestRunner(TestCase):
 
         self.assertIsInstance(runner._train_loop, BaseLoop)
         self.assertIsInstance(runner.train_dataloader, DataLoader)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper, OptimizerWrapper)
+        self.assertIsInstance(runner.optimizer, dict)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner._val_loop, BaseLoop)
         self.assertIsInstance(runner._val_loop.dataloader, DataLoader)
@@ -581,43 +582,47 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
-    def test_build_optimizer(self):
+    def test_build_optimizer_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_optimizer'
+        cfg.experiment_name = 'test_build_optimizer_wrapper'
         runner = Runner.from_cfg(cfg)
 
         # input should be an Optimizer object or dict
         with self.assertRaisesRegex(TypeError, 'optimizer should be'):
-            runner.build_optimizer('invalid-type')
+            runner.build_optimizer_wrapper('invalid-type')
 
         # input is an Optimizer object
         _optimizer = SGD(runner.model.parameters(), lr=0.01)
-        optimizer = runner.build_optimizer(_optimizer)
-        self.assertEqual(id(_optimizer), id(optimizer))
+        optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
+        self.assertEqual(id(_optimizer), id(optimizer_wrapper.optimizer))
 
         # input is a dict
-        optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
-        self.assertIsInstance(optimizer, SGD)
+        optimizer_wrapper = runner.build_optimizer_wrapper(
+            dict(type='SGD', lr=0.01))
+        self.assertIsInstance(optimizer_wrapper, OptimizerWrapper)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_param_scheduler'
         runner = Runner.from_cfg(cfg)
 
-        # `build_optimizer` should be called before `build_param_scheduler`
+        # `build_optimizer_wrapper` should be called before
+        # `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
-        runner.optimizer = None
+        runner.optimizer_wrapper = None
         with self.assertRaisesRegex(RuntimeError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
-        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+        runner.optimizer_wrapper = runner.build_optimizer_wrapper(
+            dict(type='SGD', lr=0.01))
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertIsInstance(param_schedulers, list)
         self.assertEqual(len(param_schedulers), 1)
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
 
         # input is a ParamScheduler object
-        param_scheduler = MultiStepLR(runner.optimizer, milestones=[1, 2])
+        param_scheduler = MultiStepLR(
+            runner.optimizer_wrapper, milestones=[1, 2])
         param_schedulers = runner.build_param_scheduler(param_scheduler)
         self.assertEqual(id(param_schedulers[0]), id(param_scheduler))
 
@@ -645,7 +650,7 @@ class TestRunner(TestCase):
                 AssertionError,
                 'Scheduler can only be converted to iter-based when '
                 'train loop is built.'):
-            param_schedulers = runner.build_param_scheduler(cfg)
+            runner.build_param_scheduler(cfg)
 
         # convert epoch-based to iter-based scheduler
         cfg = dict(
@@ -1002,15 +1007,15 @@ class TestRunner(TestCase):
             get_priority('BELOW_NORMAL'))
 
         # 1.3 `hook` is a hook object
-        optimizer_hook = OptimizerHook()
-        runner.register_hook(optimizer_hook)
+        runtime_info_hook = RuntimeInfoHook()
+        runner.register_hook(runtime_info_hook)
         self.assertEqual(len(runner._hooks), 2)
-        # The priority of `OptimizerHook` is `HIGH` which is greater than
+        # The priority of `runtime_info_hook` is `HIGH` which is greater than
         # `IterTimerHook`, so the first item of `_hooks` should be
-        # `OptimizerHook`
-        self.assertTrue(isinstance(runner._hooks[0], OptimizerHook))
+        # `runtime_info_hook`
+        self.assertTrue(isinstance(runner._hooks[0], RuntimeInfoHook))
         self.assertEqual(
-            get_priority(runner._hooks[0].priority), get_priority('HIGH'))
+            get_priority(runner._hooks[0].priority), get_priority('VERY_HIGH'))
 
         # 2. test `priority` parameter
         # `priority` argument is not None and it will be set as priority of
@@ -1076,7 +1081,7 @@ class TestRunner(TestCase):
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
-        # 7 default hooks + custom hook (ToyHook)
+        # six default hooks + custom hook (ToyHook)
         self.assertEqual(len(runner._hooks), 8)
         self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
@@ -1197,7 +1202,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.4 test auto resume
@@ -1209,7 +1214,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.5 test resume from a specified checkpoint
@@ -1222,7 +1227,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 1)
         self.assertEqual(runner.iter, 4)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2. test iter based
@@ -1261,7 +1266,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.4 test auto resume
@@ -1273,7 +1278,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.5 test resume from a specified checkpoint
@@ -1286,5 +1291,5 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 3)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optimizer_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)

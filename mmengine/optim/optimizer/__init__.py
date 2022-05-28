@@ -1,11 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .builder import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS, build_optimizer
+from .builder import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
+                      build_optimizer_wrapper)
 from .default_constructor import DefaultOptimizerConstructor
-from .optimizer_wrapper import (AmpOptimizerWrapper, OptimizerWrapper,
-                                multi_optims_gradient_accumulation)
+from .optimizer_wrapper import AmpOptimizerWrapper, OptimizerWrapper
 
 __all__ = [
     'OPTIMIZER_CONSTRUCTORS', 'OPTIMIZERS', 'DefaultOptimizerConstructor',
-    'build_optimizer', 'OptimizerWrapper', 'AmpOptimizerWrapper',
-    'multi_optims_gradient_accumulation'
+    'build_optimizer_wrapper', 'OptimizerWrapper', 'AmpOptimizerWrapper'
 ]

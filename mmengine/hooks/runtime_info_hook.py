@@ -42,7 +42,7 @@ class RuntimeInfoHook(Hook):
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer.param_groups[0]['lr'])
+            'train/lr', runner.optimizer_wrapper.param_groups[0]['lr'])
 
     def after_train_iter(self,
                          runner,

@@ -3,9 +3,9 @@ from .default_scope import DefaultScope
 from .registry import Registry, build_from_cfg
 from .root import (DATA_SAMPLERS, DATASETS, HOOKS, LOG_PROCESSORS, LOOPS,
                    METRICS, MODEL_WRAPPERS, MODELS, OPTIMIZER_CONSTRUCTORS,
-                   OPTIMIZERS, PARAM_SCHEDULERS, RUNNER_CONSTRUCTORS, RUNNERS,
-                   TASK_UTILS, TRANSFORMS, VISBACKENDS, VISUALIZERS,
-                   WEIGHT_INITIALIZERS, OPTIMIZER_WRAPPERS)
+                   OPTIMIZER_WRAPPERS, OPTIMIZERS, PARAM_SCHEDULERS,
+                   RUNNER_CONSTRUCTORS, RUNNERS, TASK_UTILS, TRANSFORMS,
+                   VISBACKENDS, VISUALIZERS, WEIGHT_INITIALIZERS)
 from .utils import count_registered_modules, traverse_registry_tree
 
 __all__ = [

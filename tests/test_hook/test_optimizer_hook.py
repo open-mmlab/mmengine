@@ -46,8 +46,8 @@ class TestOptimizerHook:
         x = torch.rand(1, 1, 3, 3)
 
         dummy_runner = MagicMock()
-        dummy_runner.optimizer.zero_grad = Mock(return_value=None)
-        dummy_runner.optimizer.step = Mock(return_value=None)
+        dummy_runner.optimizer_wrapper.zero_grad = Mock(return_value=None)
+        dummy_runner.optimizer_wrapper.step = Mock(return_value=None)
         dummy_runner.model = model
         dummy_runner.outputs = dict()
 
@@ -82,7 +82,7 @@ class TestOptimizerHook:
         assert 'conv3.bias' in dummy_runner.logger.msg
         assert 'conv1.weight' not in dummy_runner.logger.msg
         assert 'conv1.bias' not in dummy_runner.logger.msg
-        dummy_runner.optimizer.step.assert_called()
+        dummy_runner.optimizer_wrapper.step.assert_called()
         dummy_runner.outputs['loss'].backward.assert_called()
         optimizer_hook.clip_grads.assert_called()
         optimizer_hook.detect_anomalous_parameters.assert_called()
@@ -109,7 +109,7 @@ class TestOptimizerHook:
 
         optimizer_hook.after_train_iter(dummy_runner, 0)
 
-        dummy_runner.optimizer.step.assert_called()
+        dummy_runner.optimizer_wrapper.step.assert_called()
         dummy_runner.outputs['loss'].backward.assert_called()
         optimizer_hook.clip_grads.assert_not_called()
         optimizer_hook.detect_anomalous_parameters.assert_not_called()

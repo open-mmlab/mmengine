@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
+from .optimizer_wrapper import OptimizerWrapper
 
 
 def register_torch_optimizers() -> List[str]:
@@ -30,7 +31,7 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def build_optimizer(model: nn.Module, cfg: dict) -> torch.optim.Optimizer:
+def build_optimizer_wrapper(model: nn.Module, cfg: dict) -> OptimizerWrapper:
     """Build function of optimizer.
 
     If ``constructor`` is set in the ``cfg``, this method will build an
@@ -41,8 +42,6 @@ def build_optimizer(model: nn.Module, cfg: dict) -> torch.optim.Optimizer:
     Args:
         model (nn.Module): Model to be optimized.
         cfg (dict): Config of optimizer and optimizer constructor.
-        default_scope (str, optional): The ``default_scope`` is used to
-            reset the current registry. Defaults to None.
 
     Returns:
         torch.optim.Optimizer: The built optimizer.

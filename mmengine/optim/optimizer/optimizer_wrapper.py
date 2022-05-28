@@ -1,18 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import logging
-from contextlib import ExitStack, contextmanager
-from typing import List, Optional, Union
+from contextlib import contextmanager
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
-from torch.nn.modules.batchnorm import _BatchNorm
-from torch.nn.parallel import DistributedDataParallel
 from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
 from mmengine.logging import MessageHub, MMLogger
 from mmengine.registry import OPTIMIZER_WRAPPERS
+from mmengine.utils import has_batch_norm
 
 
 @OPTIMIZER_WRAPPERS.register_module()
@@ -28,41 +26,49 @@ class OptimizerWrapper:
     Args:
         optimizer (Optimizer): Optimizer used to update model parameters.
         cumulative_iters (int): Number of gradient accumulation. Defaults to 1.
-        grad_clip (dict, optional): Configuration of gradient cropping.
-        detect_anomalous_params (bool): Whether to detect anomalous
-            parameters. Only used in debug mode. Defaults to False.
+        clip_grad_kwargs (dict, optional): If ``clip_grad_kwargs`` is not
+            None, it will be the arguments of ``torch.nn.utils.clip_grad``.
 
     Warnings:
         If ``cumulative_iters`` is larger than 1, :meth:`update_params` must be
-        called in the context of ``gradient_accumulation``.
+        called in the context of ``accumulate_grad``.
 
     Examples:
-        OptimizerWrapper config sample
+        OptimizerWrapper config sample.
         >>> optimizer_wrapper_cfg = dict(
         >>>     type='OptimizerWrapper',
         >>>     cumulative_iters=3,
-        >>>     grad_clip=dict(max_norm=0.2))
-        Use OptimizerWrapper to update parameters in model.
-        >>> class MyMODEL(BaseModel)
-        >>>     ...
-        >>>     def train_step(self, data, optimizer_wrapper):
-        >>>         # calculate loss
-        >>>         ...
-        >>>         optimizer_wrapper.update_params(loss)
-        Use OptimizerWrapper independently
-        >>> # initialize train_dataloader before
-        >>> for idx, data_batch in enumerate(train_dataloader)
-        >>> # enable gradient accumulation
-        >>>     with optimizer_wrapper.gradient_accumulation(
-        >>>         idx, len(train_dataloader), model):
+        >>>     clip_grad_kwargs=dict(max_norm=0.2))
+        Using OptimizerWrapper to update model.
+        >>> import torch.nn as nn
+        >>> import torch
+        >>> from torch.optim import SGD
+        >>> from torch.utils.data import DataLoader
+        >>> from mmengine.optim import OptimizerWrapper
+        >>>
+        >>> model = nn.Linear(1, 1)
+        >>> dataset = torch.randn(10, 1, 1)
+        >>> dataloader = DataLoader(dataset)
+        >>> optimizer = SGD(model.parameters(), lr=0.1)
+        >>> optim_wrapper = OptimizerWrapper(optimizer)
+        >>>
+        >>> for data in dataloader:
+        >>>     loss = model(data)
+        >>>     optim_wrapper.update_params(loss)
+        >>> # Enable gradient accumulation. If model is a subclass instance of
+        >>> # DistributedDataParallel, ``accumulate_grad`` context manager can
+        >>> # avoid unnecessary gradient synchronize.
+        >>> for iter, data in enumerate(dataloader):
+        >>>     with optim_wrapper.accumulate_grad(
+        >>>         model, iter, len(dataloader)):
         >>>         loss = model(data)
-        >>>         optimizer_wrapper.update_params(loss)
+        >>>         optim_wrapper.update_params(loss)
     """
+
     def __init__(self,
                  optimizer: Optimizer,
                  cumulative_iters: int = 1,
-                 grad_clip: Optional[dict] = None,
-                 detect_anomalous_params: bool = False):
+                 clip_grad_kwargs: Optional[dict] = None):
         assert cumulative_iters > 0, (
             'cumulative_iters at least greater than or equal to 1')
         # `max_iters` and `cur_iter` is only valid in gradient accumulative
@@ -71,30 +77,34 @@ class OptimizerWrapper:
         self.max_iters = 0
 
         self.optimizer = optimizer
-        self.grad_clip = grad_clip
+
+        if clip_grad_kwargs is not None:
+            # clip_grad_kwargs should not be non-empty dict.
+            assert isinstance(clip_grad_kwargs, dict) and clip_grad_kwargs, (
+                'if `clip_grad_kwargs` is not None, it should be a `dict` '
+                'which is the arguments of `torch.nn.utils.clip_grad`')
+        self.clip_grad_kwargs = clip_grad_kwargs
         self.logger = MMLogger.get_current_instance()
         self.cumulative_iters = cumulative_iters
-        self.detect_anomalous_params = detect_anomalous_params
         # Using to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
 
-    def update_params(self,
-                      loss: torch.Tensor,
-                      model: Optional[nn.Module] = None) -> None:
+    def update_params(self, loss: torch.Tensor) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:
             loss (torch.Tensor): A tensor for back propagation.
-            model (nn.Module, optional): Training model. ``update_params``
-                will check whether the model has BatchNormalization layer in
-                model in gradient_acc
         """
-        if self.cumulative_iters > 1:
+        if self.cumulative_iters == 1:
+            # update parameters without gradient accumulation. The gradient
+            # should not be rescaled and `loss_factor=1`.
+            loss_factor = 1
+        else:
             # gradient accumulation must be called in the context of
-            # ``gradient_accumulation``.
+            # ``accumulate_grad``.
             assert hasattr(self, 'divisible_iters'), (
                 'gradient accumulation must be performed in the context of'
-                '`OptimizerWrapper.gradient_accumulation`')
+                '`OptimizerWrapper.accumulate_grad`')
             # if `self.cumulative_iters > 1`, the gradient needs to be
             # rescaled and accumulated. In most cases, `loss_factor` equals to
             # `self.cumulative_iters`. However `self.max_iters` may not be
@@ -104,37 +114,28 @@ class OptimizerWrapper:
                 loss_factor = self.cumulative_iters
             else:
                 loss_factor = self.remainder_iters
-            assert loss_factor != 0, (
-                'loss_factor should not be zero! This error could happened '
-                'when message_hub update with an error `iter` or `max_iters`, '
-                'please check your loop')
-        else:
-            # update parameters without gradient accumulation. The gradient
-            # should not be rescaled and `loss_factor=1`.
-            loss_factor = 1
+            assert loss_factor > 0, (
+                'loss_factor should be larger than zero! This error could '
+                'happened when gradient accumulation context enabled with an '
+                'error `cur_iter` or `max_iters` please check your loop')
+
         loss = loss / loss_factor
-        self.backward(loss, model)
+        self.backward(loss)
         # Update parameters only if `self.cur_iter` is divisible by
         # `self.cumulative_iters` or `self.cur_iter` equals to
         # `self.max_iters`
         if self._should_update(self.cur_iter, self.max_iters):
-            if self.grad_clip:
-                self._clip_grads()
+            if self.clip_grad_kwargs:
+                self._clip_grad()
             self.step()
             self.zero_grad()
 
-    def backward(self,
-                 loss: torch.Tensor,
-                 model: Optional[nn.Module] = None) -> None:
-        """Perform gradient backpropagation.
+    def backward(self, loss: torch.Tensor) -> None:
+        """Perform gradient back propagation.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
-            model (nn.Module, optional): The training model.
         """
-        if self.detect_anomalous_params:
-            assert model is not None
-            self._detect_anomalous_params(loss, model)
         loss.backward()
 
     def zero_grad(self) -> None:
@@ -147,16 +148,14 @@ class OptimizerWrapper:
     def step(self) -> None:
         """A wrapper of ``Optimizer.step``.
 
-        Update the parameters in
-        :attr:`optimizer`
+        Update the parameters in :attr:`optimizer`
         """
         self.optimizer.step()
 
     def state_dict(self) -> dict:
         """A wrapper of ``Optimizer.state_dict``.
 
-        Return the state dict of
-        :attr:`optimizer`.
+        Return the state dict of :attr:`optimizer`.
         """
         return self.optimizer.state_dict()
 
@@ -178,8 +177,8 @@ class OptimizerWrapper:
         return self.optimizer.param_groups
 
     @contextmanager
-    def gradient_accumulation(self, model: nn.Module, cur_iter: int,
-                              max_iters: int) -> None:
+    def accumulate_grad(self, model: nn.Module, cur_iter: int,
+                        max_iters: int) -> None:
         """A Context manager for gradient accumulation and avoiding unnecessary
         gradient synchronization during gradient accumulation.
 
@@ -203,21 +202,21 @@ class OptimizerWrapper:
         self.max_iters = max_iters
         if not hasattr(self, 'divisible_iters'):
             self._iter_status_initialized(model)
-        if not self._should_update(cur_iter, max_iters):
-            if isinstance(model, DistributedDataParallel):
-                with model.no_sync():
-                    yield None
-            else:
-                yield None
+        # During gradient accumulation process, the gradient synchronize
+        # should only happen before updating parameters.
+        if (not self._should_update(cur_iter, max_iters)
+                and hasattr(model, 'no_sync')):
+            with model.no_sync():
+                yield
         else:
-            yield None
+            yield
 
     @contextmanager
     def precision_context(self) -> None:
         """precision context, default enable an empty context."""
-        yield None
+        yield
 
-    def _clip_grads(self) -> None:
+    def _clip_grad(self) -> None:
         """Clip the gradients of parameters."""
         params: List[torch.Tensor] = []
         for param_group in self.optimizer.param_groups:
@@ -226,43 +225,9 @@ class OptimizerWrapper:
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            grad_norm = clip_grad.clip_grad_norm_(params, **self.grad_clip)
+            grad_norm = clip_grad.clip_grad_norm_(params,
+                                                  **self.clip_grad_kwargs)
             self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
-
-    def _detect_anomalous_params(self, loss: torch.Tensor,
-                                 model: nn.Module) -> None:
-        """Detect anomalous parameters that are not included in the graph.
-
-        Args:
-            loss (torch.Tensor): The loss of current iteration.
-            model (nn.Module): Training model.
-        """
-        parameters_in_graph = set()
-        visited = set()
-
-        # Traverse the grad function of loss and detects all
-        # parameters participating in the forward inference
-        def traverse(grad_fn):
-            if grad_fn is None:
-                return
-            if grad_fn not in visited:
-                visited.add(grad_fn)
-                if hasattr(grad_fn, 'variable'):
-                    parameters_in_graph.add(grad_fn.variable)
-                parents = grad_fn.next_functions
-                if parents is not None:
-                    for parent in parents:
-                        grad_fn = parent[0]
-                        traverse(grad_fn)
-
-        traverse(loss.grad_fn)
-        # Detect parameters that do not appear in the graph.
-        for n, p in model.named_parameters():
-            if p not in parameters_in_graph and p.requires_grad:
-                self.logger.log(
-                    level=logging.ERROR,
-                    msg=f'{n} with shape {p.size()} is not '
-                    f'in the computational graph \n')
 
     def _iter_status_initialized(self, model: nn.Module) -> None:
         """Initialize gradient accumulation related attributes.
@@ -277,7 +242,7 @@ class OptimizerWrapper:
                 'some iters is lost and the result may be influenced slightly.'
             )
 
-        if self._has_batch_norm(model) and self.cumulative_iters > 1:
+        if has_batch_norm(model) and self.cumulative_iters > 1:
             self.logger.warning(
                 'Gradient accumulative may slightly decrease '
                 'performance if the model has BatchNorm layers.')
@@ -288,22 +253,6 @@ class OptimizerWrapper:
             residual_iters // self.cumulative_iters * self.cumulative_iters)
         # Remainder of ``self.max_iters`` divided by ``self.max_iters``
         self.remainder_iters = residual_iters - self.divisible_iters
-
-    def _has_batch_norm(self, model: nn.Module) -> bool:
-        """Detect whether model has a BatchNormalization layer.
-
-        Args:
-            model (nn.Module): training model.
-
-        Returns:
-            bool: whether model has a BatchNormalization layer
-        """
-        if isinstance(model, _BatchNorm):
-            return True
-        for m in model.children():
-            if self._has_batch_norm(m):
-                return True
-        return False
 
     def _should_update(self, cur_iter: int, max_iters: int) -> bool:
         """Should optimizer_wrapper update parameters or synchronized gradient
@@ -359,108 +308,60 @@ class AmpOptimizerWrapper(OptimizerWrapper):
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", got {loss_scale}')
 
-    def backward(self, loss: torch.Tensor, model: Optional[nn.Module] = None):
+    def backward(self, loss: torch.Tensor):
         """Perform gradient backpropagation with :attr:`loss_scalar`.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
-            model (nn.Module): The training model.
         """
-        if self.detect_anomalous_params:
-            assert model is not None
-            self._detect_anomalous_params(loss, model)
         self.loss_scalar.scale(loss).backward()
         self.loss_scalar.unscale_(self.optimizer)
 
     def step(self):
         """Update parameters with :attr:`loss_scalar`."""
-        if self.grad_clip:
-            self._clip_grads()
+        if self.clip_grad_kwargs:
+            self._clip_grad()
         self.loss_scalar.step(self.optimizer)
         self.loss_scalar.update(self._scale_update_param)
 
     def state_dict(self) -> dict:
-        """Get the state dict of :attr:`optimizer` and :attr:`loss_scalar`. The
-        key of :attr:`loss_scalar` will be added with the prefix
-        "loss_scalar.".
+        """Get the state dictionary of :attr:`optimizer` and
+        :attr:`loss_scalar`.
+
+        based on the state dictionary of optimizer, The returned state
+        dictionary will add a key named "loss_scalar".
 
         Returns:
             dict: The merged state dict of :attr:`loss_scalar` and
             :attr:`optimizer`.
         """
         # save state_dict of loss_scalar
-        optim_state_dict = self.optimizer.state_dict()
-        for key, value in self.loss_scalar.state_dict().items():
-            key = f'loss_scalar.{key}'
-            optim_state_dict[key] = value
-        return optim_state_dict
+        state_dict = self.optimizer.state_dict()
+        state_dict['loss_scalar'] = self.loss_scalar.state_dict()
+        return state_dict
 
     def load_state_dict(self, state_dict: dict):
-        """Load and parse the state dict of :attr:`optimizer` and
+        """Load and parse the state dictionary of :attr:`optimizer` and
         :attr:`loss_scalar`.
 
         If state_dict contains the key starts with "loss_scalar.", the
         :attr:`loss_scalar` will load the corresponding keys. Otherwise only
-        the :attr:`optimizer` will load the state dict.
+        the :attr:`optimizer` will load the state dictionary.
 
         Args:
             state_dict (dict): The state dict of :attr:`optimizer` and
                 :attr:`loss_scalar`
         """
-        loss_scalar_dict = dict()
-        for key in list(state_dict.keys()):
-            if key.startswith('loss_scalar.'):
-                ori_key = key.replace('loss_scalar.', '')
-                loss_scalar_dict[ori_key] = state_dict.pop(key)
-
-        # Load an empty loss_scalar_dict will raise RuntimeError.
-        if loss_scalar_dict:
-            self.loss_scalar.load_state_dict(loss_scalar_dict)
+        if 'loss_scalar' in state_dict:
+            self.loss_scalar.load_state_dict(state_dict.pop('loss_scalar'))
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
     def precision_context(self) -> None:
         """A wrapper of ``torch.autocast``"""
         if torch.cuda.is_available():
-            with torch.autocast('cuda'):
-                yield None
+            device = 'cuda'
         else:
-            with torch.autocast('cpu'):
-                yield None
-
-
-@contextmanager
-def multi_optims_gradient_accumulation(
-        optimizer_wrapper: Union[dict, OptimizerWrapper],
-        model: nn.Module,
-        cur_iter: int,
-        max_iters: int) -> None:
-    """A context manager that enables ``gradient_accumulation`` context
-    compatible with multiple optimizer wrappers.
-
-    If ``optimizer_wrapper`` is a :obj:`OptimizerWrapper` instance,
-    the ``gradient_accumulation`` context will be enabled.
-    If ``optimizer_wrapper`` is a dictionary of ``OptimizerWrapper``, enable
-    an empty context. The ``gradient_accumulation`` should be enabled in
-    ``train_step`` of :obj:`BaseModel`
-
-    Args:
-        optimizer_wrapper (dict or OptimizerWrapper): Single or multiple
-            OptimizerWrapper instances which need to enable
-            ``gradient_accumulation`` context.
-        model (nn.Module): The training model.
-        cur_iter (int): current training iteration.
-        max_iters (int): Maximum training iteration.
-    """
-    if isinstance(optimizer_wrapper, OptimizerWrapper):
-        with optimizer_wrapper.gradient_accumulation(
-                model, cur_iter, max_iters):
-            yield None
-    # If `optimizer_wrapper` is a dict, we should make sure all
-    # `optimizer_wrapper` have the same `cumulative_iters`, and they will
-    # have the same gradient accumulative behavior.
-    elif isinstance(optimizer_wrapper, dict):
-        yield None
-    else:
-        raise TypeError('optimizer_wrapper should be `OptimizerWrapper`,'
-                        f'but got {type(optimizer_wrapper)}')
+            device = 'cpu'
+        with torch.autocast(device):
+            yield
