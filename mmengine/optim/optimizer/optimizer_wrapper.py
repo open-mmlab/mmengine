@@ -178,7 +178,7 @@ class OptimizerWrapper:
 
     @contextmanager
     def accumulate_grad(self, model: nn.Module, cur_iter: int,
-                        max_iters: int) -> None:
+                        max_iters: int):
         """A Context manager for gradient accumulation and avoiding unnecessary
         gradient synchronization during gradient accumulation.
 
@@ -212,7 +212,7 @@ class OptimizerWrapper:
             yield
 
     @contextmanager
-    def precision_context(self) -> None:
+    def precision_context(self):
         """precision context, default enable an empty context."""
         yield
 
@@ -357,7 +357,7 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
-    def precision_context(self) -> None:
+    def precision_context(self):
         """A wrapper of ``torch.autocast``"""
         if torch.cuda.is_available():
             device = 'cuda'
