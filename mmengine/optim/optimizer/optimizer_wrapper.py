@@ -177,8 +177,7 @@ class OptimizerWrapper:
         return self.optimizer.param_groups
 
     @contextmanager
-    def accumulate_grad(self, model: nn.Module, cur_iter: int,
-                        max_iters: int):
+    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
         """A Context manager for gradient accumulation and avoiding unnecessary
         gradient synchronization during gradient accumulation.
 
