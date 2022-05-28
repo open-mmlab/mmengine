@@ -233,8 +233,9 @@ class DefaultOptimizerConstructor:
                     if key == 'params':
                         continue
                     full_name = f'{prefix}.{name}' if prefix else name
-                    print_log(f'paramwise_options -- \
-                        {full_name}:{key}={value}',logger = 'current')
+                    print_log(
+                        f'paramwise_options -- {full_name}:{key}={value}',
+                        logger='current')
 
         if mmcv_full_available():
             from mmcv.ops import DeformConv2d, ModulatedDeformConv2d
