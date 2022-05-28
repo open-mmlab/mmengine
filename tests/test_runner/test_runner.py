@@ -214,7 +214,7 @@ class TestRunner(TestCase):
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
             train_cfg=dict(by_epoch=True, max_epochs=3),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=1),
             test_cfg=dict(),
             custom_hooks=[],
             default_hooks=dict(
@@ -404,7 +404,7 @@ class TestRunner(TestCase):
             train_dataloader=train_dataloader,
             optimizer=optimizer,
             param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
-            val_cfg=dict(interval=1),
+            val_cfg=dict(interval=1, begin=1),
             val_dataloader=val_dataloader,
             val_evaluator=ToyMetric1(),
             test_cfg=dict(),
@@ -767,12 +767,12 @@ class TestRunner(TestCase):
             runner.build_test_loop('invalid-type')
 
         # input is a dict and contains type key
-        cfg = dict(type='ValLoop', interval=1)
+        cfg = dict(type='ValLoop', interval=1, begin=1)
         loop = runner.build_test_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
         # input is a dict but does not contain type key
-        cfg = dict(interval=1)
+        cfg = dict(interval=1, begin=1)
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
@@ -851,13 +851,16 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.train()
 
-        # 2. test iter and epoch counter of EpochBasedTrainLoop
+        # 2. test iter and epoch counter of EpochBasedTrainLoop and timing of
+        # running ValLoop
         epoch_results = []
         epoch_targets = [i for i in range(3)]
         iter_results = []
         iter_targets = [i for i in range(4 * 3)]
         batch_idx_results = []
         batch_idx_targets = [i for i in range(4)] * 3  # train and val
+        val_epoch_results = []
+        val_epoch_targets = [i for i in range(2, 4)]
 
         @HOOKS.register_module()
         class TestEpochHook(Hook):
@@ -869,9 +872,13 @@ class TestRunner(TestCase):
                 iter_results.append(runner.iter)
                 batch_idx_results.append(batch_idx)
 
+            def before_val_epoch(self, runner):
+                val_epoch_results.append(runner.epoch)
+
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train2'
         cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
+        cfg.val_cfg = dict(begin=2)
         runner = Runner.from_cfg(cfg)
 
         runner.train()
@@ -884,13 +891,20 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
             self.assertEqual(result, target)
+        for result, target, in zip(val_epoch_results, val_epoch_targets):
+            self.assertEqual(result, target)
 
-        # 3. test iter and epoch counter of IterBasedTrainLoop
+        # 3. test iter and epoch counter of IterBasedTrainLoop and timing of
+        # running ValLoop
         epoch_results = []
         iter_results = []
         batch_idx_results = []
+        val_iter_results = []
+        val_batch_idx_results = []
         iter_targets = [i for i in range(12)]
         batch_idx_targets = [i for i in range(12)]
+        val_iter_targets = [i for i in range(4, 12)]
+        val_batch_idx_targets = [i for i in range(4)] * 2
 
         @HOOKS.register_module()
         class TestIterHook(Hook):
@@ -902,10 +916,14 @@ class TestRunner(TestCase):
                 iter_results.append(runner.iter)
                 batch_idx_results.append(batch_idx)
 
+            def before_val_iter(self, runner, batch_idx, data_batch=None):
+                val_epoch_results.append(runner.iter)
+                val_batch_idx_results.append(batch_idx)
+
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train3'
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.val_cfg = dict(interval=4)
+        cfg.val_cfg = dict(interval=4, begin=4)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -916,6 +934,11 @@ class TestRunner(TestCase):
         for result, target, in zip(iter_results, iter_targets):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_iter_results, val_iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_batch_idx_results,
+                                   val_batch_idx_targets):
             self.assertEqual(result, target)
 
     def test_val(self):
