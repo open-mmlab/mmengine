@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
-from typing import List
+from typing import List, Union
 
 import torch
 import torch.nn as nn
 
-from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
-from .optimizer_wrapper import OptimizerWrapper
+from mmengine.config import Config, ConfigDict
+from mmengine.registry import OPTIMIZERS, OPTIMIZERWRAPPER_CONSTRUCTORS
+from .composed_optimizer_wrapper import OptimizerWrapper
 
 
 def register_torch_optimizers() -> List[str]:
@@ -31,29 +32,32 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def build_optimizer_wrapper(model: nn.Module, cfg: dict) -> OptimizerWrapper:
-    """Build function of optimizer.
+def build_optimizer_wrapper(
+        model: nn.Module, cfg: Union[dict, Config,
+                                     ConfigDict]) -> OptimizerWrapper:
+    """Build function of OptimizerWrapper.
 
     If ``constructor`` is set in the ``cfg``, this method will build an
-    optimizer constructor, and use optimizer constructor to build the
-    optimizer. If ``constructor`` is not set, the
-    ``DefaultOptimizerConstructor`` will be used by default.
+    optimizer wrapper constructor, and use optimizer wrapper constructor to
+    build the optimizer wrapper. If ``constructor`` is not set, the
+    ``DefaultOptimizerWrapperConstructor`` will be used by default.
 
     Args:
         model (nn.Module): Model to be optimized.
-        cfg (dict): Config of optimizer and optimizer constructor.
+        cfg (dict): Config of optimizer, optimizer_wrapper and optimizer
+            constructor.
 
     Returns:
-        torch.optim.Optimizer: The built optimizer.
+        OptimizerWrapper: The built optimizer wrapper.
     """
     optimizer_cfg = copy.deepcopy(cfg)
     constructor_type = optimizer_cfg.pop('constructor',
-                                         'DefaultOptimizerConstructor')
+                                         'DefaultOptimizerWrapperConstructor')
     paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
-    optim_constructor = OPTIMIZER_CONSTRUCTORS.build(
+    optim_wrapper_constructor = OPTIMIZERWRAPPER_CONSTRUCTORS.build(
         dict(
             type=constructor_type,
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg))
-    optimizer = optim_constructor(model)
-    return optimizer
+    optimizer_wrapper = optim_wrapper_constructor(model)
+    return optimizer_wrapper

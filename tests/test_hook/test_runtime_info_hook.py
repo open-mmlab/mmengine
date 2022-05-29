@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 from mmengine.hooks import RuntimeInfoHook
 from mmengine.logging import MessageHub
+from mmengine.optim import OptimizerWrapper, OptimizerWrapperDict
 
 
 class TestRuntimeInfoHook(TestCase):
@@ -47,16 +48,39 @@ class TestRuntimeInfoHook(TestCase):
         self.assertEqual(message_hub.get_info('epoch'), 9)
 
     def test_before_train_iter(self):
+        # single optimizer
         message_hub = MessageHub.get_instance(
             'runtime_info_hook_test_before_train_iter')
         runner = Mock()
         runner.iter = 9
+        runner.optimizer_wrapper = Mock(spec=OptimizerWrapper)
         runner.optimizer_wrapper.param_groups = [{'lr': 0.01}]
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
         self.assertEqual(message_hub.get_info('iter'), 9)
         self.assertEqual(message_hub.get_scalar('train/lr').current(), 0.01)
+
+        # multiple optimizers
+        message_hub = MessageHub.get_instance(
+            'runtime_info_hook_test_before_train_iter')
+        runner = Mock()
+        runner.iter = 9
+        optimizer1 = Mock()
+        optimizer1.param_groups = [{'lr': 0.01}]
+        optimizer2 = Mock()
+        optimizer2.param_groups = [{'lr': 0.02}]
+        runner.message_hub = message_hub
+        runner.optimizer_wrapper = Mock(spec=OptimizerWrapperDict)
+        runner.optimizer_wrapper.items = Mock(
+            return_value=[['key1', optimizer1], ['key2', optimizer2]])
+        hook = RuntimeInfoHook()
+        hook.before_train_iter(runner, batch_idx=2, data_batch=None)
+        self.assertEqual(message_hub.get_info('iter'), 9)
+        self.assertEqual(
+            message_hub.get_scalar('train/key1.lr').current(), 0.01)
+        self.assertEqual(
+            message_hub.get_scalar('train/key2.lr').current(), 0.02)
 
     def test_after_train_iter(self):
         message_hub = MessageHub.get_instance(

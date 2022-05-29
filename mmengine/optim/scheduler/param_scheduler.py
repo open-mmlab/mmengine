@@ -13,6 +13,8 @@ from mmengine.registry import PARAM_SCHEDULERS
 
 INF = int(1e9)
 
+OptimizerType = Union[OptimizerWrapper, Optimizer]
+
 
 class _ParamScheduler:
     """Base class for parameter schedulers.
@@ -41,7 +43,7 @@ class _ParamScheduler:
     """  # noqa: E501
 
     def __init__(self,
-                 optimizer: Union[OptimizerWrapper, Optimizer],
+                 optimizer: OptimizerType,
                  param_name: str,
                  begin: int = 0,
                  end: int = INF,
@@ -236,7 +238,7 @@ class StepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[OptimizerWrapper, Optimizer],
+                 optimizer: OptimizerType,
                  param_name: str,
                  step_size: int,
                  gamma: float = 0.1,
@@ -322,7 +324,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[OptimizerWrapper, Optimizer],
+                 optimizer: OptimizerType,
                  param_name: str,
                  milestones: List[int],
                  gamma: float = 0.1,
@@ -409,7 +411,7 @@ class ConstantParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[OptimizerWrapper, Optimizer],
+                 optimizer: OptimizerType,
                  param_name: str,
                  factor: float = 1.0 / 3,
                  begin: int = 0,
@@ -495,7 +497,7 @@ class ExponentialParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[OptimizerWrapper, Optimizer],
+                 optimizer: OptimizerType,
                  param_name: str,
                  gamma: float,
                  begin: int = 0,

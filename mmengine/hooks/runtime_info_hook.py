@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence
 
+from mmengine.optim import OptimizerWrapper, OptimizerWrapperDict
 from mmengine.registry import HOOKS
 from .hook import Hook
 
@@ -41,8 +42,15 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer_wrapper.param_groups[0]['lr'])
+        if isinstance(runner.optimizer_wrapper, OptimizerWrapper):
+            runner.message_hub.update_scalar(
+                'train/lr', runner.optimizer_wrapper.param_groups[0]['lr'])
+        else:
+            assert isinstance(runner.optimizer_wrapper, OptimizerWrapperDict)
+            for name, optimizer_wrapper in runner.optimizer_wrapper.items():
+                runner.message_hub.update_scalar(
+                    f'train/{name}.lr',
+                    optimizer_wrapper.param_groups[0]['lr'])
 
     def after_train_iter(self,
                          runner,
