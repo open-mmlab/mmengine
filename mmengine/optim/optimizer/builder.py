@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
 from mmengine.registry import OPTIMIZERS, OPTIMIZERWRAPPER_CONSTRUCTORS
-from .composed_optimizer_wrapper import OptimizerWrapper
+from .optimizer_wrapper_dict import OptimizerWrapper
 
 
 def register_torch_optimizers() -> List[str]:

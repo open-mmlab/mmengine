@@ -1,6 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
+from contextlib import ExitStack, contextmanager
 from typing import Dict, Iterator, Tuple
+
+import torch.nn as nn
 
 from .optimizer_wrapper import OptimizerWrapper
 
@@ -8,24 +11,17 @@ from .optimizer_wrapper import OptimizerWrapper
 class OptimizerWrapperDict:
     """A dictionary container of :obj:`OptimizerWrapper`.
 
-    An :obj:`OptimizerWrapperDict` instance is composed by a dictionary of
-    :obj:`OptimizerWrapper`, and can be accessed just like a dictionary. All
-    optimizer wrapper instance should have the same type and all
-    instance in the dictionary will call corresponding methods when
-    :meth:`step`, :meth:`zero_gard`, and :meth:`update_params` of
-    :obj:`OptimizerWrapper` is called.
+    If runner is training with multiple optimizers,
+    ``runner.optimizer_wrapper`` is an ``OptimizerWrapperDict`` instance, which
+    is built by ``CustomOptimizerWrapperConstructor``.
 
-    Warning:
-        :obj:`OptimizerWrapperDict` will only call :meth:`backward` of the
-        first instance in dictionary. Since the gradient back propagation
-        process is only related to the ``loss`` itself, but not to the
-        optimizer.
+    The ``OptimizerWrapper`` instance contained in ``OptimizerWrapperDict``
+    can be accessed in the same way as `dict`.
 
-    Warning:
-        :obj:`OptimizerWrapperDict` cannot enable a gradient accumulation
-        context. The gradient accumulation should be
-        enabled by accessing the corresponding :obj:`OptimizerWrapper`
-        instance and call its :meth:`accumulate_grad`.
+    Consider runner and loop will call the following methods of
+    ``OptimizerWrapper``: ``state_dict``, ``load_state_dict`` and
+    ``accumulate_grad``. ``OptimizerWrapperDict`` implements these methods to
+    make it compatible with single optimizer training.
 
     Args:
         optimizer_wrappers (Dict[str, OptimizerWrapper]): A dictionary of
@@ -48,6 +44,31 @@ class OptimizerWrapperDict:
                     f'optimizer wrappers. You should access the corresponding '
                     f'optimizer wrapper to enable the context.')
         self.optimizer_wrappers = optimizer_wrappers
+
+    @contextmanager
+    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
+        """Enable ``accumulate_grad`` contexts of all optimizer wrappers.
+
+        Warning:
+            Consider there is only single ``model`` arguments for all
+            optimizer wrappers, all optimizer wrappers are working under the
+            same ``model.no_sync`` context. For example, there is a model
+            composed of model_a(optimizer_a) and model_b(optimizer_b).
+            ``OptimizerWrapperDict.accumulate_grad`` will further
+            call ``model.no_sync``, which will block the gradient
+            synchronization of both a and b. If optimizer_a and
+            optimizer_b have different ``accumulative_iters``, and want to
+            block the gradient synchronization of model_a and model_b
+            separately, the model should not implement the ``no_sync``
+            method(or enable an empty context). The ``accumulate_grad`` context
+            should be enabled inside the model by accessing corresponding
+            optimizer wrapper.
+        """
+        with ExitStack() as stack:
+            for optim_wrapper in self.optimizer_wrappers.values():
+                stack.enter_context(
+                    optim_wrapper.accumulate_grad(model, cur_iter, max_iters))
+            yield
 
     def load_state_dict(self, state_dict: dict) -> None:
         """Load the state dictionary from the ``state_dict``.
