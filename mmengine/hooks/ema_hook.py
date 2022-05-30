@@ -70,18 +70,20 @@ class EMAHook(Hook):
 
     def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """Save ema parameters to checkpoint."""
-        # save ema parameters to the source model's state dict so that we can
-        # directly load the averaged model weights for deployment.
-        self._swap_ema_parameters()
         checkpoint['ema_state_dict'] = self.ema_model.state_dict()
-        self._swap_ema_parameters()
+        # Save ema parameters to the source model's state dict so that we can
+        # directly load the averaged model weights for deployment.
+        # Swapping the state_dict key-values instead of swapping model
+        # parameters because the state_dict is a shallow copy of model
+        # parameters.
+        self._swap_ema_state_dict(checkpoint)
 
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Resume ema parameters from checkpoint."""
-        self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
         # The original model parameters are actually saved in ema field.
         # swap the weights back to resume ema state.
-        self._swap_ema_parameters()
+        self._swap_ema_state_dict(checkpoint)
+        self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
@@ -98,3 +100,13 @@ class EMAHook(Hook):
             tmp = p_avg.data.clone()
             p_avg.data.copy_(p_src.data)
             p_src.data.copy_(tmp)
+
+    def _swap_ema_state_dict(self, checkpoint):
+        """Swap the state dict values of model with ema_model."""
+        model_state = checkpoint['state_dict']
+        ema_state = checkpoint['ema_state_dict']
+        for k in ema_state:
+            if k[:7] == 'module.':
+                tmp = ema_state[k]
+                ema_state[k] = model_state[k[7:]]
+                model_state[k[7:]] = tmp
