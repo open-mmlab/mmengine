@@ -69,7 +69,7 @@ class BaseModel(nn.Module):
 
     def train_step(self, data: List[dict],
                    optimizer_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """Implement the default model parameter update process。
+        """Implement the default model parameter update process.
 
         During non-distributed training.If subclass does not override the
         :meth:`train_step`, :class:`EpochBasedTrainLoop` or
@@ -157,9 +157,14 @@ class BaseModel(nn.Module):
 
         return loss, log_vars
 
-    def to(self, device, *args, **kwargs) -> nn.Module:
+    def to(self, device: Optional[Union[int, torch.device]], *args,
+           **kwargs) -> nn.Module:
         """Override this method to set the ``device`` attribute of
         :obj:`BaseDataPreprocessor` additionally
+
+        Args:
+            device (int or torch.device, optional): the desired device of the
+                parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
