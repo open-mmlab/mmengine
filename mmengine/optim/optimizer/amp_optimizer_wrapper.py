@@ -16,10 +16,10 @@ class AmpOptimWrapper(OptimWrapper):
 
     ``AmpOptimWrapper`` provides a unified interface with
     ``OptimWrapper``, so ``AmpOptimWrapper`` and ``OptimWrapper`` can be
-    used in the same way with ``OptimizerWrapper``.
+    used in the same way with ``OptimWrapper``.
 
     Warnings:
-        ``AmpOptimizerWrapper`` requires PyTorch >= 1.6.
+        ``AmpOptimWrapper`` requires PyTorch >= 1.6.
 
     Args:
         loss_scale (float or str or dict): The initial configuration of
@@ -30,7 +30,7 @@ class AmpOptimWrapper(OptimWrapper):
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
 
-        **kwargs: Keyword arguments passed to OptimizerWrapper.
+        **kwargs: Keyword arguments passed to OptimWrapper.
     """
 
     def __init__(self, loss_scale=512., **kwargs):
@@ -60,12 +60,12 @@ class AmpOptimWrapper(OptimWrapper):
             loss (torch.Tensor): The loss of current iteration.
         """
         self.loss_scaler.scale(loss).backward()
-        self.loss_scaler.unscale_(self.optimizer)
 
     def step(self):
         """Update parameters with :attr:`loss_scaler`."""
         if self.clip_grad_kwargs:
             self._clip_grad()
+        self.loss_scaler.unscale_(self.optimizer)
         self.loss_scaler.step(self.optimizer)
         self.loss_scaler.update(self._scale_update_param)
 
