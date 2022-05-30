@@ -99,9 +99,9 @@ class TopGANModel(BaseModel):
 @MODEL_WRAPPERS.register_module()
 class CustomModelWrapper(nn.Module):
 
-    def __init__(self, model):
+    def __init__(self, module):
         super().__init__()
-        self.model = model
+        self.model = module
 
 
 @OPTIM_WRAPPER_CONSTRUCTORS.register_module()
