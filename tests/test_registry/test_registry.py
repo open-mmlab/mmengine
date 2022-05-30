@@ -4,16 +4,8 @@ import time
 import pytest
 
 from mmengine.config import Config, ConfigDict  # type: ignore
-from mmengine.registry import RUNNERS, DefaultScope, Registry, build_from_cfg
-from mmengine.runner import Runner
+from mmengine.registry import DefaultScope, Registry, build_from_cfg
 from mmengine.utils import ManagerMixin
-
-
-@RUNNERS.register_module()
-class CustomRunner(Runner):
-
-    def setup_env(env_cfg):
-        pass
 
 
 class TestRegistry:
@@ -515,13 +507,3 @@ def test_build_from_cfg(cfg_type):
     cfg = dict(type='Visualizer', name='visualizer')
     build_from_cfg(cfg, VISUALIZER)
     Visualizer.get_current_instance()
-
-
-def test_build_runner():
-    runner_type = 'CustomRunner'
-    assert RUNNERS.build(runner_type) is CustomRunner
-    assert RUNNERS.build(CustomRunner) is CustomRunner
-    with pytest.raises(
-            TypeError,
-            match="type must be a str or valid type, but got <class 'int'>"):
-        RUNNERS.build(0)

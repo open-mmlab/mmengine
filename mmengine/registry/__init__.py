@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .default_scope import DefaultScope
-from .registry import Registry, build_from_cfg, build_runner
+from .registry import Registry, build_from_cfg, build_runner_from_cfg
 from .root import (DATA_SAMPLERS, DATASETS, HOOKS, LOG_PROCESSORS, LOOPS,
                    METRICS, MODEL_WRAPPERS, MODELS, OPTIMIZER_CONSTRUCTORS,
                    OPTIMIZERS, PARAM_SCHEDULERS, RUNNER_CONSTRUCTORS, RUNNERS,
@@ -14,5 +14,5 @@ __all__ = [
     'OPTIMIZERS', 'OPTIMIZER_CONSTRUCTORS', 'TASK_UTILS', 'PARAM_SCHEDULERS',
     'METRICS', 'MODEL_WRAPPERS', 'LOOPS', 'VISBACKENDS', 'VISUALIZERS',
     'LOG_PROCESSORS', 'DefaultScope', 'traverse_registry_tree',
-    'count_registered_modules', 'build_runner'
+    'count_registered_modules', 'build_runner_from_cfg'
 ]

@@ -10,42 +10,111 @@ from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
 
-def build_runner(runner: Union[str, Type],
-                 registry: 'Registry') -> Optional[Type]:
-    """Build a Runner Class.
+def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
+                          registry: 'Registry') -> Any:
+    """Build a Runner object.
     Examples:
-        >>> from mmengine import Registry, build_runner
-        >>> RUNNERS = Registry('runners', build_runner)
+        >>> from mmengine import Registry, build_runner_from_cfg
+        >>> RUNNERS = Registry('runners', build_runner_from_cfg)
         >>> @RUNNERS.register_module()
         >>> class CustomRunner(Runner):
         >>>     def setup_env(env_cfg):
         >>>         pass
-        >>> runner='CustomRunner'
-        >>> custom_runner = RUNNERS.build(runner)
+        >>> cfg = dict(
+        >>>     runner_type='CustomRunner'
+        >>>     model=dict(type='ToyModel'),
+        >>>     work_dir='path/of/work_dir',
+        >>>     train_dataloader=dict(
+        >>>     dataset=dict(type='ToyDataset'),
+        >>>     sampler=dict(type='DefaultSampler', shuffle=True),
+        >>>     batch_size=1,
+        >>>     num_workers=0),
+        >>>     val_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>        batch_size=1,
+        >>>        num_workers=0),
+        >>>     test_dataloader=dict(
+        >>>         dataset=dict(type='ToyDataset'),
+        >>>         sampler=dict(type='DefaultSampler', shuffle=False),
+        >>>         batch_size=1,
+        >>>         num_workers=0),
+        >>>     optimizer=dict(type='SGD', lr=0.01),
+        >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
+        >>>     val_evaluator=dict(type='ToyEvaluator'),
+        >>>     test_evaluator=dict(type='ToyEvaluator'),
+        >>>     train_cfg=dict(by_epoch=True, max_epochs=3),
+        >>>     val_cfg=dict(interval=1),
+        >>>     test_cfg=dict(),
+        >>>     custom_hooks=[],
+        >>>     default_hooks=dict(
+        >>>         timer=dict(type='IterTimerHook'),
+        >>>         checkpoint=dict(type='CheckpointHook', interval=1),
+        >>>         logger=dict(type='LoggerHook'),
+        >>>         optimizer=dict(type='OptimizerHook', grad_clip=False),
+        >>>         param_scheduler=dict(type='ParamSchedulerHook')),
+        >>>     launcher='none',
+        >>>     env_cfg=dict(dist_cfg=dict(backend='nccl')),
+        >>>     log_processor=dict(window_size=20),
+        >>>     visualizer=dict(type='Visualizer',
+        >>>     vis_backends=[dict(type='LocalVisBackend',
+        >>>                        save_dir='temp_dir')])
+        >>>    )
+        >>> custom_runner = RUNNERS.build(cfg)
 
     Args:
-        runner (str or Type): Str of runner type or custom runner class.
+        cfg (dict or ConfigDict or Config): Config dict. It should at least
+            contain the key "runner_type".
         registry (:obj:`Registry`): The registry to search the type from.
 
     Returns:
-        Type or None: Return the corresponding class, otherwise return None.
+        object: The constructed object.
     """
-    if isinstance(runner, str):
-        runner_cls = registry.get(runner)
+    from ..logging.logger import MMLogger
+
+    assert isinstance(
+        cfg,
+        (dict, ConfigDict, Config
+         )), f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}'
+    assert 'runner_type' in cfg, ('cfg must contain the key "runner_type"',
+                                  f'but got {cfg}')
+    assert isinstance(
+        registry, Registry), ('registry should be a mmengine.Registry object',
+                              f'but got {type(registry)}')
+
+    args = cfg.copy()
+    obj_type = args.pop('runner_type')
+    if isinstance(obj_type, str):
+        runner_cls = registry.get(obj_type)
         if runner_cls is None:
             raise KeyError(
-                f'{runner} is not in the {registry.name} registry. '
-                f'Please check whether the value of `{runner}` is correct or'
+                f'{obj_type} is not in the {registry.name} registry. '
+                f'Please check whether the value of `{obj_type}` is correct or'
                 ' it was registered as expected. More details can be found at'
                 ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
             )
-        else:
-            return runner_cls
-    elif inspect.isclass(runner):
-        return runner
+    elif inspect.isclass(obj_type):
+        runner_cls = obj_type
     else:
         raise TypeError(
-            f'type must be a str or valid type, but got {type(runner)}')
+            f'type must be a str or valid type, but got {type(obj_type)}')
+
+    try:
+        runner = runner_cls.from_cfg(args)  # type: ignore
+        logger: MMLogger = MMLogger.get_current_instance()
+        logger.info(
+            f'An `{runner_cls.__name__}` instance is built '  # type: ignore
+            f'from registry, its implementation can be found in'
+            f'{runner_cls.__module__}')  # type: ignore
+        return runner
+
+    except Exception as e:
+        # Normal TypeError does not print class name.
+        cls_location = '/'.join(
+            runner_cls.__module__.split('.'))  # type: ignore
+        raise type(e)(
+            f'class `{runner_cls.__name__}` in '  # type: ignore
+            f'{cls_location}.py: {e}')
 
 
 def build_from_cfg(
