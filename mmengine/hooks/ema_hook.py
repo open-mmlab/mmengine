@@ -71,8 +71,11 @@ class EMAHook(Hook):
     def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """Save ema parameters to checkpoint."""
         checkpoint['ema_state_dict'] = self.ema_model.state_dict()
-        # save ema parameters to the source model's state dict so that we can
+        # Save ema parameters to the source model's state dict so that we can
         # directly load the averaged model weights for deployment.
+        # Swapping the state_dict key-values instead of swapping model
+        # parameters because the state_dict is a shallow copy of model
+        # parameters.
         self._swap_ema_state_dict(checkpoint)
 
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
