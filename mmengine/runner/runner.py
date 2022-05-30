@@ -815,7 +815,7 @@ class Runner:
 
         Examples:
             >>> # build an optimizer
-            >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
+            >>> optim_cfg = dict(type='SGD', lr=0.01)
             >>> optimizer = runner.build_optimizer(optim_cfg)
             >>> optimizer
             SGD (
