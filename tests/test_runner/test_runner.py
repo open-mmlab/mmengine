@@ -19,13 +19,13 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.optim import (AmpOptimizerWrapper,
-                            DefaultOptimizerWrapperConstructor, MultiStepLR,
-                            OptimizerWrapper, OptimizerWrapperDict, StepLR)
+from mmengine.optim import (AmpOptimWrapper, DefaultOptimWrapperConstructor,
+                            MultiStepLR, OptimWrapper, OptimWrapperDict,
+                            StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS,
-                               OPTIMIZERWRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
-                               Registry)
+                               OPTIMIZER_WRAPPER_CONSTRUCTORS,
+                               PARAM_SCHEDULERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -76,7 +76,7 @@ class CustomModelWrapper(nn.Module):
         self.model = model
 
 
-@OPTIMIZERWRAPPER_CONSTRUCTORS.register_module()
+@OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
 class ToyMultipleOptimizerConstructor:
 
     def __init__(self, optimizer_cfg, paramwise_cfg=None):
@@ -90,10 +90,10 @@ class ToyMultipleOptimizerConstructor:
         for key, cfg in self.optimizer_cfg.items():
             _cfg = cfg.copy()
             paramwise_cfg_ = _cfg.pop('paramwise_cfg', None)
-            self.constructors[key] = DefaultOptimizerWrapperConstructor(
+            self.constructors[key] = DefaultOptimWrapperConstructor(
                 _cfg, paramwise_cfg_)
 
-    def __call__(self, model: nn.Module) -> OptimizerWrapperDict:
+    def __call__(self, model: nn.Module) -> OptimWrapperDict:
         optimizers = {}
         while hasattr(model, 'module'):
             model = model.module
@@ -101,7 +101,7 @@ class ToyMultipleOptimizerConstructor:
         for key, constructor in self.constructors.items():
             module = getattr(model, key)
             optimizers[key] = constructor(module)
-        return OptimizerWrapperDict(optimizers)
+        return OptimWrapperDict(optimizers)
 
 
 @DATASETS.register_module()
@@ -404,7 +404,7 @@ class TestRunner(TestCase):
 
         self.assertIsInstance(runner._train_loop, BaseLoop)
         self.assertIsInstance(runner.train_dataloader, DataLoader)
-        self.assertIsInstance(runner.optimizer_wrapper, OptimizerWrapper)
+        self.assertIsInstance(runner.optimizer_wrapper, OptimWrapper)
         self.assertIsInstance(runner.optimizer, dict)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner._val_loop, BaseLoop)
@@ -633,15 +633,15 @@ class TestRunner(TestCase):
         # 1.2 input is a dict
         optimizer_wrapper = runner.build_optimizer_wrapper(
             dict(type='SGD', lr=0.01))
-        self.assertIsInstance(optimizer_wrapper, OptimizerWrapper)
+        self.assertIsInstance(optimizer_wrapper, OptimWrapper)
 
         # 1.3 build custom optimizer wrapper
         optimizer_wrapper = runner.build_optimizer_wrapper(
             dict(
                 type='SGD',
                 lr=0.01,
-                optimizer_wrapper=dict(type='AmpOptimizerWrapper')))
-        self.assertIsInstance(optimizer_wrapper, AmpOptimizerWrapper)
+                optimizer_wrapper=dict(type='AmpOptimWrapper')))
+        self.assertIsInstance(optimizer_wrapper, AmpOptimWrapper)
 
         # 2. test multiple optmizers
         # 2.1 input is a dict which contains multiple optimizer objects
@@ -649,7 +649,7 @@ class TestRunner(TestCase):
         optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
         optim_cfg = dict(key1=optimizer1, key2=optimizer2)
         optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
-        self.assertIsInstance(optimizer_wrapper, OptimizerWrapperDict)
+        self.assertIsInstance(optimizer_wrapper, OptimWrapperDict)
         self.assertIsInstance(optimizer_wrapper['key1'].optimizer, SGD)
         self.assertIsInstance(optimizer_wrapper['key2'].optimizer, Adam)
 
@@ -668,7 +668,7 @@ class TestRunner(TestCase):
             linear2=dict(type='Adam', lr=0.02),
             constructor='ToyMultipleOptimizerConstructor')
         optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
-        self.assertIsInstance(optimizer_wrapper, OptimizerWrapperDict)
+        self.assertIsInstance(optimizer_wrapper, OptimWrapperDict)
         self.assertIsInstance(optimizer_wrapper['linear1'].optimizer, SGD)
         self.assertIsInstance(optimizer_wrapper['linear2'].optimizer, Adam)
 
@@ -1413,7 +1413,7 @@ class TestRunner(TestCase):
         cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
-        self.assertIsInstance(runner.optimizer_wrapper, OptimizerWrapperDict)
+        self.assertIsInstance(runner.optimizer_wrapper, OptimWrapperDict)
         self.assertIsInstance(runner.optimizer_wrapper['linear1'].optimizer,
                               SGD)
         self.assertEqual(

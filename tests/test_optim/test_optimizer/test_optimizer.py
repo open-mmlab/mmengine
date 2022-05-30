@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
-from mmengine.optim import (OPTIMIZERS, OPTIMIZERWRAPPER_CONSTRUCTORS,
-                            DefaultOptimizerWrapperConstructor,
+from mmengine.optim import (OPTIMIZER_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
+                            DefaultOptimWrapperConstructor,
                             build_optimizer_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
@@ -233,10 +233,10 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
         optim_constructor_cfg = dict(
-            type='DefaultOptimizerWrapperConstructor',
+            type='DefaultOptimWrapperConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZERWRAPPER_CONSTRUCTORS.build(
+        optim_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
             optim_constructor_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         self._check_sgd_optimizer(optimizer_wrapper.optimizer, self.model,
@@ -249,8 +249,8 @@ class TestBuilder(TestCase):
             weight_decay=self.base_wd,
             momentum=self.momentum)
 
-        @OPTIMIZERWRAPPER_CONSTRUCTORS.register_module()
-        class MyOptimizerConstructor(DefaultOptimizerWrapperConstructor):
+        @OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
+        class MyOptimizerConstructor(DefaultOptimWrapperConstructor):
 
             def __call__(self, model):
                 if hasattr(model, 'module'):
@@ -273,7 +273,7 @@ class TestBuilder(TestCase):
             type='MyOptimizerConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZERWRAPPER_CONSTRUCTORS.build(
+        optim_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
             optim_constructor_cfg)
         optimizer = optim_constructor(self.model)
 
@@ -295,15 +295,14 @@ class TestBuilder(TestCase):
         with self.assertRaises(TypeError):
             # optimizer_cfg must be a dict
             optimizer_cfg = []
-            optim_constructor = DefaultOptimizerWrapperConstructor(
-                optimizer_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
             optim_constructor(self.model)
 
         with self.assertRaises(TypeError):
             # paramwise_cfg must be a dict or None
             optimizer_cfg = dict(lr=0.0001)
             paramwise_cfg = ['error']
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg, paramwise_cfg)
             optim_constructor(self.model)
 
@@ -312,7 +311,7 @@ class TestBuilder(TestCase):
             # is None
             optimizer_cfg = dict(lr=0.0001, weight_decay=None)
             paramwise_cfg = dict(bias_decay_mult=1, norm_decay_mult=1)
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg, paramwise_cfg)
             optim_constructor(self.model)
 
@@ -322,7 +321,7 @@ class TestBuilder(TestCase):
             lr=self.base_lr,
             weight_decay=self.base_wd,
             momentum=self.momentum)
-        optim_constructor = DefaultOptimizerWrapperConstructor(optimizer_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         self._check_default_optimizer(optimizer_wrapper.optimizer, self.model)
 
@@ -335,7 +334,7 @@ class TestBuilder(TestCase):
             weight_decay=self.base_wd,
             momentum=self.momentum)
         paramwise_cfg = None
-        optim_constructor = DefaultOptimizerWrapperConstructor(optimizer_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
         optimizer_wrapper = optim_constructor(model)
         self._check_default_optimizer(
             optimizer_wrapper.optimizer, model, prefix='module.')
@@ -353,7 +352,7 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer_wrapper = optim_constructor(model)
         self._check_sgd_optimizer(
@@ -371,8 +370,7 @@ class TestBuilder(TestCase):
                 weight_decay=self.base_wd,
                 momentum=self.momentum)
             paramwise_cfg = None
-            optim_constructor = DefaultOptimizerWrapperConstructor(
-                optimizer_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
             optimizer_wrapper = optim_constructor(model)
             self._check_default_optimizer(
                 optimizer_wrapper.optimizer, model, prefix='module.')
@@ -391,7 +389,7 @@ class TestBuilder(TestCase):
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
                 dcn_offset_lr_mult=0.1)
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg, paramwise_cfg)
             optimizer_wrapper = optim_constructor(model)
             self._check_sgd_optimizer(
@@ -408,7 +406,7 @@ class TestBuilder(TestCase):
             weight_decay=self.base_wd,
             momentum=self.momentum)
         paramwise_cfg = dict()
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         self._check_default_optimizer(optimizer_wrapper.optimizer, self.model)
@@ -423,7 +421,7 @@ class TestBuilder(TestCase):
             weight_decay=self.base_wd,
             momentum=self.momentum)
         paramwise_cfg = dict()
-        optim_constructor = DefaultOptimizerWrapperConstructor(optimizer_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
         optimizer_wrapper = optim_constructor(model)
         self._check_default_optimizer(optimizer_wrapper.optimizer, model)
 
@@ -440,7 +438,7 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         self._check_sgd_optimizer(optimizer_wrapper.optimizer, self.model,
@@ -462,7 +460,7 @@ class TestBuilder(TestCase):
 
         for param in self.model.parameters():
             param.requires_grad = False
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         optimizer = optimizer_wrapper.optimizer
@@ -495,7 +493,7 @@ class TestBuilder(TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 'some parameters appear in more than one parameter group'):
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg, paramwise_cfg)
             optim_constructor(model)
 
@@ -506,7 +504,7 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
             bypass_duplicate=True)
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
 
         self.assertWarnsRegex(
@@ -522,7 +520,7 @@ class TestBuilder(TestCase):
                                   **paramwise_cfg)
 
     def test_default_optimizer_constructor_custom_key(self):
-        # test DefaultOptimizerWrapperConstructor with custom_keys and
+        # test DefaultOptimWrapperConstructor with custom_keys and
         # ExampleModel
         optimizer_cfg = dict(
             type='SGD',
@@ -541,7 +539,7 @@ class TestBuilder(TestCase):
         with self.assertRaises(TypeError):
             # custom_keys should be a dict
             paramwise_cfg_ = dict(custom_keys=[0.1, 0.0001])
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg, paramwise_cfg_)
             optimizer = optim_constructor(self.model)
 
@@ -551,11 +549,11 @@ class TestBuilder(TestCase):
             optimizer_cfg_ = dict(type='SGD', lr=0.01)
             paramwise_cfg_ = dict(
                 custom_keys={'.backbone': dict(decay_mult=0.5)})
-            optim_constructor = DefaultOptimizerWrapperConstructor(
+            optim_constructor = DefaultOptimWrapperConstructor(
                 optimizer_cfg_, paramwise_cfg_)
             optim_constructor(self.model)
 
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer = optim_constructor(self.model).optimizer
         # check optimizer type and default config
@@ -616,13 +614,13 @@ class TestBuilder(TestCase):
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
 
-        # test DefaultOptimizerWrapperConstructor with custom_keys and
+        # test DefaultOptimWrapperConstructor with custom_keys and
         # ExampleModel 2
         optimizer_cfg = dict(
             type='SGD', lr=self.base_lr, momentum=self.momentum)
         paramwise_cfg = dict(custom_keys={'param1': dict(lr_mult=10)})
 
-        optim_constructor = DefaultOptimizerWrapperConstructor(
+        optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
         optimizer = optim_constructor(self.model).optimizer
         # check optimizer type and default config

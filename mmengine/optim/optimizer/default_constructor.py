@@ -6,15 +6,15 @@ import torch
 import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
-from mmengine.registry import (OPTIMIZER_WRAPPERS, OPTIMIZERS,
-                               OPTIMIZERWRAPPER_CONSTRUCTORS)
+from mmengine.registry import (OPTIMIZER_WRAPPER_CONSTRUCTORS,
+                               OPTIMIZER_WRAPPERS, OPTIMIZERS)
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
-from .optimizer_wrapper import OptimizerWrapper
+from .optimizer_wrapper import OptimWrapper
 
 
-@OPTIMIZERWRAPPER_CONSTRUCTORS.register_module()
-class DefaultOptimizerWrapperConstructor:
+@OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
+class DefaultOptimWrapperConstructor:
     """Default constructor for optimizers.
 
     By default each parameter share the same optimizer settings, and we
@@ -79,7 +79,7 @@ class DefaultOptimizerWrapperConstructor:
         >>> optimizer_cfg = dict(type='SGD', lr=0.01, momentum=0.9,
         >>>                      weight_decay=0.0001)
         >>> paramwise_cfg = dict(norm_decay_mult=0.)
-        >>> optim_builder = DefaultOptimizerWrapperConstructor(
+        >>> optim_builder = DefaultOptimWrapperConstructor(
         >>>     optimizer_cfg, paramwise_cfg)
         >>> optimizer = optim_builder(model)
 
@@ -88,7 +88,7 @@ class DefaultOptimizerWrapperConstructor:
         >>> optimizer_cfg = dict(type='SGD', lr=0.01, weight_decay=0.95)
         >>> paramwise_cfg = dict(custom_keys={
                 '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
-        >>> optim_builder = DefaultOptimizerWrapperConstructor(
+        >>> optim_builder = DefaultOptimWrapperConstructor(
         >>>     optimizer_cfg, paramwise_cfg)
         >>> optimizer = optim_builder(model)
         >>> # Then the `lr` and `weight_decay` for model.backbone is
@@ -243,13 +243,13 @@ class DefaultOptimizerWrapperConstructor:
                 prefix=child_prefix,
                 is_dcn_module=is_dcn_module)
 
-    def __call__(self, model: nn.Module) -> OptimizerWrapper:
+    def __call__(self, model: nn.Module) -> OptimWrapper:
         if hasattr(model, 'module'):
             model = model.module
 
         optimizer_cfg = self.optimizer_cfg.copy()
-        optimizer_wrapper_cfg = optimizer_cfg.pop(
-            'optimizer_wrapper', dict(type='OptimizerWrapper'))
+        optimizer_wrapper_cfg = optimizer_cfg.pop('optimizer_wrapper',
+                                                  dict(type='OptimWrapper'))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()

@@ -22,7 +22,7 @@ class ConstantMomentum(MomentumSchedulerMixin, ConstantParamScheduler):
     momentum value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         factor (float): The number we multiply momentum until the milestone.
             Defaults to 1./3.
@@ -70,7 +70,7 @@ class CosineAnnealingMomentum(MomentumSchedulerMixin,
     only implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         T_max (int): Maximum number of iterations.
         eta_min (float): Minimum momentum value. Defaults to 0.
@@ -95,7 +95,7 @@ class ExponentialMomentum(MomentumSchedulerMixin, ExponentialParamScheduler):
     """Decays the momentum of each parameter group by gamma every epoch.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         gamma (float): Multiplicative factor of momentum value decay.
         begin (int): Step at which to start updating the momentum.
@@ -120,7 +120,7 @@ class LinearMomentum(MomentumSchedulerMixin, LinearParamScheduler):
     Notice that such decay can happen simultaneously with other changes to the
     momentum from outside this scheduler.
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         start_factor (float): The number we multiply momentum in the
             first epoch. The multiplication factor changes towards end_factor
@@ -148,7 +148,7 @@ class MultiStepMomentum(MomentumSchedulerMixin, MultiStepParamScheduler):
     scheduler.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of momentum value decay.
@@ -173,7 +173,7 @@ class StepMomentum(MomentumSchedulerMixin, StepParamScheduler):
     to the momentum from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         step_size (int): Period of momentum value decay.
         gamma (float): Multiplicative factor of momentum value decay.
@@ -200,7 +200,7 @@ class PolyMomentum(MomentumSchedulerMixin, PolyParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimizerWrapper): optimizer or Wrapped
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         eta_min (float): Minimum momentum at the end of scheduling.
             Defaults to 0.

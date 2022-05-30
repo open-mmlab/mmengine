@@ -5,32 +5,37 @@ import torch
 from torch.cuda.amp import GradScaler
 
 from mmengine.registry import OPTIMIZER_WRAPPERS
-from .optimizer_wrapper import OptimizerWrapper
+from mmengine.utils import TORCH_VERSION, digit_version
+from .optimizer_wrapper import OptimWrapper
 
 
 @OPTIMIZER_WRAPPERS.register_module()
-class AmpOptimizerWrapper(OptimizerWrapper):
-    """A subclass of :class:`OptimizerWrapper` that supports automatic mixed
+class AmpOptimWrapper(OptimWrapper):
+    """A subclass of :class:`OptimWrapper` that supports automatic mixed
     precision training based on torch.cuda.amp.
 
-    ``AmpOptimizerWrapper`` provide unified interface with
-    ``OptimizerWrapper``, and ``AmpOptimizerWrapper`` and ``OptimizerWrapper``
-     can be used in the same way.
+    ``AmpOptimWrapper`` provides a unified interface with
+    ``OptimWrapper``, so ``AmpOptimWrapper`` and ``OptimWrapper`` can be
+    used in the same way with ``OptimizerWrapper``.
 
     Warnings:
-        You should use AmpOptimizerWrapper with PyTorch >= 1.6
+        ``AmpOptimizerWrapper`` requires PyTorch >= 1.6.
 
     Args:
-        loss_scale (float or str or dict): The initial  configuration of
-            `torch.cuda.amp.GradScaler`. See find more specific arguments
-            introduction at https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler # noqa: E501
+        loss_scale (float or str or dict): The initial configuration of
+            `torch.cuda.amp.GradScaler`. See more specific arguments
+            introduction at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler>`_ # noqa: E501
 
-            - "dynamic": Initialize GradScale without any Arguments.
+            - "dynamic": Initialize GradScale without any arguments.
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
+
+        **kwargs: Keyword arguments passed to OptimizerWrapper.
     """
 
     def __init__(self, loss_scale=512., **kwargs):
+        assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
+            '`torch.cuda.amp` is only available when pytorch version > 1.6')
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':
@@ -46,7 +51,7 @@ class AmpOptimizerWrapper(OptimizerWrapper):
             self.loss_scaler = GradScaler(**loss_scale)
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
-                            f'"dynamic", got {loss_scale}')
+                            f'"dynamic", but got {loss_scale}')
 
     def backward(self, loss: torch.Tensor):
         """Perform gradient back propagation with :attr:`loss_scaler`.
@@ -84,9 +89,9 @@ class AmpOptimizerWrapper(OptimizerWrapper):
         """Load and parse the state dictionary of :attr:`optimizer` and
         :attr:`loss_scaler`.
 
-        If state_dict contains the key starts with "loss_scaler.", the
-        :attr:`loss_scaler` will load the corresponding keys. Otherwise only
-        the :attr:`optimizer` will load the state dictionary.
+        If state_dict contains "loss_scaler.", the :attr:`loss_scaler` will
+        load the corresponding keys. Otherwise, only the :attr:`optimizer`
+        will load the state dictionary.
 
         Args:
             state_dict (dict): The state dict of :attr:`optimizer` and

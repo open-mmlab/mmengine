@@ -13,7 +13,7 @@ from torch.optim import SGD, Optimizer
 
 from mmengine import MessageHub, MMLogger
 from mmengine.dist import all_gather
-from mmengine.optim import AmpOptimizerWrapper, OptimizerWrapper
+from mmengine.optim import AmpOptimWrapper, OptimWrapper
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 
@@ -43,7 +43,7 @@ class ToyModel2(nn.Module):
         return x
 
 
-class TestOptimizerWrapper(MultiProcessTestCase):
+class TestOptimWrapper(MultiProcessTestCase):
 
     def setUp(self) -> None:
         super().setUp()
@@ -57,20 +57,20 @@ class TestOptimizerWrapper(MultiProcessTestCase):
         super().run_test(test_name, parent_pipe)
 
     def test_init(self):
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         self.assertEqual(optimizer_wrapper.optimizer, self.optimizer)
         self.assertIsNone(optimizer_wrapper.clip_grad_kwargs)
         self.assertEqual(optimizer_wrapper.accumulative_iters, 1)
-        self.assertEqual(optimizer_wrapper.logger, self.logger)
-        self.assertEqual(optimizer_wrapper.message_hub, self.message_hub)
+        self.assertIs(optimizer_wrapper.logger, self.logger)
+        self.assertIs(optimizer_wrapper.message_hub, self.message_hub)
 
-        with self.assertRaises(AssertionError):
-            OptimizerWrapper(self.optimizer, clip_grad_kwargs=[])
+        with self.assertRaisesRegex(AssertionError,
+                                    'If `clip_grad_kwargs` is not None'):
+            OptimWrapper(self.optimizer, clip_grad_kwargs=[])
 
     def test_update_params(self):
         # Test update params every iteration.
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=1)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=1)
         self._mock_method(optimizer_wrapper)
         loss = torch.tensor(1)
         optimizer_wrapper.update_params(loss)
@@ -86,10 +86,10 @@ class TestOptimizerWrapper(MultiProcessTestCase):
 
         # It will raise an error if `accumulative_iters > 1` and
         # `accumulate_grad` is not enabled.
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=3)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         self._mock_method(optimizer_wrapper)
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(AssertionError,
+                                    'gradient accumulation must be'):
             optimizer_wrapper.update_params(loss)
 
         # `iter=0`, Call `optimizer_step` first time.
@@ -118,22 +118,20 @@ class TestOptimizerWrapper(MultiProcessTestCase):
 
         # If ``accumulative_iters > 1``, call ``update_params`` with
         # non-accumulate_grad context will raise an Assertion error
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=1)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=1)
         optimizer_wrapper.accumulative_iters = 2
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(AssertionError,
+                                    'gradient accumulation must be performed'):
             optimizer_wrapper.update_params(loss)
 
     def test_initilize_iter_status(self):
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=3)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         optimizer_wrapper._initilize_iter_status(self.model)
         self.assertEqual(optimizer_wrapper.divisible_iters, 0)
         self.assertEqual(optimizer_wrapper.remainder_iters, 0)
 
         # Indivisible cur_iter will output warning.
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=3)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         optimizer_wrapper.cur_iter = 0
         optimizer_wrapper.max_iters = 100
         with self.assertLogs(self.logger) as cm:
@@ -142,8 +140,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
             self.assertRegex(cm.records[0].msg, 'Resume iter number is not')
 
         # Model with batch norm will output warning.
-        optimizer_wrapper = OptimizerWrapper(
-            self.optimizer, accumulative_iters=3)
+        optimizer_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         optimizer_wrapper.cur_iter = 0
         optimizer_wrapper.max_iters = 99
         model = nn.BatchNorm2d(1)
@@ -154,24 +151,24 @@ class TestOptimizerWrapper(MultiProcessTestCase):
 
     def test_backward(self):
         loss = MagicMock()
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         optimizer_wrapper.backward(loss)
         loss.backward.assert_called()
 
     def test_zero_grad(self):
         optimizer = MagicMock(spec=Optimizer)
-        optimizer_wrapper = OptimizerWrapper(optimizer)
+        optimizer_wrapper = OptimWrapper(optimizer)
         optimizer_wrapper.zero_grad()
         optimizer.zero_grad.assert_called()
 
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
-        optimizer_wrapper = OptimizerWrapper(optimizer)
+        optimizer_wrapper = OptimWrapper(optimizer)
         optimizer_wrapper.step()
         optimizer.step.assert_called()
 
     def test_clip_grads(self):
-        optimizer_wrapper = OptimizerWrapper(
+        optimizer_wrapper = OptimWrapper(
             self.optimizer, clip_grad_kwargs=dict(max_norm=35))
         loss = self.model(torch.Tensor(1, 1, 1, 1))
         loss.backward()
@@ -180,12 +177,12 @@ class TestOptimizerWrapper(MultiProcessTestCase):
         self.assertIn('train/grad_norm', log_scalars)
 
     def test_state_dict(self):
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         self.assertEqual(optimizer_wrapper.state_dict(),
                          self.optimizer.state_dict())
 
     def test_load_state_dict(self):
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
         optimizer_wrapper.load_state_dict(optimizer.state_dict())
@@ -194,7 +191,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
                          optimizer.state_dict())
 
     def test_param_groups(self):
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         self.assertEqual(optimizer_wrapper.param_groups,
                          self.optimizer.param_groups)
 
@@ -203,7 +200,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
         model = ToyModel2()
         ddp_model = DistributedDataParallel(model)
         optimizer = SGD(ddp_model.parameters(), lr=0.01)
-        optimizer_wrapper = OptimizerWrapper(optimizer, accumulative_iters=1)
+        optimizer_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
         optimizer_wrapper.zero_grad()
         with optimizer_wrapper.accumulate_grad(ddp_model, 0, 100):
             # Automatically sync grads if `accumulative_iters` = 1
@@ -215,7 +212,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
 
         # Do not sync grads when `optimizer_wrapper.cur_iter` cannot be
         # divided by `optimizer_wrapper.accumulative_iters`
-        optimizer_wrapper = OptimizerWrapper(optimizer, accumulative_iters=3)
+        optimizer_wrapper = OptimWrapper(optimizer, accumulative_iters=3)
         with optimizer_wrapper.accumulate_grad(ddp_model, 0, 100):
             ddp_model(inputs).sum().backward()
             all_grads = all_gather(model.conv.weight.grad)
@@ -229,7 +226,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
             assert_allclose(all_grads[0], all_grads[1])
 
     def test_precision_context(self):
-        optimizer_wrapper = OptimizerWrapper(self.optimizer)
+        optimizer_wrapper = OptimWrapper(self.optimizer)
         with optimizer_wrapper.precision_context():
             pass
 
@@ -247,7 +244,7 @@ class TestOptimizerWrapper(MultiProcessTestCase):
         optimizer_wrapper.zero_grad = MagicMock()
 
 
-class TestAmpOptimizerWrapper(TestCase):
+class TestAmpOptimWrapper(TestCase):
 
     def setUp(self) -> None:
         self.model = ToyModel()
@@ -255,29 +252,27 @@ class TestAmpOptimizerWrapper(TestCase):
 
     def test_init(self):
         # Test with default arguments.
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dynamic.
-        amp_optim_wrapper = AmpOptimizerWrapper(
+        amp_optim_wrapper = AmpOptimWrapper(
             'dynamic', optimizer=self.optimizer)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dict loss_scale.
-        amp_optim_wrapper = AmpOptimizerWrapper(
+        amp_optim_wrapper = AmpOptimWrapper(
             dict(init_scale=1, growth_factor=2), optimizer=self.optimizer)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
-        with self.assertRaises(TypeError):
-            AmpOptimizerWrapper(
-                optimizer=self.optimizer,
-                loss_scale='unknown',
-                detect_anomalous_params=False)
+        with self.assertRaisesRegex(TypeError,
+                                    'loss_scale must be of type float'):
+            AmpOptimWrapper(optimizer=self.optimizer, loss_scale='unknown')
 
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
         amp_optim_wrapper.loss_scaler = MagicMock()
         amp_optim_wrapper.step()
         amp_optim_wrapper.loss_scaler.step.assert_called_with(
@@ -286,7 +281,7 @@ class TestAmpOptimizerWrapper(TestCase):
             amp_optim_wrapper._scale_update_param)
 
     def test_backward(self):
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         loss_scaler = MagicMock()
         scale_return = MagicMock()
         scale_fn = MagicMock(return_value=scale_return)
@@ -301,7 +296,7 @@ class TestAmpOptimizerWrapper(TestCase):
         not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
     def test_state_dict(self):
         self.model = self.model.cuda()
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         with amp_optim_wrapper.precision_context():
             loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
             amp_optim_wrapper.update_params(loss)
@@ -317,7 +312,7 @@ class TestAmpOptimizerWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
     def test_load_state_dict(self):
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         self.model = self.model.cuda()
         # Test load from optimizer
         optimizer = SGD(self.model.parameters(), lr=0.1)
@@ -326,8 +321,8 @@ class TestAmpOptimizerWrapper(TestCase):
         self.assertDictEqual(optimizer.state_dict(),
                              amp_optim_wrapper.optimizer.state_dict())
         # Test load from optimizer_wrapper
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
-        amp_optim_wrapper_ = AmpOptimizerWrapper(
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper_ = AmpOptimWrapper(
             optimizer=SGD(self.model.parameters(), lr=0.1))
         amp_optim_wrapper_.load_state_dict(amp_optim_wrapper.state_dict())
         self.assertDictEqual(amp_optim_wrapper.optimizer.state_dict(),
@@ -338,7 +333,7 @@ class TestAmpOptimizerWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(), reason='at lest need 1 gpu to test')
     def test_precision_context(self):
-        amp_optim_wrapper = AmpOptimizerWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         with amp_optim_wrapper.precision_context():
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)

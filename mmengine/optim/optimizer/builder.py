@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
-from mmengine.registry import OPTIMIZERS, OPTIMIZERWRAPPER_CONSTRUCTORS
-from .optimizer_wrapper_dict import OptimizerWrapper
+from mmengine.registry import OPTIMIZER_WRAPPER_CONSTRUCTORS, OPTIMIZERS
+from .optimizer_wrapper_dict import OptimWrapper
 
 
 def register_torch_optimizers() -> List[str]:
@@ -34,13 +34,13 @@ TORCH_OPTIMIZERS = register_torch_optimizers()
 
 def build_optimizer_wrapper(
         model: nn.Module, cfg: Union[dict, Config,
-                                     ConfigDict]) -> OptimizerWrapper:
-    """Build function of OptimizerWrapper.
+                                     ConfigDict]) -> OptimWrapper:
+    """Build function of OptimWrapper.
 
     If ``constructor`` is set in the ``cfg``, this method will build an
     optimizer wrapper constructor, and use optimizer wrapper constructor to
     build the optimizer wrapper. If ``constructor`` is not set, the
-    ``DefaultOptimizerWrapperConstructor`` will be used by default.
+    ``DefaultOptimWrapperConstructor`` will be used by default.
 
     Args:
         model (nn.Module): Model to be optimized.
@@ -48,13 +48,13 @@ def build_optimizer_wrapper(
             constructor.
 
     Returns:
-        OptimizerWrapper: The built optimizer wrapper.
+        OptimWrapper: The built optimizer wrapper.
     """
     optimizer_cfg = copy.deepcopy(cfg)
     constructor_type = optimizer_cfg.pop('constructor',
-                                         'DefaultOptimizerWrapperConstructor')
+                                         'DefaultOptimWrapperConstructor')
     paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
-    optim_wrapper_constructor = OPTIMIZERWRAPPER_CONSTRUCTORS.build(
+    optim_wrapper_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
         dict(
             type=constructor_type,
             optimizer_cfg=optimizer_cfg,

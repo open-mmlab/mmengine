@@ -26,8 +26,8 @@ from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
-from mmengine.optim import (OptimizerWrapper, OptimizerWrapperDict,
-                            _ParamScheduler, build_optimizer_wrapper)
+from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
+                            build_optimizer_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                VISUALIZERS, DefaultScope,
@@ -46,7 +46,7 @@ from .priority import Priority, get_priority
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
                                                        List[_ParamScheduler]]]
-OptimizerWrapperType = Union[OptimizerWrapper, OptimizerWrapperDict]
+OptimWrapperType = Union[OptimWrapper, OptimWrapperDict]
 
 
 class Runner:
@@ -267,7 +267,7 @@ class Runner:
         self._train_dataloader = train_dataloader
         self._train_loop = train_cfg
         self.optimizer = optimizer
-        self.optimizer_wrapper: Optional[OptimizerWrapperType] = None
+        self.optimizer_wrapper: Optional[OptimWrapperType] = None
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
@@ -811,13 +811,13 @@ class Runner:
         return model
 
     def build_optimizer_wrapper(
-        self, optimizer: Union[Optimizer, OptimizerWrapper, Dict]
-    ) -> Union[OptimizerWrapper, OptimizerWrapperDict]:
+        self, optimizer: Union[Optimizer, OptimWrapper, Dict]
+    ) -> Union[OptimWrapper, OptimWrapperDict]:
         """Build optimizer wrapper.
 
         Args:
             optimizer (Optimizer or dict): An Optimizer object or a dict to
-                build OptimizerWrapper objects. If ``optimizer`` is an
+                build OptimWrapper objects. If ``optimizer`` is an
                 Optimizer, just return an ``OptimizeWrapper`` instance.
 
         Examples:
@@ -825,7 +825,7 @@ class Runner:
             >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
             >>> optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
             >>> optimizer_wrapper
-            Type: OptimizerWrapper
+            Type: OptimWrapper
             accumulative_iters: 1
             optimizer:
             SGD (
@@ -847,7 +847,7 @@ class Runner:
             >>> optimizer_wrapper = runner.optimizer_wrapper(optim_cfg)
             >>> optimizer_wrapper
             name: generator
-            Type: OptimizerWrapper
+            Type: OptimWrapper
             accumulative_iters: 1
             optimizer:
             SGD (
@@ -859,7 +859,7 @@ class Runner:
                 weight_decay: 0
             )
             name: discriminator
-            Type: OptimizerWrapper
+            Type: OptimWrapper
             accumulative_iters: 1
             optimizer:
             'discriminator': Adam (
@@ -874,7 +874,7 @@ class Runner:
         Note:
             If optimizer is an ``Optimizer`` or a `dict` of ``Optimizer``,
             ``build_optimizer_wrapper`` will return a default
-            ``OptimizerWrapper`` without the function of automatic mixed
+            ``OptimWrapper`` without the function of automatic mixed
             precision training or gradient accumulation. Only if optimizer is
             a config dictitonary configured with ``optimizer_wrapper``,
             the corresponding function can be enabled.
@@ -882,18 +882,18 @@ class Runner:
         Important:
             If you need to build multiple optimizers, you should implement a
             MultipleOptimizerConstructor which gets parameters passed to
-            corresponding optimizers and compose the ``OptimizerWrapperDict``.
+            corresponding optimizers and compose the ``OptimWrapperDict``.
             More details about how to customize OptimizerConstructor can be
             found at `optimizer-docs`_.
 
         Returns:
-            OptimizerWrapper: Optimizer wrapper build from ``optimizer_cfg``.
+            OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
 
         .. _optimizer-docs:
            https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
         """
         if isinstance(optimizer, Optimizer):
-            optim_wrapper = OptimizerWrapper(optimizer)
+            optim_wrapper = OptimWrapper(optimizer)
             return optim_wrapper
         elif isinstance(optimizer, (dict, ConfigDict, Config)):
             if 'type' not in optimizer and 'constructor' not in optimizer:
@@ -904,26 +904,25 @@ class Runner:
                             'each item mush be an optimizer object when "type"'
                             ' and "constructor" are not in optimizer, '
                             f'but got {name}={optim}')
-                    optim_wrappers[name] = OptimizerWrapper(optim)
-                return OptimizerWrapperDict(optim_wrappers)
+                    optim_wrappers[name] = OptimWrapper(optim)
+                return OptimWrapperDict(optim_wrappers)
             else:
-                optimizer = build_optimizer_wrapper(self.model, optimizer)
-                return optimizer
+                optim_wrapper = build_optimizer_wrapper(self.model, optimizer)
+                return optim_wrapper
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
                             f'but got {optimizer}')
 
     def _build_param_scheduler(
             self, scheduler: Union[_ParamScheduler, Dict, List],
-            optimizer_wrapper: OptimizerWrapper) -> List[_ParamScheduler]:
+            optimizer_wrapper: OptimWrapper) -> List[_ParamScheduler]:
         """Build parameter schedulers for a single optimizer.
 
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
-            optimizer_wrapper (OptimizerWrapper):
-                An optimizer object is passed to construnct ParamScheduler
-                object.
+            optimizer_wrapper (OptimWrapper): An optimizer wrapper object is
+                passed to construct ParamScheduler object.
 
         Returns:
             list[_ParamScheduler]: List of parameter schedulers build from
@@ -1031,13 +1030,13 @@ class Runner:
            https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
         """
         param_schedulers: ParamSchedulerType
-        if isinstance(self.optimizer_wrapper, OptimizerWrapper):
+        if type(self.optimizer_wrapper) is OptimWrapper:
             param_schedulers = self._build_param_scheduler(
-                scheduler, self.optimizer_wrapper)
+                scheduler, self.optimizer_wrapper)  # type: ignore
             return param_schedulers
         else:
             param_schedulers = dict()
-            assert isinstance(self.optimizer_wrapper, OptimizerWrapperDict), (
+            assert isinstance(self.optimizer_wrapper, OptimWrapperDict), (
                 '`build_optimizer` should be called before'
                 '`build_param_scheduler` because the latter depends '
                 'on the former')
@@ -1794,12 +1793,12 @@ class Runner:
         # save optimizer state dict to checkpoint
         if save_optimizer:
             if isinstance(self.optimizer_wrapper,
-                          (OptimizerWrapper, OptimizerWrapperDict)):
+                          (OptimWrapper, OptimWrapperDict)):
                 checkpoint['optimizer'] = self.optimizer_wrapper.state_dict()
             else:  # TODO
                 raise TypeError(
-                    'self.optimizer_wrapper should be an `OptimizerWrapper` '
-                    'or `OptimizerWrapperDict` instance, but got '
+                    'self.optimizer_wrapper should be an `OptimWrapper` '
+                    'or `OptimWrapperDict` instance, but got '
                     f'{self.optimizer_wrapper}')
 
         # save param scheduler state dict

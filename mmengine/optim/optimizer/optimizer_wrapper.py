@@ -13,17 +13,17 @@ from mmengine.utils import has_batch_norm
 
 
 @OPTIMIZER_WRAPPERS.register_module()
-class OptimizerWrapper:
+class OptimWrapper:
     """Optimizer wrapper provides a common interface for updating parameters.
 
     Optimizer wrapper provides a unified interface for single precision
     training and automatic mixed precision training with different hardware.
-    OptimizerWrapper encapsulates optimizer to provide simplified interfaces
+    OptimWrapper encapsulates optimizer to provide simplified interfaces
     for commonly used training techniques such as gradient accumulative and
-    grad clips. ``OptimizerWrapper`` implements the basic logic of gradient
+    grad clips. ``OptimWrapper`` implements the basic logic of gradient
     accumulation and gradient clipping based on ``torch.optim.Optimizer``.
-    The subclasses only need to overload some methods to implement the mixed
-    precision training. See more information in :class:`AmpOptimizerWrapper`.
+    The subclasses only need to override some methods to implement the mixed
+    precision training. See more information in :class:`AmpOptimWrapper`.
 
     Args:
         optimizer (Optimizer): Optimizer used to update model parameters.
@@ -38,23 +38,23 @@ class OptimizerWrapper:
         be called in the context of ``accumulate_grad``.
 
     Examples:
-        >>> # Config sample of OptimizerWrapper.
+        >>> # Config sample of OptimWrapper.
         >>> optimizer_wrapper_cfg = dict(
-        >>>     type='OptimizerWrapper',
+        >>>     type='OptimWrapper',
         >>>     accumulative_iters=3,
         >>>     clip_grad_kwargs=dict(max_norm=0.2))
-        >>> # Use OptimizerWrapper to update model.
+        >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
         >>> import torch
         >>> from torch.optim import SGD
         >>> from torch.utils.data import DataLoader
-        >>> from mmengine.optim import OptimizerWrapper
+        >>> from mmengine.optim import OptimWrapper
         >>>
         >>> model = nn.Linear(1, 1)
         >>> dataset = torch.randn(10, 1, 1)
         >>> dataloader = DataLoader(dataset)
         >>> optimizer = SGD(model.parameters(), lr=0.1)
-        >>> optim_wrapper = OptimizerWrapper(optimizer)
+        >>> optim_wrapper = OptimWrapper(optimizer)
         >>>
         >>> for data in dataloader:
         >>>     loss = model(data)
@@ -87,12 +87,12 @@ class OptimizerWrapper:
         if clip_grad_kwargs is not None:
             # clip_grad_kwargs should not be non-empty dict.
             assert isinstance(clip_grad_kwargs, dict) and clip_grad_kwargs, (
-                'if `clip_grad_kwargs` is not None, it should be a `dict` '
+                'If `clip_grad_kwargs` is not None, it should be a `dict` '
                 'which is the arguments of `torch.nn.utils.clip_grad`')
         self.clip_grad_kwargs = clip_grad_kwargs
         self.logger = MMLogger.get_current_instance()
         self.accumulative_iters = accumulative_iters
-        # Using to update `grad_norm` log message.
+        # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self.iter_status_initialized = False
 
@@ -111,7 +111,7 @@ class OptimizerWrapper:
             # ``accumulate_grad``.
             assert hasattr(self, 'divisible_iters'), (
                 'gradient accumulation must be performed in the context of'
-                '`OptimizerWrapper.accumulate_grad`')
+                '`OptimWrapper.accumulate_grad`')
             # if `self.accumulative_iters > 1`, the gradient needs to be
             # rescaled and accumulated. In most cases, `loss_factor` equals to
             # `self.accumulative_iters`. However `self.max_iters` may not be
@@ -212,8 +212,8 @@ class OptimizerWrapper:
         """A Context manager for gradient accumulation and avoiding unnecessary
         gradient synchronization during gradient accumulation.
 
-        If model is a instance with ``no_sync`` method (which means
-        blocking the )  and
+        If model is an instance with ``no_sync`` method (which means
+        blocking the gradient synchronization) and
         ``self.accumulative_iters != 1``. The model will not automatically
         synchronize gradients if ``cur_iter`` is divisible by
         ``self.accumulative_iters``. Otherwise, this method will enable an
@@ -244,9 +244,9 @@ class OptimizerWrapper:
 
     @contextmanager
     def precision_context(self):
-        """precision context, default enable an empty context.
+        """precision context which enables an empty context by default.
 
-        The subclass used for mixed or low precision training need to override
+        The subclass used for mixed or low precision training needs to override
         this method.
         """
         yield
@@ -268,7 +268,7 @@ class OptimizerWrapper:
         """Initialize gradient accumulation related attributes.
 
         Args:
-            model: Training model
+            model (nn.Module): Training model
         """
         if self.max_iters % self.accumulative_iters != 0:
             self.logger.warning(
@@ -280,7 +280,7 @@ class OptimizerWrapper:
         if has_batch_norm(model) and self.accumulative_iters > 1:
             self.logger.warning(
                 'Gradient accumulative may slightly decrease '
-                'performance if the model has BatchNorm layers.')
+                'performance because the model has BatchNorm layers.')
         residual_iters = self.max_iters - self.cur_iter
         # The maximum number of training iteration that is divisible by
         # accumulative_iters.
