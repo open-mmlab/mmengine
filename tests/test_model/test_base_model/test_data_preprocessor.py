@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from mmengine import InstanceData
-from mmengine.model import ImgDataPreprocessor, BaseDataPreprocessor
+from mmengine.model import BaseDataPreprocessor, ImgDataPreprocessor
 from mmengine.testing import assert_allclose
 
 
@@ -22,8 +22,10 @@ class TestBaseDataPreprocessor(TestCase):
         label1 = torch.randn(1)
         label2 = torch.randn(1)
 
-        data = [dict(inputs=input1, data_sample=label1),
-                dict(inputs=input2, data_sample=label2)]
+        data = [
+            dict(inputs=input1, data_sample=label1),
+            dict(inputs=input2, data_sample=label2)
+        ]
 
         batch_inputs, batch_labels = base_data_preprocessor(data)
         self.assertEqual(batch_inputs.shape, (2, 1, 3, 5))
@@ -47,14 +49,12 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         self.assertEqual(data_processor.pad_size_divisor, 1)
         assert_allclose(data_processor.pad_value, torch.tensor(0))
         # initiate model with preprocess_cfg` and feat keys
-        preprocess_cfg = dict(
+        data_processor = ImgDataPreprocessor(
             to_rgb=True,
-            pixel_mean=[0, 0, 0],
-            pixel_std=[255, 255, 255],
+            mean=[0, 0, 0],
+            std=[255, 255, 255],
             pad_size_divisor=16,
-            pad_value=10,
-        )
-        data_processor = ImgDataPreprocessor(preprocess_cfg)
+            pad_value=10)
         self.assertTrue(data_processor.to_rgb, True)
         assert_allclose(data_processor.pixel_mean,
                         torch.tensor([0, 0, 0]).view(-1, 1, 1))
@@ -65,14 +65,12 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
 
     def test_forward(self):
         # Test `pad_value`, `to_rgb`, `pad_size_divisor`.
-        preprocess_cfg = dict(
-            to_rgb=True,
+        data_preprocessor = ImgDataPreprocessor(
+            std=[1, 2, 3],
             pad_size_divisor=16,
             pad_value=10,
-            pixel_std=[1, 2, 3])
-        data_preprocessor = ImgDataPreprocessor(
-            preprocess_cfg)
-        data_preprocessor
+            to_rgb=True,
+        )
         inputs1 = torch.randn(3, 10, 10)
         inputs2 = torch.randn(3, 15, 15)
         data_sample1 = InstanceData(bboxes=torch.randn(5, 4))
@@ -95,8 +93,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         for input_, data_sample, target_input, target_data_sample in zip(
                 inputs, data_samples, target_inputs, target_data_samples):
             assert_allclose(input_, target_input)
-            assert_allclose(data_sample.bboxes,
-                            target_data_sample.bboxes)
+            assert_allclose(data_sample.bboxes, target_data_sample.bboxes)
 
         # Test empty `data_sample`
         data = [dict(inputs=inputs1.clone()), dict(inputs=inputs2.clone())]

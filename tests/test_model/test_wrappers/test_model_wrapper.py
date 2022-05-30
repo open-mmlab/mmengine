@@ -8,11 +8,9 @@ import torch.distributed as torch_dist
 import torch.nn as nn
 from torch.optim import SGD
 
-from mmengine.dist import all_gather
-from mmengine.logging import MessageHub
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             MMSeparateDDPWrapper)
-from mmengine.optim import OptimizerWrapper
+from mmengine.optim import OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 
@@ -65,11 +63,11 @@ class TestModelWrapper(MultiProcessTestCase):
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        # Test `optimizer_wrapper` is a instance of `OptimizerWrapper`
+        # Test `optimizer_wrapper` is a instance of `OptimWrapper`
         model = ToyModel()
         ddp_model = MMDistributedDataParallel(model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
-        optimizer_wrapper = OptimizerWrapper(optimizer, cumulative_iters=1)
+        optimizer_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
         inputs = torch.randn(3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
         ddp_model.train_step([data], optimizer_wrapper=optimizer_wrapper)
@@ -114,19 +112,20 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         # There will be two independently updated `DistributedDataParallel`
         # submodules.
         model = ComplexModel()
-        ddp_model = MMSeparateDDPWrapper(model)
+        ddp_model = MMSeparateDDPWrapper(model.cuda())
         optimizer1 = SGD(model.conv1.parameters(), lr=0.1)
         optimizer2 = SGD(model.conv1.parameters(), lr=0.2)
-        optimizer_wrapper1 = OptimizerWrapper(optimizer1, 1)
-        optimizer_wrapper2 = OptimizerWrapper(optimizer2, 1)
-        optimizer_wrapper = dict(
-            optimizer_wrapper1=optimizer_wrapper1,
-            optimizer_wrapper2=optimizer_wrapper2)
+        optimizer_wrapper1 = OptimWrapper(optimizer1, 1)
+        optimizer_wrapper2 = OptimWrapper(optimizer2, 1)
+        optim_wrapper_dict = OptimWrapperDict(
+            dict(
+                optimizer_wrapper1=optimizer_wrapper1,
+                optimizer_wrapper2=optimizer_wrapper2))
         inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs)
         # Automatically sync grads of `optimizer_wrapper1` since
         # `cumulative_iters` = 1
-        ddp_model.train_step([data], optimizer_wrapper=optimizer_wrapper)
+        ddp_model.train_step([data], optimizer_wrapper=optim_wrapper_dict)
 
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)

@@ -5,10 +5,10 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from mmengine.data import BaseDataElement
-from mmengine.optim import OptimizerWrapper
-from mmengine.registry import MODELS
 from mmengine.config import Config
+from mmengine.data import BaseDataElement
+from mmengine.optim import OptimWrapper
+from mmengine.registry import MODELS
 
 
 # TODO inherit from BaseModule
@@ -59,6 +59,7 @@ class BaseModel(nn.Module):
         data_preprocessor (dict or Config, optional): The pre-process config of
             :class:`BaseDataPreprocessor`.
     """
+
     def __init__(self,
                  data_preprocessor: Optional[Union[dict, Config]] = None):
         super().__init__()
@@ -66,9 +67,8 @@ class BaseModel(nn.Module):
             data_preprocessor = dict(type='BaseDataPreprocessor')
         self.data_preprocessor = MODELS.build(data_preprocessor)
 
-    def train_step(
-            self, data: List[dict],
-            optimizer_wrapper: OptimizerWrapper) -> Dict[str, torch.Tensor]:
+    def train_step(self, data: List[dict],
+                   optimizer_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Implement the default model parameter update process。
 
         During non-distributed training.If subclass does not override the
@@ -86,14 +86,15 @@ class BaseModel(nn.Module):
 
         Args:
             data (List[dict]): Data sampled from dataloader.
-            optimizer_wrapper (OptimizerWrapper): OptimizerWrapper instance
+            optimizer_wrapper (OptimWrapper): OptimWrapper instance
                 used to update model parameters.
 
         Returns:
             Dict[str, torch.Tensor]: dict of tensor for logging.
         """
         inputs, data_sample = self.data_preprocessor(data, True)
-        losses = self(inputs, data_sample, mode='loss')
+        with optimizer_wrapper.precision_context():
+            losses = self(inputs, data_sample, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
         optimizer_wrapper.update_params(parsed_losses)
         return log_vars
@@ -127,7 +128,7 @@ class BaseModel(nn.Module):
         return self(inputs, data_sample, mode='predict')
 
     def parse_losses(
-            self, losses: Dict[str, torch.Tensor]
+        self, losses: Dict[str, torch.Tensor]
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Parse the raw outputs (losses) of the network.
 
@@ -164,7 +165,7 @@ class BaseModel(nn.Module):
             nn.Module: The model itself.
         """
         self.data_preprocessor.device = torch.device(device)
-        return super(BaseModel, self).to(device)
+        return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
         """Override this method to set the ``device`` attribute of
@@ -174,5 +175,4 @@ class BaseModel(nn.Module):
             nn.Module: The model itself.
         """
         self.data_preprocessor.device = torch.cuda.current_device()
-        return super(BaseModel, self).cuda()
-
+        return super().cuda()

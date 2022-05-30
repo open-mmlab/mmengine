@@ -3,6 +3,7 @@ import collections.abc
 import functools
 import glob
 import itertools
+import logging
 import os.path as osp
 import pkgutil
 import subprocess
@@ -12,7 +13,6 @@ from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
 from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
-import logging
 
 import numpy as np
 import torch
@@ -534,6 +534,7 @@ def has_batch_norm(model: nn.Module) -> bool:
             return True
     return False
 
+
 def stack_batch(tensors, size_divisor=0, pad_value=0):
     """Stack multiple tensors to form a batch and pad the images to the max
     shape use the right bottom padding mode in these images.
@@ -601,7 +602,7 @@ def detect_anomalous_params(loss: torch.Tensor, model) -> None:
             logger.log(
                 level=logging.ERROR,
                 msg=f'{n} with shape {p.size()} is not '
-                    f'in the computational graph \n')
+                f'in the computational graph \n')
 
 
 def merge_dict(*args):

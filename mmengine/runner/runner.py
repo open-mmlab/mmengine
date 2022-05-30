@@ -13,7 +13,6 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn.parallel import DistributedDataParallel
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
@@ -25,7 +24,8 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.model import is_model_wrapper
+from mmengine.model import (BaseModel, MMDistributedDataParallel,
+                            is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
@@ -733,7 +733,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
+    def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object
@@ -745,27 +745,27 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (nn.Module or dict): A nn.Module object or a dict to build
+            model (BaseModel or dict): A nn.Module object or a dict to build
                 nn.Module object. If ``model`` is a nn.Module object, just
                 returns itself.
 
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, nn.Module):
+        if isinstance(model, BaseModel):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
             # init weights
-            if hasattr(model, 'init_weights'):
-                model.init_weights()
-            return model
+            if hasattr(model, 'init_weights'):  # type: ignore
+                model.init_weights()  # type: ignore
+            return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
 
     def wrap_model(self, model_wrapper_cfg: Optional[Dict],
-                   model: nn.Module) -> nn.Module:
+                   model: BaseModel) -> BaseModel:
         """Wrap model.
 
         An example of ``model_wrapper_cfg``::
@@ -782,7 +782,7 @@ class Runner:
             model (nn.Module): Model to be wrapped.
 
         Returns:
-            nn.Module: Wrapped model.
+            BaseModel: Wrapped model.
         """
         if is_model_wrapper(model):
             if model_wrapper_cfg is not None:
@@ -798,7 +798,7 @@ class Runner:
                                                       False)
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
-                model = DistributedDataParallel(
+                model = MMDistributedDataParallel(
                     self.model.cuda(),
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
@@ -809,7 +809,7 @@ class Runner:
                     model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(model=self.model.cuda()))
+                model_wrapper_cfg, default_args=dict(module=self.model.cuda()))
 
         return model
 
@@ -1575,8 +1575,6 @@ class Runner:
         +======================+=========================+
         | RuntimeInfoHook      | VERY_HIGH (10)          |
         +----------------------+-------------------------+
-        | OptimizerHook        | HIGH (30)               |
-        +----------------------+-------------------------+
         | IterTimerHook        | NORMAL (40)             |
         +----------------------+-------------------------+
         | DistSamplerSeedHook  | NORMAL (40)             |
@@ -1593,7 +1591,6 @@ class Runner:
 
             default_hooks = dict(
                 runtime_info=dict(type='RuntimeInfoHook'),
-                optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
                 sampler_seed=dict(type='DistSamplerSeedHook'),
                 logger=dict(type='LoggerHook'),
@@ -1616,7 +1613,6 @@ class Runner:
         """
         default_hooks: dict = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
-            optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),

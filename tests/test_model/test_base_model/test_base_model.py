@@ -1,21 +1,20 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import unittest
 from unittest import TestCase
-from unittest.mock import MagicMock
 
-import pytest
 import torch
 import torch.nn as nn
 from torch.optim import SGD
 
-from mmengine.model import BaseModel, BaseDataPreprocessor
+from mmengine.model import BaseDataPreprocessor, BaseModel
+from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 from mmengine.testing import assert_allclose
-from mmengine.optim import OptimizerWrapper
 
 
 @MODELS.register_module()
 class CustomDataPreprocessor(BaseDataPreprocessor):
+
     def forward(self, data, training=False):
         if training:
             return 1
@@ -79,7 +78,7 @@ class TestBaseModel(TestCase):
     def test_train_step(self):
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
-        optimizer_wrapper = OptimizerWrapper(optimizer)
+        optimizer_wrapper = OptimWrapper(optimizer)
         inputs = torch.randn(3, 1, 1)
         data = dict(inputs=inputs)
         # initiate grad.
@@ -115,5 +114,3 @@ class TestBaseModel(TestCase):
         data = dict(inputs=inputs)
         model = ToyModel().to(torch.cuda.current_device())
         model.val_step([data])
-
-

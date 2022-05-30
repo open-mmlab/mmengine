@@ -1,14 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from contextlib import contextmanager, ExitStack
+from contextlib import ExitStack, contextmanager
 from typing import List, Union
 
-import torch
-import torch.nn as nn
 from torch.nn.parallel import DataParallel
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.data import BaseDataElement
-from mmengine.optim import OptimizerWrapper
+from mmengine.optim import OptimWrapper, OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
 from mmengine.utils import detect_anomalous_params
 
@@ -41,6 +39,17 @@ class MMDistributedDataParallel(DistributedDataParallel):
 
     Args:
         module (nn.Module): module to be parallelized.
+        detect_anomalous_params (bool): This option is only used for
+            debugging which will slow down the training speed.
+            Detect anomalous parameters that are not included in
+            the computational graph with `loss` as the root.
+            There are two cases
+
+                - Parameters were not used during
+                  forward pass.
+                - Parameters were not used to produce
+                  loss.
+            Default: False.
 
     Note:
         If model have multiple submodules and each module have
@@ -53,11 +62,13 @@ class MMDistributedDataParallel(DistributedDataParallel):
         inherit from ``MMDistributedDataParallel`` should be defined and
         override the ``train_step`` method.
     """
-    def __init__(self, module, *args, **kwargs):
+
+    def __init__(self, module, detect_anomalous_params=False, *args, **kwargs):
         super().__init__(module, *args, **kwargs)
+        self.detect_anomalous_params = detect_anomalous_params
 
     def train_step(self, data: List[dict],
-                   optimizer_wrapper: OptimizerWrapper) -> dict:
+                   optimizer_wrapper: OptimWrapper) -> dict:
         """Interface for model forward, backward and parameter updating during
         training process.
 
@@ -72,15 +83,17 @@ class MMDistributedDataParallel(DistributedDataParallel):
 
         Args:
             data (List[dict]): Data sampled by dataloader.
-            optimizer_wrapper (OptimizerWrapper): A wrapper of optimizer to
+            optimizer_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
         Returns:
             dict: A tensor dict used to log training losses.
         """
         data = self.module.data_preprocessor(data, training=True)
-        losses = self(*data, mode='loss')
-        detect_anomalous_params(losses, model=self)
+        with optimizer_wrapper.precision_context():
+            losses = self(*data, mode='loss')
+        if self.detect_anomalous_params:
+            detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optimizer_wrapper.update_params(parsed_loss)
         return log_vars
@@ -144,46 +157,27 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
             `torch.nn.parallel.distributed.DistributedDataParallel`.
     """
 
-    def __init__(self,
-                 module,
-                 dim=0,
-                 broadcast_buffers=False,
-                 find_unused_parameters=False,
-                 **kwargs):
-        super().__init__()
+    def __init__(self, module, *args, **kwargs):
+        super(DistributedDataParallel, self).__init__()
         self.module = module
-        self.dim = dim
-        self.to_ddp(
-            dim=dim,
-            broadcast_buffers=broadcast_buffers,
-            find_unused_parameters=find_unused_parameters,
-            **kwargs)
-
-    def to_ddp(self, dim, broadcast_buffers, find_unused_parameters, **kwargs):
-        """Wrap models with separate MMDistributedDataParallel.
-
-        It only wraps the modules with parameters.
-        """
-        for name, module in self.module._modules.items():
-            if next(module.parameters(), None) is None:
-                module = module.cuda()
+        for name, _module in module._modules.items():
+            # module without parameters.
+            if next(_module.parameters(), None) is None:
+                _module = _module.cuda()
             elif all(not p.requires_grad for p in module.parameters()):
-                module = module.cuda()
+                _module = _module.cuda()
             else:
-                module = MMDistributedDataParallel(
-                    module.cuda(),
-                    dim=dim,
-                    broadcast_buffers=broadcast_buffers,
-                    find_unused_parameters=find_unused_parameters,
-                    **kwargs)
-            self.module._modules[name] = module
+                _module = MMDistributedDataParallel(_module.cuda(), *args,
+                                                    **kwargs)
+            module._modules[name] = _module
 
-    def train_step(self, data: List[dict], optimizer_wrapper: dict) -> dict:
+    def train_step(self, data: List[dict],
+                   optimizer_wrapper: OptimWrapperDict) -> dict:
         """Train step function.
 
         Args:
             data: Data sampled by dataloader.
-            optimizer_wrapper (OptimizerWrapper): A wrapper of optimizer to
+            optimizer_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
         """
         output = self.module.train_step(data, optimizer_wrapper)
@@ -217,7 +211,7 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
     @contextmanager
     def no_sync(self):
         """enable ``no_sync`` context of all sub-``MMDistributedDataParallel``
-        modules"""
+        modules."""
         with ExitStack() as stack:
             for sub_ddp_model in self.module._modules.values():
                 stack.enter_context(sub_ddp_model.no_sync())

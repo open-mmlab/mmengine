@@ -1,24 +1,25 @@
-from typing import Optional, Sequence, Tuple, List, Union
+# Copyright (c) OpenMMLab. All rights reserved.
+from typing import List, Sequence, Tuple, Union
 
-import torch.nn as nn
 import torch
+import torch.nn as nn
 
+from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
 from mmengine.utils import stack_batch
-from mmengine.data import BaseDataElement
 
 
 @MODELS.register_module()
 class BaseDataPreprocessor(nn.Module):
-    """Base data pre-processor used for collating and moving data to the
-    target device.
+    """Base data pre-processor used for collating and moving data to the target
+    device.
 
     ``BaseDataPreprocessor`` perform data pre-processing according to the
     following steps:
 
     - Take the data sampled from dataloader and unpack them into list of tensor
       and list of labels.
-    - Moving data to the target device.
+    - Move data to the target device.
     - Stack the input tensor at the first dimension.
 
     Subclass inherit ``BaseDataPreprocessor`` could override the forward method
@@ -29,24 +30,14 @@ class BaseDataPreprocessor(nn.Module):
         Each item of data sampled from dataloader must a dict and at least
         contain the ``inputs`` key. Furthermore, the value of ``inputs``
         must be a ``Tensor`` with the same shape.
-
-    Args:
-        preprocess_cfg (dict, optional): The configuration of pre-processing
-            data. The base class does not need to be configured with
-            it.
-        device (str): the target device, Defaults to 'auto'.
-
-            - 'auto': If cuda is available, the device is the current cuda
-               device; otherwise device will be cpu.
-            - other string: Specific target device.
     """
-    def __init__(self,
-                 preprocess_cfg: Optional[dict] = None):
+
+    def __init__(self):
         super().__init__()
         self.device = 'cpu'
 
-    def collate_data(self, data: Sequence[dict]
-                     ) -> Tuple[List[torch.Tensor], list]:
+    def collate_data(self,
+                     data: Sequence[dict]) -> Tuple[List[torch.Tensor], list]:
         """Collating and moving data to the target device.
 
         Take the data sampled from dataloader and unpack them into list of
@@ -71,13 +62,14 @@ class BaseDataPreprocessor(nn.Module):
 
         # Move data from CPU to corresponding device.
         batch_data_samples = [
-            self.cast_device(data_sample) for data_sample in
-            batch_data_samples]
+            self.cast_device(data_sample) for data_sample in batch_data_samples
+        ]
         inputs = [_input.to(self.cast_device(_input)) for _input in inputs]
         return inputs, batch_data_samples
 
-    def cast_device(self, data: Union[torch.Tensor, BaseDataElement]
-                    ) -> Union[torch.Tensor, BaseDataElement]:
+    def cast_device(
+        self, data: Union[torch.Tensor, BaseDataElement]
+    ) -> Union[torch.Tensor, BaseDataElement]:
         """Moving data to target device.
 
         Args:
@@ -89,8 +81,9 @@ class BaseDataPreprocessor(nn.Module):
         """
         return data.to(self.device)
 
-    def forward(self, data: Sequence[dict], training: bool = False
-                ) -> Tuple[torch.Tensor, list]:
+    def forward(self,
+                data: Sequence[dict],
+                training: bool = False) -> Tuple[torch.Tensor, list]:
         """Pre-process the data into the model input format.
 
         After the data pre-processing of :meth:`collate_data`, ``forward``
@@ -134,28 +127,35 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         constructor of :class:`BaseDataset`.
 
     Args:
-        preprocess_cfg (dict, optional): The config of `to_rgb`, `pixel_mean`,
-            `pixel_mean`, ``pad_size_divisor`` and ``pad_value``.
+        mean (Sequence[float or int]): The pixel mean of R, G, B channels.
+            Defaults to (127.5, 127.5, 127.5).
+        std (Sequence[float or int]): The pixel standard deviation of R, G, B
+            channels. (127.5, 127.5, 127.5)
+        pad_size_divisor (int): The size of padded image should be
+            divisible by ``pad_size_divisor``. Defaults to 1.
+        pad_value (float or int): The padded pixel value. Defaults to 0.
+        to_rgb (bool): whether to convert image from BGR to RGB.
+            Defaults to False
     """
-    def __init__(self,
-                 preprocess_cfg: Optional[dict] = None,
-                 *args,
-                 **kwargs):
-        super().__init__(*args, **kwargs)
-        if preprocess_cfg is None:
-            preprocess_cfg = dict()
-        self.to_rgb = preprocess_cfg.get('to_rgb', False)
-        pixel_mean = preprocess_cfg.get('pixel_mean', [127.5, 127.5, 127.5])
-        pixel_std = preprocess_cfg.get('pixel_std', [127.5, 127.5, 127.5])
-        self.register_buffer('pixel_mean',
-                             torch.tensor(pixel_mean).view(-1, 1, 1), False)
-        self.register_buffer('pixel_std',
-                             torch.tensor(pixel_std).view(-1, 1, 1), False)
-        self.pad_size_divisor = preprocess_cfg.get('pad_size_divisor', 1)
-        self.pad_value = preprocess_cfg.get('pad_value', 0)
 
-    def forward(self, data: Sequence[dict], training: bool = False
-                ) -> Tuple[torch.Tensor, list]:
+    def __init__(self,
+                 mean: Sequence[Union[float, int]] = (127.5, 127.5, 127.5),
+                 std: Sequence[Union[float, int]] = (127.5, 127.5, 127.5),
+                 pad_size_divisor: int = 1,
+                 pad_value: Union[float, int] = 0,
+                 to_rgb: bool = False):
+        super().__init__()
+        self.register_buffer('pixel_mean',
+                             torch.tensor(mean).view(-1, 1, 1), False)
+        self.register_buffer('pixel_std',
+                             torch.tensor(std).view(-1, 1, 1), False)
+        self.pad_size_divisor = pad_size_divisor
+        self.pad_value = pad_value
+        self.to_rgb = to_rgb
+
+    def forward(self,
+                data: Sequence[dict],
+                training: bool = False) -> Tuple[torch.Tensor, list]:
         """Perform normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
