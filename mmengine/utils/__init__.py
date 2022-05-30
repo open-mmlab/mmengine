@@ -8,7 +8,8 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    iter_cast, list_cast, mmcv_full_available,
                    requires_executable, requires_package, slice_list,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
-                   tuple_cast)
+                   tuple_cast, stack_batch, merge_dict,
+                   detect_anomalous_params)
 from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
                    scandir, symlink)
@@ -28,5 +29,6 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin',
-    'set_multi_processing', 'has_batch_norm'
+    'set_multi_processing', 'has_batch_norm', 'stack_batch', 'merge_dict',
+    'detect_anomalous_params'
 ]

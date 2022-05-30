@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .averaged_model import (ExponentialMovingAverage, MomentumAnnealingEMA,
                              StochasticWeightAverage)
+from .base_model import BaseModel, BaseDataPreprocessor, ImgDataPreprocessor
 from .wrappers import (MMDataParallel, MMDistributedDataParallel,
-                       is_model_wrapper)
+                       MMSeparateDDPWrapper, is_model_wrapper)
 
 __all__ = [
-    'MMDistributedDataParallel', 'MMDataParallel', 'is_model_wrapper',
+    'MMDistributedDataParallel', 'is_model_wrapper',
     'StochasticWeightAverage', 'ExponentialMovingAverage',
-    'MomentumAnnealingEMA'
+    'MomentumAnnealingEMA', 'BaseModel', 'BaseDataPreprocessor',
+    'ImgDataPreprocessor', 'MMSeparateDDPWrapper'
 ]

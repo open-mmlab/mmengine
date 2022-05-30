@@ -809,7 +809,7 @@ class Runner:
                     model = model.cuda()
         else:
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(model=self.model))
+                model_wrapper_cfg, default_args=dict(model=self.model.cuda()))
 
         return model
 
