@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -27,7 +27,7 @@ class BaseDataPreprocessor(nn.Module):
     CutMix.
 
     Args:
-        device (str or int or torch.device): Target device.
+        device (int or torch.device): Target device.
 
     Warnings:
         Each item of data sampled from dataloader must a dict and at least
@@ -35,7 +35,7 @@ class BaseDataPreprocessor(nn.Module):
         must be a ``Tensor`` with the same shape.
     """
 
-    def __init__(self, device: Union[str, int, torch.device] = 'cpu'):
+    def __init__(self, device: Union[int, torch.device] = 'cpu'):
         super().__init__()
         self.device = device
 
@@ -91,6 +91,29 @@ class BaseDataPreprocessor(nn.Module):
         batch_inputs = torch.stack(inputs, dim=0)
         return batch_inputs, batch_data_samples
 
+    def to(self, device: Optional[Union[int, torch.device]], *args,
+           **kwargs) -> nn.Module:
+        """Override this method to set the :attr:`device`
+
+        Args:
+            device (int or torch.device, optional): the desired device of the
+                parameters and buffers in this module.
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self.device = torch.device(device)
+        return super().to(device)
+
+    def cuda(self, *args, **kwargs) -> nn.Module:
+        """Override this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self.device = torch.cuda.current_device()
+        return super().cuda()
+
 
 @MODELS.register_module()
 class ImgDataPreprocessor(BaseDataPreprocessor):
@@ -125,7 +148,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         pad_value (float or int): The padded pixel value. Defaults to 0.
         to_rgb (bool): whether to convert image from BGR to RGB.
             Defaults to False.
-        device (str or int or torch.device): Target device.
+        device (int or torch.device): Target device.
     """
 
     def __init__(self,
@@ -134,7 +157,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
                  to_rgb: bool = False,
-                 device: Union[str, int, torch.device] = 'cpu'):
+                 device: Union[int, torch.device] = 'cpu'):
         super().__init__(device)
         self.register_buffer('pixel_mean',
                              torch.tensor(mean).view(-1, 1, 1), False)
@@ -159,11 +182,13 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             input.
         """
         inputs, batch_data_samples = self.collate_data(data)
-
+        # bgr to rgb
         if self.to_rgb and inputs[0].size(0) == 3:
             inputs = [_input[[2, 1, 0], ...] for _input in inputs]
+        # Normalization.
         inputs = [(_input - self.pixel_mean) / self.pixel_std
                   for _input in inputs]
+        # Pad and stack Tensor.
         batch_inputs = stack_batch(inputs, self.pad_size_divisor,
                                    self.pad_value)
         return batch_inputs, batch_data_samples
