@@ -64,34 +64,47 @@ class DefaultOptimWrapperConstructor:
         model contains multiple DCN layers in places other than backbone.
 
     Args:
-        optim_wrapper_cfg (dict): The config dict of the optimizer.
+        optim_wrapper_cfg (dict): The config dict of the optimizer wrapper.
             Positional fields are
 
-                - `type`: class name of the optimizer.
+                - ``type``: class name of the OptimizerWrapper
+                - ``optimizer``: The configuration of optimizer.
 
             Optional fields are
 
-                - any arguments of the corresponding optimizer type, e.g.,
-                  lr, weight_decay, momentum, etc.
+                - any arguments of the corresponding optimizer wrapper type,
+                  e.g., accumulative_iters, clip_grad, etc.
+
+        The positional fields of ``optimizer`` are
+
+            - `type`: class name of the optimizer.
+
+        Optional fields are
+
+            - any arguments of the corresponding optimizer type, e.g.,
+              lr, weight_decay, momentum, etc.
+
         paramwise_cfg (dict, optional): Parameter-wise options.
 
     Example 1:
         >>> model = torch.nn.modules.Conv1d(1, 1, 1)
-        >>> optimizer_cfg = dict(type='SGD', lr=0.01, momentum=0.9,
-        >>>                      weight_decay=0.0001)
+        >>> optim_wrapper_cfg = dict(
+        >>>     dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01,
+        >>>         momentum=0.9, weight_decay=0.0001))
         >>> paramwise_cfg = dict(norm_decay_mult=0.)
-        >>> optim_builder = DefaultOptimWrapperConstructor(
-        >>>     optimizer_cfg, paramwise_cfg)
-        >>> optimizer = optim_builder(model)
+        >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
+        >>>     optim_wrapper_cfg, paramwise_cfg)
+        >>> optim_wrapper = optim_wrapper_builder(model)
 
     Example 2:
         >>> # assume model have attribute model.backbone and model.cls_head
-        >>> optimizer_cfg = dict(type='SGD', lr=0.01, weight_decay=0.95)
+        >>> optim_wrapper_cfg = dict(type=OptimWrapper, optimizer=dict(
+        >>>     type='SGD', lr=0.01, weight_decay=0.95))
         >>> paramwise_cfg = dict(custom_keys={
-                '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
-        >>> optim_builder = DefaultOptimWrapperConstructor(
-        >>>     optimizer_cfg, paramwise_cfg)
-        >>> optimizer = optim_builder(model)
+        >>>     '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
+        >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
+        >>>     optim_wrapper_cfg, paramwise_cfg)
+        >>> optim_wrapper = optim_wrapper_builder(model)
         >>> # Then the `lr` and `weight_decay` for model.backbone is
         >>> # (0.01 * 0.1, 0.95 * 0.9). `lr` and `weight_decay` for
         >>> # model.cls_head is (0.01, 0.95).
@@ -103,6 +116,8 @@ class DefaultOptimWrapperConstructor:
         if not isinstance(optim_wrapper_cfg, dict):
             raise TypeError('optimizer_cfg should be a dict',
                             f'but got {type(optim_wrapper_cfg)}')
+        assert 'optimizer' in optim_wrapper_cfg, (
+            '`optim_wrapper_cfg` must contain "optimizer" config')
         self.optim_wrapper_cfg = optim_wrapper_cfg.copy()
         self.optimizer_cfg = self.optim_wrapper_cfg.pop('optimizer')
         self.paramwise_cfg = {} if paramwise_cfg is None else paramwise_cfg

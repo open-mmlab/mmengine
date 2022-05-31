@@ -222,6 +222,13 @@ class TestBuilder(TestCase):
             optim_wrapper_cfg['paramwise_cfg'] = dict(invalid_mult=1)
             build_optim_wrapper(self.model, optim_wrapper_cfg)
 
+        optim_wrapper_cfg.pop('optimizer')
+        optim_wrapper_cfg.pop('constructor')
+        optim_wrapper_cfg.pop('paramwise_cfg')
+        self.assertRaisesRegex(
+            AssertionError, '`optim_wrapper_cfg` must contain',
+            lambda: build_optim_wrapper(self.model, optim_wrapper_cfg))
+
     def test_build_default_optimizer_constructor(self):
         optim_wrapper = dict(
             type='OptimWrapper',

@@ -43,8 +43,8 @@ def build_optim_wrapper(model: nn.Module,
 
     Args:
         model (nn.Module): Model to be optimized.
-        cfg (dict): Config of optimizer, optim_wrapper and optimizer
-            constructor.
+        cfg (dict): Config of optimizer wrapper, optimizer constructor and
+            optimizer.
 
     Returns:
         OptimWrapper: The built optimizer wrapper.
