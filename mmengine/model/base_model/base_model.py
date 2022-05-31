@@ -54,8 +54,8 @@ class BaseModel(nn.Module):
         >>>             return dict(loss=loss)
 
     Args:
-        init_cfg (dict or Config, optional): The weight initialized config for
-            :class:`BaseModule`.
+        init_cfg (dict or Config or ConfigDict, optional): The weight
+            initialized config for :class:`BaseModule`.
         data_preprocessor (dict or Config, optional): The pre-process config of
             :class:`BaseDataPreprocessor`.
     """

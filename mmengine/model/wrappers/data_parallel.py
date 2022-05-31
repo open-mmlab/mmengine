@@ -2,6 +2,7 @@
 from contextlib import ExitStack, contextmanager
 from typing import List, Union
 
+import torch.nn as nn
 from torch.nn.parallel import DataParallel
 from torch.nn.parallel.distributed import DistributedDataParallel
 
@@ -38,7 +39,6 @@ class MMDistributedDataParallel(DistributedDataParallel):
     - ``test_step``: Called by ``runner.test_loop``, equivalent ``val_step``.
 
     Args:
-        module (nn.Module): module to be parallelized.
         detect_anomalous_params (bool): This option is only used for
             debugging which will slow down the training speed.
             Detect anomalous parameters that are not included in
@@ -50,6 +50,9 @@ class MMDistributedDataParallel(DistributedDataParallel):
                 - Parameters were not used to produce
                   loss.
             Default: False.
+
+        *args: list arguments passed to ``DistributedDataParallel``
+        **kwargs: keyword arguments passed to ``DistributedDataParallel``.
 
     Note:
         If model have multiple submodules and each module have
@@ -63,13 +66,13 @@ class MMDistributedDataParallel(DistributedDataParallel):
         override the ``train_step`` method.
     """
 
-    def __init__(self, module, detect_anomalous_params=False, *args, **kwargs):
-        super().__init__(module, *args, **kwargs)
+    def __init__(self, detect_anomalous_params: bool = False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.detect_anomalous_params = detect_anomalous_params
 
     def train_step(self, data: List[dict],
                    optimizer_wrapper: OptimWrapper) -> dict:
-        """Interface for model forward, backward and parameter updating during
+        """Interface for model forward, backward and parameters updating during
         training process.
 
         :meth:`train_step` will perform the following steps in order:
@@ -128,7 +131,7 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
     In MMedting and MMGeneration there is a need to wrap different modules in
     the models with separate DistributedDataParallel. Otherwise, it will cause
     errors for GAN training. More specific, the GAN model, usually has two
-    sub-modules: generator and discriminator. If we wrap both of them in one
+    submodules: generator and discriminator. If we wrap both of them in one
     standard DistributedDataParallel, it will cause errors during training,
     because when we update the parameters of the generator (or discriminator),
     the parameters of the discriminator (or generator) is not updated, which is
@@ -140,26 +143,19 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
     2. Do scatter operation for 'forward', 'train_step' and 'val_step'.
     Note that the arguments of this wrapper is the same as those in
     `torch.nn.parallel.distributed.DistributedDataParallel`.
+
     Args:
-        module (nn.Module): Module that needs to be wrapped.
-        device_ids (list[int | `torch.device`]): Same as that in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
-        dim (int, optional): Same as that in the official scatter function in
-            pytorch. Defaults to 0.
-        broadcast_buffers (bool): Same as that in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
-            Defaults to False.
-        find_unused_parameters (bool, optional): Same as that in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
-            Traverse the autograd graph of all tensors contained in returned
-            value of the wrapped module’s forward function. Defaults to False.
-        kwargs (dict): Other arguments used in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
+        module (nn.Module): model contain multiple submodules which have
+            separately updating strategy.
+        *args: list arguments passed to ``DistributedDataParallel``
+        **kwargs: keyword arguments passed to ``DistributedDataParallel``.
     """
 
-    def __init__(self, module, *args, **kwargs):
+    def __init__(self, module: nn.Module, *args, **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
+        # Wrap the submodule with parameters of `self.module` to
+        # `MMDistributedDataParallel`
         for name, _module in module._modules.items():
             # module without parameters.
             if next(_module.parameters(), None) is None:
@@ -167,8 +163,8 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
             elif all(not p.requires_grad for p in module.parameters()):
                 _module = _module.cuda()
             else:
-                _module = MMDistributedDataParallel(_module.cuda(), *args,
-                                                    **kwargs)
+                _module = MMDistributedDataParallel(
+                    module=_module.cuda(), *args, **kwargs)
             module._modules[name] = _module
 
     def train_step(self, data: List[dict],
@@ -210,7 +206,7 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
 
     @contextmanager
     def no_sync(self):
-        """enable ``no_sync`` context of all sub-``MMDistributedDataParallel``
+        """enable ``no_sync`` context of all sub ``MMDistributedDataParallel``
         modules."""
         with ExitStack() as stack:
             for sub_ddp_model in self.module._modules.values():
