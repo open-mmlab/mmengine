@@ -41,8 +41,13 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer.param_groups[0]['lr'])
+        if isinstance(runner.optimizer, dict):
+            for name, optimizer in runner.optimizer.items():
+                runner.message_hub.update_scalar(
+                    f'train/{name}.lr', optimizer.param_groups[0]['lr'])
+        else:
+            runner.message_hub.update_scalar(
+                'train/lr', runner.optimizer.param_groups[0]['lr'])
 
     def after_train_iter(self,
                          runner,
