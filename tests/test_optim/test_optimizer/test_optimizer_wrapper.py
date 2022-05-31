@@ -69,7 +69,7 @@ class TestOptimWrapper(MultiProcessTestCase):
 
         with self.assertRaisesRegex(AssertionError,
                                     'If `clip_grad_kwargs` is not None'):
-            OptimWrapper(self.optimizer, clip_grad_kwargs=[])
+            OptimWrapper(self.optimizer, clip_grad=[])
 
     def test_update_params(self):
         # Test update params every iteration.
@@ -172,7 +172,7 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_clip_grads(self):
         optim_wrapper = OptimWrapper(
-            self.optimizer, clip_grad_kwargs=dict(max_norm=35))
+            self.optimizer, clip_grad=dict(max_norm=35))
         loss = self.model(torch.Tensor(1, 1, 1, 1))
         loss.backward()
         optim_wrapper._clip_grad()

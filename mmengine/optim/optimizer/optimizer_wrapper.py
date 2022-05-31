@@ -30,8 +30,8 @@ class OptimWrapper:
         accumulative_iters (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
             ``accumulative_iters``.
-        clip_grad_kwargs (dict, optional): If ``clip_grad_kwargs`` is not
-            None, it will be the arguments of ``torch.nn.utils.clip_grad``.
+        clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
+            the arguments of ``torch.nn.utils.clip_grad``.
 
     Warnings:
         If ``accumulative_iters`` is larger than 1, :meth:`update_params` must
@@ -72,7 +72,7 @@ class OptimWrapper:
     def __init__(self,
                  optimizer: Optimizer,
                  accumulative_iters: int = 1,
-                 clip_grad_kwargs: Optional[dict] = None):
+                 clip_grad: Optional[dict] = None):
         assert accumulative_iters > 0, (
             'accumulative_iters at least greater than or equal to 1')
         self.accumulative_iters = accumulative_iters
@@ -87,12 +87,12 @@ class OptimWrapper:
             f'{type(optimizer)}')
         self.optimizer = optimizer
 
-        if clip_grad_kwargs is not None:
+        if clip_grad is not None:
             # clip_grad_kwargs should not be non-empty dict.
-            assert isinstance(clip_grad_kwargs, dict) and clip_grad_kwargs, (
+            assert isinstance(clip_grad, dict) and clip_grad, (
                 'If `clip_grad_kwargs` is not None, it should be a `dict` '
                 'which is the arguments of `torch.nn.utils.clip_grad`')
-        self.clip_grad_kwargs = clip_grad_kwargs
+        self.clip_grad_kwargs = clip_grad
         self.logger = MMLogger.get_current_instance()
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
