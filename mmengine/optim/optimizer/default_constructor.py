@@ -64,7 +64,7 @@ class DefaultOptimWrapperConstructor:
         model contains multiple DCN layers in places other than backbone.
 
     Args:
-        optimizer_cfg (dict): The config dict of the optimizer.
+        optim_wrapper_cfg (dict): The config dict of the optimizer.
             Positional fields are
 
                 - `type`: class name of the optimizer.
@@ -98,15 +98,16 @@ class DefaultOptimWrapperConstructor:
     """
 
     def __init__(self,
-                 optimizer_cfg: dict,
+                 optim_wrapper_cfg: dict,
                  paramwise_cfg: Optional[dict] = None):
-        if not isinstance(optimizer_cfg, dict):
+        if not isinstance(optim_wrapper_cfg, dict):
             raise TypeError('optimizer_cfg should be a dict',
-                            f'but got {type(optimizer_cfg)}')
-        self.optimizer_cfg = optimizer_cfg
+                            f'but got {type(optim_wrapper_cfg)}')
+        self.optim_wrapper_cfg = optim_wrapper_cfg.copy()
+        self.optimizer_cfg = self.optim_wrapper_cfg.pop('optimizer')
         self.paramwise_cfg = {} if paramwise_cfg is None else paramwise_cfg
-        self.base_lr = optimizer_cfg.get('lr', None)
-        self.base_wd = optimizer_cfg.get('weight_decay', None)
+        self.base_lr = self.optimizer_cfg.get('lr', None)
+        self.base_wd = self.optimizer_cfg.get('weight_decay', None)
         self._validate_cfg()
 
     def _validate_cfg(self) -> None:
@@ -255,9 +256,8 @@ class DefaultOptimWrapperConstructor:
         if hasattr(model, 'module'):
             model = model.module
 
+        optim_wrapper_cfg = self.optim_wrapper_cfg.copy()
         optimizer_cfg = self.optimizer_cfg.copy()
-        optim_wrapper_cfg = optimizer_cfg.pop('optim_wrapper',
-                                              dict(type='OptimWrapper'))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()

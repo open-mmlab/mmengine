@@ -49,14 +49,14 @@ def build_optim_wrapper(model: nn.Module,
     Returns:
         OptimWrapper: The built optimizer wrapper.
     """
-    optimizer_cfg = copy.deepcopy(cfg)
-    constructor_type = optimizer_cfg.pop('constructor',
-                                         'DefaultOptimWrapperConstructor')
-    paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
+    optim_wrapper_cfg = copy.deepcopy(cfg)
+    constructor_type = optim_wrapper_cfg.pop('constructor',
+                                             'DefaultOptimWrapperConstructor')
+    paramwise_cfg = optim_wrapper_cfg.pop('paramwise_cfg', None)
     optim_wrapper_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
         dict(
             type=constructor_type,
-            optimizer_cfg=optimizer_cfg,
+            optim_wrapper_cfg=optim_wrapper_cfg,
             paramwise_cfg=paramwise_cfg))
     optim_wrapper = optim_wrapper_constructor(model)
     return optim_wrapper
