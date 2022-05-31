@@ -619,39 +619,37 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
-    def test_auto_scale_lr(self):
+    def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_auto_scale_lr'
         runner = Runner.from_cfg(cfg)
 
-        # When autoscalelr_cfg is None or enable is False, the lr will
-        # not be linearly scaled.
-        autoscalelr_cfg = dict(base_batch_size=16, enable=False)
+        # When no base_batch_size in auto_scale_lr_cfg, an
+        # assertion error will raise.
+        auto_scale_lr_cfg = dict(enable=True)
         optimizer = dict(type='SGD', lr=0.01)
-        runner.auto_scale_lr(optimizer)
+        with self.assertRaises(AssertionError):
+            runner.scale_lr(optimizer, auto_scale_lr_cfg)
+
+        # When auto_scale_lr_cfg is None or enable is False, the lr will
+        # not be linearly scaled.
+        auto_scale_lr_cfg = dict(base_batch_size=16, enable=False)
+        optimizer = dict(type='SGD', lr=0.01)
+        runner.scale_lr(optimizer)
         self.assertEqual(optimizer['lr'], 0.01)
-        runner.auto_scale_lr(optimizer, autoscalelr_cfg)
+        runner.scale_lr(optimizer, auto_scale_lr_cfg)
         self.assertEqual(optimizer['lr'], 0.01)
 
-        # When autoscalelr_cfg is None or enable is False, the lr will
-        # not be linearly scaled.
-        autoscalelr_cfg = dict(base_batch_size=16, enable=False)
-        optimizer = dict(type='SGD', lr=0.01)
-        runner.auto_scale_lr(optimizer)
-        self.assertEqual(optimizer['lr'], 0.01)
-        runner.auto_scale_lr(optimizer, autoscalelr_cfg)
-        self.assertEqual(optimizer['lr'], 0.01)
-
-        # When autoscalelr_cfg is not None and enable is True, the lr will
+        # When auto_scale_lr_cfg is correct and enable is True, the lr will
         # be linearly scaled.
         autoscalelr_cfg = dict(base_batch_size=16, enable=True)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
         optimizer = dict(type='SGD', lr=0.01)
-        runner.auto_scale_lr(optimizer, autoscalelr_cfg)
+        runner.scale_lr(optimizer, autoscalelr_cfg)
         self.assertEqual(optimizer['lr'], 0.01 * (real_bs / 16))
 
         optimizer = SGD(runner.model.parameters(), lr=0.01)
-        runner.auto_scale_lr(optimizer, autoscalelr_cfg)
+        runner.scale_lr(optimizer, autoscalelr_cfg)
         self.assertEqual(optimizer.param_groups[0]['lr'],
                          0.01 * (real_bs / 16))
 

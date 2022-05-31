@@ -96,16 +96,12 @@ class Runner:
             not provide "type" key, :class:`TestLoop` will be used by default.
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
             specified. Defaults to None.
-<<<<<<< HEAD
-            See :meth:`build_test_loop` for more details.
-=======
             See :meth:`build_test_loop` for more etails.
         auto_scale_lr (dict, optional): Automatically scaling lr config.  It
             includes ``enable`` and ``base_batch_size``. ``enable`` is
             the switch to turn on and off the automatically scaling lr.
             ``base_batch_size`` is the batch size that the optimizer lr
             is based on.
->>>>>>> Add auto scale lr fucntion
         optimizer (Optimizer or dict, optional): Computing gradient of model
             parameters. If specified, :attr:`train_dataloader` should also be
             specified. Defaults to None.
@@ -272,7 +268,7 @@ class Runner:
         self._train_loop = train_cfg
         self.optimizer = optimizer
 
-        self.autoscalelr_cfg = auto_scale_lr
+        self.auto_scale_lr_cfg = auto_scale_lr
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
@@ -816,9 +812,9 @@ class Runner:
 
         return model
 
-    def auto_scale_lr(self,
-                      optimizer: Union[Optimizer, Dict],
-                      autoscalelr_cfg: Optional[Dict] = None) -> None:
+    def scale_lr(self,
+                 optimizer: Union[Optimizer, Dict],
+                 auto_scale_lr_cfg: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size. Referring to `paper <https://arxiv.org/abs/1706.02677>`_.
@@ -832,14 +828,17 @@ class Runner:
                 ``base_batch_size`` is the batch size that the optimizer lr
                 is based on.
         """
-        if autoscalelr_cfg is None or not autoscalelr_cfg['enable']:
+        if (auto_scale_lr_cfg is None
+                or not auto_scale_lr_cfg.get('enable', False)):
             return None
 
+        assert 'base_batch_size' in auto_scale_lr_cfg, \
+            'Lack of `base_batch_size` in `auto_scale_lr_cfg`.'
         dataloader: Union[DataLoader, Dict] = self._train_dataloader
         bs = dataloader.batch_size if isinstance(
             dataloader, DataLoader) else dataloader['batch_size']
         real_bs = self.world_size * bs
-        base_bs = autoscalelr_cfg['base_batch_size']
+        base_bs = auto_scale_lr_cfg['base_batch_size']
         ratio = float(real_bs) / float(base_bs)
         self.logger.info(f'LR is set based on batch size being {base_bs}, '
                          f'while the training batch size is {real_bs}. '
@@ -848,9 +847,9 @@ class Runner:
         if isinstance(optimizer, dict):
             optimizer['lr'] = optimizer['lr'] * ratio
         else:
+            assert self.param_schedulers
             for group in optimizer.param_groups:
                 group['lr'] = group['lr'] * ratio
-
 
     def build_optimizer(
         self, optimizer: Union[Optimizer, Dict]
@@ -1404,7 +1403,7 @@ class Runner:
             self._train_loop)  # type: ignore
 
         # Automatically scaling lr by linear scaling rule
-        self.auto_scale_lr(self.optimizer, self.autoscalelr_cfg)
+        self.scale_lr(self.optimizer, self.auto_scale_lr_cfg)
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
