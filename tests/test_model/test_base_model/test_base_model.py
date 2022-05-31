@@ -78,12 +78,12 @@ class TestBaseModel(TestCase):
     def test_train_step(self):
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
-        optimizer_wrapper = OptimWrapper(optimizer)
+        optim_wrapper = OptimWrapper(optimizer)
         inputs = torch.randn(3, 1, 1)
         data = dict(inputs=inputs)
         # initiate grad.
         # model.conv.weight.grad = torch.randn(1, 3, 1, 1)
-        log_vars = model.train_step([data], optimizer_wrapper)
+        log_vars = model.train_step([data], optim_wrapper)
         self.assertIsNotNone(model.conv.weight.grad)
         self.assertIsInstance(log_vars['loss'], torch.Tensor)
 

@@ -71,7 +71,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         self.detect_anomalous_params = detect_anomalous_params
 
     def train_step(self, data: List[dict],
-                   optimizer_wrapper: OptimWrapper) -> dict:
+                   optim_wrapper: OptimWrapper) -> dict:
         """Interface for model forward, backward and parameters updating during
         training process.
 
@@ -81,24 +81,24 @@ class MMDistributedDataParallel(DistributedDataParallel):
             call ``module.preprocess`` to pre-processing data.
         - Call ``module.forward(**data)`` and get losses.
         - Parse losses.
-        - Call ``optimizer_wrapper.optimizer_step`` to update parameters.
+        - Call ``optim_wrapper.optimizer_step`` to update parameters.
         - Return log messages of losses.
 
         Args:
             data (List[dict]): Data sampled by dataloader.
-            optimizer_wrapper (OptimWrapper): A wrapper of optimizer to
+            optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
         Returns:
             dict: A tensor dict used to log training losses.
         """
         data = self.module.data_preprocessor(data, training=True)
-        with optimizer_wrapper.precision_context():
+        with optim_wrapper.precision_context():
             losses = self(*data, mode='loss')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
-        optimizer_wrapper.update_params(parsed_loss)
+        optim_wrapper.update_params(parsed_loss)
         return log_vars
 
     def val_step(self, data: List[dict]) -> Union[List[BaseDataElement], dict]:
@@ -168,15 +168,15 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
             module._modules[name] = _module
 
     def train_step(self, data: List[dict],
-                   optimizer_wrapper: OptimWrapperDict) -> dict:
+                   optim_wrapper: OptimWrapperDict) -> dict:
         """Train step function.
 
         Args:
             data: Data sampled by dataloader.
-            optimizer_wrapper (OptimWrapper): A wrapper of optimizer to
+            optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
         """
-        output = self.module.train_step(data, optimizer_wrapper)
+        output = self.module.train_step(data, optim_wrapper)
         return output
 
     def val_step(self, data) -> List[BaseDataElement]:

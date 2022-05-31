@@ -100,10 +100,10 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
         # train_logs should be a dict of loss.
-        with self.runner.optimizer_wrapper.accumulate_grad(
+        with self.runner.optim_wrapper.accumulate_grad(
                 self.runner.model, self._iter, self._max_iters):
             train_logs = self.runner.model.train_step(
-                data_batch, optimizer_wrapper=self.runner.optimizer_wrapper)
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
         self.runner.message_hub.update_info('train_logs', train_logs)
 
         self.runner.call_hook(
@@ -198,10 +198,10 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # train_logs should be a dict of loss.
-        with self.runner.optimizer_wrapper.accumulate_grad(
+        with self.runner.optim_wrapper.accumulate_grad(
                 self.runner.model, self._iter, self._max_iters):
             train_logs = self.runner.model.train_step(
-                data_batch, optimizer_wrapper=self.runner.optimizer_wrapper)
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
         self.runner.message_hub.update_info('train_logs', train_logs)
 
         self.runner.call_hook(

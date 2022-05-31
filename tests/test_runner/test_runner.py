@@ -88,11 +88,11 @@ class TopGANModel(BaseModel):
         elif mode == 'predict':
             return output1, output2
 
-    def train_step(self, data, optimizer_wrapper):
+    def train_step(self, data, optim_wrapper):
         batch_inputs, batch_labels = self.data_preprocessor(data)
         loss = self(batch_inputs, batch_labels, mode='loss')
-        optimizer_wrapper['linear1'].update_params(loss['linear1'])
-        optimizer_wrapper['linear2'].update_params(loss['linear2'])
+        optim_wrapper['linear1'].update_params(loss['linear1'])
+        optim_wrapper['linear2'].update_params(loss['linear2'])
         return loss
 
 
@@ -1296,7 +1296,7 @@ class TestRunner(TestCase):
                 self.runner.call_hook(
                     'before_warmup_iter', data_batch=data_batch)
                 train_logs = self.runner.model.train_step(
-                    data_batch, self.runner.optimizer_wrapper)
+                    data_batch, self.runner.optim_wrapper)
                 self.runner.message_hub.update_info('train_logs', train_logs)
                 self.runner.call_hook(
                     'after_warmup_iter', data_batch=data_batch)

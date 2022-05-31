@@ -10,10 +10,17 @@ from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 
+from abc import ABCMeta, abstractmethod
+
+
+DataSamples = Optional[Union[list, torch.Tensor]]
+ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
+                       Tuple[torch.Tensor], torch.Tensor]
+
 
 # TODO inherit from BaseModule
 @MODELS.register_module()
-class BaseModel(nn.Module):
+class BaseModel(nn.Module, metaclass=ABCMeta):
     """Base class for all algorithmic models.
 
     BaseModel implements the basic functions of the algorithmic model, such as
@@ -58,6 +65,11 @@ class BaseModel(nn.Module):
             initialized config for :class:`BaseModule`.
         data_preprocessor (dict or Config, optional): The pre-process config of
             :class:`BaseDataPreprocessor`.
+
+    Attributes:
+        data_preprocessor (:obj:`BaseDataPreprocessor`): Used for
+            pre-processing data sampled by dataloader to the format accepted by
+            :meth:`forward`.
     """
 
     def __init__(self,
@@ -68,7 +80,7 @@ class BaseModel(nn.Module):
         self.data_preprocessor = MODELS.build(data_preprocessor)
 
     def train_step(self, data: List[dict],
-                   optimizer_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
+                   optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Implement the default model parameter update process.
 
         During non-distributed training.If subclass does not override the
@@ -82,21 +94,21 @@ class BaseModel(nn.Module):
           loss
         - call ``self.parse_losses`` to get ``parsed_losses`` tensor used to
           backward and dict of loss tensor used to log messages.
-        - call ``optimizer_wrapper.update_params(loss)`` to update model.
+        - call ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
             data (List[dict]): Data sampled from dataloader.
-            optimizer_wrapper (OptimWrapper): OptimWrapper instance
+            optim_wrapper (OptimWrapper): OptimWrapper instance
                 used to update model parameters.
 
         Returns:
             Dict[str, torch.Tensor]: dict of tensor for logging.
         """
         inputs, data_sample = self.data_preprocessor(data, True)
-        with optimizer_wrapper.precision_context():
+        with optim_wrapper.precision_context():
             losses = self(inputs, data_sample, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
-        optimizer_wrapper.update_params(parsed_losses)
+        optim_wrapper.update_params(parsed_losses)
         return log_vars
 
     def val_step(self, data: List[dict]) -> List[BaseDataElement]:
@@ -181,3 +193,52 @@ class BaseModel(nn.Module):
         """
         self.data_preprocessor.device = torch.cuda.current_device()
         return super().cuda()
+
+    @abstractmethod
+    def forward(self,
+                batch_inputs: torch.Tensor,
+                data_samples: DataSamples = None,
+                mode: str = 'feat') -> ForwardResults:
+        """Get losses or predictions of training, validation, testing,
+        and simple inference process.
+
+        ``forward`` method of BaseModel is an abstract method, subclass must
+        override this method.
+
+        Accept ``batch_inputs`` and ``data_samples`` processed by
+        :attr:`data_preprocessor`, and return results according to mode
+        arguments.
+
+        During non-dist training, validation and testing  process, ``forward``
+        will be called by ``BaseModel.train_step``, ``BaseModel.val_step`` and
+        ``BaseModel.val_step`` directly.
+
+        During distributed data parallel training process, since calling
+        ``DistributedDataParallel.forward`` can achieve automatic gradient
+        synchronization, :obj:`MMDistributedDataParallel` will call
+        ``DistributedDataParallel.forward`` in ``train_step``, and
+        further calls the ``forward`` method of ``BaseModel`` subclass.
+
+        Args:
+            batch_inputs (torch.Tensor): batch input tensor collated by
+                :attr:`data_preprocessor`.
+            data_samples (torch.Tensor, list, optional):
+                data samples collated by :attr:`data_preprocessor`.
+            mode (str): mode shoule be one of ``loss``, ``predict`` and
+                ``feat``
+
+                - ``loss``: Called by ``train_step`` and return loss dict used
+                  for logging
+                - ``predict``: Called by ``val_step`` and ``test_step``
+                  and return list of ``BaseDataElement`` results used for
+                  computing metric.
+                - ``feat``: Called by custom use to get a ``Tensor`` type
+                  results.
+
+        Returns:
+            dict or list or torch.Tensor or tuple:
+                - dict of loss tensor used for logging.
+                - list of :BaseDataElement:`BaseDataElement` for
+                  computing metric.
+                - Tensor or tuple of tensor or dict or tensor for custom use.
+        """

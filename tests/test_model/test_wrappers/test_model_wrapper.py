@@ -40,12 +40,12 @@ class ComplexModel(BaseModel):
         self.conv1 = nn.Conv2d(3, 1, 1)
         self.conv2 = nn.Conv2d(3, 1, 1)
 
-    def train_step(self, data, optimizer_wrapper):
+    def train_step(self, data, optim_wrapper):
         batch_inputs, _ = self.data_preprocessor(data)
         loss1 = self.conv1(batch_inputs)
-        optimizer_wrapper['optimizer_wrapper1'].update_params(loss1)
+        optim_wrapper['optim_wrapper1'].update_params(loss1)
         loss2 = self.conv2(batch_inputs)
-        optimizer_wrapper['optimizer_wrapper2'].update_params(loss2)
+        optim_wrapper['optim_wrapper2'].update_params(loss2)
         return dict(loss1=loss1, loss2=loss2)
 
     def val_step(self, data):
@@ -63,14 +63,14 @@ class TestModelWrapper(MultiProcessTestCase):
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        # Test `optimizer_wrapper` is a instance of `OptimWrapper`
+        # Test `optim_wrapper` is a instance of `OptimWrapper`
         model = ToyModel()
         ddp_model = MMDistributedDataParallel(module=model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
-        optimizer_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
+        optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
         inputs = torch.randn(3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
-        ddp_model.train_step([data], optimizer_wrapper=optimizer_wrapper)
+        ddp_model.train_step([data], optim_wrapper=optim_wrapper)
         grad = ddp_model.module.conv1.weight.grad
         assert_allclose(grad, torch.zeros_like(grad))
 
@@ -108,24 +108,24 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        # Test `optimizer_wrapper` is a dict. In this case,
+        # Test `optim_wrapper` is a dict. In this case,
         # There will be two independently updated `DistributedDataParallel`
         # submodules.
         model = ComplexModel()
         ddp_model = MMSeparateDDPWrapper(model.cuda())
         optimizer1 = SGD(model.conv1.parameters(), lr=0.1)
         optimizer2 = SGD(model.conv1.parameters(), lr=0.2)
-        optimizer_wrapper1 = OptimWrapper(optimizer1, 1)
-        optimizer_wrapper2 = OptimWrapper(optimizer2, 1)
+        optim_wrapper1 = OptimWrapper(optimizer1, 1)
+        optim_wrapper2 = OptimWrapper(optimizer2, 1)
         optim_wrapper_dict = OptimWrapperDict(
             dict(
-                optimizer_wrapper1=optimizer_wrapper1,
-                optimizer_wrapper2=optimizer_wrapper2))
+                optim_wrapper1=optim_wrapper1,
+                optim_wrapper2=optim_wrapper2))
         inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs)
-        # Automatically sync grads of `optimizer_wrapper1` since
+        # Automatically sync grads of `optim_wrapper1` since
         # `cumulative_iters` = 1
-        ddp_model.train_step([data], optimizer_wrapper=optim_wrapper_dict)
+        ddp_model.train_step([data], optim_wrapper=optim_wrapper_dict)
 
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
