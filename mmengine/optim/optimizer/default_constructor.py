@@ -7,18 +7,18 @@ import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
 from mmengine.logging import print_log
-from mmengine.registry import (OPTIMIZER_WRAPPER_CONSTRUCTORS,
+from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS,
                                OPTIMIZER_WRAPPERS, OPTIMIZERS)
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 from .optimizer_wrapper import OptimWrapper
 
 
-@OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
+@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
 class DefaultOptimWrapperConstructor:
     """Default constructor for optimizers.
 
-    By default each parameter share the same optimizer settings, and we
+    By default, each parameter share the same optimizer settings, and we
     provide an argument ``paramwise_cfg`` to specify parameter-wise settings.
     It is a dict and may contain the following fields:
 

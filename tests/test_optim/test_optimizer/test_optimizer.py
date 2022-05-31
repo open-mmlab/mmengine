@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
-from mmengine.optim import (OPTIMIZER_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
+from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
@@ -236,7 +236,7 @@ class TestBuilder(TestCase):
             type='DefaultOptimWrapperConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
+        optim_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
             optim_constructor_cfg)
         optimizer_wrapper = optim_constructor(self.model)
         self._check_sgd_optimizer(optimizer_wrapper.optimizer, self.model,
@@ -249,7 +249,7 @@ class TestBuilder(TestCase):
             weight_decay=self.base_wd,
             momentum=self.momentum)
 
-        @OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
+        @OPTIM_WRAPPER_CONSTRUCTORS.register_module()
         class MyOptimizerConstructor(DefaultOptimWrapperConstructor):
 
             def __call__(self, model):
@@ -273,7 +273,7 @@ class TestBuilder(TestCase):
             type='MyOptimizerConstructor',
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
+        optim_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
             optim_constructor_cfg)
         optimizer = optim_constructor(self.model)
 

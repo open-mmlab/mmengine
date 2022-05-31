@@ -16,7 +16,7 @@ class AmpOptimWrapper(OptimWrapper):
 
     ``AmpOptimWrapper`` provides a unified interface with
     ``OptimWrapper``, so ``AmpOptimWrapper`` can be used in the same way
-    with ``OptimWrapper``.
+    as ``OptimWrapper``.
 
     Warnings:
         ``AmpOptimWrapper`` requires PyTorch >= 1.6.
@@ -32,10 +32,9 @@ class AmpOptimWrapper(OptimWrapper):
 
         **kwargs: Keyword arguments passed to OptimWrapper.
     """
-
     def __init__(self, loss_scale=512., **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
-            '`torch.cuda.amp` is only available when pytorch version > 1.6')
+            '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':

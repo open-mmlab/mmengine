@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
-from mmengine.registry import OPTIMIZER_WRAPPER_CONSTRUCTORS, OPTIMIZERS
+from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
 from .optimizer_wrapper_dict import OptimWrapper
 
 
@@ -53,7 +53,7 @@ def build_optim_wrapper(model: nn.Module,
     constructor_type = optimizer_cfg.pop('constructor',
                                          'DefaultOptimWrapperConstructor')
     paramwise_cfg = optimizer_cfg.pop('paramwise_cfg', None)
-    optim_wrapper_constructor = OPTIMIZER_WRAPPER_CONSTRUCTORS.build(
+    optim_wrapper_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
         dict(
             type=constructor_type,
             optimizer_cfg=optimizer_cfg,

@@ -43,6 +43,9 @@ class OptimWrapperDict(OptimWrapper):
     def __init__(self, **optim_wrapper_dict: OptimWrapper):
         first_key = next(iter(optim_wrapper_dict))
         first_optim_wrapper = optim_wrapper_dict[first_key]
+        assert isinstance(first_optim_wrapper, OptimWrapper), (
+            'Each argument of `OptimWrapperDict` must be an `OptimWrapper '
+            'instance`')
         optim_wrapper_class = type(first_optim_wrapper)
         for key, value in optim_wrapper_dict.items():
             assert type(value) == optim_wrapper_class, (

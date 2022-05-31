@@ -24,7 +24,7 @@ from mmengine.optim import (AmpOptimWrapper, DefaultOptimWrapperConstructor,
                             StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS,
-                               OPTIMIZER_WRAPPER_CONSTRUCTORS,
+                               OPTIM_WRAPPER_CONSTRUCTORS,
                                PARAM_SCHEDULERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
@@ -76,7 +76,7 @@ class CustomModelWrapper(nn.Module):
         self.model = model
 
 
-@OPTIMIZER_WRAPPER_CONSTRUCTORS.register_module()
+@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
 class ToyMultipleOptimizerConstructor:
 
     def __init__(self, optimizer_cfg, paramwise_cfg=None):

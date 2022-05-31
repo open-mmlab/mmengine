@@ -44,7 +44,9 @@ class ToyModel2(nn.Module):
 
 
 class TestOptimWrapper(MultiProcessTestCase):
-
+    # Test `OptimWrapper.accumulate_grad` will block the gradient
+    # synchronization when using gradient accumulation strategy in distributed
+    # data parallel training.
     def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
@@ -238,6 +240,8 @@ class TestOptimWrapper(MultiProcessTestCase):
         torch_dist.init_process_group(
             backend='gloo', rank=rank, world_size=world_size)
 
+    # TODO Test the real interface after add testing tool function which can
+    #  test the function or method is read called.
     def _mock_method(self, optimizer_wrapper):
         optimizer_wrapper.backward = MagicMock()
         optimizer_wrapper.step = MagicMock()
