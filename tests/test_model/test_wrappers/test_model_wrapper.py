@@ -118,9 +118,7 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         optim_wrapper1 = OptimWrapper(optimizer1, 1)
         optim_wrapper2 = OptimWrapper(optimizer2, 1)
         optim_wrapper_dict = OptimWrapperDict(
-            dict(
-                optim_wrapper1=optim_wrapper1,
-                optim_wrapper2=optim_wrapper2))
+            dict(optim_wrapper1=optim_wrapper1, optim_wrapper2=optim_wrapper2))
         inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs)
         # Automatically sync grads of `optim_wrapper1` since

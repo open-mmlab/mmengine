@@ -24,8 +24,8 @@ class CustomDataPreprocessor(BaseDataPreprocessor):
 
 class ToyModel(BaseModel):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, data_preprocessor=None):
+        super().__init__(data_preprocessor)
         self.conv = nn.Conv2d(3, 1, 1)
 
     def forward(self, batch_inputs, data_samples=None, mode='feat'):
@@ -44,16 +44,16 @@ class TestBaseModel(TestCase):
 
     def test_init(self):
         # initiate model without `preprocess_cfg`
-        model = BaseModel()
+        model = ToyModel()
         self.assertIsInstance(model.data_preprocessor, BaseDataPreprocessor)
         data_preprocessor = dict(type='CustomDataPreprocessor')
-        model = BaseModel(data_preprocessor)
+        model = ToyModel(data_preprocessor)
         self.assertIsInstance(model.data_preprocessor, CustomDataPreprocessor)
         self.assertEqual(model.data_preprocessor(1, training=True), 1)
         self.assertEqual(model.data_preprocessor(1, training=False), 2)
 
     def test_parse_losses(self):
-        model = BaseModel()
+        model = ToyModel()
         loss_cls = torch.tensor(1, dtype=torch.float32)
         loss_list = [
             torch.tensor(2, dtype=torch.float32),

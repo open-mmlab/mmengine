@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -10,16 +11,12 @@ from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 
-from abc import ABCMeta, abstractmethod
-
-
 DataSamples = Optional[Union[list, torch.Tensor]]
 ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
                        Tuple[torch.Tensor], torch.Tensor]
 
 
 # TODO inherit from BaseModule
-@MODELS.register_module()
 class BaseModel(nn.Module, metaclass=ABCMeta):
     """Base class for all algorithmic models.
 
@@ -32,8 +29,8 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
     method, and then can be trained in the runner.
 
     Examples:
-        >>> @MODELS.register_module(BaseModel)
-        >>> class ToyModel(nn.Module):
+        >>> @MODELS.register_module()
+        >>> class ToyModel(BaseModel):
         >>>
         >>>     def __init__(self):
         >>>         super().__init__()
@@ -81,7 +78,9 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """Implement the default model parameter update process.
+        """Implement the default model training process including pre-
+        processing, model forward propagation, loss calculation, optimization,
+        and back-propagation.
 
         During non-distributed training.If subclass does not override the
         :meth:`train_step`, :class:`EpochBasedTrainLoop` or
@@ -199,8 +198,8 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
                 batch_inputs: torch.Tensor,
                 data_samples: DataSamples = None,
                 mode: str = 'feat') -> ForwardResults:
-        """Get losses or predictions of training, validation, testing,
-        and simple inference process.
+        """Get losses or predictions of training, validation, testing, and
+        simple inference process.
 
         ``forward`` method of BaseModel is an abstract method, subclass must
         override this method.
@@ -224,7 +223,7 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
                 :attr:`data_preprocessor`.
             data_samples (torch.Tensor, list, optional):
                 data samples collated by :attr:`data_preprocessor`.
-            mode (str): mode shoule be one of ``loss``, ``predict`` and
+            mode (str): mode should be one of ``loss``, ``predict`` and
                 ``feat``
 
                 - ``loss``: Called by ``train_step`` and return loss dict used

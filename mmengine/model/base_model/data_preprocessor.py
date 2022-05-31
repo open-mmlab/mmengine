@@ -159,10 +159,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  to_rgb: bool = False,
                  device: Union[int, torch.device] = 'cpu'):
         super().__init__(device)
-        self.register_buffer('mean',
-                             torch.tensor(mean).view(-1, 1, 1), False)
-        self.register_buffer('std',
-                             torch.tensor(std).view(-1, 1, 1), False)
+        self.register_buffer('mean', torch.tensor(mean).view(-1, 1, 1), False)
+        self.register_buffer('std', torch.tensor(std).view(-1, 1, 1), False)
         self.pad_size_divisor = pad_size_divisor
         self.pad_value = pad_value
         self.to_rgb = to_rgb
@@ -186,8 +184,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         if self.to_rgb and inputs[0].size(0) == 3:
             inputs = [_input[[2, 1, 0], ...] for _input in inputs]
         # Normalization.
-        inputs = [(_input - self.mean) / self.std
-                  for _input in inputs]
+        inputs = [(_input - self.mean) / self.std for _input in inputs]
         # Pad and stack Tensor.
         batch_inputs = stack_batch(inputs, self.pad_size_divisor,
                                    self.pad_value)

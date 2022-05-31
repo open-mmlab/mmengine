@@ -252,7 +252,15 @@ class LoggerHook(Hook):
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`')
 
-    def _update_logs(self, runner, mode):
+    def _update_logs(self, runner, mode: str) -> None:
+        """Update ``train_logs``, ``val_logs`` and ``test_logs`` collected from
+        loops to history scalars of :obj:`MessageHub`.
+
+        Args:
+            runner (Runner): Runner of training, testing and evaluation
+                process.
+            mode (str): Current mode of runner
+        """
         assert mode in ('train', 'test', 'val')
         log_infos = runner.message_hub.get_info(f'{mode}_logs')
         if log_infos is None:

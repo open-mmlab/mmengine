@@ -39,6 +39,9 @@ class ToyModel1(BaseModel, ToyModel):
     def __init__(self):
         super().__init__()
 
+    def forward(self, *args, **kwargs):
+        return super(BaseModel, self).forward(*args, **kwargs)
+
 
 @DATASETS.register_module()
 class DummyDataset(Dataset):
