@@ -820,8 +820,8 @@ class Runner:
                       optimizer: Union[Optimizer, Dict],
                       autoscalelr_cfg: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
-        raio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch size.
-        Referring to `linear scaling rule <https://arxiv.org/abs/1706.02677>`_.
+        ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
+        size. Referring to `paper <https://arxiv.org/abs/1706.02677>`_.
 
         Args:
             optimizer (Optimizer or dict): An Optimizer object or a dict to
