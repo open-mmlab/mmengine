@@ -65,7 +65,7 @@ class TestModelWrapper(MultiProcessTestCase):
         self._init_dist_env(self.rank, self.world_size)
         # Test `optimizer_wrapper` is a instance of `OptimWrapper`
         model = ToyModel()
-        ddp_model = MMDistributedDataParallel(model)
+        ddp_model = MMDistributedDataParallel(module=model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
         optimizer_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
         inputs = torch.randn(3, 1, 1) * self.rank * 255
@@ -77,7 +77,7 @@ class TestModelWrapper(MultiProcessTestCase):
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
-        ddp_model = MMDistributedDataParallel(model)
+        ddp_model = MMDistributedDataParallel(module=model)
         inputs = torch.randn(3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
         # Test get predictions.
@@ -87,7 +87,7 @@ class TestModelWrapper(MultiProcessTestCase):
     def test_test_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
-        ddp_model = MMDistributedDataParallel(model)
+        ddp_model = MMDistributedDataParallel(module=model)
         inputs = torch.randn(3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
         predictions = ddp_model.test_step([data])
