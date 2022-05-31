@@ -4,7 +4,6 @@ from typing import List, Optional, Union
 
 import torch
 import torch.nn as nn
-import torch.distributed as dist
 from torch.nn import GroupNorm, LayerNorm
 from mmengine.mmengine.logging.logger import print_log
 
@@ -228,14 +227,13 @@ class DefaultOptimizerConstructor:
                         param_group[
                             'weight_decay'] = self.base_wd * bias_decay_mult
             params.append(param_group)
-            if not dist.is_initialized() or dist.get_rank() == 0:
-                for key,value in param_group.items():
-                    if key == 'params':
-                        continue
-                    full_name = f'{prefix}.{name}' if prefix else name
-                    print_log(
-                        f'paramwise_options -- {full_name}:{key}={value}',
-                        logger='current')
+            for key, value in param_group.items():
+                if key == 'params':
+                    continue
+                full_name = f'{prefix}.{name}' if prefix else name
+                print_log(
+                    f'paramwise_options -- {full_name}:{key}={value}',
+                    logger='current')
 
         if mmcv_full_available():
             from mmcv.ops import DeformConv2d, ModulatedDeformConv2d
