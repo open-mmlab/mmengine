@@ -26,15 +26,18 @@ class BaseDataPreprocessor(nn.Module):
     to implement custom data pre-processing, such as batch-resize, MixUp and
     CutMix.
 
+    Args:
+        device (str or int or torch.device): Target device.
+
     Warnings:
         Each item of data sampled from dataloader must a dict and at least
         contain the ``inputs`` key. Furthermore, the value of ``inputs``
         must be a ``Tensor`` with the same shape.
     """
 
-    def __init__(self):
+    def __init__(self, device: Union[str, int, torch.device] = 'cpu'):
         super().__init__()
-        self.device = 'cpu'
+        self.device = device
 
     def collate_data(self,
                      data: Sequence[dict]) -> Tuple[List[torch.Tensor], list]:
@@ -62,24 +65,10 @@ class BaseDataPreprocessor(nn.Module):
 
         # Move data from CPU to corresponding device.
         batch_data_samples = [
-            self.cast_device(data_sample) for data_sample in batch_data_samples
+            data_sample.to(self.device) for data_sample in batch_data_samples
         ]
-        inputs = [_input.to(self.cast_device(_input)) for _input in inputs]
+        inputs = [_input.to(self.device) for _input in inputs]
         return inputs, batch_data_samples
-
-    def cast_device(
-        self, data: Union[torch.Tensor, BaseDataElement]
-    ) -> Union[torch.Tensor, BaseDataElement]:
-        """Moving data to target device.
-
-        Args:
-            data (torch.Tensor or BaseDataElement): unpacked data sampled from
-                dataloader.
-
-        Returns:
-            torch.Tensor or BaseDataElement: data at target device.
-        """
-        return data.to(self.device)
 
     def forward(self,
                 data: Sequence[dict],
@@ -135,7 +124,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             divisible by ``pad_size_divisor``. Defaults to 1.
         pad_value (float or int): The padded pixel value. Defaults to 0.
         to_rgb (bool): whether to convert image from BGR to RGB.
-            Defaults to False
+            Defaults to False.
+        device (str or int or torch.device): Target device.
     """
 
     def __init__(self,
@@ -143,8 +133,9 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  std: Sequence[Union[float, int]] = (127.5, 127.5, 127.5),
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
-                 to_rgb: bool = False):
-        super().__init__()
+                 to_rgb: bool = False,
+                 device: Union[str, int, torch.device] = 'cpu'):
+        super().__init__(device)
         self.register_buffer('pixel_mean',
                              torch.tensor(mean).view(-1, 1, 1), False)
         self.register_buffer('pixel_std',
