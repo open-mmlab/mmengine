@@ -37,11 +37,10 @@ class OptimWrapperDict(OptimWrapper):
         in the same way as `dict`.
 
     Args:
-        optimizer_wrappers (Dict[str, OptimWrapper]): A dictionary of
-            ``OptimWrapper`` instance.
+        **optimizer_wrappers: A dictionary of ``OptimWrapper`` instance.
     """
 
-    def __init__(self, **optim_wrapper_dict):
+    def __init__(self, **optim_wrapper_dict: OptimWrapper):
         first_key = next(iter(optim_wrapper_dict))
         first_optim_wrapper = optim_wrapper_dict[first_key]
         optim_wrapper_class = type(first_optim_wrapper)

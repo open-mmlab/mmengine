@@ -2,9 +2,10 @@
 import inspect
 import threading
 from collections import OrderedDict
-from typing import Any
+from typing import Type, TypeVar
 
 _lock = threading.RLock()
+T = TypeVar('T')
 
 
 def _accquire_lock() -> None:
@@ -76,7 +77,7 @@ class ManagerMixin(metaclass=ManagerMeta):
         self._instance_name = name
 
     @classmethod
-    def get_instance(cls, name: str, **kwargs) -> Any:
+    def get_instance(cls: Type[T], name: str, **kwargs) -> T:
         """Get subclass instance by name if the name exists.
 
         If corresponding name instance has not been created, ``get_instance``
@@ -102,11 +103,11 @@ class ManagerMixin(metaclass=ManagerMeta):
         _accquire_lock()
         assert isinstance(name, str), \
             f'type of name should be str, but got {type(cls)}'
-        instance_dict = cls._instance_dict
+        instance_dict = cls._instance_dict  # type: ignore
         # Get the instance by name.
         if name not in instance_dict:
-            instance = cls(name=name, **kwargs)
-            instance_dict[name] = instance
+            instance = cls(name=name, **kwargs)  # type: ignore
+            instance_dict[name] = instance  # type: ignore
         else:
             assert not kwargs, (
                 f'{cls} instance named of {name} has been created, the method '

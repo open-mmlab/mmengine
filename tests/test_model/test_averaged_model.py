@@ -187,7 +187,7 @@ class TestAveragedModel(TestCase):
                 if param.size() != torch.Size([])
             ]
             for p, p_avg in zip(params, averaged_params):
-                p.detach().add_(torch.randn_like(p))
+                p.add(torch.randn_like(p))
                 if i == 0:
                     updated_averaged_params.append(p.clone())
                 else:
@@ -234,7 +234,7 @@ class TestAveragedModel(TestCase):
                 if param.size() != torch.Size([])
             ]
             for p, p_avg in zip(params, averaged_params):
-                p.detach().add_(torch.randn_like(p))
+                p.add(torch.randn_like(p))
                 if i == 0:
                     updated_averaged_params.append(p.clone())
                 elif i % interval == 0:
