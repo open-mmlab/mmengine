@@ -75,6 +75,7 @@ class OptimWrapper:
                  clip_grad_kwargs: Optional[dict] = None):
         assert accumulative_iters > 0, (
             'accumulative_iters at least greater than or equal to 1')
+        self.accumulative_iters = accumulative_iters
         # `max_iters` and `cur_iter` is only valid in gradient accumulative
         # mode (`accumulative_iters` > 1).
         self.cur_iter = 0
@@ -91,7 +92,6 @@ class OptimWrapper:
                 'which is the arguments of `torch.nn.utils.clip_grad`')
         self.clip_grad_kwargs = clip_grad_kwargs
         self.logger = MMLogger.get_current_instance()
-        self.accumulative_iters = accumulative_iters
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self.iter_status_initialized = False
@@ -132,8 +132,6 @@ class OptimWrapper:
         # `self.accumulative_iters` or `self.cur_iter` equals to
         # `self.max_iters`
         if self._should_update(self.cur_iter, self.max_iters):
-            if self.clip_grad_kwargs:
-                self._clip_grad()
             self.step()
             self.zero_grad()
 
@@ -165,8 +163,13 @@ class OptimWrapper:
         Provide unified ``step`` interface compatible with automatic mixed
         precision training. Subclass can overload this method to implement the
         required logic. For example, ``torch.cuda.amp`` require some extra
-        operation on GradScaler during step process.
+        operation on ``GradScaler`` during step process.
+
+        Clip grad if :attr:`clip_grad_kwargs` is not None, and then update
+        parameters.
         """
+        if self.clip_grad_kwargs:
+            self._clip_grad()
         self.optimizer.step()
 
     def state_dict(self) -> dict:
