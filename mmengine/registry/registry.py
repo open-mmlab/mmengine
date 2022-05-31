@@ -480,8 +480,9 @@ class Registry:
             module_name = [module_name]
         for name in module_name:
             if not force and name in self._module_dict:
-                raise KeyError(f'{name} is already registered '
-                               f'in {self.name}')
+                existed_module = self.module_dict[name]
+                raise KeyError(f'{name} is already registered in {self.name} '
+                               f'at {existed_module.__module__}')
             self._module_dict[name] = module_class
 
     def register_module(
