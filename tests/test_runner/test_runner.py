@@ -246,7 +246,7 @@ class TestRunner(TestCase):
                 sampler=dict(type='DefaultSampler', shuffle=False),
                 batch_size=3,
                 num_workers=0),
-            auto_scale_lr=dict(base_batch_size=16, enable=False),
+            auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
             optimizer=dict(type='SGD', lr=0.01),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
             val_evaluator=dict(type='ToyMetric1'),
@@ -642,14 +642,14 @@ class TestRunner(TestCase):
 
         # When auto_scale_lr_cfg is correct and enable is True, the lr will
         # be linearly scaled.
-        autoscalelr_cfg = dict(base_batch_size=16, enable=True)
+        auto_scale_lr_cfg = dict(base_batch_size=16, enable=True)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
         optimizer = dict(type='SGD', lr=0.01)
-        runner.scale_lr(optimizer, autoscalelr_cfg)
+        runner.scale_lr(optimizer, auto_scale_lr_cfg)
         self.assertEqual(optimizer['lr'], 0.01 * (real_bs / 16))
 
         optimizer = SGD(runner.model.parameters(), lr=0.01)
-        runner.scale_lr(optimizer, autoscalelr_cfg)
+        runner.scale_lr(optimizer, auto_scale_lr_cfg)
         self.assertEqual(optimizer.param_groups[0]['lr'],
                          0.01 * (real_bs / 16))
 

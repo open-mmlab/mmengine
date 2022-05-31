@@ -96,12 +96,11 @@ class Runner:
             not provide "type" key, :class:`TestLoop` will be used by default.
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
             specified. Defaults to None.
-            See :meth:`build_test_loop` for more etails.
-        auto_scale_lr (dict, optional): Automatically scaling lr config.  It
-            includes ``enable`` and ``base_batch_size``. ``enable`` is
-            the switch to turn on and off the automatically scaling lr.
-            ``base_batch_size`` is the batch size that the optimizer lr
-            is based on.
+            See :meth:`build_test_loop` for more details.
+        auto_scale_lr_cfg (dict, optional): Automatically scaling lr config. It
+            includes ``enable`` and ``base_batch_size``. ``enable`` is the
+            switch to turn on and off the feature.  ``base_batch_size`` is the
+            batch size that the optimizer lr is based on.
         optimizer (Optimizer or dict, optional): Computing gradient of model
             parameters. If specified, :attr:`train_dataloader` should also be
             specified. Defaults to None.
@@ -182,6 +181,7 @@ class Runner:
         >>>         sampler=dict(type='DefaultSampler', shuffle=False),
         >>>         batch_size=1,
         >>>         num_workers=0),
+        >>>     auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
         >>>     optimizer=dict(type='SGD', lr=0.01),
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
         >>>     val_evaluator=dict(type='ToyEvaluator'),
@@ -222,7 +222,7 @@ class Runner:
         train_cfg: Optional[Dict] = None,
         val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
-        auto_scale_lr: Optional[Dict] = None,
+        auto_scale_lr_cfg: Optional[Dict] = None,
         optimizer: Optional[Union[Optimizer, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         val_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
@@ -268,7 +268,7 @@ class Runner:
         self._train_loop = train_cfg
         self.optimizer = optimizer
 
-        self.auto_scale_lr_cfg = auto_scale_lr
+        self.auto_scale_lr_cfg = auto_scale_lr_cfg
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
@@ -408,7 +408,7 @@ class Runner:
             train_cfg=cfg.get('train_cfg'),
             val_cfg=cfg.get('val_cfg'),
             test_cfg=cfg.get('test_cfg'),
-            auto_scale_lr=cfg.get('auto_scale_lr'),
+            auto_scale_lr_cfg=cfg.get('auto_scale_lr_cfg'),
             optimizer=cfg.get('optimizer'),
             param_scheduler=cfg.get('param_scheduler'),
             val_evaluator=cfg.get('val_evaluator'),
@@ -822,9 +822,9 @@ class Runner:
         Args:
             optimizer (Optimizer or dict): An Optimizer object or a dict to
                 build Optimizer object.
-            autoscalelr_cfg (Dict, Optional): Automatically scaling lr config.
-                It includes ``enable`` and ``base_batch_size``. ``enable`` is
-                the switch to turn on and off the automatically scaling lr.
+            auto_scale_lr_cfg (Dict, Optional): Automatically scaling lr
+                config. It includes ``enable`` and ``base_batch_size``.
+                ``enable`` is the switch to turn on and off the feature.
                 ``base_batch_size`` is the batch size that the optimizer lr
                 is based on.
         """
