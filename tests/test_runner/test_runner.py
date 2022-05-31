@@ -615,28 +615,28 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
-    def test_build_optimizer_wrapper(self):
+    def test_build_optim_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_optimizer_wrapper'
+        cfg.experiment_name = 'test_build_optim_wrapper'
         runner = Runner.from_cfg(cfg)
 
         # input should be an Optimizer object or dict
         with self.assertRaisesRegex(TypeError, 'optimizer should be'):
-            runner.build_optimizer_wrapper('invalid-type')
+            runner.build_optim_wrapper('invalid-type')
 
         # 1. test one optimizer
         # 1.1 input is an Optimizer object
         _optimizer = SGD(runner.model.parameters(), lr=0.01)
-        optimizer_wrapper = runner.build_optimizer_wrapper(_optimizer)
+        optimizer_wrapper = runner.build_optim_wrapper(_optimizer)
         self.assertEqual(id(_optimizer), id(optimizer_wrapper.optimizer))
 
         # 1.2 input is a dict
-        optimizer_wrapper = runner.build_optimizer_wrapper(
+        optimizer_wrapper = runner.build_optim_wrapper(
             dict(type='SGD', lr=0.01))
         self.assertIsInstance(optimizer_wrapper, OptimWrapper)
 
         # 1.3 build custom optimizer wrapper
-        optimizer_wrapper = runner.build_optimizer_wrapper(
+        optimizer_wrapper = runner.build_optim_wrapper(
             dict(
                 type='SGD',
                 lr=0.01,
@@ -648,7 +648,7 @@ class TestRunner(TestCase):
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
         optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
         optim_cfg = dict(key1=optimizer1, key2=optimizer2)
-        optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
+        optimizer_wrapper = runner.build_optim_wrapper(optim_cfg)
         self.assertIsInstance(optimizer_wrapper, OptimWrapperDict)
         self.assertIsInstance(optimizer_wrapper['key1'].optimizer, SGD)
         self.assertIsInstance(optimizer_wrapper['key2'].optimizer, Adam)
@@ -660,14 +660,14 @@ class TestRunner(TestCase):
         optim_cfg = dict(key1=optimizer1, key2=optimizer2)
         with self.assertRaisesRegex(ValueError,
                                     'each item mush be an optimizer object'):
-            runner.build_optimizer_wrapper(optim_cfg)
+            runner.build_optim_wrapper(optim_cfg)
 
         # 2.3 input is a dict which contains multiple configs
         optim_cfg = dict(
             linear1=dict(type='SGD', lr=0.01),
             linear2=dict(type='Adam', lr=0.02),
             constructor='ToyMultipleOptimizerConstructor')
-        optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
+        optimizer_wrapper = runner.build_optim_wrapper(optim_cfg)
         self.assertIsInstance(optimizer_wrapper, OptimWrapperDict)
         self.assertIsInstance(optimizer_wrapper['linear1'].optimizer, SGD)
         self.assertIsInstance(optimizer_wrapper['linear2'].optimizer, Adam)
@@ -677,7 +677,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_build_param_scheduler'
         runner = Runner.from_cfg(cfg)
 
-        # `build_optimizer_wrapper` should be called before
+        # `build_optim_wrapper` should be called before
         # `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
         runner.optimizer_wrapper = dict(
@@ -687,7 +687,7 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(AssertionError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
-        runner.optimizer_wrapper = runner.build_optimizer_wrapper(
+        runner.optimizer_wrapper = runner.build_optim_wrapper(
             dict(type='SGD', lr=0.01))
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertIsInstance(param_schedulers, list)
@@ -729,7 +729,7 @@ class TestRunner(TestCase):
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
         optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
         optim_cfg = dict(key1=optimizer1, key2=optimizer2)
-        runner.optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
+        runner.optimizer_wrapper = runner.build_optim_wrapper(optim_cfg)
         cfg = [
             dict(type='MultiStepLR', milestones=[1, 2]),
             dict(type='StepLR', step_size=1)
@@ -755,7 +755,7 @@ class TestRunner(TestCase):
         self.assertEqual(len(param_schedulers['key2']), 2)
 
         # 5. test converting epoch-based scheduler to iter-based
-        runner.optimizer_wrapper = runner.build_optimizer_wrapper(
+        runner.optimizer_wrapper = runner.build_optim_wrapper(
             dict(type='SGD', lr=0.01))
 
         # 5.1 train loop should be built before converting scheduler

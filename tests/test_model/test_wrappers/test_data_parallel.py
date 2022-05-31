@@ -37,6 +37,9 @@ def test_is_model_wrapper():
     if hasattr(torch.distributed, '_verify_model_across_ranks'):
         torch.distributed._verify_model_across_ranks = mock
 
+    if hasattr(torch.distributed, '_verify_params_across_processes'):
+        torch.distributed._verify_params_across_processes = mock
+
     model = Model()
     assert not is_model_wrapper(model)
 

@@ -27,7 +27,7 @@ from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import is_model_wrapper
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
-                            build_optimizer_wrapper)
+                            build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                VISUALIZERS, DefaultScope,
@@ -105,7 +105,7 @@ class Runner:
             specified. If automatic mixed precision or gradient accmulation
             training is required. ``optimizer_wrapper`` needs to be
             additionally configured  in ``optimizer``.
-            See :meth:`build_optimizer_wrapper` for examples. Defaults to None.
+            See :meth:`build_optim_wrapper` for examples. Defaults to None.
 
         param_scheduler (_ParamScheduler or dict or list, optional):
             Parameter scheduler for updating optimizer parameters. If
@@ -810,7 +810,7 @@ class Runner:
 
         return model
 
-    def build_optimizer_wrapper(
+    def build_optim_wrapper(
         self, optimizer: Union[Optimizer, OptimWrapper, Dict]
     ) -> Union[OptimWrapper, OptimWrapperDict]:
         """Build optimizer wrapper.
@@ -823,7 +823,7 @@ class Runner:
         Examples:
             >>> # build an optimizer
             >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
-            >>> optimizer_wrapper = runner.build_optimizer_wrapper(optim_cfg)
+            >>> optimizer_wrapper = runner.build_optim_wrapper(optim_cfg)
             >>> optimizer_wrapper
             Type: OptimWrapper
             accumulative_iters: 1
@@ -873,7 +873,7 @@ class Runner:
 
         Note:
             If optimizer is an ``Optimizer`` or a `dict` of ``Optimizer``,
-            ``build_optimizer_wrapper`` will return a default
+            ``build_optim_wrapper`` will return a default
             ``OptimWrapper`` without the function of automatic mixed
             precision training or gradient accumulation. Only if optimizer is
             a config dictitonary configured with ``optimizer_wrapper``,
@@ -907,7 +907,7 @@ class Runner:
                     optim_wrappers[name] = OptimWrapper(optim)
                 return OptimWrapperDict(optim_wrappers)
             else:
-                optim_wrapper = build_optimizer_wrapper(self.model, optimizer)
+                optim_wrapper = build_optim_wrapper(self.model, optimizer)
                 return optim_wrapper
         else:
             raise TypeError('optimizer should be an Optimizer object or dict, '
@@ -975,7 +975,7 @@ class Runner:
         """Build parameter schedulers.
 
         ``build_param_scheduler`` should be called after
-        ``build_optimizer_wrapper`` because the building logic will change
+        ``build_optim_wrapper`` because the building logic will change
         according to the number of optimizers built by the runner.
         The cases are as below:
 
@@ -999,7 +999,7 @@ class Runner:
         Examples:
             >>> # build one scheduler
             >>> optim_cfg = dict(dict(type='SGD', lr=0.01))
-            >>> runner.optimizer_wrapper = runner.build_optimizer_wrapper(
+            >>> runner.optimizer_wrapper = runner.build_optim_wrapper(
             >>>     optim_cfg)
             >>> scheduler_cfg = dict(type='MultiStepLR', milestones=[1, 2])
             >>> schedulers = runner.build_param_scheduler(scheduler_cfg)
@@ -1385,7 +1385,7 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
-        self.optimizer_wrapper = self.build_optimizer_wrapper(self.optimizer)
+        self.optimizer_wrapper = self.build_optim_wrapper(self.optimizer)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -1668,8 +1668,7 @@ class Runner:
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
-            self.optimizer_wrapper = self.build_optimizer_wrapper(
-                self.optimizer)
+            self.optimizer_wrapper = self.build_optim_wrapper(self.optimizer)
             self.optimizer_wrapper.load_state_dict(  # type: ignore
                 checkpoint['optimizer'])
 

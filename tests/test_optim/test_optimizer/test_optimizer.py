@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from mmengine.optim import (OPTIMIZER_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor,
-                            build_optimizer_wrapper)
+                            build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
 from mmengine.utils import mmcv_full_available
@@ -207,18 +207,18 @@ class TestBuilder(TestCase):
             lr=self.base_lr,
             weight_decay=self.base_wd,
             momentum=self.momentum)
-        optimizer_wrapper = build_optimizer_wrapper(self.model, optimizer_cfg)
+        optimizer_wrapper = build_optim_wrapper(self.model, optimizer_cfg)
         self._check_default_optimizer(optimizer_wrapper.optimizer, self.model)
 
         # test build function with invalid ``constructor``
         with self.assertRaises(KeyError):
             optimizer_cfg['constructor'] = 'INVALID_CONSTRUCTOR'
-            build_optimizer_wrapper(self.model, optimizer_cfg)
+            build_optim_wrapper(self.model, optimizer_cfg)
 
         # test build function with invalid ``paramwise_cfg``
         with self.assertRaises(KeyError):
             optimizer_cfg['paramwise_cfg'] = dict(invalid_mult=1)
-            build_optimizer_wrapper(self.model, optimizer_cfg)
+            build_optim_wrapper(self.model, optimizer_cfg)
 
     def test_build_default_optimizer_constructor(self):
         optimizer_cfg = dict(

@@ -32,9 +32,8 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def build_optimizer_wrapper(
-        model: nn.Module, cfg: Union[dict, Config,
-                                     ConfigDict]) -> OptimWrapper:
+def build_optim_wrapper(model: nn.Module,
+                        cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
 
     If ``constructor`` is set in the ``cfg``, this method will build an
