@@ -37,7 +37,7 @@ class OptimWrapperDict(OptimWrapper):
         in the same way as `dict`.
 
     Args:
-        **optimizer_wrappers: A dictionary of ``OptimWrapper`` instance.
+        **optim_wrappers: A dictionary of ``OptimWrapper`` instance.
     """
 
     def __init__(self, **optim_wrapper_dict: OptimWrapper):
@@ -59,7 +59,7 @@ class OptimWrapperDict(OptimWrapper):
                     'will not enable any `accumulate_grad` context of its '
                     'optimizer wrappers. You should access the corresponding '
                     'optimizer wrapper to enable the context.')
-        self.optimizer_wrappers = optim_wrapper_dict
+        self.optim_wrappers = optim_wrapper_dict
 
     def update_params(self, loss: torch.Tensor) -> None:
         """Update all optimizer wrappers would lead to a duplicate backward
@@ -92,12 +92,12 @@ class OptimWrapperDict(OptimWrapper):
 
     def zero_grad(self) -> None:
         """Set the gradients of all optimizer wrappers to zero."""
-        for optim_wrapper in self.optimizer_wrappers.values():
+        for optim_wrapper in self.optim_wrappers.values():
             optim_wrapper.zero_grad()
 
     @contextmanager
     def precision_context(self):
-        optim_wrapper = next(iter(self.optimizer_wrappers.values()))
+        optim_wrapper = next(iter(self.optim_wrappers.values()))
         with optim_wrapper.precision_context():
             yield
 
@@ -121,7 +121,7 @@ class OptimWrapperDict(OptimWrapper):
             optimizer wrapper.
         """
         with ExitStack() as stack:
-            for optim_wrapper in self.optimizer_wrappers.values():
+            for optim_wrapper in self.optim_wrappers.values():
                 stack.enter_context(
                     optim_wrapper.accumulate_grad(model, cur_iter, max_iters))
             yield
@@ -135,10 +135,10 @@ class OptimWrapperDict(OptimWrapper):
                 :obj:`OptimWrapper`.
         """
         for name, _state_dict in state_dict.items():
-            assert name in self.optimizer_wrappers, (
+            assert name in self.optim_wrappers, (
                 f'Mismatched `state_dict`! cannot found {name} in '
                 'OptimWrapperDict')
-            self.optimizer_wrappers[name].load_state_dict(_state_dict)
+            self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def state_dict(self) -> dict:
         """Get the state dictionary of all optimizer wrappers.
@@ -148,38 +148,38 @@ class OptimWrapperDict(OptimWrapper):
             and state dictionary of corresponding :obj:`OptimWrapper`.
         """
         state_dict = dict()
-        for name, optim_wrapper in self.optimizer_wrappers.items():
+        for name, optim_wrapper in self.optim_wrappers.items():
             state_dict[name] = optim_wrapper.state_dict()
         return state_dict
 
     def items(self) -> Iterator[Tuple[str, OptimWrapper]]:
         """A generator to get the name and corresponding
         :obj:`OptimWrapper`"""
-        yield from self.optimizer_wrappers.items()
+        yield from self.optim_wrappers.items()
 
     def values(self) -> Iterator[OptimWrapper]:
         """A generator to get :obj:`OptimWrapper`"""
-        yield from self.optimizer_wrappers.values()
+        yield from self.optim_wrappers.values()
 
     def keys(self) -> Iterator[str]:
         """A generator to get the name of :obj:`OptimWrapper`"""
-        yield from self.optimizer_wrappers.keys()
+        yield from self.optim_wrappers.keys()
 
     def __getitem__(self, key: str) -> OptimWrapper:
-        assert key in self.optimizer_wrappers, (
+        assert key in self.optim_wrappers, (
             f'Cannot find {key} in OptimWrapperDict, please check '
             'your optimizer constructor.')
-        return self.optimizer_wrappers[key]
+        return self.optim_wrappers[key]
 
     def __contains__(self, key: str) -> bool:
-        return key in self.optimizer_wrappers
+        return key in self.optim_wrappers
 
     def __len__(self) -> int:
-        return len(self.optimizer_wrappers)
+        return len(self.optim_wrappers)
 
     def __repr__(self) -> str:
         desc = ''
-        for name, optim_wrapper in self.optimizer_wrappers.items():
+        for name, optim_wrapper in self.optim_wrappers.items():
             desc += f'name: {name}\n'
             desc += repr(optim_wrapper)
         return desc

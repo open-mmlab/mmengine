@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
-from .optimizer_wrapper_dict import OptimWrapper
+from .optimizer_wrapper import OptimWrapper
 
 
 def register_torch_optimizers() -> List[str]:
@@ -43,7 +43,7 @@ def build_optim_wrapper(model: nn.Module,
 
     Args:
         model (nn.Module): Model to be optimized.
-        cfg (dict): Config of optimizer, optimizer_wrapper and optimizer
+        cfg (dict): Config of optimizer, optim_wrapper and optimizer
             constructor.
 
     Returns:
@@ -58,5 +58,5 @@ def build_optim_wrapper(model: nn.Module,
             type=constructor_type,
             optimizer_cfg=optimizer_cfg,
             paramwise_cfg=paramwise_cfg))
-    optimizer_wrapper = optim_wrapper_constructor(model)
-    return optimizer_wrapper
+    optim_wrapper = optim_wrapper_constructor(model)
+    return optim_wrapper

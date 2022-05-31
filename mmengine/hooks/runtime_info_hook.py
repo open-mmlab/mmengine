@@ -42,15 +42,20 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        if not isinstance(runner.optimizer_wrapper, OptimWrapperDict):
-            assert isinstance(runner.optimizer_wrapper, OptimWrapper)
+        if not isinstance(runner.optim_wrapper, OptimWrapperDict):
+            # Since `OptimWrapperDict` inherits from `OptimWrapper`,
+            # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
+            # whether `self.optim_wrapper` is an `OptimizerWrapper` or
+            # `OptimWrapperDict` instance. Therefore, here we simply check
+            # self.optim_wrapper is not an `OptimWrapperDict` instance and
+            # then assert it is an OptimWrapper instance.
+            assert isinstance(runner.optim_wrapper, OptimWrapper)
             runner.message_hub.update_scalar(
-                'train/lr', runner.optimizer_wrapper.param_groups[0]['lr'])
+                'train/lr', runner.optim_wrapper.param_groups[0]['lr'])
         else:
-            for name, optimizer_wrapper in runner.optimizer_wrapper.items():
+            for name, optim_wrapper in runner.optim_wrapper.items():
                 runner.message_hub.update_scalar(
-                    f'train/{name}.lr',
-                    optimizer_wrapper.param_groups[0]['lr'])
+                    f'train/{name}.lr', optim_wrapper.param_groups[0]['lr'])
 
     def after_train_iter(self,
                          runner,

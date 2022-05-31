@@ -63,7 +63,7 @@ class TestRuntimeInfoHook(TestCase):
             'runtime_info_hook_test_before_train_iter')
         runner = Mock()
         runner.iter = 9
-        runner.optimizer_wrapper = optim_wrapper1
+        runner.optim_wrapper = optim_wrapper1
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
@@ -80,7 +80,7 @@ class TestRuntimeInfoHook(TestCase):
         optimizer2 = Mock()
         optimizer2.param_groups = [{'lr': 0.02}]
         runner.message_hub = message_hub
-        runner.optimizer_wrapper = optim_wrapper_dict
+        runner.optim_wrapper = optim_wrapper_dict
         hook = RuntimeInfoHook()
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
         self.assertEqual(message_hub.get_info('iter'), 9)

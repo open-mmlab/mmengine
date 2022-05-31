@@ -8,11 +8,11 @@ from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.registry import OPTIMIZER_WRAPPERS
+from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import has_batch_norm
 
 
-@OPTIMIZER_WRAPPERS.register_module()
+@OPTIM_WRAPPERS.register_module()
 class OptimWrapper:
     """Optimizer wrapper provides a common interface for updating parameters.
 
@@ -39,7 +39,7 @@ class OptimWrapper:
 
     Examples:
         >>> # Config sample of OptimWrapper.
-        >>> optimizer_wrapper_cfg = dict(
+        >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
         >>>     accumulative_iters=3,
         >>>     clip_grad_kwargs=dict(max_norm=0.2))
@@ -297,8 +297,8 @@ class OptimWrapper:
         self.iter_status_initialized = True
 
     def _should_update(self, cur_iter: int, max_iters: int) -> bool:
-        """Should optimizer_wrapper update parameters or synchronized gradient
-        at current iteration.
+        """Should optim_wrapper update parameters or synchronized gradient at
+        current iteration.
 
         Args:
             cur_iter (int): Current iteration of training process.

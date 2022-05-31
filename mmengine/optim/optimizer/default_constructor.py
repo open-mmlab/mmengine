@@ -7,8 +7,8 @@ import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
 from mmengine.logging import print_log
-from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS,
-                               OPTIMIZER_WRAPPERS, OPTIMIZERS)
+from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
+                               OPTIMIZERS)
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 from .optimizer_wrapper import OptimWrapper
@@ -256,8 +256,8 @@ class DefaultOptimWrapperConstructor:
             model = model.module
 
         optimizer_cfg = self.optimizer_cfg.copy()
-        optimizer_wrapper_cfg = optimizer_cfg.pop('optimizer_wrapper',
-                                                  dict(type='OptimWrapper'))
+        optim_wrapper_cfg = optimizer_cfg.pop('optim_wrapper',
+                                              dict(type='OptimWrapper'))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()
@@ -268,6 +268,6 @@ class DefaultOptimWrapperConstructor:
             self.add_params(params, model)
             optimizer_cfg['params'] = params
             optimizer = OPTIMIZERS.build(optimizer_cfg)
-        optimizer_wrapper = OPTIMIZER_WRAPPERS.build(
-            optimizer_wrapper_cfg, default_args=dict(optimizer=optimizer))
-        return optimizer_wrapper
+        optim_wrapper = OPTIM_WRAPPERS.build(
+            optim_wrapper_cfg, default_args=dict(optimizer=optimizer))
+        return optim_wrapper

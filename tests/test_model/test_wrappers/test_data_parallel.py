@@ -37,6 +37,9 @@ def test_is_model_wrapper():
     if hasattr(torch.distributed, '_verify_model_across_ranks'):
         torch.distributed._verify_model_across_ranks = mock
 
+    # _verify_model_across_ranks is added in torch1.11.0 so we should check
+    # whether _verify_params_across_processes is the member of
+    # torch.distributed before mocking
     if hasattr(torch.distributed, '_verify_params_across_processes'):
         torch.distributed._verify_params_across_processes = mock
 

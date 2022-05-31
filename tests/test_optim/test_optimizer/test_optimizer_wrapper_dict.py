@@ -22,7 +22,7 @@ class TestOptimWrapperDict(TestCase):
 
     def test_init(self):
         composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertEqual(composed_optim_wrapper.optimizer_wrappers,
+        self.assertEqual(composed_optim_wrapper.optim_wrappers,
                          self.optimizers_wrappers)
         # Different types of OptimWrapper will raise an error
 

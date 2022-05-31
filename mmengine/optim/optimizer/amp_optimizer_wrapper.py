@@ -4,12 +4,12 @@ from contextlib import contextmanager
 import torch
 from torch.cuda.amp import GradScaler
 
-from mmengine.registry import OPTIMIZER_WRAPPERS
+from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import TORCH_VERSION, digit_version
 from .optimizer_wrapper import OptimWrapper
 
 
-@OPTIMIZER_WRAPPERS.register_module()
+@OPTIM_WRAPPERS.register_module()
 class AmpOptimWrapper(OptimWrapper):
     """A subclass of :class:`OptimWrapper` that supports automatic mixed
     precision training based on torch.cuda.amp.
@@ -32,6 +32,7 @@ class AmpOptimWrapper(OptimWrapper):
 
         **kwargs: Keyword arguments passed to OptimWrapper.
     """
+
     def __init__(self, loss_scale=512., **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
