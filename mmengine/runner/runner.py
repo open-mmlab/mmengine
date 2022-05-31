@@ -266,12 +266,12 @@ class Runner:
                 f'optimizer={optimizer}.')
         self._train_dataloader = train_dataloader
         self._train_loop = train_cfg
-        self.optimizer = optimizer
+        self._optimizer = optimizer
         self.optimizer_wrapper: Optional[OptimWrapperType] = None
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
-        if param_scheduler is not None and self.optimizer is None:
+        if param_scheduler is not None and self._optimizer is None:
             raise ValueError(
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
@@ -905,7 +905,7 @@ class Runner:
                             ' and "constructor" are not in optimizer, '
                             f'but got {name}={optim}')
                     optim_wrappers[name] = OptimWrapper(optim)
-                return OptimWrapperDict(optim_wrappers)
+                return OptimWrapperDict(**optim_wrappers)
             else:
                 optim_wrapper = build_optim_wrapper(self.model, optimizer)
                 return optim_wrapper
@@ -1030,16 +1030,16 @@ class Runner:
            https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
         """
         param_schedulers: ParamSchedulerType
-        if type(self.optimizer_wrapper) is OptimWrapper:
+        if not isinstance(self.optimizer_wrapper, OptimWrapperDict):
+            assert isinstance(self.optimizer_wrapper, OptimWrapper), (
+                '`build_optimizer` should be called before'
+                '`build_param_scheduler` because the latter depends '
+                'on the former')
             param_schedulers = self._build_param_scheduler(
                 scheduler, self.optimizer_wrapper)  # type: ignore
             return param_schedulers
         else:
             param_schedulers = dict()
-            assert isinstance(self.optimizer_wrapper, OptimWrapperDict), (
-                '`build_optimizer` should be called before'
-                '`build_param_scheduler` because the latter depends '
-                'on the former')
             for name, optimizer in self.optimizer_wrapper.items():
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
@@ -1385,7 +1385,7 @@ class Runner:
 
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
-        self.optimizer_wrapper = self.build_optim_wrapper(self.optimizer)
+        self.optimizer_wrapper = self.build_optim_wrapper(self._optimizer)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -1668,7 +1668,7 @@ class Runner:
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
-            self.optimizer_wrapper = self.build_optim_wrapper(self.optimizer)
+            self.optimizer_wrapper = self.build_optim_wrapper(self._optimizer)
             self.optimizer_wrapper.load_state_dict(  # type: ignore
                 checkpoint['optimizer'])
 
@@ -1791,8 +1791,7 @@ class Runner:
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
-            if isinstance(self.optimizer_wrapper,
-                          (OptimWrapper, OptimWrapperDict)):
+            if isinstance(self.optimizer_wrapper, OptimWrapper):
                 checkpoint['optimizer'] = self.optimizer_wrapper.state_dict()
             else:  # TODO
                 raise TypeError(

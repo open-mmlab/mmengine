@@ -42,11 +42,11 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        if type(runner.optimizer_wrapper) is OptimWrapper:
+        if not isinstance(runner.optimizer_wrapper, OptimWrapperDict):
+            assert isinstance(runner.optimizer_wrapper, OptimWrapper)
             runner.message_hub.update_scalar(
                 'train/lr', runner.optimizer_wrapper.param_groups[0]['lr'])
         else:
-            assert isinstance(runner.optimizer_wrapper, OptimWrapperDict)
             for name, optimizer_wrapper in runner.optimizer_wrapper.items():
                 runner.message_hub.update_scalar(
                     f'train/{name}.lr',

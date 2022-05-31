@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 from contextlib import ExitStack, contextmanager
-from typing import Dict, Iterator, Tuple
+from typing import Iterator, Tuple
 
 import torch
 import torch.nn as nn
@@ -21,6 +21,17 @@ class OptimWrapperDict(OptimWrapper):
     :meth:`backward` of all optimizer wrappers, ``OptimWrapperDict`` will not
     implement these methods.
 
+    Examples:
+        >>> import torch.nn as nn
+        >>> from torch.optim import SGD
+        >>> from mmengine.optim import OptimWrapperDict, OptimWrapper
+        >>> model1 = nn.Linear(1, 1)
+        >>> model2 = nn.Linear(1, 1)
+        >>> optim_wrapper1 = OptimWrapper(SGD(model1.parameters(), lr=0.1))
+        >>> optim_wrapper2 = OptimWrapper(SGD(model2.parameters(), lr=0.1))
+        >>> optim_wrapper_dict = OptimWrapperDict(model1=optim_wrapper1,
+        >>>                                       model2=optim_wrapper2)
+
     Note:
         The optimizer wrapper contained in ``OptimWrapperDict`` can be accessed
         in the same way as `dict`.
@@ -30,11 +41,11 @@ class OptimWrapperDict(OptimWrapper):
             ``OptimWrapper`` instance.
     """
 
-    def __init__(self, optimizer_wrappers: Dict[str, OptimWrapper]):
-        first_key = next(iter(optimizer_wrappers))
-        first_optim_wrapper = optimizer_wrappers[first_key]
+    def __init__(self, **optim_wrapper_dict):
+        first_key = next(iter(optim_wrapper_dict))
+        first_optim_wrapper = optim_wrapper_dict[first_key]
         optim_wrapper_class = type(first_optim_wrapper)
-        for key, value in optimizer_wrappers.items():
+        for key, value in optim_wrapper_dict.items():
             assert type(value) == optim_wrapper_class, (
                 f'All optimizer wrappers should have the same type, but found'
                 f' {key}: {type(value)} and {first_key}: {optim_wrapper_class}'
@@ -46,7 +57,7 @@ class OptimWrapperDict(OptimWrapper):
                     'will not enable any `accumulate_grad` context of its '
                     'optimizer wrappers. You should access the corresponding '
                     'optimizer wrapper to enable the context.')
-        self.optimizer_wrappers = optimizer_wrappers
+        self.optimizer_wrappers = optim_wrapper_dict
 
     def update_params(self, loss: torch.Tensor) -> None:
         """Update all optimizer wrappers would lead to a duplicate backward

@@ -101,7 +101,7 @@ class ToyMultipleOptimizerConstructor:
         for key, constructor in self.constructors.items():
             module = getattr(model, key)
             optimizers[key] = constructor(module)
-        return OptimWrapperDict(optimizers)
+        return OptimWrapperDict(**optimizers)
 
 
 @DATASETS.register_module()
@@ -394,7 +394,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner._train_dataloader, dict)
         self.assertIsInstance(runner._val_dataloader, dict)
         self.assertIsInstance(runner._test_dataloader, dict)
-        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner._optimizer, dict)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 
         # After calling runner.train(),
@@ -405,7 +405,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner._train_loop, BaseLoop)
         self.assertIsInstance(runner.train_dataloader, DataLoader)
         self.assertIsInstance(runner.optimizer_wrapper, OptimWrapper)
-        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner._optimizer, dict)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner._val_loop, BaseLoop)
         self.assertIsInstance(runner._val_loop.dataloader, DataLoader)
@@ -1335,7 +1335,7 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         # load checkpoint will not initialize optimizer and param_schedulers
         # objects
-        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner._optimizer, dict)
         self.assertIsInstance(runner.param_schedulers, list)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 

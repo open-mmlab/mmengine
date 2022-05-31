@@ -15,8 +15,8 @@ class AmpOptimWrapper(OptimWrapper):
     precision training based on torch.cuda.amp.
 
     ``AmpOptimWrapper`` provides a unified interface with
-    ``OptimWrapper``, so ``AmpOptimWrapper`` and ``OptimWrapper`` can be
-    used in the same way with ``OptimWrapper``.
+    ``OptimWrapper``, so ``AmpOptimWrapper`` can be used in the same way
+    with ``OptimWrapper``.
 
     Warnings:
         ``AmpOptimWrapper`` requires PyTorch >= 1.6.
@@ -64,8 +64,8 @@ class AmpOptimWrapper(OptimWrapper):
     def step(self):
         """Update parameters with :attr:`loss_scaler`."""
         if self.clip_grad_kwargs:
+            self.loss_scaler.unscale_(self.optimizer)
             self._clip_grad()
-        self.loss_scaler.unscale_(self.optimizer)
         self.loss_scaler.step(self.optimizer)
         self.loss_scaler.update(self._scale_update_param)
 
@@ -73,7 +73,7 @@ class AmpOptimWrapper(OptimWrapper):
         """Get the state dictionary of :attr:`optimizer` and
         :attr:`loss_scaler`.
 
-        based on the state dictionary of optimizer, The returned state
+        Based on the state dictionary of the optimizer, the returned state
         dictionary will add a key named "loss_scaler".
 
         Returns:

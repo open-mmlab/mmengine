@@ -77,7 +77,9 @@ class OptimWrapper:
             'accumulative_iters at least greater than or equal to 1')
         self.accumulative_iters = accumulative_iters
         # `max_iters` and `cur_iter` is only valid in gradient accumulative
-        # mode (`accumulative_iters` > 1).
+        # mode (`accumulative_iters` > 1). `cur_iter` and `max_iter` will be
+        # updated in the ``accumulate_grad`` context that is enabled in
+        # `runner.train_loop`.
         self.cur_iter = 0
         self.max_iters = 0
         assert isinstance(optimizer, Optimizer), (

@@ -57,7 +57,7 @@ class TestRuntimeInfoHook(TestCase):
         optim_wrapper1 = OptimWrapper(optim1)
         optim_wrapper2 = OptimWrapper(optim2)
         optim_wrapper_dict = OptimWrapperDict(
-            dict(key1=optim_wrapper1, key2=optim_wrapper2))
+            key1=optim_wrapper1, key2=optim_wrapper2)
         # single optimizer
         message_hub = MessageHub.get_instance(
             'runtime_info_hook_test_before_train_iter')
