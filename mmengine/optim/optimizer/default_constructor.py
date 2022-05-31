@@ -5,8 +5,8 @@ from typing import List, Optional, Union
 import torch
 import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
-from mmengine.mmengine.logging.logger import print_log
 
+from mmengine.logging.logger import print_log
 from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
