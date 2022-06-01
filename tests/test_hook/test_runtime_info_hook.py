@@ -70,7 +70,7 @@ class TestRuntimeInfoHook(TestCase):
         self.assertEqual(message_hub.get_info('iter'), 9)
         self.assertEqual(message_hub.get_scalar('train/lr').current(), 0.01)
 
-        with self.assertRaisesRegex(TypeError,
+        with self.assertRaisesRegex(AssertionError,
                                     'runner.optim_wrapper.get_lr()'):
             runner.optim_wrapper = Mock()
             runner.optim_wrapper.get_lr = Mock(return_value='error type')

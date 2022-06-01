@@ -112,14 +112,14 @@ class TestOptimWrapperDict(TestCase):
     def test_get_lr(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         lr = optim_wrapper_dict.get_lr()
-        self.assertEqual(lr['optim1'], [0.1])
-        self.assertEqual(lr['optim2'], [0.2])
+        self.assertEqual(lr['optim1.lr'], [0.1])
+        self.assertEqual(lr['optim2.lr'], [0.2])
 
     def test_get_momentum(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         momentum = optim_wrapper_dict.get_momentum()
-        self.assertEqual(momentum['optim1'], [0.8])
-        self.assertEqual(momentum['optim2'], [0.9])
+        self.assertEqual(momentum['optim1.momentum'], [0.8])
+        self.assertEqual(momentum['optim2.momentum'], [0.9])
 
     def test_getitem(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)

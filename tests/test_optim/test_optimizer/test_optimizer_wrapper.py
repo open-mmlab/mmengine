@@ -156,18 +156,18 @@ class TestOptimWrapper(MultiProcessTestCase):
         model = ToyModel()
         optim = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optim)
-        self.assertEqual(optim_wrapper.get_lr(), [0.1])
+        self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1]))
 
     def test_get_momentum(self):
         # Get momentum from SGD
         model = ToyModel()
         optim = SGD(model.parameters(), lr=0., momentum=0.8)
         optim_wrapper = OptimWrapper(optim)
-        self.assertEqual(optim_wrapper.get_momentum(), [0.8])
+        self.assertEqual(optim_wrapper.get_momentum(), dict(momentum=[0.8]))
         # Get momentum from Adam
         optim = Adam(model.parameters(), lr=0., betas=(0.9, 0.9))
         optim_wrapper = OptimWrapper(optim)
-        self.assertEqual(optim_wrapper.get_momentum(), [0.9])
+        self.assertEqual(optim_wrapper.get_momentum(), dict(momentum=[0.9]))
 
     def test_backward(self):
         loss = MagicMock()

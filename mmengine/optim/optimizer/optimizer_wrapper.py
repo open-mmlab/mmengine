@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
@@ -212,7 +212,7 @@ class OptimWrapper:
         """
         return self.optimizer.param_groups
 
-    def get_lr(self) -> List[float]:
+    def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of the optimizer.
 
         Provide unified interface to get learning rate of optimizer.
@@ -221,9 +221,9 @@ class OptimWrapper:
             List[float]: Learning rate of the optimizer.
         """
         lr = [group['lr'] for group in self.param_groups]
-        return lr
+        return dict(lr=lr)
 
-    def get_momentum(self) -> List[float]:
+    def get_momentum(self) -> Dict[str, List[float]]:
         """Get the momentum of the optimizer.
 
         Provide unified interface to get momentum of optimizer.
@@ -241,7 +241,7 @@ class OptimWrapper:
                 momentum.append(group['betas'][0])
             else:
                 momentum.append(0)
-        return momentum
+        return dict(momentum=momentum)
 
     @contextmanager
     def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
