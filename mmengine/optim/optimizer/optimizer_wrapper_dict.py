@@ -141,8 +141,7 @@ class OptimWrapperDict(OptimWrapper):
             self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def get_lr(self) -> Dict[str, List[float]]:  # type: ignore
-        """Get the learning rate of the first parameter group of all optimizer
-        wrappers.
+        """Get the learning rate of all optimizers.
 
         Returns:
             Dict[str, List[float]]: Learning rate of all optimizers.
@@ -153,8 +152,7 @@ class OptimWrapperDict(OptimWrapper):
         return lr_dict
 
     def get_momentum(self) -> Dict[str, List[float]]:  # type: ignore
-        """Get the momentum of the first parameter group of all optimizer
-        wrappers.
+        """Get the momentum of all optimizers.
 
         Returns:
             Dict[str, List[float]]: momentum of all optimizers.

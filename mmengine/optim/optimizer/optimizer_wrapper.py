@@ -213,7 +213,7 @@ class OptimWrapper:
         return self.optimizer.param_groups
 
     def get_lr(self) -> List[float]:
-        """Get the learning rate of the first parameter group.
+        """Get the learning rate of the optimizer.
 
         Provide unified interface to get learning rate of optimizer.
 
@@ -224,7 +224,7 @@ class OptimWrapper:
         return lr
 
     def get_momentum(self) -> List[float]:
-        """Get the momentum of the first parameter group.
+        """Get the momentum of the optimizer.
 
         Provide unified interface to get momentum of optimizer.
 
