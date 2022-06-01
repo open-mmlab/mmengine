@@ -818,22 +818,28 @@ class Runner:
     ) -> Union[OptimWrapper, OptimWrapperDict]:
         """Build optimizer wrapper.
 
+        If ``optim_wrapper`` is a config dict with only one optimizer,
+        the config dict must contain ``optimizer``, and ``type`` is optional,
+        defaults to build :obj:`OptimWrapper` instance.
+
+        If ``optim_wrapper`` is a config dict with multiple optimizers,
+        The constructor is must be defined since
+        :obj:`DefaultOptimizerConstructor` will not handle the case of
+        training with multiple optimizers.
+
+        If ``optim_wrapper`` is a dict of ``OptimWrapper``,
+        ``build_optim_wrapper`` will directly build the :obj:`OptimWrapperDict`
+        instance from ``optim_wrapper``.
+
         Args:
             optim_wrapper (OptimWrapper or dict): An OptimWrapper object or a
                 dict to build OptimWrapper objects. If ``optim_wrapper`` is an
                 OptimWrapper, just return an ``OptimizeWrapper`` instance.
 
-        Note:
-            For single optimizer training, if `optim_wrapper` is a config
-            dict, `type` is optional(defaults to :obj:`OptimWrapper`) and it
-            must contain `optimizer` to build the corresponding optimizer.
-
         Examples:
             >>> # build an optimizer
             >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
             ...     type='SGD', lr=0.01))
-            >>> # optim_wrapper_cfg = dict(optimizer=dict(type='SGD', lr=0.01))
-            >>> # is also valid.
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
@@ -847,7 +853,22 @@ class Runner:
                 nesterov: False
                 weight_decay: 0
             )
-
+            >>> # build optimizer without `type`
+            >>> optim_wrapper_cfg = dict(optimizer=dict(type='SGD', lr=0.01))
+            >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+            >>> optim_wrapper
+            Type: OptimWrapper
+            accumulative_iters: 1
+            optimizer:
+            SGD (
+            Parameter Group 0
+                dampening: 0
+                lr: 0.01
+                maximize: False
+                momentum: 0
+                nesterov: False
+                weight_decay: 0
+            )
             >>> # build multiple optimizers
             >>> optim_wrapper_cfg = dict(
             ...    generator=dict(type='OptimWrapper', optimizer=dict(
@@ -855,7 +876,7 @@ class Runner:
             ...    discriminator=dict(type='OptimWrapper', optimizer=dict(
             ...        type='Adam', lr=0.001))
             ...    # need to customize a multiple optimizer constructor
-            ...    constructor='CustomizedMultipleOptimizersConstructor',
+            ...    constructor='CustomMultiOptimizerConstructor',
             ...)
             >>> optim_wrapper = runner.optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
@@ -886,7 +907,7 @@ class Runner:
 
         Important:
             If you need to build multiple optimizers, you should implement a
-            MultipleOptimizerConstructor which gets parameters passed to
+            MultiOptimWrapperConstructor which gets parameters passed to
             corresponding optimizers and compose the ``OptimWrapperDict``.
             More details about how to customize OptimizerConstructor can be
             found at `optimizer-docs`_.
