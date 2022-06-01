@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 
 from mmengine.hooks import EMAHook
 from mmengine.model import ExponentialMovingAverage
+from mmengine.optim import OptimWrapper
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
 from mmengine.runner import Runner
 
@@ -79,7 +80,8 @@ class TestEMAHook(TestCase):
                 num_workers=0),
             val_evaluator=evaluator,
             work_dir=self.temp_dir.name,
-            optimizer=torch.optim.Adam(ToyModel().parameters()),
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
             train_cfg=dict(by_epoch=True, max_epochs=2),
             val_cfg=dict(interval=1),
             default_hooks=dict(logger=None),

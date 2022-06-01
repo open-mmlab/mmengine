@@ -16,13 +16,15 @@ from mmengine.config import Config
 from mmengine.data import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
-                            IterTimerHook, LoggerHook, OptimizerHook,
-                            ParamSchedulerHook)
+                            IterTimerHook, LoggerHook, ParamSchedulerHook,
+                            RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.optim import DefaultOptimizerConstructor, MultiStepLR, StepLR
+from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
+                            OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
-                               MODEL_WRAPPERS, MODELS, OPTIMIZER_CONSTRUCTORS,
-                               PARAM_SCHEDULERS, Registry)
+                               MODEL_WRAPPERS, MODELS,
+                               OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -73,24 +75,24 @@ class CustomModelWrapper(nn.Module):
         self.model = model
 
 
-@OPTIMIZER_CONSTRUCTORS.register_module()
+@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
 class ToyMultipleOptimizerConstructor:
 
-    def __init__(self, optimizer_cfg, paramwise_cfg=None):
-        if not isinstance(optimizer_cfg, dict):
+    def __init__(self, optim_wrapper_cfg, paramwise_cfg=None):
+        if not isinstance(optim_wrapper_cfg, dict):
             raise TypeError('optimizer_cfg should be a dict',
-                            f'but got {type(optimizer_cfg)}')
+                            f'but got {type(optim_wrapper_cfg)}')
         assert paramwise_cfg is None, (
             'parawise_cfg should be set in each optimizer separately')
-        self.optimizer_cfg = optimizer_cfg
+        self.optim_wrapper_cfg = optim_wrapper_cfg
         self.constructors = {}
-        for key, cfg in self.optimizer_cfg.items():
+        for key, cfg in self.optim_wrapper_cfg.items():
             _cfg = cfg.copy()
             paramwise_cfg_ = _cfg.pop('paramwise_cfg', None)
-            self.constructors[key] = DefaultOptimizerConstructor(
+            self.constructors[key] = DefaultOptimWrapperConstructor(
                 _cfg, paramwise_cfg_)
 
-    def __call__(self, model: nn.Module) -> torch.optim.Optimizer:
+    def __call__(self, model: nn.Module) -> OptimWrapperDict:
         optimizers = {}
         while hasattr(model, 'module'):
             model = model.module
@@ -98,7 +100,7 @@ class ToyMultipleOptimizerConstructor:
         for key, constructor in self.constructors.items():
             module = getattr(model, key)
             optimizers[key] = constructor(module)
-        return optimizers
+        return OptimWrapperDict(**optimizers)
 
 
 @DATASETS.register_module()
@@ -157,13 +159,6 @@ class ToyHook2(Hook):
     priority = 'Lowest'
 
     def after_train_epoch(self, runner):
-        pass
-
-
-@HOOKS.register_module()
-class ToyHook3(Hook):
-
-    def before_train_iter(self, runner, data_batch):
         pass
 
 
@@ -246,7 +241,8 @@ class TestRunner(TestCase):
                 sampler=dict(type='DefaultSampler', shuffle=False),
                 batch_size=3,
                 num_workers=0),
-            optimizer=dict(type='SGD', lr=0.01),
+            optim_wrapper=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
@@ -299,7 +295,7 @@ class TestRunner(TestCase):
         # also be None
         cfg.experiment_name = 'test_init2'
         cfg.pop('train_dataloader')
-        cfg.pop('optimizer')
+        cfg.pop('optim_wrapper')
         cfg.pop('param_scheduler')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
@@ -324,7 +320,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_init5'
         cfg.pop('train_cfg')
         cfg.pop('train_dataloader')
-        cfg.pop('optimizer')
+        cfg.pop('optim_wrapper')
         with self.assertRaisesRegex(ValueError, 'should be None'):
             runner = Runner(**cfg)
 
@@ -398,7 +394,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner._train_dataloader, dict)
         self.assertIsInstance(runner._val_dataloader, dict)
         self.assertIsInstance(runner._test_dataloader, dict)
-        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner.optim_wrapper, dict)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 
         # After calling runner.train(),
@@ -408,7 +404,7 @@ class TestRunner(TestCase):
 
         self.assertIsInstance(runner._train_loop, BaseLoop)
         self.assertIsInstance(runner.train_dataloader, DataLoader)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper, OptimWrapper)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertIsInstance(runner._val_loop, BaseLoop)
         self.assertIsInstance(runner._val_loop.dataloader, DataLoader)
@@ -423,10 +419,10 @@ class TestRunner(TestCase):
 
         # 4. initialize runner with objects rather than config
         model = ToyModel()
-        optimizer = SGD(
+        optim_wrapper = OptimWrapper(SGD(
             model.parameters(),
             lr=0.01,
-        )
+        ))
         toy_hook = ToyHook()
         toy_hook2 = ToyHook2()
 
@@ -438,8 +434,8 @@ class TestRunner(TestCase):
             work_dir=self.temp_dir,
             train_cfg=dict(by_epoch=True, max_epochs=3),
             train_dataloader=train_dataloader,
-            optimizer=optimizer,
-            param_scheduler=MultiStepLR(optimizer, milestones=[1, 2]),
+            optim_wrapper=optim_wrapper,
+            param_scheduler=MultiStepLR(optim_wrapper, milestones=[1, 2]),
             val_cfg=dict(interval=1, begin=1),
             val_dataloader=val_dataloader,
             val_evaluator=ToyMetric1(),
@@ -618,79 +614,92 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, CustomModelWrapper)
 
-    def test_build_optimizer(self):
+    def test_build_optim_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_optimizer'
+        cfg.experiment_name = 'test_build_optim_wrapper'
         runner = Runner.from_cfg(cfg)
 
         # input should be an Optimizer object or dict
-        with self.assertRaisesRegex(TypeError, 'optimizer should be'):
-            runner.build_optimizer('invalid-type')
+        with self.assertRaisesRegex(TypeError, 'optimizer wrapper should be'):
+            runner.build_optim_wrapper('invalid-type')
 
         # 1. test one optimizer
         # 1.1 input is an Optimizer object
-        _optimizer = SGD(runner.model.parameters(), lr=0.01)
-        optimizer = runner.build_optimizer(_optimizer)
-        self.assertEqual(id(_optimizer), id(optimizer))
+        optimizer = SGD(runner.model.parameters(), lr=0.01)
+        optim_wrapper = OptimWrapper(optimizer)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper)
+        self.assertEqual(id(optimizer), id(optim_wrapper.optimizer))
 
         # 1.2 input is a dict
-        optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
-        self.assertIsInstance(optimizer, SGD)
+        optim_wrapper = runner.build_optim_wrapper(
+            dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
 
         # 2. test multiple optmizers
         # 2.1 input is a dict which contains multiple optimizer objects
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
+        optim_wrapper1 = OptimWrapper(optimizer1)
         optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
-        optim_cfg = dict(key1=optimizer1, key2=optimizer2)
-        optimizer = runner.build_optimizer(optim_cfg)
-        self.assertIsInstance(optimizer, dict)
-        self.assertIsInstance(optimizer['key1'], SGD)
-        self.assertIsInstance(optimizer['key2'], Adam)
+        optim_wrapper2 = OptimWrapper(optimizer2)
+        optim_wrapper_cfg = dict(key1=optim_wrapper1, key2=optim_wrapper2)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapperDict)
+        self.assertIsInstance(optim_wrapper['key1'].optimizer, SGD)
+        self.assertIsInstance(optim_wrapper['key2'].optimizer, Adam)
 
         # 2.2 each item mush be an optimizer object when "type" and
         # "constructor" are not in optimizer
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
-        optimizer2 = dict(type='Adam', lr=0.02)
-        optim_cfg = dict(key1=optimizer1, key2=optimizer2)
+        optim_wrapper1 = OptimWrapper(optimizer1)
+        optim_wrapper2 = dict(
+            type='OptimWrapper', optimizer=dict(type='Adam', lr=0.01))
+        optim_cfg = dict(key1=optim_wrapper1, key2=optim_wrapper2)
         with self.assertRaisesRegex(ValueError,
                                     'each item mush be an optimizer object'):
-            runner.build_optimizer(optim_cfg)
+            runner.build_optim_wrapper(optim_cfg)
 
         # 2.3 input is a dict which contains multiple configs
-        optim_cfg = dict(
-            linear1=dict(type='SGD', lr=0.01),
-            linear2=dict(type='Adam', lr=0.02),
+        optim_wrapper_cfg = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
             constructor='ToyMultipleOptimizerConstructor')
-        optimizer = runner.build_optimizer(optim_cfg)
-        self.assertIsInstance(optimizer, dict)
-        self.assertIsInstance(optimizer['linear1'], SGD)
-        self.assertIsInstance(optimizer['linear2'], Adam)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapperDict)
+        self.assertIsInstance(optim_wrapper['linear1'].optimizer, SGD)
+        self.assertIsInstance(optim_wrapper['linear2'].optimizer, Adam)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_param_scheduler'
         runner = Runner.from_cfg(cfg)
 
-        # `build_optimizer` should be called before `build_param_scheduler`
+        # `build_optim_wrapper` should be called before
+        # `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
-        runner.optimizer = dict(
-            key1=dict(type='SGD', lr=0.01),
-            key2=dict(type='Adam', lr=0.02),
+        runner.optim_wrapper = dict(
+            key1=dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)),
+            key2=dict(type=OptimWrapper, optimizer=dict(type='Adam', lr=0.02)),
         )
-        with self.assertRaisesRegex(RuntimeError, 'should be called before'):
+        with self.assertRaisesRegex(AssertionError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
-        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+        runner.optim_wrapper = runner.build_optim_wrapper(
+            dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)))
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertIsInstance(param_schedulers, list)
+        self.assertEqual(len(param_schedulers), 1)
+        self.assertIsInstance(param_schedulers[0], MultiStepLR)
 
         # 1. test one optimizer and one parameter scheduler
         # 1.1 input is a ParamScheduler object
-        param_scheduler = MultiStepLR(runner.optimizer, milestones=[1, 2])
+        param_scheduler = MultiStepLR(runner.optim_wrapper, milestones=[1, 2])
         param_schedulers = runner.build_param_scheduler(param_scheduler)
         self.assertEqual(len(param_schedulers), 1)
         self.assertEqual(id(param_schedulers[0]), id(param_scheduler))
 
         # 1.2 input is a dict
-        cfg = dict(type='MultiStepLR', milestones=[1, 2])
         param_schedulers = runner.build_param_scheduler(param_scheduler)
         self.assertEqual(len(param_schedulers), 1)
         self.assertIsInstance(param_schedulers[0], MultiStepLR)
@@ -715,9 +724,11 @@ class TestRunner(TestCase):
 
         # 3. test multiple optimizers and list of parameter schedulers
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
+        optim_wrapper1 = OptimWrapper(optimizer1)
         optimizer2 = Adam(runner.model.linear2.parameters(), lr=0.02)
-        optim_cfg = dict(key1=optimizer1, key2=optimizer2)
-        runner.optimizer = runner.build_optimizer(optim_cfg)
+        optim_wrapper2 = OptimWrapper(optimizer2)
+        optim_wrapper_cfg = dict(key1=optim_wrapper1, key2=optim_wrapper2)
+        runner.optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
         cfg = [
             dict(type='MultiStepLR', milestones=[1, 2]),
             dict(type='StepLR', step_size=1)
@@ -743,7 +754,8 @@ class TestRunner(TestCase):
         self.assertEqual(len(param_schedulers['key2']), 2)
 
         # 5. test converting epoch-based scheduler to iter-based
-        runner.optimizer = runner.build_optimizer(dict(type='SGD', lr=0.01))
+        runner.optim_wrapper = runner.build_optim_wrapper(
+            dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)))
 
         # 5.1 train loop should be built before converting scheduler
         cfg = dict(
@@ -752,7 +764,7 @@ class TestRunner(TestCase):
                 AssertionError,
                 'Scheduler can only be converted to iter-based when '
                 'train loop is built.'):
-            param_schedulers = runner.build_param_scheduler(cfg)
+            runner.build_param_scheduler(cfg)
 
         # 5.2 convert epoch-based to iter-based scheduler
         cfg = dict(
@@ -947,7 +959,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_train1'
         cfg.pop('train_dataloader')
         cfg.pop('train_cfg')
-        cfg.pop('optimizer')
+        cfg.pop('optim_wrapper')
         cfg.pop('param_scheduler')
         runner = Runner.from_cfg(cfg)
         with self.assertRaisesRegex(RuntimeError, 'should not be None'):
@@ -1063,7 +1075,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_individually_val'
         cfg.pop('train_dataloader')
         cfg.pop('train_cfg')
-        cfg.pop('optimizer')
+        cfg.pop('optim_wrapper')
         cfg.pop('param_scheduler')
         cfg.pop('test_dataloader')
         cfg.pop('test_cfg')
@@ -1091,7 +1103,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_individually_test'
         cfg.pop('train_dataloader')
         cfg.pop('train_cfg')
-        cfg.pop('optimizer')
+        cfg.pop('optim_wrapper')
         cfg.pop('param_scheduler')
         cfg.pop('val_dataloader')
         cfg.pop('val_cfg')
@@ -1132,15 +1144,15 @@ class TestRunner(TestCase):
             get_priority('BELOW_NORMAL'))
 
         # 1.3 `hook` is a hook object
-        optimizer_hook = OptimizerHook()
-        runner.register_hook(optimizer_hook)
+        runtime_info_hook = RuntimeInfoHook()
+        runner.register_hook(runtime_info_hook)
         self.assertEqual(len(runner._hooks), 2)
-        # The priority of `OptimizerHook` is `HIGH` which is greater than
+        # The priority of `runtime_info_hook` is `HIGH` which is greater than
         # `IterTimerHook`, so the first item of `_hooks` should be
-        # `OptimizerHook`
-        self.assertTrue(isinstance(runner._hooks[0], OptimizerHook))
+        # `runtime_info_hook`
+        self.assertTrue(isinstance(runner._hooks[0], RuntimeInfoHook))
         self.assertEqual(
-            get_priority(runner._hooks[0].priority), get_priority('HIGH'))
+            get_priority(runner._hooks[0].priority), get_priority('VERY_HIGH'))
 
         # 2. test `priority` parameter
         # `priority` argument is not None and it will be set as priority of
@@ -1198,29 +1210,6 @@ class TestRunner(TestCase):
         self.assertEqual(len(runner._hooks), 8)
         self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
-    def test_call_hook(self):
-        # test unexpected argument in `call_hook`
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_call_hook1'
-        runner = Runner.from_cfg(cfg)
-        runner._hooks = []
-        custom_hooks = [dict(type='ToyHook3')]
-        runner.register_custom_hooks(custom_hooks)
-        with self.assertRaisesRegex(
-                TypeError,
-                r"got an unexpected keyword argument 'batch_idx' in "
-                r'<test_runner.ToyHook3 object at \w+>'):
-            runner.call_hook('before_train_iter', batch_idx=0, data_batch=None)
-
-        # test call hook with expected arguments
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_call_hook2'
-        runner = Runner.from_cfg(cfg)
-        runner._hooks = []
-        custom_hooks = [dict(type='ToyHook3')]
-        runner.register_custom_hooks(custom_hooks)
-        runner.call_hook('before_train_iter', data_batch=None)
-
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_register_hooks'
@@ -1229,7 +1218,7 @@ class TestRunner(TestCase):
         runner._hooks = []
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
-        # 7 default hooks + custom hook (ToyHook)
+        # six default hooks + custom hook (ToyHook)
         self.assertEqual(len(runner._hooks), 8)
         self.assertTrue(isinstance(runner._hooks[7], ToyHook))
 
@@ -1336,7 +1325,7 @@ class TestRunner(TestCase):
         # 1.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint2'
-        cfg.optimizer = dict(type='SGD', lr=0.2)
+        cfg.optim_wrapper = dict(type='SGD', lr=0.2)
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         runner = Runner.from_cfg(cfg)
         runner.load_checkpoint(path)
@@ -1345,22 +1334,24 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         # load checkpoint will not initialize optimizer and param_schedulers
         # objects
-        self.assertIsInstance(runner.optimizer, dict)
+        self.assertIsInstance(runner.optim_wrapper, dict)
         self.assertIsInstance(runner.param_schedulers, list)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 
         # 1.3 test `resume`
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint3'
-        cfg.optimizer = dict(type='SGD', lr=0.2)
+        cfg.optim_wrapper = dict(
+            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.2))
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
-        self.assertEqual(runner.optimizer.param_groups[0]['lr'], 0.0001)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
+        self.assertEqual(runner.optim_wrapper.param_groups[0]['lr'], 0.0001)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertEqual(runner.param_schedulers[0].milestones, {1: 1, 2: 1})
 
@@ -1373,7 +1364,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 3)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.5 test resume from a specified checkpoint
@@ -1386,46 +1377,48 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 1)
         self.assertEqual(runner.iter, 4)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.6 multiple optimizers
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint6'
-        cfg.optimizer = dict(
-            linear1=dict(type='SGD', lr=0.01),
-            linear2=dict(type='Adam', lr=0.02),
-            constructor='ToyMultipleOptimizerConstructor',
-        )
+        cfg.optim_wrapper = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
+            constructor='ToyMultipleOptimizerConstructor')
         # disable OptimizerHook because it only works with one optimizer
         cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.train()
         path = osp.join(self.temp_dir, 'epoch_3.pth')
         self.assertTrue(osp.exists(path))
-        self.assertEqual(runner.optimizer['linear1'].param_groups[0]['lr'],
+        self.assertEqual(runner.optim_wrapper['linear1'].param_groups[0]['lr'],
                          0.0001)
-        self.assertIsInstance(runner.optimizer['linear2'], Adam)
-        self.assertEqual(runner.optimizer['linear2'].param_groups[0]['lr'],
+        self.assertIsInstance(runner.optim_wrapper['linear2'].optimizer, Adam)
+        self.assertEqual(runner.optim_wrapper['linear2'].param_groups[0]['lr'],
                          0.0002)
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint7'
-        cfg.optimizer = dict(
-            linear1=dict(type='SGD', lr=0.2),
-            linear2=dict(type='Adam', lr=0.03),
-            constructor='ToyMultipleOptimizerConstructor',
-        )
+        cfg.optim_wrapper = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.2)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.03)),
+            constructor='ToyMultipleOptimizerConstructor')
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
-        self.assertIsInstance(runner.optimizer, dict)
-        self.assertIsInstance(runner.optimizer['linear1'], SGD)
-        self.assertEqual(runner.optimizer['linear1'].param_groups[0]['lr'],
+        self.assertIsInstance(runner.optim_wrapper, OptimWrapperDict)
+        self.assertIsInstance(runner.optim_wrapper['linear1'].optimizer, SGD)
+        self.assertEqual(runner.optim_wrapper['linear1'].param_groups[0]['lr'],
                          0.0001)
-        self.assertIsInstance(runner.optimizer['linear2'], Adam)
-        self.assertEqual(runner.optimizer['linear2'].param_groups[0]['lr'],
+        self.assertIsInstance(runner.optim_wrapper['linear2'].optimizer, Adam)
+        self.assertEqual(runner.optim_wrapper['linear2'].param_groups[0]['lr'],
                          0.0002)
         self.assertIsInstance(runner.param_schedulers, dict)
         self.assertEqual(len(runner.param_schedulers['linear1']), 1)
@@ -1479,7 +1472,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.4 test auto resume
@@ -1491,7 +1484,7 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 12)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 2.5 test resume from a specified checkpoint
@@ -1504,5 +1497,5 @@ class TestRunner(TestCase):
         self.assertEqual(runner.epoch, 0)
         self.assertEqual(runner.iter, 3)
         self.assertTrue(runner._has_loaded)
-        self.assertIsInstance(runner.optimizer, SGD)
+        self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)

@@ -6,17 +6,19 @@ import torch
 import torch.nn as nn
 from torch.nn import GroupNorm, LayerNorm
 
-from mmengine.logging.logger import print_log
-from mmengine.registry import OPTIMIZER_CONSTRUCTORS, OPTIMIZERS
+from mmengine.logging import print_log
+from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
+                               OPTIMIZERS)
 from mmengine.utils import is_list_of, mmcv_full_available
 from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
+from .optimizer_wrapper import OptimWrapper
 
 
-@OPTIMIZER_CONSTRUCTORS.register_module()
-class DefaultOptimizerConstructor:
+@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
+class DefaultOptimWrapperConstructor:
     """Default constructor for optimizers.
 
-    By default each parameter share the same optimizer settings, and we
+    By default, each parameter share the same optimizer settings, and we
     provide an argument ``paramwise_cfg`` to specify parameter-wise settings.
     It is a dict and may contain the following fields:
 
@@ -62,49 +64,65 @@ class DefaultOptimizerConstructor:
         model contains multiple DCN layers in places other than backbone.
 
     Args:
-        optimizer_cfg (dict): The config dict of the optimizer.
+        optim_wrapper_cfg (dict): The config dict of the optimizer wrapper.
             Positional fields are
 
-                - `type`: class name of the optimizer.
+                - ``type``: class name of the OptimizerWrapper
+                - ``optimizer``: The configuration of optimizer.
 
             Optional fields are
 
-                - any arguments of the corresponding optimizer type, e.g.,
-                  lr, weight_decay, momentum, etc.
+                - any arguments of the corresponding optimizer wrapper type,
+                  e.g., accumulative_iters, clip_grad, etc.
+
+        The positional fields of ``optimizer`` are
+
+            - `type`: class name of the optimizer.
+
+        Optional fields are
+
+            - any arguments of the corresponding optimizer type, e.g.,
+              lr, weight_decay, momentum, etc.
+
         paramwise_cfg (dict, optional): Parameter-wise options.
 
     Example 1:
         >>> model = torch.nn.modules.Conv1d(1, 1, 1)
-        >>> optimizer_cfg = dict(type='SGD', lr=0.01, momentum=0.9,
-        >>>                      weight_decay=0.0001)
+        >>> optim_wrapper_cfg = dict(
+        >>>     dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01,
+        >>>         momentum=0.9, weight_decay=0.0001))
         >>> paramwise_cfg = dict(norm_decay_mult=0.)
-        >>> optim_builder = DefaultOptimizerConstructor(
-        >>>     optimizer_cfg, paramwise_cfg)
-        >>> optimizer = optim_builder(model)
+        >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
+        >>>     optim_wrapper_cfg, paramwise_cfg)
+        >>> optim_wrapper = optim_wrapper_builder(model)
 
     Example 2:
         >>> # assume model have attribute model.backbone and model.cls_head
-        >>> optimizer_cfg = dict(type='SGD', lr=0.01, weight_decay=0.95)
+        >>> optim_wrapper_cfg = dict(type=OptimWrapper, optimizer=dict(
+        >>>     type='SGD', lr=0.01, weight_decay=0.95))
         >>> paramwise_cfg = dict(custom_keys={
-                '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
-        >>> optim_builder = DefaultOptimizerConstructor(
-        >>>     optimizer_cfg, paramwise_cfg)
-        >>> optimizer = optim_builder(model)
+        >>>     '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
+        >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
+        >>>     optim_wrapper_cfg, paramwise_cfg)
+        >>> optim_wrapper = optim_wrapper_builder(model)
         >>> # Then the `lr` and `weight_decay` for model.backbone is
         >>> # (0.01 * 0.1, 0.95 * 0.9). `lr` and `weight_decay` for
         >>> # model.cls_head is (0.01, 0.95).
     """
 
     def __init__(self,
-                 optimizer_cfg: dict,
+                 optim_wrapper_cfg: dict,
                  paramwise_cfg: Optional[dict] = None):
-        if not isinstance(optimizer_cfg, dict):
+        if not isinstance(optim_wrapper_cfg, dict):
             raise TypeError('optimizer_cfg should be a dict',
-                            f'but got {type(optimizer_cfg)}')
-        self.optimizer_cfg = optimizer_cfg
+                            f'but got {type(optim_wrapper_cfg)}')
+        assert 'optimizer' in optim_wrapper_cfg, (
+            '`optim_wrapper_cfg` must contain "optimizer" config')
+        self.optim_wrapper_cfg = optim_wrapper_cfg.copy()
+        self.optimizer_cfg = self.optim_wrapper_cfg.pop('optimizer')
         self.paramwise_cfg = {} if paramwise_cfg is None else paramwise_cfg
-        self.base_lr = optimizer_cfg.get('lr', None)
-        self.base_wd = optimizer_cfg.get('weight_decay', None)
+        self.base_lr = self.optimizer_cfg.get('lr', None)
+        self.base_wd = self.optimizer_cfg.get('weight_decay', None)
         self._validate_cfg()
 
     def _validate_cfg(self) -> None:
@@ -249,19 +267,23 @@ class DefaultOptimizerConstructor:
                 prefix=child_prefix,
                 is_dcn_module=is_dcn_module)
 
-    def __call__(self, model: nn.Module) -> torch.optim.Optimizer:
+    def __call__(self, model: nn.Module) -> OptimWrapper:
         if hasattr(model, 'module'):
             model = model.module
 
+        optim_wrapper_cfg = self.optim_wrapper_cfg.copy()
+        optim_wrapper_cfg.setdefault('type', 'OptimWrapper')
         optimizer_cfg = self.optimizer_cfg.copy()
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg['params'] = model.parameters()
-            return OPTIMIZERS.build(optimizer_cfg)
-
-        # set param-wise lr and weight decay recursively
-        params: List = []
-        self.add_params(params, model)
-        optimizer_cfg['params'] = params
-
-        return OPTIMIZERS.build(optimizer_cfg)
+            optimizer = OPTIMIZERS.build(optimizer_cfg)
+        else:
+            # set param-wise lr and weight decay recursively
+            params: List = []
+            self.add_params(params, model)
+            optimizer_cfg['params'] = params
+            optimizer = OPTIMIZERS.build(optimizer_cfg)
+        optim_wrapper = OPTIM_WRAPPERS.build(
+            optim_wrapper_cfg, default_args=dict(optimizer=optimizer))
+        return optim_wrapper

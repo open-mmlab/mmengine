@@ -514,3 +514,20 @@ def find_latest_checkpoint(path: str, suffix: str = 'pth'):
             latest_path = checkpoint
 
     return latest_path
+
+
+def has_batch_norm(model: nn.Module) -> bool:
+    """Detect whether model has a BatchNormalization layer.
+
+    Args:
+        model (nn.Module): training model.
+
+    Returns:
+        bool: whether model has a BatchNormalization layer
+    """
+    if isinstance(model, _BatchNorm):
+        return True
+    for m in model.children():
+        if has_batch_norm(m):
+            return True
+    return False
