@@ -272,6 +272,7 @@ class DefaultOptimWrapperConstructor:
             model = model.module
 
         optim_wrapper_cfg = self.optim_wrapper_cfg.copy()
+        optim_wrapper_cfg.setdefault('type', 'OptimWrapper')
         optimizer_cfg = self.optimizer_cfg.copy()
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:

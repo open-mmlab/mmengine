@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
-                            DefaultOptimWrapperConstructor,
+                            DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
@@ -210,6 +210,17 @@ class TestBuilder(TestCase):
                 weight_decay=self.base_wd,
                 momentum=self.momentum))
         optim_wrapper = build_optim_wrapper(self.model, optim_wrapper_cfg)
+        self._check_default_optimizer(optim_wrapper.optimizer, self.model)
+
+        # test build optimizer without type in optim_wrapper_cfg
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_wrapper = build_optim_wrapper(self.model, optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
         self._check_default_optimizer(optim_wrapper.optimizer, self.model)
 
         # test build function with invalid ``constructor``

@@ -9,7 +9,7 @@ import torch.distributed as torch_dist
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel.distributed import DistributedDataParallel
-from torch.optim import SGD, Optimizer
+from torch.optim import SGD, Adam, Optimizer
 
 from mmengine import MessageHub, MMLogger
 from mmengine.dist import all_gather
@@ -151,6 +151,23 @@ class TestOptimWrapper(MultiProcessTestCase):
             optim_wrapper._initilize_iter_status(model)
             self.assertEqual(len(cm.output), 1)
             self.assertRegex(cm.records[0].msg, 'Gradient accumulative')
+
+    def test_ger_lr(self):
+        model = ToyModel()
+        optim = SGD(model.parameters(), lr=0.1)
+        optim_wrapper = OptimWrapper(optim)
+        self.assertEqual(optim_wrapper.get_lr(), [0.1])
+
+    def test_get_momentum(self):
+        # Get momentum from SGD
+        model = ToyModel()
+        optim = SGD(model.parameters(), lr=0., momentum=0.8)
+        optim_wrapper = OptimWrapper(optim)
+        self.assertEqual(optim_wrapper.get_momentum(), [0.8])
+        # Get momentum from Adam
+        optim = Adam(model.parameters(), lr=0., betas=(0.9, 0.9))
+        optim_wrapper = OptimWrapper(optim)
+        self.assertEqual(optim_wrapper.get_momentum(), [0.9])
 
     def test_backward(self):
         loss = MagicMock()

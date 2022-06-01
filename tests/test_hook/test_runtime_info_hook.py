@@ -70,6 +70,12 @@ class TestRuntimeInfoHook(TestCase):
         self.assertEqual(message_hub.get_info('iter'), 9)
         self.assertEqual(message_hub.get_scalar('train/lr').current(), 0.01)
 
+        with self.assertRaisesRegex(TypeError,
+                                    'runner.optim_wrapper.get_lr()'):
+            runner.optim_wrapper = Mock()
+            runner.optim_wrapper.get_lr = Mock(return_value='error type')
+            hook.before_train_iter(runner, batch_idx=2, data_batch=None)
+
         # multiple optimizers
         message_hub = MessageHub.get_instance(
             'runtime_info_hook_test_before_train_iter')

@@ -212,6 +212,37 @@ class OptimWrapper:
         """
         return self.optimizer.param_groups
 
+    def get_lr(self) -> List[float]:
+        """Get the learning rate of the first parameter group.
+
+        Provide unified interface to get learning rate of optimizer.
+
+        Returns:
+            List[float]: Learning rate of the optimizer.
+        """
+        lr = [group['lr'] for group in self.param_groups]
+        return lr
+
+    def get_momentum(self) -> List[float]:
+        """Get the momentum of the first parameter group.
+
+        Provide unified interface to get momentum of optimizer.
+
+        Returns:
+            List[float]: Momentum of the optimizer.
+        """
+        momentum = []
+        for group in self.param_groups:
+            # Get momentum of SGD.
+            if 'momentum' in group.keys():
+                momentum.append(group['momentum'])
+            # Get momentum of Adam.
+            elif 'betas' in group.keys():
+                momentum.append(group['betas'][0])
+            else:
+                momentum.append(0)
+        return momentum
+
     @contextmanager
     def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
         """A Context manager for gradient accumulation and avoiding unnecessary

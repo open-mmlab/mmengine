@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence
 
-from mmengine.optim import OptimWrapper, OptimWrapperDict
 from mmengine.registry import HOOKS
 from .hook import Hook
 
@@ -42,20 +41,18 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        if not isinstance(runner.optim_wrapper, OptimWrapperDict):
-            # Since `OptimWrapperDict` inherits from `OptimWrapper`,
-            # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
-            # whether `self.optim_wrapper` is an `OptimizerWrapper` or
-            # `OptimWrapperDict` instance. Therefore, here we simply check
-            # self.optim_wrapper is not an `OptimWrapperDict` instance and
-            # then assert it is an OptimWrapper instance.
-            assert isinstance(runner.optim_wrapper, OptimWrapper)
-            runner.message_hub.update_scalar(
-                'train/lr', runner.optim_wrapper.param_groups[0]['lr'])
+        all_lr = runner.optim_wrapper.get_lr()
+        if isinstance(all_lr, (list, tuple)):
+            runner.message_hub.update_scalar('train/lr', all_lr[0])
+        elif isinstance(all_lr, dict):
+            for name, lr in all_lr.items():
+                runner.message_hub.update_scalar(f'train/{name}.lr', lr[0])
         else:
-            for name, optim_wrapper in runner.optim_wrapper.items():
-                runner.message_hub.update_scalar(
-                    f'train/{name}.lr', optim_wrapper.param_groups[0]['lr'])
+            raise TypeError('`runner.optim_wrapper.get_lr()` should return'
+                            'a dict of learning rate when training with '
+                            f'multiple optimizers, but got {type(all_lr)}, '
+                            f'please check your `CustomOptimizerConstructor`'
+                            f'return an `OptimWrapperDict` instance')
 
     def after_train_iter(self,
                          runner,

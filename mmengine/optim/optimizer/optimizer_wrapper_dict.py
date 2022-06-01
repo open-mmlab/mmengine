@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 from contextlib import ExitStack, contextmanager
-from typing import Iterator, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import torch
 import torch.nn as nn
@@ -139,6 +139,30 @@ class OptimWrapperDict(OptimWrapper):
                 f'Mismatched `state_dict`! cannot found {name} in '
                 'OptimWrapperDict')
             self.optim_wrappers[name].load_state_dict(_state_dict)
+
+    def get_lr(self) -> Dict[str, List[float]]:  # type: ignore
+        """Get the learning rate of the first parameter group of all optimizer
+        wrappers.
+
+        Returns:
+            Dict[str, List[float]]: Learning rate of all optimizers.
+        """
+        lr_dict = dict()
+        for name, optim_wrapper in self.optim_wrappers.items():
+            lr_dict[name] = optim_wrapper.get_lr()
+        return lr_dict
+
+    def get_momentum(self) -> Dict[str, List[float]]:  # type: ignore
+        """Get the momentum of the first parameter group of all optimizer
+        wrappers.
+
+        Returns:
+            Dict[str, List[float]]: momentum of all optimizers.
+        """
+        lr_dict = dict()
+        for name, optim_wrapper in self.optim_wrappers.items():
+            lr_dict[name] = optim_wrapper.get_momentum()
+        return lr_dict
 
     def state_dict(self) -> dict:
         """Get the state dictionary of all optimizer wrappers.

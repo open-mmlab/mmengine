@@ -13,16 +13,16 @@ class TestOptimWrapperDict(TestCase):
     def setUp(self) -> None:
         model1 = nn.Linear(1, 1)
         model2 = nn.Linear(1, 1)
-        self.optim1 = SGD(model1.parameters(), lr=0.1)
-        self.optim2 = SGD(model2.parameters(), lr=0.1)
+        self.optim1 = SGD(model1.parameters(), lr=0.1, momentum=0.8)
+        self.optim2 = SGD(model2.parameters(), lr=0.2, momentum=0.9)
         self.optim_wrapper1 = OptimWrapper(self.optim1)
         self.optim_wrapper2 = OptimWrapper(self.optim2)
         self.optimizers_wrappers = dict(
             optim1=self.optim_wrapper1, optim2=self.optim_wrapper2)
 
     def test_init(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertEqual(composed_optim_wrapper.optim_wrappers,
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        self.assertEqual(optim_wrapper_dict.optim_wrappers,
                          self.optimizers_wrappers)
         # Different types of OptimWrapper will raise an error
 
@@ -53,10 +53,10 @@ class TestOptimWrapperDict(TestCase):
         a = [0]
         b = [0]
         # Test enter the context both of `optim_wrapper1` and `optim_wrapper1`.
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.optim_wrapper1.accumulate_grad = context_a
         self.optim_wrapper2.accumulate_grad = context_b
-        with composed_optim_wrapper.accumulate_grad(a, b, 0):
+        with optim_wrapper_dict.accumulate_grad(a, b, 0):
             self.assertEqual(a[0], 100)
             self.assertEqual(b[0], 200)
 
@@ -64,8 +64,8 @@ class TestOptimWrapperDict(TestCase):
         self.assertEqual(b[0], 2)
 
     def test_state_dict(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        state_dict = composed_optim_wrapper.state_dict()
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        state_dict = optim_wrapper_dict.state_dict()
         self.assertEqual(state_dict['optim1'],
                          self.optim_wrapper1.state_dict())
         self.assertEqual(state_dict['optim2'],
@@ -80,50 +80,61 @@ class TestOptimWrapperDict(TestCase):
         optim_wrapper_load1 = OptimWrapper(optim1)
         optim_wrapper_load2 = OptimWrapper(optim2)
 
-        composed_optim_wrapper_save = OptimWrapperDict(
-            **self.optimizers_wrappers)
-        composed_optim_wrapper_load = OptimWrapperDict(
+        optim_wrapper_dict_save = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict_load = OptimWrapperDict(
             optim1=optim_wrapper_load1, optim2=optim_wrapper_load2)
-        state_dict = composed_optim_wrapper_save.state_dict()
-        composed_optim_wrapper_load.load_state_dict(state_dict)
+        state_dict = optim_wrapper_dict_save.state_dict()
+        optim_wrapper_dict_load.load_state_dict(state_dict)
 
-        self.assertDictEqual(composed_optim_wrapper_load.state_dict(),
-                             composed_optim_wrapper_save.state_dict())
+        self.assertDictEqual(optim_wrapper_dict_load.state_dict(),
+                             optim_wrapper_dict_save.state_dict())
 
     def test_items(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertListEqual(
-            list(composed_optim_wrapper.items()),
+            list(optim_wrapper_dict.items()),
             list(self.optimizers_wrappers.items()))
 
     def test_values(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertListEqual(
-            list(composed_optim_wrapper.values()),
+            list(optim_wrapper_dict.values()),
             list(self.optimizers_wrappers.values()))
 
     def test_keys(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertListEqual(
-            list(composed_optim_wrapper.keys()),
+            list(optim_wrapper_dict.keys()),
             list(self.optimizers_wrappers.keys()))
 
+    def test_get_lr(self):
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        lr = optim_wrapper_dict.get_lr()
+        self.assertEqual(lr['optim1'], [0.1])
+        self.assertEqual(lr['optim2'], [0.2])
+
+    def test_get_momentum(self):
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        momentum = optim_wrapper_dict.get_momentum()
+        self.assertEqual(momentum['optim1'], [0.8])
+        self.assertEqual(momentum['optim2'], [0.9])
+
     def test_getitem(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertIs(self.optimizers_wrappers['optim1'],
-                      composed_optim_wrapper['optim1'])
+                      optim_wrapper_dict['optim1'])
         self.assertIs(self.optimizers_wrappers['optim2'],
-                      composed_optim_wrapper['optim2'])
+                      optim_wrapper_dict['optim2'])
 
     def test_len(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertEqual(len(composed_optim_wrapper), 2)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        self.assertEqual(len(optim_wrapper_dict), 2)
 
     def test_contain(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertIn('optim1', composed_optim_wrapper)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        self.assertIn('optim1', optim_wrapper_dict)
 
     def test_repr(self):
-        composed_optim_wrapper = OptimWrapperDict(**self.optimizers_wrappers)
-        desc = repr(composed_optim_wrapper)
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        desc = repr(optim_wrapper_dict)
         self.assertRegex(desc, 'name: optim1')
