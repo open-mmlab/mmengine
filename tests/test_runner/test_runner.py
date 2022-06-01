@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import shutil
 import tempfile
@@ -20,9 +21,8 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import BaseModel
-from mmengine.optim import (DefaultOptimWrapperConstructor,
-                            MultiStepLR, OptimWrapper, OptimWrapperDict,
-                            StepLR)
+from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
+                            OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
@@ -635,13 +635,20 @@ class TestRunner(TestCase):
         self.assertFalse(model.initiailzed)
 
     def test_wrap_model(self):
-        # TODO: test on distributed environment
         # custom model wrapper
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_wrap_model'
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, CustomModelWrapper)
+        self.assertIsInstance(runner.model, BaseModel)
+        if torch.cuda.is_available():
+            os.environ['MASTER_ADDR'] = '127.0.0.1'
+            os.environ['MASTER_PORT'] = '29515'
+            os.environ['RANK'] = str(0)
+            os.environ['WORLD_SIZE'] = str(1)
+            cfg.launcher = 'pytorch'
+            runner = Runner.from_cfg(cfg)
+            self.assertIsInstance(runner.model, CustomModelWrapper)
 
     def test_build_optim_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
