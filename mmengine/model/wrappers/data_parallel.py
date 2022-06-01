@@ -138,7 +138,7 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
     not allowed for DistributedDataParallel. So we design this wrapper to
     separately wrap DistributedDataParallel for generator and discriminator.
     In this wrapper, we perform two operations:
-    1. Wrap the modules in the models with separate MMDistributedDataParallel.
+    1. Wrap each module in the models with separate MMDistributedDataParallel.
         Note that only modules with parameters will be wrapped.
     2. Do scatter operation for 'forward', 'train_step' and 'val_step'.
     Note that the arguments of this wrapper is the same as those in
@@ -147,8 +147,8 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
     Args:
         module (nn.Module): model contain multiple submodules which have
             separately updating strategy.
-        *args: list arguments passed to ``DistributedDataParallel``
-        **kwargs: keyword arguments passed to ``DistributedDataParallel``.
+        *args: list arguments passed to ``MMDistributedDataParallel``
+        **kwargs: keyword arguments passed to ``MMDistributedDataParallel``.
     """
 
     def __init__(self, module: nn.Module, *args, **kwargs):
@@ -173,23 +173,20 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
 
         Args:
             data: Data sampled by dataloader.
-            optim_wrapper (OptimWrapper): A wrapper of optimizer to
+            optim_wrapper (OptimWrapperDict): A wrapper of optimizer to
                 update parameters.
         """
         output = self.module.train_step(data, optim_wrapper)
         return output
 
     def val_step(self, data) -> List[BaseDataElement]:
-        """Get the losses or prediction of module during validation process.
-
-        ``val_step`` will return losses if ``return_loss==True``, otherwise it
-        returns the predictions.
+        """Get the prediction of module during validation process.
 
         Args:
             data (List[dict]): Data sampled by dataloader.
 
         Returns:
-            List[BaseDataElement] or dict: The predictions or losses.
+            List[BaseDataElement]: The predictions or losses.
         """
         return self.module.val_step(data)
 

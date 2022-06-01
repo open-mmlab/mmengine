@@ -126,7 +126,6 @@ class LoggerHook(Hook):
                 Defaults to None.
             outputs (dict, optional): Outputs from model. Defaults to None.
         """
-        self._update_logs(runner, 'train')
         # Print experiment name every n iterations.
         if self.every_n_train_iters(
                 runner, self.interval_exp_name) or (self.end_of_epoch(
@@ -203,7 +202,6 @@ class LoggerHook(Hook):
                 metrics on validation dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
         """
-        self._update_logs(runner, 'val')
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
@@ -222,7 +220,6 @@ class LoggerHook(Hook):
                 metrics on test dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
         """
-        self._update_logs(runner, 'test')
         _, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test')
         runner.logger.info(log_str)
@@ -252,21 +249,3 @@ class LoggerHook(Hook):
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`')
 
-    def _update_logs(self, runner, mode: str) -> None:
-        """Update ``train_logs``, ``val_logs`` and ``test_logs`` collected from
-        loops to history scalars of :obj:`MessageHub`.
-
-        Args:
-            runner (Runner): Runner of training, testing and evaluation
-                process.
-            mode (str): Current mode of runner
-        """
-        assert mode in ('train', 'test', 'val')
-        log_infos = runner.message_hub.get_info(f'{mode}_logs')
-        if log_infos is None:
-            log_infos = dict()
-        runner.message_hub.update_info(f'{mode}_logs', dict())
-        for key, value in log_infos.items():
-            if isinstance(value, torch.Tensor):
-                value = value.item()
-            runner.message_hub.update_scalar(f'{mode}/{key}', value)

@@ -23,10 +23,10 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
     BaseModel implements the basic functions of the algorithmic model, such as
     weights initialize, batch inputs preprocess(see more information in
     :class:`BaseDataPreprocessor`), parse losses, and update model parameters.
-    You can set up your model
 
-    Model inherits from BaseModel only needs to implement the forward
-    method, and then can be trained in the runner.
+    Subclasses inherit from BaseModel only needs to implement the forward
+    method, which implements the logic to calculate loss and predictions,
+    then can be trained in the runner.
 
     Examples:
         >>> @MODELS.register_module()
@@ -236,8 +236,8 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
 
         Returns:
             dict or list or torch.Tensor or tuple:
-                - dict of loss tensor used for logging.
+                - dict of loss tensor used for backward and logging.
                 - list of :BaseDataElement:`BaseDataElement` for
-                  computing metric.
+                  computing metric and getting inference result.
                 - Tensor or tuple of tensor or dict or tensor for custom use.
         """

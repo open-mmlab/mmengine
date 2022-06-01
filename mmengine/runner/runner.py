@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from torch.nn.parallel.distributed import DistributedDataParallel
 
 import mmengine
 from mmengine.config import Config, ConfigDict
@@ -764,9 +765,10 @@ class Runner:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
 
-    def wrap_model(self, model_wrapper_cfg: Optional[Dict],
-                   model: BaseModel) -> BaseModel:
-        """Wrap model.
+    def wrap_model(self, model_wrapper_cfg: Optional[Dict], model: BaseModel
+                   ) -> Union[DistributedDataParallel, BaseModel]:
+        """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
+        distributed data-parallel module wrappers.
 
         An example of ``model_wrapper_cfg``::
 
@@ -779,10 +781,11 @@ class Runner:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``DistributedDataParallel`` will be used in
                 distributed environment. Defaults to None.
-            model (nn.Module): Model to be wrapped.
+            model (BaseModel): Model to be wrapped.
 
         Returns:
-            BaseModel: Wrapped model.
+            BaseModel or DistributedDataParallel: BaseModel or subclass of
+            ``DistributedDataParallel``.
         """
         if is_model_wrapper(model):
             if model_wrapper_cfg is not None:
@@ -803,13 +806,14 @@ class Runner:
                 # Sets the `find_unused_parameters` parameter in
                 # torch.nn.parallel.DistributedDataParallel
                 model = MMDistributedDataParallel(
-                    model,
+                    module=model,
                     device_ids=[torch.cuda.current_device()],
                     broadcast_buffers=False,
                     find_unused_parameters=find_unused_parameters)
         else:
-            model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(module=model))
+            if self.distributed:
+                model = MODEL_WRAPPERS.build(
+                    model_wrapper_cfg, default_args=dict(module=model))
 
         return model
 
