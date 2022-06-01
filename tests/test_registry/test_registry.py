@@ -115,7 +115,8 @@ class TestRegistry:
         # force=False
         with pytest.raises(
                 KeyError,
-                match='BritishShorthair is already registered in cat'):
+                match='BritishShorthair is already registered in cat '
+                'at test_registry'):
 
             @CATS.register_module()
             class BritishShorthair:
