@@ -13,9 +13,9 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from torch.nn.parallel.distributed import DistributedDataParallel
 
 import mmengine
 from mmengine.config import Config, ConfigDict
@@ -765,8 +765,9 @@ class Runner:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
 
-    def wrap_model(self, model_wrapper_cfg: Optional[Dict], model: BaseModel
-                   ) -> Union[DistributedDataParallel, BaseModel]:
+    def wrap_model(
+            self, model_wrapper_cfg: Optional[Dict],
+            model: BaseModel) -> Union[DistributedDataParallel, BaseModel]:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 
@@ -842,10 +843,17 @@ class Runner:
                 dict to build OptimWrapper objects. If ``optim_wrapper`` is an
                 OptimWrapper, just return an ``OptimizeWrapper`` instance.
 
+        Note:
+            For single optimizer training, if `optim_wrapper` is a config
+            dict, `type` is optional(defaults to :obj:`OptimWrapper`) and it
+            must contain `optimizer` to build the corresponding optimizer.
+
         Examples:
             >>> # build an optimizer
             >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
             ...     type='SGD', lr=0.01))
+            >>> # optim_wrapper_cfg = dict(optimizer=dict(type='SGD', lr=0.01))
+            >>> # is also valid.
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
