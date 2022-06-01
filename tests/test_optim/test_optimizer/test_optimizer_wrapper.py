@@ -271,6 +271,11 @@ class TestAmpOptimWrapper(TestCase):
         self.model = ToyModel()
         self.optimizer = SGD(self.model.parameters(), lr=0.1)
 
+    @unittest.skipIf(
+        not torch.cuda.is_available()
+        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
+        '>= 1.6')
     def test_init(self):
         # Test with default arguments.
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
@@ -291,6 +296,11 @@ class TestAmpOptimWrapper(TestCase):
                                     'loss_scale must be of type float'):
             AmpOptimWrapper(optimizer=self.optimizer, loss_scale='unknown')
 
+    @unittest.skipIf(
+        not torch.cuda.is_available()
+        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
+        '>= 1.6')
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
         amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
@@ -301,6 +311,11 @@ class TestAmpOptimWrapper(TestCase):
         amp_optim_wrapper.loss_scaler.update.assert_called_with(
             amp_optim_wrapper._scale_update_param)
 
+    @unittest.skipIf(
+        not torch.cuda.is_available()
+        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
+        '>= 1.6')
     def test_backward(self):
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         loss_scaler = MagicMock()
@@ -314,8 +329,10 @@ class TestAmpOptimWrapper(TestCase):
         scale_return.backward.assert_called_with()
 
     @unittest.skipIf(
-        not torch.cuda.is_available() and torch,
-        reason='at lest need 1 gpu to test')
+        not torch.cuda.is_available()
+        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
+        '>= 1.6')
     def test_state_dict(self):
         self.model = self.model.cuda()
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
@@ -331,8 +348,10 @@ class TestAmpOptimWrapper(TestCase):
                              amp_optim_wrapper.loss_scaler.state_dict())
 
     @unittest.skipIf(
-        not torch.cuda.is_available() and torch,
-        reason='at lest need 1 gpu to test')
+        not torch.cuda.is_available()
+        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
+        '>= 1.6')
     def test_load_state_dict(self):
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         self.model = self.model.cuda()
