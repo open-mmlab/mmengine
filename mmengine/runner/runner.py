@@ -823,10 +823,17 @@ class Runner:
                 dict to build OptimWrapper objects. If ``optim_wrapper`` is an
                 OptimWrapper, just return an ``OptimizeWrapper`` instance.
 
+        Note:
+            For single optimizer training, if `optim_wrapper` is a config
+            dict, `type` is optional(defaults to :obj:`OptimWrapper`) and it
+            must contain `optimizer` to build the corresponding optimizer.
+
         Examples:
             >>> # build an optimizer
             >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
             ...     type='SGD', lr=0.01))
+            >>> # optim_wrapper_cfg = dict(optimizer=dict(type='SGD', lr=0.01))
+            >>> # is also valid.
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
@@ -893,20 +900,40 @@ class Runner:
         if isinstance(optim_wrapper, OptimWrapper):
             return optim_wrapper
         elif isinstance(optim_wrapper, (dict, ConfigDict, Config)):
-            if 'type' not in optim_wrapper and ('constructor'
-                                                not in optim_wrapper):
-                optim_wrappers = OrderedDict()
-                for name, optim in optim_wrapper.items():
-                    if not isinstance(optim, OptimWrapper):
-                        raise ValueError(
-                            'each item mush be an optimizer object when "type"'
-                            ' and "constructor" are not in optimizer, '
-                            f'but got {name}={optim}')
-                    optim_wrappers[name] = optim
-                return OptimWrapperDict(**optim_wrappers)
-            else:
+            # If `optim_wrapper` is a config dict with only one optimizer,
+            # the config dict must contain `optimizer`:
+            # optim_wrapper = dict(optimizer=dict(type='SGD', lr=0.1))
+            # `type` is optional, defaults to `OptimWrapper`. `optim_wrapper`
+            # could also be defined as:
+            # optim_wrapper = dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.1))  # noqa: E501
+            # to build specific optimizer wrapper.
+            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper:
                 optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
                 return optim_wrapper
+            else:
+                # if `type` and `optimizer` are not defined in `optim_wrapper`,
+                # it should be the case of training with multiple optimizers.
+                # If constructor is not defined in `optim_wrapper`, each value
+                # of `optim_wrapper` must be an `OptimWrapper` instance since
+                # `DefaultOptimizerConstructor` will not handle the multiple
+                # optimizers training case. `build_optim_wrapper` will directly
+                # build the `OptimWrapperDict` instance from `optim_wrapper.`
+                if 'constructor' not in optim_wrapper:
+                    optim_wrappers = OrderedDict()
+                    for name, optim in optim_wrapper.items():
+                        if not isinstance(optim, OptimWrapper):
+                            raise ValueError(
+                                'each item mush be an optimizer object when '
+                                '"type" and "constructor" are not in '
+                                f'optimizer, but got {name}={optim}')
+                        optim_wrappers[name] = optim
+                    return OptimWrapperDict(**optim_wrappers)
+                # If constructor is defined, directly build the optimizer
+                # wrapper instance from the config.
+                else:
+                    optim_wrapper = build_optim_wrapper(
+                        self.model, optim_wrapper)
+                    return optim_wrapper
         else:
             raise TypeError('optimizer wrapper should be an OptimWrapper '
                             f'object or dict, but got {optim_wrapper}')
