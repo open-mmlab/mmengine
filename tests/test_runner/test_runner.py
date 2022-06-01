@@ -19,9 +19,8 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.optim import (AmpOptimWrapper, DefaultOptimWrapperConstructor,
-                            MultiStepLR, OptimWrapper, OptimWrapperDict,
-                            StepLR)
+from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
+                            OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
@@ -635,11 +634,6 @@ class TestRunner(TestCase):
         optim_wrapper = runner.build_optim_wrapper(
             dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
         self.assertIsInstance(optim_wrapper, OptimWrapper)
-
-        # 1.3 build custom optimizer wrapper
-        optim_wrapper = runner.build_optim_wrapper(
-            dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
-        self.assertIsInstance(optim_wrapper, AmpOptimWrapper)
 
         # 2. test multiple optmizers
         # 2.1 input is a dict which contains multiple optimizer objects

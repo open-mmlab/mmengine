@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
 from unittest import TestCase
+from unittest.mock import patch
 
 import torch.nn as nn
 from torch.optim import SGD
@@ -20,6 +21,7 @@ class TestOptimWrapperDict(TestCase):
         self.optimizers_wrappers = dict(
             optim1=self.optim_wrapper1, optim2=self.optim_wrapper2)
 
+    @patch('torch.cuda.is_available', lambda: True)
     def test_init(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertEqual(optim_wrapper_dict.optim_wrappers,

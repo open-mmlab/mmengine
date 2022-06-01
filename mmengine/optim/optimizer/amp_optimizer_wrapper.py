@@ -36,6 +36,8 @@ class AmpOptimWrapper(OptimWrapper):
     def __init__(self, loss_scale=512., **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
+        assert torch.cuda.is_available(), (
+            '``AmpOptimizerWrapper`` is only available training by gpu')
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':
@@ -103,10 +105,6 @@ class AmpOptimWrapper(OptimWrapper):
 
     @contextmanager
     def precision_context(self):
-        """A wrapper of ``torch.autocast``"""
-        if torch.cuda.is_available():
-            device = 'cuda'
-        else:
-            device = 'cpu'
-        with torch.autocast(device):
+        """A wrapper of ``torch.cuda.amp.autocast``"""
+        with torch.cuda.amp.autocast():
             yield
