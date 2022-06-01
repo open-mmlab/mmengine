@@ -2,7 +2,7 @@
 from .hub import load_url
 from .manager import ManagerMeta, ManagerMixin
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
-                   find_latest_checkpoint, has_method,
+                   find_latest_checkpoint, has_batch_norm, has_method,
                    import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
                    iter_cast, list_cast, mmcv_full_available,
@@ -28,5 +28,5 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin',
-    'set_multi_processing'
+    'set_multi_processing', 'has_batch_norm'
 ]
