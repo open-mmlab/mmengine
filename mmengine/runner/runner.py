@@ -1268,9 +1268,7 @@ class Runner:
             loop = ValLoop(
                 runner=self,
                 dataloader=self._val_dataloader,
-                evaluator=self._val_evaluator,  # type: ignore
-                **loop_cfg,
-            )  # type: ignore
+                evaluator=self._val_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
