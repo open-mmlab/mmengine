@@ -17,7 +17,8 @@ import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_default_group, barrier, get_data_device,
                     get_comm_device, cast_data_device)
-from mmengine.utils import digit_version, TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
+from mmengine.utils.parrots_wrapper import TORCH_VERSION
 
 
 def _get_reduce_op(name: str) -> torch_dist.ReduceOp:
@@ -310,6 +311,12 @@ def broadcast(data: Tensor,
 
 def sync_random_seed(group: Optional[ProcessGroup] = None) -> int:
     """Synchronize a random seed to all processes.
+
+    In distributed sampling, different ranks should sample non-overlapped
+    data in the dataset. Therefore, this function is used to make sure that
+    each rank shuffles the data indices in the same order based
+    on the same seed. Then different ranks could use different indices
+    to select non-overlapped data from the same data list.
 
     Args:
         group (ProcessGroup, optional): The process group to work on. If None,

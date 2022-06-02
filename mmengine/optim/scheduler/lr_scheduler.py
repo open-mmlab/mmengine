@@ -22,7 +22,7 @@ class ConstantLR(LRSchedulerMixin, ConstantParamScheduler):
     changes to the learning rate value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         factor (float): The number we multiply learning rate until the
             milestone. Defaults to 1./3.
         begin (int): Step at which to start updating the learning rate.
@@ -68,7 +68,7 @@ class CosineAnnealingLR(LRSchedulerMixin, CosineAnnealingParamScheduler):
     only implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         T_max (int): Maximum number of iterations.
         eta_min (float): Minimum learning rate. Defaults to 0.
         begin (int): Step at which to start updating the learning rate.
@@ -92,7 +92,7 @@ class ExponentialLR(LRSchedulerMixin, ExponentialParamScheduler):
     """Decays the learning rate of each parameter group by gamma every epoch.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         gamma (float): Multiplicative factor of learning rate decay.
         begin (int): Step at which to start updating the learning rate.
             Defaults to 0.
@@ -116,7 +116,7 @@ class LinearLR(LRSchedulerMixin, LinearParamScheduler):
     Notice that such decay can happen simultaneously with other changes to the
     learning rate from outside this scheduler.
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         start_factor (float): The number we multiply learning rate in the
             first epoch. The multiplication factor changes towards end_factor
             in the following epochs. Defaults to 1./3.
@@ -143,7 +143,7 @@ class MultiStepLR(LRSchedulerMixin, MultiStepParamScheduler):
     outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of learning rate decay.
             Defaults to 0.1.
@@ -167,7 +167,7 @@ class StepLR(LRSchedulerMixin, StepParamScheduler):
     other changes to the learning rate from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         step_size (int): Period of learning rate decay.
         gamma (float): Multiplicative factor of learning rate decay.
             Defaults to 0.1.
@@ -193,7 +193,7 @@ class PolyLR(LRSchedulerMixin, PolyParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         eta_min (float): Minimum learning rate at the end of scheduling.
             Defaults to 0.
         power (float): The power of the polynomial. Defaults to 1.0.

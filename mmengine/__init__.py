@@ -3,6 +3,7 @@
 from .config import *
 from .data import *
 from .dataset import *
+from .device import *
 from .fileio import *
 from .hooks import *
 from .logging import *
