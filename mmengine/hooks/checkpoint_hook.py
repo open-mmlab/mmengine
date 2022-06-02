@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import warnings
-from pathlib import Path
-from typing import List, Optional, Sequence, Union
 from collections import OrderedDict
 from math import inf
+from pathlib import Path
+from typing import Optional, Sequence, Union
 
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
@@ -73,9 +73,9 @@ class CheckpointHook(Hook):
     priority = 'VERY_LOW'
 
     # logic to save best checkpoints
-    # Since the key for determining greater or less is related to the downstream
-    # tasks, downstream repositories may need to overwrite the following inner
-    # variables accordingly.
+    # Since the key for determining greater or less is related to the
+    # downstream tasks, downstream repositories may need to overwrite
+    # the following inner variables accordingly.
 
     rule_map = {'greater': lambda x, y: x > y, 'less': lambda x, y: x < y}
     init_value_map = {'greater': -inf, 'less': inf}
@@ -95,8 +95,8 @@ class CheckpointHook(Hook):
                  save_last: bool = True,
                  save_best: Optional[str] = None,
                  rule: Optional[str] = None,
-                 greater_keys: Optional[Sequence[str]]=None,
-                 less_keys: Optional[Sequence[str]]=None,
+                 greater_keys: Optional[Sequence[str]] = None,
+                 less_keys: Optional[Sequence[str]] = None,
                  file_client_args: Optional[dict] = None,
                  **kwargs) -> None:
         self.interval = interval
@@ -119,17 +119,17 @@ class CheckpointHook(Hook):
             self.greater_keys = self._default_greater_keys
         else:
             if not isinstance(greater_keys, (list, tuple)):
-                greater_keys = (greater_keys, )
+                greater_keys = (greater_keys, )  # type: ignore
             assert is_seq_of(greater_keys, str)
-            self.greater_keys = greater_keys
+            self.greater_keys = greater_keys  # type: ignore
 
         if less_keys is None:
             self.less_keys = self._default_less_keys
         else:
             if not isinstance(less_keys, (list, tuple)):
-                less_keys = (less_keys, )
+                less_keys = (less_keys, )  # type: ignore
             assert is_seq_of(less_keys, str)
-            self.less_keys = less_keys
+            self.less_keys = less_keys  # type: ignore
 
         if self.save_best is not None:
             self.best_ckpt_path = None
@@ -184,7 +184,6 @@ class CheckpointHook(Hook):
         self.key_indicator = key_indicator
         if self.rule is not None:
             self.compare_func = self.rule_map[self.rule]
-
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
@@ -251,25 +250,26 @@ class CheckpointHook(Hook):
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
             self._save_checkpoint(runner)
 
-    
-    def _get_metric_score(self,runner):
+    def after_val_epoch(self, runner, metrics):
+        if not self.by_epoch:
+            return
+        self._save_best_checkpoint(runner, metrics)
+
+    def _get_metric_score(self, metrics):
         eval_res = OrderedDict()
-        for k,v in runner.message_hub.log_scalars.items():
-            if k.startswith('val'):
-                val_metric_key = k.split('/')[-1]
-                eval_res[val_metric_key] = v.current()
-        
+        if metrics is not None:
+            eval_res.update(metrics)
+
         if len(eval_res) == 0:
             warnings.warn(
                 'Since `eval_res` is an empty dict, the behavior to save '
                 'the best checkpoint will be skipped in this evaluation.')
             return None
-        
+
         if self.key_indicator == 'auto':
             self._init_rule(self.rule, list(eval_res.keys())[0])
 
         return eval_res[self.key_indicator]
-
 
     @master_only
     def _save_checkpoint(self, runner) -> None:
@@ -281,12 +281,10 @@ class CheckpointHook(Hook):
         if self.by_epoch:
             ckpt_filename = self.args.get(
                 'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
-            cur_type, cur_time = 'epoch', runner.epoch + 1
         else:
             ckpt_filename = self.args.get(
                 'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-            cur_type, cur_time = 'iter', runner.iter + 1
-            
+
         runner.save_checkpoint(
             self.out_dir,
             filename=ckpt_filename,
@@ -300,43 +298,6 @@ class CheckpointHook(Hook):
             runner.meta['hook_msgs']['last_ckpt'] = self.file_client.join_path(
                 self.out_dir, ckpt_filename)
 
-        # save best logic
-        if self.save_best:
-            # get score from messagehub
-            # notice `_get_metirc_score` helps to infer
-            # self.rule when self.save_best is `auto`
-            key_score = self._get_metric_score(runner)
-            best_score = runner.meta['hook_msgs'].get(
-                'best_score',self.init_value_map[self.rule]
-            )
-            if key_score and self.compare_func(key_score,best_score):
-                best_score = key_score
-                runner.meta['hook_msgs']['best_score'] = best_score
-
-                if self.best_ckpt_path and self.file_client.isfile(
-                    self.best_ckpt_path):
-                    self.file_client.remove(self.best_ckpt_path)
-                    runner.logger.info(
-                        f'The previous best checkpoint {self.best_ckpt_path} was '
-                        'removed')
-
-                best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
-                self.best_ckpt_path = self.file_client.join_path(
-                    self.out_dir, best_ckpt_name)
-                runner.meta['hook_msgs']['best_ckpt'] = self.best_ckpt_path
-                runner.save_checkpoint(
-                    self.out_dir,
-                    filename=best_ckpt_name,
-                    save_optimizer=False,
-                    save_param_scheduler=False,
-                    by_epoch=False,
-                    create_symlink=False)
-                runner.logger.info(
-                    f'Now best checkpoint is saved as {best_ckpt_name}.')
-                runner.logger.info(
-                    f'Best {self.key_indicator} is {best_score:0.4f} '
-                    f'at {cur_time} {cur_type}.')
-                    
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
@@ -356,6 +317,61 @@ class CheckpointHook(Hook):
                     self.file_client.remove(ckpt_path)
                 else:
                     break
+
+    @master_only
+    def _save_best_checkpoint(self, runner, metrics) -> None:
+        """Save the current checkpoint and delete outdated checkpoint.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if self.by_epoch:
+            ckpt_filename = self.args.get(
+                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
+            cur_type, cur_time = 'epoch', runner.epoch + 1
+        else:
+            ckpt_filename = self.args.get(
+                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
+            cur_type, cur_time = 'iter', runner.iter + 1
+
+        if runner.meta is not None:
+            runner.meta.setdefault('hook_msgs', dict())
+
+        # save best logic
+        if self.save_best:
+            # get score from messagehub
+            # notice `_get_metirc_score` helps to infer
+            # self.rule when self.save_best is `auto`
+            key_score = self._get_metric_score(metrics)
+            best_score = runner.meta['hook_msgs'].get(
+                'best_score', self.init_value_map[self.rule])
+            if key_score and self.compare_func(key_score, best_score):
+                best_score = key_score
+                runner.meta['hook_msgs']['best_score'] = best_score
+
+                if self.best_ckpt_path and self.file_client.isfile(
+                        self.best_ckpt_path):
+                    self.file_client.remove(self.best_ckpt_path)
+                    runner.logger.info(
+                        f'The previous best checkpoint {self.best_ckpt_path} '
+                        'was removed')
+
+                best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
+                self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
+                    self.out_dir, best_ckpt_name)
+                runner.meta['hook_msgs']['best_ckpt'] = self.best_ckpt_path
+                runner.save_checkpoint(
+                    self.out_dir,
+                    filename=best_ckpt_name,
+                    save_optimizer=False,
+                    save_param_scheduler=False,
+                    by_epoch=False,
+                    create_symlink=False)
+                runner.logger.info(
+                    f'Now best checkpoint is saved as {best_ckpt_name}.')
+                runner.logger.info(
+                    f'Best {self.key_indicator} is {best_score:0.4f} '
+                    f'at {cur_time} {cur_type}.')
 
     def after_train_iter(self,
                          runner,
