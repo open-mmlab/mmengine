@@ -818,18 +818,20 @@ class Runner:
     ) -> Union[OptimWrapper, OptimWrapperDict]:
         """Build optimizer wrapper.
 
-        If ``optim_wrapper`` is a config dict with only one optimizer,
-        the config dict must contain ``optimizer``, and ``type`` is optional,
-        defaults to build :obj:`OptimWrapper` instance.
+        If ``optim_wrapper`` is a config dict for only one optimizer,
+        the keys must contain ``optimizer``, and ``type`` is optional.
+        It will build a :obj:`OptimWrapper` by default.
 
-        If ``optim_wrapper`` is a config dict with multiple optimizers,
-        The constructor is must be defined since
-        :obj:`DefaultOptimizerConstructor` will not handle the case of
+        If ``optim_wrapper`` is a config dict for multiple optimizers, i.e.,
+        it has multiple keys and each key is for an optimizer wrapper. The
+        constructor must be specified since
+        :obj:`DefaultOptimizerConstructor` cannot handle the building of
         training with multiple optimizers.
 
-        If ``optim_wrapper`` is a dict of ``OptimWrapper``,
-        ``build_optim_wrapper`` will directly build the :obj:`OptimWrapperDict`
-        instance from ``optim_wrapper``.
+        If ``optim_wrapper`` is a dict of pre-built optimizer wrappers, i.e.,
+        each value of ``optim_wrapper`` represents an ``OptimWrapper``
+        instance. ``build_optim_wrapper`` will directly build the
+        :obj:`OptimWrapperDict` instance from ``optim_wrapper``.
 
         Args:
             optim_wrapper (OptimWrapper or dict): An OptimWrapper object or a
