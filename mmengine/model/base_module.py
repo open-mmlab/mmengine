@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import warnings
 from abc import ABCMeta
 from collections import defaultdict
@@ -98,7 +99,8 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             if self.init_cfg:
                 print_log(
                     f'initialize {module_name} with init_cfg {self.init_cfg}',
-                    logger=logger_name)
+                    logger=logger_name,
+                    level=logging.DEBUG)
                 initialize(self, self.init_cfg)
                 if isinstance(self.init_cfg, dict):
                     # prevent the parameters of
