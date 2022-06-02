@@ -103,7 +103,7 @@ class Runner:
         auto_scale_lr_cfg (dict, optional): Automatically scaling lr config. It
             includes ``enable`` and ``base_batch_size``. ``enable`` is the
             switch to turn on and off the feature.  ``base_batch_size`` is the
-            batch size that the optimizer lr is based on.
+            batch size that the optimizer lr is based on. Defaults to None.
         optim_wrapper (OptimWrapper or dict, optional):
             Computing gradient of model parameters. If specified,
             :attr:`train_dataloader` should also be specified. If automatic
@@ -822,7 +822,7 @@ class Runner:
         return model
 
     def scale_lr(self,
-                 optim_wrapper: Union[OptimWrapper, Dict, None],
+                 optim_wrapper: OptimWrapper,
                  auto_scale_lr_cfg: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
@@ -854,24 +854,25 @@ class Runner:
                          f'and the current batch size is {real_bs}. '
                          f'Scaling the original LR by {ratio}.')
 
-        if self.param_schedulers and isinstance(self.param_schedulers[0],
-                                                _ParamScheduler):
+        def _is_built(schedulers):
+            if isinstance(schedulers, dict):
+                return False if 'type' in schedulers else any(
+                    _is_built(s) for s in schedulers.values())
+            if isinstance(schedulers, list):
+                return any(_is_built(s) for s in schedulers)
+            return isinstance(schedulers, _ParamScheduler)
+
+        if _is_built(self.param_schedulers):
             raise RuntimeError('`scale_lr` should be called before building '
                                'ParamScheduler because ParamScheduler will '
-                               'store initial lr from optimizer')
+                               'store initial lr from optimizer wrappers')
 
-        if isinstance(optim_wrapper, dict):
-            optim_wrapper['optimizer']['lr'] = \
-                optim_wrapper['optimizer']['lr'] * ratio
-        elif isinstance(optim_wrapper, OptimWrapper):
-            wrappers = list(optim_wrapper.values()) if isinstance(
-                optim_wrapper, OptimWrapperDict) else [optim_wrapper]
-            for wrapper in wrappers:
-                for group in wrapper.optimizer.param_groups:
-                    group['lr'] = group['lr'] * ratio
-        else:
-            raise TypeError('optimizer wrapper should be an OptimWrapper '
-                            f'object or dict, but got {optim_wrapper}')
+        assert isinstance(optim_wrapper, OptimWrapper)
+        wrappers = list(optim_wrapper.values()) if isinstance(
+            optim_wrapper, OptimWrapperDict) else [optim_wrapper]
+        for wrapper in wrappers:
+            for group in wrapper.optimizer.param_groups:
+                group['lr'] = group['lr'] * ratio
 
     def build_optim_wrapper(
         self, optim_wrapper: Union[Optimizer, OptimWrapper, Dict]
@@ -1447,12 +1448,12 @@ class Runner:
         self._train_loop = self.build_train_loop(
             self._train_loop)  # type: ignore
 
-        # Automatically scaling lr by linear scaling rule
-        self.scale_lr(self.optim_wrapper, self.auto_scale_lr_cfg)
-
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
+
+        # Automatically scaling lr by linear scaling rule
+        self.scale_lr(self.optim_wrapper, self.auto_scale_lr_cfg)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -1736,9 +1737,10 @@ class Runner:
                         or not self.auto_scale_lr_cfg.get('enable', False)):
                     raise RuntimeError(
                         'Cannot automatically rescale lr in resuming. Please '
-                        'make sure the number of GPU is consistent with '
-                        'resuming from checkpoint or set `enable` in '
-                        '`auto_scale_lr to False.')
+                        'make sure the number of GPU is consistent with the '
+                        'previous training state which resuming from the '
+                        'checkpoint or set `enable` in `auto_scale_lr '
+                        'to False.')
 
         # resume meta information meta
         self.meta = checkpoint['meta']
