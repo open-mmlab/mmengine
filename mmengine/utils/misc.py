@@ -12,7 +12,7 @@ from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
-from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -229,7 +229,7 @@ def check_prerequisites(
         prerequisites,
         checker,
         msg_tmpl='Prerequisites "{}" are required in method "{}" but not '
-        'found, please install them first.'):  # yapf: disable
+                 'found, please install them first.'):  # yapf: disable
     """A decorator factory to check if prerequisites are satisfied.
 
     Args:
@@ -343,7 +343,6 @@ def deprecated_api_warning(name_dict: dict,
             if kwargs:
                 for src_arg_name, dst_arg_name in name_dict.items():
                     if src_arg_name in kwargs:
-
                         assert dst_arg_name not in kwargs, (
                             f'The expected behavior is to replace '
                             f'the deprecated key `{src_arg_name}` to '
@@ -473,7 +472,7 @@ def tensor2imgs(tensor: torch.Tensor,
     if std is None:
         std = (1, ) * channels
     assert (channels == len(mean) == len(std) == 3) or \
-        (channels == len(mean) == len(std) == 1 and not to_bgr)
+           (channels == len(mean) == len(std) == 1 and not to_bgr)
     mean = tensor.new_tensor(mean).view(1, -1)
     std = tensor.new_tensor(std).view(1, -1)
     tensor = tensor.permute(0, 2, 3, 1) * std + mean
@@ -535,46 +534,60 @@ def has_batch_norm(model: nn.Module) -> bool:
     return False
 
 
-def stack_batch(tensors, size_divisor=0, pad_value=0):
+def stack_batch(tensor_list: List[torch.Tensor],
+                pad_size_divisor: int = 1,
+                pad_value: Union[int, float] = 0) -> torch.Tensor:
     """Stack multiple tensors to form a batch and pad the images to the max
-    shape use the right bottom padding mode in these images.
+    shape use the right bottom padding mode in these images. If
+    ``pad_size_divisor > 0``, add padding to ensure the shape of each dim is
+    divisible by ``pad_size_divisor``.
 
     Args:
-        tensors (Tensor, List[Tensor]): The input multiple tensors.
-            each is a CHW 3D-tensor.
-        size_divisor: If `size_divisor > 0`, add padding to ensure
-            the common height and width is divisible by `size_divisor`.
-            This depends on the model and many models need a
-            divisibility of 32. Default: 0
-        pad_value: The padding value. Default: 0
+        tensor_list (List[Tensor]): A list of tensors with the same dim.
+        pad_size_divisor (int): If ``pad_size_divisor > 0``, add padding
+            to ensure the shape of each dim is divisible by
+            ``pad_size_divisor``. This depends on the model, and many
+            models need a divisibility of 32. Defaults to 0
+        pad_value (int, float): The padding value. Defaults to 0.
+        pad_first_dim (bool): Whether to pad first dim of tensor. +++
 
     Returns:
        Tensor: The 4D-tensor.
     """
-    assert isinstance(tensors, list)
-    assert len({tensor.ndim for tensor in tensors}) == 1
-    assert len({tensor.shape[:-2] for tensor in tensors}) == 1
+    assert isinstance(
+        tensor_list,
+        list), (f'Expected input type to be list, but got {type(tensor_list)}')
+    assert tensor_list, '`tensor_list` could not be an empty list'
+    assert len({
+        tensor.ndim
+        for tensor in tensor_list
+    }) == 1, (f'Expected the dimensions of all tensors must be the same, '
+              f'but got {[tensor.ndim for tensor in tensor_list]}')
 
-    tensor_sizes = [(tensor.shape[-2], tensor.shape[-1]) for tensor in tensors]
-    max_size = np.stack(tensor_sizes).max(0)
-
-    if size_divisor > 1:
-        stride = size_divisor
-        # the last two dims are H,W, both subject to divisibility requirement
-        max_size = (max_size + (stride - 1)) // stride * stride
-
-    padded_samples = []
-    for tensor in tensors:
-        padding_size = [
-            0, max_size[-1] - tensor.shape[-1], 0,
-            max_size[-2] - tensor.shape[-2]
-        ]
-        if sum(padding_size) == 0:
-            padded_samples.append(tensor)
-        else:
-            padded_samples.append(F.pad(tensor, padding_size, value=pad_value))
-
-    return torch.stack(padded_samples, dim=0)
+    dim = tensor_list[0].dim()
+    num_img = len(tensor_list)
+    all_sizes: torch.Tensor = torch.Tensor(
+        [tensor.shape for tensor in tensor_list])
+    max_sizes = torch.ceil(
+        torch.max(all_sizes, dim=0)[0] / pad_size_divisor) * pad_size_divisor
+    padded_sizes = max_sizes - all_sizes
+    # The first dim normally means channel,  which should not be padded.
+    padded_sizes[:, 0] = 0
+    if padded_sizes.sum() == 0:
+        return torch.stack(tensor_list)
+    # `pad` is the second arguments of `F.pad`. If pad is (1, 2, 3, 4),
+    # it means that padding the last dim with 1(left) 2(right), padding the
+    # penultimate dim to 3(top) 4(bottom). The order of `pad` is opposite of
+    # the `padded_sizes`. Therefore, the `padded_sizes` needs to be reversed,
+    # and only odd index of pad should be assigned to keep padding "right" and
+    # "bottom".
+    pad = torch.zeros(num_img, 2 * dim, dtype=torch.int)
+    pad[:, 1::2] = padded_sizes[:, range(dim - 1, -1, -1)]
+    batch_tensor = []
+    for idx, tensor in enumerate(tensor_list):
+        batch_tensor.append(
+            F.pad(tensor, tuple(pad[idx].tolist()), value=pad_value))
+    return torch.stack(batch_tensor)
 
 
 def detect_anomalous_params(loss: torch.Tensor, model) -> None:
@@ -606,16 +619,44 @@ def detect_anomalous_params(loss: torch.Tensor, model) -> None:
 
 
 def merge_dict(*args):
+    """Merge all dictionaries into one dictionary.
+
+    If pytorch version >= 1.8, ``merge_dict`` will be wrapped
+    by ``torch.fx.wrap``,  which will make ``torch.fx.symbolic_trace`` skip
+    trace ``merge_dict``.
+
+    Note:
+        If a function needs to be traced by ``torch.fx.symbolic_trace``,
+        but inevitably needs to use ``update`` method of ``dict``(``update``
+        is not traceable). It should use ``merge_dict`` to replace
+        ``xxx.update``.
+
+    Args:
+        *args: dictionary needs to be merged.
+
+    Returns:
+        dict: Merged dict from args
+    """
     output = dict()
     for item in args:
-        assert isinstance(item, dict)
+        assert isinstance(
+            item,
+            dict), (f'all arguments of merge_dict should be a dict, but got '
+                    f'{type(item)}')
         output.update(item)
     return output
 
 
+# torch.fx is only available when pytorch version >= 1.8.
+# If the subclass of `BaseModel` has multiple submodules, and each module
+# will return a loss dict during training process, i.e., `TwoStageDetector`
+# in mmdet. It should use `merge_dict` to get the total loss, rather than
+# `loss.update` to keep model traceable.
 try:
     import torch.fx
+
+    # make torch.fx skip trace `merge_dict`.
     merge_dict = torch.fx.wrap(merge_dict)
 
 except ImportError:
-    pass
+    warnings.warn('Cannot import torch.fx, merge_dict in a simple')
