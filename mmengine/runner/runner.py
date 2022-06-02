@@ -189,8 +189,8 @@ class Runner:
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
         >>>     val_evaluator=dict(type='ToyEvaluator'),
         >>>     test_evaluator=dict(type='ToyEvaluator'),
-        >>>     train_cfg=dict(by_epoch=True, max_epochs=3),
-        >>>     val_cfg=dict(interval=1),
+        >>>     train_cfg=dict(by_epoch=True, max_epochs=3, val_interval=1),
+        >>>     val_cfg=dict(),
         >>>     test_cfg=dict(),
         >>>     custom_hooks=[],
         >>>     default_hooks=dict(
@@ -1236,10 +1236,10 @@ class Runner:
         Examples of ``loop``:
 
             # `ValLoop` will be used
-            loop = dict(interval=1)
+            loop = dict()
 
             # custom validation loop
-            loop = dict(type='CustomValLoop', interval=1)
+            loop = dict(type='CustomValLoop')
 
         Args:
             loop (BaseLoop or dict): A validation loop or a dict to build
