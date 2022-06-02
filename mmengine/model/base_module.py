@@ -1,4 +1,4 @@
-from asyncio.log import logger
+# Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import warnings
 from abc import ABCMeta
@@ -8,7 +8,8 @@ from logging import FileHandler
 import torch.nn as nn
 
 from mmengine.dist import master_only
-from mmengine.logging import MMLogger,print_log
+from mmengine.logging import MMLogger, print_log
+
 
 class BaseModule(nn.Module, metaclass=ABCMeta):
     """Base module for all modules in openmmlab.
@@ -34,7 +35,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         # NOTE init_cfg can be defined in different levels, but init_cfg
         # in low levels has a higher priority.
 
-        super(BaseModule, self).__init__()
+        super().__init__()
         # define default value of init_cfg instead of hard code
         # in init_weights() function
         self._is_init = False
@@ -50,7 +51,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     @property
     def is_init(self):
         return self._is_init
-
 
     def init_weights(self):
         """Initialize the weights."""
@@ -92,7 +92,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         logger = MMLogger.get_current_instance()
         logger_name = logger.instance_name
 
-        from .utils.weight_init import initialize,update_init_info
+        from .utils.weight_init import initialize, update_init_info
         module_name = self.__class__.__name__
         if not self._is_init:
             if self.init_cfg:
@@ -139,10 +139,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             logger_name (str): The name of logger.
         """
 
-        # if MMLogger.check_instance_created(logger_name):
-        #     logger = MMLogger.get_instance(logger_name)
-        # else:
-        #     raise ValueError(f'MMLogger: {logger_name} has not been created!')
         logger = MMLogger.get_current_instance()
         logger_name = logger.instance_name
         with_file_handler = False

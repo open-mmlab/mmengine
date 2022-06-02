@@ -1,21 +1,18 @@
-from distutils.command.build import build
-from distutils.command.config import config
-import torch
-import logging
-import pytest
-from unittest import mock
+# Copyright (c) OpenMMLab. All rights reserved.
 from unittest import TestCase
-from torch import nn
-from yaml import dump
-from mmengine.model.base_module import BaseModule
-from mmengine.logging.logger import MMLogger
-from mmengine.registry import Registry,build_from_cfg
 
+import torch
+from torch import nn
+
+from mmengine.logging.logger import MMLogger
+from mmengine.model.base_module import BaseModule
+from mmengine.registry import Registry, build_from_cfg
 
 COMPONENTS = Registry('component')
 FOOMODELS = Registry('model')
 
 Logger = MMLogger.get_current_instance()
+
 
 @COMPONENTS.register_module()
 class FooConv1d(BaseModule):
@@ -90,6 +87,7 @@ class FooModel(BaseModule):
 
 
 class TestBaseModule(TestCase):
+
     def setUp(self) -> None:
         self.BaseModule = BaseModule()
         self.model_cfg = dict(
@@ -110,7 +108,7 @@ class TestBaseModule(TestCase):
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
 
     def test_is_init(self):
-        assert self.BaseModule.is_init == False
+        assert self.BaseModule.is_init is False
 
     def test_init_weights(self):
         """
@@ -135,21 +133,27 @@ class TestBaseModule(TestCase):
             ├──conv1d (FooConv1d, weight=3, bias=4)
         ├──reg (nn.Linear, weight=1, bias=2)
         """
-        
+
         self.model.init_weights()
 
-        assert torch.equal(self.model.component1.conv1d.weight,
-                        torch.full(self.model.component1.conv1d.weight.shape, 3.0))
-        assert torch.equal(self.model.component1.conv1d.bias,
-                        torch.full(self.model.component1.conv1d.bias.shape, 4.0))
-        assert torch.equal(self.model.component2.conv2d.weight,
-                        torch.full(self.model.component2.conv2d.weight.shape, 5.0))
-        assert torch.equal(self.model.component2.conv2d.bias,
-                        torch.full(self.model.component2.conv2d.bias.shape, 6.0))
-        assert torch.equal(self.model.component3.linear.weight,
-                        torch.full(self.model.component3.linear.weight.shape, 1.0))
-        assert torch.equal(self.model.component3.linear.bias,
-                        torch.full(self.model.component3.linear.bias.shape, 2.0))
+        assert torch.equal(
+            self.model.component1.conv1d.weight,
+            torch.full(self.model.component1.conv1d.weight.shape, 3.0))
+        assert torch.equal(
+            self.model.component1.conv1d.bias,
+            torch.full(self.model.component1.conv1d.bias.shape, 4.0))
+        assert torch.equal(
+            self.model.component2.conv2d.weight,
+            torch.full(self.model.component2.conv2d.weight.shape, 5.0))
+        assert torch.equal(
+            self.model.component2.conv2d.bias,
+            torch.full(self.model.component2.conv2d.bias.shape, 6.0))
+        assert torch.equal(
+            self.model.component3.linear.weight,
+            torch.full(self.model.component3.linear.weight.shape, 1.0))
+        assert torch.equal(
+            self.model.component3.linear.bias,
+            torch.full(self.model.component3.linear.bias.shape, 2.0))
         assert torch.equal(
             self.model.component4.linear.linear.weight,
             torch.full(self.model.component4.linear.linear.weight.shape, 1.0))
@@ -162,12 +166,14 @@ class TestBaseModule(TestCase):
         assert torch.equal(
             self.model.component4.conv1d.conv1d.bias,
             torch.full(self.model.component4.conv1d.conv1d.bias.shape, 4.0))
-        assert torch.equal(self.model.reg.weight, torch.full(self.model.reg.weight.shape,
-                                                        1.0))
-        assert torch.equal(self.model.reg.bias, torch.full(self.model.reg.bias.shape, 2.0))
+        assert torch.equal(self.model.reg.weight,
+                           torch.full(self.model.reg.weight.shape, 1.0))
+        assert torch.equal(self.model.reg.bias,
+                           torch.full(self.model.reg.bias.shape, 2.0))
 
     def test_dump_init_info(self):
-        import os,shutil
+        import os
+        import shutil
         dump_dir = 'tests/test_model/test_dump_info'
         if not (os.path.exists(dump_dir) and os.path.isdir(dump_dir)):
             os.makedirs(dump_dir)
@@ -177,14 +183,15 @@ class TestBaseModule(TestCase):
                 os.unlink(file_path)
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
-        
-        MMLogger.get_instance('logger1') # add logger without FileHandler
-        model1 = build_from_cfg(self.model_cfg,FOOMODELS)
+
+        MMLogger.get_instance('logger1')  # add logger without FileHandler
+        model1 = build_from_cfg(self.model_cfg, FOOMODELS)
         model1.init_weights()
         assert len(os.listdir(dump_dir)) == 0
-        log_path = os.path.join(dump_dir,'out.log')
-        MMLogger.get_instance('logger2', log_file=log_path) # add logger with FileHandler
-        model2 = build_from_cfg(self.model_cfg,FOOMODELS)
+        log_path = os.path.join(dump_dir, 'out.log')
+        MMLogger.get_instance(
+            'logger2', log_file=log_path)  # add logger with FileHandler
+        model2 = build_from_cfg(self.model_cfg, FOOMODELS)
         model2.init_weights()
         assert len(os.listdir(dump_dir)) == 1
         assert os.stat(log_path).st_size != 0
