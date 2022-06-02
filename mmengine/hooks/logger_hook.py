@@ -4,8 +4,6 @@ import os.path as osp
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
 
-import torch
-
 from mmengine.data import BaseDataElement
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
@@ -248,4 +246,3 @@ class LoggerHook(Hook):
                 os.remove(local_filepath)
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`')
-

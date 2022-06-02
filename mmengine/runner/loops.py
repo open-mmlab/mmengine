@@ -110,7 +110,9 @@ class EpochBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook(
             'after_train_iter',
-            batch_idx=idx, data_batch=data_batch, outputs=train_logs)
+            batch_idx=idx,
+            data_batch=data_batch,
+            outputs=train_logs)
         self._iter += 1
 
 
@@ -211,7 +213,9 @@ class IterBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook(
             'after_train_iter',
-            batch_idx=self._iter, data_batch=data_batch, outputs=train_logs)
+            batch_idx=self._iter,
+            data_batch=data_batch,
+            outputs=train_logs)
         self._iter += 1
 
 
