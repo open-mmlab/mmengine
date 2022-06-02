@@ -5,8 +5,6 @@ import platform
 import random
 import shutil
 import time
-from tkinter import W
-from types import WrapperDescriptorType
 import warnings
 from collections import OrderedDict
 from functools import partial
@@ -824,7 +822,7 @@ class Runner:
         return model
 
     def scale_lr(self,
-                 optim_wrapper: Union[OptimWrapper, Dict],
+                 optim_wrapper: Union[OptimWrapper, Dict, None],
                  auto_scale_lr_cfg: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
@@ -856,11 +854,11 @@ class Runner:
                          f'and the current batch size is {real_bs}. '
                          f'Scaling the original LR by {ratio}.')
 
-        if self.param_schedulers and isinstance(
-            self.param_schedulers[0], _ParamScheduler):
+        if self.param_schedulers and isinstance(self.param_schedulers[0],
+                                                _ParamScheduler):
             raise RuntimeError('`scale_lr` should be called before building '
                                'ParamScheduler because ParamScheduler will '
-                               'store inital lr from optimizer')
+                               'store initial lr from optimizer')
 
         if isinstance(optim_wrapper, dict):
             optim_wrapper['optimizer']['lr'] = \

@@ -624,8 +624,7 @@ class TestRunner(TestCase):
         # assertion error will raise.
         auto_scale_lr_cfg = dict(enable=True)
         optim_wrapper = dict(
-            type='OptimWrapper',
-            optimizer=dict(type='SGD', lr=0.01))
+            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01))
         with self.assertRaises(AssertionError):
             runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
 
@@ -633,8 +632,7 @@ class TestRunner(TestCase):
         # not be linearly scaled.
         auto_scale_lr_cfg = dict(base_batch_size=16, enable=False)
         optim_wrapper = dict(
-            type='OptimWrapper',
-            optimizer=dict(type='SGD', lr=0.01))
+            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01))
         runner.scale_lr(optim_wrapper)
         self.assertEqual(optim_wrapper['optimizer']['lr'], 0.01)
         runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
@@ -645,8 +643,7 @@ class TestRunner(TestCase):
         auto_scale_lr_cfg = dict(base_batch_size=16, enable=True)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
         optim_wrapper = dict(
-            type='OptimWrapper',
-            optimizer=dict(type='SGD', lr=0.01))
+            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01))
         runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
         self.assertEqual(optim_wrapper['optimizer']['lr'],
                          0.01 * (real_bs / 16))
