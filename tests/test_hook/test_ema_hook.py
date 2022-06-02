@@ -82,8 +82,8 @@ class TestEMAHook(TestCase):
             work_dir=self.temp_dir.name,
             optim_wrapper=OptimWrapper(
                 torch.optim.Adam(ToyModel().parameters())),
-            train_cfg=dict(by_epoch=True, max_epochs=2),
-            val_cfg=dict(interval=1),
+            train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+            val_cfg=dict(),
             default_hooks=dict(logger=None),
             custom_hooks=[dict(type='EMAHook', )],
             experiment_name='test1')
