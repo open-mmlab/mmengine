@@ -20,7 +20,7 @@ class EpochBasedTrainLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         max_epochs (int): Total training epochs.
-        val_begin (int): The epoch/iteration that begins validating.
+        val_begin (int): The epoch that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1.
     """
@@ -29,8 +29,8 @@ class EpochBasedTrainLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  max_epochs: int,
-                 val_begin=1,
-                 val_interval=1) -> None:
+                 val_begin: int = 1,
+                 val_interval: int = 1) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
@@ -120,7 +120,7 @@ class IterBasedTrainLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         max_iters (int): Total training iterations.
-        val_begin (int): The epoch/iteration that begins validating.
+        val_begin (int): The iteration that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1000.
     """
@@ -129,8 +129,8 @@ class IterBasedTrainLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  max_iters: int,
-                 val_begin=1,
-                 val_interval=1000) -> None:
+                 val_begin: int = 1,
+                 val_interval: int = 1000) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
