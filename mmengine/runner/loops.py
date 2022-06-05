@@ -333,7 +333,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model.val_step(data_batch)
+        predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',
