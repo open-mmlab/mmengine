@@ -89,7 +89,7 @@ class DefaultOptimWrapperConstructor:
     Example 1:
         >>> model = torch.nn.modules.Conv1d(1, 1, 1)
         >>> optim_wrapper_cfg = dict(
-        >>>     dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01,
+        >>>     dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01,
         >>>         momentum=0.9, weight_decay=0.0001))
         >>> paramwise_cfg = dict(norm_decay_mult=0.)
         >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
@@ -98,7 +98,7 @@ class DefaultOptimWrapperConstructor:
 
     Example 2:
         >>> # assume model have attribute model.backbone and model.cls_head
-        >>> optim_wrapper_cfg = dict(type=OptimWrapper, optimizer=dict(
+        >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
         >>>     type='SGD', lr=0.01, weight_decay=0.95))
         >>> paramwise_cfg = dict(custom_keys={
         >>>     '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})

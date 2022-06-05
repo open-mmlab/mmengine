@@ -635,6 +635,11 @@ class TestRunner(TestCase):
             dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
         self.assertIsInstance(optim_wrapper, OptimWrapper)
 
+        # 1.3 use default OptimWrapper type.
+        optim_wrapper = runner.build_optim_wrapper(
+            dict(optimizer=dict(type='SGD', lr=0.01)))
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
+
         # 2. test multiple optmizers
         # 2.1 input is a dict which contains multiple optimizer objects
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
@@ -679,14 +684,16 @@ class TestRunner(TestCase):
         # `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
         runner.optim_wrapper = dict(
-            key1=dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)),
-            key2=dict(type=OptimWrapper, optimizer=dict(type='Adam', lr=0.02)),
+            key1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            key2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
         )
         with self.assertRaisesRegex(AssertionError, 'should be called before'):
             runner.build_param_scheduler(cfg)
 
         runner.optim_wrapper = runner.build_optim_wrapper(
-            dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)))
+            dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertIsInstance(param_schedulers, list)
         self.assertEqual(len(param_schedulers), 1)
@@ -755,7 +762,7 @@ class TestRunner(TestCase):
 
         # 5. test converting epoch-based scheduler to iter-based
         runner.optim_wrapper = runner.build_optim_wrapper(
-            dict(type=OptimWrapper, optimizer=dict(type='SGD', lr=0.01)))
+            dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
 
         # 5.1 train loop should be built before converting scheduler
         cfg = dict(
