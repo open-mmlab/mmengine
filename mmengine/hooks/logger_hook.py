@@ -203,8 +203,12 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
+        time_tags = {k: v for k, v in tag.items() if 'time' in k}
+        metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
         runner.visualizer.add_scalars(
-            tag, step=runner.iter, file_path=self.json_log_path)
+            time_tags, step=runner.iter, file_path=self.json_log_path)
+        runner.visualizer.add_scalars(
+            metric_tags, step=runner.epoch, file_path=self.json_log_path)
 
     def after_test_epoch(self,
                          runner,
