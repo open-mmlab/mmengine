@@ -27,6 +27,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
         cfg (dict or ConfigDict or Config): Config dict. If "runner_type" key
             exists, it will be used to build a custom runner. Otherwise, it
             will be used to build a default runner.
+        registry (:obj:`Registry`): The registry to search the type from.
 
     Returns:
         object: The constructed runner object.
