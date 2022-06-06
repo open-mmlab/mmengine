@@ -15,7 +15,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     """Build a Runner object.
     Examples:
         >>> from mmengine import Registry, build_runner_from_cfg
-        >>> RUNNERS = Registry('runners', build_runner_from_cfg)
+        >>> RUNNERS = Registry('runners', build_func=build_runner_from_cfg)
         >>> @RUNNERS.register_module()
         >>> class CustomRunner(Runner):
         >>>     def setup_env(env_cfg):
@@ -24,12 +24,12 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
         >>> custom_runner = RUNNERS.build(cfg)
 
     Args:
-        cfg (dict or ConfigDict or Config): Config dict. It should at least
-            contain the key "runner_type".
-        registry (:obj:`Registry`): The registry to search the type from.
+        cfg (dict or ConfigDict or Config): Config dict. If "runner_type" key
+            exists, it will be used to build a custom runner. Otherwise, it
+            will be used to build a default runner.
 
     Returns:
-        object: The constructed object.
+        object: The constructed runner object.
     """
     from ..logging.logger import MMLogger
 
