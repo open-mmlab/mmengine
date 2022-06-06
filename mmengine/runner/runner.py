@@ -1738,9 +1738,8 @@ class Runner:
                     raise RuntimeError(
                         'Cannot automatically rescale lr in resuming. Please '
                         'make sure the number of GPU is consistent with the '
-                        'previous training state which resuming from the '
-                        'checkpoint or set `enable` in `auto_scale_lr '
-                        'to False.')
+                        'previous training state resuming from the checkpoint '
+                        'or set `enable` in `auto_scale_lr to False.')
 
         # resume meta information meta
         self.meta = checkpoint['meta']
