@@ -831,9 +831,9 @@ class Runner:
         It scales the learning rate linearly according to the
         `paper <https://arxiv.org/abs/1706.02677>`_.
 
-            Note:
-                ``scale_lr`` must be called after building optimizer wrappers
-                and before building parameter schedulers.
+        Note:
+            ``scale_lr`` must be called after building optimizer wrappers
+            and before building parameter schedulers.
 
         Args:
             optim_wrapper (OptimWrapper): An OptimWrapper object whose
