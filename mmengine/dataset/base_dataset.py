@@ -637,8 +637,8 @@ class BaseDataset(Dataset):
         if self.serialize_data:
             data_bytes, data_address = \
                 self._get_serialized_subset(indices)
-            sub_dataset._data_bytes = data_bytes.copy()
-            sub_dataset._data_address = data_address.copy()
+            sub_dataset.data_bytes = data_bytes.copy()
+            sub_dataset.data_address = data_address.copy()
         else:
             data_list = self._get_unserialized_subset(indices)
             sub_dataset.data_list = copy.deepcopy(data_list)
