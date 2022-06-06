@@ -100,10 +100,10 @@ class Runner:
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
             specified. Defaults to None.
             See :meth:`build_test_loop` for more details.
-        auto_scale_lr_cfg (dict, optional): Automatically scaling lr config. It
-            includes ``enable`` and ``base_batch_size``. ``enable`` is the
-            switch to turn on and off the feature.  ``base_batch_size`` is the
-            batch size that the optimizer lr is based on. Defaults to None.
+        auto_scale_lr_cfg (dict, Optional): Config to scale the learning rate
+            automatically. It includes ``base_batch_size`` and ``enable``.
+            ``base_batch_size`` is the batch size that the optimizer lr is
+            based on. ``enable`` is the switch to turn on and off the feature.
         optim_wrapper (OptimWrapper or dict, optional):
             Computing gradient of model parameters. If specified,
             :attr:`train_dataloader` should also be specified. If automatic
@@ -826,18 +826,23 @@ class Runner:
                  auto_scale_lr_cfg: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
-        size. Referring to `paper <https://arxiv.org/abs/1706.02677>`_.
-        ``scale_lr`` must be called after building optimizer wrappers and
-        before building parameter schedulers.
+        size.
+
+        It scales the learning rate linearly according to the
+        `paper <https://arxiv.org/abs/1706.02677>`_.
+
+            Note:
+                ``scale_lr`` must be called after building optimizer wrappers
+                and before building parameter schedulers.
 
         Args:
-            optim_wrapper (OptimWrapper): An OptimWrapper object need to be
-                scaled.
-            auto_scale_lr_cfg (Dict, Optional): Automatically scaling lr
-                config. It includes ``enable`` and ``base_batch_size``.
-                ``enable`` is the switch to turn on and off the feature.
-                ``base_batch_size`` is the batch size that the optimizer lr
-                is based on.
+            optim_wrapper (OptimWrapper): An OptimWrapper object whose
+                parameter groups' learning rate need to be scaled.
+            auto_scale_lr_cfg (Dict, Optional): Config to scale the learning
+                rate automatically. It includes ``base_batch_size`` and
+                ``enable``. ``base_batch_size`` is the batch size that the
+                optimizer lr is based on. ``enable`` is the switch to turn on
+                and off the feature.
         """
         if (auto_scale_lr_cfg is None
                 or not auto_scale_lr_cfg.get('enable', False)):
