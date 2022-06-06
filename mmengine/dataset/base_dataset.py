@@ -229,7 +229,7 @@ class BaseDataset(Dataset):
         self.test_mode = test_mode
         self.max_refetch = max_refetch
         self.data_list: List[dict] = []
-        self._data_bytes: np.ndarray
+        self.data_bytes: np.ndarray
 
         # Set meta information.
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
@@ -256,10 +256,10 @@ class BaseDataset(Dataset):
             dict: The idx-th annotation of the dataset.
         """
         if self.serialize_data:
-            start_addr = 0 if idx == 0 else self._data_address[idx - 1].item()
-            end_addr = self._data_address[idx].item()
+            start_addr = 0 if idx == 0 else self.data_address[idx - 1].item()
+            end_addr = self.data_address[idx].item()
             bytes = memoryview(
-                self._data_bytes[start_addr:end_addr])  # type: ignore
+                self.data_bytes[start_addr:end_addr])  # type: ignore
             data_info = pickle.loads(bytes)  # type: ignore
         else:
             data_info = self.data_list[idx]
@@ -302,7 +302,7 @@ class BaseDataset(Dataset):
 
         # serialize data_list
         if self.serialize_data:
-            self._data_bytes, self._data_address = self._serialize_data()
+            self.data_bytes, self.data_address = self._serialize_data()
 
         self._fully_initialized = True
 
@@ -436,7 +436,7 @@ class BaseDataset(Dataset):
             raise ValueError('Annotation must have data_list and metainfo '
                              'keys')
         metainfo = annotations['metainfo']
-        rawdata_list = annotations['data_list']
+        raw_data_list = annotations['data_list']
 
         # Meta information load from annotation file will not influence the
         # existed meta information load from `BaseDataset.METAINFO` and
@@ -446,7 +446,7 @@ class BaseDataset(Dataset):
 
         # load and parse data_infos.
         data_list = []
-        for raw_data_info in rawdata_list:
+        for raw_data_info in raw_data_list:
             # parse raw data information to target format
             data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
@@ -584,7 +584,7 @@ class BaseDataset(Dataset):
         # Get subset of data from serialized data or data information sequence
         # according to `self.serialize_data`.
         if self.serialize_data:
-            self._data_bytes, self._data_address = \
+            self.data_bytes, self.data_address = \
                 self._get_serialized_subset(indices)
         else:
             self.data_list = self._get_unserialized_subset(indices)
@@ -663,25 +663,25 @@ class BaseDataset(Dataset):
         sub_data_address: Union[List, np.ndarray]
         if isinstance(indices, int):
             if indices >= 0:
-                assert indices < len(self._data_address), \
+                assert indices < len(self.data_address), \
                     f'{indices} is out of dataset length({len(self)}'
                 # Return the first few data information.
-                end_addr = self._data_address[indices - 1].item() \
+                end_addr = self.data_address[indices - 1].item() \
                     if indices > 0 else 0
                 # Slicing operation of `np.ndarray` does not trigger a memory
                 # copy.
-                sub_data_bytes = self._data_bytes[:end_addr]
+                sub_data_bytes = self.data_bytes[:end_addr]
                 # Since the buffer size of first few data information is not
                 # changed,
-                sub_data_address = self._data_address[:indices]
+                sub_data_address = self.data_address[:indices]
             else:
-                assert -indices <= len(self._data_address), \
+                assert -indices <= len(self.data_address), \
                     f'{indices} is out of dataset length({len(self)}'
                 # Return the last few data information.
-                ignored_bytes_size = self._data_address[indices - 1]
-                start_addr = self._data_address[indices - 1].item()
-                sub_data_bytes = self._data_bytes[start_addr:]
-                sub_data_address = self._data_address[indices:]
+                ignored_bytes_size = self.data_address[indices - 1]
+                start_addr = self.data_address[indices - 1].item()
+                sub_data_bytes = self.data_bytes[start_addr:]
+                sub_data_address = self.data_address[indices:]
                 sub_data_address = sub_data_address - ignored_bytes_size
         elif isinstance(indices, Sequence):
             sub_data_bytes = []
@@ -689,10 +689,10 @@ class BaseDataset(Dataset):
             for idx in indices:
                 assert len(self) > idx >= -len(self)
                 start_addr = 0 if idx == 0 else \
-                    self._data_address[idx - 1].item()
-                end_addr = self._data_address[idx].item()
+                    self.data_address[idx - 1].item()
+                end_addr = self.data_address[idx].item()
                 # Get data information by address.
-                sub_data_bytes.append(self._data_bytes[start_addr:end_addr])
+                sub_data_bytes.append(self.data_bytes[start_addr:end_addr])
                 # Get data information size.
                 sub_data_address.append(end_addr - start_addr)
             # Handle indices is an empty list.
@@ -798,7 +798,7 @@ class BaseDataset(Dataset):
             int: The length of filtered dataset.
         """
         if self.serialize_data:
-            return len(self._data_address)
+            return len(self.data_address)
         else:
             return len(self.data_list)
 

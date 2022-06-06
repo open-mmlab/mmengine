@@ -55,14 +55,14 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert hasattr(dataset, '_data_address')
+        assert hasattr(dataset, 'data_address')
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert hasattr(dataset, '_data_address')
+        assert hasattr(dataset, 'data_address')
 
         # test the instantiation of self.base_dataset with
         # `serialize_data=False`
@@ -73,7 +73,7 @@ class TestBaseDataset:
             serialize_data=False)
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert not hasattr(dataset, '_data_address')
+        assert not hasattr(dataset, 'data_address')
         assert len(dataset) == 3
         assert dataset.get_data_info(0) == self.data_info
 
@@ -129,7 +129,7 @@ class TestBaseDataset:
         dataset.pipeline = self.pipeline
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
-        assert hasattr(dataset, '_data_address')
+        assert hasattr(dataset, 'data_address')
         assert len(dataset) == 6
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
