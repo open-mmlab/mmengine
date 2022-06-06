@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -10,14 +10,14 @@ from mmengine.config import Config
 from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
+from ..base_module import BaseModule
 
 DataSamples = Optional[Union[list, torch.Tensor]]
 ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
                        Tuple[torch.Tensor], torch.Tensor]
 
 
-# TODO inherit from BaseModule
-class BaseModel(nn.Module, metaclass=ABCMeta):
+class BaseModel(BaseModule):
     """Base class for all algorithmic models.
 
     BaseModel implements the basic functions of the algorithmic model, such as
@@ -64,14 +64,16 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
             :class:`BaseDataPreprocessor`.
 
     Attributes:
+        init_cfg (dict, optional): Initialization config dict.
         data_preprocessor (:obj:`BaseDataPreprocessor`): Used for
             pre-processing data sampled by dataloader to the format accepted by
             :meth:`forward`.
     """
 
     def __init__(self,
+                 init_cfg: Optional[dict] = None,
                  data_preprocessor: Optional[Union[dict, Config]] = None):
-        super().__init__()
+        super().__init__(init_cfg)
         if data_preprocessor is None:
             data_preprocessor = dict(type='BaseDataPreprocessor')
         self.data_preprocessor = MODELS.build(data_preprocessor)
@@ -202,15 +204,15 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
         simple inference process.
 
         ``forward`` method of BaseModel is an abstract method, subclass must
-        override this method.
+        implement this method.
 
         Accept ``batch_inputs`` and ``data_samples`` processed by
         :attr:`data_preprocessor`, and return results according to mode
         arguments.
 
-        During non-dist training, validation and testing  process, ``forward``
-        will be called by ``BaseModel.train_step``, ``BaseModel.val_step`` and
-        ``BaseModel.val_step`` directly.
+        During non-distributed training, validation and testing  process,
+        ``forward`` will be called by ``BaseModel.train_step``,
+        ``BaseModel.val_step`` and ``BaseModel.val_step`` directly.
 
         During distributed data parallel training process, since calling
         ``DistributedDataParallel.forward`` can achieve automatic gradient
@@ -226,18 +228,21 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
             mode (str): mode should be one of ``loss``, ``predict`` and
                 ``feat``
 
-                - ``loss``: Called by ``train_step`` and return loss dict used
-                  for logging
+                - ``loss``: Called by ``train_step`` and return loss ``dict``
+                  used for logging
                 - ``predict``: Called by ``val_step`` and ``test_step``
                   and return list of ``BaseDataElement`` results used for
                   computing metric.
-                - ``feat``: Called by custom use to get a ``Tensor`` type
+                - ``feat``: Called by custom use to get ``Tensor`` type
                   results.
 
         Returns:
             dict or list or torch.Tensor or tuple:
-                - dict of loss tensor used for backward and logging.
-                - list of :BaseDataElement:`BaseDataElement` for
-                  computing metric and getting inference result.
-                - Tensor or tuple of tensor or dict or tensor for custom use.
+                - If ``mode == 'loss'``, return a ``dict`` of loss tensor used
+                  for backward and logging.
+                - If ``mode == 'predict'``, return a ``list`` of
+                  :BaseDataElement:`BaseDataElement` for computing metric
+                  and getting inference result.
+                - If ``mode == 'feat'``, return a tensor or ``tuple`` of tensor
+                  or ``dict or tensor for custom use.
         """

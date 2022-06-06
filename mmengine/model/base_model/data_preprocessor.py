@@ -23,14 +23,14 @@ class BaseDataPreprocessor(nn.Module):
     - Stack the input tensor at the first dimension.
 
     Subclass inherit ``BaseDataPreprocessor`` could override the forward method
-    to implement custom data pre-processing, such as batch-resize, MixUp and
+    to implement custom data pre-processing, such as batch-resize, MixUp, and
     CutMix.
 
     Args:
         device (int or torch.device): Target device.
 
     Warnings:
-        Each item of data sampled from dataloader must a dict and at least
+        Each item of data sampled from dataloader must be a dict and at least
         contain the ``inputs`` key. Furthermore, the value of ``inputs``
         must be a ``Tensor`` with the same shape.
     """

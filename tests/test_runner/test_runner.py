@@ -647,6 +647,7 @@ class TestRunner(TestCase):
             os.environ['RANK'] = str(0)
             os.environ['WORLD_SIZE'] = str(1)
             cfg.launcher = 'pytorch'
+            cfg.experiment_name = 'test_wrap_model1'
             runner = Runner.from_cfg(cfg)
             self.assertIsInstance(runner.model, CustomModelWrapper)
 

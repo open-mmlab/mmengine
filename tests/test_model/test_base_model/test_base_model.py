@@ -25,7 +25,7 @@ class CustomDataPreprocessor(BaseDataPreprocessor):
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
-        super().__init__(data_preprocessor)
+        super().__init__(None, data_preprocessor=data_preprocessor)
         self.conv = nn.Conv2d(3, 1, 1)
 
     def forward(self, batch_inputs, data_samples=None, mode='feat'):
@@ -47,7 +47,7 @@ class TestBaseModel(TestCase):
         model = ToyModel()
         self.assertIsInstance(model.data_preprocessor, BaseDataPreprocessor)
         data_preprocessor = dict(type='CustomDataPreprocessor')
-        model = ToyModel(data_preprocessor)
+        model = ToyModel(data_preprocessor=data_preprocessor)
         self.assertIsInstance(model.data_preprocessor, CustomDataPreprocessor)
         self.assertEqual(model.data_preprocessor(1, training=True), 1)
         self.assertEqual(model.data_preprocessor(1, training=False), 2)

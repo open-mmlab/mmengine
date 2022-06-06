@@ -126,6 +126,8 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         data = dict(inputs=inputs)
         # Automatically sync grads of `optim_wrapper1` since
         # `cumulative_iters` = 1
+        ddp_model.train()
+        self.assertTrue(ddp_model.training)
         ddp_model.train_step([data], optim_wrapper=optim_wrapper_dict)
 
     def test_val_step(self):
@@ -134,6 +136,8 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         ddp_model = MMSeparateDDPWrapper(model)
         data = torch.randn(3, 1, 1)
         # Test get predictions.
+        ddp_model.eval()
+        self.assertFalse(ddp_model.training)
         predictions = ddp_model.val_step([data])
         self.assertEqual(predictions, 1)
 
@@ -143,6 +147,8 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         ddp_model = MMSeparateDDPWrapper(model)
         data = torch.randn(3, 1, 1)
         # Test get predictions.
+        ddp_model.eval()
+        self.assertFalse(ddp_model.training)
         predictions = ddp_model.test_step(data)
         self.assertEqual(predictions, 2)
 
