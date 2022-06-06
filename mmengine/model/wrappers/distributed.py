@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Union
+from typing import Dict, List
 
+import torch
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.data import BaseDataElement
@@ -49,9 +50,10 @@ class MMDistributedDataParallel(DistributedDataParallel):
         **kwargs: keyword arguments passed to ``DistributedDataParallel``.
 
     Note:
-        If model have multiple submodules and each module have
-        separately optimization strategies. :class:`MMSeparateDDPWrapper`
-        should be used to wrap the model.
+        If model has multiple submodules and each module have
+        separately optimization strategies.
+        :class:`MMSeparateDistributedDataParallel` should be used to wrap
+        the model.
 
     Note:
         If model itself has custom optimization strategy, rather than
@@ -65,7 +67,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         self.detect_anomalous_params = detect_anomalous_params
 
     def train_step(self, data: List[dict],
-                   optim_wrapper: OptimWrapper) -> dict:
+                   optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
 
@@ -84,35 +86,37 @@ class MMDistributedDataParallel(DistributedDataParallel):
                 update parameters.
 
         Returns:
-            dict: A tensor dict used to log training losses.
+            Dict[str, torch.Tensor]: A ``dict`` of tensor for logging.
         """
+        # enable automatic mixed precision training context.
         with optim_wrapper.precision_context():
-            data = self.module.data_preprocessor(data, training=True)
-            losses = self(*data, mode='loss')
+            batch_inputs, data_samples = self.module.data_preprocessor(
+                data, training=True)
+            losses = self(batch_inputs, data_samples, mode='loss')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> Union[List[BaseDataElement], dict]:
-        """Get the prediction of module during validation process.
+    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+        """Gets the prediction of module during validation process.
 
         Args:
             data (List[dict]): Data sampled by dataloader.
 
         Returns:
-            List[BaseDataElement] or dict: The predictions or losses.
+            List[BaseDataElement] or dict: The predictions of given data.
         """
         return self.module.val_step(data)
 
     def test_step(self, data: List[dict]) -> List[BaseDataElement]:
-        """Get the predictions of module during testing process.
+        """Gets the predictions of module during testing process.
 
         Args:
             data: Data sampled by dataloader.
 
         Returns:
-            List[BaseDataElement]: The predictions of module.
+            List[BaseDataElement]: The predictions of given data.
         """
-        return self.module.test_step(data)  # type: ignore
+        return self.module.test_step(data)

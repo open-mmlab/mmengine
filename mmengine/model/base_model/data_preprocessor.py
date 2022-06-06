@@ -11,20 +11,19 @@ from mmengine.utils import stack_batch
 
 @MODELS.register_module()
 class BaseDataPreprocessor(nn.Module):
-    """Base data pre-processor used for collating and moving data to the target
-    device.
+    """Base data pre-processor used for collating and copying data to the
+    target device.
 
-    ``BaseDataPreprocessor`` perform data pre-processing according to the
+    ``BaseDataPreprocessor`` performs data pre-processing according to the
     following steps:
 
-    - Take the data sampled from dataloader and unpack them into list of tensor
-      and list of labels.
-    - Move data to the target device.
-    - Stack the input tensor at the first dimension.
+    - Collates the data sampled from dataloader.
+    - Copies data to the target device.
+    - Stacks the input tensor at the first dimension.
 
-    Subclass inherit ``BaseDataPreprocessor`` could override the forward method
-    to implement custom data pre-processing, such as batch-resize, MixUp, and
-    CutMix.
+    Subclasses inherit from ``BaseDataPreprocessor`` could override the
+    forward method to implement custom data pre-processing, such as
+    batch-resize, MixUp, or CutMix.
 
     Args:
         device (int or torch.device): Target device.
@@ -41,27 +40,27 @@ class BaseDataPreprocessor(nn.Module):
 
     def collate_data(self,
                      data: Sequence[dict]) -> Tuple[List[torch.Tensor], list]:
-        """Collating and moving data to the target device.
+        """Collating and copying data to the target device.
 
-        Take the data sampled from dataloader and unpack them into list of
-        tensor and list of labels. Then moving tensor to the target device.
+        Collates the data sampled from dataloader into a list of tensor and
+        list of labels, and then copies tensor to the target device.
 
-        Subclass could override it to be compatible with the custom format
+        Subclasses could override it to be compatible with the custom format
         data sampled from custom dataloader.
 
         Args:
-            data (Sequence[dict]): data sampled from dataloader.
+            data (Sequence[dict]): Data sampled from dataloader.
 
         Returns:
             Tuple[List[torch.Tensor], list]: Unstacked list of input tensor
             and list of labels at target device.
         """
-        inputs = [data_['inputs'] for data_ in data]
+        inputs = [_data['inputs'] for _data in data]
         batch_data_samples: List[BaseDataElement] = []
-        # Allow no `data_samples` in data
-        for data_ in data:
-            if 'data_sample' in data_:
-                batch_data_samples.append(data_['data_sample'])
+        # Model can get predictions without any data samples.
+        for _data in data:
+            if 'data_sample' in _data:
+                batch_data_samples.append(_data['data_sample'])
 
         # Move data from CPU to corresponding device.
         batch_data_samples = [
@@ -73,7 +72,7 @@ class BaseDataPreprocessor(nn.Module):
     def forward(self,
                 data: Sequence[dict],
                 training: bool = False) -> Tuple[torch.Tensor, list]:
-        """Pre-process the data into the model input format.
+        """Preprocesses the data into the model input format.
 
         After the data pre-processing of :meth:`collate_data`, ``forward``
         will stack the input tensor list to a batch tensor at the first
@@ -93,10 +92,10 @@ class BaseDataPreprocessor(nn.Module):
 
     def to(self, device: Optional[Union[int, torch.device]], *args,
            **kwargs) -> nn.Module:
-        """Override this method to set the :attr:`device`
+        """Overrides this method to set the :attr:`device`
 
         Args:
-            device (int or torch.device, optional): the desired device of the
+            device (int or torch.device, optional): The desired device of the
                 parameters and buffers in this module.
 
         Returns:
@@ -106,7 +105,7 @@ class BaseDataPreprocessor(nn.Module):
         return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
-        """Override this method to set the :attr:`device`
+        """Overrides this method to set the :attr:`device`
 
         Returns:
             nn.Module: The model itself.
@@ -119,14 +118,14 @@ class BaseDataPreprocessor(nn.Module):
 class ImgDataPreprocessor(BaseDataPreprocessor):
     """Image pre-processor for normalization and bgr to rgb conversion.
 
-    Accept the data sampled by the dataLoader, and preprocesses it into the
+    Accepts the data sampled by the dataloader, and preprocesses it into the
     format of the model input. ``ImgDataPreprocessor`` provides the
     basic data pre-processing as follows
 
-    - Collate and move data to the target device.
-    - Convert inputs from bgr to rgb if the shape of input is (3, H, W).
-    - Normalize image with defined std and mean.
-    - Pad inputs to the maximum size of current batch with defined
+    - Collates and moves data to the target device.
+    - Converts inputs from bgr to rgb if the shape of input is (3, H, W).
+    - Normalizes image with defined std and mean.
+    - Pads inputs to the maximum size of current batch with defined
       ``pad_value``. The padding size can be divisible by a defined
       ``pad_size_divisor``
     - Stack inputs to batch_inputs.
@@ -168,7 +167,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
     def forward(self,
                 data: Sequence[dict],
                 training: bool = False) -> Tuple[torch.Tensor, list]:
-        """Perform normalization、padding and bgr2rgb conversion based on
+        """Performs normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
         Args:

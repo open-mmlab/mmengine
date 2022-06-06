@@ -6,13 +6,12 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from mmengine.config import Config
 from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
+from mmengine.utils import is_list_of
 from ..base_module import BaseModule
 
-DataSamples = Optional[Union[list, torch.Tensor]]
 ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
                        Tuple[torch.Tensor], torch.Tensor]
 
@@ -58,9 +57,9 @@ class BaseModel(BaseModule):
         >>>             return dict(loss=loss)
 
     Args:
-        init_cfg (dict or Config or ConfigDict, optional): The weight
-            initialized config for :class:`BaseModule`.
-        data_preprocessor (dict or Config, optional): The pre-process config of
+        init_cfg (dict, optional): The weight initialized config for
+            :class:`BaseModule`.
+        data_preprocessor (dict, optional): The pre-process config of
             :class:`BaseDataPreprocessor`.
 
     Attributes:
@@ -72,7 +71,7 @@ class BaseModel(BaseModule):
 
     def __init__(self,
                  init_cfg: Optional[dict] = None,
-                 data_preprocessor: Optional[Union[dict, Config]] = None):
+                 data_preprocessor: Optional[dict] = None):
         super().__init__(init_cfg)
         if data_preprocessor is None:
             data_preprocessor = dict(type='BaseDataPreprocessor')
@@ -80,22 +79,22 @@ class BaseModel(BaseModule):
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """Implement the default model training process including pre-
+        """Implements the default model training process including pre-
         processing, model forward propagation, loss calculation, optimization,
         and back-propagation.
 
-        During non-distributed training.If subclass does not override the
+        During non-distributed training. If subclasses do not override the
         :meth:`train_step`, :class:`EpochBasedTrainLoop` or
         :class:`IterBasedTrainLoop` will call this method to update model
         parameters. The default parameter update process is as follows:
 
-        - call ``self.data_processor(data, training=False) to collext
+        1. Calls ``self.data_processor(data, training=False) to collext
           batch_inputs and corresponding data_samples(labels).
-        - call ``self(batch_inputs, data_samples, mode='loss')`` to get raw
+        2. Calls ``self(batch_inputs, data_samples, mode='loss')`` to get raw
           loss
-        - call ``self.parse_losses`` to get ``parsed_losses`` tensor used to
+        3. Calls ``self.parse_losses`` to get ``parsed_losses`` tensor used to
           backward and dict of loss tensor used to log messages.
-        - call ``optim_wrapper.update_params(loss)`` to update model.
+        4. Calls ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
             data (List[dict]): Data sampled from dataloader.
@@ -103,21 +102,22 @@ class BaseModel(BaseModule):
                 used to update model parameters.
 
         Returns:
-            Dict[str, torch.Tensor]: dict of tensor for logging.
+            Dict[str, torch.Tensor]: A ``dict`` of tensor for logging.
         """
+        # enable automatic mixed precision training context.
         with optim_wrapper.precision_context():
-            inputs, data_sample = self.data_preprocessor(data, True)
-            losses = self(inputs, data_sample, mode='loss')
+            batch_inputs, data_samples = self.data_preprocessor(data, True)
+            losses = self(batch_inputs, data_samples, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
         optim_wrapper.update_params(parsed_losses)
         return log_vars
 
     def val_step(self, data: List[dict]) -> List[BaseDataElement]:
-        """Get the predictions of given data.
+        """Gets the predictions of given data.
 
-        Call ``self.data_preprocessor(data, False)`` and
-        ``self(inputs, data_sample, mode='predict')`` in sequence. Return the
-        predictions used by evaluator.
+        Calls ``self.data_preprocessor(data, False)`` and
+        ``self(inputs, data_sample, mode='predict')`` in order. Return the
+        predictions which will be passed to evaluator.
 
         Args:
             data (List[dict]): Data sampled from dataloader.
@@ -129,7 +129,7 @@ class BaseModel(BaseModule):
         return self(inputs, data_sample, mode='predict')
 
     def test_step(self, data: List[dict]) -> List[BaseDataElement]:
-        """BaseModel implement ``test_step`` the same as ``val_step``.
+        """``BaseModel`` implements ``test_step`` the same as ``val_step``.
 
         Args:
             data (List[dict]): Data sampled from dataloader.
@@ -143,36 +143,36 @@ class BaseModel(BaseModule):
     def parse_losses(
         self, losses: Dict[str, torch.Tensor]
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Parse the raw outputs (losses) of the network.
+        """Parses the raw outputs (losses) of the network.
 
         Args:
             losses (dict): Raw output of the network, which usually contain
                 losses and other necessary information.
 
         Returns:
-            tuple[Tensor, dict]: (loss, log_vars), loss is the loss tensor
-                which may be a weighted sum of all losses, log_vars contains
-                all the variables to be sent to the logger.
+            tuple[Tensor, dict]: There are two elements. The first is the
+            loss tensor passed to optim_wrapper which may be a weighted sum of
+            all losses, and the second is log_vars which will be sent to the
+            logger.
         """
         log_vars = OrderedDict()
         for loss_name, loss_value in losses.items():
             if isinstance(loss_value, torch.Tensor):
                 log_vars[loss_name] = loss_value.mean()
-            elif isinstance(loss_value, list):
+            elif is_list_of(loss_value, torch.Tensor):
                 log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
             else:
                 raise TypeError(
                     f'{loss_name} is not a tensor or list of tensors')
 
-        loss = sum(_value for _key, _value in log_vars.items()
-                   if 'loss' in _key)
+        loss = sum(value for key, value in log_vars.items() if 'loss' in key)
         log_vars['loss'] = loss
 
         return loss, log_vars
 
     def to(self, device: Optional[Union[int, torch.device]], *args,
            **kwargs) -> nn.Module:
-        """Override this method to set the ``device`` attribute of
+        """Overrides this method to set the ``device`` attribute of
         :obj:`BaseDataPreprocessor` additionally
 
         Args:
@@ -186,7 +186,7 @@ class BaseModel(BaseModule):
         return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
-        """Override this method to set the ``device`` attribute of
+        """Overrides this method to set the ``device`` attribute of
         :obj:`BaseDataPreprocessor` additionally
 
         Returns:
@@ -198,32 +198,32 @@ class BaseModel(BaseModule):
     @abstractmethod
     def forward(self,
                 batch_inputs: torch.Tensor,
-                data_samples: DataSamples = None,
+                data_samples: Optional[List[BaseDataElement]] = None,
                 mode: str = 'feat') -> ForwardResults:
-        """Get losses or predictions of training, validation, testing, and
+        """Returns losses or predictions of training, validation, testing, and
         simple inference process.
 
-        ``forward`` method of BaseModel is an abstract method, subclass must
-        implement this method.
+        ``forward`` method of BaseModel is an abstract method, its subclasses
+        must implement this method.
 
         Accept ``batch_inputs`` and ``data_samples`` processed by
         :attr:`data_preprocessor`, and return results according to mode
         arguments.
 
-        During non-distributed training, validation and testing  process,
+        During non-distributed training, validation, and testing process,
         ``forward`` will be called by ``BaseModel.train_step``,
         ``BaseModel.val_step`` and ``BaseModel.val_step`` directly.
 
-        During distributed data parallel training process, since calling
-        ``DistributedDataParallel.forward`` can achieve automatic gradient
-        synchronization, :obj:`MMDistributedDataParallel` will call
-        ``DistributedDataParallel.forward`` in ``train_step``, and
-        further calls the ``forward`` method of ``BaseModel`` subclass.
+        During distributed data parallel training process,
+        ``MMSeparateDistributedDataParallel.train_step`` will first call
+        ``DistributedDataParallel.forward`` to enable automatic
+        gradient synchronization, and then call ``forward`` to get training
+        loss.
 
         Args:
             batch_inputs (torch.Tensor): batch input tensor collated by
                 :attr:`data_preprocessor`.
-            data_samples (torch.Tensor, list, optional):
+            data_samples (List[BaseDataElement], optional):
                 data samples collated by :attr:`data_preprocessor`.
             mode (str): mode should be one of ``loss``, ``predict`` and
                 ``feat``
@@ -237,12 +237,13 @@ class BaseModel(BaseModule):
                   results.
 
         Returns:
-            dict or list or torch.Tensor or tuple:
-                - If ``mode == 'loss'``, return a ``dict`` of loss tensor used
+            ForwardResults:
+
+                - If ``mode == loss``, return a ``dict`` of loss tensor used
                   for backward and logging.
-                - If ``mode == 'predict'``, return a ``list`` of
-                  :BaseDataElement:`BaseDataElement` for computing metric
+                - If ``mode == predict``, return a ``list`` of
+                  :obj:`BaseDataElement` for computing metric
                   and getting inference result.
-                - If ``mode == 'feat'``, return a tensor or ``tuple`` of tensor
+                - If ``mode == feat``, return a tensor or ``tuple`` of tensor
                   or ``dict or tensor for custom use.
         """

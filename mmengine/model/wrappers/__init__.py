@@ -1,8 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .mm_ddp import MMDistributedDataParallel
-from .mm_sep_ddp import MMSeparateDDPWrapper
+from .distributed import MMDistributedDataParallel
+from .seperate_distributed import MMSeparateDistributedDataParallel
 from .utils import is_model_wrapper
 
 __all__ = [
-    'MMDistributedDataParallel', 'is_model_wrapper', 'MMSeparateDDPWrapper'
+    'MMDistributedDataParallel', 'is_model_wrapper',
+    'MMSeparateDistributedDataParallel'
 ]

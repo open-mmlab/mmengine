@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.optim import SGD
 
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            MMSeparateDDPWrapper)
+                            MMSeparateDistributedDataParallel)
 from mmengine.optim import OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
@@ -107,7 +107,7 @@ class TestModelWrapper(MultiProcessTestCase):
 
 @unittest.skipIf(
     not torch.cuda.is_available(), reason='cuda should be available')
-class TestMMSeparateDDPWrapper(TestModelWrapper):
+class TestMMSeparateDistributedDataParallel(TestModelWrapper):
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -115,7 +115,7 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
         # There will be two independently updated `DistributedDataParallel`
         # submodules.
         model = ComplexModel()
-        ddp_model = MMSeparateDDPWrapper(model.cuda())
+        ddp_model = MMSeparateDistributedDataParallel(model.cuda())
         optimizer1 = SGD(model.conv1.parameters(), lr=0.1)
         optimizer2 = SGD(model.conv1.parameters(), lr=0.2)
         optim_wrapper1 = OptimWrapper(optimizer1, 1)
@@ -133,7 +133,7 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ComplexModel()
-        ddp_model = MMSeparateDDPWrapper(model)
+        ddp_model = MMSeparateDistributedDataParallel(model)
         data = torch.randn(3, 1, 1)
         # Test get predictions.
         ddp_model.eval()
@@ -144,7 +144,7 @@ class TestMMSeparateDDPWrapper(TestModelWrapper):
     def test_test_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ComplexModel()
-        ddp_model = MMSeparateDDPWrapper(model)
+        ddp_model = MMSeparateDistributedDataParallel(model)
         data = torch.randn(3, 1, 1)
         # Test get predictions.
         ddp_model.eval()

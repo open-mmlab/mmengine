@@ -1,18 +1,19 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import ExitStack, contextmanager
-from typing import List
+from typing import Dict, List
 
+import torch
 import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
-from .mm_ddp import MMDistributedDataParallel
+from .distributed import MMDistributedDataParallel
 
 
 @MODEL_WRAPPERS.register_module()
-class MMSeparateDDPWrapper(DistributedDataParallel):
+class MMSeparateDistributedDataParallel(DistributedDataParallel):
     """A DistributedDataParallel wrapper for models in MMGeneration.
 
     In MMedting and MMGeneration there is a need to wrap different modules in
@@ -55,58 +56,62 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
             module._modules[name] = _module
 
     def train_step(self, data: List[dict],
-                   optim_wrapper: OptimWrapperDict) -> dict:
-        """Train step function.
+                   optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:
+        """Interface for model forward, backward and parameters updating during
+        training process.
 
         Args:
             data: Data sampled by dataloader.
             optim_wrapper (OptimWrapperDict): A wrapper of optimizer to
                 update parameters.
+
+        Returns:
+            Dict[str, torch.Tensor]: A dict of tensor for logging.
         """
         output = self.module.train_step(data, optim_wrapper)
         return output
 
     def val_step(self, data) -> List[BaseDataElement]:
-        """Get the prediction of module during validation process.
+        """Gets the prediction of module during validation process.
 
         Args:
             data (List[dict]): Data sampled by dataloader.
 
         Returns:
-            List[BaseDataElement]: The predictions or losses.
+            List[BaseDataElement]: The predictions of given data.
         """
         return self.module.val_step(data)
 
     def test_step(self, data: List[dict]) -> List[BaseDataElement]:
-        """Get the predictions of module during testing process.
+        """Gets the predictions of module during testing process.
 
         Args:
             data: Data sampled by dataloader.
 
         Returns:
-            List[BaseDataElement]: The predictions of module.
+            ForwardResults: The predictions of given data.
         """
         return self.module.test_step(data)
 
     @contextmanager
     def no_sync(self):
-        """enable ``no_sync`` context of all sub ``MMDistributedDataParallel``
+        """Enables ``no_sync`` context of all sub ``MMDistributedDataParallel``
         modules."""
         with ExitStack() as stack:
             for sub_ddp_model in self.module._modules.values():
                 stack.enter_context(sub_ddp_model.no_sync())
                 yield
 
-    def train(self, mode=True):
+    def train(self, mode: bool = True) -> 'MMSeparateDistributedDataParallel':
         """Sets the module in training mode.
 
         In order to make the ddp wrapper inheritance hierarchy more uniform,
-        ``MMSeparateDDPWrapper`` inherits from ``DistributedDataParallel``,
-        but will not call its constructor. Since the attributes of
-        ``DistributedDataParallel`` have not been initialized, call the
-        ``train`` method of ``DistributedDataParallel`` will report an
-        error if pytorch version <= 1.9. Therefore, override this method
-        to call the ``train`` method of submodules.
+        ``MMSeparateDistributedDataParallel`` inherits from
+        ``DistributedDataParallel``, but will not call its constructor.
+        Since the attributes of ``DistributedDataParallel`` have not been
+        initialized, call the ``train`` method of ``DistributedDataParallel``
+        will report an error if pytorch version <= 1.9. Therefore, override
+        this method to call the ``train`` method of submodules.
 
         Args:
             mode (bool): whether to set training mode (``True``) or evaluation
@@ -116,4 +121,5 @@ class MMSeparateDDPWrapper(DistributedDataParallel):
             Module: self.
         """
         self.training = mode
-        return self.module.train(mode)
+        self.module.train(mode)
+        return self
