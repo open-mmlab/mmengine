@@ -10,8 +10,8 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
                    tuple_cast)
 from .parrots_wrapper import TORCH_VERSION
-from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
-                   scandir, symlink, is_abs)
+from .path import (check_file_exist, fopen, is_abs, is_filepath,
+                   mkdir_or_exist, scandir, symlink)
 from .setup_env import set_multi_processing
 from .version_utils import digit_version, get_git_hash
 
