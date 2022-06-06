@@ -189,8 +189,8 @@ class Runner:
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
         >>>     val_evaluator=dict(type='ToyEvaluator'),
         >>>     test_evaluator=dict(type='ToyEvaluator'),
-        >>>     train_cfg=dict(by_epoch=True, max_epochs=3),
-        >>>     val_cfg=dict(interval=1),
+        >>>     train_cfg=dict(by_epoch=True, max_epochs=3, val_interval=1),
+        >>>     val_cfg=dict(),
         >>>     test_cfg=dict(),
         >>>     custom_hooks=[],
         >>>     default_hooks=dict(
@@ -573,13 +573,13 @@ class Runner:
     @property
     def val_interval(self):
         """int: Interval to run validation during training."""
-        return self.val_loop.interval
+        return self.train_loop.val_interval
 
     @property
     def val_begin(self):
         """int: The epoch/iteration to start running validation during
         training."""
-        return self.val_loop.begin
+        return self.train_loop.val_begin
 
     def setup_env(self, env_cfg: Dict) -> None:
         """Setup environment.
@@ -1285,10 +1285,10 @@ class Runner:
         Examples of ``loop``:
 
             # `ValLoop` will be used
-            loop = dict(interval=1)
+            loop = dict()
 
             # custom validation loop
-            loop = dict(type='CustomValLoop', interval=1)
+            loop = dict(type='CustomValLoop')
 
         Args:
             loop (BaseLoop or dict): A validation loop or a dict to build
@@ -1317,9 +1317,7 @@ class Runner:
             loop = ValLoop(
                 runner=self,
                 dataloader=self._val_dataloader,
-                evaluator=self._val_evaluator,  # type: ignore
-                **loop_cfg,
-            )  # type: ignore
+                evaluator=self._val_evaluator)  # type: ignore
 
         return loop  # type: ignore
 

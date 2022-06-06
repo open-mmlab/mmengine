@@ -176,7 +176,7 @@ class CustomTrainLoop(BaseLoop):
 @LOOPS.register_module()
 class CustomValLoop(BaseLoop):
 
-    def __init__(self, runner, dataloader, evaluator, interval=1):
+    def __init__(self, runner, dataloader, evaluator):
         super().__init__(runner, dataloader)
         self._runner = runner
 
@@ -246,8 +246,9 @@ class TestRunner(TestCase):
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
-            train_cfg=dict(by_epoch=True, max_epochs=3),
-            val_cfg=dict(interval=1, begin=1),
+            train_cfg=dict(
+                by_epoch=True, max_epochs=3, val_interval=1, val_begin=1),
+            val_cfg=dict(),
             test_cfg=dict(),
             custom_hooks=[],
             default_hooks=dict(
@@ -432,11 +433,12 @@ class TestRunner(TestCase):
         runner = Runner(
             model=model,
             work_dir=self.temp_dir,
-            train_cfg=dict(by_epoch=True, max_epochs=3),
+            train_cfg=dict(
+                by_epoch=True, max_epochs=3, val_interval=1, val_begin=1),
             train_dataloader=train_dataloader,
             optim_wrapper=optim_wrapper,
             param_scheduler=MultiStepLR(optim_wrapper, milestones=[1, 2]),
-            val_cfg=dict(interval=1, begin=1),
+            val_cfg=dict(),
             val_dataloader=val_dataloader,
             val_evaluator=ToyMetric1(),
             test_cfg=dict(),
@@ -888,12 +890,12 @@ class TestRunner(TestCase):
             runner.build_test_loop('invalid-type')
 
         # input is a dict and contains type key
-        cfg = dict(type='ValLoop', interval=1, begin=1)
+        cfg = dict(type='ValLoop')
         loop = runner.build_test_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
         # input is a dict but does not contain type key
-        cfg = dict(interval=1, begin=1)
+        cfg = dict()
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
@@ -901,7 +903,7 @@ class TestRunner(TestCase):
         self.assertEqual(id(runner.build_val_loop(loop)), id(loop))
 
         # test custom validation loop
-        cfg = dict(type='CustomValLoop', interval=1)
+        cfg = dict(type='CustomValLoop')
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, CustomValLoop)
 
@@ -999,7 +1001,7 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train2'
         cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
-        cfg.val_cfg = dict(begin=2)
+        cfg.train_cfg = dict(by_epoch=True, max_epochs=3, val_begin=2)
         runner = Runner.from_cfg(cfg)
 
         runner.train()
@@ -1044,7 +1046,8 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train3'
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.val_cfg = dict(interval=4, begin=4)
+        cfg.train_cfg = dict(
+            by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -1052,6 +1055,8 @@ class TestRunner(TestCase):
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)
+        self.assertEqual(runner.val_interval, 4)
+        self.assertEqual(runner.val_begin, 4)
         for result, target, in zip(iter_results, iter_targets):
             self.assertEqual(result, target)
         for result, target, in zip(batch_idx_results, batch_idx_targets):
