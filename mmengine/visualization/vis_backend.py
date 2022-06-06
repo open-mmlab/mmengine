@@ -43,7 +43,7 @@ def force_init_env(old_func: Callable) -> Any:
         if not getattr(obj, '_env_initialized', False):
             logger = MMLogger.get_current_instance()
             logger.debug('Attribute `_env_initialized` is not defined in '
-                         f'{type(obj)} or `type(obj)._env_initialized is '
+                         f'{type(obj)} or `{type(obj)}._env_initialized is '
                          'False, `_init_env` will be called and '
                          f'{type(obj)}._env_initialized will be set to '
                          'True')
