@@ -92,8 +92,8 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             dict: A tensor dict used to log training losses.
         """
-        data = self.module.data_preprocessor(data, training=True)
         with optim_wrapper.precision_context():
+            data = self.module.data_preprocessor(data, training=True)
             losses = self(*data, mode='loss')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)

@@ -103,8 +103,8 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
         Returns:
             Dict[str, torch.Tensor]: dict of tensor for logging.
         """
-        inputs, data_sample = self.data_preprocessor(data, True)
         with optim_wrapper.precision_context():
+            inputs, data_sample = self.data_preprocessor(data, True)
             losses = self(inputs, data_sample, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
         optim_wrapper.update_params(parsed_losses)
