@@ -32,7 +32,7 @@ WEIGHT_INITIALIZERS = Registry('weight initializer')
 # mangage all kinds of optimizers like `SGD` and `Adam`
 OPTIMIZERS = Registry('optimizer')
 # manage constructors that customize the optimization hyperparameters.
-OPTIMIZER_CONSTRUCTORS = Registry('optimizer constructor')
+OPTIM_WRAPPER_CONSTRUCTORS = Registry('optimizer wrapper constructor')
 # mangage all kinds of parameter schedulers like `MultiStepLR`
 PARAM_SCHEDULERS = Registry('parameter scheduler')
 # manage all kinds of metrics
@@ -48,3 +48,6 @@ VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
 LOG_PROCESSORS = Registry('log_processor')
+
+# manage optimizer wrapper
+OPTIM_WRAPPERS = Registry('optim_wrapper')

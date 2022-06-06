@@ -6,8 +6,9 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
-from mmengine.optim import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
-                            DefaultOptimizerConstructor, build_optimizer)
+from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
+                            DefaultOptimWrapperConstructor, OptimWrapper,
+                            build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
 from mmengine.utils import mmcv_full_available
@@ -201,30 +202,52 @@ class TestBuilder(TestCase):
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
-        optimizer = build_optimizer(self.model, optimizer_cfg)
-        self._check_default_optimizer(optimizer, self.model)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_wrapper = build_optim_wrapper(self.model, optim_wrapper_cfg)
+        self._check_default_optimizer(optim_wrapper.optimizer, self.model)
+
+        # test build optimizer without type in optim_wrapper_cfg
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_wrapper = build_optim_wrapper(self.model, optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
+        self._check_default_optimizer(optim_wrapper.optimizer, self.model)
 
         # test build function with invalid ``constructor``
         with self.assertRaises(KeyError):
-            optimizer_cfg['constructor'] = 'INVALID_CONSTRUCTOR'
-            build_optimizer(self.model, optimizer_cfg)
+            optim_wrapper_cfg['constructor'] = 'INVALID_CONSTRUCTOR'
+            build_optim_wrapper(self.model, optim_wrapper_cfg)
 
         # test build function with invalid ``paramwise_cfg``
         with self.assertRaises(KeyError):
-            optimizer_cfg['paramwise_cfg'] = dict(invalid_mult=1)
-            build_optimizer(self.model, optimizer_cfg)
+            optim_wrapper_cfg['paramwise_cfg'] = dict(invalid_mult=1)
+            build_optim_wrapper(self.model, optim_wrapper_cfg)
+
+        optim_wrapper_cfg.pop('optimizer')
+        optim_wrapper_cfg.pop('constructor')
+        optim_wrapper_cfg.pop('paramwise_cfg')
+        self.assertRaisesRegex(
+            AssertionError, '`optim_wrapper_cfg` must contain',
+            lambda: build_optim_wrapper(self.model, optim_wrapper_cfg))
 
     def test_build_default_optimizer_constructor(self):
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             bias_lr_mult=2,
             bias_decay_mult=0.5,
@@ -232,22 +255,26 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
         optim_constructor_cfg = dict(
-            type='DefaultOptimizerConstructor',
-            optimizer_cfg=optimizer_cfg,
+            type='DefaultOptimWrapperConstructor',
+            optim_wrapper_cfg=optim_wrapper,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZER_CONSTRUCTORS.build(optim_constructor_cfg)
-        optimizer = optim_constructor(self.model)
-        self._check_sgd_optimizer(optimizer, self.model, **paramwise_cfg)
+        optim_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
+            optim_constructor_cfg)
+        optim_wrapper = optim_constructor(self.model)
+        self._check_sgd_optimizer(optim_wrapper.optimizer, self.model,
+                                  **paramwise_cfg)
 
     def test_build_custom_optimizer_constructor(self):
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
 
-        @OPTIMIZER_CONSTRUCTORS.register_module()
-        class MyOptimizerConstructor(DefaultOptimizerConstructor):
+        @OPTIM_WRAPPER_CONSTRUCTORS.register_module()
+        class MyOptimizerConstructor(DefaultOptimWrapperConstructor):
 
             def __call__(self, model):
                 if hasattr(model, 'module'):
@@ -268,9 +295,10 @@ class TestBuilder(TestCase):
         paramwise_cfg = dict(conv1_lr_mult=5)
         optim_constructor_cfg = dict(
             type='MyOptimizerConstructor',
-            optimizer_cfg=optimizer_cfg,
+            optim_wrapper_cfg=optim_wrapper_cfg,
             paramwise_cfg=paramwise_cfg)
-        optim_constructor = OPTIMIZER_CONSTRUCTORS.build(optim_constructor_cfg)
+        optim_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
+            optim_constructor_cfg)
         optimizer = optim_constructor(self.model)
 
         param_groups = optimizer.param_groups
@@ -291,153 +319,182 @@ class TestBuilder(TestCase):
         with self.assertRaises(TypeError):
             # optimizer_cfg must be a dict
             optimizer_cfg = []
-            optim_constructor = DefaultOptimizerConstructor(optimizer_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
             optim_constructor(self.model)
 
         with self.assertRaises(TypeError):
             # paramwise_cfg must be a dict or None
-            optimizer_cfg = dict(lr=0.0001)
+            optim_wrapper_cfg = dict(
+                type='OptimWrapper',
+                optimizer=dict(lr=0.0001, weight_decay=None))
             paramwise_cfg = ['error']
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg, paramwise_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg, paramwise_cfg)
             optim_constructor(self.model)
 
         with self.assertRaises(ValueError):
             # bias_decay_mult/norm_decay_mult is specified but weight_decay
             # is None
-            optimizer_cfg = dict(lr=0.0001, weight_decay=None)
+            optim_wrapper_cfg = dict(
+                type='OptimWrapper',
+                optimizer=dict(lr=0.0001, weight_decay=None))
             paramwise_cfg = dict(bias_decay_mult=1, norm_decay_mult=1)
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg, paramwise_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg, paramwise_cfg)
             optim_constructor(self.model)
 
         # basic config with ExampleModel
         optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
-        optim_constructor = DefaultOptimizerConstructor(optimizer_cfg)
-        optimizer = optim_constructor(self.model)
-        self._check_default_optimizer(optimizer, self.model)
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
+        optim_wrapper = optim_constructor(self.model)
+        self._check_default_optimizer(optim_wrapper.optimizer, self.model)
 
     def test_default_optimizer_constructor_with_model_wrapper(self):
         # basic config with pseudo data parallel
         model = PseudoDataParallel()
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = None
-        optim_constructor = DefaultOptimizerConstructor(optimizer_cfg)
-        optimizer = optim_constructor(model)
-        self._check_default_optimizer(optimizer, model, prefix='module.')
+        optim_constructor = DefaultOptimWrapperConstructor(optim_wrapper_cfg)
+        optim_wrapper = optim_constructor(model)
+        self._check_default_optimizer(
+            optim_wrapper.optimizer, model, prefix='module.')
 
         # paramwise_cfg with pseudo data parallel
         model = PseudoDataParallel()
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             bias_lr_mult=2,
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(model)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optim_wrapper = optim_constructor(model)
         self._check_sgd_optimizer(
-            optimizer, model, prefix='module.', **paramwise_cfg)
+            optim_wrapper.optimizer, model, prefix='module.', **paramwise_cfg)
 
         # basic config with DataParallel
         if torch.cuda.is_available():
             model = torch.nn.DataParallel(ExampleModel())
-            optimizer_cfg = dict(
-                type='SGD',
-                lr=self.base_lr,
-                weight_decay=self.base_wd,
-                momentum=self.momentum)
+            optim_wrapper_cfg = dict(
+                type='OptimWrapper',
+                optimizer=dict(
+                    type='SGD',
+                    lr=self.base_lr,
+                    weight_decay=self.base_wd,
+                    momentum=self.momentum))
             paramwise_cfg = None
-            optim_constructor = DefaultOptimizerConstructor(optimizer_cfg)
-            optimizer = optim_constructor(model)
-            self._check_default_optimizer(optimizer, model, prefix='module.')
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg)
+            optim_wrapper = optim_constructor(model)
+            self._check_default_optimizer(
+                optim_wrapper.optimizer, model, prefix='module.')
 
         # paramwise_cfg with DataParallel
         if torch.cuda.is_available():
             model = torch.nn.DataParallel(self.model)
-            optimizer_cfg = dict(
-                type='SGD',
-                lr=self.base_lr,
-                weight_decay=self.base_wd,
-                momentum=self.momentum)
+            optim_wrapper_cfg = dict(
+                type='OptimWrapper',
+                optimizer=dict(
+                    type='SGD',
+                    lr=self.base_lr,
+                    weight_decay=self.base_wd,
+                    momentum=self.momentum))
             paramwise_cfg = dict(
                 bias_lr_mult=2,
                 bias_decay_mult=0.5,
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
                 dcn_offset_lr_mult=0.1)
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg, paramwise_cfg)
-            optimizer = optim_constructor(model)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg, paramwise_cfg)
+            optim_wrapper = optim_constructor(model)
             self._check_sgd_optimizer(
-                optimizer, model, prefix='module.', **paramwise_cfg)
+                optim_wrapper.optimizer,
+                model,
+                prefix='module.',
+                **paramwise_cfg)
 
     def test_default_optimizer_constructor_with_empty_paramwise_cfg(self):
         # Empty paramwise_cfg with ExampleModel
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict()
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(self.model)
-        self._check_default_optimizer(optimizer, self.model)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optim_wrapper = optim_constructor(self.model)
+        self._check_default_optimizer(optim_wrapper.optimizer, self.model)
 
         # Empty paramwise_cfg with ExampleModel and no grad
         model = ExampleModel()
         for param in model.parameters():
             param.requires_grad = False
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict()
-        optim_constructor = DefaultOptimizerConstructor(optimizer_cfg)
-        optimizer = optim_constructor(model)
-        self._check_default_optimizer(optimizer, model)
+        optim_constructor = DefaultOptimWrapperConstructor(optim_wrapper_cfg)
+        optim_wrapper = optim_constructor(model)
+        self._check_default_optimizer(optim_wrapper.optimizer, model)
 
     def test_default_optimizer_constructor_with_paramwise_cfg(self):
         # paramwise_cfg with ExampleModel
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             bias_lr_mult=2,
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(self.model)
-        self._check_sgd_optimizer(optimizer, self.model, **paramwise_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optim_wrapper = optim_constructor(self.model)
+        self._check_sgd_optimizer(optim_wrapper.optimizer, self.model,
+                                  **paramwise_cfg)
 
     def test_default_optimizer_constructor_no_grad(self):
         # paramwise_cfg with ExampleModel and no grad
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             bias_lr_mult=2,
             bias_decay_mult=0.5,
@@ -447,11 +504,12 @@ class TestBuilder(TestCase):
 
         for param in self.model.parameters():
             param.requires_grad = False
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(self.model)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optim_wrapper = optim_constructor(self.model)
+        optimizer = optim_wrapper.optimizer
         param_groups = optimizer.param_groups
-        assert isinstance(optimizer, torch.optim.SGD)
+        assert isinstance(optim_wrapper.optimizer, torch.optim.SGD)
         assert optimizer.defaults['lr'] == self.base_lr
         assert optimizer.defaults['momentum'] == self.momentum
         assert optimizer.defaults['weight_decay'] == self.base_wd
@@ -465,11 +523,13 @@ class TestBuilder(TestCase):
     def test_default_optimizer_constructor_bypass_duplicate(self):
         # paramwise_cfg with bypass_duplicate option
         model = ExampleDuplicateModel()
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             bias_lr_mult=2,
             bias_decay_mult=0.5,
@@ -479,8 +539,8 @@ class TestBuilder(TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 'some parameters appear in more than one parameter group'):
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg, paramwise_cfg)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg, paramwise_cfg)
             optim_constructor(model)
 
         paramwise_cfg = dict(
@@ -490,27 +550,31 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
             bypass_duplicate=True)
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
 
         self.assertWarnsRegex(
             Warning,
             'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
             lambda: optim_constructor(model))
-        optimizer = optim_constructor(model)
+        optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11
-        assert len(
-            optimizer.param_groups) == len(model_parameters) == num_params
-        self._check_sgd_optimizer(optimizer, model, **paramwise_cfg)
+        assert len(optim_wrapper.optimizer.param_groups) == len(
+            model_parameters) == num_params
+        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
+                                  **paramwise_cfg)
 
     def test_default_optimizer_constructor_custom_key(self):
-        # test DefaultOptimizerConstructor with custom_keys and ExampleModel
-        optimizer_cfg = dict(
-            type='SGD',
-            lr=self.base_lr,
-            weight_decay=self.base_wd,
-            momentum=self.momentum)
+        # test DefaultOptimWrapperConstructor with custom_keys and
+        # ExampleModel
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
         paramwise_cfg = dict(
             custom_keys={
                 'param1': dict(lr_mult=10),
@@ -523,23 +587,24 @@ class TestBuilder(TestCase):
         with self.assertRaises(TypeError):
             # custom_keys should be a dict
             paramwise_cfg_ = dict(custom_keys=[0.1, 0.0001])
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg, paramwise_cfg_)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg, paramwise_cfg_)
             optimizer = optim_constructor(self.model)
 
         with self.assertRaises(ValueError):
             # if 'decay_mult' is specified in custom_keys, weight_decay
             # should be specified
-            optimizer_cfg_ = dict(type='SGD', lr=0.01)
+            optim_wrapper_cfg_ = dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01))
             paramwise_cfg_ = dict(
                 custom_keys={'.backbone': dict(decay_mult=0.5)})
-            optim_constructor = DefaultOptimizerConstructor(
-                optimizer_cfg_, paramwise_cfg_)
-            optimizer = optim_constructor(self.model)
+            optim_constructor = DefaultOptimWrapperConstructor(
+                optim_wrapper_cfg_, paramwise_cfg_)
+            optim_constructor(self.model)
 
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(self.model)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optimizer = optim_constructor(self.model).optimizer
         # check optimizer type and default config
         assert isinstance(optimizer, torch.optim.SGD)
         assert optimizer.defaults['lr'] == self.base_lr
@@ -598,14 +663,17 @@ class TestBuilder(TestCase):
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
 
-        # test DefaultOptimizerConstructor with custom_keys and ExampleModel 2
-        optimizer_cfg = dict(
-            type='SGD', lr=self.base_lr, momentum=self.momentum)
+        # test DefaultOptimWrapperConstructor with custom_keys and
+        # ExampleModel 2
+        optim_wrapper_cfg = dict(
+            type='OptimWrapper',
+            optimizer=dict(
+                type='SGD', lr=self.base_lr, momentum=self.momentum))
         paramwise_cfg = dict(custom_keys={'param1': dict(lr_mult=10)})
 
-        optim_constructor = DefaultOptimizerConstructor(
-            optimizer_cfg, paramwise_cfg)
-        optimizer = optim_constructor(self.model)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+        optimizer = optim_constructor(self.model).optimizer
         # check optimizer type and default config
         assert isinstance(optimizer, torch.optim.SGD)
         assert optimizer.defaults['lr'] == self.base_lr
