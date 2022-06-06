@@ -12,6 +12,7 @@ import torch
 
 from mmengine.config import Config
 from mmengine.fileio import dump
+from mmengine.logging import MMLogger
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import TORCH_VERSION
 
@@ -40,11 +41,12 @@ def force_init_env(old_func: Callable) -> Any:
         # `_env_initialized` is False, call `_init_env` and set
         # `_env_initialized` to True
         if not getattr(obj, '_env_initialized', False):
-            warnings.warn('Attribute `_env_initialized` is not defined in '
-                          f'{type(obj)} or `type(obj)._env_initialized is '
-                          'False, `_init_env` will be called and '
-                          f'{type(obj)}._env_initialized will be set to '
-                          'True')
+            logger = MMLogger.get_current_instance()
+            logger.debug('Attribute `_env_initialized` is not defined in '
+                         f'{type(obj)} or `{type(obj)}._env_initialized is '
+                         'False, `_init_env` will be called and '
+                         f'{type(obj)}._env_initialized will be set to '
+                         'True')
             obj._init_env()  # type: ignore
             obj._env_initialized = True  # type: ignore
 
