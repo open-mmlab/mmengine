@@ -24,7 +24,7 @@ from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
                                MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
-                               Registry)
+                               RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.priority import Priority, get_priority
@@ -213,6 +213,41 @@ class CustomLogProcessor(LogProcessor):
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self._check_custom_cfg()
+
+
+@RUNNERS.register_module()
+class CustomRunner(Runner):
+
+    def __init__(self,
+                 model,
+                 work_dir,
+                 train_dataloader=None,
+                 val_dataloader=None,
+                 test_dataloader=None,
+                 train_cfg=None,
+                 val_cfg=None,
+                 test_cfg=None,
+                 optimizer=None,
+                 param_scheduler=None,
+                 val_evaluator=None,
+                 test_evaluator=None,
+                 default_hooks=None,
+                 custom_hooks=None,
+                 load_from=None,
+                 resume=False,
+                 launcher='none',
+                 env_cfg=dict(dist_cfg=dict(backend='nccl')),
+                 log_processor=None,
+                 log_level='INFO',
+                 visualizer=None,
+                 default_scope=None,
+                 randomness=dict(seed=None),
+                 experiment_name=None,
+                 cfg=None):
+        pass
+
+    def setup_env(self, env_cfg):
+        pass
 
 
 def collate_fn(data_batch):
@@ -1511,3 +1546,17 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+    def test_build_runner(self):
+        # No need to test other cases which have been tested in
+        # `test_build_from_cfg`
+        # test custom runner
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_build_runner1'
+        cfg.runner_type = 'CustomRunner'
+        assert isinstance(RUNNERS.build(cfg), CustomRunner)
+
+        # test default runner
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_build_runner2'
+        assert isinstance(RUNNERS.build(cfg), Runner)

@@ -6,10 +6,10 @@ More datails can be found at
 https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 """
 
-from .registry import Registry
+from .registry import Registry, build_runner_from_cfg
 
 # manage all kinds of runners like `EpochBasedRunner` and `IterBasedRunner`
-RUNNERS = Registry('runner')
+RUNNERS = Registry('runner', build_func=build_runner_from_cfg)
 # manage runner constructors that define how to initialize runners
 RUNNER_CONSTRUCTORS = Registry('runner constructor')
 # manage all kinds of loops like `EpochBasedTrainLoop`

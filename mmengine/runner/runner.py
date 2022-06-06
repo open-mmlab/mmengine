@@ -30,7 +30,7 @@ from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               VISUALIZERS, DefaultScope,
+                               RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version,
@@ -49,6 +49,7 @@ ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
 OptimWrapperType = Union[OptimWrapper, OptimWrapperDict]
 
 
+@RUNNERS.register_module()
 class Runner:
     """A training helper for PyTorch.
 

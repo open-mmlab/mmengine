@@ -10,6 +10,73 @@ from ..utils import ManagerMixin, is_seq_of
 from .default_scope import DefaultScope
 
 
+def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
+                          registry: 'Registry') -> Any:
+    """Build a Runner object.
+    Examples:
+        >>> from mmengine import Registry, build_runner_from_cfg
+        >>> RUNNERS = Registry('runners', build_func=build_runner_from_cfg)
+        >>> @RUNNERS.register_module()
+        >>> class CustomRunner(Runner):
+        >>>     def setup_env(env_cfg):
+        >>>         pass
+        >>> cfg = dict(runner_type='CustomRunner', ...)
+        >>> custom_runner = RUNNERS.build(cfg)
+
+    Args:
+        cfg (dict or ConfigDict or Config): Config dict. If "runner_type" key
+            exists, it will be used to build a custom runner. Otherwise, it
+            will be used to build a default runner.
+        registry (:obj:`Registry`): The registry to search the type from.
+
+    Returns:
+        object: The constructed runner object.
+    """
+    from ..logging.logger import MMLogger
+
+    assert isinstance(
+        cfg,
+        (dict, ConfigDict, Config
+         )), f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}'
+    assert isinstance(
+        registry, Registry), ('registry should be a mmengine.Registry object',
+                              f'but got {type(registry)}')
+
+    args = cfg.copy()
+    obj_type = args.pop('runner_type', 'mmengine.Runner')
+    if isinstance(obj_type, str):
+        runner_cls = registry.get(obj_type)
+        if runner_cls is None:
+            raise KeyError(
+                f'{obj_type} is not in the {registry.name} registry. '
+                f'Please check whether the value of `{obj_type}` is correct or'
+                ' it was registered as expected. More details can be found at'
+                ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+            )
+    elif inspect.isclass(obj_type):
+        runner_cls = obj_type
+    else:
+        raise TypeError(
+            f'type must be a str or valid type, but got {type(obj_type)}')
+
+    try:
+        runner = runner_cls.from_cfg(args)  # type: ignore
+        logger: MMLogger = MMLogger.get_current_instance()
+        logger.info(
+            f'An `{runner_cls.__name__}` instance is built '  # type: ignore
+            f'from registry, its implementation can be found in'
+            f'{runner_cls.__module__}')  # type: ignore
+        return runner
+
+    except Exception as e:
+        # Normal TypeError does not print class name.
+        cls_location = '/'.join(
+            runner_cls.__module__.split('.'))  # type: ignore
+        raise type(e)(
+            f'class `{runner_cls.__name__}` in '  # type: ignore
+            f'{cls_location}.py: {e}')
+
+
 def build_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: 'Registry',
