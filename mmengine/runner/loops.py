@@ -146,7 +146,8 @@ class IterBasedTrainLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
-        self.dataloader = iter(self.dataloader)
+        # get the iterator of the dataloader
+        self.dataloader_iterator = iter(self.dataloader)
 
     @property
     def max_epochs(self):
@@ -177,7 +178,7 @@ class IterBasedTrainLoop(BaseLoop):
         while self._iter < self._max_iters:
             self.runner.model.train()
 
-            data_batch = next(self.dataloader)
+            data_batch = next(self.dataloader_iterator)
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None

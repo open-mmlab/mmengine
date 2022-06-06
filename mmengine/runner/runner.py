@@ -34,7 +34,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, is_list_of,
+                            find_latest_checkpoint, get_git_hash, is_list_of,
                             set_multi_processing, symlink)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
@@ -331,6 +331,7 @@ class Runner:
         self.setup_env(env_cfg)
         # self._deterministic and self._seed will be set in the
         # `set_randomness`` method
+        self._randomness_cfg = randomness
         self.set_randomness(**randomness)
 
         if experiment_name is not None:
@@ -1796,8 +1797,26 @@ class Runner:
                         'previous training state resuming from the checkpoint '
                         'or set `enable` in `auto_scale_lr to False.')
 
-        # resume meta information meta
-        self.meta = checkpoint['meta']
+        # resume random seed
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        current_seed = self._randomness_cfg.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                warnings.warn(f'The value of random seed in the '
+                              f'checkpoint "{resumed_seed}" is '
+                              f'different from the value in '
+                              f'`randomness` config "{current_seed}"')
+            self._randomness_cfg.update(seed=resumed_seed)
+            self.set_randomness(**self._randomness_cfg)
+
+        dataset_meta = checkpoint['meta'].get('dataset_meta', None)
+        if (dataset_meta is not None
+                and dataset_meta != self.train_dataloader.dataset.metainfo):
+            warnings.warn(
+                'The dataset metainfo from the resumed checkpoint is '
+                'different from the current training dataset, please '
+                'check the correctness of the checkpoint or the training '
+                'dataset.')
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
@@ -1909,9 +1928,13 @@ class Runner:
 
         filepath = osp.join(out_dir, filename)
 
-        if hasattr(self.model, 'CLASSES') and self.model.CLASSES is not None:
-            # save class name to the meta
-            meta.update(CLASSES=self.model.CLASSES)
+        meta.update(
+            cfg=self.cfg.pretty_text,
+            dataset_meta=self.train_dataloader.dataset.metainfo,
+            seed=self.seed,
+            experiment_name=self.experiment_name,
+            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
+            mmengine_version=mmengine.__version__ + get_git_hash())
 
         if is_model_wrapper(self.model):
             model = self.model.module
