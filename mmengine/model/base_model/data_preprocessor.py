@@ -38,8 +38,9 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self.device = device
 
-    def collate_data(self,
-                     data: Sequence[dict]) -> Tuple[List[torch.Tensor], list]:
+    def collate_data(
+            self,
+            data: Sequence[dict]) -> Tuple[List[torch.Tensor], Optional[list]]:
         """Collating and copying data to the target device.
 
         Collates the data sampled from dataloader into a list of tensor and
@@ -52,8 +53,8 @@ class BaseDataPreprocessor(nn.Module):
             data (Sequence[dict]): Data sampled from dataloader.
 
         Returns:
-            Tuple[List[torch.Tensor], list]: Unstacked list of input tensor
-            and list of labels at target device.
+            Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
+            tensor and list of labels at target device.
         """
         inputs = [_data['inputs'] for _data in data]
         batch_data_samples: List[BaseDataElement] = []
@@ -61,17 +62,20 @@ class BaseDataPreprocessor(nn.Module):
         for _data in data:
             if 'data_sample' in _data:
                 batch_data_samples.append(_data['data_sample'])
-
         # Move data from CPU to corresponding device.
         batch_data_samples = [
             data_sample.to(self.device) for data_sample in batch_data_samples
         ]
         inputs = [_input.to(self.device) for _input in inputs]
+
+        if not batch_data_samples:
+            batch_data_samples = None  # type: ignore
+
         return inputs, batch_data_samples
 
     def forward(self,
                 data: Sequence[dict],
-                training: bool = False) -> Tuple[torch.Tensor, list]:
+                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
         """Preprocesses the data into the model input format.
 
         After the data pre-processing of :meth:`collate_data`, ``forward``
@@ -83,8 +87,8 @@ class BaseDataPreprocessor(nn.Module):
             training (bool): Whether to enable training time augmentation.
 
         Returns:
-            Tuple[torch.Tensor, list]: Data in the same format as the model
-            input.
+            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
+            model input.
         """
         inputs, batch_data_samples = self.collate_data(data)
         batch_inputs = torch.stack(inputs, dim=0)
@@ -174,7 +178,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
 
     def forward(self,
                 data: Sequence[dict],
-                training: bool = False) -> Tuple[torch.Tensor, list]:
+                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
         """Performs normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
@@ -183,8 +187,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             training (bool): Whether to enable training time augmentation.
 
         Returns:
-            Tuple[torch.Tensor, list]: Data in the same format as the model
-            input.
+            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
+            model input.
         """
         inputs, batch_data_samples = self.collate_data(data)
         # bgr to rgb
