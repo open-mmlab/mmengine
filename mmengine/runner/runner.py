@@ -827,11 +827,12 @@ class Runner:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size. Referring to `paper <https://arxiv.org/abs/1706.02677>`_.
+        ``scale_lr`` must be called after building optimizer wrappers and
+        before building parameter schedulers.
 
         Args:
-            optim_wrapper (OptimWrapper or dict): An OptimWrapper object or a
-                dict to build OptimWrapper objects. If ``optim_wrapper`` is an
-                OptimWrapper
+            optim_wrapper (OptimWrapper): An OptimWrapper object need to be
+                scaled.
             auto_scale_lr_cfg (Dict, Optional): Automatically scaling lr
                 config. It includes ``enable`` and ``base_batch_size``.
                 ``enable`` is the switch to turn on and off the feature.
@@ -867,7 +868,8 @@ class Runner:
                                'ParamScheduler because ParamScheduler will '
                                'store initial lr from optimizer wrappers')
 
-        assert isinstance(optim_wrapper, OptimWrapper)
+        assert isinstance(optim_wrapper, OptimWrapper), \
+            '`scale_lr should be called after building OptimWrapper'
         wrappers = list(optim_wrapper.values()) if isinstance(
             optim_wrapper, OptimWrapperDict) else [optim_wrapper]
         for wrapper in wrappers:
