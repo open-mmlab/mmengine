@@ -28,14 +28,14 @@ class ToyModel(BaseModel):
         super().__init__(None, data_preprocessor=data_preprocessor)
         self.conv = nn.Conv2d(3, 1, 1)
 
-    def forward(self, batch_inputs, data_samples=None, mode='feat'):
+    def forward(self, batch_inputs, data_samples=None, mode='tensor'):
         if mode == 'loss':
             out = self.conv(batch_inputs)
             return dict(loss=out)
         elif mode == 'predict':
             out = self.conv(batch_inputs)
             return out
-        elif mode == 'feat':
+        elif mode == 'tensor':
             out = self.conv(batch_inputs)
             return out
 

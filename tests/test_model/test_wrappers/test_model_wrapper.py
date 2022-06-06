@@ -22,7 +22,7 @@ class ToyModel(BaseModel):
         self.conv1 = nn.Conv2d(3, 1, 1)
         self.conv2 = nn.Conv2d(1, 1, 1)
 
-    def forward(self, x, data_samples=None, mode='feat'):
+    def forward(self, x, data_samples=None, mode='tensor'):
         if mode == 'loss':
             x = self.conv1(x)
             x = self.conv2(x)

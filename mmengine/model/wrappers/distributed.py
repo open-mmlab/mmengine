@@ -16,8 +16,9 @@ class MMDistributedDataParallel(DistributedDataParallel):
     loop.
 
     Different from DistributedDataParallel, MMDistributedDataParallel
-    implements a :meth:`train_step`, :meth:`test_step`  and :meth:`val_step`,
-    which will be called by ``train_loop``, ``val_loop`` and ``test_loop``.
+    implements three methods :meth:`train_step`, :meth:`val_step` and
+    :meth:`test_step`, which will be called by ``train_loop``, ``val_loop``
+    and ``test_loop``.
 
     - ``train_step``: Called by ``runner.train_loop``, and implement
       default model forward, gradient back propagation, parameter updating
@@ -50,8 +51,8 @@ class MMDistributedDataParallel(DistributedDataParallel):
         **kwargs: keyword arguments passed to ``DistributedDataParallel``.
 
     Note:
-        If model has multiple submodules and each module have
-        separately optimization strategies.
+        If model has multiple submodules and each module has
+        separate optimization strategies,
         :class:`MMSeparateDistributedDataParallel` should be used to wrap
         the model.
 

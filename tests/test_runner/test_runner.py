@@ -42,12 +42,12 @@ class ToyModel(BaseModel):
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='feat'):
+    def forward(self, batch_inputs, labels, mode='tensor'):
         labels = torch.stack(labels)
         outputs = self.linear1(batch_inputs)
         outputs = self.linear2(outputs)
 
-        if mode == 'feat':
+        if mode == 'tensor':
             return outputs
         elif mode == 'loss':
             loss = (labels - outputs).sum()
@@ -73,12 +73,12 @@ class TopGANModel(BaseModel):
         self.linear1 = nn.Linear(2, 1)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='feat'):
+    def forward(self, batch_inputs, labels, mode='tensor'):
         labels = torch.stack(labels)
         output1 = self.linear1(batch_inputs)
         output2 = self.linear2(batch_inputs)
 
-        if mode == 'feat':
+        if mode == 'tensor':
             return output1, output2
         elif mode == 'loss':
             loss1 = (labels - output1).sum()

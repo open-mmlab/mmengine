@@ -547,9 +547,8 @@ def stack_batch(tensor_list: List[torch.Tensor],
         pad_size_divisor (int): If ``pad_size_divisor > 0``, add padding
             to ensure the shape of each dim is divisible by
             ``pad_size_divisor``. This depends on the model, and many
-            models need a divisibility of 32. Defaults to 0
+            models need to be divisible by 32. Defaults to 1
         pad_value (int, float): The padding value. Defaults to 0.
-        pad_first_dim (bool): Whether to pad first dim of tensor. +++
 
     Returns:
        Tensor: The 4D-tensor.

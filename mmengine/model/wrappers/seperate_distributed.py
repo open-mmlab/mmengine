@@ -18,7 +18,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
 
     In MMedting and MMGeneration there is a need to wrap different modules in
     the models with separate DistributedDataParallel. Otherwise, it will cause
-    errors for GAN training. More specific, the GAN model, usually has two
+    errors for GAN training. For example, the GAN model, usually has two
     submodules: generator and discriminator. If we wrap both of them in one
     standard DistributedDataParallel, it will cause errors during training,
     because when we update the parameters of the generator (or discriminator),
@@ -26,11 +26,11 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
     not allowed for DistributedDataParallel. So we design this wrapper to
     separately wrap DistributedDataParallel for generator and discriminator.
     In this wrapper, we perform two operations:
-    1. Wrap each module in the models with separate MMDistributedDataParallel.
-        Note that only modules with parameters will be wrapped.
-    2. Do scatter operation for 'forward', 'train_step' and 'val_step'.
-    Note that the arguments of this wrapper is the same as those in
-    `torch.nn.parallel.distributed.DistributedDataParallel`.
+
+    1. Wraps each module in the models with separate MMDistributedDataParallel.
+       Note that only modules with parameters will be wrapped.
+    2. Calls ``train_step``, ``val_step`` and ``test_step`` of submodules to
+       get losses and predictions.
 
     Args:
         module (nn.Module): model contain multiple submodules which have
@@ -110,12 +110,12 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         ``DistributedDataParallel``, but will not call its constructor.
         Since the attributes of ``DistributedDataParallel`` have not been
         initialized, call the ``train`` method of ``DistributedDataParallel``
-        will report an error if pytorch version <= 1.9. Therefore, override
+        will raise an error if pytorch version <= 1.9. Therefore, override
         this method to call the ``train`` method of submodules.
 
         Args:
             mode (bool): whether to set training mode (``True``) or evaluation
-                         mode (``False``). Default: ``True``.
+                 mode (``False``). Default: ``True``.
 
         Returns:
             Module: self.

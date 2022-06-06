@@ -23,7 +23,7 @@ class BaseModel(BaseModule):
     weights initialize, batch inputs preprocess(see more information in
     :class:`BaseDataPreprocessor`), parse losses, and update model parameters.
 
-    Subclasses inherit from BaseModel only needs to implement the forward
+    Subclasses inherit from BaseModel only need to implement the forward
     method, which implements the logic to calculate loss and predictions,
     then can be trained in the runner.
 
@@ -43,9 +43,9 @@ class BaseModel(BaseModule):
         >>>
         >>>         self.criterion = nn.CrossEntropyLoss()
         >>>
-        >>>     def forward(self, batch_inputs, data_samples, mode='feat'):
+        >>>     def forward(self, batch_inputs, data_samples, mode='tensor'):
         >>>         data_samples = torch.stack(data_samples)
-        >>>         if mode == 'feat':
+        >>>         if mode == 'tensor':
         >>>             return self.backbone(batch_inputs)
         >>>         elif mode == 'predict':
         >>>             feats = self.backbone(batch_inputs)
@@ -79,9 +79,9 @@ class BaseModel(BaseModule):
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """Implements the default model training process including pre-
-        processing, model forward propagation, loss calculation, optimization,
-        and back-propagation.
+        """Implements the default model training process including
+        preprocessing, model forward propagation, loss calculation,
+        optimization, and back-propagation.
 
         During non-distributed training. If subclasses do not override the
         :meth:`train_step`, :class:`EpochBasedTrainLoop` or
@@ -199,15 +199,15 @@ class BaseModel(BaseModule):
     def forward(self,
                 batch_inputs: torch.Tensor,
                 data_samples: Optional[List[BaseDataElement]] = None,
-                mode: str = 'feat') -> ForwardResults:
+                mode: str = 'tensor') -> ForwardResults:
         """Returns losses or predictions of training, validation, testing, and
         simple inference process.
 
         ``forward`` method of BaseModel is an abstract method, its subclasses
         must implement this method.
 
-        Accept ``batch_inputs`` and ``data_samples`` processed by
-        :attr:`data_preprocessor`, and return results according to mode
+        Accepts ``batch_inputs`` and ``data_samples`` processed by
+        :attr:`data_preprocessor`, and returns results according to mode
         arguments.
 
         During non-distributed training, validation, and testing process,

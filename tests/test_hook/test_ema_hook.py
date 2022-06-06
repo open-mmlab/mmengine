@@ -21,10 +21,10 @@ class ToyModel(nn.Module):
         super().__init__()
         self.linear = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='feat'):
+    def forward(self, batch_inputs, labels, mode='tensor'):
         labels = torch.stack(labels)
         outputs = self.linear(batch_inputs)
-        if mode == 'feat':
+        if mode == 'tensor':
             return outputs
         elif mode == 'loss':
             loss = (labels - outputs).sum()

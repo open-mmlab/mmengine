@@ -139,9 +139,11 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
 
     Args:
         mean (Sequence[float or int]): The pixel mean of R, G, B channels.
-            Defaults to (127.5, 127.5, 127.5).
+            Defaults to (127.5, 127.5, 127.5). If ``mean`` and ``std`` are not
+            specified, ImgDataPreprocessor will normalize images to [-1, 1].
         std (Sequence[float or int]): The pixel standard deviation of R, G, B
-            channels. (127.5, 127.5, 127.5)
+            channels. (127.5, 127.5, 127.5). If ``mean`` and ``std`` are not
+            specified, ImgDataPreprocessor will normalize images to [-1, 1].
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
         pad_value (float or int): The padded pixel value. Defaults to 0.
@@ -158,6 +160,12 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  to_rgb: bool = False,
                  device: Union[int, torch.device] = 'cpu'):
         super().__init__(device)
+        assert len(mean) == 3 or len(mean) == 1, (
+            'The length of mean should be 1 or 3 to be compatible with RGB '
+            f'or gray image, but got {len(mean)}')
+        assert len(std) == 3 or len(std) == 1, (
+            'The length of mean should be 1 or 3 to be compatible with RGB '
+            f'or gray image, but got {len(std)}')
         self.register_buffer('mean', torch.tensor(mean).view(-1, 1, 1), False)
         self.register_buffer('std', torch.tensor(std).view(-1, 1, 1), False)
         self.pad_size_divisor = pad_size_divisor
