@@ -724,20 +724,20 @@ class BaseDataset(Dataset):
         if isinstance(indices, int):
             if indices >= 0:
                 # Return the first few data information.
-                subdata_list = self.data_list[:indices]
+                sub_data_list = self.data_list[:indices]
             else:
                 # Return the last few data information.
-                subdata_list = self.data_list[indices:]
+                sub_data_list = self.data_list[indices:]
         elif isinstance(indices, Sequence):
             # Return the data information according to given indices.
-            subdata_list = []
+            sub_data_list = []
             for idx in indices:
-                subdata_list.append(self.data_list[idx])
-            subdata_list = subdata_list
+                sub_data_list.append(self.data_list[idx])
+            sub_data_list = sub_data_list
         else:
             raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')
-        return subdata_list
+        return sub_data_list
 
     def _serialize_data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Serialize ``self.data_list`` to save memory when launching multiple
