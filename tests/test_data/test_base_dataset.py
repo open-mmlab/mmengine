@@ -54,14 +54,14 @@ class TestBaseDataset:
             data_prefix=dict(img='imgs'),
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert hasattr(dataset, '_data_address')
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img=None),
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert hasattr(dataset, '_data_address')
 
         # test the instantiation of self.base_dataset with
@@ -72,7 +72,7 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             serialize_data=False)
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert not hasattr(dataset, '_data_address')
         assert len(dataset) == 3
         assert dataset.get_data_info(0) == self.data_info
@@ -84,7 +84,7 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json',
             lazy_init=True)
         assert not dataset._fully_initialized
-        assert not dataset._data_list
+        assert not dataset.data_list
 
         # test the instantiation of self.base_dataset if ann_file is not
         # existed.
@@ -128,7 +128,7 @@ class TestBaseDataset:
             ann_file='annotations/dummy_annotation.json')
         dataset.pipeline = self.pipeline
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert hasattr(dataset, '_data_address')
         assert len(dataset) == 6
         assert dataset[0] == dict(imgs=self.imgs)
@@ -278,16 +278,16 @@ class TestBaseDataset:
             lazy_init=lazy_init)
         if not lazy_init:
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
             assert len(dataset) == 3
         else:
             # test `__len__()` when lazy_init is True
             assert not dataset._fully_initialized
-            assert not dataset._data_list
+            assert not dataset.data_list
             # call `full_init()` automatically
             assert len(dataset) == 3
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
 
     def test_compose(self):
         # test callable transform
@@ -328,16 +328,16 @@ class TestBaseDataset:
         dataset.pipeline = self.pipeline
         if not lazy_init:
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
             assert dataset[0] == dict(imgs=self.imgs)
         else:
             # Test `__getitem__()` when lazy_init is True
             assert not dataset._fully_initialized
-            assert not dataset._data_list
+            assert not dataset.data_list
             # Call `full_init()` automatically
             assert dataset[0] == dict(imgs=self.imgs)
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
 
         # Test with test mode
         dataset.test_mode = False
@@ -370,16 +370,16 @@ class TestBaseDataset:
 
         if not lazy_init:
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
             assert dataset.get_data_info(0) == self.data_info
         else:
             # test `get_data_info()` when lazy_init is True
             assert not dataset._fully_initialized
-            assert not dataset._data_list
+            assert not dataset.data_list
             # call `full_init()` automatically
             assert dataset.get_data_info(0) == self.data_info
             assert dataset._fully_initialized
-            assert hasattr(dataset, '_data_list')
+            assert hasattr(dataset, 'data_list')
         # Test parse_data_info with `data_prefix`
         BaseDataset.parse_data_info = self.ori_parse_data_info
         data_root = osp.join(osp.dirname(__file__), '../data/')
@@ -412,11 +412,11 @@ class TestBaseDataset:
         dataset.pipeline = self.pipeline
         # test `full_init()` when lazy_init is True
         assert not dataset._fully_initialized
-        assert not dataset._data_list
+        assert not dataset.data_list
         # call `full_init()` manually
         dataset.full_init()
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert len(dataset) == 3
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
@@ -429,7 +429,7 @@ class TestBaseDataset:
 
         dataset.pipeline = self.pipeline
         assert dataset._fully_initialized
-        assert hasattr(dataset, '_data_list')
+        assert hasattr(dataset, 'data_list')
         assert len(dataset) == 3
         assert dataset[0] == dict(imgs=self.imgs)
         assert dataset.get_data_info(0) == self.data_info
