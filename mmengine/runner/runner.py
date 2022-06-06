@@ -101,6 +101,10 @@ class Runner:
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
             specified. Defaults to None.
             See :meth:`build_test_loop` for more details.
+        auto_scale_lr_cfg (dict, Optional): Config to scale the learning rate
+            automatically. It includes ``base_batch_size`` and ``enable``.
+            ``base_batch_size`` is the batch size that the optimizer lr is
+            based on. ``enable`` is the switch to turn on and off the feature.
         optim_wrapper (OptimWrapper or dict, optional):
             Computing gradient of model parameters. If specified,
             :attr:`train_dataloader` should also be specified. If automatic
@@ -108,7 +112,6 @@ class Runner:
             training is required. The type of ``optim_wrapper`` should be
             AmpOptimizerWrapper. See :meth:`build_optim_wrapper` for
             examples. Defaults to None.
-
         param_scheduler (_ParamScheduler or dict or list, optional):
             Parameter scheduler for updating optimizer parameters. If
             specified, :attr:`optimizer` should also be specified.
@@ -185,6 +188,7 @@ class Runner:
         >>>         sampler=dict(type='DefaultSampler', shuffle=False),
         >>>         batch_size=1,
         >>>         num_workers=0),
+        >>>     auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
         >>>     optim_wrapper=dict(type='OptimizerWrapper', optimizer=dict(
         >>>         type='SGD', lr=0.01)),
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -226,6 +230,7 @@ class Runner:
         train_cfg: Optional[Dict] = None,
         val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
+        auto_scale_lr_cfg: Optional[Dict] = None,
         optim_wrapper: Optional[Union[OptimWrapper, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         val_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
@@ -272,6 +277,8 @@ class Runner:
 
         self.optim_wrapper: Optional[Union[OptimWrapper, dict]]
         self.optim_wrapper = optim_wrapper
+
+        self.auto_scale_lr_cfg = auto_scale_lr_cfg
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
@@ -411,6 +418,7 @@ class Runner:
             train_cfg=cfg.get('train_cfg'),
             val_cfg=cfg.get('val_cfg'),
             test_cfg=cfg.get('test_cfg'),
+            auto_scale_lr_cfg=cfg.get('auto_scale_lr_cfg'),
             optim_wrapper=cfg.get('optim_wrapper'),
             param_scheduler=cfg.get('param_scheduler'),
             val_evaluator=cfg.get('val_evaluator'),
@@ -813,6 +821,66 @@ class Runner:
                 model_wrapper_cfg, default_args=dict(model=self.model))
 
         return model
+
+    def scale_lr(self,
+                 optim_wrapper: OptimWrapper,
+                 auto_scale_lr_cfg: Optional[Dict] = None) -> None:
+        """Automatically scaling learning rate in training according to the
+        ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
+        size.
+
+        It scales the learning rate linearly according to the
+        `paper <https://arxiv.org/abs/1706.02677>`_.
+
+        Note:
+            ``scale_lr`` must be called after building optimizer wrappers
+            and before building parameter schedulers.
+
+        Args:
+            optim_wrapper (OptimWrapper): An OptimWrapper object whose
+                parameter groups' learning rate need to be scaled.
+            auto_scale_lr_cfg (Dict, Optional): Config to scale the learning
+                rate automatically. It includes ``base_batch_size`` and
+                ``enable``. ``base_batch_size`` is the batch size that the
+                optimizer lr is based on. ``enable`` is the switch to turn on
+                and off the feature.
+        """
+        if (auto_scale_lr_cfg is None
+                or not auto_scale_lr_cfg.get('enable', False)):
+            return None
+
+        assert 'base_batch_size' in auto_scale_lr_cfg, \
+            'Lack of `base_batch_size` in `auto_scale_lr_cfg`.'
+        dataloader: Union[DataLoader, Dict] = self._train_dataloader
+        bs = dataloader.batch_size if isinstance(
+            dataloader, DataLoader) else dataloader['batch_size']
+        real_bs = self.world_size * bs
+        base_bs = auto_scale_lr_cfg['base_batch_size']
+        ratio = float(real_bs) / float(base_bs)
+        self.logger.info(f'LR is set based on batch size of {base_bs} '
+                         f'and the current batch size is {real_bs}. '
+                         f'Scaling the original LR by {ratio}.')
+
+        def _is_built(schedulers):
+            if isinstance(schedulers, dict):
+                return False if 'type' in schedulers else any(
+                    _is_built(s) for s in schedulers.values())
+            if isinstance(schedulers, list):
+                return any(_is_built(s) for s in schedulers)
+            return isinstance(schedulers, _ParamScheduler)
+
+        if _is_built(self.param_schedulers):
+            raise RuntimeError('`scale_lr` should be called before building '
+                               'ParamScheduler because ParamScheduler will '
+                               'store initial lr from optimizer wrappers')
+
+        assert isinstance(optim_wrapper, OptimWrapper), \
+            '`scale_lr should be called after building OptimWrapper'
+        wrappers = list(optim_wrapper.values()) if isinstance(
+            optim_wrapper, OptimWrapperDict) else [optim_wrapper]
+        for wrapper in wrappers:
+            for group in wrapper.optimizer.param_groups:
+                group['lr'] = group['lr'] * ratio
 
     def build_optim_wrapper(
         self, optim_wrapper: Union[Optimizer, OptimWrapper, Dict]
@@ -1439,6 +1507,9 @@ class Runner:
         #  because the latter depends on the former
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
 
+        # Automatically scaling lr by linear scaling rule
+        self.scale_lr(self.optim_wrapper, self.auto_scale_lr_cfg)
+
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
@@ -1717,6 +1788,13 @@ class Runner:
                 self.logger.info(
                     'Number of GPU used for current experiment is not '
                     'consistent with resuming from checkpoint')
+                if (self.auto_scale_lr_cfg is None
+                        or not self.auto_scale_lr_cfg.get('enable', False)):
+                    raise RuntimeError(
+                        'Cannot automatically rescale lr in resuming. Please '
+                        'make sure the number of GPU is consistent with the '
+                        'previous training state resuming from the checkpoint '
+                        'or set `enable` in `auto_scale_lr to False.')
 
         # resume meta information meta
         self.meta = checkpoint['meta']
