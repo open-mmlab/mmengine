@@ -491,8 +491,8 @@ class BaseDataset(Dataset):
 
         for k, v in metainfo.items():
             if isinstance(v, str):
-                # If type of value is string, it means the file name of
-                # meta file.
+                # If type of value is string, and can be loaded from
+                # corresponding backend. it means the file name of meta file.
                 try:
                     cls_metainfo[k] = list_from_file(v)
                 except (TypeError, FileNotFoundError):
@@ -733,7 +733,6 @@ class BaseDataset(Dataset):
             sub_data_list = []
             for idx in indices:
                 sub_data_list.append(self.data_list[idx])
-            sub_data_list = sub_data_list
         else:
             raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')
