@@ -283,7 +283,7 @@ class BaseDataset(Dataset):
 
         Several steps to initialize annotation:
 
-            - loaddata_list: Load annotations from annotation file.
+            - load_data_list: Load annotations from annotation file.
             - filter data information: Filter annotations according to
               filter_cfg.
             - slice_data: Slice dataset according to ``self._indices``
@@ -293,7 +293,7 @@ class BaseDataset(Dataset):
         if self._fully_initialized:
             return
         # load data information
-        self.data_list = self.loaddata_list()
+        self.data_list = self.load_data_list()
         # filter illegal data, such as data that has no annotations.
         self.data_list = self.filter_data()
         # Get subset data according to indices.
@@ -414,7 +414,7 @@ class BaseDataset(Dataset):
         raise Exception(f'Cannot find valid image after {self.max_refetch}! '
                         'Please check your image path and pipeline')
 
-    def loaddata_list(self) -> List[dict]:
+    def load_data_list(self) -> List[dict]:
         """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
