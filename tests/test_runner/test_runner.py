@@ -109,6 +109,10 @@ class ToyDataset(Dataset):
     data = torch.randn(12, 2)
     label = torch.ones(12)
 
+    @property
+    def metainfo(self):
+        return self.METAINFO
+
     def __len__(self):
         return self.data.size(0)
 
@@ -1333,7 +1337,7 @@ class TestRunner(TestCase):
                 self.runner.cur_dataloader = self.warmup_loader
                 self.runner.call_hook('before_train_epoch')
                 while self.runner.iter < self._max_iters:
-                    data_batch = next(self.dataloader)
+                    data_batch = next(self.dataloader_iterator)
                     self.run_iter(data_batch)
                 self.runner.call_hook('after_train_epoch')
 
@@ -1404,7 +1408,11 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        # self.assertEqual(ckpt['meta']['hook_msgs']['last_ckpt'], path)
+        self.assertEqual(ckpt['meta']['dataset_meta'],
+                         runner.train_dataloader.dataset.metainfo)
+        self.assertEqual(ckpt['meta']['experiment_name'],
+                         runner.experiment_name)
+        self.assertEqual(ckpt['meta']['seed'], runner.seed)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
 
@@ -1424,7 +1432,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.param_schedulers, list)
         self.assertIsInstance(runner.param_schedulers[0], dict)
 
-        # 1.3 test `resume`
+        # 1.3.1 test `resume`
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint3'
         cfg.optim_wrapper = dict(
@@ -1441,8 +1449,38 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertEqual(runner.param_schedulers[0].milestones, {1: 1, 2: 1})
 
+        # 1.3.2 test resume with unmatched dataset_meta
+        ckpt_modified = copy.deepcopy(ckpt)
+        ckpt_modified['meta']['dataset_meta'] = {'CLASSES': ['cat', 'dog']}
+        # ckpt_modified['meta']['seed'] = 123
+        path_modified = osp.join(self.temp_dir, 'modified.pth')
+        torch.save(ckpt_modified, path_modified)
+        with self.assertWarnsRegex(
+                Warning, 'The dataset metainfo from the resumed checkpoint is '
+                'different from the current training dataset, please '
+                'check the correctness of the checkpoint or the training '
+                'dataset.'):
+            runner.resume(path_modified)
+
+        # 1.3.3 test resume with unmatched seed
+        ckpt_modified = copy.deepcopy(ckpt)
+        ckpt_modified['meta']['seed'] = 123
+        path_modified = osp.join(self.temp_dir, 'modified.pth')
+        torch.save(ckpt_modified, path_modified)
+        with self.assertWarnsRegex(
+                Warning, 'The value of random seed in the checkpoint'):
+            runner.resume(path_modified)
+
+        # 1.3.3 test resume with no seed and dataset meta
+        ckpt_modified = copy.deepcopy(ckpt)
+        ckpt_modified['meta'].pop('seed')
+        ckpt_modified['meta'].pop('dataset_meta')
+        path_modified = osp.join(self.temp_dir, 'modified.pth')
+        torch.save(ckpt_modified, path_modified)
+        runner.resume(path_modified)
+
         # 1.4 test auto resume
-        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint4'
         cfg.resume = True
         runner = Runner.from_cfg(cfg)
@@ -1454,7 +1492,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
         # 1.5 test resume from a specified checkpoint
-        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint5'
         cfg.resume = True
         cfg.load_from = osp.join(self.temp_dir, 'epoch_1.pth')

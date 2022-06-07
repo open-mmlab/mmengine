@@ -46,6 +46,10 @@ class DummyDataset(Dataset):
     data = torch.randn(12, 2)
     label = torch.ones(12)
 
+    @property
+    def metainfo(self):
+        return self.METAINFO
+
     def __len__(self):
         return self.data.size(0)
 

@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from functools import partial
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -139,4 +138,4 @@ class TestInfiniteSampler(TestCase):
 
     def test_set_epoch(self):
         sampler = InfiniteSampler(self.dataset)
-        self.assertRaises(NotImplementedError, partial(sampler.set_epoch, 10))
+        sampler.set_epoch(10)
