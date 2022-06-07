@@ -91,7 +91,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         logger = MMLogger.get_current_instance()
         logger_name = logger.instance_name
 
-        from .utils.weight_init import initialize, update_init_info
+        from .utils import initialize, update_init_info
         module_name = self.__class__.__name__
         if not self._is_init:
             if self.init_cfg:

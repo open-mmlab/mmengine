@@ -240,7 +240,7 @@ class BaseModel(BaseModule):
                 - ``predict``: Called by ``val_step`` and ``test_step``
                   and return list of ``BaseDataElement`` results used for
                   computing metric.
-                - ``feat``: Called by custom use to get ``Tensor`` type
+                - ``tensor``: Called by custom use to get ``Tensor`` type
                   results.
 
         Returns:
@@ -251,6 +251,6 @@ class BaseModel(BaseModule):
                 - If ``mode == predict``, return a ``list`` of
                   :obj:`BaseDataElement` for computing metric
                   and getting inference result.
-                - If ``mode == feat``, return a tensor or ``tuple`` of tensor
-                  or ``dict or tensor for custom use.
+                - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
+                  or ``dict of tensor for custom use.
         """

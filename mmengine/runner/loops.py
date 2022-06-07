@@ -104,15 +104,15 @@ class EpochBasedTrainLoop(BaseLoop):
         with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
                                                        self._iter,
                                                        self._max_iters):
-            # train_logs should be a dict of loss.
-            train_logs = self.runner.model.train_step(
+            # outputs should be a dict of loss.
+            outputs = self.runner.model.train_step(
                 data_batch, optim_wrapper=self.runner.optim_wrapper)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=idx,
             data_batch=data_batch,
-            outputs=train_logs)
+            outputs=outputs)
         self._iter += 1
 
 

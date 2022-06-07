@@ -63,9 +63,19 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(data_processor.pad_value, torch.tensor(10))
         self.assertEqual(data_processor.pad_size_divisor, 16)
 
+        with self.assertRaisesRegex(AssertionError, 'The length of mean'):
+            ImgDataPreprocessor(mean=(1, 2))
+
+        with self.assertRaisesRegex(AssertionError, 'The length of std'):
+            ImgDataPreprocessor(std=(1, 2))
+
+        with self.assertRaisesRegex(AssertionError, '`bgr2rgb` and `rgb2bgr`'):
+            ImgDataPreprocessor(bgr_to_rgb=True, rgb_to_bgr=True)
+
     def test_forward(self):
         # Test `pad_value`, `to_rgb`, `pad_size_divisor`.
         data_preprocessor = ImgDataPreprocessor(
+            mean=[127.5],
             std=[1, 2, 3],
             pad_size_divisor=16,
             pad_value=10,

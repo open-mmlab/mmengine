@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
-from mmengine.utils import stack_batch
+from ..utils import stach_batch_imgs
 
 
 @MODELS.register_module()
@@ -56,7 +56,7 @@ class BaseDataPreprocessor(nn.Module):
             Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
             tensor and list of labels at target device.
         """
-        inputs = [_data['inputs'] for _data in data]
+        inputs = [_data['inputs'].to(self.device) for _data in data]
         batch_data_samples: List[BaseDataElement] = []
         # Model can get predictions without any data samples.
         for _data in data:
@@ -66,7 +66,6 @@ class BaseDataPreprocessor(nn.Module):
         batch_data_samples = [
             data_sample.to(self.device) for data_sample in batch_data_samples
         ]
-        inputs = [_input.to(self.device) for _input in inputs]
 
         if not batch_data_samples:
             batch_data_samples = None  # type: ignore
@@ -142,12 +141,16 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         constructor of :class:`BaseDataset`.
 
     Args:
-        mean (Sequence[float or int]): The pixel mean of R, G, B channels.
-            Defaults to (127.5, 127.5, 127.5). If ``mean`` and ``std`` are not
-            specified, ImgDataPreprocessor will normalize images to [-1, 1].
-        std (Sequence[float or int]): The pixel standard deviation of R, G, B
-            channels. (127.5, 127.5, 127.5). If ``mean`` and ``std`` are not
-            specified, ImgDataPreprocessor will normalize images to [-1, 1].
+        mean (Sequence[float or int]): The pixel mean of image channels. If
+            ``bgr_to_rgb=True`` it means the mean value of R, G, B channels.
+            If ``mean`` and ``std`` are not specified, ``ImgDataPreprocessor``
+            will normalize images to [-1, 1]. Defaults to (127.5, 127.5,
+            127.5).
+        std (Sequence[float or int]): The pixel standard deviation of image
+            channels. If ``bgr_to_rgb=True`` it means the standard deviation of
+            R, G, B channels. If ``mean`` and ``std`` are not specified,
+            ImgDataPreprocessor will normalize images to [-1, 1]. Defaults
+            to (127.5, 127.5, 127.5).
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
         pad_value (float or int): The padded pixel value. Defaults to 0.
@@ -171,8 +174,10 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             'The length of mean should be 1 or 3 to be compatible with RGB '
             f'or gray image, but got {len(mean)}')
         assert len(std) == 3 or len(std) == 1, (
-            'The length of mean should be 1 or 3 to be compatible with RGB '
+            'The length of std should be 1 or 3 to be compatible with RGB '
             f'or gray image, but got {len(std)}')
+        assert not (bgr_to_rgb and rgb_to_bgr), (
+            '`bgr2rgb` and `rgb2bgr` cannot be set to True at the same time')
         self.channel_conversion = rgb_to_bgr or bgr_to_rgb
         self.register_buffer('mean', torch.tensor(mean).view(-1, 1, 1), False)
         self.register_buffer('std', torch.tensor(std).view(-1, 1, 1), False)
@@ -187,7 +192,10 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
 
         Args:
             data (Sequence[dict]): data sampled from dataloader.
-            training (bool): Whether to enable training time augmentation.
+            training (bool): Whether to enable training time augmentation. If
+                subclasses override this method, they can perform different
+                preprocessing strategies for training and testing based on the
+                value of ``training``.
 
         Returns:
             Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
@@ -200,6 +208,6 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         # Normalization.
         inputs = [(_input - self.mean) / self.std for _input in inputs]
         # Pad and stack Tensor.
-        batch_inputs = stack_batch(inputs, self.pad_size_divisor,
-                                   self.pad_value)
+        batch_inputs = stach_batch_imgs(inputs, self.pad_size_divisor,
+                                        self.pad_value)
         return batch_inputs, batch_data_samples

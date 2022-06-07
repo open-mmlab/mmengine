@@ -796,26 +796,26 @@ class Runner:
 
             return model
 
-        # Set `export CUDA_VISIBLE_DEVICES=-1` can enable CPU training.
+        # Set `export CUDA_VISIBLE_DEVICES=-1` to enable CPU training.
         if torch.cuda.is_available():
             model = model.cuda()
 
-        if model_wrapper_cfg is None:
-            if self.distributed:
-                find_unused_parameters = self.cfg.get('find_unused_parameters',
-                                                      False)
-                # Sets the `find_unused_parameters` parameter in
-                # torch.nn.parallel.DistributedDataParallel
-                model = MMDistributedDataParallel(
-                    module=model,
-                    device_ids=[torch.cuda.current_device()],
-                    broadcast_buffers=False,
-                    find_unused_parameters=find_unused_parameters)
-        else:
-            if self.distributed:
-                model = MODEL_WRAPPERS.build(
-                    model_wrapper_cfg, default_args=dict(module=model))
+        if not self.distributed:
+            return model
 
+        if model_wrapper_cfg is None:
+            find_unused_parameters = self.cfg.get('find_unused_parameters',
+                                                  False)
+            # Sets the `find_unused_parameters` parameter in
+            # torch.nn.parallel.DistributedDataParallel
+            model = MMDistributedDataParallel(
+                module=model,
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False,
+                find_unused_parameters=find_unused_parameters)
+        else:
+            model = MODEL_WRAPPERS.build(
+                model_wrapper_cfg, default_args=dict(module=model))
         return model
 
     def build_optim_wrapper(

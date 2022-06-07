@@ -68,8 +68,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         Returns:
             Dict[str, torch.Tensor]: A dict of tensor for logging.
         """
-        output = self.module.train_step(data, optim_wrapper)
-        return output
+        return self.module.train_step(data, optim_wrapper)
 
     def val_step(self, data) -> List[BaseDataElement]:
         """Gets the prediction of module during validation process.
