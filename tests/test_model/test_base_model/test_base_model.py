@@ -52,6 +52,15 @@ class TestBaseModel(TestCase):
         self.assertEqual(model.data_preprocessor(1, training=True), 1)
         self.assertEqual(model.data_preprocessor(1, training=False), 2)
 
+        # initiate model with built `data_preprocessor`.
+        data_preprocessor = CustomDataPreprocessor()
+        model = ToyModel(data_preprocessor=data_preprocessor)
+        self.assertIs(model.data_preprocessor, data_preprocessor)
+
+        # initiate model with error type `data_preprocessor`.
+        with self.assertRaisesRegex(TypeError, 'data_preprocessor should be'):
+            ToyModel(data_preprocessor=[data_preprocessor])
+
     def test_parse_losses(self):
         model = ToyModel()
         loss_cls = torch.tensor(1, dtype=torch.float32)

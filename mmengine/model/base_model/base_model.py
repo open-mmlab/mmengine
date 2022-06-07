@@ -71,11 +71,18 @@ class BaseModel(BaseModule):
 
     def __init__(self,
                  init_cfg: Optional[dict] = None,
-                 data_preprocessor: Optional[dict] = None):
+                 data_preprocessor: Optional[Union[dict, nn.Module]] = None):
         super().__init__(init_cfg)
         if data_preprocessor is None:
             data_preprocessor = dict(type='BaseDataPreprocessor')
-        self.data_preprocessor = MODELS.build(data_preprocessor)
+        if isinstance(data_preprocessor, nn.Module):
+            self.data_preprocessor = data_preprocessor
+        elif isinstance(data_preprocessor, dict):
+            self.data_preprocessor = MODELS.build(data_preprocessor)
+        else:
+            raise TypeError('data_preprocessor should be a `dict` or '
+                            f'`nn.Module` instance, but got '
+                            f'{type(data_preprocessor)}')
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
