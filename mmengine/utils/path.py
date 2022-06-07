@@ -99,3 +99,18 @@ def find_vcs_root(path, markers=('.git', )):
             return cur
         prev, cur = cur, osp.split(cur)[0]
     return None
+
+
+def is_abs(path: str) -> bool:
+    """Check if path is an absolute path in different backends.
+
+    Args:
+        path (str): path of directory or file.
+
+    Returns:
+        bool: whether path is an absolute path.
+    """
+    if osp.isabs(path) or path.startswith(('http', 'https', 's3')):
+        return True
+    else:
+        return False
