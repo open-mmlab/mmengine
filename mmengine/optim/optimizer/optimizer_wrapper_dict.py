@@ -96,13 +96,8 @@ class OptimWrapperDict(OptimWrapper):
             optim_wrapper.zero_grad()
 
     @contextmanager
-    def precision_context(self):
-        optim_wrapper = next(iter(self.optim_wrappers.values()))
-        with optim_wrapper.precision_context():
-            yield
-
-    @contextmanager
-    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
+    def optimizer_context(self, model: nn.Module, cur_iter: int,
+                          max_iters: int):
         """Enable ``accumulate_grad`` contexts of all optimizer wrappers.
 
         Warning:
@@ -123,7 +118,8 @@ class OptimWrapperDict(OptimWrapper):
         with ExitStack() as stack:
             for optim_wrapper in self.optim_wrappers.values():
                 stack.enter_context(
-                    optim_wrapper.accumulate_grad(model, cur_iter, max_iters))
+                    optim_wrapper.optimizer_context(model, cur_iter,
+                                                    max_iters))
             yield
 
     def load_state_dict(self, state_dict: dict) -> None:

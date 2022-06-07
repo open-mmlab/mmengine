@@ -244,7 +244,8 @@ class OptimWrapper:
         return dict(momentum=momentum)
 
     @contextmanager
-    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
+    def optimizer_context(self, model: nn.Module, cur_iter: int,
+                          max_iters: int):
         """A Context manager for gradient accumulation and avoiding unnecessary
         gradient synchronization during gradient accumulation.
 
@@ -277,15 +278,6 @@ class OptimWrapper:
                 yield
         else:
             yield
-
-    @contextmanager
-    def precision_context(self):
-        """precision context which enables an empty context by default.
-
-        The subclass used for mixed or low precision training needs to override
-        this method.
-        """
-        yield
 
     def _clip_grad(self) -> None:
         """Clip the gradients of parameters."""

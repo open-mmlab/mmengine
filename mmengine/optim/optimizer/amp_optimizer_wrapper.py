@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 
 import torch
+import torch.nn as nn
 from torch.cuda.amp import GradScaler
 
 from mmengine.registry import OPTIM_WRAPPERS
@@ -104,7 +105,8 @@ class AmpOptimWrapper(OptimWrapper):
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
-    def precision_context(self):
-        """A wrapper of ``torch.cuda.amp.autocast``"""
-        with torch.cuda.amp.autocast():
+    def optimizer_context(self, model: nn.Module, cur_iter: int,
+                          max_iters: int):
+        with super().optimizer_context(model, cur_iter, max_iters), \
+                torch.cuda.amp.autocast():
             yield
