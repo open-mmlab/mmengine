@@ -151,7 +151,9 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
         pad_value (float or int): The padded pixel value. Defaults to 0.
-        to_rgb (bool): whether to convert image from BGR to RGB.
+        bgr_to_rgb (bool): whether to convert image from BGR to RGB.
+            Defaults to False.
+        rgb_to_bgr (bool): whether to convert image from RGB to RGB.
             Defaults to False.
         device (int or torch.device): Target device.
     """
@@ -161,7 +163,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  std: Sequence[Union[float, int]] = (127.5, 127.5, 127.5),
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
-                 to_rgb: bool = False,
+                 bgr_to_rgb: bool = False,
+                 rgb_to_bgr: bool = False,
                  device: Union[int, torch.device] = 'cpu'):
         super().__init__(device)
         assert len(mean) == 3 or len(mean) == 1, (
@@ -170,11 +173,11 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         assert len(std) == 3 or len(std) == 1, (
             'The length of mean should be 1 or 3 to be compatible with RGB '
             f'or gray image, but got {len(std)}')
+        self.channel_conversion = rgb_to_bgr or bgr_to_rgb
         self.register_buffer('mean', torch.tensor(mean).view(-1, 1, 1), False)
         self.register_buffer('std', torch.tensor(std).view(-1, 1, 1), False)
         self.pad_size_divisor = pad_size_divisor
         self.pad_value = pad_value
-        self.to_rgb = to_rgb
 
     def forward(self,
                 data: Sequence[dict],
@@ -191,8 +194,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             model input.
         """
         inputs, batch_data_samples = self.collate_data(data)
-        # bgr to rgb
-        if self.to_rgb and inputs[0].size(0) == 3:
+        # channel transform
+        if self.channel_conversion:
             inputs = [_input[[2, 1, 0], ...] for _input in inputs]
         # Normalization.
         inputs = [(_input - self.mean) / self.std for _input in inputs]

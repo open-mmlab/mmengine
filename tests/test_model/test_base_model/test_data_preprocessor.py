@@ -41,7 +41,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
     def test_init(self):
         # initiate model without `preprocess_cfg`
         data_processor = ImgDataPreprocessor()
-        self.assertFalse(data_processor.to_rgb, False)
+        self.assertFalse(data_processor.channel_conversion)
         assert_allclose(data_processor.mean,
                         torch.tensor([127.5, 127.5, 127.5]).view(-1, 1, 1))
         assert_allclose(data_processor.std,
@@ -50,12 +50,12 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(data_processor.pad_value, torch.tensor(0))
         # initiate model with preprocess_cfg` and feat keys
         data_processor = ImgDataPreprocessor(
-            to_rgb=True,
+            bgr_to_rgb=True,
             mean=[0, 0, 0],
             std=[255, 255, 255],
             pad_size_divisor=16,
             pad_value=10)
-        self.assertTrue(data_processor.to_rgb, True)
+        self.assertTrue(data_processor.channel_conversion, True)
         assert_allclose(data_processor.mean,
                         torch.tensor([0, 0, 0]).view(-1, 1, 1))
         assert_allclose(data_processor.std,
@@ -69,7 +69,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
             std=[1, 2, 3],
             pad_size_divisor=16,
             pad_value=10,
-            to_rgb=True,
+            rgb_to_bgr=True,
         )
         inputs1 = torch.randn(3, 10, 10)
         inputs2 = torch.randn(3, 15, 15)
