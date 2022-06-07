@@ -233,7 +233,7 @@ class BaseModel(BaseModule):
             data_samples (List[BaseDataElement], optional):
                 data samples collated by :attr:`data_preprocessor`.
             mode (str): mode should be one of ``loss``, ``predict`` and
-                ``feat``
+                ``tensor``
 
                 - ``loss``: Called by ``train_step`` and return loss ``dict``
                   used for logging
