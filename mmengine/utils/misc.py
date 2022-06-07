@@ -227,7 +227,7 @@ def check_prerequisites(
         prerequisites,
         checker,
         msg_tmpl='Prerequisites "{}" are required in method "{}" but not '
-        'found, please install them first.'):  # yapf: disable
+                 'found, please install them first.'):  # yapf: disable
     """A decorator factory to check if prerequisites are satisfied.
 
     Args:
@@ -341,7 +341,6 @@ def deprecated_api_warning(name_dict: dict,
             if kwargs:
                 for src_arg_name, dst_arg_name in name_dict.items():
                     if src_arg_name in kwargs:
-
                         assert dst_arg_name not in kwargs, (
                             f'The expected behavior is to replace '
                             f'the deprecated key `{src_arg_name}` to '
@@ -471,7 +470,7 @@ def tensor2imgs(tensor: torch.Tensor,
     if std is None:
         std = (1, ) * channels
     assert (channels == len(mean) == len(std) == 3) or \
-        (channels == len(mean) == len(std) == 1 and not to_bgr)
+           (channels == len(mean) == len(std) == 1 and not to_bgr)
     mean = tensor.new_tensor(mean).view(1, -1)
     std = tensor.new_tensor(std).view(1, -1)
     tensor = tensor.permute(0, 2, 3, 1) * std + mean

@@ -59,7 +59,7 @@ class RuntimeInfoHook(Hook):
                          outputs: Optional[dict] = None) -> None:
         """Update ``log_vars`` in model outputs every iteration."""
         if outputs is not None:
-            for key, value in outputs['log_vars'].items():
+            for key, value in outputs.items():
                 runner.message_hub.update_scalar(f'train/{key}', value)
 
     def after_val_epoch(self,

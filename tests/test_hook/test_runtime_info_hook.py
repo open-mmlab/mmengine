@@ -102,12 +102,7 @@ class TestRuntimeInfoHook(TestCase):
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.after_train_iter(
-            runner,
-            batch_idx=2,
-            data_batch=None,
-            outputs={'log_vars': {
-                'loss_cls': 1.111
-            }})
+            runner, batch_idx=2, data_batch=None, outputs={'loss_cls': 1.111})
         self.assertEqual(
             message_hub.get_scalar('train/loss_cls').current(), 1.111)
 

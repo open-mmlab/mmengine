@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import shutil
 import tempfile
@@ -19,6 +20,7 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.model import BaseModel
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
@@ -33,29 +35,25 @@ from mmengine.visualization import Visualizer
 
 
 @MODELS.register_module()
-class ToyModel(nn.Module):
+class ToyModel(BaseModel):
 
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, data_batch, return_loss=False):
-        inputs, labels = [], []
-        for x in data_batch:
-            inputs.append(x['inputs'])
-            labels.append(x['data_sample'])
-
-        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        inputs = torch.stack(inputs).to(device)
-        labels = torch.stack(labels).to(device)
-        outputs = self.linear1(inputs)
+    def forward(self, batch_inputs, labels, mode='tensor'):
+        labels = torch.stack(labels)
+        outputs = self.linear1(batch_inputs)
         outputs = self.linear2(outputs)
-        if return_loss:
-            loss = (labels - outputs).sum()
-            outputs = dict(loss=loss, log_vars=dict(loss=loss.item()))
+
+        if mode == 'tensor':
             return outputs
-        else:
+        elif mode == 'loss':
+            loss = (labels - outputs).sum()
+            outputs = dict(loss=loss)
+            return outputs
+        elif mode == 'predict':
             outputs = dict(log_vars=dict(a=1, b=0.5))
             return outputs
 
@@ -67,12 +65,43 @@ class ToyModel1(ToyModel):
         super().__init__()
 
 
+@MODELS.register_module()
+class TopGANModel(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        self.linear1 = nn.Linear(2, 1)
+        self.linear2 = nn.Linear(2, 1)
+
+    def forward(self, batch_inputs, labels, mode='tensor'):
+        labels = torch.stack(labels)
+        output1 = self.linear1(batch_inputs)
+        output2 = self.linear2(batch_inputs)
+
+        if mode == 'tensor':
+            return output1, output2
+        elif mode == 'loss':
+            loss1 = (labels - output1).sum()
+            loss2 = (labels - output2).sum()
+            outputs = dict(linear1=loss1, linear2=loss2)
+            return outputs
+        elif mode == 'predict':
+            return output1, output2
+
+    def train_step(self, data, optim_wrapper):
+        batch_inputs, batch_labels = self.data_preprocessor(data)
+        loss = self(batch_inputs, batch_labels, mode='loss')
+        optim_wrapper['linear1'].update_params(loss['linear1'])
+        optim_wrapper['linear2'].update_params(loss['linear2'])
+        return loss
+
+
 @MODEL_WRAPPERS.register_module()
 class CustomModelWrapper(nn.Module):
 
-    def __init__(self, model):
+    def __init__(self, module):
         super().__init__()
-        self.model = model
+        self.model = module
 
 
 @OPTIM_WRAPPER_CONSTRUCTORS.register_module()
@@ -294,7 +323,6 @@ class TestRunner(TestCase):
             custom_hooks=[],
             default_hooks=dict(
                 runtime_info=dict(type='RuntimeInfoHook'),
-                optimizer=dict(type='OptimizerHook', grad_clip=None),
                 timer=dict(type='IterTimerHook'),
                 logger=dict(type='LoggerHook'),
                 param_scheduler=dict(type='ParamSchedulerHook'),
@@ -314,7 +342,6 @@ class TestRunner(TestCase):
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
-            optimizer=dict(type='OptimizerHook', grad_clip=None),
             timer=dict(type='IterTimerHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
@@ -649,13 +676,21 @@ class TestRunner(TestCase):
         self.assertFalse(model.initiailzed)
 
     def test_wrap_model(self):
-        # TODO: test on distributed environment
         # custom model wrapper
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_wrap_model'
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, CustomModelWrapper)
+        self.assertIsInstance(runner.model, BaseModel)
+        if torch.cuda.is_available():
+            os.environ['MASTER_ADDR'] = '127.0.0.1'
+            os.environ['MASTER_PORT'] = '29515'
+            os.environ['RANK'] = str(0)
+            os.environ['WORLD_SIZE'] = str(1)
+            cfg.launcher = 'pytorch'
+            cfg.experiment_name = 'test_wrap_model1'
+            runner = Runner.from_cfg(cfg)
+            self.assertIsInstance(runner.model, CustomModelWrapper)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1270,35 +1305,35 @@ class TestRunner(TestCase):
 
         # register 7 hooks by default
         runner.register_default_hooks()
-        self.assertEqual(len(runner._hooks), 7)
+        self.assertEqual(len(runner._hooks), 6)
         # the third registered hook should be `DistSamplerSeedHook`
-        self.assertTrue(isinstance(runner._hooks[3], DistSamplerSeedHook))
+        self.assertTrue(isinstance(runner._hooks[2], DistSamplerSeedHook))
         # the fifth registered hook should be `ParamSchedulerHook`
-        self.assertTrue(isinstance(runner._hooks[5], ParamSchedulerHook))
+        self.assertTrue(isinstance(runner._hooks[4], ParamSchedulerHook))
 
         runner._hooks = []
         # remove `ParamSchedulerHook` from default hooks
         runner.register_default_hooks(hooks=dict(timer=None))
-        self.assertEqual(len(runner._hooks), 6)
+        self.assertEqual(len(runner._hooks), 5)
         # `ParamSchedulerHook` was popped so the fifth is `CheckpointHook`
-        self.assertTrue(isinstance(runner._hooks[5], CheckpointHook))
+        self.assertTrue(isinstance(runner._hooks[4], CheckpointHook))
 
         # add a new default hook
         runner._hooks = []
         runner.register_default_hooks(hooks=dict(ToyHook=dict(type='ToyHook')))
-        self.assertEqual(len(runner._hooks), 8)
-        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_custom_hooks'
         runner = Runner.from_cfg(cfg)
 
-        self.assertEqual(len(runner._hooks), 7)
+        self.assertEqual(len(runner._hooks), 6)
         custom_hooks = [dict(type='ToyHook')]
         runner.register_custom_hooks(custom_hooks)
-        self.assertEqual(len(runner._hooks), 8)
-        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_register_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1309,8 +1344,8 @@ class TestRunner(TestCase):
         custom_hooks = [dict(type='ToyHook')]
         runner.register_hooks(custom_hooks=custom_hooks)
         # six default hooks + custom hook (ToyHook)
-        self.assertEqual(len(runner._hooks), 8)
-        self.assertTrue(isinstance(runner._hooks[7], ToyHook))
+        self.assertEqual(len(runner._hooks), 7)
+        self.assertTrue(isinstance(runner._hooks[6], ToyHook))
 
     def test_custom_loop(self):
         # test custom loop with additional hook
@@ -1346,12 +1381,11 @@ class TestRunner(TestCase):
             def warmup_iter(self, data_batch):
                 self.runner.call_hook(
                     'before_warmup_iter', data_batch=data_batch)
-                self.runner.outputs = self.runner.model(
-                    data_batch, return_loss=True)
+                train_logs = self.runner.model.train_step(
+                    data_batch, self.runner.optim_wrapper)
+                self.runner.message_hub.update_info('train_logs', train_logs)
                 self.runner.call_hook(
-                    'after_warmup_iter',
-                    data_batch=data_batch,
-                    outputs=self.runner.outputs)
+                    'after_warmup_iter', data_batch=data_batch)
 
         before_warmup_iter_results = []
         after_warmup_iter_results = []
@@ -1513,8 +1547,8 @@ class TestRunner(TestCase):
             linear2=dict(
                 type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
             constructor='ToyMultipleOptimizerConstructor')
+        cfg.model = dict(type='TopGANModel')
         # disable OptimizerHook because it only works with one optimizer
-        cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.train()
         path = osp.join(self.temp_dir, 'epoch_3.pth')
@@ -1533,8 +1567,8 @@ class TestRunner(TestCase):
             linear2=dict(
                 type='OptimWrapper', optimizer=dict(type='Adam', lr=0.03)),
             constructor='ToyMultipleOptimizerConstructor')
+        cfg.model = dict(type='TopGANModel')
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
-        cfg.default_hooks = dict(optimizer=None)
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
         self.assertIsInstance(runner.optim_wrapper, OptimWrapperDict)

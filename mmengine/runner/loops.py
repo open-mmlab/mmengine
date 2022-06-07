@@ -99,15 +99,20 @@ class EpochBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be a dict containing one or multiple loss tensors
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+        # Enable gradient accumulation mode and avoid unnecessary gradient
+        # synchronization during gradient accumulation process.
+        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
+                                                       self._iter,
+                                                       self._max_iters):
+            # outputs should be a dict of loss.
+            outputs = self.runner.model.train_step(
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=idx,
             data_batch=data_batch,
-            outputs=self.runner.outputs)
-
+            outputs=outputs)
         self._iter += 1
 
 
@@ -197,14 +202,21 @@ class IterBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
-        # outputs should be a dict containing loss tensor
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+        # Enable gradient accumulation mode and avoid unnecessary gradient
+        # synchronization during gradient accumulation process.
+        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
+                                                       self._iter,
+                                                       self._max_iters):
+            # train_logs should be a dict of loss.
+            train_logs = self.runner.model.train_step(
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
+        self.runner.message_hub.update_info('train_logs', train_logs)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self._iter,
             data_batch=data_batch,
-            outputs=self.runner.outputs)
+            outputs=train_logs)
         self._iter += 1
 
 
@@ -247,7 +259,6 @@ class ValLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
 
@@ -262,7 +273,7 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        outputs = self.runner.model(data_batch)
+        outputs = self.runner.model.val_step(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
             'after_val_iter',
@@ -310,7 +321,6 @@ class TestLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
 
@@ -324,7 +334,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model(data_batch)
+        predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',
