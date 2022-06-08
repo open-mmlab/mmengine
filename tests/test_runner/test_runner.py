@@ -1449,6 +1449,9 @@ class TestRunner(TestCase):
         self.assertEqual(ckpt['meta']['seed'], runner.seed)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
+        self.assertIsInstance(ckpt['message_hub'], MessageHub)
+        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 3)
+        self.assertEqual(ckpt['message_hub'].get_info('iter'), 12)
 
         # 1.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1482,6 +1485,9 @@ class TestRunner(TestCase):
         self.assertEqual(runner.optim_wrapper.param_groups[0]['lr'], 0.0001)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertEqual(runner.param_schedulers[0].milestones, {1: 1, 2: 1})
+        self.assertIsInstance(runner.message_hub, MessageHub)
+        self.assertEqual(runner.message_hub.get_info('epoch'), 3)
+        self.assertEqual(runner.message_hub.get_info('iter'), 12)
 
         # 1.3.2 test resume with unmatched dataset_meta
         ckpt_modified = copy.deepcopy(ckpt)
@@ -1612,6 +1618,9 @@ class TestRunner(TestCase):
         # self.assertEqual(ckpt['meta']['hook_msgs']['last_ckpt'], path)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
+        self.assertIsInstance(ckpt['message_hub'], MessageHub)
+        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 0)
+        self.assertEqual(ckpt['message_hub'].get_info('iter'), 12)
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
@@ -1632,6 +1641,8 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+        self.assertEqual(runner.message_hub.get_info('epoch'), 0)
+        self.assertEqual(runner.message_hub.get_info('iter'), 12)
 
         # 2.4 test auto resume
         cfg = copy.deepcopy(self.iter_based_cfg)

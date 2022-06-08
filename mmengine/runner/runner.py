@@ -1826,6 +1826,8 @@ class Runner:
                 'check the correctness of the checkpoint or the training '
                 'dataset.')
 
+        self.message_hub = checkpoint['message_hub']
+
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
             self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
@@ -1930,8 +1932,12 @@ class Runner:
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self.epoch + 1`
+            self.message_hub.update_info('epoch', self.epoch + 1)
+            self.message_hub.update_info('iter', self.iter)
             meta.update(epoch=self.epoch + 1, iter=self.iter)
         else:
+            self.message_hub.update_info('epoch', self.epoch)
+            self.message_hub.update_info('iter', self.iter + 1)
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
         filepath = osp.join(out_dir, filename)
@@ -1951,7 +1957,8 @@ class Runner:
 
         checkpoint = {
             'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model))
+            'state_dict': weights_to_cpu(get_state_dict(model)),
+            'message_hub': self.message_hub
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
