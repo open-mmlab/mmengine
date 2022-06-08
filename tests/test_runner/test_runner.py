@@ -1118,7 +1118,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
         self.assertEqual(runner.optim_wrapper._inner_count, 12)
-        self.assertEqual(runner.optim_wrapper.max_iters, 12)
+        self.assertEqual(runner.optim_wrapper.max_counts, 12)
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
 
@@ -1166,7 +1166,7 @@ class TestRunner(TestCase):
         runner.train()
 
         self.assertEqual(runner.optim_wrapper._inner_count, 12)
-        self.assertEqual(runner.optim_wrapper.max_iters, 12)
+        self.assertEqual(runner.optim_wrapper.max_counts, 12)
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
 
         self.assertEqual(len(epoch_results), 1)

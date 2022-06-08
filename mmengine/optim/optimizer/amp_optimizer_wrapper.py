@@ -105,7 +105,9 @@ class AmpOptimWrapper(OptimWrapper):
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
-    def optimizer_context(self, model: nn.Module):
-        # TODO """"""
-        with super().optimizer_context(model), torch.cuda.amp.autocast():
+    def optim_context(self, model: nn.Module):
+        """Enables the context for mixed precision training, and enables the
+        context for disabling gradient synchronization during gradient
+        accumulation context."""
+        with super().optim_context(model), torch.cuda.amp.autocast():
             yield

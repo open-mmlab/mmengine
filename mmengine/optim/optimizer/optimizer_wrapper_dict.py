@@ -56,7 +56,7 @@ class OptimWrapperDict(OptimWrapper):
                 warnings.warn(
                     f'The `accumulative_iters` of {key} is '
                     f'{value.accumulative_iters}. OptimWrapperDict '
-                    'will not enable any `optimizer_context` context of its '
+                    'will not enable any `optim_context` context of its '
                     'optimizer wrappers. You should access the corresponding '
                     'optimizer wrapper to enable the context.')
         self.optim_wrappers = optim_wrapper_dict
@@ -96,15 +96,22 @@ class OptimWrapperDict(OptimWrapper):
             optim_wrapper.zero_grad()
 
     @contextmanager
-    def optimizer_context(self, model: nn.Module):
-        # TODO
-        """"""
-        raise NotImplementedError('You should access the OptimWrapper of the '
-                                  'OptimWrapperDict and call its '
-                                  '`optimizer_context`')
+    def optim_context(self, model: nn.Module):
+        """``optim_context`` should not be called by each optimizer
+        separately."""
+        raise NotImplementedError(
+            '``optim_context`` should not be called by each optimizer '
+            'separately')
 
     def initilize_iter_status(self, model: nn.Module, cur_iter,
                               max_iters) -> None:
+        """Do nothing but providing unified interface for :obj:`OptimWrapper`
+
+        Since ``OptimWrapperDict`` does not know the correspondence between
+        model and optimizer wrapper. ``initilize_iter_status`` will do nothing
+        and each optimizer wrapper should call ``initilize_iter_status``
+        separately.
+        """
         return
 
     def load_state_dict(self, state_dict: dict) -> None:

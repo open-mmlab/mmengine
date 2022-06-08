@@ -45,7 +45,7 @@ class ToyModel2(nn.Module):
 
 
 class TestOptimWrapper(MultiProcessTestCase):
-    # Test `OptimWrapper.optimizer_context` will block the gradient
+    # Test `OptimWrapper.optim_context` will block the gradient
     # synchronization when using gradient accumulation strategy in distributed
     # data parallel training.
     def setUp(self) -> None:
@@ -67,7 +67,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.assertIs(optim_wrapper.logger, self.logger)
         self.assertIs(optim_wrapper.message_hub, self.message_hub)
         self.assertEqual(optim_wrapper._inner_count, 0)
-        self.assertEqual(optim_wrapper.max_iters, int(1e9))
+        self.assertEqual(optim_wrapper.max_counts, int(1e9))
         self.assertEqual(optim_wrapper.divisible_iters, int(1e9))
         self.assertEqual(optim_wrapper.remainder_iters, 1)
 
@@ -81,7 +81,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         self._mock_method(optim_wrapper)
         loss = torch.tensor(1)
         optim_wrapper.update_params(loss)
-        optim_wrapper.backward.assert_called_with(torch.tensor(1))
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
         optim_wrapper.step.assert_called_with()
         optim_wrapper.zero_grad.assert_called_with()
 
@@ -91,12 +91,13 @@ class TestOptimWrapper(MultiProcessTestCase):
         # `iter=0`, accumulate gradient and do not update params.
         loss = torch.tensor(1)
         optim_wrapper.update_params(loss)
-        optim_wrapper.backward.assert_called_with(torch.tensor(1) / 3)
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1) / 3)
         optim_wrapper.step.assert_not_called()
         optim_wrapper.zero_grad.assert_not_called()
 
         # gradient accumulate
         optim_wrapper.update_params(loss)
+        self.assertEqual(optim_wrapper._inner_count, 2)
 
         # `iter=2`, update params.
         optim_wrapper.update_params(loss)
@@ -109,7 +110,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_not_called()
         optim_wrapper.zero_grad.assert_not_called()
-        optim_wrapper.backward.assert_called_with(torch.tensor(1) / 3)
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1) / 3)
         self._mock_method(optim_wrapper)
 
         # After calling `initilize_iter_status`, params will be updated at the
@@ -118,7 +119,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_called()
         optim_wrapper.zero_grad.assert_called()
-        optim_wrapper.backward.assert_called_with(1)
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
 
     def test_initilize_iter_status(self):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
@@ -203,7 +204,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.assertEqual(optim_wrapper.param_groups,
                          self.optimizer.param_groups)
 
-    def test_optimizer_context(self):
+    def test_optim_context(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel2()
         ddp_model = DistributedDataParallel(model)
@@ -223,18 +224,20 @@ class TestOptimWrapper(MultiProcessTestCase):
         # divided by `optim_wrapper.accumulative_iters`
         optim_wrapper = OptimWrapper(optimizer, accumulative_iters=3)
         optim_wrapper.initilize_iter_status(model, 0, 100)
-        with optim_wrapper.optimizer_context(ddp_model):
-            ddp_model(inputs).sum().backward()
-            all_grads = all_gather(model.conv.weight.grad)
-            with self.assertRaises(AssertionError):
-                assert_allclose(all_grads[0], all_grads[1])
+        with optim_wrapper.optim_context(ddp_model):
+            loss = ddp_model(inputs).sum()
+        loss.backward()
+        all_grads = all_gather(model.conv.weight.grad)
+        with self.assertRaises(AssertionError):
+            assert_allclose(all_grads[0], all_grads[1])
 
         # sync grads if `cur_iter == 2`
         optim_wrapper.initilize_iter_status(model, 2, 100)
-        with optim_wrapper.optimizer_context(ddp_model):
-            ddp_model(inputs).sum().backward()
-            all_grads = all_gather(model.conv.weight.grad)
-            assert_allclose(all_grads[0], all_grads[1])
+        with optim_wrapper.optim_context(ddp_model):
+            loss = ddp_model(inputs).sum()
+        loss.backward()
+        all_grads = all_gather(model.conv.weight.grad)
+        assert_allclose(all_grads[0], all_grads[1])
 
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
@@ -247,7 +250,12 @@ class TestOptimWrapper(MultiProcessTestCase):
     # TODO Test the real interface after add testing tool function which can
     #  test the function or method is read called.
     def _mock_method(self, optim_wrapper):
-        optim_wrapper.backward = MagicMock()
+
+        def mock_methd(loss):
+            optim_wrapper._inner_count += 1
+            optim_wrapper.scaled_loss = loss
+
+        optim_wrapper.backward = mock_methd
         optim_wrapper.step = MagicMock()
         optim_wrapper.zero_grad = MagicMock()
 
@@ -363,9 +371,9 @@ class TestAmpOptimWrapper(TestCase):
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
-    def test_optimizer_context(self):
+    def test_optim_context(self):
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
-        with amp_optim_wrapper.optimizer_context(self.model):
+        with amp_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)
