@@ -52,8 +52,8 @@ class LoggerHook(Hook):
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Defaults to None.
         log_metric_by_epoch (bool):Whether to output metric in validation step
-            by epoch.It can be true when it run in epoch based runner.If set to
-            True,`after_val_epoch` will set `step` to self.epoch in
+            by epoch.It can be true when running in epoch based runner.
+            If set to True,`after_val_epoch` will set `step` to self.epoch in
             `runner.visualizer.add_scalars`.Otherwise `step` will be self.iter.
             Default to True.
 
