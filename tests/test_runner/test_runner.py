@@ -697,7 +697,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_scale_lr'
         runner = Runner.from_cfg(cfg)
 
-        # When no base_batch_size in auto_scale_lr_cfg, an
+        # When no base_batch_size in auto_scale_lr, an
         # assertion error will raise.
         auto_scale_lr = dict(enable=True)
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
