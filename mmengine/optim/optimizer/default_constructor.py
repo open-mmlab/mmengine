@@ -216,6 +216,9 @@ class DefaultOptimWrapperConstructor:
                     if self.base_wd is not None:
                         decay_mult = custom_keys[key].get('decay_mult', 1.)
                         param_group['weight_decay'] = self.base_wd * decay_mult
+                    # add custom settings to param_group
+                    for k, v in custom_keys[key].items():
+                        param_group[k] = v
                     break
 
             if not is_custom:
