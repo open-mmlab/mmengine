@@ -1519,7 +1519,6 @@ class Runner:
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
-
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr_cfg)
 
@@ -1531,9 +1530,13 @@ class Runner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
-
+        # Initiate inner count of `optim_wrapper`.
+        self.optim_wrapper.initilize_iter_status(
+            self.model,
+            self._train_loop.iter,  # type: ignore
+            self._train_loop.max_iters)  # type: ignore
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 

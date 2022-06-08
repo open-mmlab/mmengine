@@ -90,7 +90,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
             Dict[str, torch.Tensor]: A ``dict`` of tensor for logging.
         """
         # enable automatic mixed precision training context.
-        with optim_wrapper.precision_context():
+        with optim_wrapper.optimizer_context(self):
             batch_inputs, data_samples = self.module.data_preprocessor(
                 data, training=True)
             losses = self(batch_inputs, data_samples, mode='loss')

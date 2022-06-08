@@ -45,7 +45,7 @@ class ToyModel2(nn.Module):
 
 
 class TestOptimWrapper(MultiProcessTestCase):
-    # Test `OptimWrapper.accumulate_grad` will block the gradient
+    # Test `OptimWrapper.optimizer_context` will block the gradient
     # synchronization when using gradient accumulation strategy in distributed
     # data parallel training.
     def setUp(self) -> None:
@@ -61,14 +61,18 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_init(self):
         optim_wrapper = OptimWrapper(self.optimizer)
-        self.assertEqual(optim_wrapper.optimizer, self.optimizer)
+        self.assertIs(optim_wrapper.optimizer, self.optimizer)
         self.assertIsNone(optim_wrapper.clip_grad_kwargs)
         self.assertEqual(optim_wrapper.accumulative_iters, 1)
         self.assertIs(optim_wrapper.logger, self.logger)
         self.assertIs(optim_wrapper.message_hub, self.message_hub)
+        self.assertEqual(optim_wrapper._inner_count, 0)
+        self.assertEqual(optim_wrapper.max_iters, int(1e9))
+        self.assertEqual(optim_wrapper.divisible_iters, int(1e9))
+        self.assertEqual(optim_wrapper.remainder_iters, 1)
 
         with self.assertRaisesRegex(AssertionError,
-                                    'If `clip_grad_kwargs` is not None'):
+                                    'If `clip_grad` is not None'):
             OptimWrapper(self.optimizer, clip_grad=[])
 
     def test_update_params(self):
@@ -81,74 +85,59 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.step.assert_called_with()
         optim_wrapper.zero_grad.assert_called_with()
 
-        with optim_wrapper.accumulate_grad(self.model, 2, 100):
-            optim_wrapper.update_params(torch.tensor(1))
-            optim_wrapper.backward.assert_called_with(torch.tensor(1))
-            optim_wrapper.step.assert_called_with()
-            optim_wrapper.zero_grad.assert_called_with()
-
-        # It will raise an error if `accumulative_iters > 1` and
-        # `accumulate_grad` is not enabled.
+        # Test gradient accumulation.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         self._mock_method(optim_wrapper)
-        with self.assertRaisesRegex(AssertionError,
-                                    'gradient accumulation must be'):
-            optim_wrapper.update_params(loss)
+        # `iter=0`, accumulate gradient and do not update params.
+        loss = torch.tensor(1)
+        optim_wrapper.update_params(loss)
+        optim_wrapper.backward.assert_called_with(torch.tensor(1) / 3)
+        optim_wrapper.step.assert_not_called()
+        optim_wrapper.zero_grad.assert_not_called()
 
-        # `iter=0`, Call `optimizer_step` first time.
-        with optim_wrapper.accumulate_grad(
-                self.model, cur_iter=0, max_iters=100):
-            loss = torch.tensor(1)
-            optim_wrapper.update_params(loss)
-            optim_wrapper.backward.assert_called_with(torch.tensor(1) / 3)
-            optim_wrapper.step.assert_not_called()
-            optim_wrapper.zero_grad.assert_not_called()
+        # gradient accumulate
+        optim_wrapper.update_params(loss)
 
-        # `iter=2`, Call `optimizer_step` first time.
-        with optim_wrapper.accumulate_grad(
-                self.model, cur_iter=2, max_iters=100):
-            optim_wrapper.update_params(loss)
-            optim_wrapper.step.assert_called()
-            optim_wrapper.zero_grad.assert_called()
+        # `iter=2`, update params.
+        optim_wrapper.update_params(loss)
+        optim_wrapper.step.assert_called()
+        optim_wrapper.zero_grad.assert_called()
         self._mock_method(optim_wrapper)
-        # Test end of training.
-        with optim_wrapper.accumulate_grad(
-                self.model, cur_iter=99, max_iters=100):
-            optim_wrapper.update_params(loss)
-            optim_wrapper.step.assert_called()
-            optim_wrapper.zero_grad.assert_called()
-            optim_wrapper.backward.assert_called_with(1)
 
-        # If ``accumulative_iters > 1``, call ``update_params`` with
-        # non-accumulate_grad context will raise an Assertion error
-        optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=1)
-        optim_wrapper.accumulative_iters = 2
-        with self.assertRaisesRegex(AssertionError,
-                                    'gradient accumulation must be performed'):
-            optim_wrapper.update_params(loss)
+        # Test end of training without calling `initilize_iter_status`
+        optim_wrapper._inner_count = 99
+        optim_wrapper.update_params(loss)
+        optim_wrapper.step.assert_not_called()
+        optim_wrapper.zero_grad.assert_not_called()
+        optim_wrapper.backward.assert_called_with(torch.tensor(1) / 3)
+        self._mock_method(optim_wrapper)
+
+        # After calling `initilize_iter_status`, params will be updated at the
+        # last iteration, and the `loss_scaler` will be adjusted.
+        optim_wrapper.initilize_iter_status(self.model, 99, 100)
+        optim_wrapper.update_params(loss)
+        optim_wrapper.step.assert_called()
+        optim_wrapper.zero_grad.assert_called()
+        optim_wrapper.backward.assert_called_with(1)
 
     def test_initilize_iter_status(self):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
-        optim_wrapper._initilize_iter_status(self.model)
-        self.assertEqual(optim_wrapper.divisible_iters, 0)
-        self.assertEqual(optim_wrapper.remainder_iters, 0)
+        optim_wrapper.initilize_iter_status(self.model, 0, 100)
+        self.assertEqual(optim_wrapper.divisible_iters, 99)
+        self.assertEqual(optim_wrapper.remainder_iters, 1)
 
         # Indivisible cur_iter will output warning.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
-        optim_wrapper.cur_iter = 0
-        optim_wrapper.max_iters = 100
         with self.assertLogs(self.logger) as cm:
-            optim_wrapper._initilize_iter_status(self.model)
+            optim_wrapper.initilize_iter_status(self.model, 2, 100)
             self.assertEqual(len(cm.output), 1)
             self.assertRegex(cm.records[0].msg, 'Resume iter number is not')
 
         # Model with batch norm will output warning.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
-        optim_wrapper.cur_iter = 0
-        optim_wrapper.max_iters = 99
         model = nn.BatchNorm2d(1)
         with self.assertLogs(self.logger) as cm:
-            optim_wrapper._initilize_iter_status(model)
+            optim_wrapper.initilize_iter_status(model, 0, 99)
             self.assertEqual(len(cm.output), 1)
             self.assertRegex(cm.records[0].msg, 'Gradient accumulative')
 
@@ -214,40 +203,38 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.assertEqual(optim_wrapper.param_groups,
                          self.optimizer.param_groups)
 
-    def test_accumulate_grad(self):
+    def test_optimizer_context(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel2()
         ddp_model = DistributedDataParallel(model)
         optimizer = SGD(ddp_model.parameters(), lr=0.01)
         optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
         optim_wrapper.zero_grad()
-        with optim_wrapper.accumulate_grad(ddp_model, 0, 100):
-            # Automatically sync grads if `accumulative_iters` = 1
-            inputs = torch.randn(1, 1, 1, 1) * self.rank
-            ddp_model(inputs).sum().backward()
-            grad = model.conv.weight.grad
-            all_grads = all_gather(grad)
-            assert_allclose(all_grads[0], all_grads[1])
+
+        # Automatically sync grads if `accumulative_iters` = 1
+        optim_wrapper.initilize_iter_status(model, 0, 100)
+        inputs = torch.randn(1, 1, 1, 1) * self.rank
+        ddp_model(inputs).sum().backward()
+        grad = model.conv.weight.grad
+        all_grads = all_gather(grad)
+        assert_allclose(all_grads[0], all_grads[1])
 
         # Do not sync grads when `optim_wrapper.cur_iter` cannot be
         # divided by `optim_wrapper.accumulative_iters`
         optim_wrapper = OptimWrapper(optimizer, accumulative_iters=3)
-        with optim_wrapper.accumulate_grad(ddp_model, 0, 100):
+        optim_wrapper.initilize_iter_status(model, 0, 100)
+        with optim_wrapper.optimizer_context(ddp_model):
             ddp_model(inputs).sum().backward()
             all_grads = all_gather(model.conv.weight.grad)
             with self.assertRaises(AssertionError):
                 assert_allclose(all_grads[0], all_grads[1])
 
         # sync grads if `cur_iter == 2`
-        with optim_wrapper.accumulate_grad(ddp_model, 2, 100):
+        optim_wrapper.initilize_iter_status(model, 2, 100)
+        with optim_wrapper.optimizer_context(ddp_model):
             ddp_model(inputs).sum().backward()
             all_grads = all_gather(model.conv.weight.grad)
             assert_allclose(all_grads[0], all_grads[1])
-
-    def test_precision_context(self):
-        optim_wrapper = OptimWrapper(self.optimizer)
-        with optim_wrapper.precision_context():
-            pass
 
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
@@ -376,9 +363,9 @@ class TestAmpOptimWrapper(TestCase):
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
-    def test_precision_context(self):
+    def test_optimizer_context(self):
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
-        with amp_optim_wrapper.precision_context():
+        with amp_optim_wrapper.optimizer_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)

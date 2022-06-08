@@ -1116,8 +1116,9 @@ class TestRunner(TestCase):
         cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
         cfg.train_cfg = dict(by_epoch=True, max_epochs=3, val_begin=2)
         runner = Runner.from_cfg(cfg)
-
         runner.train()
+        self.assertEqual(runner.optim_wrapper._inner_count, 12)
+        self.assertEqual(runner.optim_wrapper.max_iters, 12)
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
 
@@ -1164,6 +1165,8 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
+        self.assertEqual(runner.optim_wrapper._inner_count, 12)
+        self.assertEqual(runner.optim_wrapper.max_iters, 12)
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
 
         self.assertEqual(len(epoch_results), 1)

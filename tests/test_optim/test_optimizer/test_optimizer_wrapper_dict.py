@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from contextlib import contextmanager
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -37,33 +36,6 @@ class TestOptimWrapperDict(TestCase):
             optim_wrapper2 = OptimWrapper(
                 optimizer=self.optim2, accumulative_iters=2)
             OptimWrapperDict(optim1=self.optim_wrapper1, optim2=optim_wrapper2)
-
-    def test_accumulate_grad(self):
-
-        @contextmanager
-        def context_a(a, b, *args, **kwargs):
-            a[0] = 100
-            yield
-            a[0] = 1
-
-        @contextmanager
-        def context_b(a, b, *args, **kwargs):
-            b[0] = 200
-            yield
-            b[0] = 2
-
-        a = [0]
-        b = [0]
-        # Test enter the context both of `optim_wrapper1` and `optim_wrapper1`.
-        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
-        self.optim_wrapper1.accumulate_grad = context_a
-        self.optim_wrapper2.accumulate_grad = context_b
-        with optim_wrapper_dict.accumulate_grad(a, b, 0):
-            self.assertEqual(a[0], 100)
-            self.assertEqual(b[0], 200)
-
-        self.assertEqual(a[0], 1)
-        self.assertEqual(b[0], 2)
 
     def test_state_dict(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)

@@ -8,9 +8,10 @@ import torch.distributed as torch_dist
 import torch.nn as nn
 from torch.optim import SGD
 
+from mmengine.dist import all_gather
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             MMSeparateDistributedDataParallel)
-from mmengine.optim import OptimWrapper, OptimWrapperDict
+from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 
@@ -23,9 +24,9 @@ class ToyModel(BaseModel):
         self.conv2 = nn.Conv2d(1, 1, 1)
 
     def forward(self, x, data_samples=None, mode='tensor'):
+        x = self.conv1(x)
+        x = self.conv2(x)
         if mode == 'loss':
-            x = self.conv1(x)
-            x = self.conv2(x)
             return dict(loss=x)
         elif mode == 'predict':
             return x
@@ -58,24 +59,41 @@ class ComplexModel(BaseModel):
         pass
 
 
-class TestModelWrapper(MultiProcessTestCase):
+class TestDistributedDataParallel(MultiProcessTestCase):
 
     def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
 
+    @unittest.skipIf(
+        not torch.cuda.is_available(), reason='cuda should be available')
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
-        # Test `optim_wrapper` is a instance of `OptimWrapper`
-        model = ToyModel()
+        # Mixed precision training and gradient asynchronous should be valid at
+        # the same time
+        model = ToyModel().cuda()
         ddp_model = MMDistributedDataParallel(module=model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
-        optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        optim_wrapper = AmpOptimWrapper(
+            optimizer=optimizer, accumulative_iters=3)
+        inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
+        res = ddp_model.train_step([data], optim_wrapper=optim_wrapper)['loss']
+        self.assertIs(res.dtype, torch.float16)
+        grad = ddp_model.module.conv1.weight.grad
+        all_grads = all_gather(grad)
+        with self.assertRaises(AssertionError):
+            assert_allclose(all_grads[0], all_grads[1])
+
+        # Gradient accumulation
+        ddp_model.train_step([data], optim_wrapper=optim_wrapper)
+
+        # Test update params and clean grads.
         ddp_model.train_step([data], optim_wrapper=optim_wrapper)
         grad = ddp_model.module.conv1.weight.grad
-        assert_allclose(grad, torch.zeros_like(grad))
+        all_grads = all_gather(grad)
+        assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
+        assert_allclose(all_grads[1], torch.zeros_like(all_grads[0]))
 
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -107,7 +125,7 @@ class TestModelWrapper(MultiProcessTestCase):
 
 @unittest.skipIf(
     not torch.cuda.is_available(), reason='cuda should be available')
-class TestMMSeparateDistributedDataParallel(TestModelWrapper):
+class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
 
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)

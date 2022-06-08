@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from typing import Dict, Iterator, List, Tuple
 
 import torch
@@ -56,7 +56,7 @@ class OptimWrapperDict(OptimWrapper):
                 warnings.warn(
                     f'The `accumulative_iters` of {key} is '
                     f'{value.accumulative_iters}. OptimWrapperDict '
-                    'will not enable any `accumulate_grad` context of its '
+                    'will not enable any `optimizer_context` context of its '
                     'optimizer wrappers. You should access the corresponding '
                     'optimizer wrapper to enable the context.')
         self.optim_wrappers = optim_wrapper_dict
@@ -96,31 +96,16 @@ class OptimWrapperDict(OptimWrapper):
             optim_wrapper.zero_grad()
 
     @contextmanager
-    def optimizer_context(self, model: nn.Module, cur_iter: int,
-                          max_iters: int):
-        """Enable ``accumulate_grad`` contexts of all optimizer wrappers.
+    def optimizer_context(self, model: nn.Module):
+        # TODO
+        """"""
+        raise NotImplementedError('You should access the OptimWrapper of the '
+                                  'OptimWrapperDict and call its '
+                                  '`optimizer_context`')
 
-        Warning:
-            Consider there is only one ``model`` arguments for all
-            optimizer wrappers, all optimizer wrappers are working under the
-            same ``model.no_sync`` context. For example, there is a model
-            composed of model_a(optimizer_a) and model_b(optimizer_b).
-            ``OptimWrapperDict.accumulate_grad`` will further
-            call ``model.no_sync``, which will block the gradient
-            synchronization of both a and b. If optimizer_a and
-            optimizer_b have different ``accumulative_iters``, and want to
-            block the gradient synchronization of model_a and model_b
-            separately, the model should not implement the ``no_sync``
-            method(or enable an empty context). The ``accumulate_grad`` context
-            should be enabled inside the model by accessing corresponding
-            optimizer wrapper.
-        """
-        with ExitStack() as stack:
-            for optim_wrapper in self.optim_wrappers.values():
-                stack.enter_context(
-                    optim_wrapper.optimizer_context(model, cur_iter,
-                                                    max_iters))
-            yield
+    def initilize_iter_status(self, model: nn.Module, cur_iter,
+                              max_iters) -> None:
+        return
 
     def load_state_dict(self, state_dict: dict) -> None:
         """Load the state dictionary from the ``state_dict``.

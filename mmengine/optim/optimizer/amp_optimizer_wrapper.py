@@ -105,8 +105,7 @@ class AmpOptimWrapper(OptimWrapper):
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
-    def optimizer_context(self, model: nn.Module, cur_iter: int,
-                          max_iters: int):
-        with super().optimizer_context(model, cur_iter, max_iters), \
-                torch.cuda.amp.autocast():
+    def optimizer_context(self, model: nn.Module):
+        # TODO """"""
+        with super().optimizer_context(model), torch.cuda.amp.autocast():
             yield
