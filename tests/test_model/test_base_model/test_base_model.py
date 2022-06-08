@@ -25,7 +25,7 @@ class CustomDataPreprocessor(BaseDataPreprocessor):
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
-        super().__init__(None, data_preprocessor=data_preprocessor)
+        super().__init__(data_preprocessor=data_preprocessor, init_cfg=None)
         self.conv = nn.Conv2d(3, 1, 1)
 
     def forward(self, batch_inputs, data_samples=None, mode='tensor'):
