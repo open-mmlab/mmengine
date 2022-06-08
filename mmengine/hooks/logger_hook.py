@@ -51,10 +51,11 @@ class LoggerHook(Hook):
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Defaults to None.
-        out_metric_by_epoch (bool):Whether to output metric in validation step
-            by epoch.If set to True,`after_val_epoch` will set `step` to
-            self.epoch in `runner.visualizer.add_scalars`.Otherwise `step` will
-            be self.iter. Default to True.
+        log_metric_by_epoch (bool):Whether to output metric in validation step
+            by epoch.It can be true when it run in epoch based runner.If set to
+            True,`after_val_epoch` will set `step` to self.epoch in
+            `runner.visualizer.add_scalars`.Otherwise `step` will be self.iter.
+            Default to True.
 
     Examples:
         >>> # The simplest LoggerHook config.
@@ -71,7 +72,7 @@ class LoggerHook(Hook):
                                    str] = ('.json', '.log', '.py', 'yaml'),
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
-                 out_metric_by_epoch: bool = True):
+                 log_metric_by_epoch: bool = True):
         self.interval = interval
         self.ignore_last = ignore_last
         self.interval_exp_name = interval_exp_name
@@ -94,7 +95,7 @@ class LoggerHook(Hook):
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
-        self.out_metric_by_epoch = out_metric_by_epoch
+        self.log_metric_by_epoch = log_metric_by_epoch
 
     def before_run(self, runner) -> None:
         """Infer ``self.file_client`` from ``self.out_dir``. Initialize the
@@ -207,7 +208,7 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
-        if self.out_metric_by_epoch:
+        if self.log_metric_by_epoch:
             time_tags = {k: v for k, v in tag.items() if 'time' in k}
             metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
             runner.visualizer.add_scalars(
