@@ -19,7 +19,10 @@ class BaseAveragedModel(nn.Module):
     This class creates a copy of the provided module :attr:`model`
     on the device :attr:`device` and allows computing running averages of the
     parameters of the :attr:`model`.
-    The code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/optim/swa_utils.py
+    The code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/optim/swa_utils.py.
+    Different from the `AveragedModel` in PyTorch, we use in-place operation
+    to improve the parameter updating speed, which is about 5 times faster
+    than the non-in-place version.
 
     In mmengine, we provide two ways to use the model averaging:
     1. Use the model averaging module in hook:
