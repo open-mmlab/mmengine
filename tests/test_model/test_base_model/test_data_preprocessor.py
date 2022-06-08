@@ -13,7 +13,7 @@ class TestBaseDataPreprocessor(TestCase):
 
     def test_init(self):
         base_data_preprocessor = BaseDataPreprocessor()
-        self.assertEqual(base_data_preprocessor.device, 'cpu')
+        self.assertEqual(base_data_preprocessor._device, 'cpu')
 
     def test_forward(self):
         base_data_preprocessor = BaseDataPreprocessor()

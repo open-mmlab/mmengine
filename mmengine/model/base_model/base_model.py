@@ -189,7 +189,7 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.device = torch.device(device)
+        self.data_preprocessor.to(device)
         return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
@@ -199,7 +199,7 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.device = torch.cuda.current_device()
+        self.data_preprocessor.cuda()
         return super().cuda()
 
     @abstractmethod
