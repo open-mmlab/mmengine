@@ -29,8 +29,8 @@ from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
+                               LOOPS, MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
@@ -1211,7 +1211,11 @@ class Runner:
         if isinstance(evaluator, Evaluator):
             return evaluator
         elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            return Evaluator(evaluator)  # type: ignore
+            if 'type' in evaluator:
+                return EVALUATOR.build(evaluator)
+            else:
+                # use the default `Evaluator`
+                return Evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
                 'evaluator should be one of dict, list of dict, and Evaluator'
