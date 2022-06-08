@@ -114,7 +114,7 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             nn.Module: The model itself.
         """
-        self._device = torch.cuda.current_device()
+        self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
 
     def cpu(self, *args, **kwargs) -> nn.Module:
