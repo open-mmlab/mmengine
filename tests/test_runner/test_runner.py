@@ -260,7 +260,7 @@ class CustomRunner(Runner):
                  train_cfg=None,
                  val_cfg=None,
                  test_cfg=None,
-                 auto_scale_lr_cfg=None,
+                 auto_scale_lr=None,
                  optim_wrapper=None,
                  param_scheduler=None,
                  val_evaluator=None,
@@ -310,7 +310,7 @@ class TestRunner(TestCase):
                 sampler=dict(type='DefaultSampler', shuffle=False),
                 batch_size=3,
                 num_workers=0),
-            auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
+            auto_scale_lr=dict(base_batch_size=16, enable=False),
             optim_wrapper=dict(
                 type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -699,33 +699,33 @@ class TestRunner(TestCase):
 
         # When no base_batch_size in auto_scale_lr_cfg, an
         # assertion error will raise.
-        auto_scale_lr_cfg = dict(enable=True)
+        auto_scale_lr = dict(enable=True)
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         with self.assertRaises(AssertionError):
-            runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+            runner.scale_lr(optim_wrapper, auto_scale_lr)
 
-        # When auto_scale_lr_cfg is None or enable is False, the lr will
+        # When auto_scale_lr is None or enable is False, the lr will
         # not be linearly scaled.
-        auto_scale_lr_cfg = dict(base_batch_size=16, enable=False)
+        auto_scale_lr = dict(base_batch_size=16, enable=False)
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         runner.scale_lr(optim_wrapper)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
-        runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+        runner.scale_lr(optim_wrapper, auto_scale_lr)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
 
-        # When auto_scale_lr_cfg is correct and enable is True, the lr will
+        # When auto_scale_lr is correct and enable is True, the lr will
         # be linearly scaled.
-        auto_scale_lr_cfg = dict(base_batch_size=16, enable=True)
+        auto_scale_lr = dict(base_batch_size=16, enable=True)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
-        runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+        runner.scale_lr(optim_wrapper, auto_scale_lr)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'],
                          0.01 * (real_bs / 16))
 
         # Test when optim_wrapper is an OptimWrapperDict
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         wrapper_dict = OptimWrapperDict(wrapper=optim_wrapper)
-        runner.scale_lr(wrapper_dict, auto_scale_lr_cfg)
+        runner.scale_lr(wrapper_dict, auto_scale_lr)
         scaled_lr = wrapper_dict['wrapper'].optimizer.param_groups[0]['lr']
         self.assertEqual(scaled_lr, 0.01 * (real_bs / 16))
 
