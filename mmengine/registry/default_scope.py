@@ -77,7 +77,7 @@ class DefaultScope(ManagerMixin):
 
     @classmethod
     @contextmanager
-    def overwrite_default_scope(cls, scope_name: str) -> Generator:
+    def overwrite_default_scope(cls, scope_name: Optional[str]) -> Generator:
         """overwrite the current default scope with `scope_name`"""
         if scope_name is None:
             yield
