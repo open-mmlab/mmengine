@@ -84,5 +84,7 @@ class DefaultScope(ManagerMixin):
         else:
             tmp = copy.deepcopy(cls._instance_dict)
             cls.get_instance(f'overwrite-{time.time()}', scope_name=scope_name)
-            yield
-            cls._instance_dict = tmp
+            try:
+                yield
+            finally:
+                cls._instance_dict = tmp
