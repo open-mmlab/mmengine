@@ -33,7 +33,7 @@ class BaseDataPreprocessor(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self._device = 'cpu'
+        self._device = torch.device('cpu')
 
     def collate_data(
             self,
@@ -90,6 +90,10 @@ class BaseDataPreprocessor(nn.Module):
         batch_inputs = torch.stack(inputs, dim=0)
         return batch_inputs, batch_data_samples
 
+    @property
+    def device(self):
+        return self._device
+
     def to(self, device: Optional[Union[int, torch.device]], *args,
            **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
@@ -119,7 +123,7 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             nn.Module: The model itself.
         """
-        self._device = 'cpu'
+        self._device = torch.device('cpu')
         return super().cpu()
 
 
