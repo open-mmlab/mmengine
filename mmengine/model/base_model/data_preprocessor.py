@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
-from ..utils import stach_batch_imgs
+from ..utils import stack_batch
 
 
 @MODELS.register_module()
@@ -113,6 +113,15 @@ class BaseDataPreprocessor(nn.Module):
         self._device = torch.cuda.current_device()
         return super().cuda()
 
+    def cpu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = 'cpu'
+        return super().cpu()
+
 
 @MODELS.register_module()
 class ImgDataPreprocessor(BaseDataPreprocessor):
@@ -203,6 +212,6 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         # Normalization.
         inputs = [(_input - self.mean) / self.std for _input in inputs]
         # Pad and stack Tensor.
-        batch_inputs = stach_batch_imgs(inputs, self.pad_size_divisor,
-                                        self.pad_value)
+        batch_inputs = stack_batch(inputs, self.pad_size_divisor,
+                                   self.pad_value)
         return batch_inputs, batch_data_samples

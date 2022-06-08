@@ -202,6 +202,16 @@ class BaseModel(BaseModule):
         self.data_preprocessor.cuda()
         return super().cuda()
 
+    def cpu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the ``device`` attribute of
+        :obj:`BaseDataPreprocessor` additionally
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self.data_preprocessor.cpu()
+        return super().cuda()
+
     @abstractmethod
     def forward(self,
                 batch_inputs: torch.Tensor,
