@@ -57,21 +57,21 @@ class BaseModel(BaseModule):
         >>>             return dict(loss=loss)
 
     Args:
-        init_cfg (dict, optional): The weight initialized config for
-            :class:`BaseModule`.
         data_preprocessor (dict, optional): The pre-process config of
             :class:`BaseDataPreprocessor`.
+        init_cfg (dict, optional): The weight initialized config for
+            :class:`BaseModule`.
 
     Attributes:
-        init_cfg (dict, optional): Initialization config dict.
         data_preprocessor (:obj:`BaseDataPreprocessor`): Used for
             pre-processing data sampled by dataloader to the format accepted by
             :meth:`forward`.
+        init_cfg (dict, optional): Initialization config dict.
     """
 
     def __init__(self,
-                 init_cfg: Optional[dict] = None,
-                 data_preprocessor: Optional[Union[dict, nn.Module]] = None):
+                 data_preprocessor: Optional[Union[dict, nn.Module]] = None,
+                 init_cfg: Optional[dict] = None):
         super().__init__(init_cfg)
         if data_preprocessor is None:
             data_preprocessor = dict(type='BaseDataPreprocessor')
