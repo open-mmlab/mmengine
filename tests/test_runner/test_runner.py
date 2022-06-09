@@ -23,8 +23,8 @@ from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import BaseModel
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
-                               MODEL_WRAPPERS, MODELS,
+from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
+                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
                                RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
@@ -282,6 +282,13 @@ class CustomRunner(Runner):
 
     def setup_env(self, env_cfg):
         pass
+
+
+@EVALUATOR.register_module()
+class ToyEvaluator(Evaluator):
+
+    def __init__(self, metrics):
+        super().__init__(metrics)
 
 
 def collate_fn(data_batch):
@@ -927,6 +934,18 @@ class TestRunner(TestCase):
             dict(type='ToyMetric2', collect_device='gpu')
         ]
         _evaluator = runner.build_evaluator(evaluator)
+        self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
+        self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
+
+        # test build a customize evaluator
+        evaluator = dict(
+            type='ToyEvaluator',
+            metrics=[
+                dict(type='ToyMetric1', collect_device='cpu'),
+                dict(type='ToyMetric2', collect_device='gpu')
+            ])
+        _evaluator = runner.build_evaluator(evaluator)
+        self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator)
         self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
         self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
 

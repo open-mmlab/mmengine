@@ -1210,12 +1210,16 @@ class Runner:
         """
         if isinstance(evaluator, Evaluator):
             return evaluator
-        elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
-            if 'type' in evaluator:
+        elif isinstance(evaluator, dict):
+            # if `metrics` in dict keys, it means to build customized evalutor
+            if 'metrics' in evaluator:
                 return EVALUATOR.build(evaluator)
+            # otherwise, default evalutor will be built
             else:
-                # use the default `Evaluator`
                 return Evaluator(evaluator)  # type: ignore
+        elif is_list_of(evaluator, dict):
+            # use the default `Evaluator`
+            return Evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
                 'evaluator should be one of dict, list of dict, and Evaluator'
