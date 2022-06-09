@@ -85,6 +85,22 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         with self.assertRaisesRegex(AssertionError, '`bgr2rgb` and `rgb2bgr`'):
             ImgDataPreprocessor(bgr_to_rgb=True, rgb_to_bgr=True)
 
+        with self.assertRaisesRegex(AssertionError, 'mean and std should be'):
+            ImgDataPreprocessor(
+                bgr_to_rgb=True,
+                mean=None,
+                std=[255, 255, 255],
+                pad_size_divisor=16,
+                pad_value=10)
+
+        data_processor = ImgDataPreprocessor(
+            bgr_to_rgb=True,
+            mean=None,
+            std=None,
+            pad_size_divisor=16,
+            pad_value=10)
+        self.assertFalse(data_processor._enable_normalize)
+
     def test_forward(self):
         # Test `pad_value`, `to_rgb`, `pad_size_divisor`.
         data_preprocessor = ImgDataPreprocessor(
@@ -104,12 +120,34 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         ]
 
         std = torch.tensor([1, 2, 3]).view(-1, 1, 1)
-        inputs1 = (inputs1[[2, 1, 0], ...] - 127.5) / std
-        inputs2 = (inputs2[[2, 1, 0], ...] - 127.5) / std
-        inputs1 = F.pad(inputs1, (0, 6, 0, 6), value=10)
-        inputs2 = F.pad(inputs2, (0, 1, 0, 1), value=10)
+        target_inputs1 = (inputs1.clone()[[2, 1, 0], ...] - 127.5) / std
+        target_inputs2 = (inputs2.clone()[[2, 1, 0], ...] - 127.5) / std
+        target_inputs1 = F.pad(target_inputs1, (0, 6, 0, 6), value=10)
+        target_inputs2 = F.pad(target_inputs2, (0, 1, 0, 1), value=10)
 
-        target_inputs = [inputs1, inputs2]
+        target_inputs = [target_inputs1, target_inputs2]
+        inputs, data_samples = data_preprocessor(data, True)
+
+        target_data_samples = [data_sample1, data_sample2]
+        for input_, data_sample, target_input, target_data_sample in zip(
+                inputs, data_samples, target_inputs, target_data_samples):
+            assert_allclose(input_, target_input)
+            assert_allclose(data_sample.bboxes, target_data_sample.bboxes)
+
+        # Test image without normalization.
+        data_preprocessor = ImgDataPreprocessor(
+            mean=None,
+            std=None,
+            pad_size_divisor=16,
+            pad_value=10,
+            rgb_to_bgr=True,
+        )
+        target_inputs1 = (inputs1.clone()[[2, 1, 0], ...])
+        target_inputs2 = (inputs2.clone()[[2, 1, 0], ...])
+        target_inputs1 = F.pad(target_inputs1, (0, 6, 0, 6), value=10)
+        target_inputs2 = F.pad(target_inputs2, (0, 1, 0, 1), value=10)
+
+        target_inputs = [target_inputs1, target_inputs2]
         inputs, data_samples = data_preprocessor(data, True)
 
         target_data_samples = [data_sample1, data_sample2]
