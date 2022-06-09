@@ -168,7 +168,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Defaults to False.
 
     Note:
-        if images do not need to be normalized `std` and `mean` should be
+        if images do not need to be normalized, `std` and `mean` should be
         both set to None, otherwise both of them should be set to a tuple of
         corresponding values.
     """
@@ -184,7 +184,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         assert not (bgr_to_rgb and rgb_to_bgr), (
             '`bgr2rgb` and `rgb2bgr` cannot be set to True at the same time')
         assert (mean is None) == (std is None), (
-            'mean and std should be both `None` or not `None`')
+            'mean and std should be both None or tuple')
         if mean is not None:
             assert len(mean) == 3 or len(mean) == 1, (
                 'The length of mean should be 1 or 3 to be compatible with '
