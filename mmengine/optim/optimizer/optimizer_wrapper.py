@@ -213,7 +213,7 @@ class OptimWrapper:
         Provide unified interface to get learning rate of optimizer.
 
         Returns:
-            List[float]: Learning rate of the optimizer.
+            Dict[str, List[float]]: Learning rate of the optimizer.
         """
         lr = [group['lr'] for group in self.param_groups]
         return dict(lr=lr)
@@ -224,7 +224,7 @@ class OptimWrapper:
         Provide unified interface to get momentum of optimizer.
 
         Returns:
-            List[float]: Momentum of the optimizer.
+            Dict[str, List[float]]: Momentum of the optimizer.
         """
         momentum = []
         for group in self.param_groups:

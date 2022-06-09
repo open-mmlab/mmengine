@@ -63,6 +63,7 @@ class AmpOptimWrapper(OptimWrapper):
             loss (torch.Tensor): The loss of current iteration.
         """
         self.loss_scaler.scale(loss).backward()
+        self._inner_count += 1
 
     def step(self):
         """Update parameters with :attr:`loss_scaler`."""
