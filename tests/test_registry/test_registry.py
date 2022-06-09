@@ -167,16 +167,17 @@ class TestRegistry:
         registries = []
         DOGS = Registry('dogs')
         registries.append(DOGS)
-        HOUNDS = Registry('dogs', parent=DOGS, scope='hound')
+        HOUNDS = Registry('hounds', parent=DOGS, scope='hound')
         registries.append(HOUNDS)
-        LITTLE_HOUNDS = Registry('dogs', parent=HOUNDS, scope='little_hound')
+        LITTLE_HOUNDS = Registry(
+            'little hounds', parent=HOUNDS, scope='little_hound')
         registries.append(LITTLE_HOUNDS)
-        MID_HOUNDS = Registry('dogs', parent=HOUNDS, scope='mid_hound')
+        MID_HOUNDS = Registry('mid hounds', parent=HOUNDS, scope='mid_hound')
         registries.append(MID_HOUNDS)
-        SAMOYEDS = Registry('dogs', parent=DOGS, scope='samoyed')
+        SAMOYEDS = Registry('samoyeds', parent=DOGS, scope='samoyed')
         registries.append(SAMOYEDS)
         LITTLE_SAMOYEDS = Registry(
-            'dogs', parent=SAMOYEDS, scope='little_samoyed')
+            'little samoyeds', parent=SAMOYEDS, scope='little_samoyed')
         registries.append(LITTLE_SAMOYEDS)
 
         return registries
@@ -323,7 +324,7 @@ class TestRegistry:
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = self._build_registry()
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS, SAMOYEDS = registries[:5]
 
         @DOGS.register_module()
         class GoldenRetriever:
@@ -366,6 +367,37 @@ class TestRegistry:
             f'test2-{time.time()}', scope_name='scope-not-found')
         dog = MID_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
+
+        # test overwrite default scope with `_scope_`
+        @SAMOYEDS.register_module()
+        class MySamoyed:
+
+            def __init__(self, friend):
+                self.friend = DOGS.build(friend)
+
+        @SAMOYEDS.register_module()
+        class YourSamoyed:
+            pass
+
+        s_cfg = cfg_type(
+            dict(
+                _scope_='samoyed',
+                type='MySamoyed',
+                friend=dict(type='hound.BloodHound')))
+        dog = DOGS.build(s_cfg)
+        assert isinstance(dog, MySamoyed)
+        assert isinstance(dog.friend, BloodHound)
+        assert DefaultScope.get_current_instance().scope_name != 'samoyed'
+
+        s_cfg = cfg_type(
+            dict(
+                _scope_='samoyed',
+                type='MySamoyed',
+                friend=dict(type='YourSamoyed')))
+        dog = DOGS.build(s_cfg)
+        assert isinstance(dog, MySamoyed)
+        assert isinstance(dog.friend, YourSamoyed)
+        assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
     def test_repr(self):
         CATS = Registry('cat')

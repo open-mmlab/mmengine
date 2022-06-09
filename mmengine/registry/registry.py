@@ -468,7 +468,7 @@ class Registry:
 
         return None
 
-    def build(self, *args, **kwargs) -> Any:
+    def build(self, cfg, *args, **kwargs) -> Any:
         """Build an instance.
 
         Build an instance by calling :attr:`build_func`. If the global
@@ -487,27 +487,28 @@ class Registry:
             >>> cfg = dict(type='ResNet', depth=50)
             >>> model = MODELS.build(cfg)
         """
-        # get the global default scope
-        default_scope = DefaultScope.get_current_instance()
-        if default_scope is not None:
-            scope_name = default_scope.scope_name
-            root = self._get_root_registry()
-            registry = root._search_child(scope_name)
-            if registry is None:
-                # if `default_scope` can not be found, fallback to use self
-                warnings.warn(
-                    f'Failed to search registry with scope "{scope_name}" in '
-                    f'the "{root.name}" registry tree. '
-                    f'As a workaround, the current "{self.name}" registry in '
-                    f'"{self.scope}" is used to build instance. This may '
-                    f'cause unexpected failure when running the built '
-                    f'modules. Please check whether "{scope_name}" is a '
-                    f'correct scope, or whether the registry is initialized.')
+        with DefaultScope.overwrite_default_scope(cfg.pop('_scope_', None)):
+            # get the global default scope
+            default_scope = DefaultScope.get_current_instance()
+            if default_scope is not None:
+                scope_name = default_scope.scope_name
+                root = self._get_root_registry()
+                registry = root._search_child(scope_name)
+                if registry is None:
+                    # if `default_scope` can not be found, fallback to use self
+                    warnings.warn(
+                        f'Failed to search registry with scope "{scope_name}" '
+                        f'in the "{root.name}" registry tree. '
+                        f'As a workaround, the current "{self.name}" registry '
+                        f'in "{self.scope}" is used to build instance. This '
+                        f'may cause unexpected failure when running the built '
+                        f'modules. Please check whether "{scope_name}" is a '
+                        f'correct scope, or whether the registry is '
+                        f'initialized.')
+                    registry = self
+            else:
                 registry = self
-        else:
-            registry = self
-
-        return registry.build_func(*args, **kwargs, registry=registry)
+            return registry.build_func(cfg, *args, **kwargs, registry=registry)
 
     def _add_child(self, registry: 'Registry') -> None:
         """Add a child for a registry.
