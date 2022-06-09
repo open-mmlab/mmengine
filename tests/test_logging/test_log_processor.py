@@ -2,10 +2,11 @@
 import copy
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 import torch
 
-from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.logging import HistoryBuffer, LogProcessor, MessageHub, MMLogger
 
 
 class TestLogProcessor:
@@ -154,17 +155,27 @@ class TestLogProcessor:
                 assert out == 'Iter(val) [10/10]  accuracy: 0.9000'
 
     def test_collect_scalars(self):
+        history_count = np.ones(100)
+        time_scalars = np.random.randn(100)
+        loss_cls_scalars = np.random.randn(100)
+        lr_scalars = np.random.randn(100)
+        metric_scalars = np.random.randn(100)
+
+        history_time_buffer = HistoryBuffer(time_scalars, history_count)
+        histroy_loss_cls = HistoryBuffer(loss_cls_scalars, history_count)
+        history_lr_buffer = HistoryBuffer(lr_scalars, history_count)
+        history_metric_buffer = HistoryBuffer(metric_scalars, history_count)
+
         custom_cfg = [
-            dict(data_src='time', method_name='mean', window_size=100),
             dict(data_src='time', method_name='max', log_name='time_max')
         ]
         logger_hook = LogProcessor(custom_cfg=custom_cfg)
         # Collect with prefix.
         log_scalars = {
-            'train/time': MagicMock(),
-            'lr': MagicMock(),
-            'train/loss_cls': MagicMock(),
-            'val/metric': MagicMock()
+            'train/time': history_time_buffer,
+            'lr': history_lr_buffer,
+            'train/loss_cls': histroy_loss_cls,
+            'val/metric': history_metric_buffer
         }
         self.runner.message_hub._log_scalars = log_scalars
         tag = logger_hook._collect_scalars(
@@ -172,14 +183,14 @@ class TestLogProcessor:
         # Test training key in tag.
         assert list(tag.keys()) == ['time', 'loss_cls', 'time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
-        log_scalars['train/time'].statistics.assert_called_with(
-            method_name='max')
-        log_scalars['train/loss_cls'].mean.assert_called()
+        assert tag['time'] == time_scalars[-10:].mean()
+        assert tag['time_max'] == time_scalars.max()
+        assert tag['loss_cls'] == loss_cls_scalars[-10:].mean()
 
         tag = logger_hook._collect_scalars(
             copy.deepcopy(custom_cfg), self.runner, mode='val')
         assert list(tag.keys()) == ['metric']
-        log_scalars['val/metric'].current.assert_called()
+        assert tag['metric'] == metric_scalars[-1]
 
     @patch('torch.cuda.max_memory_allocated', MagicMock())
     @patch('torch.cuda.reset_peak_memory_stats', MagicMock())
