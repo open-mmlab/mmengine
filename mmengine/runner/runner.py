@@ -1213,6 +1213,8 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
+                assert 'type' in evaluator, 'expected customized evaluator' \
+                                    f' with key `type`,but got {evaluator}'
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
