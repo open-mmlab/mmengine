@@ -673,10 +673,10 @@ def trunc_normal_(tensor: Tensor,
     return _no_grad_trunc_normal_(tensor, mean, std, a, b)
 
 
-def stach_batch_imgs(tensor_list: List[torch.Tensor],
-                     pad_size_divisor: int = 1,
-                     pad_value: Union[int, float] = 0) -> torch.Tensor:
-    """Stack multiple tensors to form a batch and pad the images to the max
+def stack_batch(tensor_list: List[torch.Tensor],
+                pad_size_divisor: int = 1,
+                pad_value: Union[int, float] = 0) -> torch.Tensor:
+    """Stack multiple tensors to form a batch and pad the tensor to the max
     shape use the right bottom padding mode in these images. If
     ``pad_size_divisor > 0``, add padding to ensure the shape of each dim is
     divisible by ``pad_size_divisor``.
@@ -690,7 +690,7 @@ def stach_batch_imgs(tensor_list: List[torch.Tensor],
         pad_value (int, float): The padding value. Defaults to 0.
 
     Returns:
-       Tensor: The 4D-tensor.
+       Tensor: The n dim tensor.
     """
     assert isinstance(
         tensor_list,

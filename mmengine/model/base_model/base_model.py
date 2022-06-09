@@ -179,8 +179,8 @@ class BaseModel(BaseModule):
 
     def to(self, device: Optional[Union[int, torch.device]], *args,
            **kwargs) -> nn.Module:
-        """Overrides this method to set the ``device`` attribute of
-        :obj:`BaseDataPreprocessor` additionally
+        """Overrides this method to call :meth:`BaseDataPreprocessor.to`
+        additionally.
 
         Args:
             device (int or torch.device, optional): the desired device of the
@@ -189,18 +189,28 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.device = torch.device(device)
+        self.data_preprocessor.to(device)
         return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
-        """Overrides this method to set the ``device`` attribute of
-        :obj:`BaseDataPreprocessor` additionally
+        """Overrides this method to call :meth:`BaseDataPreprocessor.cuda`
+        additionally.
 
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.device = torch.cuda.current_device()
+        self.data_preprocessor.cuda()
         return super().cuda()
+
+    def cpu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to call :meth:`BaseDataPreprocessor.cpu`
+        additionally.
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self.data_preprocessor.cpu()
+        return super().cpu()
 
     @abstractmethod
     def forward(self,

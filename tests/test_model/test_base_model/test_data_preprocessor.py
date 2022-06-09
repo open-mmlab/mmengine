@@ -13,7 +13,7 @@ class TestBaseDataPreprocessor(TestCase):
 
     def test_init(self):
         base_data_preprocessor = BaseDataPreprocessor()
-        self.assertEqual(base_data_preprocessor.device, 'cpu')
+        self.assertEqual(base_data_preprocessor._device.type, 'cpu')
 
     def test_forward(self):
         base_data_preprocessor = BaseDataPreprocessor()
@@ -34,6 +34,19 @@ class TestBaseDataPreprocessor(TestCase):
         assert_allclose(input2, batch_inputs[1])
         assert_allclose(label1, batch_labels[0])
         assert_allclose(label2, batch_labels[1])
+
+        if torch.cuda.is_available():
+            base_data_preprocessor = base_data_preprocessor.cuda()
+            batch_inputs, batch_labels = base_data_preprocessor(data)
+            self.assertEqual(batch_inputs.device.type, 'cuda')
+
+            base_data_preprocessor = base_data_preprocessor.cpu()
+            batch_inputs, batch_labels = base_data_preprocessor(data)
+            self.assertEqual(batch_inputs.device.type, 'cpu')
+
+            base_data_preprocessor = base_data_preprocessor.to('cuda:0')
+            batch_inputs, batch_labels = base_data_preprocessor(data)
+            self.assertEqual(batch_inputs.device.type, 'cuda')
 
 
 class TestImageDataPreprocessor(TestBaseDataPreprocessor):

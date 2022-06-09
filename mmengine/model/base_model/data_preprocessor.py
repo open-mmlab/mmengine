@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
-from ..utils import stach_batch_imgs
+from ..utils import stack_batch
 
 
 @MODELS.register_module()
@@ -25,18 +25,15 @@ class BaseDataPreprocessor(nn.Module):
     forward method to implement custom data pre-processing, such as
     batch-resize, MixUp, or CutMix.
 
-    Args:
-        device (int or torch.device): Target device.
-
     Warnings:
         Each item of data sampled from dataloader must be a dict and at least
         contain the ``inputs`` key. Furthermore, the value of ``inputs``
         must be a ``Tensor`` with the same shape.
     """
 
-    def __init__(self, device: Union[int, torch.device] = 'cpu'):
+    def __init__(self):
         super().__init__()
-        self.device = device
+        self._device = torch.device('cpu')
 
     def collate_data(
             self,
@@ -56,7 +53,7 @@ class BaseDataPreprocessor(nn.Module):
             Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
             tensor and list of labels at target device.
         """
-        inputs = [_data['inputs'].to(self.device) for _data in data]
+        inputs = [_data['inputs'].to(self._device) for _data in data]
         batch_data_samples: List[BaseDataElement] = []
         # Model can get predictions without any data samples.
         for _data in data:
@@ -64,7 +61,7 @@ class BaseDataPreprocessor(nn.Module):
                 batch_data_samples.append(_data['data_sample'])
         # Move data from CPU to corresponding device.
         batch_data_samples = [
-            data_sample.to(self.device) for data_sample in batch_data_samples
+            data_sample.to(self._device) for data_sample in batch_data_samples
         ]
 
         if not batch_data_samples:
@@ -93,6 +90,10 @@ class BaseDataPreprocessor(nn.Module):
         batch_inputs = torch.stack(inputs, dim=0)
         return batch_inputs, batch_data_samples
 
+    @property
+    def device(self):
+        return self._device
+
     def to(self, device: Optional[Union[int, torch.device]], *args,
            **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
@@ -104,7 +105,7 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             nn.Module: The model itself.
         """
-        self.device = torch.device(device)
+        self._device = torch.device(device)
         return super().to(device)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
@@ -113,8 +114,17 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             nn.Module: The model itself.
         """
-        self.device = torch.cuda.current_device()
+        self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
+
+    def cpu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device('cpu')
+        return super().cpu()
 
 
 @MODELS.register_module()
@@ -158,7 +168,6 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Defaults to False.
         rgb_to_bgr (bool): whether to convert image from RGB to RGB.
             Defaults to False.
-        device (int or torch.device): Target device.
     """
 
     def __init__(self,
@@ -167,9 +176,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
                  bgr_to_rgb: bool = False,
-                 rgb_to_bgr: bool = False,
-                 device: Union[int, torch.device] = 'cpu'):
-        super().__init__(device)
+                 rgb_to_bgr: bool = False):
+        super().__init__()
         assert len(mean) == 3 or len(mean) == 1, (
             'The length of mean should be 1 or 3 to be compatible with RGB '
             f'or gray image, but got {len(mean)}')
@@ -208,6 +216,6 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         # Normalization.
         inputs = [(_input - self.mean) / self.std for _input in inputs]
         # Pad and stack Tensor.
-        batch_inputs = stach_batch_imgs(inputs, self.pad_size_divisor,
-                                        self.pad_value)
+        batch_inputs = stack_batch(inputs, self.pad_size_divisor,
+                                   self.pad_value)
         return batch_inputs, batch_data_samples

@@ -115,11 +115,13 @@ class TestBaseModel(TestCase):
         inputs = torch.randn(3, 1, 1).cuda()
         data = dict(inputs=inputs)
         model = ToyModel().cuda()
-        model.val_step([data])
+        out = model.val_step([data])
+        self.assertEqual(out.device.type, 'cuda')
 
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_to(self):
-        inputs = torch.randn(3, 1, 1).cuda()
+        inputs = torch.randn(3, 1, 1).to('cuda:0')
         data = dict(inputs=inputs)
         model = ToyModel().to(torch.cuda.current_device())
-        model.val_step([data])
+        out = model.val_step([data])
+        self.assertEqual(out.device.type, 'cuda')
