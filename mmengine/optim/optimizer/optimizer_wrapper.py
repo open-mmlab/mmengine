@@ -139,6 +139,10 @@ class OptimWrapper:
         required logic. For example, ``torch.cuda.amp`` require some extra
         operation on GradScaler during backward process.
 
+        Note:
+            If subclasses inherit from ``OptimWrapper`` override
+            ``backward``, ``_inner_count +=1`` must be implemented.
+
         Args:
             loss (torch.Tensor): The loss of current iteration.
         """
