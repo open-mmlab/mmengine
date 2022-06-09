@@ -153,14 +153,12 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
     Args:
         mean (Sequence[float or int], optional): The pixel mean of image
             channels. If ``bgr_to_rgb=True`` it means the mean value of R,
-            G, B channels. If ``mean`` and ``std`` are not specified,
-            ``ImgDataPreprocessor`` will normalize images to [-1,
-            1]. Defaults to (127.5, 127.5, 127.5).
+            G, B channels. If it is not specified, images will not be
+            normalized. Defaults None.
         std (Sequence[float or int], optional): The pixel standard deviation of
             image channels. If ``bgr_to_rgb=True`` it means the standard
-            deviation of R, G, B channels. If ``mean`` and ``std`` are not
-            specified, ImgDataPreprocessor will normalize images to [-1,
-            1]. Defaults to (127.5, 127.5, 127.5).
+            deviation of R, G, B channels. If it is not specified, images will
+            not be normalized. Defaults None.
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
         pad_value (float or int): The padded pixel value. Defaults to 0.
@@ -170,15 +168,14 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Defaults to False.
 
     Note:
-        If images do not need to be normalized, `std` and `mean` should be both
-        set to None.
+        if images do not need to be normalized `std` and `mean` should be
+        both set to None, otherwise both of them should be set to a tuple of
+        corresponding values.
     """
 
     def __init__(self,
-                 mean: Optional[Sequence[Union[float,
-                                               int]]] = (127.5, 127.5, 127.5),
-                 std: Optional[Sequence[Union[float,
-                                              int]]] = (127.5, 127.5, 127.5),
+                 mean: Optional[Sequence[Union[float, int]]] = None,
+                 std: Optional[Sequence[Union[float, int]]] = None,
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
                  bgr_to_rgb: bool = False,

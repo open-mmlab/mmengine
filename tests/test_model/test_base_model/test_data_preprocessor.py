@@ -55,10 +55,8 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         # initiate model without `preprocess_cfg`
         data_processor = ImgDataPreprocessor()
         self.assertFalse(data_processor.channel_conversion)
-        assert_allclose(data_processor.mean,
-                        torch.tensor([127.5, 127.5, 127.5]).view(-1, 1, 1))
-        assert_allclose(data_processor.std,
-                        torch.tensor([127.5, 127.5, 127.5]).view(-1, 1, 1))
+        self.assertFalse(hasattr(data_processor, 'mean'))
+        self.assertFalse(hasattr(data_processor, 'std'))
         self.assertEqual(data_processor.pad_size_divisor, 1)
         assert_allclose(data_processor.pad_value, torch.tensor(0))
         # initiate model with preprocess_cfg` and feat keys
@@ -68,6 +66,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
             std=[255, 255, 255],
             pad_size_divisor=16,
             pad_value=10)
+        self.assertTrue(data_processor._enable_normalize)
         self.assertTrue(data_processor.channel_conversion, True)
         assert_allclose(data_processor.mean,
                         torch.tensor([0, 0, 0]).view(-1, 1, 1))
@@ -77,10 +76,10 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         self.assertEqual(data_processor.pad_size_divisor, 16)
 
         with self.assertRaisesRegex(AssertionError, 'The length of mean'):
-            ImgDataPreprocessor(mean=(1, 2))
+            ImgDataPreprocessor(mean=(1, 2), std=(1, 2, 3))
 
         with self.assertRaisesRegex(AssertionError, 'The length of std'):
-            ImgDataPreprocessor(std=(1, 2))
+            ImgDataPreprocessor(mean=(1, 2, 3), std=(1, 2))
 
         with self.assertRaisesRegex(AssertionError, '`bgr2rgb` and `rgb2bgr`'):
             ImgDataPreprocessor(bgr_to_rgb=True, rgb_to_bgr=True)
@@ -94,11 +93,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
                 pad_value=10)
 
         data_processor = ImgDataPreprocessor(
-            bgr_to_rgb=True,
-            mean=None,
-            std=None,
-            pad_size_divisor=16,
-            pad_value=10)
+            bgr_to_rgb=True, pad_size_divisor=16, pad_value=10)
         self.assertFalse(data_processor._enable_normalize)
 
     def test_forward(self):
@@ -136,8 +131,6 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
 
         # Test image without normalization.
         data_preprocessor = ImgDataPreprocessor(
-            mean=None,
-            std=None,
             pad_size_divisor=16,
             pad_value=10,
             rgb_to_bgr=True,
