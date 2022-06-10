@@ -23,6 +23,7 @@ from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
+from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
@@ -1892,6 +1893,7 @@ class Runner:
     def save_checkpoint(self,
                         out_dir: str,
                         filename: str,
+                        file_client_args,
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
@@ -1933,7 +1935,8 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        filepath = osp.join(out_dir, filename)
+        file_client = FileClient.infer_client(file_client_args, out_dir)
+        filepath = file_client.join_path(out_dir, filename)
 
         meta.update(
             cfg=self.cfg.pretty_text,
@@ -1987,6 +1990,10 @@ class Runner:
                 symlink(filename, dst_file)
             else:
                 shutil.copy(filepath, dst_file)
+
+        save_file = osp.join(self.work_dir, 'last_checkpoint.log')
+        with open(save_file, 'w') as f:
+            f.write(filepath)
 
     @master_only
     def dump_config(self) -> None:

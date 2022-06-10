@@ -142,7 +142,8 @@ class CheckpointHook(Hook):
 
         runner.save_checkpoint(
             self.out_dir,
-            filename=ckpt_filename,
+            ckpt_filename,
+            self.file_client_args,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
             by_epoch=self.by_epoch,
