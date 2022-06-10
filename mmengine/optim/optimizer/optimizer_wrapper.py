@@ -38,6 +38,15 @@ class OptimWrapper:
         :meth:`update_params` under the context of  ``optim_context``
         could avoid unnecessary gradient synchronization.
 
+    Note:
+        If you use ``IterBasedRunner`` and enable gradient accumulation,
+        The original `max_iters` should be multiplied by
+        ``accumulative_iters``.
+
+    Note:
+        If subclasses inherit from ``OptimWrapper`` override
+        ``backward``, ``_inner_count +=1`` must be implemented in ``backward``.
+
     Examples:
         >>> # Config sample of OptimWrapper.
         >>> optim_wrapper_cfg = dict(

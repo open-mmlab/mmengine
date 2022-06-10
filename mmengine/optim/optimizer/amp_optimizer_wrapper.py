@@ -32,6 +32,11 @@ class AmpOptimWrapper(OptimWrapper):
             - dict: Initialize GradScaler with more detail configuration.
 
         **kwargs: Keyword arguments passed to OptimWrapper.
+
+    Note:
+        If you use ``IterBasedRunner`` and enable gradient accumulation,
+        The original `max_iters` should be multiplied by
+        ``accumulative_iters``.
     """
 
     def __init__(self, loss_scale=512., **kwargs):

@@ -1536,6 +1536,12 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
+        if (isinstance(self._train_loop, IterBasedTrainLoop)
+                and self.optim_wrapper.accumulative_iters > 1):
+            self.logger.warning(
+                'If you use `IterBasedRunner` and enable gradient '
+                'accumulation, The original `max_iters` should be multiplied'
+                'by `accumulative_iters`')
         # TODO: add a contextmanager to avoid calling `before_run` many times
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
