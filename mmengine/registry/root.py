@@ -6,10 +6,10 @@ More datails can be found at
 https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 """
 
-from .registry import Registry
+from .registry import Registry, build_runner_from_cfg
 
 # manage all kinds of runners like `EpochBasedRunner` and `IterBasedRunner`
-RUNNERS = Registry('runner')
+RUNNERS = Registry('runner', build_func=build_runner_from_cfg)
 # manage runner constructors that define how to initialize runners
 RUNNER_CONSTRUCTORS = Registry('runner constructor')
 # manage all kinds of loops like `EpochBasedTrainLoop`
@@ -32,16 +32,22 @@ WEIGHT_INITIALIZERS = Registry('weight initializer')
 # mangage all kinds of optimizers like `SGD` and `Adam`
 OPTIMIZERS = Registry('optimizer')
 # manage constructors that customize the optimization hyperparameters.
-OPTIMIZER_CONSTRUCTORS = Registry('optimizer constructor')
+OPTIM_WRAPPER_CONSTRUCTORS = Registry('optimizer wrapper constructor')
 # mangage all kinds of parameter schedulers like `MultiStepLR`
 PARAM_SCHEDULERS = Registry('parameter scheduler')
+# manage all kinds of metrics
+METRICS = Registry('metric')
 
 # manage task-specific modules like anchor generators and box coders
 TASK_UTILS = Registry('task util')
 
-# manage all kinds of evaluators for computing metrics
-EVALUATORS = Registry('evaluator')
 # manage visualizer
 VISUALIZERS = Registry('visualizer')
-# manage writer
-WRITERS = Registry('writer')
+# manage visualizer backend
+VISBACKENDS = Registry('vis_backend')
+
+# manage logprocessor
+LOG_PROCESSORS = Registry('log_processor')
+
+# manage optimizer wrapper
+OPTIM_WRAPPERS = Registry('optim_wrapper')

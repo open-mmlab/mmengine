@@ -24,7 +24,7 @@ copyright = '2022, mmengine contributors'
 author = 'mmengine contributors'
 
 version_file = '../../mmengine/version.py'
-with open(version_file, 'r') as f:
+with open(version_file) as f:
     exec(compile(f.read(), version_file, 'exec'))
 __version__ = locals()['__version__']
 # The short X.Y version
@@ -50,7 +50,9 @@ extensions = [
     'sphinx_markdown_tables',
     'myst_parser',
     'sphinx_copybutton',
+    'sphinx.ext.autodoc.typehints',
 ]  # yapf: disable
+autodoc_typehints = 'description'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

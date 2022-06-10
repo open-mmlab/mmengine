@@ -12,17 +12,18 @@ class TestDistSamplerSeedHook:
         # Test dataset sampler
         runner = Mock()
         runner.epoch = 1
-        runner.cur_dataloader = Mock()
-        runner.cur_dataloader.sampler = Mock()
-        runner.cur_dataloader.sampler.set_epoch = Mock()
+        runner.train_loop.dataloader = Mock()
+        runner.train_loop.dataloader.sampler = Mock()
+        runner.train_loop.dataloader.sampler.set_epoch = Mock()
         hook.before_train_epoch(runner)
-        runner.cur_dataloader.sampler.set_epoch.assert_called()
+        runner.train_loop.dataloader.sampler.set_epoch.assert_called()
         # Test batch sampler
         runner = Mock()
-        runner.cur_dataloader = Mock()
-        runner.cur_dataloader.sampler = Mock(spec_set=True)
-        runner.cur_dataloader.batch_sampler = Mock()
-        runner.cur_dataloader.batch_sampler.sampler = Mock()
-        runner.cur_dataloader.batch_sampler.sampler.set_epoch = Mock()
+        runner.train_loop.dataloader = Mock()
+        runner.train_loop.dataloader.sampler = Mock(spec_set=True)
+        runner.train_loop.dataloader.batch_sampler = Mock()
+        runner.train_loop.dataloader.batch_sampler.sampler = Mock()
+        runner.train_loop.dataloader.batch_sampler.sampler.set_epoch = Mock()
         hook.before_train_epoch(runner)
-        runner.cur_dataloader.batch_sampler.sampler.set_epoch.assert_called()
+        runner.train_loop.dataloader.\
+            batch_sampler.sampler.set_epoch.assert_called()

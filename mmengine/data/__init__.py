@@ -1,10 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .base_data_element import BaseDataElement
-from .base_data_sample import BaseDataSample
+from .instance_data import InstanceData
+from .label_data import LabelData
+from .pixel_data import PixelData
 from .sampler import DefaultSampler, InfiniteSampler
 from .utils import pseudo_collate, worker_init_fn
 
 __all__ = [
-    'BaseDataElement', 'BaseDataSample', 'DefaultSampler', 'InfiniteSampler',
-    'worker_init_fn', 'pseudo_collate'
+    'BaseDataElement', 'DefaultSampler', 'InfiniteSampler', 'worker_init_fn',
+    'pseudo_collate', 'InstanceData', 'LabelData', 'PixelData'
 ]

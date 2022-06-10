@@ -4,13 +4,16 @@ import warnings
 import weakref
 from collections import Counter
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Union
 
 from torch.optim import Optimizer
 
+from mmengine.optim import OptimWrapper
 from mmengine.registry import PARAM_SCHEDULERS
 
 INF = int(1e9)
+
+OptimizerType = Union[OptimWrapper, Optimizer]
 
 
 class _ParamScheduler:
@@ -23,7 +26,7 @@ class _ParamScheduler:
     https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
         begin (int): Step at which to start updating the parameters.
@@ -40,7 +43,7 @@ class _ParamScheduler:
     """  # noqa: E501
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: OptimizerType,
                  param_name: str,
                  begin: int = 0,
                  end: int = INF,
@@ -49,7 +52,7 @@ class _ParamScheduler:
                  verbose: bool = False):
 
         # Attach optimizer
-        if not isinstance(optimizer, Optimizer):
+        if not isinstance(optimizer, (Optimizer, OptimWrapper)):
             raise TypeError('``optimizer`` should be an Optimizer,'
                             'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer
@@ -111,8 +114,8 @@ class _ParamScheduler:
             return wrapper
 
         # add counter to optimizer
-        self.optimizer.step = with_counter(self.optimizer.step)
-        self.optimizer._global_step = -1
+        self.optimizer.step = with_counter(self.optimizer.step)  # type: ignore
+        self.optimizer._global_step = -1  # type: ignore
 
         self._global_step = -1
         self.verbose = verbose
@@ -218,7 +221,7 @@ class StepParamScheduler(_ParamScheduler):
     other changes to the parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
         step_size (int): Period of parameter value decay.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -235,7 +238,7 @@ class StepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: OptimizerType,
                  param_name: str,
                  step_size: int,
                  gamma: float = 0.1,
@@ -255,7 +258,37 @@ class StepParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              step_size,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        step_size = step_size * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            step_size=step_size,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
+
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if (self.last_step == 0) or (self.last_step % self.step_size != 0):
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -274,7 +307,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -291,7 +324,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: OptimizerType,
                  param_name: str,
                  milestones: List[int],
                  gamma: float = 0.1,
@@ -311,7 +344,37 @@ class MultiStepParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              milestones,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        milestones = [i * epoch_length for i in milestones]
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            milestones=milestones,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
+
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step not in self.milestones:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -331,7 +394,8 @@ class ConstantParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
         factor (float): The number we multiply parameter value until the
             milestone. Defaults to 1./3.
         begin (int): Step at which to start updating the parameters.
@@ -347,7 +411,7 @@ class ConstantParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: OptimizerType,
                  param_name: str,
                  factor: float = 1.0 / 3,
                  begin: int = 0,
@@ -370,7 +434,29 @@ class ConstantParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.factor
@@ -395,7 +481,8 @@ class ExponentialParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every epoch.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
         gamma (float): Multiplicative factor of parameter value decay.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
@@ -410,7 +497,7 @@ class ExponentialParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: OptimizerType,
                  param_name: str,
                  gamma: float,
                  begin: int = 0,
@@ -428,7 +515,29 @@ class ExponentialParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -469,7 +578,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     only implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
         T_max (int): Maximum number of iterations.
         eta_min (float): Minimum parameter value. Defaults to 0.
         begin (int): Step at which to start updating the parameters.
@@ -488,7 +598,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[Optimizer, OptimWrapper],
                  param_name: str,
                  T_max: int,
                  eta_min: float = 0.,
@@ -508,7 +618,37 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              T_max,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        T_max = T_max * epoch_length
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(
+            *args,
+            T_max=T_max,
+            begin=begin,
+            end=end,
+            by_epoch=by_epoch,
+            **kwargs)
+
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -534,8 +674,10 @@ class LinearParamScheduler(_ParamScheduler):
 
     Notice that such decay can happen simultaneously with other changes to the
     parameter value from outside this scheduler.
+
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
         start_factor (float): The number we multiply parameter value in the
             first epoch. The multiplication factor changes towards end_factor
             in the following epochs. Defaults to 1./3.
@@ -554,7 +696,7 @@ class LinearParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Optimizer,
+                 optimizer: Union[Optimizer, OptimWrapper],
                  param_name: str,
                  start_factor: float = 1.0 / 3,
                  end_factor: float = 1.0,
@@ -583,8 +725,29 @@ class LinearParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             verbose=verbose)
 
-    def _get_value(self):
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
 
+    def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         if self.last_step == 0:
             return [
                 group[self.param_name] * self.start_factor
@@ -598,3 +761,86 @@ class LinearParamScheduler(_ParamScheduler):
               (self.end_factor - self.start_factor)))
             for group in self.optimizer.param_groups
         ]
+
+
+@PARAM_SCHEDULERS.register_module()
+class PolyParamScheduler(_ParamScheduler):
+    """Decays the parameter value of each parameter group in a polynomial decay
+    scheme.
+
+    Notice that such decay can happen simultaneously with other changes to the
+    parameter value from outside this scheduler.
+
+    Args:
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
+        eta_min (float): Minimum parameter value at the end of scheduling.
+            Defaults to 0.
+        power (float): The power of the polynomial. Defaults to 1.0.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
+
+    def __init__(self,
+                 optimizer: Union[Optimizer, OptimWrapper],
+                 param_name: str,
+                 eta_min: float = 0,
+                 power: float = 1.0,
+                 begin: int = 0,
+                 end: int = INF,
+                 last_step: int = -1,
+                 by_epoch: bool = True,
+                 verbose: bool = False):
+
+        self.eta_min = eta_min
+        self.power = power
+        self.total_iters = end - begin - 1
+
+        super().__init__(
+            optimizer,
+            param_name=param_name,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
+    def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
+        if self.last_step == 0:
+            return [
+                group[self.param_name] for group in self.optimizer.param_groups
+            ]
+
+        return [(group[self.param_name] - self.eta_min) *
+                (1 - 1 / (self.total_iters - self.last_step + 1))**self.power +
+                self.eta_min for group in self.optimizer.param_groups]

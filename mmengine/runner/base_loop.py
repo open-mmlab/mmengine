@@ -19,14 +19,11 @@ class BaseLoop(metaclass=ABCMeta):
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
-
         if isinstance(dataloader, dict):
-            self.dataloader = runner.build_dataloader(dataloader)
+            self.dataloader = runner.build_dataloader(
+                dataloader, seed=runner.seed)
         else:
             self.dataloader = dataloader
-
-        # TODO, used by `end_of_epoch` of `Hook`
-        self._runner.data_loader = self.dataloader
 
     @property
     def runner(self):

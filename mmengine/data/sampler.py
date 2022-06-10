@@ -2,17 +2,12 @@
 import itertools
 import math
 from typing import Iterator, Optional, Sized
-# from mmengine.dist import get_dist_info, sync_random_seed
-from unittest.mock import MagicMock
 
 import torch
 from torch.utils.data import Sampler
 
+from mmengine.dist import get_dist_info, sync_random_seed
 from mmengine.registry import DATA_SAMPLERS
-
-# TODO, need to remove those lines after implementing dist module
-get_dist_info = MagicMock(return_value=(0, 1))
-sync_random_seed = MagicMock(return_value=0)
 
 
 @DATA_SAMPLERS.register_module()
@@ -159,8 +154,7 @@ class InfiniteSampler(Sampler):
 
     def __iter__(self) -> Iterator[int]:
         """Iterate the indices."""
-        for idx in self.indices:
-            yield idx
+        yield from self.indices
 
     def __len__(self) -> int:
         """Length of base dataset."""
@@ -168,6 +162,4 @@ class InfiniteSampler(Sampler):
 
     def set_epoch(self, epoch: int) -> None:
         """Not supported in iteration-based runner."""
-        raise NotImplementedError(
-            'The `InfiniteSampler` is only used in iteration-based runner, '
-            "and doesn't need `set_epoch`")
+        pass

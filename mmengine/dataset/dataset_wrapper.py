@@ -4,34 +4,52 @@ import copy
 import math
 import warnings
 from collections import defaultdict
-from typing import List, Sequence, Tuple
+from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
+from mmengine.registry import DATASETS
 from .base_dataset import BaseDataset, force_full_init
 
 
+@DATASETS.register_module()
 class ConcatDataset(_ConcatDataset):
     """A wrapper of concatenated dataset.
 
     Same as ``torch.utils.data.dataset.ConcatDataset`` and support lazy_init.
 
+    Note:
+        ``ConcatDataset`` should not inherit from ``BaseDataset`` since
+        ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
+        sub-dataset which conflicts with original dataset. If you want to use
+        a sub-dataset of ``ConcatDataset``, you should set ``indices``
+        arguments for wrapped dataset which inherit from ``BaseDataset``.
+
     Args:
-        datasets (Sequence[BaseDataset]): A list of datasets which will be
-            concatenated.
+        datasets (Sequence[BaseDataset] or Sequence[dict]): A list of datasets
+            which will be concatenated.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
-                 datasets: Sequence[BaseDataset],
+                 datasets: Sequence[Union[BaseDataset, dict]],
                  lazy_init: bool = False):
-        # Only use meta of first dataset.
-        self._meta = datasets[0].meta
-        self.datasets = datasets  # type: ignore
-        for i, dataset in enumerate(datasets, 1):
-            if self._meta != dataset.meta:
-                warnings.warn(
+        self.datasets: List[BaseDataset] = []
+        for i, dataset in enumerate(datasets):
+            if isinstance(dataset, dict):
+                self.datasets.append(DATASETS.build(dataset))
+            elif isinstance(dataset, BaseDataset):
+                self.datasets.append(dataset)
+            else:
+                raise TypeError(
+                    'elements in datasets sequence should be config or '
+                    f'`BaseDataset` instance, but got {type(dataset)}')
+        # Only use metainfo of first dataset.
+        self._metainfo = self.datasets[0].metainfo
+        for i, dataset in enumerate(self.datasets, 1):
+            if self._metainfo != dataset.metainfo:
+                raise ValueError(
                     f'The meta information of the {i}-th dataset does not '
                     'match meta information of the first dataset')
 
@@ -40,14 +58,14 @@ class ConcatDataset(_ConcatDataset):
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the first dataset in ``self.datasets``.
 
         Returns:
             dict: Meta information of first dataset.
         """
-        # Prevent `self._meta` from being modified by outside.
-        return copy.deepcopy(self._meta)
+        # Prevent `self._metainfo` from being modified by outside.
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
@@ -77,8 +95,9 @@ class ConcatDataset(_ConcatDataset):
                     f'absolute value of index({idx}) should not exceed dataset'
                     f'length({len(self)}).')
             idx = len(self) + idx
-        # Get the inner index of single dataset
+        # Get `dataset_idx` to tell idx belongs to which dataset.
         dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+        # Get the inner index of single dataset.
         if dataset_idx == 0:
             sample_idx = idx
         else:
@@ -111,7 +130,28 @@ class ConcatDataset(_ConcatDataset):
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
         return self.datasets[dataset_idx][sample_idx]
 
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``ConcatDataset`` for the ambiguous meaning of sub-
+        dataset."""
+        raise NotImplementedError(
+            '`ConcatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ConcatDataset`.')
 
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``ConcatDataset`` for the ambiguous meaning of sub-
+        dataset."""
+        raise NotImplementedError(
+            '`ConcatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ConcatDataset`.')
+
+
+@DATASETS.register_module()
 class RepeatDataset:
     """A wrapper of repeated dataset.
 
@@ -120,33 +160,48 @@ class RepeatDataset:
     is small. Using RepeatDataset can reduce the data loading time between
     epochs.
 
+    Note:
+        ``RepeatDataset`` should not inherit from ``BaseDataset`` since
+        ``get_subset`` and ``get_subset_`` could produce ambiguous meaning
+        sub-dataset which conflicts with original dataset. If you want to use
+        a sub-dataset of ``RepeatDataset``, you should set ``indices``
+        arguments for wrapped dataset which inherit from ``BaseDataset``.
+
     Args:
-        dataset (BaseDataset): The dataset to be repeated.
+        dataset (BaseDataset or dict): The dataset to be repeated.
         times (int): Repeat times.
-        lazy_init (bool, optional): Whether to load annotation during
+        lazy_init (bool): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
-                 dataset: BaseDataset,
+                 dataset: Union[BaseDataset, dict],
                  times: int,
                  lazy_init: bool = False):
-        self.dataset = dataset
+        self.dataset: BaseDataset
+        if isinstance(dataset, dict):
+            self.dataset = DATASETS.build(dataset)
+        elif isinstance(dataset, BaseDataset):
+            self.dataset = dataset
+        else:
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.times = times
-        self._meta = dataset.meta
+        self._metainfo = self.dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the repeated dataset.
 
         Returns:
             dict: The meta information of repeated dataset.
         """
-        return copy.deepcopy(self._meta)
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
@@ -195,6 +250,26 @@ class RepeatDataset:
     def __len__(self):
         return self.times * self._ori_len
 
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``RepeatDataset`` for the ambiguous meaning of sub-
+        dataset."""
+        raise NotImplementedError(
+            '`RepeatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `RepeatDataset`.')
+
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``RepeatDataset`` for the ambiguous meaning of sub-
+        dataset."""
+        raise NotImplementedError(
+            '`RepeatDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `RepeatDataset`.')
+
 
 class ClassBalancedDataset:
     """A wrapper of class balanced dataset.
@@ -219,8 +294,16 @@ class ClassBalancedDataset:
     3. For each image I, compute the image-level repeat factor:
        :math:`r(I) = max_{c in I} r(c)`
 
+    Note:
+        ``ClassBalancedDataset`` should not inherit from ``BaseDataset``
+        since ``get_subset`` and ``get_subset_`` could  produce ambiguous
+        meaning sub-dataset which conflicts with original dataset. If you
+        want to use a sub-dataset of ``ClassBalancedDataset``, you should set
+        ``indices`` arguments for wrapped dataset which inherit from
+        ``BaseDataset``.
+
     Args:
-        dataset (BaseDataset): The dataset to be repeated.
+        dataset (BaseDataset or dict): The dataset to be repeated.
         oversample_thr (float): frequency threshold below which data is
             repeated. For categories with ``f_c >= oversample_thr``, there is
             no oversampling. For categories with ``f_c < oversample_thr``, the
@@ -231,25 +314,32 @@ class ClassBalancedDataset:
     """
 
     def __init__(self,
-                 dataset: BaseDataset,
+                 dataset: Union[BaseDataset, dict],
                  oversample_thr: float,
                  lazy_init: bool = False):
-        self.dataset = dataset
+        if isinstance(dataset, dict):
+            self.dataset = DATASETS.build(dataset)
+        elif isinstance(dataset, BaseDataset):
+            self.dataset = dataset
+        else:
+            raise TypeError(
+                'elements in datasets sequence should be config or '
+                f'`BaseDataset` instance, but got {type(dataset)}')
         self.oversample_thr = oversample_thr
-        self._meta = dataset.meta
+        self._metainfo = self.dataset.metainfo
 
         self._fully_initialized = False
         if not lazy_init:
             self.full_init()
 
     @property
-    def meta(self) -> dict:
+    def metainfo(self) -> dict:
         """Get the meta information of the repeated dataset.
 
         Returns:
             dict: The meta information of repeated dataset.
         """
-        return copy.deepcopy(self._meta)
+        return copy.deepcopy(self._metainfo)
 
     def full_init(self):
         """Loop to ``full_init`` each dataset."""
@@ -257,9 +347,12 @@ class ClassBalancedDataset:
             return
 
         self.dataset.full_init()
-
+        # Get repeat factors for each image.
         repeat_factors = self._get_repeat_factors(self.dataset,
                                                   self.oversample_thr)
+        # Repeat dataset's indices according to repeat_factors. For example,
+        # if `repeat_factors = [1, 2, 3]`, and the `len(dataset) == 3`,
+        # the repeated indices will be [1, 2, 2, 3, 3, 3].
         repeat_indices = []
         for dataset_index, repeat_factor in enumerate(repeat_factors):
             repeat_indices.extend([dataset_index] * math.ceil(repeat_factor))
@@ -362,3 +455,23 @@ class ClassBalancedDataset:
     @force_full_init
     def __len__(self):
         return len(self.repeat_indices)
+
+    def get_subset_(self, indices: Union[List[int], int]) -> None:
+        """Not supported in ``ClassBalancedDataset`` for the ambiguous meaning
+        of sub-dataset."""
+        raise NotImplementedError(
+            '`ClassBalancedDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ClassBalancedDataset`.')
+
+    def get_subset(self, indices: Union[List[int], int]) -> 'BaseDataset':
+        """Not supported in ``ClassBalancedDataset`` for the ambiguous meaning
+        of sub-dataset."""
+        raise NotImplementedError(
+            '`ClassBalancedDataset` dose not support `get_subset` and '
+            '`get_subset_` interfaces because this will lead to ambiguous '
+            'implementation of some methods. If you want to use `get_subset` '
+            'or `get_subset_` interfaces, please use them in the wrapped '
+            'dataset first and then use `ClassBalancedDataset`.')

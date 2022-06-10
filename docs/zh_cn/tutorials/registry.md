@@ -210,7 +210,7 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 15 个根注册器：
+为了方便跨库调用，MMEngine 提供了 18 个根注册器：
 
 - RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -225,8 +225,11 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - OPTIMIZERS: 注册了 PyTorch 中所有的 `optimizer` 以及自定义的 `optimizer`
 - OPTIMIZER_CONSTRUCTORS: optimizer 的构造器
 - PARAM_SCHEDULERS: 各种参数调度器， 如 `MultiStepLR`
+- METRICS: 用于验证模型精度的评估指标
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
-- EVALUATORS: 用于验证模型精度的评估器
+- VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
+- WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`
+- LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 
@@ -260,7 +263,7 @@ class RetinaNet(nn.Module):
 
 ![registry](https://user-images.githubusercontent.com/58739961/153880947-1d66ac06-e5ee-448e-8d7d-201e96d1101d.png)
 
-我们可以在 `MMDetection` 中调用 `MMEngine` 中模块。
+我们可以在 `MMDetection` 中调用 `MMEngine` 中的模块。
 
 ```python
 from mmdet.models import MODELS
@@ -275,6 +278,29 @@ model = MODELS.build(cfg=dict(type='Conv2d'))
 ```
 
 如果不加前缀，`build` 方法首先查找当前节点是否存在该模块，如果存在则返回该模块，否则会继续向上查找父节点甚至祖先节点直到找到该模块，因此，如果当前节点和父节点存在同一模块并且希望调用父节点的模块，我们需要指定 `scope` 前缀。需要注意的是，向上查找父节点甚至祖先节点的**前提是父节点或者祖先节点的模块已通过某种方式被导入进而完成注册**。例如，在上面这个示例中，之所以没有显示导入父节点 `mmengine` 中的 `MODELS`，是因为通过 `from mmdet.models import MODELS` 间接触发 `mmengine.MODELS` 完成模块的注册。
+
+上面展示了如何使用子节点注册器构建模块，但有时候我们希望不填加前缀也能在父节点注册器中构建子节点的模块，目的是提供通用的代码，避免下游算法库重复造轮子，该如何实现呢？
+
+假设 MMEngine 中有一个 `build_model` 函数，该方法用于构建模型。
+
+```python
+from mmengine.registry import MODELS
+
+def build_model(cfg):
+    model = MODELS.build(cfg)
+```
+
+如果我们希望在 MMDetection 中调用该函数构建 MMDetection 注册的模块，那么我们需要先获取一个 scope_name 为 'mmdet' 的 [DefaultScope](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.registry.DefaultScope) 实例，该实例全局唯一。
+
+```python
+from mmengine import build_model
+import mmdet.models  # 通过 import 的方式将 mmdet 中的模块导入注册器进而完成注册
+
+default_scope = DefaultScope.get_instance('my_experiment', scope_name='mmdet')
+model = build_model(cfg=dict(type='RetinaNet'))
+```
+
+获取 `DefaultScope` 实例的目的是使 Registry 的 build 方法会将 DefaultScope 名称（mmdet）注册器节点作为注册器的起点，才能在配置中不填加 mmdet 前缀的情况下在 MMDetection 的注册器节点中找到 RetinaNet 模块，如若不然，程序会报找不到 RetinaNet 错误。
 
 ### 调用兄弟节点的模块
 
@@ -309,12 +335,7 @@ from mmcls.models import MODELS
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
 ```
 
-调用兄弟节点的模块需要指定在 `type` 中指定 `scope` 前缀，如果不想指定，我们可以将 `build` 方法中的 `default_scope` 参数设置为 'mmdet'，它会将 `default_scope` 对应的 `registry` 作为当前 `Registry` 并调用 `build` 方法。
-
-```python
-from mmcls.models import MODELS
-model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
-```
+调用非本节点或父节点的模块需要在 `type` 中指定 `scope` 前缀。
 
 注册器除了支持两层结构，三层甚至更多层结构也是支持的。
 
@@ -323,7 +344,7 @@ model = MODELS.build(cfg=dict(type='RetinaNet'), default_scope='mmdet')
 `DetPlus` 中定义了模块 `MetaNet`，
 
 ```python
-from mmengine.model import Registry
+from mmengine.registry import Registry
 from mmdet.model import MODELS as MMDET_MODELS
 MODELS = Registry('model', parent=MMDET_MODELS, scope='det_plus')
 
@@ -352,6 +373,4 @@ model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 from mmcls.models import MODELS
 # 需要注意前缀的顺序，'detplus.mmdet.ResNet' 是不正确的
 model = MODELS.build(cfg=dict(type='mmdet.detplus.MetaNet'))
-# 当然，更简单的方法是直接设置 default_scope
-model = MODELS.build(cfg=dict(type='MetaNet', default_scope='detplus'))
 ```

@@ -6,12 +6,15 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+# yapf: disable
 from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       CosineAnnealingParamScheduler,
                                       ExponentialParamScheduler,
                                       LinearParamScheduler,
                                       MultiStepParamScheduler,
-                                      StepParamScheduler, _ParamScheduler)
+                                      PolyParamScheduler, StepParamScheduler,
+                                      _ParamScheduler)
+# yapf: enable
 from mmengine.testing import assert_allclose
 
 
@@ -44,7 +47,8 @@ class TestParameterScheduler(TestCase):
 
     def test_invalid_optimizer(self):
         with self.assertRaisesRegex(TypeError, 'should be an Optimizer'):
-            StepParamScheduler('invalid_optimizer', 'lr', step_size=1)
+            StepParamScheduler(
+                'invalid_optimizer', step_size=1, param_name='lr')
 
     def test_overwrite_optimzer_step(self):
         # raise warning if the counter in optimizer.step() is overwritten
@@ -137,7 +141,8 @@ class TestParameterScheduler(TestCase):
     def test_get_last_value(self):
         epochs = 10
         targets = [[0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]]
-        scheduler = StepParamScheduler(self.optimizer, 'lr', 3, gamma=0.1)
+        scheduler = StepParamScheduler(
+            self.optimizer, param_name='lr', step_size=3, gamma=0.1)
         for epoch in range(epochs):
             result = scheduler.get_last_value()
             self.optimizer.step()
@@ -336,6 +341,25 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
 
+    def test_poly_scheduler(self):
+        epochs = 10
+        power = 0.9
+        min_lr = 0.001
+        iters = 4
+        single_targets = [
+            min_lr + (0.05 - min_lr) * (1 - i / iters)**power
+            for i in range(iters)
+        ] + [min_lr] * (
+            epochs - iters)
+        targets = [single_targets, [x * epochs for x in single_targets]]
+        scheduler = PolyParamScheduler(
+            self.optimizer,
+            param_name='lr',
+            power=power,
+            eta_min=min_lr,
+            end=iters + 1)
+        self._test_scheduler_value(scheduler, targets, epochs=10)
+
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
         scheduler = construct()
         for _ in range(epochs):
@@ -401,6 +425,171 @@ class TestParameterScheduler(TestCase):
                 start_factor=0,
                 end_factor=0.3),
             epochs=epochs)
+
+    def test_poly_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: PolyParamScheduler(
+                self.optimizer, param_name='lr', power=0.5, eta_min=0.001),
+            lambda: PolyParamScheduler(
+                self.optimizer, param_name='lr', power=0.8, eta_min=0.002),
+            epochs=10)
+
+    def test_step_scheduler_convert_iterbased(self):
+        # invalid epoch_length
+        with self.assertRaises(AssertionError):
+            scheduler = StepParamScheduler.build_iter_from_epoch(
+                self.optimizer,
+                param_name='momentum',
+                gamma=0.1,
+                step_size=2,
+                epoch_length=-1)
+
+        # momentum = 0.01     if epoch < 2
+        # momentum = 0.001    if 2 <= epoch < 4
+        epochs = 4
+        epoch_length = 7
+        single_targets = [0.01] * 2 * epoch_length + [0.001] * 2 * epoch_length
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = StepParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='momentum',
+            gamma=0.1,
+            step_size=2,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(
+            scheduler, targets, epochs * epoch_length, param_name='momentum')
+
+    def test_multi_step_scheduler_convert_iterbased(self):
+        # lr = 0.05     if epoch < 2
+        # lr = 0.005    if 2 <= epoch < 5
+        # lr = 0.0005   if 5 <= epoch < 9
+        # lr = 0.00005   if epoch >= 9
+        epochs = 10
+        epoch_length = 7
+        single_targets = [0.05
+                          ] * 2 * epoch_length + [0.005] * 3 * epoch_length + [
+                              0.0005
+                          ] * 4 * epoch_length + [0.00005] * 3 * epoch_length
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = MultiStepParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            gamma=0.1,
+            milestones=[2, 5, 9],
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs * epoch_length)
+
+    def test_constant_scheduler_convert_iterbased(self):
+        # lr = 0.025     if epoch < 5
+        # lr = 0.005    if 5 <= epoch
+        epochs = 10
+        epoch_length = 7
+        single_targets = [0.025] * (5 * epoch_length -
+                                    1) + [0.05] * (5 * epoch_length + 1)
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = ConstantParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            factor=1.0 / 2,
+            end=5,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs * epoch_length)
+
+    def test_linear_scheduler_convert_iterbased(self):
+        epochs = 10
+        start_factor = 1.0 / 2
+        end = 5
+        epoch_length = 11
+
+        iters = end * epoch_length - 1
+        interpolation = [
+            start_factor + i * (1 - start_factor) / iters for i in range(iters)
+        ]
+        single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
+            epochs * epoch_length - iters)
+        targets = [single_targets, [x * epochs for x in single_targets]]
+        scheduler = LinearParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            start_factor=start_factor,
+            end=end,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs)
+
+    def test_exp_scheduler_convert_iterbased(self):
+        epochs = 10
+        epoch_length = 7
+
+        single_targets = [
+            0.05 * (0.9**x) for x in range(epochs * epoch_length)
+        ]
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = ExponentialParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            gamma=0.9,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs * epoch_length)
+
+    def test_cos_anneal_scheduler_convert_iterbased(self):
+        epochs = 12
+        t = 10
+        eta_min = 1e-10
+        epoch_length = 11
+        single_targets = [
+            eta_min + (0.05 - eta_min) *
+            (1 + math.cos(math.pi * x / t / epoch_length)) / 2
+            for x in range(epochs * epoch_length)
+        ]
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = CosineAnnealingParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            T_max=t,
+            eta_min=eta_min,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs)
+
+    def test_poly_scheduler_convert_iterbased(self):
+        epochs = 10
+        power = 0.9
+        min_lr = 0.001
+        end = 5
+        epoch_length = 11
+
+        iters = end * epoch_length - 1
+        single_targets = [
+            min_lr + (0.05 - min_lr) * (1 - i / iters)**power
+            for i in range(iters)
+        ] + [min_lr] * (
+            epochs - iters)
+        targets = [
+            single_targets,
+            [x * epochs * epoch_length for x in single_targets]
+        ]
+        scheduler = PolyParamScheduler.build_iter_from_epoch(
+            self.optimizer,
+            param_name='lr',
+            power=power,
+            eta_min=min_lr,
+            end=end,
+            epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler, targets, epochs=10)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):
         # use Linear in the first 5 epochs and then use MultiStep
