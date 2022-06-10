@@ -44,8 +44,8 @@ class OptimWrapper:
         ``accumulative_iters``.
 
     Note:
-        If subclasses inherit from ``OptimWrapper`` override
-        ``backward``, ``_inner_count +=1`` must be implemented in ``backward``.
+        The subclass should ensure that once update_params is called,
+        ``_inner_count += 1`` is automatically performed.
 
     Examples:
         >>> # Config sample of OptimWrapper.
