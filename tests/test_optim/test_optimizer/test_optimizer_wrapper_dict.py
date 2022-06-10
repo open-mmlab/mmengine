@@ -1,11 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest import TestCase
-from unittest.mock import patch
 
 import torch.nn as nn
 from torch.optim import SGD
 
-from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
+from mmengine.optim import OptimWrapper, OptimWrapperDict
 
 
 class TestOptimWrapperDict(TestCase):
@@ -20,22 +19,13 @@ class TestOptimWrapperDict(TestCase):
         self.optimizers_wrappers = dict(
             optim1=self.optim_wrapper1, optim2=self.optim_wrapper2)
 
-    @patch('torch.cuda.is_available', lambda: True)
     def test_init(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
         self.assertEqual(optim_wrapper_dict.optim_wrappers,
                          self.optimizers_wrappers)
-        # Different types of OptimWrapper will raise an error
-
-        with self.assertRaisesRegex(
-                AssertionError, 'All optimizer wrappers should have the same'):
-            optim_wrapper2 = AmpOptimWrapper(optimizer=self.optim2)
-            OptimWrapperDict(optim1=self.optim_wrapper1, optim2=optim_wrapper2)
-
-        with self.assertWarnsRegex(UserWarning, 'The `accumulative_iters` of'):
-            optim_wrapper2 = OptimWrapper(
-                optimizer=self.optim2, accumulative_iters=2)
-            OptimWrapperDict(optim1=self.optim_wrapper1, optim2=optim_wrapper2)
+        with self.assertRaisesRegex(AssertionError,
+                                    '`OptimWrapperDict` only accept'):
+            OptimWrapperDict(**dict(optim1=self.optim1, optim2=self.optim2))
 
     def test_state_dict(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
@@ -99,6 +89,13 @@ class TestOptimWrapperDict(TestCase):
                       optim_wrapper_dict['optim1'])
         self.assertIs(self.optimizers_wrappers['optim2'],
                       optim_wrapper_dict['optim2'])
+
+    def test_param_groups(self):
+        optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
+        self.assertEqual(optim_wrapper_dict.param_groups['optim1'],
+                         self.optim1.param_groups)
+        self.assertEqual(optim_wrapper_dict.param_groups['optim2'],
+                         self.optim2.param_groups)
 
     def test_len(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)

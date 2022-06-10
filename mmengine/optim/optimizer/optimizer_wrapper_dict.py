@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
 from contextlib import contextmanager
 from typing import Dict, Iterator, List, Tuple
 
@@ -41,24 +40,10 @@ class OptimWrapperDict(OptimWrapper):
     """
 
     def __init__(self, **optim_wrapper_dict: OptimWrapper):
-        first_key = next(iter(optim_wrapper_dict))
-        first_optim_wrapper = optim_wrapper_dict[first_key]
-        assert isinstance(first_optim_wrapper, OptimWrapper), (
-            'Each argument of `OptimWrapperDict` must be an `OptimWrapper '
-            'instance`')
-        optim_wrapper_class = type(first_optim_wrapper)
         for key, value in optim_wrapper_dict.items():
-            assert type(value) == optim_wrapper_class, (
-                f'All optimizer wrappers should have the same type, but found'
-                f' {key}: {type(value)} and {first_key}: {optim_wrapper_class}'
-            )
-            if value.accumulative_iters != 1:
-                warnings.warn(
-                    f'The `accumulative_iters` of {key} is '
-                    f'{value.accumulative_iters}. OptimWrapperDict '
-                    'will not enable any `optim_context` context of its '
-                    'optimizer wrappers. You should access the corresponding '
-                    'optimizer wrapper to enable the context.')
+            assert isinstance(value, OptimWrapper), (
+                '`OptimWrapperDict` only accept OptimWrapper instance, '
+                f'but got {key}: {type(value)}')
         self.optim_wrappers = optim_wrapper_dict
 
     def update_params(self, loss: torch.Tensor) -> None:
@@ -113,6 +98,14 @@ class OptimWrapperDict(OptimWrapper):
         separately.
         """
         return
+
+    @property
+    def param_groups(self):
+        """Returns the parameter groups of each OptimWrapper."""
+        param_groups = dict()
+        for key, value in self.optim_wrappers.items():
+            param_groups[key] = value.param_groups
+        return param_groups
 
     def load_state_dict(self, state_dict: dict) -> None:
         """Load the state dictionary from the ``state_dict``.
