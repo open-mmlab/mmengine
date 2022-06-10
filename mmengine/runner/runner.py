@@ -1550,13 +1550,13 @@ class Runner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
-        self.call_hook('before_val')
+        self.call_hook('before_run')
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
         self.val_loop.run()  # type: ignore
-        self.call_hook('after_val')
+        self.call_hook('after_run')
 
     def test(self) -> None:
         """Launch test."""
@@ -1568,13 +1568,13 @@ class Runner:
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
-        self.call_hook('before_test')
+        self.call_hook('before_run')
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
         self.test_loop.run()  # type: ignore
-        self.call_hook('after_test')
+        self.call_hook('after_run')
 
     def call_hook(self, fn_name: str, **kwargs) -> None:
         """Call all hooks.

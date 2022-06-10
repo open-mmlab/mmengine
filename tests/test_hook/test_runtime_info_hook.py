@@ -12,19 +12,6 @@ from mmengine.optim import OptimWrapper, OptimWrapperDict
 
 class TestRuntimeInfoHook(TestCase):
 
-    def test_before_run(self):
-        message_hub = MessageHub.get_instance(
-            'runtime_info_hook_test_before_run')
-        runner = Mock()
-        runner.epoch = 3
-        runner.iter = 30
-
-        runner.message_hub = message_hub
-        hook = RuntimeInfoHook()
-        hook.before_run(runner)
-        self.assertEqual(message_hub.get_info('epoch'), 3)
-        self.assertEqual(message_hub.get_info('iter'), 30)
-
     def test_before_train(self):
         message_hub = MessageHub.get_instance(
             'runtime_info_hook_test_before_train')
