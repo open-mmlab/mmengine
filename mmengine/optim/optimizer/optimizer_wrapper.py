@@ -253,9 +253,15 @@ class OptimWrapper:
 
     @contextmanager
     def optim_context(self, model: nn.Module):
-        # TODO
-        """A Context manager for gradient accumulation and avoiding unnecessary
-        gradient synchronization during gradient accumulation.
+        """A Context for gradient accumulation and automatic mix precision
+        training.
+
+        If subclasses need to enable the context for mix precision training,
+        e.g., ``:class:`AmpOptimWrapper``,  the corresponding context should be
+        enabled in `optim_context`. Since ``OptimWrapper`` uses default fp32
+        training, ``optim_context`` will only enable the context for
+        blocking the unnecessary gradient synchronization during gradient
+        accumulation
 
         If model is an instance with ``no_sync`` method (which means
         blocking the gradient synchronization) and
@@ -263,10 +269,6 @@ class OptimWrapper:
         synchronize gradients if ``cur_iter`` is divisible by
         ``self.accumulative_iters``. Otherwise, this method will enable an
         empty context.
-
-        Warnings:
-            This context manager must be enabled if you want to use
-            gradient accumulation.
 
         Args:
             model (nn.Module): The training model.

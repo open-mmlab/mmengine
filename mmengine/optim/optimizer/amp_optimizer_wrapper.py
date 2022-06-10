@@ -114,6 +114,10 @@ class AmpOptimWrapper(OptimWrapper):
     def optim_context(self, model: nn.Module):
         """Enables the context for mixed precision training, and enables the
         context for disabling gradient synchronization during gradient
-        accumulation context."""
+        accumulation context.
+
+        Args:
+            model (nn.Module): The training model.
+        """
         with super().optim_context(model), torch.cuda.amp.autocast():
             yield
