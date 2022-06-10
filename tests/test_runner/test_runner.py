@@ -1234,6 +1234,8 @@ class TestRunner(TestCase):
         cfg.pop('val_dataloader')
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
+        runner = Runner.from_cfg(cfg)
+        runner.test()
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
