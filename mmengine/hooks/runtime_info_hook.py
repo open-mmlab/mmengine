@@ -18,11 +18,6 @@ class RuntimeInfoHook(Hook):
 
     priority = 'VERY_HIGH'
 
-    def before_run(self, runner) -> None:
-        """Initialize runtime information."""
-        runner.message_hub.update_info('epoch', runner.epoch)
-        runner.message_hub.update_info('iter', runner.iter)
-
     def before_train(self, runner) -> None:
         """Update resumed training state."""
         runner.message_hub.update_info('epoch', runner.epoch)
