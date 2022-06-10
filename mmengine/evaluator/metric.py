@@ -9,7 +9,7 @@ from mmengine.data import BaseDataElement
 from mmengine.dist import (broadcast_object_list, collect_results,
                            is_main_process)
 from mmengine.fileio import dump
-from mmengine.logging import MMLogger
+from mmengine.logging import print_log
 from mmengine.registry import METRICS
 
 
@@ -152,8 +152,9 @@ class DumpResults(BaseMetric):
     def compute_metrics(self, results: list) -> dict:
         """dump the prediction results to a pickle file."""
         dump(results, self.out_file_path)
-        logger = MMLogger.get_current_instance()
-        logger.info(f'Results has been saved to {self.out_file_path}.')
+        print_log(
+            f'Results has been saved to {self.out_file_path}.',
+            logger='current')
         return {}
 
 
