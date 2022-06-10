@@ -40,11 +40,11 @@ class OptimWrapper:
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
-        The original `max_iters` should be multiplied by
+        the original `max_iters` should be multiplied by
         ``accumulative_iters``.
 
     Note:
-        The subclass should ensure that once update_params is called,
+        The subclass should ensure that once :meth:`update_params` is called,
         ``_inner_count += 1`` is automatically performed.
 
     Examples:

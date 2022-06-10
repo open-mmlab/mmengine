@@ -35,7 +35,7 @@ class AmpOptimWrapper(OptimWrapper):
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
-        The original `max_iters` should be multiplied by
+        the original `max_iters` should be multiplied by
         ``accumulative_iters``.
     """
 
