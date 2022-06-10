@@ -18,15 +18,12 @@ class TestRuntimeInfoHook(TestCase):
         runner = Mock()
         runner.epoch = 3
         runner.iter = 30
-        runner.max_epochs = 4
-        runner.max_iters = 40
+
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.before_run(runner)
         self.assertEqual(message_hub.get_info('epoch'), 3)
         self.assertEqual(message_hub.get_info('iter'), 30)
-        self.assertEqual(message_hub.get_info('max_epochs'), 4)
-        self.assertEqual(message_hub.get_info('max_iters'), 40)
 
     def test_before_train(self):
         message_hub = MessageHub.get_instance(
@@ -34,11 +31,15 @@ class TestRuntimeInfoHook(TestCase):
         runner = Mock()
         runner.epoch = 7
         runner.iter = 71
+        runner.max_epochs = 4
+        runner.max_iters = 40
         runner.message_hub = message_hub
         hook = RuntimeInfoHook()
         hook.before_train(runner)
         self.assertEqual(message_hub.get_info('epoch'), 7)
         self.assertEqual(message_hub.get_info('iter'), 71)
+        self.assertEqual(message_hub.get_info('max_epochs'), 4)
+        self.assertEqual(message_hub.get_info('max_iters'), 40)
 
     def test_before_train_epoch(self):
         message_hub = MessageHub.get_instance(

@@ -22,13 +22,13 @@ class RuntimeInfoHook(Hook):
         """Initialize runtime information."""
         runner.message_hub.update_info('epoch', runner.epoch)
         runner.message_hub.update_info('iter', runner.iter)
-        runner.message_hub.update_info('max_epochs', runner.max_epochs)
-        runner.message_hub.update_info('max_iters', runner.max_iters)
 
     def before_train(self, runner) -> None:
         """Update resumed training state."""
         runner.message_hub.update_info('epoch', runner.epoch)
         runner.message_hub.update_info('iter', runner.iter)
+        runner.message_hub.update_info('max_epochs', runner.max_epochs)
+        runner.message_hub.update_info('max_iters', runner.max_iters)
 
     def before_train_epoch(self, runner) -> None:
         """Update current epoch information before every epoch."""
