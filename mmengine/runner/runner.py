@@ -642,11 +642,16 @@ class Runner:
             resource.setrlimit(resource.RLIMIT_NOFILE,
                                (soft_limit, hard_limit))
 
-    def set_randomness(self, seed, deterministic: bool = False) -> None:
+    def set_randomness(self,
+                       seed,
+                       diff_seed: bool = False,
+                       deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
 
         Args:
             seed (int): A number to set random modules.
+            diff_seed (bool): Whether or not set different seed according to
+                global rank.
             deterministic (bool): Whether to set the deterministic option for
                 CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
                 to True and `torch.backends.cudnn.benchmark` to False.
@@ -658,7 +663,9 @@ class Runner:
         self._seed = seed
         if self._seed is None:
             self._seed = sync_random_seed()
-
+        # set different seed for different rank
+        if diff_seed:
+            self._seed = self._seed + get_rank()
         random.seed(self._seed)
         np.random.seed(self._seed)
         torch.manual_seed(self._seed)
