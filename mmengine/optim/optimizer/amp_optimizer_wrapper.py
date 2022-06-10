@@ -26,7 +26,7 @@ class AmpOptimWrapper(OptimWrapper):
         loss_scale (float or str or dict): The initial configuration of
             `torch.cuda.amp.GradScaler`. See more specific arguments
             introduction at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler>`_ # noqa: E501
-
+            Defaults to ``dynamic``.
             - "dynamic": Initialize GradScale without any arguments.
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
@@ -39,7 +39,7 @@ class AmpOptimWrapper(OptimWrapper):
         ``accumulative_iters``.
     """
 
-    def __init__(self, loss_scale=512., **kwargs):
+    def __init__(self, loss_scale='dynamic', **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         assert torch.cuda.is_available(), (
