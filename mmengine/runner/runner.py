@@ -1536,9 +1536,11 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
+        # `OptimWrapperDict` does not have `accumulative_iters` attribute, get
+        # the default value 1.
         if (isinstance(self._train_loop, IterBasedTrainLoop)
-                and self.optim_wrapper.accumulative_iters > 1):
-            self.logger.warning(
+                and getattr(self.optim_wrapper, 'accumulative_iters', 1) > 1):
+            warnings.warn(
                 'If you use `IterBasedRunner` and enable gradient '
                 'accumulation, The original `max_iters` should be multiplied'
                 'by `accumulative_iters`')

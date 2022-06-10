@@ -1183,6 +1183,16 @@ class TestRunner(TestCase):
                                    val_batch_idx_targets):
             self.assertEqual(result, target)
 
+        # 3.1 Test training with gradient accumulation.
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train4'
+        cfg.optim_wrapper = dict(
+            optimizer=dict(type='SGD', lr=0.1), accumulative_iters=3)
+
+        runner = runner.from_cfg(cfg)
+        with self.assertWarnsRegex(UserWarning, 'If you use `IterBasedRunner'):
+            runner.train()
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
