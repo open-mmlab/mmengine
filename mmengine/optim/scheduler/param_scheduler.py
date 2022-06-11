@@ -913,7 +913,7 @@ class OneCycleParamScheduler(_ParamScheduler):
             epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
-        
+
     .. _Super-Convergence\: Very Fast Training of Neural Networks Using Large Learning Rates:
         https://arxiv.org/abs/1708.07120
     """# noqa E501
@@ -967,7 +967,7 @@ class OneCycleParamScheduler(_ParamScheduler):
         # Validate pct_start
         if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
             raise ValueError(
-                "Expected float between 0 and 1 pct_start, but got {}".format(
+                'Expected float between 0 and 1 pct_start, but got {}'.format(
                     pct_start))
 
         # Validate anneal_strategy
@@ -1037,8 +1037,7 @@ class OneCycleParamScheduler(_ParamScheduler):
             if len(param) != len(optimizer.param_groups):
                 raise ValueError(
                     f'expected {len(optimizer.param_groups)} values '
-                    f'for {name}, got { len(param)}'
-                )
+                    f'for {name}, got { len(param)}')
             return param
         else:
             return [param] * len(optimizer.param_groups)

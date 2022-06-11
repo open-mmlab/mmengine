@@ -8,8 +8,8 @@ import torch.optim as optim
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
                                       ExponentialLR, LinearLR, MultiStepLR,
-                                      PolyLR, StepLR, _ParamScheduler,
-                                      OneCycleLR)
+                                      OneCycleLR, PolyLR, StepLR,
+                                      _ParamScheduler)
 from mmengine.testing import assert_allclose
 
 

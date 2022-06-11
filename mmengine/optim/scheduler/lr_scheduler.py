@@ -3,8 +3,8 @@ from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
-                              MultiStepParamScheduler, PolyParamScheduler,
-                              StepParamScheduler, OneCycleParamScheduler)
+                              MultiStepParamScheduler, OneCycleParamScheduler,
+                              PolyParamScheduler, StepParamScheduler)
 
 
 class LRSchedulerMixin:
@@ -277,7 +277,7 @@ class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
             epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
-        
+
     .. _Super-Convergence\: Very Fast Training of Neural Networks Using Large Learning Rates:
         https://arxiv.org/abs/1708.07120
     """# noqa E501

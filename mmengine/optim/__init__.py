@@ -7,8 +7,8 @@ from .scheduler import (
     CosineAnnealingMomentum, CosineAnnealingParamScheduler, ExponentialLR,
     ExponentialMomentum, ExponentialParamScheduler, LinearLR, LinearMomentum,
     LinearParamScheduler, MultiStepLR, MultiStepMomentum,
-    MultiStepParamScheduler, StepLR, StepMomentum, StepParamScheduler,
-    _ParamScheduler, OneCycleParamScheduler, OneCycleLR)
+    MultiStepParamScheduler, OneCycleLR, OneCycleParamScheduler, StepLR,
+    StepMomentum, StepParamScheduler, _ParamScheduler)
 
 __all__ = [
     'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS', 'build_optim_wrapper',
