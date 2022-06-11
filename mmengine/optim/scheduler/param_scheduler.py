@@ -1043,29 +1043,33 @@ class OneCycleParamScheduler(_ParamScheduler):
             return [param] * len(optimizer.param_groups)
 
     def _annealing_cos(self, start, end, pct):
-        """Cosine anneal from `start` to `end` as pct goes from 0.0 to 1.0.
-
-        Args:
-            start (_type_): _description_
-            end (_type_): _description_
-            pct (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
+        """Cosine anneal from `start` to `end` as pct goes from 0.0 to 1.0."""
 
         cos_out = math.cos(math.pi * pct) + 1
         return end + (start - end) / 2.0 * cos_out
 
     def _annealing_linear(self, start, end, pct):
-        """Linearly anneal from `start` to `end` as pct goes from 0.0 to 1.0.
-
-        Args:
-            start (_type_): _description_
-            end (_type_): _description_
-            pct (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
+        """Linearly anneal from `start` to `end` as pct goes from 0.0 to
+        1.0."""
         return (end - start) * pct + start
+
+    @classmethod
+    def build_iter_from_epoch(cls,
+                              *args,
+                              begin=0,
+                              end=INF,
+                              by_epoch=True,
+                              epoch_length=None,
+                              **kwargs):
+        """Build an iter-based instance of this scheduler from an epoch-based
+        config."""
+        assert by_epoch, 'Only epoch-based kwargs whose `by_epoch=True` can ' \
+                         'be converted to iter-based.'
+        assert epoch_length is not None and epoch_length > 0, \
+            f'`epoch_length` must be a positive integer, ' \
+            f'but got {epoch_length}.'
+        by_epoch = False
+        begin = begin * epoch_length
+        if end != INF:
+            end = end * epoch_length
+        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
