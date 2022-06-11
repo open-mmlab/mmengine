@@ -1088,12 +1088,12 @@ class OneCycleParamScheduler(_ParamScheduler):
                 end_step = phase['end_step']
                 if step_num <= end_step or i == len(self._schedule_phases) - 1:
                     pct = (step_num - start_step) / (end_step - start_step)
-                    computed_lr = self.anneal_func(
+                    computed_param = self.anneal_func(
                         group[phase['start_' + self.param_name]],
                         group[phase['end_' + self.param_name]], pct)
                     break
                 start_step = phase['end_step']
 
-            params.append(computed_lr)
+            params.append(computed_param)
 
         return params
