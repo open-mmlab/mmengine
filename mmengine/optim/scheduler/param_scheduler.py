@@ -983,23 +983,17 @@ class OneCycleParamScheduler(_ParamScheduler):
                 {
                     'end_step': float(pct_start * self.total_steps) - 1,
                     'start_lr': 'initial_lr',
-                    'end_lr': 'max_lr',
-                    'start_momentum': 'max_momentum',
-                    'end_momentum': 'base_momentum',
+                    'end_lr': 'max_lr'
                 },
                 {
                     'end_step': float(2 * pct_start * self.total_steps) - 2,
                     'start_lr': 'max_lr',
-                    'end_lr': 'initial_lr',
-                    'start_momentum': 'base_momentum',
-                    'end_momentum': 'max_momentum',
+                    'end_lr': 'initial_lr'
                 },
                 {
                     'end_step': self.total_steps - 1,
                     'start_lr': 'initial_lr',
-                    'end_lr': 'min_lr',
-                    'start_momentum': 'max_momentum',
-                    'end_momentum': 'max_momentum',
+                    'end_lr': 'min_lr'
                 },
             ]
         else:
@@ -1007,18 +1001,23 @@ class OneCycleParamScheduler(_ParamScheduler):
                 {
                     'end_step': float(pct_start * self.total_steps) - 1,
                     'start_lr': 'initial_lr',
-                    'end_lr': 'max_lr',
-                    'start_momentum': 'max_momentum',
-                    'end_momentum': 'base_momentum',
+                    'end_lr': 'max_lr'
                 },
                 {
                     'end_step': self.total_steps - 1,
                     'start_lr': 'max_lr',
-                    'end_lr': 'min_lr',
-                    'start_momentum': 'base_momentum',
-                    'end_momentum': 'max_momentum',
+                    'end_lr': 'min_lr'
                 },
             ]
+
+        # Initialize parameters
+        max_lrs = self._format_param('max_' + param_name, optimizer, eta_max)
+        if last_step == -1:
+            for idx, group in enumerate(optimizer.param_groups):
+                group['initial_' + param_name] = max_lrs[idx] / div_factor
+                group['max_' + param_name] = max_lrs[idx]
+                group['min_' + param_name] = \
+                    group['initial_' + param_name] / final_div_factor
 
         super().__init__(
             optimizer=optimizer,
@@ -1071,3 +1070,30 @@ class OneCycleParamScheduler(_ParamScheduler):
         if end != INF:
             end = end * epoch_length
         return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+
+    def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
+
+        params = []
+        step_num = self.last_step
+
+        if step_num > self.total_steps:
+            raise ValueError(
+                f'Tried to step {step_num + 1} times. '
+                f'The specified number of total steps is {self.total_steps}')
+
+        for group in self.optimizer.param_groups:
+            start_step = 0
+            for i, phase in enumerate(self._schedule_phases):
+                end_step = phase['end_step']
+                if step_num <= end_step or i == len(self._schedule_phases) - 1:
+                    pct = (step_num - start_step) / (end_step - start_step)
+                    computed_lr = self.anneal_func(
+                        group[phase['start_' + self.param_name]],
+                        group[phase['end_' + self.param_name]], pct)
+                    break
+                start_step = phase['end_step']
+
+            params.append(computed_lr)
+
+        return params
