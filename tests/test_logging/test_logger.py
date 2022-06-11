@@ -159,3 +159,16 @@ class TestLogger:
         # Test original `get_current_instance` function.
         MMLogger.get_instance('mmdet')
         assert MMLogger.get_current_instance().instance_name == 'mmdet'
+
+    def test_set_level(self, capsys):
+        logger = MMLogger.get_instance('test_set_level')
+        logger.info('hello')
+        out, _ = capsys.readouterr()
+        assert 'INFO' in out
+        logger.setLevel('WARNING')
+        logger.info('hello')
+        out, _ = capsys.readouterr()
+        assert not out
+        logger.warning('hello')
+        out, _ = capsys.readouterr()
+        assert 'WARNING' in out

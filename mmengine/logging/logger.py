@@ -9,6 +9,7 @@ from termcolor import colored
 
 from mmengine import dist
 from mmengine.utils import ManagerMixin
+from mmengine.utils.manager import _accquire_lock, _release_lock
 
 
 class MMFormatter(logging.Formatter):
@@ -215,6 +216,17 @@ class MMLogger(Logger, ManagerMixin):
         for handler in self.handlers:
             if record.levelno >= handler.level:
                 handler.handle(record)
+
+    def setLevel(self, level):
+        """Set the logging level of this logger.
+
+        level must be an int or a str.
+        """
+        self.level = logging._checkLevel(level)
+        _accquire_lock()
+        for logger in MMLogger._instance_dict.values():
+            logger._cache.clear()
+        _release_lock()
 
 
 def print_log(msg,
