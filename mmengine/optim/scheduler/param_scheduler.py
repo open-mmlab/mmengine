@@ -927,8 +927,8 @@ class OneCycleParamScheduler(_ParamScheduler):
                  param_name: str,
                  eta_max: float = 0,
                  total_steps: Optional[int] = None,
-                 steps_per_epoch: Optional[int] = None,
                  epochs: int = None,
+                 steps_per_epoch: Optional[int] = None,
                  pct_start: float = 0.3,
                  anneal_strategy: str = 'cos',
                  div_factor: float = 25.,
@@ -947,9 +947,7 @@ class OneCycleParamScheduler(_ParamScheduler):
         self.eta_max = eta_max
         self.div_factor = div_factor
         self.final_div_factor = final_div_factor
-        if end <= begin:
-            raise ValueError('end should be larger than begin, but got'
-                             f' begin={begin}, end={end}')
+
         # Validate total_steps
         if total_steps is not None:
             if total_steps <= 0 or not isinstance(total_steps, int):
