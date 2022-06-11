@@ -844,3 +844,229 @@ class PolyParamScheduler(_ParamScheduler):
         return [(group[self.param_name] - self.eta_min) *
                 (1 - 1 / (self.total_iters - self.last_step + 1))**self.power +
                 self.eta_min for group in self.optimizer.param_groups]
+
+
+@PARAM_SCHEDULERS.register_module()
+class OneCycleParamScheduler(_ParamScheduler):
+    r"""Sets the learning rate of each parameter group according to the
+    1cycle learning rate policy. The 1cycle policy anneals the learning
+    rate from an initial learning rate to some maximum learning rate and then
+    from that maximum learning rate to some minimum learning rate much lower
+    than the initial learning rate.
+    This policy was initially described in the paper `Super-Convergence:
+    Very Fast Training of Neural Networks Using Large Learning Rates`_.
+
+    The 1cycle learning rate policy changes the learning rate after every
+    batch. `step` should be called after a batch has been used for training.
+
+    This scheduler is not chainable.
+
+    Note also that the total number of steps in the cycle can be determined in
+    one of two ways (listed in order of precedence):
+
+    #. A value for total_steps is explicitly provided.
+    #. A number of epochs (epochs) and a number of steps per epoch
+       (steps_per_epoch) are provided.
+       In this case, the number of total steps is inferred by
+       total_steps = epochs * steps_per_epoch
+
+    You must either provide a value for total_steps or provide a value for both
+    epochs and steps_per_epoch.
+
+    The default behaviour of this scheduler follows the fastai implementation
+    of 1cycle, which claims that "unpublished work has shown even better
+    results by using only two phases". To mimic the behaviour of the original
+    paper instead, set ``three_phase=True``.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        eta_max (float or list): Upper parameter value boundaries in the cycle
+            for each parameter group.
+        total_steps (int): The total number of steps in the cycle. Note that
+            if a value is not provided here, then it must be inferred by
+            providing a value for epochs and steps_per_epoch.
+            Default: None
+        steps_per_epoch (int): The number of steps per epoch to train for.
+            This is used along with epochs in order to infer the total number
+            of steps in the cycle if a value for total_steps is not provided.
+            Default: None
+        pct_start (float): The percentage of the cycle (in number of steps)
+            spent increasing the learning rate.
+            Default: 0.3
+        anneal_strategy (str): {'cos', 'linear'}
+            Specifies the annealing strategy: "cos" for cosine annealing,
+            "linear" for linear annealing.
+            Default: 'cos'
+        div_factor (float): Determines the initial learning rate via
+            initial_param = eta_max/div_factor
+            Default: 25
+        final_div_factor (float): Determines the minimum learning rate via
+            eta_min = initial_param/final_div_factor
+            Default: 1e4
+        three_phase (bool): If ``True``, use a third phase of the schedule to
+            annihilate the learning rate according to 'final_div_factor'
+            instead of modifying the second phase (the first two phases will be
+            symmetrical about the step indicated by 'pct_start').
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+        
+    .. _Super-Convergence\: Very Fast Training of Neural Networks Using Large Learning Rates:
+        https://arxiv.org/abs/1708.07120
+    """# noqa E501
+
+    def __init__(self,
+                 optimizer: Union[Optimizer, OptimWrapper],
+                 param_name: str,
+                 eta_max: float = 0,
+                 total_steps=None,
+                 steps_per_epoch=None,
+                 pct_start=0.3,
+                 anneal_strategy='cos',
+                 div_factor=25.,
+                 final_div_factor=1e4,
+                 three_phase=False,
+                 begin: int = 0,
+                 end: int = INF,
+                 last_step: int = -1,
+                 by_epoch: bool = True,
+                 verbose: bool = False):
+
+        assert param_name == 'lr', ('OneCycle only works for learning rate '
+                                    'updating, but got patam_name as '
+                                    f'{param_name}')
+
+        self.eta_max = eta_max
+        self.div_factor = div_factor
+        self.final_div_factor = final_div_factor
+        if end <= begin:
+            raise ValueError('end should be larger than begin, but got'
+                             f' begin={begin}, end={end}')
+        # Validate total_steps
+        if total_steps is not None:
+            if total_steps <= 0 or not isinstance(total_steps, int):
+                raise ValueError('Expected positive integer total_steps, '
+                                 f'but got {total_steps}')
+            self.total_steps = total_steps
+        else:
+
+            if steps_per_epoch <= 0 or not isinstance(steps_per_epoch, int):
+                raise ValueError('Expected positive integer steps_per_epoch, '
+                                 f'but got {steps_per_epoch}')
+            if not by_epoch and steps_per_epoch is not None:
+                warnings.warn('When `by_epoch` is True, `steps_per_epoch` '
+                              'will be ignored')
+            if by_epoch:
+                self.total_steps = (end - begin) * steps_per_epoch
+            else:
+                self.total_steps = end - begin
+
+        # Validate pct_start
+        if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
+            raise ValueError(
+                "Expected float between 0 and 1 pct_start, but got {}".format(
+                    pct_start))
+
+        # Validate anneal_strategy
+        if anneal_strategy not in ['cos', 'linear']:
+            raise ValueError(
+                'anneal_strategy must by one of "cos" or "linear", '
+                f'instead got {anneal_strategy}')
+        elif anneal_strategy == 'cos':
+            self.anneal_func = self._annealing_cos
+        elif anneal_strategy == 'linear':
+            self.anneal_func = self._annealing_linear
+
+        if three_phase:
+            self._schedule_phases = [
+                {
+                    'end_step': float(pct_start * self.total_steps) - 1,
+                    'start_lr': 'initial_lr',
+                    'end_lr': 'max_lr',
+                    'start_momentum': 'max_momentum',
+                    'end_momentum': 'base_momentum',
+                },
+                {
+                    'end_step': float(2 * pct_start * self.total_steps) - 2,
+                    'start_lr': 'max_lr',
+                    'end_lr': 'initial_lr',
+                    'start_momentum': 'base_momentum',
+                    'end_momentum': 'max_momentum',
+                },
+                {
+                    'end_step': self.total_steps - 1,
+                    'start_lr': 'initial_lr',
+                    'end_lr': 'min_lr',
+                    'start_momentum': 'max_momentum',
+                    'end_momentum': 'max_momentum',
+                },
+            ]
+        else:
+            self._schedule_phases = [
+                {
+                    'end_step': float(pct_start * self.total_steps) - 1,
+                    'start_lr': 'initial_lr',
+                    'end_lr': 'max_lr',
+                    'start_momentum': 'max_momentum',
+                    'end_momentum': 'base_momentum',
+                },
+                {
+                    'end_step': self.total_steps - 1,
+                    'start_lr': 'max_lr',
+                    'end_lr': 'min_lr',
+                    'start_momentum': 'base_momentum',
+                    'end_momentum': 'max_momentum',
+                },
+            ]
+
+        super().__init__(
+            optimizer=optimizer,
+            param_name=param_name,
+            begin=begin,
+            end=end,
+            last_step=last_step,
+            by_epoch=by_epoch,
+            verbose=verbose)
+
+    def _format_param(self, name, optimizer, param):
+        """Return correctly formatted lr/momentum for each param group."""
+        if isinstance(param, (list, tuple)):
+            if len(param) != len(optimizer.param_groups):
+                raise ValueError(
+                    f'expected {len(optimizer.param_groups)} values '
+                    f'for {name}, got { len(param)}'
+                )
+            return param
+        else:
+            return [param] * len(optimizer.param_groups)
+
+    def _annealing_cos(self, start, end, pct):
+        """Cosine anneal from `start` to `end` as pct goes from 0.0 to 1.0.
+
+        Args:
+            start (_type_): _description_
+            end (_type_): _description_
+            pct (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+
+        cos_out = math.cos(math.pi * pct) + 1
+        return end + (start - end) / 2.0 * cos_out
+
+    def _annealing_linear(self, start, end, pct):
+        """Linearly anneal from `start` to `end` as pct goes from 0.0 to 1.0.
+
+        Args:
+            start (_type_): _description_
+            end (_type_): _description_
+            pct (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return (end - start) * pct + start

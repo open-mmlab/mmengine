@@ -2,14 +2,13 @@
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimWrapper, DefaultOptimWrapperConstructor,
                         OptimWrapper, OptimWrapperDict, build_optim_wrapper)
-from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
-                        CosineAnnealingLR, CosineAnnealingMomentum,
-                        CosineAnnealingParamScheduler, ExponentialLR,
-                        ExponentialMomentum, ExponentialParamScheduler,
-                        LinearLR, LinearMomentum, LinearParamScheduler,
-                        MultiStepLR, MultiStepMomentum,
-                        MultiStepParamScheduler, StepLR, StepMomentum,
-                        StepParamScheduler, _ParamScheduler)
+from .scheduler import (
+    ConstantLR, ConstantMomentum, ConstantParamScheduler, CosineAnnealingLR,
+    CosineAnnealingMomentum, CosineAnnealingParamScheduler, ExponentialLR,
+    ExponentialMomentum, ExponentialParamScheduler, LinearLR, LinearMomentum,
+    LinearParamScheduler, MultiStepLR, MultiStepMomentum,
+    MultiStepParamScheduler, StepLR, StepMomentum, StepParamScheduler,
+    _ParamScheduler, OneCycleParamScheduler, OneCycleLR)
 
 __all__ = [
     'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS', 'build_optim_wrapper',
@@ -19,5 +18,6 @@ __all__ = [
     'MultiStepMomentum', 'StepMomentum', 'ConstantParamScheduler',
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
-    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict'
+    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict',
+    'OneCycleParamScheduler', 'OneCycleLR'
 ]
