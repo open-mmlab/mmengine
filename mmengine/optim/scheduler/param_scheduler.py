@@ -4,7 +4,7 @@ import warnings
 import weakref
 from collections import Counter
 from functools import wraps
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 from torch.optim import Optimizer
 
@@ -886,6 +886,10 @@ class OneCycleParamScheduler(_ParamScheduler):
             if a value is not provided here, then it must be inferred by
             providing a value for epochs and steps_per_epoch.
             Default: None
+        epochs (int): The number of epochs to train for. This is used along
+            with steps_per_epoch in order to infer the total number of steps
+            in the cycle if a value for total_steps is not provided.
+            Default: None
         steps_per_epoch (int): The number of steps per epoch to train for.
             This is used along with epochs in order to infer the total number
             of steps in the cycle if a value for total_steps is not provided.
@@ -922,13 +926,14 @@ class OneCycleParamScheduler(_ParamScheduler):
                  optimizer: Union[Optimizer, OptimWrapper],
                  param_name: str,
                  eta_max: float = 0,
-                 total_steps=None,
-                 steps_per_epoch=None,
-                 pct_start=0.3,
-                 anneal_strategy='cos',
-                 div_factor=25.,
-                 final_div_factor=1e4,
-                 three_phase=False,
+                 total_steps: Optional[int] = None,
+                 steps_per_epoch: Optional[int] = None,
+                 epochs: int = None,
+                 pct_start: float = 0.3,
+                 anneal_strategy: str = 'cos',
+                 div_factor: float = 25.,
+                 final_div_factor: float = 1e4,
+                 three_phase: bool = False,
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
@@ -952,23 +957,18 @@ class OneCycleParamScheduler(_ParamScheduler):
                                  f'but got {total_steps}')
             self.total_steps = total_steps
         else:
-
-            if steps_per_epoch <= 0 or not isinstance(steps_per_epoch, int):
+            if not isinstance(epochs, int) or epochs <= 0:
+                raise ValueError('Expected positive integer epochs, '
+                                 f'but got {epochs}')
+            if not isinstance(steps_per_epoch, int) or steps_per_epoch <= 0:
                 raise ValueError('Expected positive integer steps_per_epoch, '
                                  f'but got {steps_per_epoch}')
-            if not by_epoch and steps_per_epoch is not None:
-                warnings.warn('When `by_epoch` is True, `steps_per_epoch` '
-                              'will be ignored')
-            if by_epoch:
-                self.total_steps = (end - begin) * steps_per_epoch
-            else:
-                self.total_steps = end - begin
+            self.total_steps = epochs * steps_per_epoch
 
         # Validate pct_start
         if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
-            raise ValueError(
-                'Expected float between 0 and 1 pct_start, but got {}'.format(
-                    pct_start))
+            raise ValueError('Expected float between 0 and 1 pct_start, '
+                             f'but got {pct_start}')
 
         # Validate anneal_strategy
         if anneal_strategy not in ['cos', 'linear']:
