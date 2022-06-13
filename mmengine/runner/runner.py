@@ -663,9 +663,9 @@ class Runner:
         self._seed = seed
         if self._seed is None:
             self._seed = sync_random_seed()
-        # set different seeds for different ranks
+
         if diff_seed:
-            self.logger.info('Set different seeds to different ranks.')
+            # set different seeds for different ranks
             self._seed = self._seed + get_rank()
         random.seed(self._seed)
         np.random.seed(self._seed)
