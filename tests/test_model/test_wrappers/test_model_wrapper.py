@@ -75,7 +75,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         ddp_model = MMDistributedDataParallel(module=model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
         optim_wrapper = AmpOptimWrapper(
-            optimizer=optimizer, accumulative_iters=3)
+            optimizer=optimizer, accumulative_counts=3)
         inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
         res = ddp_model.train_step([data], optim_wrapper=optim_wrapper)['loss']

@@ -73,7 +73,7 @@ class DefaultOptimWrapperConstructor:
             Optional fields are
 
                 - any arguments of the corresponding optimizer wrapper type,
-                  e.g., accumulative_iters, clip_grad, etc.
+                  e.g., accumulative_counts, clip_grad, etc.
 
         The positional fields of ``optimizer`` are
 

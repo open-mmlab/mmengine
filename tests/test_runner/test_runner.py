@@ -1118,7 +1118,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
         self.assertEqual(runner.optim_wrapper._inner_count, 12)
-        self.assertEqual(runner.optim_wrapper.max_counts, 12)
+        self.assertEqual(runner.optim_wrapper._max_counts, 12)
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
 
@@ -1166,7 +1166,7 @@ class TestRunner(TestCase):
         runner.train()
 
         self.assertEqual(runner.optim_wrapper._inner_count, 12)
-        self.assertEqual(runner.optim_wrapper.max_counts, 12)
+        self.assertEqual(runner.optim_wrapper._max_counts, 12)
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
 
         self.assertEqual(len(epoch_results), 1)
@@ -1187,7 +1187,7 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train4'
         cfg.optim_wrapper = dict(
-            optimizer=dict(type='SGD', lr=0.1), accumulative_iters=3)
+            optimizer=dict(type='SGD', lr=0.1), accumulative_counts=3)
 
         runner = runner.from_cfg(cfg)
         with self.assertWarnsRegex(UserWarning, 'If you use `IterBasedRunner'):

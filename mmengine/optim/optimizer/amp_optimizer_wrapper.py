@@ -37,7 +37,7 @@ class AmpOptimWrapper(OptimWrapper):
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
         the original `max_iters` should be multiplied by
-        ``accumulative_iters``.
+        ``accumulative_counts``.
     """
 
     def __init__(self, loss_scale='dynamic', **kwargs):

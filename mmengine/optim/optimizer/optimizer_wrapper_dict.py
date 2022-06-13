@@ -88,8 +88,8 @@ class OptimWrapperDict(OptimWrapper):
             '``optim_context`` should not be called by each optimizer '
             'separately')
 
-    def initialize_iter_status(self, model: nn.Module, cur_iter,
-                               max_iters) -> None:
+    def initialize_count_status(self, model: nn.Module, cur_iter,
+                                max_iters) -> None:
         """Do nothing but providing unified interface for :obj:`OptimWrapper`
 
         Since ``OptimWrapperDict`` does not know the correspondence between
