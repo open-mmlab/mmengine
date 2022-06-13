@@ -27,6 +27,7 @@ class AmpOptimWrapper(OptimWrapper):
             `torch.cuda.amp.GradScaler`. See more specific arguments
             introduction at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler>`_ # noqa: E501
             Defaults to ``dynamic``.
+
             - "dynamic": Initialize GradScale without any arguments.
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
