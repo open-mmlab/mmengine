@@ -332,8 +332,8 @@ class OptimWrapper:
         self._remainder_counts = residual_counts - self._divisible_counts
 
     def should_update(self) -> bool:
-        """Decide whether the OptimWrapper should update parameters at the
-        current iteration.
+        """Decide whether the parameters should be updated at the current
+        iteration.
 
         Called by :meth:`update_params` and check whether the optimizer
         wrapper should update parameters at current iteration.
@@ -345,8 +345,11 @@ class OptimWrapper:
                 or self._inner_count == self._max_counts)
 
     def should_sync(self) -> bool:
-        """Decide whether the optimizer wrapper should block the automatic
-        gradient synchronization at current iteration.
+        """Decide whether the automatic gradient synchronization should be
+        allowed at the current iteration.
+
+        It takes effect when gradient accumulation is used to skip
+        synchronization at the iterations where the parameter is not updated.
 
         Since ``should_sync`` is called by :meth:`optim_context`, and it is
         called before :meth:`backward` which means ``self._inner_count += 1``

@@ -54,9 +54,8 @@ class OptimWrapperDict(OptimWrapper):
         Therefore, this method is not implemented. The optimizer wrapper of
         OptimWrapperDict should be accessed and call its `update_params.
         """
-        raise NotImplementedError(
-            'You should access the OptimWrapper of the '
-            'OptimWrapperDict and call its `update_params`')
+        raise NotImplementedError('`update_params` should be called by each '
+                                  'optimizer separately`')
 
     def backward(self, loss: torch.Tensor) -> None:
         """Since OptimWrapperDict doesn't know which optimizer wrapper's
@@ -66,14 +65,14 @@ class OptimWrapperDict(OptimWrapper):
         The optimizer wrapper of OptimWrapperDict should be accessed and call
         its `backward.
         """
-        raise NotImplementedError('You should access the OptimWrapper of the '
-                                  'OptimWrapperDict and call its `backward`')
+        raise NotImplementedError('`backward` should be called by each '
+                                  'optimizer separately`')
 
     def step(self) -> None:
         """Since the backward method is not implemented, the step should not be
         implemented either."""
-        raise NotImplementedError('You should access the OptimWrapper of the '
-                                  'OptimWrapperDict and call its `step`')
+        raise NotImplementedError('`step` should be called by each '
+                                  'optimizer separately`')
 
     def zero_grad(self) -> None:
         """Set the gradients of all optimizer wrappers to zero."""
@@ -84,12 +83,11 @@ class OptimWrapperDict(OptimWrapper):
     def optim_context(self, model: nn.Module):
         """``optim_context`` should be called by each optimizer separately."""
         raise NotImplementedError(
-            '``optim_context`` should not be called by each optimizer '
-            'separately')
+            '`optim_context` should be called by each optimizer separately')
 
     def initialize_count_status(self, model: nn.Module, cur_iter,
                                 max_iters) -> None:
-        """Do nothing but providing unified interface for :obj:`OptimWrapper`
+        """Do nothing but provide unified interface for :obj:`OptimWrapper`
 
         Since ``OptimWrapperDict`` does not know the correspondence between
         model and optimizer wrapper. ``initialize_iter_status`` will do nothing
@@ -105,20 +103,6 @@ class OptimWrapperDict(OptimWrapper):
         for key, value in self.optim_wrappers.items():
             param_groups[key] = value.param_groups
         return param_groups
-
-    def load_state_dict(self, state_dict: dict) -> None:
-        """Load the state dictionary from the ``state_dict``.
-
-        Args:
-            state_dict (dict): Each key-value pair in `state_dict` represents
-                the name and the state dictionary of corresponding
-                :obj:`OptimWrapper`.
-        """
-        for name, _state_dict in state_dict.items():
-            assert name in self.optim_wrappers, (
-                f'Mismatched `state_dict`! cannot found {name} in '
-                'OptimWrapperDict')
-            self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of all optimizers.
@@ -154,6 +138,20 @@ class OptimWrapperDict(OptimWrapper):
         for name, optim_wrapper in self.optim_wrappers.items():
             state_dict[name] = optim_wrapper.state_dict()
         return state_dict
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        """Load the state dictionary from the ``state_dict``.
+
+        Args:
+            state_dict (dict): Each key-value pair in `state_dict` represents
+                the name and the state dictionary of corresponding
+                :obj:`OptimWrapper`.
+        """
+        for name, _state_dict in state_dict.items():
+            assert name in self.optim_wrappers, (
+                f'Mismatched `state_dict`! cannot found {name} in '
+                'OptimWrapperDict')
+            self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def items(self) -> Iterator[Tuple[str, OptimWrapper]]:
         """A generator to get the name and corresponding
