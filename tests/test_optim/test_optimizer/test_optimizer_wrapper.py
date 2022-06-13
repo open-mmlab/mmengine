@@ -132,7 +132,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         with self.assertLogs(self.logger) as cm:
             optim_wrapper.initialize_count_status(self.model, 2, 100)
             self.assertEqual(len(cm.output), 1)
-            self.assertRegex(cm.records[0].msg, 'Resume iter number is not')
+            self.assertRegex(cm.records[0].msg, 'Resumed iteration number')
 
         # Model with batch norm will output warning.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_counts=3)

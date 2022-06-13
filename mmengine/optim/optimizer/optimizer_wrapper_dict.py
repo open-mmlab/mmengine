@@ -82,8 +82,7 @@ class OptimWrapperDict(OptimWrapper):
 
     @contextmanager
     def optim_context(self, model: nn.Module):
-        """``optim_context`` should not be called by each optimizer
-        separately."""
+        """``optim_context`` should be called by each optimizer separately."""
         raise NotImplementedError(
             '``optim_context`` should not be called by each optimizer '
             'separately')

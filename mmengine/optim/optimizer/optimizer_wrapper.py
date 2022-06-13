@@ -275,7 +275,7 @@ class OptimWrapper:
         """
         # During gradient accumulation process, the gradient synchronize
         # should only happen before updating parameters.
-        if self.should_no_sync() and hasattr(model, 'no_sync'):
+        if not self.should_sync() and hasattr(model, 'no_sync'):
             with model.no_sync():
                 yield
         else:
@@ -313,10 +313,10 @@ class OptimWrapper:
         self._max_counts = max_counts
         if self._inner_count % self._accumulative_counts != 0:
             self.logger.warning(
-                'Resume iter number is not divisible by _accumulative_counts '
-                'in GradientCumulativeOptimizerHook, which means the gradient '
-                'of some iters is lost and the result may be influenced '
-                'slightly.')
+                'Resumed iteration number is not divisible by '
+                '`_accumulative_counts` in `GradientCumulativeOptimizerHook`, '
+                'which means the gradient of some iterations is lost and the '
+                'result may be influenced slightly.')
 
         if has_batch_norm(model) and self._accumulative_counts > 1:
             self.logger.warning(
@@ -332,7 +332,8 @@ class OptimWrapper:
         self._remainder_counts = residual_counts - self._divisible_counts
 
     def should_update(self) -> bool:
-        """Should optim_wrapper update parameters at current iteration.
+        """Decide whether the OptimWrapper should update parameters at the
+        current iteration.
 
         Called by :meth:`update_params` and check whether the optimizer
         wrapper should update parameters at current iteration.
@@ -343,11 +344,11 @@ class OptimWrapper:
         return (self._inner_count % self._accumulative_counts == 0
                 or self._inner_count == self._max_counts)
 
-    def should_no_sync(self) -> bool:
-        """Should optimizer wrapper block the automatic gradient
-        synchronization at current iteration.
+    def should_sync(self) -> bool:
+        """Decide whether the optimizer wrapper should block the automatic
+        gradient synchronization at current iteration.
 
-        Since ``should_no_sync`` is called by :meth:`optim_context`, and it is
+        Since ``should_sync`` is called by :meth:`optim_context`, and it is
         called before :meth:`backward` which means ``self._inner_count += 1``
         has not happened yet. Therefore, ``self._inner_count += 1`` should be
         performed manually here.
@@ -355,8 +356,8 @@ class OptimWrapper:
         Returns:
             bool: Whether to block the automatic gradient synchronization.
         """
-        return not ((self._inner_count + 1) % self._accumulative_counts == 0 or
-                    (self._inner_count + 1) == self._max_counts)
+        return ((self._inner_count + 1) % self._accumulative_counts == 0
+                or (self._inner_count + 1) == self._max_counts)
 
     def scale_loss(self, loss: torch.Tensor) -> torch.Tensor:
         """Get scaled loss according to ``_accumulative_counts``,

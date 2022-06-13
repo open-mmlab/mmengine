@@ -1536,14 +1536,7 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
-        # `OptimWrapperDict` does not have `accumulative_counts` attribute, get
-        # the default value 1.
-        if (isinstance(self._train_loop, IterBasedTrainLoop) and
-                getattr(self.optim_wrapper, '_accumulative_counts', 1) > 1):
-            warnings.warn(
-                'If you use `IterBasedRunner` and enable gradient '
-                'accumulation, The original `max_iters` should be multiplied'
-                'by `accumulative_counts`')
+
         # TODO: add a contextmanager to avoid calling `before_run` many times
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
