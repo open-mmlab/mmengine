@@ -650,8 +650,8 @@ class Runner:
 
         Args:
             seed (int): A number to set random modules.
-            diff_seed (bool): Whether or not set different seed according to
-                global rank.
+            diff_seed (bool): Whether or not set different seeds according to
+                global rank. Defaults to False.
             deterministic (bool): Whether to set the deterministic option for
                 CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
                 to True and `torch.backends.cudnn.benchmark` to False.
@@ -663,9 +663,9 @@ class Runner:
         self._seed = seed
         if self._seed is None:
             self._seed = sync_random_seed()
-        # set different seed for different rank
+        # set different seeds for different ranks
         if diff_seed:
-            self.logger.info('Set different seed to different rank.')
+            self.logger.info('Set different seeds to different ranks.')
             self._seed = self._seed + get_rank()
         random.seed(self._seed)
         np.random.seed(self._seed)
