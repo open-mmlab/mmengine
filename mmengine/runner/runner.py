@@ -35,13 +35,13 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, get_git_hash, is_list_of,
-                            set_multi_processing, symlink)
+from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
+                            is_list_of, set_multi_processing, symlink)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         get_state_dict, save_checkpoint, weights_to_cpu)
+                         find_latest_checkpoint, get_state_dict,
+                         save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
@@ -1991,7 +1991,7 @@ class Runner:
             else:
                 shutil.copy(filepath, dst_file)
 
-        save_file = osp.join(self.work_dir, 'last_checkpoint.log')
+        save_file = osp.join(self.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
             f.write(filepath)
 

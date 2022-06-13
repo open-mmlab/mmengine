@@ -2,7 +2,6 @@
 import collections.abc
 import functools
 import itertools
-import os.path as osp
 import pkgutil
 import subprocess
 import warnings
@@ -478,29 +477,6 @@ def tensor2imgs(tensor: torch.Tensor,
         imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
     imgs = [np.ascontiguousarray(img) for img in imgs]
     return imgs
-
-
-def find_latest_checkpoint(path: str):
-    """Find the latest checkpoint from the given path.
-
-    Refer to https://github.com/facebookresearch/fvcore/blob/main/fvcore/common/checkpoint.py  # noqa: E501
-
-    Args:
-        path(str): The path to find checkpoints.
-
-    Returns:
-        str or None: File path of the latest checkpoint.
-    """
-    save_file = osp.join(path, 'last_checkpoint.log')
-    try:
-        with open(save_file) as f:
-            last_saved = f.read().strip()
-    except OSError:
-        raise OSError(
-            'last_checkpoint file does not exist, maybe because it has just'
-            ' been deleted by a separate process')
-
-    return last_saved
 
 
 def has_batch_norm(model: nn.Module) -> bool:
