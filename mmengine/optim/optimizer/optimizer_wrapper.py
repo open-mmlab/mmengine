@@ -27,21 +27,21 @@ class OptimWrapper:
 
     Args:
         optimizer (Optimizer): Optimizer used to update model parameters.
-        _accumulative_counts (int): The number of iterations to accumulate
+        accumulative_counts (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
-            ``_accumulative_counts``.
+            ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
             the arguments of ``torch.nn.utils.clip_grad``.
 
     Note:
-        If ``_accumulative_counts`` is larger than 1, perform
+        If ``accumulative_counts`` is larger than 1, perform
         :meth:`update_params` under the context of  ``optim_context``
         could avoid unnecessary gradient synchronization.
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
         the original `max_iters` should be multiplied by
-        ``_accumulative_counts``.
+        ``accumulative_counts``.
 
     Note:
         The subclass should ensure that once :meth:`update_params` is called,
