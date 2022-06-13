@@ -224,7 +224,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         for idx, _input in enumerate(inputs):
             assert _input.dim() == 3 and _input.shape[0] == 3, (
                 '`ImgDataPreprocess` only accepts RGB or BGR format '
-                'image tensor.')
+                f'image tensor. But got the input shape {_input.shape}')
             # channel transform
             if self.channel_conversion:
                 _input = _input[[2, 1, 0], ...]
