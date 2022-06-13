@@ -1532,7 +1532,7 @@ class Runner:
 
         self.call_hook('before_run')
         # Initiate inner count of `optim_wrapper`.
-        self.optim_wrapper.initilize_iter_status(
+        self.optim_wrapper.initialize_iter_status(
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore

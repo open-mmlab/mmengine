@@ -105,7 +105,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.zero_grad.assert_called()
         self._mock_method(optim_wrapper)
 
-        # Test end of training without calling `initilize_iter_status`
+        # Test end of training without calling `initialize_iter_status`
         optim_wrapper._inner_count = 99
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_not_called()
@@ -113,24 +113,24 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1) / 3)
         self._mock_method(optim_wrapper)
 
-        # After calling `initilize_iter_status`, params will be updated at the
+        # After calling `initialize_iter_status`, params will be updated at the
         # last iteration, and the `loss_scaler` will be adjusted.
-        optim_wrapper.initilize_iter_status(self.model, 99, 100)
+        optim_wrapper.initialize_iter_status(self.model, 99, 100)
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_called()
         optim_wrapper.zero_grad.assert_called()
         self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
 
-    def test_initilize_iter_status(self):
+    def test_initialize_iter_status(self):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
-        optim_wrapper.initilize_iter_status(self.model, 0, 100)
+        optim_wrapper.initialize_iter_status(self.model, 0, 100)
         self.assertEqual(optim_wrapper.divisible_iters, 99)
         self.assertEqual(optim_wrapper.remainder_iters, 1)
 
         # Indivisible cur_iter will output warning.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         with self.assertLogs(self.logger) as cm:
-            optim_wrapper.initilize_iter_status(self.model, 2, 100)
+            optim_wrapper.initialize_iter_status(self.model, 2, 100)
             self.assertEqual(len(cm.output), 1)
             self.assertRegex(cm.records[0].msg, 'Resume iter number is not')
 
@@ -138,7 +138,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_iters=3)
         model = nn.BatchNorm2d(1)
         with self.assertLogs(self.logger) as cm:
-            optim_wrapper.initilize_iter_status(model, 0, 99)
+            optim_wrapper.initialize_iter_status(model, 0, 99)
             self.assertEqual(len(cm.output), 1)
             self.assertRegex(cm.records[0].msg, 'Gradient accumulative')
 
@@ -213,7 +213,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.zero_grad()
 
         # Automatically sync grads if `accumulative_iters` = 1
-        optim_wrapper.initilize_iter_status(model, 0, 100)
+        optim_wrapper.initialize_iter_status(model, 0, 100)
         inputs = torch.randn(1, 1, 1, 1) * self.rank
         ddp_model(inputs).sum().backward()
         grad = model.conv.weight.grad
@@ -223,7 +223,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         # Do not sync grads when `optim_wrapper.cur_iter` cannot be
         # divided by `optim_wrapper.accumulative_iters`
         optim_wrapper = OptimWrapper(optimizer, accumulative_iters=3)
-        optim_wrapper.initilize_iter_status(model, 0, 100)
+        optim_wrapper.initialize_iter_status(model, 0, 100)
         with optim_wrapper.optim_context(ddp_model):
             loss = ddp_model(inputs).sum()
         loss.backward()
@@ -232,7 +232,7 @@ class TestOptimWrapper(MultiProcessTestCase):
             assert_allclose(all_grads[0], all_grads[1])
 
         # sync grads if `cur_iter == 2`
-        optim_wrapper.initilize_iter_status(model, 2, 100)
+        optim_wrapper.initialize_iter_status(model, 2, 100)
         with optim_wrapper.optim_context(ddp_model):
             loss = ddp_model(inputs).sum()
         loss.backward()
