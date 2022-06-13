@@ -1241,6 +1241,8 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_test2'
         runner = Runner.from_cfg(cfg)
         runner.test()
+        # Test run test without building train loop.
+        self.assertIsInstance(runner._train_loop, dict)
 
         # test run test without train and test components
         cfg = copy.deepcopy(self.epoch_based_cfg)
