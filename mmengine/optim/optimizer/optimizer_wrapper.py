@@ -110,9 +110,9 @@ class OptimWrapper:
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self._inner_count = 0
-        # `max_counts` mean the total number of parameter updates.  It ensures
+        # `max_counts` means the total number of parameter updates.  It ensures
         # that the gradient of the last few iterations will not be lost when
-        # the `max_counts` is not divisible by _accumulative_counts.
+        # the `max_counts` is not divisible by `accumulative_counts`.
         self._max_counts = -1
         # If `_inner_count` is smaller than `divisible_counts`, the loss factor
         # used for gradient accumulation should be the same as
