@@ -1250,7 +1250,8 @@ class Runner:
 
     @staticmethod
     def build_dataloader(dataloader: Union[DataLoader, Dict],
-                         seed: Optional[int] = None) -> DataLoader:
+                         seed: Optional[int] = None,
+                         diff_seed: bool = False) -> DataLoader:
         """Build dataloader.
 
         The method builds three components:
@@ -1273,6 +1274,11 @@ class Runner:
                 build Dataloader object. If ``dataloader`` is a Dataloader
                 object, just returns itself.
             seed (int, optional): Random seed. Defaults to None.
+            diff_seed (bool): Whether or not set different seeds to different
+                ranks. If True, the seed passed to sampler is set to None, in
+                order to synchronize the seeds used in samplers across
+                different ranks.
+
 
         Returns:
             Dataloader: DataLoader build from ``dataloader_cfg``.
@@ -1296,8 +1302,10 @@ class Runner:
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
+            sampler_seed = None if diff_seed else seed
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg, default_args=dict(dataset=dataset, seed=seed))
+                sampler_cfg,
+                default_args=dict(dataset=dataset, seed=sampler_seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
