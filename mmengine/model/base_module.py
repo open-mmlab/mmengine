@@ -190,7 +190,7 @@ class ModuleList(BaseModule, nn.ModuleList):
     strategy than the outer model
 
     Args:
-        modules (iterable, optional): an iterable of modules to add.
+        modules (iterable, optional): An iterable of modules to add.
         init_cfg (dict, optional): Initialization config dict.
     """
 
@@ -208,7 +208,7 @@ class ModuleDict(BaseModule, nn.ModuleDict):
     strategy than the outer model
 
     Args:
-        modules (dict, optional): a mapping (dictionary) of (string: module)
+        modules (dict, optional): A mapping (dictionary) of (string: module)
             or an iterable of key-value pairs of type (string, module).
         init_cfg (dict, optional): Initialization config dict.
     """
