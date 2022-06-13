@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from typing import Dict, Iterator, List, Tuple
 
 import torch
@@ -41,24 +40,10 @@ class OptimWrapperDict(OptimWrapper):
     """
 
     def __init__(self, **optim_wrapper_dict: OptimWrapper):
-        first_key = next(iter(optim_wrapper_dict))
-        first_optim_wrapper = optim_wrapper_dict[first_key]
-        assert isinstance(first_optim_wrapper, OptimWrapper), (
-            'Each argument of `OptimWrapperDict` must be an `OptimWrapper '
-            'instance`')
-        optim_wrapper_class = type(first_optim_wrapper)
         for key, value in optim_wrapper_dict.items():
-            assert type(value) == optim_wrapper_class, (
-                f'All optimizer wrappers should have the same type, but found'
-                f' {key}: {type(value)} and {first_key}: {optim_wrapper_class}'
-            )
-            if value.accumulative_iters != 1:
-                warnings.warn(
-                    f'The `accumulative_iters` of {key} is '
-                    f'{value.accumulative_iters}. OptimWrapperDict '
-                    'will not enable any `accumulate_grad` context of its '
-                    'optimizer wrappers. You should access the corresponding '
-                    'optimizer wrapper to enable the context.')
+            assert isinstance(value, OptimWrapper), (
+                '`OptimWrapperDict` only accept OptimWrapper instance, '
+                f'but got {key}: {type(value)}')
         self.optim_wrappers = optim_wrapper_dict
 
     def update_params(self, loss: torch.Tensor) -> None:
@@ -69,9 +54,8 @@ class OptimWrapperDict(OptimWrapper):
         Therefore, this method is not implemented. The optimizer wrapper of
         OptimWrapperDict should be accessed and call its `update_params.
         """
-        raise NotImplementedError(
-            'You should access the OptimWrapper of the '
-            'OptimWrapperDict and call its `update_params`')
+        raise NotImplementedError('`update_params` should be called by each '
+                                  'optimizer separately`')
 
     def backward(self, loss: torch.Tensor) -> None:
         """Since OptimWrapperDict doesn't know which optimizer wrapper's
@@ -81,14 +65,14 @@ class OptimWrapperDict(OptimWrapper):
         The optimizer wrapper of OptimWrapperDict should be accessed and call
         its `backward.
         """
-        raise NotImplementedError('You should access the OptimWrapper of the '
-                                  'OptimWrapperDict and call its `backward`')
+        raise NotImplementedError('`backward` should be called by each '
+                                  'optimizer separately`')
 
     def step(self) -> None:
         """Since the backward method is not implemented, the step should not be
         implemented either."""
-        raise NotImplementedError('You should access the OptimWrapper of the '
-                                  'OptimWrapperDict and call its `step`')
+        raise NotImplementedError('`step` should be called by each '
+                                  'optimizer separately`')
 
     def zero_grad(self) -> None:
         """Set the gradients of all optimizer wrappers to zero."""
@@ -96,49 +80,29 @@ class OptimWrapperDict(OptimWrapper):
             optim_wrapper.zero_grad()
 
     @contextmanager
-    def precision_context(self):
-        optim_wrapper = next(iter(self.optim_wrappers.values()))
-        with optim_wrapper.precision_context():
-            yield
+    def optim_context(self, model: nn.Module):
+        """``optim_context`` should be called by each optimizer separately."""
+        raise NotImplementedError(
+            '`optim_context` should be called by each optimizer separately')
 
-    @contextmanager
-    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
-        """Enable ``accumulate_grad`` contexts of all optimizer wrappers.
+    def initialize_count_status(self, model: nn.Module, cur_iter,
+                                max_iters) -> None:
+        """Do nothing but provide unified interface for :obj:`OptimWrapper`
 
-        Warning:
-            Consider there is only one ``model`` arguments for all
-            optimizer wrappers, all optimizer wrappers are working under the
-            same ``model.no_sync`` context. For example, there is a model
-            composed of model_a(optimizer_a) and model_b(optimizer_b).
-            ``OptimWrapperDict.accumulate_grad`` will further
-            call ``model.no_sync``, which will block the gradient
-            synchronization of both a and b. If optimizer_a and
-            optimizer_b have different ``accumulative_iters``, and want to
-            block the gradient synchronization of model_a and model_b
-            separately, the model should not implement the ``no_sync``
-            method(or enable an empty context). The ``accumulate_grad`` context
-            should be enabled inside the model by accessing corresponding
-            optimizer wrapper.
+        Since ``OptimWrapperDict`` does not know the correspondence between
+        model and optimizer wrapper. ``initialize_iter_status`` will do nothing
+        and each optimizer wrapper should call ``initialize_iter_status``
+        separately.
         """
-        with ExitStack() as stack:
-            for optim_wrapper in self.optim_wrappers.values():
-                stack.enter_context(
-                    optim_wrapper.accumulate_grad(model, cur_iter, max_iters))
-            yield
+        return
 
-    def load_state_dict(self, state_dict: dict) -> None:
-        """Load the state dictionary from the ``state_dict``.
-
-        Args:
-            state_dict (dict): Each key-value pair in `state_dict` represents
-                the name and the state dictionary of corresponding
-                :obj:`OptimWrapper`.
-        """
-        for name, _state_dict in state_dict.items():
-            assert name in self.optim_wrappers, (
-                f'Mismatched `state_dict`! cannot found {name} in '
-                'OptimWrapperDict')
-            self.optim_wrappers[name].load_state_dict(_state_dict)
+    @property
+    def param_groups(self):
+        """Returns the parameter groups of each OptimWrapper."""
+        param_groups = dict()
+        for key, value in self.optim_wrappers.items():
+            param_groups[key] = value.param_groups
+        return param_groups
 
     def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of all optimizers.
@@ -174,6 +138,20 @@ class OptimWrapperDict(OptimWrapper):
         for name, optim_wrapper in self.optim_wrappers.items():
             state_dict[name] = optim_wrapper.state_dict()
         return state_dict
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        """Load the state dictionary from the ``state_dict``.
+
+        Args:
+            state_dict (dict): Each key-value pair in `state_dict` represents
+                the name and the state dictionary of corresponding
+                :obj:`OptimWrapper`.
+        """
+        for name, _state_dict in state_dict.items():
+            assert name in self.optim_wrappers, (
+                f'Mismatched `state_dict`! cannot found {name} in '
+                'OptimWrapperDict')
+            self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def items(self) -> Iterator[Tuple[str, OptimWrapper]]:
         """A generator to get the name and corresponding

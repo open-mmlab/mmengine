@@ -111,8 +111,8 @@ class BaseModel(BaseModule):
         Returns:
             Dict[str, torch.Tensor]: A ``dict`` of tensor for logging.
         """
-        # enable automatic mixed precision training context.
-        with optim_wrapper.precision_context():
+        # Enable automatic mixed precision training context.
+        with optim_wrapper.optim_context(self):
             batch_inputs, data_samples = self.data_preprocessor(data, True)
             losses = self(batch_inputs, data_samples, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
