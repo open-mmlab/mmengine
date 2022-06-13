@@ -8,7 +8,8 @@ import torch.optim as optim
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
                                       ExponentialLR, LinearLR, MultiStepLR,
-                                      PolyLR, StepLR, _ParamScheduler)
+                                      OneCycleLR, PolyLR, StepLR,
+                                      _ParamScheduler)
 from mmengine.testing import assert_allclose
 
 
@@ -551,3 +552,44 @@ class TestLRScheduler(TestCase):
             self.optimizer, T_max=5, eta_min=eta_min, begin=10, end=15)
 
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+
+    def test_onecycle_lr(self):
+        # test linear annealing
+        target = [1, 13, 25, 21.5, 18, 14.5, 11, 7.5, 4, 0.5]
+        scheduler = OneCycleLR(
+            self.optimizer,
+            eta_max=25,
+            final_div_factor=2,
+            total_steps=10,
+            anneal_strategy='linear')
+        self._test_scheduler_value(scheduler, [target], 10)
+        # test linear annealing three phase
+        target = [1, 9, 17, 25, 17, 9, 1, 0.75, 0.5, 0.25]
+        scheduler = OneCycleLR(
+            self.optimizer,
+            eta_max=25,
+            div_factor=25,
+            total_steps=10,
+            anneal_strategy='linear',
+            pct_start=0.4,
+            final_div_factor=4,
+            three_phase=True)
+        self._test_scheduler_value(scheduler, [target], 10)
+
+        # test cosine annealing
+        def annealing_cos(start, end, pct):
+            cos_out = math.cos(math.pi * pct) + 1
+            return end + (start - end) / 2.0 * cos_out
+
+        target = [
+            1, 13, 25,
+            annealing_cos(25, 0.5, 1 / 7.0),
+            annealing_cos(25, 0.5, 2 / 7.0),
+            annealing_cos(25, 0.5, 3 / 7.0),
+            annealing_cos(25, 0.5, 4 / 7.0),
+            annealing_cos(25, 0.5, 5 / 7.0),
+            annealing_cos(25, 0.5, 6 / 7.0), 0.5
+        ]
+        scheduler = OneCycleLR(
+            self.optimizer, eta_max=25, final_div_factor=2, total_steps=10)
+        self._test_scheduler_value(scheduler, [target], 10)
