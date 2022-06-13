@@ -122,6 +122,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
 
         target_inputs = [target_inputs1, target_inputs2]
         inputs, data_samples = data_preprocessor(data, True)
+        self.assertTrue(torch.is_floating_point(inputs))
 
         target_data_samples = [data_sample1, data_sample2]
         for input_, data_sample, target_input, target_data_sample in zip(
@@ -142,6 +143,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
 
         target_inputs = [target_inputs1, target_inputs2]
         inputs, data_samples = data_preprocessor(data, True)
+        self.assertTrue(torch.is_floating_point(inputs))
 
         target_data_samples = [data_sample1, data_sample2]
         for input_, data_sample, target_input, target_data_sample in zip(
