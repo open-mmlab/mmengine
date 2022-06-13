@@ -249,24 +249,24 @@ class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
         total_steps (int): The total number of steps in the cycle. Note that
             if a value is not provided here, then it must be inferred by
             providing a value for epochs and steps_per_epoch.
-            Default: None
+            Default to None
         steps_per_epoch (int): The number of steps per epoch to train for.
             This is used along with epochs in order to infer the total number
             of steps in the cycle if a value for total_steps is not provided.
-            Default: None
+            Default to None
         pct_start (float): The percentage of the cycle (in number of steps)
             spent increasing the learning rate.
-            Default: 0.3
+            Default to 0.3
         anneal_strategy (str): {'cos', 'linear'}
             Specifies the annealing strategy: "cos" for cosine annealing,
             "linear" for linear annealing.
-            Default: 'cos'
+            Default to 'cos'
         div_factor (float): Determines the initial learning rate via
             initial_param = eta_max/div_factor
-            Default: 25
+            Default to 25
         final_div_factor (float): Determines the minimum learning rate via
             eta_min = initial_param/final_div_factor
-            Default: 1e4
+            Default to 1e4
         three_phase (bool): If ``True``, use a third phase of the schedule to
             annihilate the learning rate according to 'final_div_factor'
             instead of modifying the second phase (the first two phases will be
