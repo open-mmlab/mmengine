@@ -221,12 +221,17 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             model input.
         """
         inputs, batch_data_samples = self.collate_data(data)
-        # channel transform
-        if self.channel_conversion:
-            inputs = [_input[[2, 1, 0], ...] for _input in inputs]
-        # Normalization.
-        if self._enable_normalize:
-            inputs = [(_input - self.mean) / self.std for _input in inputs]
+        for idx, _input in enumerate(inputs):
+            assert _input.dim() == 3 and _input.shape[0] == 3, (
+                '`ImgDataPreprocess` only accepts RGB or BGR format '
+                'image tensor.')
+            # channel transform
+            if self.channel_conversion:
+                _input = _input[[2, 1, 0], ...]
+            # Normalization.
+            if self._enable_normalize:
+                _input = (_input - self.mean) / self.std
+            inputs[idx] = _input
         # Pad and stack Tensor.
         batch_inputs = stack_batch(inputs, self.pad_size_divisor,
                                    self.pad_value)
