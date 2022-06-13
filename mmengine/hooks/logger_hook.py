@@ -62,14 +62,14 @@ class LoggerHook(Hook):
         >>> logger_hook_cfg = dict(interval=20)
     """
     priority = 'BELOW_NORMAL'
+    suffix_type = Union[Sequence[str], str]
 
     def __init__(self,
                  interval: int = 10,
                  ignore_last: bool = True,
                  interval_exp_name: int = 1000,
                  out_dir: Optional[Union[str, Path]] = None,
-                 out_suffix: Union[Sequence[str],
-                                   str] = ('.json', '.log', '.py', 'yaml'),
+                 out_suffix: suffix_type = ('.json', '.log', '.py', 'yaml'),
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True):
