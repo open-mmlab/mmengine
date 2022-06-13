@@ -22,16 +22,9 @@ class BaseStorageBackend(metaclass=ABCMeta):
     as texts.
     """
 
-    # a flag to indicate whether the backend can create a symlink for a file
-    _allow_symlink = False
-
     @property
     def name(self):
         return self.__class__.__name__
-
-    @property
-    def allow_symlink(self):
-        return self._allow_symlink
 
     @abstractmethod
     def get(self, filepath):
@@ -466,8 +459,6 @@ class LmdbBackend(BaseStorageBackend):
 class HardDiskBackend(BaseStorageBackend):
     """Raw hard disks storage backend."""
 
-    _allow_symlink = True
-
     def get(self, filepath: Union[str, Path]) -> bytes:
         """Read data from a given ``filepath`` with 'rb' mode.
 
@@ -789,10 +780,6 @@ class FileClient:
     @property
     def name(self):
         return self.client.name
-
-    @property
-    def allow_symlink(self):
-        return self.client.allow_symlink
 
     @staticmethod
     def parse_uri_prefix(uri: Union[str, Path]) -> Optional[str]:

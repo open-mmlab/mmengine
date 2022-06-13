@@ -8,18 +8,12 @@ from mmengine.hooks import CheckpointHook
 
 class MockPetrel:
 
-    _allow_symlink = False
-
     def __init__(self):
         pass
 
     @property
     def name(self):
         return self.__class__.__name__
-
-    @property
-    def allow_symlink(self):
-        return self._allow_symlink
 
 
 prefix_to_backends = {'s3': MockPetrel}
@@ -45,18 +39,6 @@ class TestCheckpointHook:
         checkpoint_hook.before_train(runner)
         assert checkpoint_hook.out_dir == (
             f'test_dir/{osp.basename(work_dir)}')
-
-        # create_symlink in args and create_symlink is True
-        checkpoint_hook = CheckpointHook(
-            interval=1, by_epoch=True, out_dir='test_dir', create_symlink=True)
-        checkpoint_hook.before_train(runner)
-        assert checkpoint_hook.args['create_symlink']
-
-        runner.work_dir = 's3://path/of/file'
-        checkpoint_hook = CheckpointHook(
-            interval=1, by_epoch=True, create_symlink=True)
-        checkpoint_hook.before_train(runner)
-        assert not checkpoint_hook.args['create_symlink']
 
     def test_after_train_epoch(self, tmp_path):
         runner = Mock()
