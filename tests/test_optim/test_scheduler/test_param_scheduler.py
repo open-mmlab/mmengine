@@ -684,20 +684,6 @@ class TestParameterScheduler(TestCase):
         with self.assertRaises(ValueError):
             OneCycleParamScheduler(
                 self.optimizer, param_name='lr', total_steps=-1)
-        with self.assertRaises(ValueError):
-            OneCycleParamScheduler(
-                self.optimizer,
-                param_name='lr',
-                total_steps=None,
-                epochs=-1,
-                steps_per_epoch=10)
-        with self.assertRaises(ValueError):
-            OneCycleParamScheduler(
-                self.optimizer,
-                param_name='lr',
-                total_steps=None,
-                epochs=10,
-                steps_per_epoch=-1)
         # test invalid pct_start
         with self.assertRaises(ValueError):
             OneCycleParamScheduler(

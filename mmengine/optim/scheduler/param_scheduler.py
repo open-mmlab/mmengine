@@ -865,13 +865,9 @@ class OneCycleParamScheduler(_ParamScheduler):
     one of two ways (listed in order of precedence):
 
     #. A value for total_steps is explicitly provided.
-    #. A number of epochs (epochs) and a number of steps per epoch
-       (steps_per_epoch) are provided.
-       In this case, the number of total steps is inferred by
-       total_steps = epochs * steps_per_epoch
-
-    You must either provide a value for total_steps or provide a value for both
-    epochs and steps_per_epoch.
+    #. If total_steps is not defined, begin and end of the ParamSchedul will
+       works for it. In this case, the number of total steps is inferred by
+       total_steps = end - begin
 
     The default behaviour of this scheduler follows the fastai implementation
     of 1cycle, which claims that "unpublished work has shown even better
@@ -883,17 +879,8 @@ class OneCycleParamScheduler(_ParamScheduler):
         eta_max (float or list): Upper parameter value boundaries in the cycle
             for each parameter group.
         total_steps (int): The total number of steps in the cycle. Note that
-            if a value is not provided here, then it must be inferred by
-            providing a value for epochs and steps_per_epoch.
-            Default to None
-        epochs (int): The number of epochs to train for. This is used along
-            with steps_per_epoch in order to infer the total number of steps
-            in the cycle if a value for total_steps is not provided.
-            Default to None
-        steps_per_epoch (int): The number of steps per epoch to train for.
-            This is used along with epochs in order to infer the total number
-            of steps in the cycle if a value for total_steps is not provided.
-            Default to None
+            if a value is not provided here, then it will be equal to
+            ``end - begin``. Default to None
         pct_start (float): The percentage of the cycle (in number of steps)
             spent increasing the learning rate.
             Default to 0.3
@@ -927,8 +914,6 @@ class OneCycleParamScheduler(_ParamScheduler):
                  param_name: str,
                  eta_max: float = 0,
                  total_steps: Optional[int] = None,
-                 epochs: int = None,
-                 steps_per_epoch: Optional[int] = None,
                  pct_start: float = 0.3,
                  anneal_strategy: str = 'cos',
                  div_factor: float = 25.,
@@ -955,13 +940,7 @@ class OneCycleParamScheduler(_ParamScheduler):
                                  f'but got {total_steps}')
             self.total_steps = total_steps
         else:
-            if not isinstance(epochs, int) or epochs <= 0:
-                raise ValueError('Expected positive integer epochs, '
-                                 f'but got {epochs}')
-            if not isinstance(steps_per_epoch, int) or steps_per_epoch <= 0:
-                raise ValueError('Expected positive integer steps_per_epoch, '
-                                 f'but got {steps_per_epoch}')
-            self.total_steps = epochs * steps_per_epoch
+            self.total_steps = self.end - self.begin
 
         # Validate pct_start
         if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
@@ -1055,6 +1034,7 @@ class OneCycleParamScheduler(_ParamScheduler):
                               *args,
                               begin=0,
                               end=INF,
+                              total_steps=None,
                               by_epoch=True,
                               epoch_length=None,
                               **kwargs):
@@ -1069,7 +1049,15 @@ class OneCycleParamScheduler(_ParamScheduler):
         begin = begin * epoch_length
         if end != INF:
             end = end * epoch_length
-        return cls(*args, begin=begin, end=end, by_epoch=by_epoch, **kwargs)
+        if total_steps is not None:
+            total_steps = total_steps * epoch_length
+        return cls(
+            *args,
+            begin=begin,
+            end=end,
+            total_steps=total_steps,
+            by_epoch=by_epoch,
+            **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
