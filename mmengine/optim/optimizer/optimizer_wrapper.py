@@ -110,18 +110,19 @@ class OptimWrapper:
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self._inner_count = 0
-        # `max_counts` means the total number of parameter updates.  It ensures
-        # that the gradient of the last few iterations will not be lost when
-        # the `max_counts` is not divisible by `accumulative_counts`.
+        # `_max_counts` means the total number of parameter updates.  It
+        # ensures that the gradient of the last few iterations will not be
+        # lost when the `_max_counts` is not divisible by
+        # `accumulative_counts`.
         self._max_counts = -1
-        # If `_inner_count` is smaller than `divisible_counts`, the loss factor
-        # used for gradient accumulation should be the same as
-        # `accumulative_counts`. If `max_counts` has not been initialized,
-        # the loss factor will always be the same as `accumulative_counts`.
+        # If `_inner_count` is smaller than `_divisible_counts`, the loss
+        # factor used for gradient accumulation should be the same as
+        # `_accumulative_counts`. If `_max_counts` has not been initialized,
+        # the loss factor will always be the same as `_accumulative_counts`.
         self._divisible_counts = -1
-        # The `remainder_iter` is used for calculating loss factor at the
-        # last few iterations. If `max_counts` has not been initialized,
-        # the loss factor will always be the same as `accumulative_counts`.
+        # The `_remainder_iter` is used for calculating loss factor at the
+        # last few iterations. If `_max_counts` has not been initialized,
+        # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
     def update_params(self, loss: torch.Tensor) -> None:
@@ -323,11 +324,11 @@ class OptimWrapper:
                 'performance because the model has BatchNorm layers.')
         residual_counts = max_counts - init_counts
         # The maximum number of training iteration that is divisible by
-        # _accumulative_counts.
+        # `_accumulative_counts`.
         self._divisible_counts = (
             residual_counts // self._accumulative_counts *
             self._accumulative_counts)
-        # Remainder of ``max_counts`` divided by ``_accumulative_counts``
+        # Remainder of `_max_counts` divided by `_accumulative_counts`
         self._remainder_counts = residual_counts - self._divisible_counts
 
     def should_update(self) -> bool:
@@ -376,8 +377,8 @@ class OptimWrapper:
         else:
             # if `self._accumulative_counts > 1`, the gradient needs to be
             # rescaled and accumulated. In most cases, `loss_factor` equals to
-            # `self._accumulative_counts`. However `self._max_counts` may not
-            # be divisible `self.by _accumulative_counts`, so the
+            # `self._accumulative_counts`. However, `self._max_counts` may not
+            # be divisible by `self._accumulative_counts`, so the
             # `loss_scale` for the last few iterations needs to be
             # recalculated.
             if self._inner_count < self._divisible_counts:
