@@ -1436,7 +1436,6 @@ class TestRunner(TestCase):
         # 1.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'epoch_3.pth')
         self.assertTrue(osp.exists(path))
-        self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_4.pth')))
 
         ckpt = torch.load(path)
@@ -1603,7 +1602,6 @@ class TestRunner(TestCase):
         # 2.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
-        self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
 
         ckpt = torch.load(path)
