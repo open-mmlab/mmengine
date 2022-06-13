@@ -153,11 +153,15 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
     Args:
         mean (Sequence[float or int], optional): The pixel mean of image
             channels. If ``bgr_to_rgb=True`` it means the mean value of R,
-            G, B channels. If it is not specified, images will not be
-            normalized. Defaults None.
+            G, B channels. If the length of `mean` is 1, it means all
+            channels have the same mean value, or the input is a gray image.
+            If it is not specified, images will not be normalized. Defaults
+            None.
         std (Sequence[float or int], optional): The pixel standard deviation of
             image channels. If ``bgr_to_rgb=True`` it means the standard
-            deviation of R, G, B channels. If it is not specified, images will
+            deviation of R, G, B channels. If the length of `std` is 1,
+            it means all channels have the same standard deviation, or the
+            input is a gray image.  If it is not specified, images will
             not be normalized. Defaults None.
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
@@ -222,14 +226,16 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         """
         inputs, batch_data_samples = self.collate_data(data)
         for idx, _input in enumerate(inputs):
-            assert _input.dim() == 3 and _input.shape[0] == 3, (
-                '`ImgDataPreprocess` only accepts RGB or BGR format '
-                f'image tensor. But got the input shape {_input.shape}')
             # channel transform
             if self.channel_conversion:
                 _input = _input[[2, 1, 0], ...]
             # Normalization.
             if self._enable_normalize:
+                if self.mean.shape[0] == 3:
+                    assert _input.dim() == 3 and _input.shape[0] == 3, (
+                        'If the length of mean is 3, the input tensor must '
+                        'have 3 H W format, which means the RGB or BGR image, '
+                        ' but got the tensor with shape {_input.shape}')
                 _input = (_input - self.mean) / self.std
             inputs[idx] = _input
         # Pad and stack Tensor.

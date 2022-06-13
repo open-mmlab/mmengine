@@ -53,7 +53,7 @@ class TestBaseDataPreprocessor(TestCase):
             self.assertEqual(batch_inputs.device.type, 'cuda')
 
 
-class TestImageDataPreprocessor(TestBaseDataPreprocessor):
+class TestImgataPreprocessor(TestBaseDataPreprocessor):
 
     def test_init(self):
         # initiate model without `preprocess_cfg`
@@ -156,18 +156,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
             assert_allclose(input_, target_input)
             assert_allclose(data_sample.bboxes, target_data_sample.bboxes)
 
-        # Test 1 channel image will raise error.
-        data_preprocessor = ImgDataPreprocessor(
-            mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
-        data = [
-            dict(inputs=torch.ones(1, 10, 10)),
-            dict(inputs=torch.ones(1, 10, 10))
-        ]
-        with self.assertRaisesRegex(AssertionError,
-                                    '`ImgDataPreprocess` only accepts'):
-            data_preprocessor(data)
-
-        # Test 2 dim image will raise error
+        # Test gray image with 3 dim mean will raise error
         data_preprocessor = ImgDataPreprocessor(
             mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
         data = [
@@ -175,7 +164,15 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
             dict(inputs=torch.ones(10, 10))
         ]
         with self.assertRaisesRegex(AssertionError,
-                                    '`ImgDataPreprocess` only accepts'):
+                                    'If the length of mean is'):
+            data_preprocessor(data)
+
+        data = [
+            dict(inputs=torch.ones(1, 10, 10)),
+            dict(inputs=torch.ones(1, 10, 10))
+        ]
+        with self.assertRaisesRegex(AssertionError,
+                                    'If the length of mean is'):
             data_preprocessor(data)
 
         # Test empty `data_sample`
