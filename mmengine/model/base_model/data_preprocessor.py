@@ -227,6 +227,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         # Normalization.
         if self._enable_normalize:
             inputs = [(_input - self.mean) / self.std for _input in inputs]
+        else:
+            inputs = [_input.float() for _input in inputs]
         # Pad and stack Tensor.
         batch_inputs = stack_batch(inputs, self.pad_size_divisor,
                                    self.pad_value)
