@@ -53,7 +53,7 @@ class BaseDataPreprocessor(nn.Module):
             Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
             tensor and list of labels at target device.
         """
-        inputs = [_data['inputs'].to(self._device) for _data in data]
+        inputs = [_data['inputs'].to(self._device).float() for _data in data]
         batch_data_samples: List[BaseDataElement] = []
         # Model can get predictions without any data samples.
         for _data in data:
