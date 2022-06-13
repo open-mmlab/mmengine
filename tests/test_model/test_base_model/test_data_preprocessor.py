@@ -121,6 +121,7 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
         std = torch.tensor([1, 2, 3]).view(-1, 1, 1)
         target_inputs1 = (inputs1.clone()[[2, 1, 0], ...] - 127.5) / std
         target_inputs2 = (inputs2.clone()[[2, 1, 0], ...] - 127.5) / std
+
         target_inputs1 = F.pad(target_inputs1, (0, 6, 0, 6), value=10)
         target_inputs2 = F.pad(target_inputs2, (0, 1, 0, 1), value=10)
 
@@ -154,6 +155,28 @@ class TestImageDataPreprocessor(TestBaseDataPreprocessor):
                 inputs, data_samples, target_inputs, target_data_samples):
             assert_allclose(input_, target_input)
             assert_allclose(data_sample.bboxes, target_data_sample.bboxes)
+
+        # Test 1 channel image will raise error.
+        data_preprocessor = ImgDataPreprocessor(
+            mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
+        data = [
+            dict(inputs=torch.ones(1, 10, 10)),
+            dict(inputs=torch.ones(1, 10, 10))
+        ]
+        with self.assertRaisesRegex(AssertionError,
+                                    '`ImgDataPreprocess` only accepts'):
+            data_preprocessor(data)
+
+        # Test 2 dim image will raise error
+        data_preprocessor = ImgDataPreprocessor(
+            mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
+        data = [
+            dict(inputs=torch.ones(10, 10)),
+            dict(inputs=torch.ones(10, 10))
+        ]
+        with self.assertRaisesRegex(AssertionError,
+                                    '`ImgDataPreprocess` only accepts'):
+            data_preprocessor(data)
 
         # Test empty `data_sample`
         data = [dict(inputs=inputs1.clone()), dict(inputs=inputs2.clone())]
