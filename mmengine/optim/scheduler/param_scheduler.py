@@ -961,42 +961,43 @@ class OneCycleParamScheduler(_ParamScheduler):
             self._schedule_phases = [
                 {
                     'end_step': float(pct_start * self.total_steps) - 1,
-                    'start_lr': 'initial_lr',
-                    'end_lr': 'max_lr'
+                    f'start_{param_name}': f'initial_{param_name}',
+                    f'end_{param_name}': f'max_{param_name}'
                 },
                 {
                     'end_step': float(2 * pct_start * self.total_steps) - 2,
-                    'start_lr': 'max_lr',
-                    'end_lr': 'initial_lr'
+                    f'start_{param_name}': f'max_{param_name}',
+                    f'end_{param_name}': f'initial_{param_name}'
                 },
                 {
                     'end_step': self.total_steps - 1,
-                    'start_lr': 'initial_lr',
-                    'end_lr': 'min_lr'
+                    f'start_{param_name}': f'initial_{param_name}',
+                    f'end_{param_name}': f'min_{param_name}'
                 },
             ]
         else:
             self._schedule_phases = [
                 {
                     'end_step': float(pct_start * self.total_steps) - 1,
-                    'start_lr': 'initial_lr',
-                    'end_lr': 'max_lr'
+                    f'start_{param_name}': f'initial_{param_name}',
+                    f'end_{param_name}': f'max_{param_name}'
                 },
                 {
                     'end_step': self.total_steps - 1,
-                    'start_lr': 'max_lr',
-                    'end_lr': 'min_lr'
+                    f'start_{param_name}': f'max_{param_name}',
+                    f'end_{param_name}': f'min_{param_name}'
                 },
             ]
 
         # Initialize parameters
-        max_lrs = self._format_param('max_' + param_name, optimizer, eta_max)
+        max_values = self._format_param(f'max_{param_name}', optimizer,
+                                        eta_max)
         if last_step == -1:
             for idx, group in enumerate(optimizer.param_groups):
-                group['initial_' + param_name] = max_lrs[idx] / div_factor
-                group['max_' + param_name] = max_lrs[idx]
-                group['min_' + param_name] = \
-                    group['initial_' + param_name] / final_div_factor
+                group[f'initial_{param_name}'] = max_values[idx] / div_factor
+                group[f'max_{param_name}'] = max_values[idx]
+                group[f'min_{param_name}'] = \
+                    group[f'initial_{param_name}'] / final_div_factor
 
         super().__init__(
             optimizer=optimizer,

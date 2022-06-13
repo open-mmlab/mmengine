@@ -249,11 +249,7 @@ class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
         total_steps (int): The total number of steps in the cycle. Note that
             if a value is not provided here, then it must be inferred by
             providing a value for epochs and steps_per_epoch.
-            Default to None
-        steps_per_epoch (int): The number of steps per epoch to train for.
-            This is used along with epochs in order to infer the total number
-            of steps in the cycle if a value for total_steps is not provided.
-            Default to None
+            Default to None.
         pct_start (float): The percentage of the cycle (in number of steps)
             spent increasing the learning rate.
             Default to 0.3
