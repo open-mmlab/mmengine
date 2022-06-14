@@ -10,6 +10,7 @@ from torch.optim import SGD
 
 from mmengine.dist import all_gather
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
+                            MMFullyShardedDataParallel,
                             MMSeparateDistributedDataParallel)
 from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
@@ -177,3 +178,55 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         os.environ['RANK'] = str(rank)
         torch_dist.init_process_group(
             backend='gloo', rank=rank, world_size=world_size)
+
+
+@unittest.skipIf(
+    torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
+class TestMMFullyShardedDataParallel(MultiProcessTestCase):
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._spawn_processes()
+
+    def test_train_step(self):
+        self._init_dist_env(self.rank, self.world_size)
+        # Test `optim_wrapper` is a instance of `OptimWrapper`
+        model = ToyModel()
+        fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
+        optimizer = SGD(fsdp_model.parameters(), lr=0)
+        optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
+        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        data = dict(inputs=inputs, data_sample=MagicMock())
+        fsdp_model.train()
+        self.assertTrue(fsdp_model.training)
+        fsdp_model.train_step([data], optim_wrapper=optim_wrapper)
+
+    def test_val_step(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ToyModel()
+        fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
+        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        data = dict(inputs=inputs, data_sample=MagicMock())
+        # Test get predictions.
+        predictions = fsdp_model.val_step([data])
+        self.assertIsInstance(predictions, torch.Tensor)
+
+    def test_test_step(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ToyModel()
+        fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
+        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        data = dict(inputs=inputs, data_sample=MagicMock())
+        predictions = fsdp_model.test_step([data])
+        self.assertIsInstance(predictions, torch.Tensor)
+
+    def _init_dist_env(self, rank, world_size):
+        """Initialize the distributed environment."""
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29520'
+        os.environ['RANK'] = str(rank)
+
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(rank % num_gpus)
+        torch_dist.init_process_group(
+            backend='nccl', rank=rank, world_size=world_size)
