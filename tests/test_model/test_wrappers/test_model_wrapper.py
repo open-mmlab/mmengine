@@ -10,11 +10,15 @@ from torch.optim import SGD
 
 from mmengine.dist import all_gather
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            MMFullyShardedDataParallel,
                             MMSeparateDistributedDataParallel)
 from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
+from mmengine.utils.parrots_wrapper import TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
+
+if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+    from mmengine.model import MMFullyShardedDataParallel
 
 
 class ToyModel(BaseModel):
@@ -182,6 +186,9 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
 
 @unittest.skipIf(
     torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
+@unittest.skipIf(
+    digit_version(TORCH_VERSION) < digit_version('1.11.0'),
+    reason='fsdp need Pytorch 1.11 or higher')
 class TestMMFullyShardedDataParallel(MultiProcessTestCase):
 
     def setUp(self) -> None:
