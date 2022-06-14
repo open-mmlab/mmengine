@@ -29,6 +29,7 @@ from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
                                RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
+from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import is_list_of
 from mmengine.visualization import Visualizer
@@ -1187,6 +1188,50 @@ class TestRunner(TestCase):
         self.assertEqual(runner.optim_wrapper._inner_count, 12)
         self.assertEqual(runner.optim_wrapper._max_counts, 12)
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
+
+        self.assertEqual(len(epoch_results), 1)
+        self.assertEqual(epoch_results[0], 0)
+        self.assertEqual(runner.val_interval, 4)
+        self.assertEqual(runner.val_begin, 4)
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(batch_idx_results, batch_idx_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_iter_results, val_iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_batch_idx_results,
+                                   val_batch_idx_targets):
+            self.assertEqual(result, target)
+
+        # 4. test iter and epoch counter of IterBasedTrainLoop and timing of
+        # running ValLoop without InfiniteSampler
+        epoch_results = []
+        iter_results = []
+        batch_idx_results = []
+        val_iter_results = []
+        val_batch_idx_results = []
+        iter_targets = [i for i in range(12)]
+        batch_idx_targets = [i for i in range(12)]
+        val_iter_targets = [i for i in range(4, 12)]
+        val_batch_idx_targets = [i for i in range(4)] * 2
+
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train4'
+        cfg.train_dataloader.sampler = dict(
+            type='DefaultSampler', shuffle=True)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.train_cfg = dict(
+            by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
+        runner = Runner.from_cfg(cfg)
+        with self.assertWarnsRegex(
+                Warning,
+                'Reach the end of the dataloader, it will be restarted and '
+                'continue to iterate.'):
+            runner.train()
+
+        assert isinstance(runner.train_loop, IterBasedTrainLoop)
+        assert isinstance(runner.train_loop.dataloader_iterator,
+                          _InfiniteDataloaderIterator)
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)
