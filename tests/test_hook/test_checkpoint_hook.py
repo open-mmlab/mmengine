@@ -8,12 +8,18 @@ from mmengine.hooks import CheckpointHook
 
 class MockPetrel:
 
+    _allow_symlink = False
+
     def __init__(self):
         pass
 
     @property
     def name(self):
         return self.__class__.__name__
+
+    @property
+    def allow_symlink(self):
+        return self._allow_symlink
 
 
 prefix_to_backends = {'s3': MockPetrel}
