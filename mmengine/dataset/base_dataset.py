@@ -152,10 +152,10 @@ class BaseDataset(Dataset):
         ann_file (str): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
-        data_root (str, optional): The root directory for ``data_prefix`` and
-            ``ann_file``. Defaults to None.
-        data_prefix (dict, optional): Prefix for training data. Defaults to
-            dict(img_path=None, seg_path=None).
+        data_root (str): The root directory for ``data_prefix`` and
+            ``ann_file``. Defaults to ''.
+        data_prefix (dict): Prefix for training data. Defaults to
+            dict(img_path='').
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
@@ -210,8 +210,8 @@ class BaseDataset(Dataset):
     def __init__(self,
                  ann_file: str = '',
                  metainfo: Optional[dict] = None,
-                 data_root: Optional[str] = None,
-                 data_prefix: dict = dict(img_path=None, seg_path=None),
+                 data_root: str = '',
+                 data_prefix: dict = dict(img_path=''),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
@@ -235,8 +235,7 @@ class BaseDataset(Dataset):
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
-        if self.data_root is not None:
-            self._join_prefix()
+        self._join_prefix()
 
         # Build pipeline.
         self.pipeline = Compose(pipeline)
@@ -534,16 +533,14 @@ class BaseDataset(Dataset):
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
-            if prefix is None:
-                self.data_prefix[data_key] = self.data_root
-            elif isinstance(prefix, str):
+            if isinstance(prefix, str):
                 if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
                 else:
                     self.data_prefix[data_key] = prefix
             else:
-                raise TypeError('prefix should be a string or None, but got '
+                raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
 
     @force_full_init

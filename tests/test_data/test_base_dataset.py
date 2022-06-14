@@ -58,7 +58,7 @@ class TestBaseDataset:
         assert hasattr(dataset, 'data_address')
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json')
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
@@ -437,11 +437,11 @@ class TestBaseDataset:
         # test the instantiation of self.base_dataset when passing indices
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json')
         dataset_sliced = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json',
             indices=1)
         assert dataset_sliced[0] == dataset[0]
@@ -455,7 +455,7 @@ class TestBaseDataset:
         indices = 2
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
             serialize_data=serialize_data)
@@ -533,7 +533,7 @@ class TestBaseDataset:
         indices = 2
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json',
             lazy_init=lazy_init,
             serialize_data=serialize_data)
@@ -579,7 +579,7 @@ class TestBaseDataset:
         # test the instantiation of self.base_dataset when passing num_samples
         dataset = BaseDataset(
             data_root=osp.join(osp.dirname(__file__), '../data/'),
-            data_prefix=dict(img=None),
+            data_prefix=dict(img=''),
             ann_file='annotations/dummy_annotation.json',
             indices=1)
         assert dataset._rand_another() >= 0
