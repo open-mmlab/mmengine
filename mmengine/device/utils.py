@@ -28,12 +28,12 @@ def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
 
 
 def is_cuda_available() -> bool:
-    """Return True if cuda devices exist."""
+    """Returns True if cuda devices exist."""
     return torch.cuda.is_available()
 
 
 def is_mlu_available() -> bool:
-    """Return True if Cambricon PyTorch and mlu devices exist."""
+    """Returns True if Cambricon PyTorch and mlu devices exist."""
     return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
 
 
