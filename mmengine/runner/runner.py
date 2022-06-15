@@ -1932,12 +1932,8 @@ class Runner:
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self.epoch + 1`
-            self.message_hub.update_info('epoch', self.epoch + 1)
-            self.message_hub.update_info('iter', self.iter)
             meta.update(epoch=self.epoch + 1, iter=self.iter)
         else:
-            self.message_hub.update_info('epoch', self.epoch)
-            self.message_hub.update_info('iter', self.iter + 1)
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
         filepath = osp.join(out_dir, filename)
