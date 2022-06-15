@@ -3,6 +3,7 @@ import copy
 import os.path as osp
 import platform
 import random
+import resource
 import shutil
 import time
 import warnings
@@ -604,6 +605,7 @@ class Runner:
                     opencv_num_threads=0
                 ),
                 dist_cfg=dict(backend='nccl'),
+                resource_limit=4096
             )
 
         Args:
@@ -627,6 +629,18 @@ class Runner:
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
+
+        # https://github.com/pytorch/pytorch/issues/973
+        # set resource limit
+        if platform.system() != 'Windows':
+            rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+            base_soft_limit = rlimit[0]
+            hard_limit = rlimit[1]
+            soft_limit = min(
+                max(env_cfg.get('resource_limit', 4096), base_soft_limit),
+                hard_limit)
+            resource.setrlimit(resource.RLIMIT_NOFILE,
+                               (soft_limit, hard_limit))
 
     def set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
