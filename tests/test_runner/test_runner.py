@@ -1431,8 +1431,6 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint1'
         runner = Runner.from_cfg(cfg)
-        import pdb
-        pdb.set_trace()
         runner.train()
 
         # 1.1 test `save_checkpoint` which is called by `CheckpointHook`
