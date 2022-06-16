@@ -2,26 +2,28 @@
 from typing import Callable, Dict, List
 
 import torch
+import torch.nn as nn
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
 
 from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
-from mmengine.registry import FSDP_WRAP_POLICY, MODEL_WRAPPERS
+from mmengine.registry import MODEL_WRAPPERS, Registry
+
+# support customize fsdp policy
+FSDP_WRAP_POLICY = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
 class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
-    def __init__(self, *args, **kwargs):
-        if 'module' not in kwargs:
-            raise KeyError(
-                f'`kwargs` must contain the key "module", but got {kwargs}\n')
-        module = kwargs['module']
-        # here, temporarily set process_group to default
-        process_group = None
+    def __init__(self,
+                 module: nn.Module,
+                 process_group=None,
+                 cpu_offload=None,
+                 fsdp_auto_wrap_policy=None,
+                 backward_prefetch=None):
 
-        cpu_offload = kwargs.get('cpu_offload', None)
         if cpu_offload:
             cpu_offload = str(cpu_offload)
             assert cpu_offload in ['True', 'False'], \
@@ -29,17 +31,17 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 f' but get {cpu_offload}'
 
             cpu_offload = CPUOffload(offload_params=(cpu_offload == 'True'))
-        fsdp_auto_wrap_policy = kwargs.get('fsdp_auto_wrap_policy', None)
+
         if fsdp_auto_wrap_policy:
             assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICY, \
                 f'`FSDP_WRAP_POLICY` has no function {fsdp_auto_wrap_policy}'
             fsdp_auto_wrap_policy = FSDP_WRAP_POLICY.get(
                 'fsdp_auto_wrap_policy')
-            if isinstance(fsdp_auto_wrap_policy, Callable):
+            if isinstance(fsdp_auto_wrap_policy, Callable):  # type: ignore
                 raise TypeError(
                     '`fsdp_auto_wrap_policy` needs to be `Callable`,'
                     f' but has type {type(fsdp_auto_wrap_policy)} ')
-        backward_prefetch = kwargs.get('backward_prefetch', None)
+
         if backward_prefetch:
             backward_prefetch = str(backward_prefetch)
             assert backward_prefetch in ['pre', 'post'], \

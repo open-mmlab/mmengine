@@ -54,6 +54,3 @@ OPTIM_WRAPPERS = Registry('optim_wrapper')
 
 # manage evaluator
 EVALUATOR = Registry('evaluator')
-
-# manage fsdp wrap policy function
-FSDP_WRAP_POLICY = Registry('fsdp wrap policy')
