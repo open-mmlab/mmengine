@@ -55,7 +55,6 @@ class ToyModel(BaseModel):
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
-            outputs = dict(log_vars=dict(a=1, b=0.5))
             return outputs
 
 
@@ -1273,7 +1272,25 @@ class TestRunner(TestCase):
         cfg.pop('test_cfg')
         cfg.pop('test_evaluator')
         runner = Runner.from_cfg(cfg)
+
+        # Test default fp32 `auto_cast` context.
+        predictions = []
+
+        def get_outputs_callback(module, inputs, outputs):
+            predictions.append(outputs)
+
+        runner.model.register_forward_hook(get_outputs_callback)
         runner.val()
+        self.assertEqual(predictions[0].dtype, torch.float32)
+        predictions.clear()
+
+        # Test fp16 `auto_cast` context.
+        cfg.experiment_name = 'test_val3'
+        cfg.val_cfg = dict(fp16_enabled=True)
+        runner = Runner.from_cfg(cfg)
+        runner.model.register_forward_hook(get_outputs_callback)
+        runner.val()
+        self.assertIn(predictions[0].dtype, (torch.float16, torch.bfloat16))
 
     def test_test(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1303,7 +1320,25 @@ class TestRunner(TestCase):
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
         runner = Runner.from_cfg(cfg)
+
+        # Test default fp32 `auto_cast` context.
+        predictions = []
+
+        def get_outputs_callback(module, inputs, outputs):
+            predictions.append(outputs)
+
+        runner.model.register_forward_hook(get_outputs_callback)
         runner.test()
+        self.assertEqual(predictions[0].dtype, torch.float32)
+        predictions.clear()
+
+        # Test fp16 `auto_cast` context.
+        cfg.experiment_name = 'test_val3'
+        cfg.test_cfg = dict(fp16_enabled=True)
+        runner = Runner.from_cfg(cfg)
+        runner.model.register_forward_hook(get_outputs_callback)
+        runner.test()
+        self.assertIn(predictions[0].dtype, (torch.float16, torch.bfloat16))
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
