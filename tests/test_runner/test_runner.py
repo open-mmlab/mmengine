@@ -31,7 +31,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
-from mmengine.utils import is_list_of
+from mmengine.utils import TORCH_VERSION, digit_version, is_list_of
 from mmengine.visualization import Visualizer
 
 
@@ -1289,8 +1289,14 @@ class TestRunner(TestCase):
         cfg.val_cfg = dict(fp16_enabled=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
-        runner.val()
-        self.assertIn(predictions[0].dtype, (torch.float16, torch.bfloat16))
+        if (digit_version(TORCH_VERSION) < digit_version('1.10.0')
+                and not torch.cuda.is_available()):
+            with self.assertRaisesRegex(RuntimeError, 'If pytorch versions'):
+                runner.val()
+        else:
+            runner.val()
+            self.assertIn(predictions[0].dtype,
+                          (torch.float16, torch.bfloat16))
 
     def test_test(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1337,8 +1343,14 @@ class TestRunner(TestCase):
         cfg.test_cfg = dict(fp16_enabled=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
-        runner.test()
-        self.assertIn(predictions[0].dtype, (torch.float16, torch.bfloat16))
+        if (digit_version(TORCH_VERSION) < digit_version('1.10.0')
+                and not torch.cuda.is_available()):
+            with self.assertRaisesRegex(RuntimeError, 'If pytorch versions'):
+                runner.test()
+        else:
+            runner.test()
+            self.assertIn(predictions[0].dtype,
+                          (torch.float16, torch.bfloat16))
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
