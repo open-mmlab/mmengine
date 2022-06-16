@@ -51,3 +51,6 @@ LOG_PROCESSORS = Registry('log_processor')
 
 # manage optimizer wrapper
 OPTIM_WRAPPERS = Registry('optim_wrapper')
+
+# manage evaluator
+EVALUATOR = Registry('evaluator')

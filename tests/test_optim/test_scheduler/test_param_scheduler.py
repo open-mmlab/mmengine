@@ -14,6 +14,7 @@ from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       MultiStepParamScheduler,
                                       PolyParamScheduler, StepParamScheduler,
                                       _ParamScheduler)
+from mmengine.optim.scheduler.param_scheduler import OneCycleParamScheduler
 # yapf: enable
 from mmengine.testing import assert_allclose
 
@@ -677,3 +678,20 @@ class TestParameterScheduler(TestCase):
             end=15)
 
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+
+    def test_onecycle_scheduler(self):
+        # test invalid total steps
+        with self.assertRaises(ValueError):
+            OneCycleParamScheduler(
+                self.optimizer, param_name='lr', total_steps=-1)
+        # test invalid pct_start
+        with self.assertRaises(ValueError):
+            OneCycleParamScheduler(
+                self.optimizer, param_name='lr', total_steps=10, pct_start=-1)
+        # test invalid anneal_strategy
+        with self.assertRaises(ValueError):
+            OneCycleParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                total_steps=10,
+                anneal_strategy='a')

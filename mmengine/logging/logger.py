@@ -9,6 +9,7 @@ from termcolor import colored
 
 from mmengine import dist
 from mmengine.utils import ManagerMixin
+from mmengine.utils.manager import _accquire_lock, _release_lock
 
 
 class MMFormatter(logging.Formatter):
@@ -215,6 +216,24 @@ class MMLogger(Logger, ManagerMixin):
         for handler in self.handlers:
             if record.levelno >= handler.level:
                 handler.handle(record)
+
+    def setLevel(self, level):
+        """Set the logging level of this logger.
+
+        If ``logging.Logger.selLevel`` is called, all ``logging.Logger``
+        instances managed by ``logging.Manager`` will clear the cache. Since
+        ``MMLogger`` is not managed by ``logging.Manager`` anymore,
+        ``MMLogger`` should override this method to clear caches of all
+        ``MMLogger`` instance which is managed by :obj:`ManagerMixin`.
+
+        level must be an int or a str.
+        """
+        self.level = logging._checkLevel(level)
+        _accquire_lock()
+        # The same logic as `logging.Manager._clear_cache`.
+        for logger in MMLogger._instance_dict.values():
+            logger._cache.clear()
+        _release_lock()
 
 
 def print_log(msg,

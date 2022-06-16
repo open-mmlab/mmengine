@@ -25,3 +25,27 @@ def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
                           device=device)
     torch.cuda.reset_peak_memory_stats()
     return int(mem_mb.item())
+
+
+def is_cuda_available() -> bool:
+    """Returns True if cuda devices exist."""
+    return torch.cuda.is_available()
+
+
+def is_mlu_available() -> bool:
+    """Returns True if Cambricon PyTorch and mlu devices exist."""
+    return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
+
+
+def get_device() -> str:
+    """Returns the currently existing device type.
+
+    Returns:
+        str: cuda | mlu | cpu.
+    """
+    if is_cuda_available():
+        return 'cuda'
+    elif is_mlu_available():
+        return 'mlu'
+    else:
+        return 'cpu'

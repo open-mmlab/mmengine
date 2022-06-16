@@ -53,7 +53,7 @@ class BaseDataPreprocessor(nn.Module):
             Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
             tensor and list of labels at target device.
         """
-        inputs = [_data['inputs'].to(self._device) for _data in data]
+        inputs = [_data['inputs'].to(self._device).float() for _data in data]
         batch_data_samples: List[BaseDataElement] = []
         # Model can get predictions without any data samples.
         for _data in data:
@@ -191,7 +191,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                 f'RGB or gray image, but got {len(mean)}')
             assert len(std) == 3 or len(std) == 1, (  # type: ignore
                 'The length of std should be 1 or 3 to be compatible with RGB '  # type: ignore # noqa: E501
-                f'or gray image, but got {len(std)}')
+                f'or gray image, but got {len(std)}')  # type: ignore
             self._enable_normalize = True
             self.register_buffer('mean',
                                  torch.tensor(mean).view(-1, 1, 1), False)

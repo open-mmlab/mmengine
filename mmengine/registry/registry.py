@@ -81,7 +81,8 @@ def build_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: 'Registry',
         default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
-    """Build a module from config dict.
+    """Build a module from config dict when it is a class configuration, or
+    call a function from config dict when it is a function configuration.
 
     At least one of the ``cfg`` and ``default_args`` contains the key "type"
     which type should be either str or class. If they all contain it, the key
@@ -101,6 +102,12 @@ def build_from_cfg(
         >>>         self.stages = stages
         >>> cfg = dict(type='ResNet', depth=50)
         >>> model = build_from_cfg(cfg, MODELS)
+        >>> # Returns an instantiated object
+        >>> @MODELS.register_module()
+        >>> def resnet50():
+        >>>     pass
+        >>> resnet = build_from_cfg(dict(type='resnet50'), MODELS)
+        >>> # Return a result of the calling function
 
     Args:
         cfg (dict or ConfigDict or Config): Config dict. It should at least
@@ -151,7 +158,7 @@ def build_from_cfg(
                 ' it was registered as expected. More details can be found at'
                 ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
             )
-    elif inspect.isclass(obj_type):
+    elif inspect.isclass(obj_type) or inspect.isfunction(obj_type):
         obj_cls = obj_type
     else:
         raise TypeError(
@@ -182,9 +189,10 @@ def build_from_cfg(
 
 
 class Registry:
-    """A registry to map strings to classes.
+    """A registry to map strings to classes or functions.
 
-    Registered objects could be built from registry.
+    Registered object could be built from registry. Meanwhile, registered
+    functions could be called from registry.
 
     Args:
         name (str): Registry name.
@@ -210,6 +218,10 @@ class Registry:
         >>>     pass
         >>> # build model from `MODELS`
         >>> resnet = MODELS.build(dict(type='ResNet'))
+        >>> @MODELS.register_module()
+        >>> def resnet50():
+        >>>     pass
+        >>> resnet = MODELS.build(dict(type='resnet50'))
 
         >>> # hierarchical registry
         >>> DETECTORS = Registry('detectors', parent=MODELS, scope='det')
@@ -525,25 +537,25 @@ class Registry:
         self.children[registry.scope] = registry
 
     def _register_module(self,
-                         module_class: Type,
+                         module: Type,
                          module_name: Optional[Union[str, List[str]]] = None,
                          force: bool = False) -> None:
         """Register a module.
 
         Args:
-            module_class (type): Module class to be registered.
+            module (type): Module class or function to be registered.
             module_name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
                 Defaults to None.
             force (bool): Whether to override an existing class with the same
                 name. Defaults to False.
         """
-        if not inspect.isclass(module_class):
-            raise TypeError('module must be a class, '
-                            f'but got {type(module_class)}')
+        if not inspect.isclass(module) and not inspect.isfunction(module):
+            raise TypeError('module must be a class or a function, '
+                            f'but got {type(module)}')
 
         if module_name is None:
-            module_name = module_class.__name__
+            module_name = module.__name__
         if isinstance(module_name, str):
             module_name = [module_name]
         for name in module_name:
@@ -551,7 +563,7 @@ class Registry:
                 existed_module = self.module_dict[name]
                 raise KeyError(f'{name} is already registered in {self.name} '
                                f'at {existed_module.__module__}')
-            self._module_dict[name] = module_class
+            self._module_dict[name] = module
 
     def register_module(
             self,
@@ -569,8 +581,8 @@ class Registry:
                 registered. If not specified, the class name will be used.
             force (bool): Whether to override an existing class with the same
                 name. Default to False.
-            module (type, optional): Module class to be registered. Defaults to
-                None.
+            module (type, optional): Module class or function to be registered.
+                Defaults to None.
 
         Examples:
             >>> backbones = Registry('backbone')
@@ -599,14 +611,12 @@ class Registry:
 
         # use it as a normal method: x.register_module(module=SomeClass)
         if module is not None:
-            self._register_module(
-                module_class=module, module_name=name, force=force)
+            self._register_module(module=module, module_name=name, force=force)
             return module
 
         # use it as a decorator: @x.register_module()
-        def _register(cls):
-            self._register_module(
-                module_class=cls, module_name=name, force=force)
-            return cls
+        def _register(module):
+            self._register_module(module=module, module_name=name, force=force)
+            return module
 
         return _register

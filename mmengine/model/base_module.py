@@ -5,6 +5,7 @@ import warnings
 from abc import ABCMeta
 from collections import defaultdict
 from logging import FileHandler
+from typing import Iterable, Optional
 
 import torch.nn as nn
 
@@ -165,3 +166,55 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         if self.init_cfg:
             s += f'\ninit_cfg={self.init_cfg}'
         return s
+
+
+class Sequential(BaseModule, nn.Sequential):
+    """Sequential module in openmmlab.
+
+    Ensures that all modules in ``Sequential`` have a different initialization
+    strategy than the outer model
+
+    Args:
+        init_cfg (dict, optional): Initialization config dict.
+    """
+
+    def __init__(self, *args, init_cfg: Optional[dict] = None):
+        BaseModule.__init__(self, init_cfg)
+        nn.Sequential.__init__(self, *args)
+
+
+class ModuleList(BaseModule, nn.ModuleList):
+    """ModuleList in openmmlab.
+
+    Ensures that all modules in ``ModuleList`` have a different initialization
+    strategy than the outer model
+
+    Args:
+        modules (iterable, optional): An iterable of modules to add.
+        init_cfg (dict, optional): Initialization config dict.
+    """
+
+    def __init__(self,
+                 modules: Optional[Iterable] = None,
+                 init_cfg: Optional[dict] = None):
+        BaseModule.__init__(self, init_cfg)
+        nn.ModuleList.__init__(self, modules)
+
+
+class ModuleDict(BaseModule, nn.ModuleDict):
+    """ModuleDict in openmmlab.
+
+    Ensures that all modules in ``ModuleDict`` have a different initialization
+    strategy than the outer model
+
+    Args:
+        modules (dict, optional): A mapping (dictionary) of (string: module)
+            or an iterable of key-value pairs of type (string, module).
+        init_cfg (dict, optional): Initialization config dict.
+    """
+
+    def __init__(self,
+                 modules: Optional[dict] = None,
+                 init_cfg: Optional[dict] = None):
+        BaseModule.__init__(self, init_cfg)
+        nn.ModuleDict.__init__(self, modules)

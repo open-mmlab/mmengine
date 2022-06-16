@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import os.path as osp
+import platform
 import random
+import resource
 import time
 import warnings
 from collections import OrderedDict
@@ -18,6 +20,7 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
@@ -28,8 +31,8 @@ from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
+                               LOOPS, MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
@@ -603,6 +606,7 @@ class Runner:
                     opencv_num_threads=0
                 ),
                 dist_cfg=dict(backend='nccl'),
+                resource_limit=4096
             )
 
         Args:
@@ -626,6 +630,18 @@ class Runner:
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
+
+        # https://github.com/pytorch/pytorch/issues/973
+        # set resource limit
+        if platform.system() != 'Windows':
+            rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+            base_soft_limit = rlimit[0]
+            hard_limit = rlimit[1]
+            soft_limit = min(
+                max(env_cfg.get('resource_limit', 4096), base_soft_limit),
+                hard_limit)
+            resource.setrlimit(resource.RLIMIT_NOFILE,
+                               (soft_limit, hard_limit))
 
     def set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
@@ -806,8 +822,7 @@ class Runner:
             return model
 
         # Set `export CUDA_VISIBLE_DEVICES=-1` to enable CPU training.
-        if torch.cuda.is_available():
-            model = model.cuda()
+        model = model.to(get_device())
 
         if not self.distributed:
             return model
@@ -925,7 +940,7 @@ class Runner:
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -940,7 +955,7 @@ class Runner:
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -964,7 +979,7 @@ class Runner:
             >>> optim_wrapper
             name: generator
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -976,7 +991,7 @@ class Runner:
             )
             name: discriminator
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             'discriminator': Adam (
             Parameter Group 0
@@ -1208,7 +1223,17 @@ class Runner:
         """
         if isinstance(evaluator, Evaluator):
             return evaluator
-        elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+        elif isinstance(evaluator, dict):
+            # if `metrics` in dict keys, it means to build customized evalutor
+            if 'metrics' in evaluator:
+                assert 'type' in evaluator, 'expected customized evaluator' \
+                                    f' with key `type`, but got {evaluator}'
+                return EVALUATOR.build(evaluator)
+            # otherwise, default evalutor will be built
+            else:
+                return Evaluator(evaluator)  # type: ignore
+        elif is_list_of(evaluator, dict):
+            # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
@@ -1517,7 +1542,6 @@ class Runner:
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
-
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
@@ -1529,9 +1553,14 @@ class Runner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
+        # Initiate inner count of `optim_wrapper`.
+        self.optim_wrapper.initialize_count_status(
+            self.model,
+            self._train_loop.iter,  # type: ignore
+            self._train_loop.max_iters)  # type: ignore
 
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 

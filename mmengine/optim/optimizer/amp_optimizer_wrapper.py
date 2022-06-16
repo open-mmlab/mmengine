@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 
 import torch
+import torch.nn as nn
 from torch.cuda.amp import GradScaler
 
 from mmengine.registry import OPTIM_WRAPPERS
@@ -25,15 +26,21 @@ class AmpOptimWrapper(OptimWrapper):
         loss_scale (float or str or dict): The initial configuration of
             `torch.cuda.amp.GradScaler`. See more specific arguments
             introduction at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler>`_ # noqa: E501
+            Defaults to ``dynamic``.
 
             - "dynamic": Initialize GradScale without any arguments.
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
 
         **kwargs: Keyword arguments passed to OptimWrapper.
+
+    Note:
+        If you use ``IterBasedRunner`` and enable gradient accumulation,
+        the original `max_iters` should be multiplied by
+        ``accumulative_counts``.
     """
 
-    def __init__(self, loss_scale=512., **kwargs):
+    def __init__(self, loss_scale='dynamic', **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         assert torch.cuda.is_available(), (
@@ -62,6 +69,7 @@ class AmpOptimWrapper(OptimWrapper):
             loss (torch.Tensor): The loss of current iteration.
         """
         self.loss_scaler.scale(loss).backward()
+        self._inner_count += 1
 
     def step(self):
         """Update parameters with :attr:`loss_scaler`."""
@@ -104,7 +112,13 @@ class AmpOptimWrapper(OptimWrapper):
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
-    def precision_context(self):
-        """A wrapper of ``torch.cuda.amp.autocast``"""
-        with torch.cuda.amp.autocast():
+    def optim_context(self, model: nn.Module):
+        """Enables the context for mixed precision training, and enables the
+        context for disabling gradient synchronization during gradient
+        accumulation context.
+
+        Args:
+            model (nn.Module): The training model.
+        """
+        with super().optim_context(model), torch.cuda.amp.autocast():
             yield
