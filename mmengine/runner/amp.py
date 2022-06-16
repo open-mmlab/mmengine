@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
-from typing import Optional
 
 import torch
 
@@ -8,10 +7,7 @@ from mmengine.utils import TORCH_VERSION, digit_version
 
 
 @contextmanager
-def auto_cast(device_type: str = 'auto',
-              enabled: bool = True,
-              dtype: Optional[torch.dtype] = None,
-              cache_enabled: bool = True):
+def auto_cast(enabled: bool = True, **kwargs):
     """A wrapper of ``torch.autocast`` and ``toch.cuda.amp.autocast``.
 
     Pytorch 1.6.0 provide ``torch.cuda.amp.autocast`` for running in
@@ -50,13 +46,9 @@ def auto_cast(device_type: str = 'auto',
          >>>    pass
 
     Args:
-        device_type (str):  Whether to use 'cuda' or 'cpu' device. Defaults
-            to 'auto'.
         enabled (bool): Whether autocasting should be enabled in the region.
             Defaults to True.
-        dtype (torch.dtype, optional):  Use torch.float16 or torch.bfloat16.
-        cache_enabled(bool, optional, default=True): Whether the weight cache
-            inside autocast should be enabled. Defaults to True.
+        kwargs (dict): Arguments of torch.autocast except for ``enabled``.
     """
     # If `enabled` is True, enable an empty context and all calculations
     # are performed under fp32.
@@ -68,15 +60,11 @@ def auto_cast(device_type: str = 'auto',
             < digit_version('1.10.0'):
         # If pytorch version is between 1.5.0 and 1.10.0, the default value of
         # dtype for `torch.cuda.amp.autocast` is torch.float16.
-        if dtype is None:
-            dtype = torch.float16
-
-        assert device_type in ('auto', 'cuda'), (
-            f'{TORCH_VERSION} only support using ``torch.cuda.amp.autocast` '
-            'with cuda`')
+        assert not kwargs, (
+            f'auto_cast under pytorch {TORCH_VERSION} only accept `enabled` '
+            'arguments.')
         if torch.cuda.is_available():
-            with torch.cuda.amp.autocast(
-                    enabled=enabled, dtype=dtype, cache_enabled=cache_enabled):
+            with torch.cuda.amp.autocast(enabled=enabled):
                 yield
         else:
             if not enabled:
@@ -87,14 +75,10 @@ def auto_cast(device_type: str = 'auto',
                     '`auto_cast` is only available in gpu mode')
 
     elif digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
-        if device_type == 'auto':
-            if torch.cuda.is_available():
-                device_type = 'cuda'
-            else:
-                device_type = 'cpu'
-        with torch.autocast(
-                device_type=device_type,
-                enabled=enabled,
-                dtype=dtype,
-                cache_enabled=cache_enabled):
+        if torch.cuda.is_available():
+            kwargs.setdefault('device_type', 'cuda')
+        else:
+            kwargs.setdefault('device_type', 'cpu')
+
+        with torch.autocast(enabled=enabled, **kwargs):
             yield
