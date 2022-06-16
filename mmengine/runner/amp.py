@@ -17,8 +17,7 @@ def auto_cast(device_type: str = 'auto',
     Pytorch 1.6.0 provide ``torch.cuda.amp.autocast`` for running in
     mixed precision , and update it to ``torch.autocast`` in 1.10.0.
     Both interfaces have different arguments, and ``torch.autocast``
-    support running with cpu additionally, ``auto_cast`` provide a unified
-    interface
+    support running with cpu additionally.
 
     ``auto_cast`` is a wrapper of both them, dealing with compatibility issues
     between different versions of pytorch, and provide unified interface for
