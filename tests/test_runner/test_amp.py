@@ -12,7 +12,7 @@ class TestAmp(unittest.TestCase):
 
     def test_auto_cast(self):
         if not torch.cuda.is_available():
-            if TORCH_VERSION < digit_version('1.10.0'):
+            if digit_version(TORCH_VERSION) < digit_version('1.10.0'):
                 # `torch.cuda.amp.autocast` is only support in gpu mode, if
                 # cuda is not available, it will return an empty context and
                 # should not accept any arguments.

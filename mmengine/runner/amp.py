@@ -60,11 +60,12 @@ def auto_cast(device_type: str = 'auto',
     """
     # If `enabled` is True, enable an empty context and all calculations
     # are performed under fp32.
-    assert TORCH_VERSION >= digit_version('1.5.0'), (
+    assert digit_version(TORCH_VERSION) >= digit_version('1.5.0'), (
         'The minimum pytorch version requirements of mmengine is 1.5.0, but '
         f'got {TORCH_VERSION}')
 
-    if digit_version('1.5.0') <= TORCH_VERSION < digit_version('1.10.0'):
+    if digit_version('1.5.0') <= digit_version(TORCH_VERSION)\
+            < digit_version('1.10.0'):
         # If pytorch version is between 1.5.0 and 1.10.0, the default value of
         # dtype for `torch.cuda.amp.autocast` is torch.float16.
         if dtype is None:
@@ -85,7 +86,7 @@ def auto_cast(device_type: str = 'auto',
                     'If pytorch versions is between 1.5.0 and 1.10, '
                     '`auto_cast` is only available in gpu mode')
 
-    elif TORCH_VERSION >= digit_version('1.10.0'):
+    elif digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
         if device_type == 'auto':
             if torch.cuda.is_available():
                 device_type = 'cuda'
