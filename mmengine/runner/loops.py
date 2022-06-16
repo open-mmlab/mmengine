@@ -339,7 +339,7 @@ class TestLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
-        fp16_enabled (bool): Whether to enable fp16 validation. Defaults to
+        fp16_enabled (bool): Whether to enable fp16 testing. Defaults to
             False.
     """
 
