@@ -2,7 +2,7 @@
 from .hub import load_url
 from .manager import ManagerMeta, ManagerMixin
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
-                   find_latest_checkpoint, has_method,
+                   find_latest_checkpoint, has_batch_norm, has_method,
                    import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
                    iter_cast, list_cast, mmcv_full_available,
@@ -10,8 +10,8 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
                    tuple_cast)
 from .parrots_wrapper import TORCH_VERSION
-from .path import (check_file_exist, fopen, is_filepath, mkdir_or_exist,
-                   scandir, symlink)
+from .path import (check_file_exist, fopen, is_abs, is_filepath,
+                   mkdir_or_exist, scandir, symlink)
 from .setup_env import set_multi_processing
 from .version_utils import digit_version, get_git_hash
 
@@ -28,5 +28,5 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'find_latest_checkpoint', 'ManagerMeta', 'ManagerMixin',
-    'set_multi_processing'
+    'set_multi_processing', 'has_batch_norm', 'is_abs'
 ]

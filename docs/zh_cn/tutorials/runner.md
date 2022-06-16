@@ -152,8 +152,13 @@ val_evaluator = dict(type='Accuracy')
 test_evaluator = dict(type='Accuracy')
 
 # 训练、验证、测试流程配置
-train_cfg = dict(by_epoch=True, max_epochs=100)
-val_cfg = dict(interval=1)  # 每隔一个 epoch 进行一次验证
+train_cfg = dict(
+    by_epoch=True,
+    max_epochs=100,
+    val_begin=20,  # 从第 20 个 epoch 开始验证
+    val_interval=1  # 每隔一个 epoch 进行一次验证
+)
+val_cfg = dict()
 test_cfg = dict()
 
 # 自定义钩子

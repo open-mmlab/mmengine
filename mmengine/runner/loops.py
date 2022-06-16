@@ -20,15 +20,24 @@ class EpochBasedTrainLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         max_epochs (int): Total training epochs.
+        val_begin (int): The epoch that begins validating.
+            Defaults to 1.
+        val_interval (int): Validation interval. Defaults to 1.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 max_epochs: int) -> None:
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 max_epochs: int,
+                 val_begin: int = 1,
+                 val_interval: int = 1) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
         self._epoch = 0
         self._iter = 0
+        self.val_begin = val_begin
+        self.val_interval = val_interval
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -66,8 +75,8 @@ class EpochBasedTrainLoop(BaseLoop):
             self.run_epoch()
 
             if (self.runner.val_loop is not None
-                    and self._epoch >= self.runner.val_loop.begin
-                    and self._epoch % self.runner.val_loop.interval == 0):
+                    and self._epoch >= self.val_begin
+                    and self._epoch % self.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -90,15 +99,20 @@ class EpochBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
-        # outputs should be a dict containing one or multiple loss tensors
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+        # Enable gradient accumulation mode and avoid unnecessary gradient
+        # synchronization during gradient accumulation process.
+        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
+                                                       self._iter,
+                                                       self._max_iters):
+            # outputs should be a dict of loss.
+            outputs = self.runner.model.train_step(
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=idx,
             data_batch=data_batch,
-            outputs=self.runner.outputs)
-
+            outputs=outputs)
         self._iter += 1
 
 
@@ -111,15 +125,24 @@ class IterBasedTrainLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         max_iters (int): Total training iterations.
+        val_begin (int): The iteration that begins validating.
+            Defaults to 1.
+        val_interval (int): Validation interval. Defaults to 1000.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 max_iters: int) -> None:
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 max_iters: int,
+                 val_begin: int = 1,
+                 val_interval: int = 1000) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
         self._epoch = 0
         self._iter = 0
+        self.val_begin = val_begin
+        self.val_interval = val_interval
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -128,7 +151,8 @@ class IterBasedTrainLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
-        self.dataloader = iter(self.dataloader)
+        # get the iterator of the dataloader
+        self.dataloader_iterator = iter(self.dataloader)
 
     @property
     def max_epochs(self):
@@ -159,12 +183,12 @@ class IterBasedTrainLoop(BaseLoop):
         while self._iter < self._max_iters:
             self.runner.model.train()
 
-            data_batch = next(self.dataloader)
+            data_batch = next(self.dataloader_iterator)
             self.run_iter(data_batch)
 
             if (self.runner.val_loop is not None
-                    and self._iter >= self.runner.val_begin
-                    and self._iter % self.runner.val_interval == 0):
+                    and self._iter >= self.val_begin
+                    and self._iter % self.val_interval == 0):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
@@ -178,14 +202,21 @@ class IterBasedTrainLoop(BaseLoop):
         """
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
-        # outputs should be a dict containing loss tensor
-        self.runner.outputs = self.runner.model(data_batch, return_loss=True)
+        # Enable gradient accumulation mode and avoid unnecessary gradient
+        # synchronization during gradient accumulation process.
+        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
+                                                       self._iter,
+                                                       self._max_iters):
+            # train_logs should be a dict of loss.
+            train_logs = self.runner.model.train_step(
+                data_batch, optim_wrapper=self.runner.optim_wrapper)
+        self.runner.message_hub.update_info('train_logs', train_logs)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self._iter,
             data_batch=data_batch,
-            outputs=self.runner.outputs)
+            outputs=train_logs)
         self._iter += 1
 
 
@@ -198,16 +229,10 @@ class ValLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
-        interval (int): Validation interval. Defaults to 1.
-        begin (int): The epoch/iteration that begins validating. Defaults to 1.
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[Evaluator, Dict, List],
-                 interval: int = 1,
-                 begin: int = 1) -> None:
+    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
+                 evaluator: Union[Evaluator, Dict, List]) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -223,8 +248,6 @@ class ValLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
-        self.interval = interval
-        self.begin = begin
 
     def run(self):
         """Launch validation."""
@@ -236,7 +259,6 @@ class ValLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
 
@@ -251,7 +273,7 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        outputs = self.runner.model(data_batch)
+        outputs = self.runner.model.val_step(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
             'after_val_iter',
@@ -299,7 +321,6 @@ class TestLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
 
@@ -313,7 +334,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model(data_batch)
+        predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',

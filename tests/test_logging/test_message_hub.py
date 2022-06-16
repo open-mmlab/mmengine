@@ -101,7 +101,7 @@ class TestMessageHub:
         message_hub.update_scalar('lr', 0.1, resumed=False)
         # update runtime information
         message_hub.update_info('iter', 1, resumed=True)
-        message_hub.update_info('feat', [1, 2, 3], resumed=False)
+        message_hub.update_info('tensor', [1, 2, 3], resumed=False)
         obj = pickle.dumps(message_hub)
         instance = pickle.loads(obj)
 

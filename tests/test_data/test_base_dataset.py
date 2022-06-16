@@ -85,6 +85,7 @@ class TestBaseDataset:
             lazy_init=True)
         assert not dataset._fully_initialized
         assert not dataset.data_list
+
         # test the instantiation of self.base_dataset if ann_file is not
         # existed.
         with pytest.raises(FileNotFoundError):
@@ -93,7 +94,7 @@ class TestBaseDataset:
                 data_prefix=dict(img='imgs'),
                 ann_file='annotations/not_existed_annotation.json')
         # Use the default value of ann_file, i.e., ''
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(TypeError):
             BaseDataset(
                 data_root=osp.join(osp.dirname(__file__), '../data/'),
                 data_prefix=dict(img='imgs'))

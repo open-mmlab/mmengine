@@ -162,6 +162,4 @@ class InfiniteSampler(Sampler):
 
     def set_epoch(self, epoch: int) -> None:
         """Not supported in iteration-based runner."""
-        raise NotImplementedError(
-            'The `InfiniteSampler` is only used in iteration-based runner, '
-            "and doesn't need `set_epoch`")
+        pass

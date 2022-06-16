@@ -31,9 +31,23 @@ class ParamSchedulerHook(Hook):
                 In order to keep this interface consistent with other hooks, we
                 keep ``data_batch`` here. Defaults to None.
         """
-        for scheduler in runner.param_schedulers:  # type: ignore
-            if not scheduler.by_epoch:
-                scheduler.step()
+
+        def step(param_schedulers):
+            assert isinstance(param_schedulers, list)
+            for scheduler in param_schedulers:
+                if not scheduler.by_epoch:
+                    scheduler.step()
+
+        if isinstance(runner.param_schedulers, list):
+            step(runner.param_schedulers)
+        elif isinstance(runner.param_schedulers, dict):
+            for param_schedulers in runner.param_schedulers.values():
+                step(param_schedulers)
+        else:
+            raise TypeError(
+                'runner.param_schedulers should be list of ParamScheduler or '
+                'a dict containing list of ParamScheduler, '
+                f'but got {runner.param_schedulers}')
 
     def after_train_epoch(self, runner) -> None:
         """Call step function for each scheduler after each epoch.
@@ -41,6 +55,20 @@ class ParamSchedulerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        for scheduler in runner.param_schedulers:  # type: ignore
-            if scheduler.by_epoch:
-                scheduler.step()
+
+        def step(param_schedulers):
+            assert isinstance(param_schedulers, list)
+            for scheduler in param_schedulers:
+                if scheduler.by_epoch:
+                    scheduler.step()
+
+        if isinstance(runner.param_schedulers, list):
+            step(runner.param_schedulers)
+        elif isinstance(runner.param_schedulers, dict):
+            for param_schedulers in runner.param_schedulers.values():
+                step(param_schedulers)
+        else:
+            raise TypeError(
+                'runner.param_schedulers should be list of ParamScheduler or '
+                'a dict containing list of ParamScheduler, '
+                f'but got {runner.param_schedulers}')

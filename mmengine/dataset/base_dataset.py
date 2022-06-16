@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 
 from mmengine.fileio import list_from_file, load
 from mmengine.registry import TRANSFORMS
-from mmengine.utils import check_file_exist
+from mmengine.utils import is_abs
 
 
 class Compose:
@@ -428,7 +428,6 @@ class BaseDataset(Dataset):
         """  # noqa: E501
         # `self.ann_file` denotes the absolute annotation file path if
         # `self.root=None` or relative path if `self.root=/path/to/data/`.
-        check_file_exist(self.ann_file)
         annotations = load(self.ann_file)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
@@ -482,7 +481,7 @@ class BaseDataset(Dataset):
         Returns:
             dict: Parsed meta information.
         """
-        # `cls.METAINFO` will be overwritten by in_meta
+        # avoid `cls.METAINFO` being overwritten by `metainfo`
         cls_metainfo = copy.deepcopy(cls.METAINFO)
         if metainfo is None:
             return cls_metainfo
@@ -491,13 +490,17 @@ class BaseDataset(Dataset):
                 f'metainfo should be a dict, but got {type(metainfo)}')
 
         for k, v in metainfo.items():
-            if isinstance(v, str) and osp.isfile(v):
-                # if filename in metainfo, this key will be further parsed.
-                # nested filename will be ignored.
-                cls_metainfo[k] = list_from_file(v)
+            if isinstance(v, str):
+                # If type of value is string, and can be loaded from
+                # corresponding backend. it means the file name of meta file.
+                try:
+                    cls_metainfo[k] = list_from_file(v)
+                except (TypeError, FileNotFoundError):
+                    warnings.warn(f'{v} is not a meta file, simply parsed as '
+                                  'meta information')
+                    cls_metainfo[k] = v
             else:
                 cls_metainfo[k] = v
-
         return cls_metainfo
 
     def _join_prefix(self):
@@ -526,7 +529,7 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not osp.isabs(self.ann_file) and self.ann_file:
+        if not is_abs(self.ann_file) and self.ann_file:
             self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
@@ -534,9 +537,11 @@ class BaseDataset(Dataset):
             if prefix is None:
                 self.data_prefix[data_key] = self.data_root
             elif isinstance(prefix, str):
-                if not osp.isabs(prefix):
+                if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
+                else:
+                    self.data_prefix[data_key] = prefix
             else:
                 raise TypeError('prefix should be a string or None, but got '
                                 f'{type(prefix)}')
@@ -725,10 +730,9 @@ class BaseDataset(Dataset):
                 sub_data_list = self.data_list[indices:]
         elif isinstance(indices, Sequence):
             # Return the data information according to given indices.
-            subdata_list = []
+            sub_data_list = []
             for idx in indices:
-                subdata_list.append(self.data_list[idx])
-            sub_data_list = subdata_list
+                sub_data_list.append(self.data_list[idx])
         else:
             raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')

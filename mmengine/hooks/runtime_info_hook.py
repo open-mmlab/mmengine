@@ -41,8 +41,16 @@ class RuntimeInfoHook(Hook):
         """Update current iter and learning rate information before every
         iteration."""
         runner.message_hub.update_info('iter', runner.iter)
-        runner.message_hub.update_scalar(
-            'train/lr', runner.optimizer.param_groups[0]['lr'])
+        lr_dict = runner.optim_wrapper.get_lr()
+        assert isinstance(lr_dict, dict), (
+            '`runner.optim_wrapper.get_lr()` should return a dict '
+            'of learning rate when training with OptimWrapper(single '
+            'optimizer) or OptimWrapperDict(multiple optimizer), '
+            f'but got {type(lr_dict)} please check your optimizer '
+            'constructor return an `OptimWrapper` or `OptimWrapperDict` '
+            'instance')
+        for name, lr in lr_dict.items():
+            runner.message_hub.update_scalar(f'train/{name}', lr[0])
 
     def after_train_iter(self,
                          runner,
@@ -51,7 +59,7 @@ class RuntimeInfoHook(Hook):
                          outputs: Optional[dict] = None) -> None:
         """Update ``log_vars`` in model outputs every iteration."""
         if outputs is not None:
-            for key, value in outputs['log_vars'].items():
+            for key, value in outputs.items():
                 runner.message_hub.update_scalar(f'train/{key}', value)
 
     def after_val_epoch(self,
