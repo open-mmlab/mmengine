@@ -1,16 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from typing import Any, Iterator, Optional, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
 
 
 class BaseDataElement:
-    """A base data structure interface of OpenMMlab.
+    """A base data interface that supports Tensor-like and dict-like
+    operations.
 
-    Data elements refer to predicted results or ground truth labels on a
-    task, such as predicted bboxes, instance masks, semantic
+    A typical data elements refer to predicted results or ground truth labels
+    on a task, such as predicted bboxes, instance masks, semantic
     segmentation masks, etc. Because groundtruth labels and predicted results
     often have similar properties (for example, the predicted bboxes and the
     groundtruth bboxes), MMEngine uses the same abstract data interface to
@@ -23,7 +24,23 @@ class BaseDataElement:
     ``BaseDataElement``, and implement ``InstanceData``, ``PixelData``, and
     ``LabelData`` inheriting from ``BaseDataElement`` to represent different
     types of ground truth labels or predictions.
-    They are used as interfaces between different commopenets.
+
+    Another common data element is sample data. A sample data consists of input
+    data (such as an image) and its annotations and predictions. In general,
+    an image can have multiple types of annotations and/or predictions at the
+    same time (for example, both pixel-level semantic segmentation annotations
+    and instance-level detection bboxes annotations). All labels and
+    predictions of a training sample are often passed between Dataset, Model,
+    Visualizer, and Evaluator components. In order to simplify the interface
+    between components, we can treat them as a large data element and
+    encapsulate them. Such data elements are generally called XXDataSample in
+    the OpenMMLab. Therefore, Similar to `nn.Module`, the `BaseDataElement`
+    allows `BaseDataElement` as its attribute. Such a class generally
+    encapsulates all the data of a sample in the algorithm library, and its
+    attributes generally are various types of data elements. For example,
+    MMDetection is assigned by the BaseDataElement to encapsulate all the data
+    elements of the sample labeling and prediction of a sample in the
+    algorithm library.
 
     The attributes in ``BaseDataElement`` are divided into two parts,
     the ``metainfo`` and the ``data`` respectively.
@@ -70,8 +87,8 @@ class BaseDataElement:
         >>> # new
         >>> gt_instances1 = gt_instance.new(
         ...                     metainfo=dict(img_id=1, img_shape=(640, 640)),
-        ...                     data=dict(bboxes=torch.rand((5, 4)),
-        ...                               scores=torch.rand((5,))))
+        ...                     bboxes=torch.rand((5, 4)),
+...                             scores=torch.rand((5,)))
         >>> gt_instances2 = gt_instances1.new()
 
         >>> # add and process property
@@ -206,11 +223,6 @@ class BaseDataElement:
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
         meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
-            if k in self._data_fields:
-                raise AttributeError(f'`{k}` is used in data,'
-                                     'which is immutable. If you want to'
-                                     'change the key in data, please use'
-                                     'set_data')
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
     def set_data(self, data: dict) -> None:
@@ -224,7 +236,9 @@ class BaseDataElement:
         assert isinstance(data,
                           dict), f'meta should be a `dict` but got {data}'
         for k, v in data.items():
-            self.set_field(name=k, value=v, field_type='data', dtype=None)
+            # Use `setattr()` rather than `self.set_field` to allow `set_data`
+            # to set property method.
+            setattr(self, k, v)
 
     def update(self, instance: 'BaseDataElement') -> None:
         """The update() method updates the BaseDataElement with the elements
@@ -241,8 +255,9 @@ class BaseDataElement:
         self.set_data(dict(instance.items()))
 
     def new(self,
-            metainfo: dict = None,
-            data: dict = None) -> 'BaseDataElement':
+            *,
+            metainfo: Optional[dict] = None,
+            **kwargs) -> 'BaseDataElement':
         """Return a new data element with same type. If ``metainfo`` and
         ``data`` are None, the new data element will have same metainfo and
         data. If metainfo or data is not None, the new result will overwrite it
@@ -252,8 +267,9 @@ class BaseDataElement:
             metainfo (dict, optional): A dict contains the meta information
                 of image, such as ``img_shape``, ``scale_factor``, etc.
                 Defaults to None.
-            data (dict, optional): A dict contains annotations of image or
-                model predictions. Defaults to None.
+            kwargs (dict): A dict contains annotations of image or
+                model predictions.
+
         Returns:
             BaseDataElement: a new data element with same type.
         """
@@ -263,8 +279,8 @@ class BaseDataElement:
             new_data.set_metainfo(metainfo)
         else:
             new_data.set_metainfo(dict(self.metainfo_items()))
-        if data is not None:
-            new_data.set_data(data)
+        if kwargs:
+            new_data.set_data(kwargs)
         else:
             new_data.set_data(dict(self.items()))
         return new_data
@@ -349,6 +365,11 @@ class BaseDataElement:
         for k in self.metainfo_keys():
             yield (k, getattr(self, k))
 
+    @property
+    def metainfo(self) -> dict:
+        """dict: A dict contains metainfo of current data element."""
+        return dict(self.metainfo_items())
+
     def __setattr__(self, name: str, value: Any):
         """setattr is only used to set data."""
         if name in ('_metainfo_fields', '_data_fields'):
@@ -358,16 +379,15 @@ class BaseDataElement:
                 raise AttributeError(f'{name} has been used as a '
                                      'private attribute, which is immutable. ')
         else:
-            if name in self._metainfo_fields:
-                raise AttributeError(
-                    f'`{name}` is used in meta information.'
-                    'if you want to change the key in metainfo, please use'
-                    '`set_metainfo(dict(name=value))`')
-
             self.set_field(
                 name=name, value=value, field_type='data', dtype=None)
 
     def __delattr__(self, item: str):
+        """delete the item in dataelement.
+
+        Args:
+            item (str): The key to delete.
+        """
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
                                  'private attribute, which is immutable. ')
@@ -378,12 +398,13 @@ class BaseDataElement:
             self._data_fields.remove(item)
 
     # dict-like methods
-    __setitem__ = __setattr__
     __delitem__ = __delattr__
 
     def get(self, key, default=None) -> Any:
         """get property in data and metainfo as the same as python."""
-        return self.__dict__.get(key, default)
+        # Use `getattr()` rather than `self.__dict__.get()` to allow getting
+        # properties.
+        return getattr(self, key, default)
 
     def pop(self, *args) -> Any:
         """pop property in data and metainfo as the same as python."""
@@ -406,13 +427,17 @@ class BaseDataElement:
             raise KeyError(f'{args[0]} is not contained in metainfo or data')
 
     def __contains__(self, item: str) -> bool:
-        return item in self._data_fields or \
-                    item in self._metainfo_fields
+        """Whether the item is in dataelement.
+
+        Args:
+            item (str): The key to inquire.
+        """
+        return item in self._data_fields or item in self._metainfo_fields
 
     def set_field(self,
                   value: Any,
                   name: str,
-                  dtype: Optional[Type] = None,
+                  dtype: Optional[Union[Type, Tuple[Type, ...]]] = None,
                   field_type: str = 'data') -> None:
         """Special method for set union field, used as property.setter
         functions."""
@@ -422,11 +447,19 @@ class BaseDataElement:
                 value,
                 dtype), f'{value} should be a {dtype} but got {type(value)}'
 
-        super().__setattr__(name, value)
         if field_type == 'metainfo':
+            if name in self._data_fields:
+                raise AttributeError(
+                    f'Cannot set {name} to be a field of metainfo '
+                    f'because {name} is already a data field')
             self._metainfo_fields.add(name)
         else:
+            if name in self._metainfo_fields:
+                raise AttributeError(
+                    f'Cannot set {name} to be a field of data '
+                    f'because {name} is already a metainfo field')
             self._data_fields.add(name)
+        super().__setattr__(name, value)
 
     # Tensor-like methods
     def to(self, *args, **kwargs) -> 'BaseDataElement':
@@ -501,12 +534,24 @@ class BaseDataElement:
         """Convert BaseDataElement to dict."""
         return {
             k: v.to_dict() if isinstance(v, BaseDataElement) else v
-            for k, v in self.items()
+            for k, v in self.all_items()
         }
 
     def __repr__(self) -> str:
+        """represent the object."""
 
         def _addindent(s_: str, num_spaces: int) -> str:
+            """This func is modified from `pytorch` https://github.com/pytorch/
+            pytorch/blob/b17b2b1cc7b017c3daaeff8cc7ec0f514d42ec37/torch/nn/modu
+            les/module.py#L29.
+
+            Args:
+                s_ (str): The string to add spaces.
+                num_spaces (int): The num of space to add.
+
+            Returns:
+                str: The string after add indent.
+            """
             s = s_.split('\n')
             # don't do anything for single-line stuff
             if len(s) == 1:
@@ -518,6 +563,14 @@ class BaseDataElement:
             return s  # type: ignore
 
         def dump(obj: Any) -> str:
+            """represent the object.
+
+            Args:
+                obj (Any): The obj to represent.
+
+            Returns:
+                str: The represented str .
+            """
             _repr = ''
             if isinstance(obj, dict):
                 for k, v in obj.items():

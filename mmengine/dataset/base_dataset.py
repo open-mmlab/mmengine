@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 
 from mmengine.fileio import list_from_file, load
 from mmengine.registry import TRANSFORMS
-from mmengine.utils import check_file_exist
+from mmengine.utils import is_abs
 
 
 class Compose:
@@ -118,12 +118,12 @@ class BaseDataset(Dataset):
     .. code-block:: none
 
         {
-            "metadata":
+            "metainfo":
             {
               "dataset_type": "test_dataset",
               "task_name": "test_task"
             },
-            "data_infos":
+            "data_list":
             [
               {
                 "img_path": "test_img.jpg",
@@ -149,13 +149,13 @@ class BaseDataset(Dataset):
         }
 
     Args:
-        ann_file (str): Annotation file path.
+        ann_file (str): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
         data_root (str, optional): The root directory for ``data_prefix`` and
             ``ann_file``. Defaults to None.
         data_prefix (dict, optional): Prefix for training data. Defaults to
-            dict(img=None, ann=None).
+            dict(img_path=None, seg_path=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
@@ -208,10 +208,10 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str,
+                 ann_file: str = '',
                  metainfo: Optional[dict] = None,
                  data_root: Optional[str] = None,
-                 data_prefix: dict = dict(img=None, ann=None),
+                 data_prefix: dict = dict(img_path=None, seg_path=None),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
@@ -232,7 +232,7 @@ class BaseDataset(Dataset):
         self.data_bytes: np.ndarray
 
         # Set meta information.
-        self._metainfo = self._get_meta_info(copy.deepcopy(metainfo))
+        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
         if self.data_root is not None:
@@ -293,7 +293,7 @@ class BaseDataset(Dataset):
         if self._fully_initialized:
             return
         # load data information
-        self.data_list = self.load_data_list(self.ann_file)
+        self.data_list = self.load_data_list()
         # filter illegal data, such as data that has no annotations.
         self.data_list = self.filter_data()
         # Get subset data according to indices.
@@ -330,6 +330,12 @@ class BaseDataset(Dataset):
         Returns:
             list or list[dict]: Parsed annotation.
         """
+        for prefix_key, prefix in self.data_prefix.items():
+            assert prefix_key in raw_data_info, (
+                f'raw_data_info: {raw_data_info} dose not contain prefix key'
+                f'{prefix_key}, please check your data_prefix.')
+            raw_data_info[prefix_key] = osp.join(prefix,
+                                                 raw_data_info[prefix_key])
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
@@ -408,8 +414,8 @@ class BaseDataset(Dataset):
         raise Exception(f'Cannot find valid image after {self.max_refetch}! '
                         'Please check your image path and pipeline')
 
-    def load_data_list(self, ann_file: str) -> List[dict]:
-        """Load annotations from an annotation file.
+    def load_data_list(self) -> List[dict]:
+        """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
         <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
@@ -417,33 +423,30 @@ class BaseDataset(Dataset):
         information of annotation file will be overwritten :attr:`METAINFO`
         and ``metainfo`` argument of constructor.
 
-        Args:
-            ann_file (str): Absolute annotation file path if ``self.root=None``
-                or relative path if ``self.root=/path/to/data/``.
-
         Returns:
             list[dict]: A list of annotation.
         """  # noqa: E501
-        check_file_exist(ann_file)
-        annotations = load(ann_file)
+        # `self.ann_file` denotes the absolute annotation file path if
+        # `self.root=None` or relative path if `self.root=/path/to/data/`.
+        annotations = load(self.ann_file)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
-        if 'data_infos' not in annotations or 'metadata' not in annotations:
-            raise ValueError('Annotation must have data_infos and metadata '
+        if 'data_list' not in annotations or 'metainfo' not in annotations:
+            raise ValueError('Annotation must have data_list and metainfo '
                              'keys')
-        meta_data = annotations['metadata']
-        raw_data_infos = annotations['data_infos']
+        metainfo = annotations['metainfo']
+        raw_data_list = annotations['data_list']
 
         # Meta information load from annotation file will not influence the
         # existed meta information load from `BaseDataset.METAINFO` and
         # `metainfo` arguments defined in constructor.
-        for k, v in meta_data.items():
+        for k, v in metainfo.items():
             self._metainfo.setdefault(k, v)
 
         # load and parse data_infos.
         data_list = []
-        for raw_data_info in raw_data_infos:
+        for raw_data_info in raw_data_list:
             # parse raw data information to target format
             data_info = self.parse_data_info(raw_data_info)
             if isinstance(data_info, dict):
@@ -467,33 +470,37 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _get_meta_info(cls, in_metainfo: dict = None) -> dict:
+    def _load_metainfo(cls, metainfo: dict = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
-            in_metainfo (dict): Meta information dict. If ``in_metainfo``
+            metainfo (dict): Meta information dict. If ``metainfo``
                 contains existed filename, it will be parsed by
                 ``list_from_file``.
 
         Returns:
             dict: Parsed meta information.
         """
-        # `cls.METAINFO` will be overwritten by in_meta
+        # avoid `cls.METAINFO` being overwritten by `metainfo`
         cls_metainfo = copy.deepcopy(cls.METAINFO)
-        if in_metainfo is None:
+        if metainfo is None:
             return cls_metainfo
-        if not isinstance(in_metainfo, dict):
+        if not isinstance(metainfo, dict):
             raise TypeError(
-                f'in_metainfo should be a dict, but got {type(in_metainfo)}')
+                f'metainfo should be a dict, but got {type(metainfo)}')
 
-        for k, v in in_metainfo.items():
-            if isinstance(v, str) and osp.isfile(v):
-                # if filename in in_metainfo, this key will be further parsed.
-                # nested filename will be ignored.
-                cls_metainfo[k] = list_from_file(v)
+        for k, v in metainfo.items():
+            if isinstance(v, str):
+                # If type of value is string, and can be loaded from
+                # corresponding backend. it means the file name of meta file.
+                try:
+                    cls_metainfo[k] = list_from_file(v)
+                except (TypeError, FileNotFoundError):
+                    warnings.warn(f'{v} is not a meta file, simply parsed as '
+                                  'meta information')
+                    cls_metainfo[k] = v
             else:
                 cls_metainfo[k] = v
-
         return cls_metainfo
 
     def _join_prefix(self):
@@ -522,7 +529,7 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not osp.isabs(self.ann_file):
+        if not is_abs(self.ann_file) and self.ann_file:
             self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
@@ -530,9 +537,11 @@ class BaseDataset(Dataset):
             if prefix is None:
                 self.data_prefix[data_key] = self.data_root
             elif isinstance(prefix, str):
-                if not osp.isabs(prefix):
+                if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
+                else:
+                    self.data_prefix[data_key] = prefix
             else:
                 raise TypeError('prefix should be a string or None, but got '
                                 f'{type(prefix)}')
@@ -721,10 +730,9 @@ class BaseDataset(Dataset):
                 sub_data_list = self.data_list[indices:]
         elif isinstance(indices, Sequence):
             # Return the data information according to given indices.
-            subdata_list = []
+            sub_data_list = []
             for idx in indices:
-                subdata_list.append(self.data_list[idx])
-            sub_data_list = subdata_list
+                sub_data_list.append(self.data_list[idx])
         else:
             raise TypeError('indices should be a int or sequence of int, '
                             f'but got {type(indices)}')

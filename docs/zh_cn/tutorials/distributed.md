@@ -44,4 +44,4 @@ PyTorch 提供了一套基础的通信原语用于多进程之间张量的通信
 - [all_reduce_dict](https://mmengine.readthedocs.io/zh/latest//api.html#mmengine.dist.all_reduce_dict)：对 dict 中的内容进行 all_reduce 操作，基于 broadcast 和 all_reduce 接口实现
 - [all_gather_object](https://mmengine.readthedocs.io/zh/latest//api.html#mmengine.dist.all_gather_object)：基于 all_gather 实现对任意可以 Python 序列化对象的 all_tather 操作
 - [gather_object](https://mmengine.readthedocs.io/zh/latest//api.html#mmengine.dist.gather_object)：将 group 里每个 rank 的  data gather 到一个目标 rank，且支持多种方式
-- [collect_results](https://mmengine.readthedocs.io/zh/latest//api.html#mmengine.dist.collect_results)：支持基于 CPU 或者 GPU 对不同进程间的列表数据进行收集·
+- [collect_results](https://mmengine.readthedocs.io/zh/latest//api.html#mmengine.dist.collect_results)：支持基于 CPU 或者 GPU 对不同进程间的列表数据进行收集

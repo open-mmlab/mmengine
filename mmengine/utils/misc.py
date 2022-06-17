@@ -1,9 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import collections.abc
 import functools
-import glob
 import itertools
-import os.path as osp
 import pkgutil
 import subprocess
 import warnings
@@ -87,7 +85,7 @@ def import_modules_from_strings(imports, allow_failed_imports=False):
                               UserWarning)
                 imported_tmp = None
             else:
-                raise ImportError
+                raise ImportError(f'Failed to import {imp}')
         imported.append(imported_tmp)
     if single_import:
         imported = imported[0]
@@ -227,7 +225,7 @@ def check_prerequisites(
         prerequisites,
         checker,
         msg_tmpl='Prerequisites "{}" are required in method "{}" but not '
-        'found, please install them first.'):  # yapf: disable
+                 'found, please install them first.'):  # yapf: disable
     """A decorator factory to check if prerequisites are satisfied.
 
     Args:
@@ -341,7 +339,6 @@ def deprecated_api_warning(name_dict: dict,
             if kwargs:
                 for src_arg_name, dst_arg_name in name_dict.items():
                     if src_arg_name in kwargs:
-
                         assert dst_arg_name not in kwargs, (
                             f'The expected behavior is to replace '
                             f'the deprecated key `{src_arg_name}` to '
@@ -471,7 +468,7 @@ def tensor2imgs(tensor: torch.Tensor,
     if std is None:
         std = (1, ) * channels
     assert (channels == len(mean) == len(std) == 3) or \
-        (channels == len(mean) == len(std) == 1 and not to_bgr)
+           (channels == len(mean) == len(std) == 1 and not to_bgr)
     mean = tensor.new_tensor(mean).view(1, -1)
     std = tensor.new_tensor(std).view(1, -1)
     tensor = tensor.permute(0, 2, 3, 1) * std + mean
@@ -482,35 +479,18 @@ def tensor2imgs(tensor: torch.Tensor,
     return imgs
 
 
-def find_latest_checkpoint(path: str, suffix: str = 'pth'):
-    """Find the latest checkpoint from the given path.
-
-    Refer to https://github.com/microsoft/SoftTeacher/blob/main/ssod/utils/patch.py  # noqa: E501
+def has_batch_norm(model: nn.Module) -> bool:
+    """Detect whether model has a BatchNormalization layer.
 
     Args:
-        path(str): The path to find checkpoints.
-        suffix(str): File extension. Defaults to 'pth'.
+        model (nn.Module): training model.
 
     Returns:
-        str or None: File path of the latest checkpoint.
+        bool: whether model has a BatchNormalization layer
     """
-    if not osp.exists(path):
-        raise FileNotFoundError('{path} does not exist.')
-
-    if osp.exists(osp.join(path, f'latest.{suffix}')):
-        return osp.join(path, f'latest.{suffix}')
-
-    checkpoints = glob.glob(osp.join(path, f'*.{suffix}'))
-    if len(checkpoints) == 0:
-        raise FileNotFoundError(f'checkpoints can not be found in {path}. '
-                                'Maybe check the suffix again.')
-
-    latest = -1
-    latest_path = None
-    for checkpoint in checkpoints:
-        count = int(osp.basename(checkpoint).split('_')[-1].split('.')[0])
-        if count > latest:
-            latest = count
-            latest_path = checkpoint
-
-    return latest_path
+    if isinstance(model, _BatchNorm):
+        return True
+    for m in model.children():
+        if has_batch_norm(m):
+            return True
+    return False

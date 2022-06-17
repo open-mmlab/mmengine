@@ -112,7 +112,7 @@ class TestBaseDataElement(TestCase):
 
         # test new() with arguments
         metainfo, data = self.setup_data()
-        new_instances = instances.new(metainfo=metainfo, data=data)
+        new_instances = instances.new(metainfo=metainfo, **data)
         assert type(new_instances) == type(instances)
         assert id(new_instances.gt_instances) != id(instances.gt_instances)
         _, new_data = self.setup_data()
@@ -159,6 +159,11 @@ class TestBaseDataElement(TestCase):
         instances.pred_instances = data['pred_instances']
         self.check_key_value(instances, data=data)
 
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement()
+        instances.set_data(data)
+        self.check_key_value(instances, data=data)
+
         # a.xx only set data rather than metainfo
         instances.img_shape = metainfo['img_shape']
         instances.img_id = metainfo['img_id']
@@ -177,6 +182,11 @@ class TestBaseDataElement(TestCase):
 
         with self.assertRaises(AssertionError):
             instances.set_data(123)
+
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo=metainfo, **data)
+        with pytest.raises(AttributeError):
+            instances.set_data(dict(img_id=1))
 
     def test_update(self):
         metainfo, data = self.setup_data()
@@ -423,6 +433,16 @@ class TestBaseDataElement(TestCase):
         instances = BaseDataElement(metainfo=metainfo, **data)
         dict_instances = instances.to_dict()
         # test convert BaseDataElement to dict
+        for k in instances.all_keys():
+            # all keys in instances should be in dict_instances
+            assert k in dict_instances
         assert isinstance(dict_instances, dict)
+        # sub data element should also be converted to dict
         assert isinstance(dict_instances['gt_instances'], dict)
         assert isinstance(dict_instances['pred_instances'], dict)
+
+    def test_metainfo(self):
+        # test metainfo property
+        metainfo, data = self.setup_data()
+        instances = BaseDataElement(metainfo=metainfo, **data)
+        self.assertDictEqual(instances.metainfo, metainfo)

@@ -1,22 +1,27 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .optimizer import (OPTIMIZER_CONSTRUCTORS, OPTIMIZERS,
-                        DefaultOptimizerConstructor, build_optimizer)
+from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
+                        AmpOptimWrapper, DefaultOptimWrapperConstructor,
+                        OptimWrapper, OptimWrapperDict, build_optim_wrapper)
+# yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
                         CosineAnnealingParamScheduler, ExponentialLR,
                         ExponentialMomentum, ExponentialParamScheduler,
                         LinearLR, LinearMomentum, LinearParamScheduler,
                         MultiStepLR, MultiStepMomentum,
-                        MultiStepParamScheduler, StepLR, StepMomentum,
+                        MultiStepParamScheduler, OneCycleLR,
+                        OneCycleParamScheduler, StepLR, StepMomentum,
                         StepParamScheduler, _ParamScheduler)
 
+# yapf: enable
 __all__ = [
-    'OPTIMIZER_CONSTRUCTORS', 'OPTIMIZERS', 'build_optimizer',
-    'DefaultOptimizerConstructor', 'ConstantLR', 'CosineAnnealingLR',
+    'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS', 'build_optim_wrapper',
+    'DefaultOptimWrapperConstructor', 'ConstantLR', 'CosineAnnealingLR',
     'ExponentialLR', 'LinearLR', 'MultiStepLR', 'StepLR', 'ConstantMomentum',
     'CosineAnnealingMomentum', 'ExponentialMomentum', 'LinearMomentum',
     'MultiStepMomentum', 'StepMomentum', 'ConstantParamScheduler',
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
-    '_ParamScheduler'
+    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict',
+    'OneCycleParamScheduler', 'OneCycleLR'
 ]

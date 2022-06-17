@@ -7,11 +7,13 @@ import platform
 import shutil
 import sys
 import tempfile
+import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
@@ -99,7 +101,8 @@ class Config:
     Args:
         cfg_dict (dict, optional): A config dictionary. Defaults to None.
         cfg_text (str, optional): Text of config. Defaults to None.
-        filename (str, optional): Name of config file. Defaults to None.
+        filename (str or Path, optional): Name of config file.
+            Defaults to None.
 
     Examples:
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
@@ -123,7 +126,8 @@ class Config:
     def __init__(self,
                  cfg_dict: dict = None,
                  cfg_text: Optional[str] = None,
-                 filename: str = None):
+                 filename: Optional[Union[str, Path]] = None):
+        filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
         elif not isinstance(cfg_dict, dict):
@@ -138,20 +142,20 @@ class Config:
         if cfg_text:
             text = cfg_text
         elif filename:
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 text = f.read()
         else:
             text = ''
         super().__setattr__('_text', text)
 
     @staticmethod
-    def fromfile(filename: str,
+    def fromfile(filename: Union[str, Path],
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
-            filename (str): Name of config file.
+            filename (str or Path): Name of config file.
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
@@ -160,10 +164,14 @@ class Config:
         Returns:
             Config: Config instance built from config file.
         """
+        filename = str(filename) if isinstance(filename, Path) else filename
         cfg_dict, cfg_text = Config._file2dict(filename,
                                                use_predefined_variables)
         if import_custom_modules and cfg_dict.get('custom_imports', None):
-            import_modules_from_strings(**cfg_dict['custom_imports'])
+            try:
+                import_modules_from_strings(**cfg_dict['custom_imports'])
+            except ImportError as e:
+                raise ImportError('Failed to custom import!') from e
         return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
 
     @staticmethod
@@ -179,7 +187,7 @@ class Config:
             Config: Config object generated from ``cfg_str``.
         """
         if file_format not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
+            raise OSError('Only py/yml/yaml/json type are supported now!')
         if file_format != '.py' and 'dict(' in cfg_str:
             # check if users specify a wrong suffix for python
             warnings.warn(
@@ -209,7 +217,7 @@ class Config:
         Args:
             filename (str): Filename of python config file.
         """
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             content = f.read()
         try:
             ast.parse(content)
@@ -267,7 +275,7 @@ class Config:
             fileBasename=file_basename,
             fileBasenameNoExtension=file_basename_no_extension,
             fileExtname=file_extname)
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             config_file = f.read()
         for key, value in support_templates.items():
             regexp = r'\{\{\s*' + str(key) + r'\s*\}\}'
@@ -290,7 +298,7 @@ class Config:
         Returns:
             dict: A dictionary contains variables in base config.
         """
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             config_file = f.read()
         base_var_dict = {}
         regexp = r'\{\{\s*' + BASE_KEY + r'\.([\w\.]+)\s*\}\}'
@@ -365,7 +373,7 @@ class Config:
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
         if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
+            raise OSError('Only py/yml/yaml/json type are supported now!')
 
         with tempfile.TemporaryDirectory() as temp_config_dir:
             temp_config_file = tempfile.NamedTemporaryFile(
@@ -392,7 +400,9 @@ class Config:
                 cfg_dict = {
                     name: value
                     for name, value in mod.__dict__.items()
-                    if not name.startswith('__')
+                    if not any((name.startswith('__'),
+                                isinstance(value, types.ModuleType),
+                                isinstance(value, types.FunctionType)))
                 }
                 # delete imported module
                 del sys.modules[temp_module_name]
@@ -405,17 +415,17 @@ class Config:
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                'in the future.'
+                          'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                    'instead.'
+                               'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                    f'{deprecation_info["reference"]}'
+                               f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
@@ -554,7 +564,7 @@ class Config:
 
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
-                v_str = f"'{v}'"
+                v_str = repr(v)
             else:
                 v_str = str(v)
 
@@ -669,38 +679,44 @@ class Config:
 
         return other
 
+    def __copy__(self):
+        cls = self.__class__
+        other = cls.__new__(cls)
+        other.__dict__.update(self.__dict__)
+
+        return other
+
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
         _cfg_dict, _filename, _text = state
         super().__setattr__('_cfg_dict', _cfg_dict)
         super().__setattr__('_filename', _filename)
         super().__setattr__('_text', _text)
 
-    def dump(self, file: Optional[str] = None):
+    def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.
 
         Args:
-            file (str, optional): If not specified, then the object
+            file (str or Path, optional): If not specified, then the object
             is dumped to a str, otherwise to a file specified by the filename.
             Defaults to None.
 
         Returns:
             str or None: Config text.
         """
+        file = str(file) if isinstance(file, Path) else file
         cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
-        if self.filename.endswith('.py'):
-            if file is None:
+        if file is None:
+            if self.filename is None or self.filename.endswith('.py'):
                 return self.pretty_text
             else:
-                with open(file, 'w', encoding='utf-8') as f:
-                    f.write(self.pretty_text)
-                return None
-        else:
-            if file is None:
                 file_format = self.filename.split('.')[-1]
                 return dump(cfg_dict, file_format=file_format)
-            else:
-                dump(cfg_dict, file)
-                return None
+        elif file.endswith('.py'):
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write(self.pretty_text)
+        else:
+            file_format = file.split('.')[-1]
+            return dump(cfg_dict, file=file, file_format=file_format)
 
     def merge_from_dict(self,
                         options: dict,
@@ -773,6 +789,8 @@ class DictAction(Action):
             pass
         if val.lower() in ['true', 'false']:
             return True if val.lower() == 'true' else False
+        if val == 'None':
+            return None
         return val
 
     @staticmethod

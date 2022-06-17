@@ -70,3 +70,7 @@ class TestManagerMixin:
         # Non-string instance name will raise `AssertionError`.
         with pytest.raises(AssertionError):
             SubClassA.get_instance(name=1)
+        # `get_instance` should not accept other arguments if corresponding
+        # instance has been created.
+        with pytest.raises(AssertionError):
+            SubClassA.get_instance('name2', a=1, b=2)

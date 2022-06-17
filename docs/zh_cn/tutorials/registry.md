@@ -6,11 +6,11 @@ OpenMMLab 大多数算法库均使用注册器来管理他们的代码模块，�
 
 ## 什么是注册器
 
-MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类的映射，使得用户可以借助字符串查找到相应的类，例如维护字符串 `"ResNet"` 到 `ResNet` 类的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类。
-而模块构建方法则定义了如何根据字符串查找到对应的类，并定义了如何实例化这个类，例如根据规则通过字符串 `"bn"` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。
+MMEngine 实现的注册器可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到类或者函数的映射，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类或函数；
+而模块构建方法则定义了如何根据字符串查找到对应的类或函数，并定义了如何实例化这个类或调用这个函数，例如根据规则通过字符串 `"bn"` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。又或者根据规则通过字符串 `"bn"` 找到 `build_batchnorm2d`，并且调用函数获得 `BatchNorm2d` 模块。
 MMEngine 中的注册器默认使用 [build_from_cfg 函数](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 来查找并实例化字符串对应的类。
 
-一个注册器管理的类通常有相似的接口和功能，因此该注册器可以被视作这些类的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类。
+一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `Classifier` 可以被视作所有分类网络的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
 使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。用户可以跳至`使用注册器提高代码的扩展性`章节了解注册器是如何提高代码拓展性的。
 
 ## 入门用法
@@ -32,10 +32,10 @@ from mmengine import Registry
 CONVERTERS = Registry('converter')
 ```
 
-然后我们可以实现不同的转换器。
+然后我们可以实现不同的转换器。例如，在 `converters/converter_cls.py` 中实现 `Converter1` 和 `Converter2`，在 `converters/converter_func.py` 中实现 `converter3`。
 
 ```python
-# converters/converter.py
+# converters/converter_cls.py
 from .builder import CONVERTERS
 
 # 使用注册器管理模块
@@ -53,12 +53,23 @@ class Converter2(object):
         self.c = c
 ```
 
-使用注册器管理模块的关键步骤是，将实现的模块注册到注册表 `CONVERTERS` 中。通过 `@CONVERTERS.register_module()` 装饰所实现的模块，字符串和类之间的映射就可以由 `CONVERTERS` 构建和维护，我们也可以通过 `CONVERTERS.register_module(module=Converter1)` 实现同样的功能。
+```python
+# converters/converter_func.py
+from .builder import CONVERTERS
+from .converter_cls import Converter1
+@CONVERTERS.register_module()
+def converter3(a, b)
+    return Converter1(a, b)
+```
 
-通过注册，我们就可以通过 `CONVERTERS` 建立字符串与类之间的映射，
+使用注册器管理模块的关键步骤是，将实现的模块注册到注册表 `CONVERTERS` 中。通过 `@CONVERTERS.register_module()` 装饰所实现的模块，字符串和类或函数之间的映射就可以由 `CONVERTERS` 构建和维护，我们也可以通过 `CONVERTERS.register_module(module=Converter1)` 实现同样的功能。
+
+通过注册，我们就可以通过 `CONVERTERS` 建立字符串与类或函数之间的映射，
 
 ```python
 'Converter1' -> <class 'Converter1'>
+'Converter2' -> <class 'Converter2'>
+'Converter3' -> <function 'Converter3'>
 ```
 
 ```{note}
@@ -72,6 +83,9 @@ class Converter2(object):
 # 注意，converter_cfg 可以通过解析配置文件得到
 converter_cfg = dict(type='Converter1', a=a_value, b=b_value)
 converter = CONVERTERS.build(converter_cfg)
+converter3_cfg = dict(type='converter3', a=a_value, b=b_value)
+# returns the calling result
+converter3 = CONVERTERS.build(converter3_cfg)
 ```
 
 如果我们想使用 `Converter2`，仅需修改配置。
@@ -210,7 +224,7 @@ conv = MODELS.build(cfg)
 
 MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 17 个根注册器：
+为了方便跨库调用，MMEngine 提供了 18 个根注册器：
 
 - RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -229,6 +243,7 @@ MMEngine 的注册器支持跨项目调用，即可以在一个项目中使用�
 - TASK_UTILS: 任务强相关的一些组件，如 `AnchorGenerator`, `BboxCoder`
 - VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
 - WRITERS: 存储训练日志的后端，如 `LocalWriter`, `TensorboardWriter`
+- LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
 
 下面我们以 OpenMMLab 开源项目为例介绍如何跨项目调用模块。
 
@@ -262,7 +277,7 @@ class RetinaNet(nn.Module):
 
 ![registry](https://user-images.githubusercontent.com/58739961/153880947-1d66ac06-e5ee-448e-8d7d-201e96d1101d.png)
 
-我们可以在 `MMDetection` 中调用 `MMEngine` 中模块。
+我们可以在 `MMDetection` 中调用 `MMEngine` 中的模块。
 
 ```python
 from mmdet.models import MODELS
@@ -277,6 +292,29 @@ model = MODELS.build(cfg=dict(type='Conv2d'))
 ```
 
 如果不加前缀，`build` 方法首先查找当前节点是否存在该模块，如果存在则返回该模块，否则会继续向上查找父节点甚至祖先节点直到找到该模块，因此，如果当前节点和父节点存在同一模块并且希望调用父节点的模块，我们需要指定 `scope` 前缀。需要注意的是，向上查找父节点甚至祖先节点的**前提是父节点或者祖先节点的模块已通过某种方式被导入进而完成注册**。例如，在上面这个示例中，之所以没有显示导入父节点 `mmengine` 中的 `MODELS`，是因为通过 `from mmdet.models import MODELS` 间接触发 `mmengine.MODELS` 完成模块的注册。
+
+上面展示了如何使用子节点注册器构建模块，但有时候我们希望不填加前缀也能在父节点注册器中构建子节点的模块，目的是提供通用的代码，避免下游算法库重复造轮子，该如何实现呢？
+
+假设 MMEngine 中有一个 `build_model` 函数，该方法用于构建模型。
+
+```python
+from mmengine.registry import MODELS
+
+def build_model(cfg):
+    model = MODELS.build(cfg)
+```
+
+如果我们希望在 MMDetection 中调用该函数构建 MMDetection 注册的模块，那么我们需要先获取一个 scope_name 为 'mmdet' 的 [DefaultScope](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.registry.DefaultScope) 实例，该实例全局唯一。
+
+```python
+from mmengine import build_model
+import mmdet.models  # 通过 import 的方式将 mmdet 中的模块导入注册器进而完成注册
+
+default_scope = DefaultScope.get_instance('my_experiment', scope_name='mmdet')
+model = build_model(cfg=dict(type='RetinaNet'))
+```
+
+获取 `DefaultScope` 实例的目的是使 Registry 的 build 方法会将 DefaultScope 名称（mmdet）注册器节点作为注册器的起点，才能在配置中不填加 mmdet 前缀的情况下在 MMDetection 的注册器节点中找到 RetinaNet 模块，如若不然，程序会报找不到 RetinaNet 错误。
 
 ### 调用兄弟节点的模块
 
@@ -311,16 +349,7 @@ from mmcls.models import MODELS
 model = MODELS.build(cfg=dict(type='mmdet.RetinaNet'))
 ```
 
-调用非本节点的模块需要指定在 `type` 中指定 `scope` 前缀，如果不想指定，我们可以创建一个全局变量 `default_scope` 并将 `scope_name` 设置为 'mmdet'，`Registry` 会将 `scope_name` 对应的 `registry` 作为当前 `Registry` 并调用 `build` 方法。
-
-```python
-from mmengine.registry import DefaultScope, MODELS
-
-# 调用注册在 mmdet 中的 RetinaNet
-default_scope = DefaultScope.get_instance(
-            'my_experiment', scope_name='mmdet')
-model = MODELS.build(cfg=dict(type='RetinaNet'))
-```
+调用非本节点或父节点的模块需要在 `type` 中指定 `scope` 前缀。
 
 注册器除了支持两层结构，三层甚至更多层结构也是支持的。
 
@@ -358,10 +387,4 @@ model = MODELS.build(cfg=dict(type='mmcls.ResNet'))
 from mmcls.models import MODELS
 # 需要注意前缀的顺序，'detplus.mmdet.ResNet' 是不正确的
 model = MODELS.build(cfg=dict(type='mmdet.detplus.MetaNet'))
-
-# 如果希望默认从 detplus 构建模型，设置可以 default_scope
-from mmengine.registry import DefaultScope
-default_scope = DefaultScope.get_instance(
-            'my_experiment', scope_name='detplus')
-model = MODELS.build(cfg=dict(type='MetaNet', default_scope='detplus'))
 ```

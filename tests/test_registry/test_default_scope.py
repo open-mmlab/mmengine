@@ -21,3 +21,15 @@ class TestDefaultScope:
         DefaultScope.get_instance('instance_name', scope_name='mmengine')
         default_scope = DefaultScope.get_current_instance()
         assert default_scope.scope_name == 'mmengine'
+
+    def test_overwrite_default_scope(self):
+        origin_scope = DefaultScope.get_instance(
+            'test_overwrite_default_scope', scope_name='origin_scope')
+        with DefaultScope.overwrite_default_scope(scope_name=None):
+            assert DefaultScope.get_current_instance(
+            ).scope_name == 'origin_scope'
+        with DefaultScope.overwrite_default_scope(scope_name='test_overwrite'):
+            assert DefaultScope.get_current_instance(
+            ).scope_name == 'test_overwrite'
+        assert DefaultScope.get_current_instance(
+        ).scope_name == origin_scope.scope_name == 'origin_scope'

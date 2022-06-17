@@ -1,13 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
-from typing import Any, Sequence, Tuple
+from typing import Sequence
 
 import numpy as np
 import torch
 
-from .base_data_element import BaseDataElement
-
-DATA_BATCH = Sequence[Tuple[Any, BaseDataElement]]
+DATA_BATCH = Sequence[dict]
 
 
 def worker_init_fn(worker_id: int, num_workers: int, rank: int,
@@ -36,10 +34,10 @@ def pseudo_collate(data_batch: DATA_BATCH) -> DATA_BATCH:
     nothing just returns ``data_batch``.
 
     Args:
-        data_batch (Sequence[Tuple[Any, BaseDataElement]]): Batch of data from
+        data_batch (Sequence[dict]): Batch of data from
             dataloader.
 
     Returns:
-        Sequence[Tuple[Any, BaseDataElement]]: Return input ``data_batch``.
+        Sequence[dict]: Return input ``data_batch``.
     """
     return data_batch

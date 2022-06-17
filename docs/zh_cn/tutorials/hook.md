@@ -135,39 +135,39 @@ def main():
 def main():
     ...
     call_hooks('before_run', hooks)  # 训练开始前执行的逻辑
-    call_hooks('after_load_checkpoint')  # 加载权重后执行的逻辑
+    call_hooks('after_load_checkpoint', hooks)  # 加载权重后执行的逻辑
     for i in range(max_epochs):
-        call_hooks('before_train_epoch')  # 遍历训练数据集前执行的逻辑
+        call_hooks('before_train_epoch', hooks)  # 遍历训练数据集前执行的逻辑
         for inputs, labels in train_dataloader:
-            call_hooks('before_train_iter')  # 模型前向计算前执行的逻辑
+            call_hooks('before_train_iter', hooks)  # 模型前向计算前执行的逻辑
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-            call_hooks('after_train_iter')  # 模型前向计算后执行的逻辑
+            call_hooks('after_train_iter', hooks)  # 模型前向计算后执行的逻辑
             loss.backward()
             optimizer.step()
-        call_hooks('after_train_epoch')  # 遍历完训练数据集后执行的逻辑
+        call_hooks('after_train_epoch', hooks)  # 遍历完训练数据集后执行的逻辑
 
-        call_hooks('before_val_epoch')  # 遍历验证数据集前执行的逻辑
+        call_hooks('before_val_epoch', hooks)  # 遍历验证数据集前执行的逻辑
         with torch.no_grad():
             for inputs, labels in val_dataloader:
-                call_hooks('before_val_iter')  # 模型前向计算前执行
+                call_hooks('before_val_iter', hooks)  # 模型前向计算前执行
                 outputs = net(inputs)
                 loss = criterion(outputs, labels)
-                call_hooks('after_val_iter')  # 模型前向计算后执行
-        call_hooks('after_val_epoch')  # 遍历完验证数据集前执行
+                call_hooks('after_val_iter', hooks)  # 模型前向计算后执行
+        call_hooks('after_val_epoch', hooks)  # 遍历完验证数据集前执行
 
-        call_hooks('before_save_checkpoint')  # 保存权重前执行的逻辑
+        call_hooks('before_save_checkpoint', hooks)  # 保存权重前执行的逻辑
 
-    call_hooks('before_test_epoch')  # 遍历测试数据集前执行的逻辑
+    call_hooks('before_test_epoch', hooks)  # 遍历测试数据集前执行的逻辑
     with torch.no_grad():
         for inputs, labels in test_dataloader:
-            call_hooks('before_test_iter')  # 模型前向计算后执行的逻辑
+            call_hooks('before_test_iter', hooks)  # 模型前向计算后执行的逻辑
             outputs = net(inputs)
             accuracy = ...
-            call_hooks('after_test_iter')  # 遍历完成测试数据集后执行的逻辑
-    call_hooks('after_test_epoch')  # 遍历完测试数据集后执行
+            call_hooks('after_test_iter', hooks)  # 遍历完成测试数据集后执行的逻辑
+    call_hooks('after_test_epoch', hooks)  # 遍历完测试数据集后执行
 
-    call_hooks('after_run')  # 训练结束后执行的逻辑
+    call_hooks('after_run', hooks)  # 训练结束后执行的逻辑
 ```
 
 在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
@@ -192,21 +192,22 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **默认钩子**
 
-| 名称      |      用途      |  优先级 |
-|:----------:|:-------------:|:------:|
-| OptimizerHook | 反向传播以及参数更新 | HIGH (30) |
-| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 | NORMAL (50) |
-| SyncBuffersHook | 同步模型的 buffer | NORMAL (50) |
-| EmptyCacheHook | PyTorch CUDA 缓存清理 | NORMAL (50) |
-| IterTimerHook | 统计迭代耗时 | NORMAL (50) |
-| LoggerHook | 打印日志 | BELOW_NORMAL (60) |
-| ParamSchedulerHook | 调用 ParamScheduler 的 step 方法 | LOW (70) |
-| CheckpointHook | 按指定间隔保存权重 | VERY_LOW (90) |
+|         名称          |             用途              |        优先级        |
+| :-----------------: | :-------------------------: | :---------------: |
+|   RuntimeInfoHook   |    向 message hub 更新运行时信息    |  VERY_HIGH (10)   |
+|    OptimizerHook    |         反向传播以及参数更新          |     HIGH (30)     |
+| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效  |    NORMAL (50)    |
+|   SyncBuffersHook   |        同步模型的 buffer         |    NORMAL (50)    |
+|   EmptyCacheHook    |      PyTorch CUDA 缓存清理      |    NORMAL (50)    |
+|    IterTimerHook    |           统计迭代耗时            |    NORMAL (50)    |
+|     LoggerHook      |            打印日志             | BELOW_NORMAL (60) |
+| ParamSchedulerHook  | 调用 ParamScheduler 的 step 方法 |     LOW (70)      |
+|   CheckpointHook    |          按指定间隔保存权重          |   VERY_LOW (90)   |
 
 **自定义钩子**
 
-| 名称      |      用途      |  优先级 |
-|:----------:|:-------------:|:------:|
+|       名称       | 用途  |     优先级      |
+| :------------: | :-: | :----------: |
 | VisualizerHook | 可视化 | LOWEST (100) |
 
 ```{note}
@@ -219,11 +220,13 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 from mmengine import Runner
 
 default_hooks = dict(
-    optimizer=dict(type='OptimizerHook'),
-    timer=dict(type='IterTimerHook',
-    logger=dict(type='TextLoggerHook'),
-    param_scheduler=dict(type='ParamSchedulerHook')),
-    checkpoint=dict(type='CheckpointHook', interval=1)
+    runtime_info=dict(type='RuntimeInfoHook'),
+    optimizer=dict(type='OptimizerHook', grad_clip=None),
+    timer=dict(type='IterTimerHook'),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    logger=dict(type='LoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', interval=1),
 )
 
 custom_hooks = [
@@ -281,7 +284,7 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 `OptimizerHook` 包含一些 optimizer 相关的操作：
 
 - 梯度清零 runner.optimizer.zero_grad()
-- 反向传播 runner.output['loss'].backward()
+- 反向传播 runner.output\['loss'\].backward()
 - 梯度截断 clip_grads（可选）
 - 参数更新 runner.optimizer.step()
 
@@ -294,7 +297,7 @@ HOOKS.build(optimizer_config)
 
 使用以上配置即可实现在 Trainer 中完成梯度清零、反向传播以及参数更新。
 
-如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm\_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
 
 ```python
 optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_type=2))
@@ -380,17 +383,23 @@ config = dict(type='EmptyCacheHook', before_epoch=False, after_epoch=True, after
 config = dict(type='SyncBuffersHook')
 ```
 
+### RuntimeInfoHook
+
+`RuntimeInfoHook` 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
+以便其他无法访问执行器的模块能够获取到这些信息。
+
 ## 添加自定义钩子
 
 如果 MMEngine 提供的默认钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
 
-例如，如果希望在训练的过程中判断损失值是否有效，如果值为无穷大则无效，我们可以在每次迭代后判断损失值是否无穷大，因此只需重写  `after_train_iter` 位点。
+例如，如果希望在训练的过程中判断损失值是否有效，如果值为无穷大则无效，我们可以在每次迭代后判断损失值是否无穷大，因此只需重写 `after_train_iter` 位点。
 
 ```python
 import torch
 
 from mmengine import HOOKS
 from mmengine.hooks import Hook
+
 
 @HOOKS.register_module()
 class CheckInvalidLossHook(Hook):
@@ -407,9 +416,20 @@ class CheckInvalidLossHook(Hook):
     def __init__(self, interval=50):
         self.interval = interval
 
-    def after_train_iter(self, runner, data_batch):
-        if self.every_n_iters(runner, self.interval):
-            assert torch.isfinite(runner.outputs['loss']), \
+    def after_train_iter(self, runner, batch_idx, data_batch=None, outputs=None):
+        """All subclasses should override this method, if they need any
+        operations after each training iteration.
+
+         Args:
+             runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
+            outputs (dict, optional): Outputs from model.
+                Defaults to None.
+        """
+        if self.every_n_train_iters(runner, self.interval):
+            assert torch.isfinite(runner.outputs['loss']),\
                 runner.logger.info('loss become infinite or NaN!')
 ```
 

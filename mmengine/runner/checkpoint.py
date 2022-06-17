@@ -695,3 +695,26 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
         with io.BytesIO() as f:
             torch.save(checkpoint, f)
             file_client.put(f.getvalue(), filename)
+
+
+def find_latest_checkpoint(path: str):
+    """Find the latest checkpoint from the given path.
+
+    Refer to https://github.com/facebookresearch/fvcore/blob/main/fvcore/common/checkpoint.py  # noqa: E501
+
+    Args:
+        path(str): The path to find checkpoints.
+
+    Returns:
+        str or None: File path of the latest checkpoint.
+    """
+    save_file = osp.join(path, 'last_checkpoint')
+    try:
+        with open(save_file) as f:
+            last_saved = f.read().strip()
+    except OSError:
+        raise OSError(
+            'last_checkpoint file does not exist, maybe because it has just'
+            ' been deleted by a separate process')
+
+    return last_saved
