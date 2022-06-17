@@ -3,7 +3,6 @@ import copy
 import os.path as osp
 import platform
 import random
-import shutil
 import time
 import warnings
 from collections import OrderedDict
