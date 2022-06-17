@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -43,11 +43,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             module to be wrapped with FSDP.
         process_group (Optional[ProcessGroup]):
             process group for sharding.
-        cpu_offload (Optional [bool]):
+        cpu_offload (Optional[Union[bool,CPUOffload]]):
             CPU offloading config.
-            Different from FullyShardedDataParallel,Since it will be set by
+            Different from FullyShardedDataParallel,Since it can be set by
             users' pre-defined config in MMEngine,its type is expected to be
-            `None` or `bool`.
+            `None`, `bool` or `CPUOffload`.
 
             Currently, only parameter and gradient CPU offload is supported.
             It can be enabled via passing in
@@ -56,14 +56,14 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             for params and grads to be on same device to work with optimizer.
             This API is subject to change. Default is ``None`` in which case
             there will be no offloading.
-        fsdp_auto_wrap_policy: (Optional [str]):
+        fsdp_auto_wrap_policy: (Optional[Union[str,Callable]]):
             Specifying a policy to recursively wrap layers with FSDP.
-            Different from FullyShardedDataParallel, Since it will be set by
+            Different from FullyShardedDataParallel, Since it can be set by
             users' pre-defined config in MMEngine, its type is expected to be
-            `None` or `str`. If it's `str`, then MMFullyShardedDataParallel
-            will try to get specified method in ``FSDP_WRAP_POLICYS`` registry,
-            and this method will be passed to FullyShardedDataParallel to
-            finally initialize model.
+            `None`, `str` or `Callable`. If it's `str`, then
+            MMFullyShardedDataParallel will try to get specified method in
+            ``FSDP_WRAP_POLICYS`` registry,and this method will be passed to
+            FullyShardedDataParallel to finally initialize model.
 
             Note that this policy currently will only apply to child modules of
             the passed in module. The remainder modules are always wrapped in
@@ -88,10 +88,10 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 >>> ) -> bool:
                 >>>     return unwrapped_params >= min_num_params
 
-        backward_prefetch: (Optional[str]):
+        backward_prefetch: (Optional[Union[str,BackwardPrefetch]]):
             Different from FullyShardedDataParallel, Since it will be set by
             users' pre-defined config in MMEngine,its type is expected to be
-            `None` or `str`.
+            `None`, `str` or `BackwardPrefetch`.
 
             This is an experimental feature that is subject to change in the
             the near future. It allows users to enable two different
@@ -104,36 +104,52 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
     def __init__(self,
                  module: nn.Module,
                  process_group: Optional[ProcessGroup] = None,
-                 cpu_offload: Optional[bool] = None,
-                 fsdp_auto_wrap_policy: Optional[str] = None,
-                 backward_prefetch: Optional[str] = None):
+                 cpu_offload: Optional[Union[bool, CPUOffload]] = None,
+                 fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
+                 backward_prefetch: Optional[Union[str,
+                                                   BackwardPrefetch]] = None):
 
         if cpu_offload:
-            if not isinstance(cpu_offload, bool):
-                raise TypeError('`cpu_offload` should be `None` or `bool`'
-                                f' but has type {type(cpu_offload)}')
-
-            cpu_offload = CPUOffload(offload_params=cpu_offload)
+            if isinstance(cpu_offload, bool):
+                cpu_offload = CPUOffload(offload_params=cpu_offload)
+            elif not isinstance(cpu_offload, CPUOffload):
+                raise TypeError(
+                    '`cpu_offload` should be `None`, `bool`'
+                    f'or `CPUOffload`, but has type {type(cpu_offload)}')
 
         if fsdp_auto_wrap_policy:
-            assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
-                f'`FSDP_WRAP_POLICYS` has no function {fsdp_auto_wrap_policy}'
-            fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
-                fsdp_auto_wrap_policy)
-            if not isinstance(fsdp_auto_wrap_policy, Callable):  # type: ignore
+            if isinstance(fsdp_auto_wrap_policy, str):
+                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
+                    '`FSDP_WRAP_POLICYS` has no ' \
+                    f'function {fsdp_auto_wrap_policy}'
+                fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
+                    fsdp_auto_wrap_policy)
+                if not isinstance(fsdp_auto_wrap_policy,
+                                  Callable):  # type: ignore
+                    raise TypeError(
+                        'Registered `fsdp_auto_wrap_policy` needs to be '
+                        '`Callable`, but has type '
+                        f'{type(fsdp_auto_wrap_policy)}')
+            elif not isinstance(fsdp_auto_wrap_policy,
+                                Callable):  # type: ignore
                 raise TypeError(
-                    '`fsdp_auto_wrap_policy` needs to be `Callable`,'
-                    f' but has type {type(fsdp_auto_wrap_policy)} ')
+                    '`fsdp_auto_wrap_policy` should be `None`, `str` '
+                    'or `Callable`, but has type '
+                    f'{type(fsdp_auto_wrap_policy)}')
 
         if backward_prefetch:
-            backward_prefetch = str(backward_prefetch)
-            assert backward_prefetch in ['pre', 'post'], \
-                '`backward_prefetch` should be either `pre` or `post`,' \
-                f' but get {backward_prefetch}'
-            if backward_prefetch == 'pre':
-                backward_prefetch = BackwardPrefetch.BACKWARD_PRE
-            else:
-                backward_prefetch = BackwardPrefetch.BACKWARD_POST
+            if isinstance(backward_prefetch, str):
+                assert backward_prefetch in ['pre', 'post'], \
+                    '`backward_prefetch` should be either `pre` or `post`,' \
+                    f' but get {backward_prefetch}'
+                if backward_prefetch == 'pre':
+                    backward_prefetch = BackwardPrefetch.BACKWARD_PRE
+                else:
+                    backward_prefetch = BackwardPrefetch.BACKWARD_POST
+            elif not isinstance(backward_prefetch, BackwardPrefetch):
+                raise TypeError('`backward_prefetch` should be `None`, `str` '
+                                'or `BackwardPrefetch`, but has type '
+                                f'{type(backward_prefetch)}')
 
         super().__init__(module, process_group, cpu_offload,
                          fsdp_auto_wrap_policy, backward_prefetch)
