@@ -967,8 +967,9 @@ class TestRunner(TestCase):
         self.assertIsInstance(dataloader.sampler, DefaultSampler)
         self.assertEqual(dataloader.sampler.seed, seed)
 
-        # diff_seed is True
-        dataloader = runner.build_dataloader(cfg, seed=seed, diff_seed=True)
+        # diff_rank_seed is True
+        dataloader = runner.build_dataloader(
+            cfg, seed=seed, diff_rank_seed=True)
         self.assertNotEqual(dataloader.sampler.seed, seed)
 
     def test_build_train_loop(self):
