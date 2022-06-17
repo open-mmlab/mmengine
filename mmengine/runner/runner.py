@@ -3,7 +3,6 @@ import copy
 import os.path as osp
 import platform
 import random
-import resource
 import time
 import warnings
 from collections import OrderedDict
@@ -634,6 +633,7 @@ class Runner:
         # https://github.com/pytorch/pytorch/issues/973
         # set resource limit
         if platform.system() != 'Windows':
+            import resource
             rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
             base_soft_limit = rlimit[0]
             hard_limit = rlimit[1]
