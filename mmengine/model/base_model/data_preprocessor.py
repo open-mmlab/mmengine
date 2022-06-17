@@ -191,11 +191,11 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             'mean and std should be both None or tuple')
         if mean is not None:
             assert len(mean) == 3 or len(mean) == 1, (
-                'The length of mean should be 1 or 3 to be compatible with '
-                f'RGB or gray image, but got {len(mean)}')
+                '`mean` should have 1 or 3 values, to be compatible with '
+                f'RGB or gray image, but got {len(mean)} values')
             assert len(std) == 3 or len(std) == 1, (  # type: ignore
-                'The length of std should be 1 or 3 to be compatible with RGB '  # type: ignore # noqa: E501
-                f'or gray image, but got {len(std)}')  # type: ignore
+                '`std` should have 1 or 3 values, to be compatible with RGB '  # type: ignore # noqa: E501
+                f'or gray image, but got {len(std)} values')
             self._enable_normalize = True
             self.register_buffer('mean',
                                  torch.tensor(mean).view(-1, 1, 1), False)
@@ -233,9 +233,9 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             if self._enable_normalize:
                 if self.mean.shape[0] == 3:
                     assert _input.dim() == 3 and _input.shape[0] == 3, (
-                        'If the length of mean is 3, the input tensor must '
-                        'have 3 H W format, which means the RGB or BGR image, '
-                        ' but got the tensor with shape {_input.shape}')
+                        'If the mean has 3 values, the input tensor should in '
+                        'shape of (3, H, W), but got the tensor with shape '
+                        f'{_input.shape}')
                 _input = (_input - self.mean) / self.std
             inputs[idx] = _input
         # Pad and stack Tensor.
