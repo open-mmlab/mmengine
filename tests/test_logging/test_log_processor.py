@@ -96,13 +96,13 @@ class TestLogProcessor:
                 log_str = (f'Epoch({mode}) [2/{len(cur_loop.dataloader)}]  ')
 
             if mode == 'train':
-                log_str += f"lr: {train_logs['lr']:.3e}  "
+                log_str += f"lr: {train_logs['lr']:.4e}  "
             else:
                 log_str += '  '
 
             log_str += (f'eta: 0:00:40  '
-                        f"time: {train_logs['time']:.3f}  "
-                        f"data_time: {train_logs['data_time']:.3f}  ")
+                        f"time: {train_logs['time']:.4f}  "
+                        f"data_time: {train_logs['data_time']:.4f}  ")
 
             if torch.cuda.is_available():
                 log_str += 'memory: 100  '
@@ -118,13 +118,13 @@ class TestLogProcessor:
                 log_str = f'Iter({mode}) [2/{max_iters}]  '
 
             if mode == 'train':
-                log_str += f"lr: {train_logs['lr']:.3e}  "
+                log_str += f"lr: {train_logs['lr']:.4e}  "
             else:
                 log_str += '  '
 
             log_str += (f'eta: 0:00:40  '
-                        f"time: {train_logs['time']:.3f}  "
-                        f"data_time: {train_logs['data_time']:.3f}  ")
+                        f"time: {train_logs['time']:.4f}  "
+                        f"data_time: {train_logs['data_time']:.4f}  ")
 
             if torch.cuda.is_available():
                 log_str += 'memory: 100  '
