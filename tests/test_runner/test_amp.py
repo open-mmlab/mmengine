@@ -37,16 +37,21 @@ class TestAmp(unittest.TestCase):
                         self.assertEqual(res.dtype, torch.float32)
 
         else:
-            with auto_cast():
-                # torch.autocast support cpu and cuda mode.
-                layer = nn.Conv2d(1, 1, 1)
-                res = layer(torch.randn(1, 1, 1, 1))
-                self.assertIn(res.dtype, (torch.bfloat16, torch.float16))
+            if digit_version(TORCH_VERSION) < digit_version('1.10.0'):
+                devices = ['cuda']
+            else:
+                devices = ['cpu', 'cuda']
+            for device in devices:
+                with auto_cast():
+                    # torch.autocast support cpu and cuda mode.
+                    layer = nn.Conv2d(1, 1, 1).to(device)
+                    res = layer(torch.randn(1, 1, 1, 1).to(device))
+                    self.assertIn(res.dtype, (torch.bfloat16, torch.float16))
+                    with auto_cast(enabled=False):
+                        res = layer(torch.randn(1, 1, 1, 1).to(device))
+                        self.assertEqual(res.dtype, torch.float32)
+                # Test with fp32_enabled
                 with auto_cast(enabled=False):
-                    res = layer(torch.randn(1, 1, 1, 1))
+                    layer = nn.Conv2d(1, 1, 1).to(device)
+                    res = layer(torch.randn(1, 1, 1, 1).to(device))
                     self.assertEqual(res.dtype, torch.float32)
-            # Test with fp32_enabled
-            with auto_cast(enabled=False):
-                layer = nn.Conv2d(1, 1, 1)
-                res = layer(torch.randn(1, 1, 1, 1))
-                self.assertEqual(res.dtype, torch.float32)
