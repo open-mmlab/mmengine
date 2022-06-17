@@ -1286,7 +1286,7 @@ class TestRunner(TestCase):
 
         # Test fp16 `auto_cast` context.
         cfg.experiment_name = 'test_val3'
-        cfg.val_cfg = dict(fp16_enabled=True)
+        cfg.val_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
         if (digit_version(TORCH_VERSION) < digit_version('1.10.0')
@@ -1340,7 +1340,7 @@ class TestRunner(TestCase):
 
         # Test fp16 `auto_cast` context.
         cfg.experiment_name = 'test_val3'
-        cfg.test_cfg = dict(fp16_enabled=True)
+        cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
         if (digit_version(TORCH_VERSION) < digit_version('1.10.0')

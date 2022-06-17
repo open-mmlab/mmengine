@@ -270,7 +270,7 @@ class ValLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
-        fp16_enabled (bool): Whether to enable fp16 validation. Defaults to
+        fp16 (bool): Whether to enable fp16 validation. Defaults to
             False.
     """
 
@@ -278,7 +278,7 @@ class ValLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
-                 fp16_enabled: bool = False) -> None:
+                 fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -294,7 +294,7 @@ class ValLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
-        self.fp16_enabled = fp16_enabled
+        self.fp16 = fp16
 
     def run(self):
         """Launch validation."""
@@ -320,7 +320,7 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        with auto_cast(enabled=self.fp16_enabled):
+        with auto_cast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
@@ -339,7 +339,7 @@ class TestLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
-        fp16_enabled (bool): Whether to enable fp16 testing. Defaults to
+        fp16 (bool): Whether to enable fp16 testing. Defaults to
             False.
     """
 
@@ -347,7 +347,7 @@ class TestLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
-                 fp16_enabled: bool = False):
+                 fp16: bool = False):
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -363,7 +363,7 @@ class TestLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
-        self.fp16_enabled = fp16_enabled
+        self.fp16 = fp16
 
     def run(self) -> None:
         """Launch test."""
@@ -388,7 +388,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        with auto_cast(enabled=self.fp16_enabled):
+        with auto_cast(enabled=self.fp16):
             predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(

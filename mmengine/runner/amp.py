@@ -15,9 +15,12 @@ def auto_cast(enabled: bool = True, **kwargs):
     Both interfaces have different arguments, and ``torch.autocast``
     support running with cpu additionally.
 
-    ``auto_cast`` is a wrapper of both them, dealing with compatibility issues
-    between different versions of pytorch, and provide unified interface for
-    easy to use.
+    This function provides a unified interface by wrapping
+    ``torch.autocast`` and ``torch.cuda.amp.autocast``, which resolves the
+    compatibility issues that ``torch.cuda.amp.autocast`` does not support
+    running mixed precision with cpu, and both contexts have different
+    arguments. We suggest users using this function in the code
+    to achieve maximized compatibility of different PyTorch versions.
 
     Note:
         ``auto_cast`` requires pytorch version >= 1.5.0. If pytorch version
