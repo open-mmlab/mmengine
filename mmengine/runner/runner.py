@@ -1274,10 +1274,10 @@ class Runner:
                 build Dataloader object. If ``dataloader`` is a Dataloader
                 object, just returns itself.
             seed (int, optional): Random seed. Defaults to None.
-            diff_rank_seed (bool): Whether or not set different seeds to different
-                ranks. If True, the seed passed to sampler is set to None, in
-                order to synchronize the seeds used in samplers across
-                different ranks.
+            diff_rank_seed (bool): Whether or not set different seeds to
+                different ranks. If True, the seed passed to sampler is set
+                to None, in order to synchronize the seeds used in samplers
+                across different ranks.
 
 
         Returns:
