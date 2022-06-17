@@ -1,8 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from torch.distributed import ProcessGroup
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
 
@@ -11,33 +12,115 @@ from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS, Registry
 
 # support customize fsdp policy
-FSDP_WRAP_POLICY = Registry('fsdp wrap policy')
+FSDP_WRAP_POLICYS = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
 class MMFullyShardedDataParallel(FullyShardedDataParallel):
+    """A wrapper for sharding Module parameters across data parallel workers.
+
+    Different from FullyShardedDataParallel, MMFullyShardedDataParallel
+    implements three methods :meth:`train_step`, :meth:`val_step` and
+    :meth:`test_step`, which will be called by ``train_loop``, ``val_loop``
+    and ``test_loop``.
+
+    - ``train_step``: Called by ``runner.train_loop``, and implement
+      default model forward, gradient back propagation, parameter updating
+      logic.
+
+    - ``val_step``: Called by ``runner.val_loop`` and get the inference
+      results. Specially, since MMFullyShardedDataParallel will wrap model
+      recursively, it may cause some problem if one just use
+      ``BaseModel.val_step`` to implement ``val_step`` here.To avoid that,
+      ``val_step`` will  call methods of :obj:`BaseModel` to pre-process
+      data first, and use ``FullyShardedDataParallel.forward`` to get result.
+
+    - ``test_step``: Called by ``runner.test_loop`` and get the inference
+      results. Its logic is equivalent to ``val_loop``
+
+    Args:
+        module (nn.Module):
+            module to be wrapped with FSDP.
+        process_group (Optional[ProcessGroup]):
+            process group for sharding.
+        cpu_offload (Optional [bool]):
+            CPU offloading config.
+            Different from FullyShardedDataParallel,Since it will be set by
+            users' pre-defined config in MMEngine,its type is expected to be
+            `None` or `bool`.
+
+            Currently, only parameter and gradient CPU offload is supported.
+            It can be enabled via passing in
+            ``cpu_offload=CPUOffload(offload_params=True)``. Note that this
+            currently implicitly enables gradient offloading to CPU in order
+            for params and grads to be on same device to work with optimizer.
+            This API is subject to change. Default is ``None`` in which case
+            there will be no offloading.
+        fsdp_auto_wrap_policy: (Optional [str]):
+            Specifying a policy to recursively wrap layers with FSDP.
+            Different from FullyShardedDataParallel, Since it will be set by
+            users' pre-defined config in MMEngine, its type is expected to be
+            `None` or `str`. If it's `str`, then MMFullyShardedDataParallel
+            will try to get specified method in ``FSDP_WRAP_POLICYS`` registry,
+            and this method will be passed to FullyShardedDataParallel to
+            finally initialize model.
+
+            Note that this policy currently will only apply to child modules of
+            the passed in module. The remainder modules are always wrapped in
+            the returned FSDP root instance.
+            ``default_auto_wrap_policy`` written in
+            ``torch.distributed.fsdp.wrap`` is an example of
+            ``fsdp_auto_wrap_policy`` callable, this policy wraps layers with
+            parameter sizes larger than 100M. Users can supply the customized
+            ``fsdp_auto_wrap_policy`` callable that should accept following
+            arguments: ``module: nn.Module``, ``recurse: bool``,
+            ``unwrapped_params: int``, extra customized arguments could be
+            added to the customized ``fsdp_auto_wrap_policy`` callable as well.
+
+            Example::
+
+                >>> def custom_auto_wrap_policy(
+                >>>     module: nn.Module,
+                >>>     recurse: bool,
+                >>>     unwrapped_params: int,
+                >>>     # These are customizable for this policy function.
+                >>>     min_num_params: int = int(1e8),
+                >>> ) -> bool:
+                >>>     return unwrapped_params >= min_num_params
+
+        backward_prefetch: (Optional[str]):
+            Different from FullyShardedDataParallel, Since it will be set by
+            users' pre-defined config in MMEngine,its type is expected to be
+            `None` or `str`.
+
+            This is an experimental feature that is subject to change in the
+            the near future. It allows users to enable two different
+            backward_prefetch algorithms to help backward communication and
+            computation overlapping.
+            Pros and cons of each algorithm is explained in class
+            ``BackwardPrefetch``.
+    """
 
     def __init__(self,
                  module: nn.Module,
-                 process_group=None,
-                 cpu_offload=None,
-                 fsdp_auto_wrap_policy=None,
-                 backward_prefetch=None):
+                 process_group: Optional[ProcessGroup] = None,
+                 cpu_offload: Optional[bool] = None,
+                 fsdp_auto_wrap_policy: Optional[str] = None,
+                 backward_prefetch: Optional[str] = None):
 
         if cpu_offload:
-            cpu_offload = str(cpu_offload)
-            assert cpu_offload in ['True', 'False'], \
-                '`cpu_offload` should be either `True` or `False`,' \
-                f' but get {cpu_offload}'
+            if not isinstance(cpu_offload, bool):
+                raise TypeError('`cpu_offload` should be `None` or `bool`'
+                                f' but has type {type(cpu_offload)}')
 
-            cpu_offload = CPUOffload(offload_params=(cpu_offload == 'True'))
+            cpu_offload = CPUOffload(offload_params=cpu_offload)
 
         if fsdp_auto_wrap_policy:
-            assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICY, \
-                f'`FSDP_WRAP_POLICY` has no function {fsdp_auto_wrap_policy}'
-            fsdp_auto_wrap_policy = FSDP_WRAP_POLICY.get(
-                'fsdp_auto_wrap_policy')
-            if isinstance(fsdp_auto_wrap_policy, Callable):  # type: ignore
+            assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
+                f'`FSDP_WRAP_POLICYS` has no function {fsdp_auto_wrap_policy}'
+            fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
+                fsdp_auto_wrap_policy)
+            if not isinstance(fsdp_auto_wrap_policy, Callable):  # type: ignore
                 raise TypeError(
                     '`fsdp_auto_wrap_policy` needs to be `Callable`,'
                     f' but has type {type(fsdp_auto_wrap_policy)} ')
