@@ -4,7 +4,6 @@ import os.path as osp
 import platform
 import random
 import resource
-import shutil
 import time
 import warnings
 from collections import OrderedDict
@@ -25,6 +24,7 @@ from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
+from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
@@ -36,13 +36,13 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, get_git_hash, is_list_of,
-                            set_multi_processing, symlink)
+from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
+                            is_list_of, set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         get_state_dict, save_checkpoint, weights_to_cpu)
+                         find_latest_checkpoint, get_state_dict,
+                         save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
@@ -1920,10 +1920,10 @@ class Runner:
     def save_checkpoint(self,
                         out_dir: str,
                         filename: str,
+                        file_client_args: Optional[dict] = None,
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
-                        create_symlink: bool = True,
                         by_epoch: bool = True):
         """Save checkpoints.
 
@@ -1933,15 +1933,16 @@ class Runner:
         Args:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
+            file_client_args (dict, optional): Arguments to instantiate a
+                FileClient. Default: None.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
                 to the checkpoint. Defaults to True.
             meta (dict, optional): The meta information to be saved in the
                 checkpoint. Defaults to None.
-            create_symlink (bool): Whether to create a symlink
-                "latest.pth" to point to the latest checkpoint.
-                Defaults to True.
+            by_epoch (bool): Whether the scheduled momentum is updated by
+                epochs. Defaults to True.
         """
         if meta is None:
             meta = {}
@@ -1961,7 +1962,8 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        filepath = osp.join(out_dir, filename)
+        file_client = FileClient.infer_client(file_client_args, out_dir)
+        filepath = file_client.join_path(out_dir, filename)
 
         meta.update(
             cfg=self.cfg.pretty_text,
@@ -2007,14 +2009,10 @@ class Runner:
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
-        # in some environments, `os.symlink` is not supported, you may need to
-        # set `create_symlink` to False
-        if create_symlink:
-            dst_file = osp.join(out_dir, 'latest.pth')
-            if platform.system() != 'Windows':
-                symlink(filename, dst_file)
-            else:
-                shutil.copy(filepath, dst_file)
+
+        save_file = osp.join(self.work_dir, 'last_checkpoint')
+        with open(save_file, 'w') as f:
+            f.write(filepath)
 
     @master_only
     def dump_config(self) -> None:

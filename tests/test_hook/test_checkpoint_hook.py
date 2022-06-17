@@ -46,18 +46,6 @@ class TestCheckpointHook:
         assert checkpoint_hook.out_dir == (
             f'test_dir/{osp.basename(work_dir)}')
 
-        # create_symlink in args and create_symlink is True
-        checkpoint_hook = CheckpointHook(
-            interval=1, by_epoch=True, out_dir='test_dir', create_symlink=True)
-        checkpoint_hook.before_train(runner)
-        assert checkpoint_hook.args['create_symlink']
-
-        runner.work_dir = 's3://path/of/file'
-        checkpoint_hook = CheckpointHook(
-            interval=1, by_epoch=True, create_symlink=True)
-        checkpoint_hook.before_train(runner)
-        assert not checkpoint_hook.args['create_symlink']
-
     def test_after_train_epoch(self, tmp_path):
         runner = Mock()
         work_dir = str(tmp_path)
