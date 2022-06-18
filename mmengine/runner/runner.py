@@ -1792,10 +1792,10 @@ class Runner:
         """
         if map_location == 'default':
             if torch.cuda.is_available():
-                device_id = torch.cuda.current_device()
+                device = get_device()
                 checkpoint = self.load_checkpoint(
                     filename,
-                    map_location=lambda storage, loc: storage.cuda(device_id))
+                    map_location=lambda storage, loc: storage.to(device))
             else:
                 checkpoint = self.load_checkpoint(filename)
         else:
@@ -1879,6 +1879,7 @@ class Runner:
 
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
 
+    @master_only
     def load_checkpoint(self,
                         filename: str,
                         map_location: Union[str, Callable] = 'cpu',
