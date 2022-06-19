@@ -192,22 +192,22 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **默认钩子**
 
-|         名称          |             用途              |        优先级        |
-| :-----------------: | :-------------------------: | :---------------: |
-|   RuntimeInfoHook   |    向 message hub 更新运行时信息    |  VERY_HIGH (10)   |
-|    OptimizerHook    |         反向传播以及参数更新          |     HIGH (30)     |
-| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效  |    NORMAL (50)    |
-|   SyncBuffersHook   |        同步模型的 buffer         |    NORMAL (50)    |
-|   EmptyCacheHook    |      PyTorch CUDA 缓存清理      |    NORMAL (50)    |
-|    IterTimerHook    |           统计迭代耗时            |    NORMAL (50)    |
-|     LoggerHook      |            打印日志             | BELOW_NORMAL (60) |
-| ParamSchedulerHook  | 调用 ParamScheduler 的 step 方法 |     LOW (70)      |
-|   CheckpointHook    |          按指定间隔保存权重          |   VERY_LOW (90)   |
+|        名称         |                用途                |      优先级       |
+| :-----------------: | :--------------------------------: | :---------------: |
+|   RuntimeInfoHook   |   向 message hub 更新运行时信息    |  VERY_HIGH (10)   |
+|    OptimizerHook    |        反向传播以及参数更新        |     HIGH (30)     |
+| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 |    NORMAL (50)    |
+|   SyncBuffersHook   |         同步模型的 buffer          |    NORMAL (50)    |
+|   EmptyCacheHook    |       PyTorch CUDA 缓存清理        |    NORMAL (50)    |
+|    IterTimerHook    |            统计迭代耗时            |    NORMAL (50)    |
+|     LoggerHook      |              打印日志              | BELOW_NORMAL (60) |
+| ParamSchedulerHook  |  调用 ParamScheduler 的 step 方法  |     LOW (70)      |
+|   CheckpointHook    |         按指定间隔保存权重         |   VERY_LOW (90)   |
 
 **自定义钩子**
 
-|       名称       | 用途  |     优先级      |
-| :------------: | :-: | :----------: |
+|      名称      |  用途  |    优先级    |
+| :------------: | :----: | :----------: |
 | VisualizerHook | 可视化 | LOWEST (100) |
 
 ```{note}
