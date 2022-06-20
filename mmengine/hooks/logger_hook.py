@@ -11,6 +11,7 @@ from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
 DATA_BATCH = Optional[Sequence[dict]]
+SUFFIX_TYPE = Union[Sequence[str], str]
 
 
 @HOOKS.register_module()
@@ -51,25 +52,24 @@ class LoggerHook(Hook):
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
             Defaults to None.
-        log_metric_by_epoch (bool):Whether to output metric in validation step
-            by epoch.It can be true when running in epoch based runner.
-            If set to True,`after_val_epoch` will set `step` to self.epoch in
-            `runner.visualizer.add_scalars`.Otherwise `step` will be self.iter.
-            Default to True.
+        log_metric_by_epoch (bool): Whether to output metric in validation step
+            by epoch. It can be true when running in epoch based runner.
+            If set to True, `after_val_epoch` will set `step` to self.epoch in
+            `runner.visualizer.add_scalars`. Otherwise `step` will be
+            self.iter. Default to True.
 
     Examples:
         >>> # The simplest LoggerHook config.
         >>> logger_hook_cfg = dict(interval=20)
     """
     priority = 'BELOW_NORMAL'
-    suffix_type = Union[Sequence[str], str]
 
     def __init__(self,
                  interval: int = 10,
                  ignore_last: bool = True,
                  interval_exp_name: int = 1000,
                  out_dir: Optional[Union[str, Path]] = None,
-                 out_suffix: suffix_type = ('.json', '.log', '.py', 'yaml'),
+                 out_suffix: SUFFIX_TYPE = ('.json', '.log', '.py', 'yaml'),
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True):
