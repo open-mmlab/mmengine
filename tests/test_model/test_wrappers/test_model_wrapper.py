@@ -188,8 +188,19 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
     torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
 @unittest.skipIf(
     digit_version(TORCH_VERSION) < digit_version('1.11.0'),
-    reason='fsdp need Pytorch 1.11 or higher')
+    reason='fsdp needs Pytorch 1.11 or higher')
 class TestMMFullyShardedDataParallel(MultiProcessTestCase):
+
+    def _init_dist_env(self, rank, world_size):
+        """Initialize the distributed environment."""
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29520'
+        os.environ['RANK'] = str(rank)
+
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(rank % num_gpus)
+        torch_dist.init_process_group(
+            backend='nccl', rank=rank, world_size=world_size)
 
     def setUp(self) -> None:
         super().setUp()
@@ -226,14 +237,3 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         data = dict(inputs=inputs, data_sample=MagicMock())
         predictions = fsdp_model.test_step([data])
         self.assertIsInstance(predictions, torch.Tensor)
-
-    def _init_dist_env(self, rank, world_size):
-        """Initialize the distributed environment."""
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29520'
-        os.environ['RANK'] = str(rank)
-
-        num_gpus = torch.cuda.device_count()
-        torch.cuda.set_device(rank % num_gpus)
-        torch_dist.init_process_group(
-            backend='nccl', rank=rank, world_size=world_size)

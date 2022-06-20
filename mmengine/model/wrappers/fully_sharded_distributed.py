@@ -31,18 +31,16 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
     - ``val_step``: Called by ``runner.val_loop`` and get the inference
       results. Specially, since MMFullyShardedDataParallel will wrap model
       recursively, it may cause some problem if one just use
-      ``BaseModel.val_step`` to implement ``val_step`` here.To avoid that,
-      ``val_step`` will  call methods of :obj:`BaseModel` to pre-process
+      ``BaseModel.val_step`` to implement ``val_step`` here. To avoid that,
+      ``val_step`` will call methods of :obj:`BaseModel` to pre-process
       data first, and use ``FullyShardedDataParallel.forward`` to get result.
 
     - ``test_step``: Called by ``runner.test_loop`` and get the inference
-      results. Its logic is equivalent to ``val_loop``
+      results. Its logic is equivalent to ``val_loop``.
 
     Args:
-        module (nn.Module):
-            module to be wrapped with FSDP.
-        process_group (Optional[ProcessGroup]):
-            process group for sharding.
+        module (nn.Module): module to be wrapped with FSDP.
+        process_group (Optional[ProcessGroup]): process group for sharding.
         cpu_offload (Optional[Union[bool,CPUOffload]]):
             CPU offloading config.
             Different from FullyShardedDataParallel,Since it can be set by
@@ -101,15 +99,16 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             ``BackwardPrefetch``.
     """
 
-    def __init__(self,
-                 module: nn.Module,
-                 process_group: Optional[ProcessGroup] = None,
-                 cpu_offload: Optional[Union[bool, CPUOffload]] = None,
-                 fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
-                 backward_prefetch: Optional[Union[str,
-                                                   BackwardPrefetch]] = None):
+    def __init__(
+        self,
+        module: nn.Module,
+        process_group: Optional[ProcessGroup] = None,
+        cpu_offload: Optional[Union[bool, CPUOffload]] = None,
+        fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
+        backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+    ):
 
-        if cpu_offload:
+        if cpu_offload is not None:
             if isinstance(cpu_offload, bool):
                 cpu_offload = CPUOffload(offload_params=cpu_offload)
             elif not isinstance(cpu_offload, CPUOffload):
@@ -117,7 +116,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                     '`cpu_offload` should be `None`, `bool`'
                     f'or `CPUOffload`, but has type {type(cpu_offload)}')
 
-        if fsdp_auto_wrap_policy:
+        if fsdp_auto_wrap_policy is not None:
             if isinstance(fsdp_auto_wrap_policy, str):
                 assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
                     '`FSDP_WRAP_POLICYS` has no ' \
@@ -137,7 +136,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                     'or `Callable`, but has type '
                     f'{type(fsdp_auto_wrap_policy)}')
 
-        if backward_prefetch:
+        if backward_prefetch is not None:
             if isinstance(backward_prefetch, str):
                 assert backward_prefetch in ['pre', 'post'], \
                     '`backward_prefetch` should be either `pre` or `post`,' \
