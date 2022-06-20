@@ -43,7 +43,7 @@ def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
         meta_path = osp.join(package_path, '.mim', meta_path)
         cfg_meta = load(meta_path)
         for model_cfg in cfg_meta['Models']:
-            cfg_name = model_cfg['Config'].split('/')[-1].strip('.py')
+            cfg_name = model_cfg['Config'].partition('/')[-1]
             cfg_dict[cfg_name] = model_cfg
     if cfg_path not in cfg_dict:
         raise ValueError(f'Expected configs: {cfg_dict.keys()}, but got '
