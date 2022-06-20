@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import ast
 import collections.abc
 import functools
-import glob
 import itertools
-import os.path as osp
 import pkgutil
 import subprocess
 import warnings
@@ -481,40 +480,6 @@ def tensor2imgs(tensor: torch.Tensor,
     return imgs
 
 
-def find_latest_checkpoint(path: str, suffix: str = 'pth'):
-    """Find the latest checkpoint from the given path.
-
-    Refer to https://github.com/microsoft/SoftTeacher/blob/main/ssod/utils/patch.py  # noqa: E501
-
-    Args:
-        path(str): The path to find checkpoints.
-        suffix(str): File extension. Defaults to 'pth'.
-
-    Returns:
-        str or None: File path of the latest checkpoint.
-    """
-    if not osp.exists(path):
-        raise FileNotFoundError('{path} does not exist.')
-
-    if osp.exists(osp.join(path, f'latest.{suffix}')):
-        return osp.join(path, f'latest.{suffix}')
-
-    checkpoints = glob.glob(osp.join(path, f'*.{suffix}'))
-    if len(checkpoints) == 0:
-        raise FileNotFoundError(f'checkpoints can not be found in {path}. '
-                                'Maybe check the suffix again.')
-
-    latest = -1
-    latest_path = None
-    for checkpoint in checkpoints:
-        count = int(osp.basename(checkpoint).split('_')[-1].split('.')[0])
-        if count > latest:
-            latest = count
-            latest_path = checkpoint
-
-    return latest_path
-
-
 def has_batch_norm(model: nn.Module) -> bool:
     """Detect whether model has a BatchNormalization layer.
 
@@ -530,3 +495,20 @@ def has_batch_norm(model: nn.Module) -> bool:
         if has_batch_norm(m):
             return True
     return False
+
+
+class RemoveAssignFromAST(ast.NodeTransformer):
+    """Remove Assign node if the target's name match the key.
+    Args:
+        key (str): The target name of the Assign node.
+    """
+
+    def __init__(self, key):
+        self.key = key
+
+    def visit_Assign(self, node):
+        if (isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id == self.key):
+            return None
+        else:
+            return node

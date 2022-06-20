@@ -21,7 +21,8 @@ from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
 from mmengine.utils import (check_file_exist, check_install_package,
-                            get_installed_path, import_modules_from_strings)
+                            get_installed_path, import_modules_from_strings,
+                            RemoveAssignFromAST)
 from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
                            _get_package_and_cfg_path)
 
@@ -361,30 +362,18 @@ class Config:
         return cfg
 
     @staticmethod
-    def _file2dict(filename: str,
-                   use_predefined_variables: bool = True) -> Tuple[dict, str]:
-        """Transform file to variables dictionary.
-
-        Args:
-            filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether to use
-                predefined variables. Defaults to True.
-
-        Returns:
-            Tuple[dict, str]: Variables dictionary and text of Config.
-        """
+    def _file2dict(filename, use_predefined_variables=True):
         filename = osp.abspath(osp.expanduser(filename))
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
-        if fileExtname not in Config._valid_format:
-            raise OSError('Only py/yml/yaml/json type are supported now!')
+        if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
+            raise IOError('Only py/yml/yaml/json type are supported now!')
 
         with tempfile.TemporaryDirectory() as temp_config_dir:
             temp_config_file = tempfile.NamedTemporaryFile(
                 dir=temp_config_dir, suffix=fileExtname)
             if platform.system() == 'Windows':
                 temp_config_file.close()
-            temp_config_name = osp.basename(temp_config_file.name)
             # Substitute predefined variables
             if use_predefined_variables:
                 Config._substitute_predefined_vars(filename,
@@ -395,79 +384,71 @@ class Config:
             base_var_dict = Config._pre_substitute_base_vars(
                 temp_config_file.name, temp_config_file.name)
 
+            # Handle base files
+            base_cfg_dict = ConfigDict()
+            cfg_text_list = list()
+            for base_cfg_path in Config.parse_base_files(
+                    temp_config_file.name):
+                base_cfg_path, scope = Config._get_cfg_path(base_cfg_path,
+                                                            filename)
+                _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
+                cfg_text_list.append(_cfg_text)
+                duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
+                if len(duplicate_keys) > 0:
+                    raise KeyError('Duplicate key is not allowed among bases. '
+                                   f'Duplicate keys: {duplicate_keys}')
+                if scope is not None:
+                    Config._parse_scope(_cfg_dict, scope)
+                base_cfg_dict.update(_cfg_dict)
+
             if filename.endswith('.py'):
-                temp_module_name = osp.splitext(temp_config_name)[0]
-                sys.path.insert(0, temp_config_dir)
-                Config._validate_py_syntax(filename)
-                mod = import_module(temp_module_name)
-                sys.path.pop(0)
-                cfg_dict = {
-                    name: value
-                    for name, value in mod.__dict__.items()
-                    if not any((name.startswith('__'),
-                                isinstance(value, types.ModuleType),
-                                isinstance(value, types.FunctionType)))
-                }
-                # delete imported module
-                del sys.modules[temp_module_name]
+                cfg_dict = {}
+                with open(temp_config_file.name, 'r') as f:
+                    codes = ast.parse(f.read())
+                    codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
+                codeobj = compile(codes, '', mode='exec')
+                eval(codeobj, {'_base_': base_cfg_dict}, cfg_dict)
             elif filename.endswith(('.yml', '.yaml', '.json')):
-                cfg_dict = load(temp_config_file.name)
+                import mmcv
+                cfg_dict = mmcv.load(temp_config_file.name)
             # close temp file
+            for key, value in list(cfg_dict.items()):
+                if isinstance(value, (types.FunctionType, types.ModuleType)):
+                    cfg_dict.pop(key)
             temp_config_file.close()
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                          'in the future.'
+                'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                               'instead.'
+                    'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                               f'{deprecation_info["reference"]}'
+                    f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
-        with open(filename, encoding='utf-8') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
-        if BASE_KEY in cfg_dict:
+        # Substitute base variables from strings to their actual values
+        cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
+                                                base_cfg_dict)
+        cfg_dict.pop(BASE_KEY, None)
 
-            base_filename = cfg_dict.pop(BASE_KEY)
-            base_filename = base_filename if isinstance(
-                base_filename, list) else [base_filename]
+        cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
+        cfg_dict = {
+            k: v
+            for k, v in cfg_dict.items() if not k.startswith('__')
+        }
 
-            cfg_dict_list = list()
-            cfg_text_list = list()
-            for base_file in base_filename:
-                cfg_path, scope = Config._get_cfg_path(base_file, filename)
-                _cfg_dict, _cfg_text = Config._file2dict(cfg_path)
-                # Add _scope_ to dict config with type.
-                if scope is not None:
-                    Config._parse_scope(_cfg_dict, scope)
-                cfg_dict_list.append(_cfg_dict)
-                cfg_text_list.append(_cfg_text)
-
-            base_cfg_dict: dict = dict()
-            for c in cfg_dict_list:
-                duplicate_keys = base_cfg_dict.keys() & c.keys()
-                if len(duplicate_keys) > 0:
-                    raise KeyError('Duplicate key is not allowed among bases. '
-                                   f'Duplicate keys: {duplicate_keys}')
-                base_cfg_dict.update(c)
-
-            # Substitute base variables from strings to their actual values
-            cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
-                                                    base_cfg_dict)
-
-            base_cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
-            cfg_dict = base_cfg_dict
-
-            # merge cfg_text
-            cfg_text_list.append(cfg_text)
-            cfg_text = '\n'.join(cfg_text_list)
+        # merge cfg_text
+        cfg_text_list.append(cfg_text)
+        cfg_text = '\n'.join(cfg_text_list)
 
         return cfg_dict, cfg_text
 
@@ -477,6 +458,35 @@ class Config:
             if isinstance(value, dict) and 'type' in value:
                 value['_scope_'] = scope
                 Config._parse_scope(value, scope)
+
+    @staticmethod
+    def parse_base_files(filename):
+        file_format = filename.partition('.')[-1]
+        if file_format == 'py':
+            Config._validate_py_syntax(filename)
+            with open(filename) as f:
+                codes = ast.parse(f.read()).body
+
+                def is_base_line(c):
+                    return (isinstance(c, ast.Assign)
+                            and c.targets[0].id == BASE_KEY)
+
+                base_code = next((c for c in codes if is_base_line(c)), None)
+                if base_code is not None:
+                    base_code = ast.Expression(body=base_code.value)
+                    base_files = eval(compile(base_code, '', mode='eval'))
+                else:
+                    base_files = []
+        elif file_format in ('yml', 'yaml', 'json'):
+            import mmengine
+            cfg_dict = mmengine.load(filename)
+            base_files = cfg_dict.get(BASE_KEY, [])
+        else:
+            raise TypeError('The config type should be py, json, yaml or '
+                            f'yml, but got {file_format}')
+        base_files = base_files if isinstance(base_files,
+                                              list) else [base_files]
+        return base_files
 
     @staticmethod
     def _get_cfg_path(cfg_path: str,
@@ -494,6 +504,7 @@ class Config:
         if '::' in cfg_path:
             # `cfg_path` startswith '::' means an external config path.
             # Get package name and relative config path.
+            scope = cfg_path.partition('::')[0]
             package, cfg_path = _get_package_and_cfg_path(cfg_path)
             # Get installed package path.
             check_install_package(package)
@@ -505,6 +516,9 @@ class Config:
                 # Since base config does not have a metafile, it should be
                 # concatenated with package path and relative config path.
                 cfg_path = _get_external_cfg_base_path(package_path, cfg_path)
+            except FileNotFoundError as e:
+                raise e
+            return cfg_path, scope
         else:
             # Get local config path.
             cfg_dir = osp.dirname(filename)
@@ -926,3 +940,4 @@ class DictAction(Action):
                 key, val = kv.split('=', maxsplit=1)
                 options[key] = self._parse_iterable(val)
         setattr(namespace, self.dest, options)
+

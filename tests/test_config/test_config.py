@@ -422,13 +422,20 @@ class TestConfig:
         filename = 'py_config/simple_config.py'
         filename = osp.join(self.data_path, 'config', filename)
         cfg_name = './base.py'
-        cfg_path = Config._get_cfg_path(cfg_name, filename)
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope is None
         osp.isfile(cfg_path)
-        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco'
-        cfg_path = Config._get_cfg_path(cfg_name, filename)
+
+        # Test scope equal to package name.
+        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmdet'
         osp.isfile(cfg_path)
-        cfg_name = 'mmdet::_base_/models/cascade_mask_rcnn_r50_fpn.py'
-        cfg_path = Config._get_cfg_path(cfg_name, filename)
+
+        # Test scope does not equal to package name.
+        cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmcls'
         osp.isfile(cfg_path)
 
     def _simple_load(self):
@@ -630,10 +637,10 @@ class TestConfig:
         assert cfg_dict['item2'] == dict(a=0, b=0)
         assert cfg_dict['item3'] is True
         assert cfg_dict['item4'] == 'test'
-        assert '_delete_' not in cfg_dict['item2']
+        assert '_delete_' not in cfg_dict['item1']
 
         assert type(cfg_dict['item1']) == ConfigDict
-        assert type(cfg_dict['item2']) == dict
+        assert type(cfg_dict['item2']) == ConfigDict
 
     def _merge_intermediate_variable(self):
 
@@ -696,3 +703,13 @@ class TestConfig:
         assert new_cfg._cfg_dict is cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
+
+    def test_get_external_cfg(self):
+        ext_cfg_path = osp.join(self.data_path,
+                       'config/py_config/test_get_config_from_remote.py')
+        cfg_path = osp.join(self.data_path,
+                           'config/py_config/faster_rcnn_r50_fpn_1x_coco.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+        cfg = Config.fromfile(cfg_path)
+        Config._parse_scope(cfg, 'mmdet')
+        assert cfg._cfg_dict == ext_cfg._cfg_dict

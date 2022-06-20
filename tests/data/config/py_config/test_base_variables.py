@@ -7,5 +7,5 @@ _base_ = [
 item3 = False
 item4 = 'test'
 item8 = '{{fileBasename}}'
-item9 = {{_base_.item2}}
-item10 = {{_base_.item7.b.c}}
+item9 = _base_.item2
+item10 = _base_.item7.b.c

@@ -57,12 +57,23 @@ class TestRegistry:
     def test_register_module(self):
         CATS = Registry('cat')
 
-        # can only decorate a class
+        @CATS.register_module()
+        def muchkin():
+            pass
+
+        assert CATS.get('muchkin') is muchkin
+        assert 'muchkin' in CATS
+
+        # can only decorate a class or a function
         with pytest.raises(TypeError):
 
-            @CATS.register_module()
-            def some_method():
-                pass
+            class Demo:
+
+                def some_method(self):
+                    pass
+
+            method = Demo().some_method
+            CATS.register_module(name='some_method', module=method)
 
         # test `name` parameter which must be either of None, a string or a
         # sequence of string
@@ -71,7 +82,7 @@ class TestRegistry:
         class BritishShorthair:
             pass
 
-        assert len(CATS) == 1
+        assert len(CATS) == 2
         assert CATS.get('BritishShorthair') is BritishShorthair
 
         # `name` is a string
@@ -79,7 +90,7 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        assert len(CATS) == 2
+        assert len(CATS) == 3
         assert CATS.get('Munchkin') is Munchkin
         assert 'Munchkin' in CATS
 
@@ -90,7 +101,7 @@ class TestRegistry:
 
         assert CATS.get('Siamese') is SiameseCat
         assert CATS.get('Siamese2') is SiameseCat
-        assert len(CATS) == 4
+        assert len(CATS) == 5
 
         # `name` is an invalid type
         with pytest.raises(
@@ -127,14 +138,15 @@ class TestRegistry:
         class BritishShorthair:
             pass
 
-        assert len(CATS) == 4
+        assert len(CATS) == 5
 
         # test `module` parameter, which is either None or a class
         # when the `register_module`` is called as a method rather than a
         # decorator, which must be a class
         with pytest.raises(
                 TypeError,
-                match="module must be a class, but got <class 'str'>"):
+                match='module must be a class or a function,'
+                " but got <class 'str'>"):
             CATS.register_module(module='string')
 
         class SphynxCat:
@@ -142,16 +154,16 @@ class TestRegistry:
 
         CATS.register_module(module=SphynxCat)
         assert CATS.get('SphynxCat') is SphynxCat
-        assert len(CATS) == 5
+        assert len(CATS) == 6
 
         CATS.register_module(name='Sphynx1', module=SphynxCat)
         assert CATS.get('Sphynx1') is SphynxCat
-        assert len(CATS) == 6
+        assert len(CATS) == 7
 
         CATS.register_module(name=['Sphynx2', 'Sphynx3'], module=SphynxCat)
         assert CATS.get('Sphynx2') is SphynxCat
         assert CATS.get('Sphynx3') is SphynxCat
-        assert len(CATS) == 8
+        assert len(CATS) == 9
 
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""
@@ -167,16 +179,17 @@ class TestRegistry:
         registries = []
         DOGS = Registry('dogs')
         registries.append(DOGS)
-        HOUNDS = Registry('dogs', parent=DOGS, scope='hound')
+        HOUNDS = Registry('hounds', parent=DOGS, scope='hound')
         registries.append(HOUNDS)
-        LITTLE_HOUNDS = Registry('dogs', parent=HOUNDS, scope='little_hound')
+        LITTLE_HOUNDS = Registry(
+            'little hounds', parent=HOUNDS, scope='little_hound')
         registries.append(LITTLE_HOUNDS)
-        MID_HOUNDS = Registry('dogs', parent=HOUNDS, scope='mid_hound')
+        MID_HOUNDS = Registry('mid hounds', parent=HOUNDS, scope='mid_hound')
         registries.append(MID_HOUNDS)
-        SAMOYEDS = Registry('dogs', parent=DOGS, scope='samoyed')
+        SAMOYEDS = Registry('samoyeds', parent=DOGS, scope='samoyed')
         registries.append(SAMOYEDS)
         LITTLE_SAMOYEDS = Registry(
-            'dogs', parent=SAMOYEDS, scope='little_samoyed')
+            'little samoyeds', parent=SAMOYEDS, scope='little_samoyed')
         registries.append(LITTLE_SAMOYEDS)
 
         return registries
@@ -323,7 +336,7 @@ class TestRegistry:
         #     LITTLE_HOUNDS    MID_HOUNDS   LITTLE_SAMOYEDS
         #     (little_hound)   (mid_hound)  (little_samoyed)
         registries = self._build_registry()
-        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
+        DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS, SAMOYEDS = registries[:5]
 
         @DOGS.register_module()
         class GoldenRetriever:
@@ -366,6 +379,37 @@ class TestRegistry:
             f'test2-{time.time()}', scope_name='scope-not-found')
         dog = MID_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
+
+        # test overwrite default scope with `_scope_`
+        @SAMOYEDS.register_module()
+        class MySamoyed:
+
+            def __init__(self, friend):
+                self.friend = DOGS.build(friend)
+
+        @SAMOYEDS.register_module()
+        class YourSamoyed:
+            pass
+
+        s_cfg = cfg_type(
+            dict(
+                _scope_='samoyed',
+                type='MySamoyed',
+                friend=dict(type='hound.BloodHound')))
+        dog = DOGS.build(s_cfg)
+        assert isinstance(dog, MySamoyed)
+        assert isinstance(dog.friend, BloodHound)
+        assert DefaultScope.get_current_instance().scope_name != 'samoyed'
+
+        s_cfg = cfg_type(
+            dict(
+                _scope_='samoyed',
+                type='MySamoyed',
+                friend=dict(type='YourSamoyed')))
+        dog = DOGS.build(s_cfg)
+        assert isinstance(dog, MySamoyed)
+        assert isinstance(dog.friend, YourSamoyed)
+        assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
     def test_repr(self):
         CATS = Registry('cat')

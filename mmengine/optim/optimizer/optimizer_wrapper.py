@@ -27,21 +27,31 @@ class OptimWrapper:
 
     Args:
         optimizer (Optimizer): Optimizer used to update model parameters.
-        accumulative_iters (int): The number of iterations to accumulate
+        accumulative_counts (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
-            ``accumulative_iters``.
+            ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
             the arguments of ``torch.nn.utils.clip_grad``.
 
-    Warnings:
-        If ``accumulative_iters`` is larger than 1, :meth:`update_params` must
-        be called in the context of ``accumulate_grad``.
+    Note:
+        If ``accumulative_counts`` is larger than 1, perform
+        :meth:`update_params` under the context of  ``optim_context``
+        could avoid unnecessary gradient synchronization.
+
+    Note:
+        If you use ``IterBasedRunner`` and enable gradient accumulation,
+        the original `max_iters` should be multiplied by
+        ``accumulative_counts``.
+
+    Note:
+        The subclass should ensure that once :meth:`update_params` is called,
+        ``_inner_count += 1`` is automatically performed.
 
     Examples:
         >>> # Config sample of OptimWrapper.
         >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
-        >>>     accumulative_iters=3,
+        >>>     _accumulative_counts=1,
         >>>     clip_grad=dict(max_norm=0.2))
         >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
@@ -59,29 +69,32 @@ class OptimWrapper:
         >>> for data in dataloader:
         >>>     loss = model(data)
         >>>     optim_wrapper.update_params(loss)
-        >>> # Enable gradient accumulation. If model is a subclass instance of
-        >>> # DistributedDataParallel, ``accumulate_grad`` context manager can
-        >>> # avoid unnecessary gradient synchronize.
+        >>> # Enable gradient accumulation
+        >>> optim_wrapper_cfg = dict(
+        >>>     type='OptimWrapper',
+        >>>     _accumulative_counts=3,
+        >>>     clip_grad=dict(max_norm=0.2))
+        >>> ddp_model = DistributedDataParallel(model)
+        >>> optimizer = SGD(ddp_model.parameters(), lr=0.1)
+        >>> optim_wrapper = OptimWrapper(optimizer)
+        >>> optim_wrapper.initialize_count_status(0, len(dataloader))
+        >>> # If model is a subclass instance of DistributedDataParallel,
+        >>> # `optim_context` context manager can avoid unnecessary gradient
+        >>> #  synchronize.
         >>> for iter, data in enumerate(dataloader):
-        >>>     with optim_wrapper.accumulate_grad(
-        >>>         model, iter, len(dataloader)):
+        >>>     with optim_wrapper.optim_context(ddp_model):
         >>>         loss = model(data)
-        >>>         optim_wrapper.update_params(loss)
+        >>>     optim_wrapper.update_params(loss)
     """
 
     def __init__(self,
                  optimizer: Optimizer,
-                 accumulative_iters: int = 1,
+                 accumulative_counts: int = 1,
                  clip_grad: Optional[dict] = None):
-        assert accumulative_iters > 0, (
-            'accumulative_iters at least greater than or equal to 1')
-        self.accumulative_iters = accumulative_iters
-        # `max_iters` and `cur_iter` is only valid in gradient accumulative
-        # mode (`accumulative_iters` > 1). `cur_iter` and `max_iter` will be
-        # updated in the ``accumulate_grad`` context that is enabled in
-        # `runner.train_loop`.
-        self.cur_iter = 0
-        self.max_iters = 0
+        assert accumulative_counts > 0, (
+            '_accumulative_counts at least greater than or equal to 1')
+        self._accumulative_counts = accumulative_counts
+
         assert isinstance(optimizer, Optimizer), (
             'optimizer must be a `torch.optim.Optimizer` instance, but got '
             f'{type(optimizer)}')
@@ -90,13 +103,27 @@ class OptimWrapper:
         if clip_grad is not None:
             # clip_grad_kwargs should not be non-empty dict.
             assert isinstance(clip_grad, dict) and clip_grad, (
-                'If `clip_grad_kwargs` is not None, it should be a `dict` '
+                'If `clip_grad` is not None, it should be a `dict` '
                 'which is the arguments of `torch.nn.utils.clip_grad`')
         self.clip_grad_kwargs = clip_grad
         self.logger = MMLogger.get_current_instance()
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
-        self.iter_status_initialized = False
+        self._inner_count = 0
+        # `_max_counts` means the total number of parameter updates.  It
+        # ensures that the gradient of the last few iterations will not be
+        # lost when the `_max_counts` is not divisible by
+        # `accumulative_counts`.
+        self._max_counts = -1
+        # If `_inner_count` is smaller than `_divisible_counts`, the loss
+        # factor used for gradient accumulation should be the same as
+        # `_accumulative_counts`. If `_max_counts` has not been initialized,
+        # the loss factor will always be the same as `_accumulative_counts`.
+        self._divisible_counts = -1
+        # The `_remainder_iter` is used for calculating loss factor at the
+        # last few iterations. If `_max_counts` has not been initialized,
+        # the loss factor will always be the same as `_accumulative_counts`.
+        self._remainder_counts = -1
 
     def update_params(self, loss: torch.Tensor) -> None:
         """Update parameters in :attr:`optimizer`.
@@ -104,36 +131,12 @@ class OptimWrapper:
         Args:
             loss (torch.Tensor): A tensor for back propagation.
         """
-        if self.accumulative_iters == 1:
-            # update parameters without gradient accumulation. The gradient
-            # should not be rescaled and `loss_factor=1`.
-            loss_factor = 1
-        else:
-            # gradient accumulation must be called in the context of
-            # ``accumulate_grad``.
-            assert hasattr(self, 'divisible_iters'), (
-                'gradient accumulation must be performed in the context of'
-                '`OptimWrapper.accumulate_grad`')
-            # if `self.accumulative_iters > 1`, the gradient needs to be
-            # rescaled and accumulated. In most cases, `loss_factor` equals to
-            # `self.accumulative_iters`. However `self.max_iters` may not be
-            # divisible `self.by accumulative_iters`, so the `loss_scale` for
-            # the last few iterations needs to be recalculated.
-            if self.cur_iter < self.divisible_iters:
-                loss_factor = self.accumulative_iters
-            else:
-                loss_factor = self.remainder_iters
-            assert loss_factor > 0, (
-                'loss_factor should be larger than zero! This error could '
-                'happened when gradient accumulation context enabled with an '
-                'error `cur_iter` or `max_iters` please check your loop')
-
-        loss = loss / loss_factor
+        loss = self.scale_loss(loss)
         self.backward(loss)
-        # Update parameters only if `self.cur_iter` is divisible by
-        # `self.accumulative_iters` or `self.cur_iter` equals to
-        # `self.max_iters`
-        if self._should_update(self.cur_iter, self.max_iters):
+        # Update parameters only if `self._inner_count` is divisible by
+        # `self._accumulative_counts` or `self._inner_count` equals to
+        # `self._max_counts`
+        if self.should_update():
             self.step()
             self.zero_grad()
 
@@ -145,10 +148,15 @@ class OptimWrapper:
         required logic. For example, ``torch.cuda.amp`` require some extra
         operation on GradScaler during backward process.
 
+        Note:
+            If subclasses inherit from ``OptimWrapper`` override
+            ``backward``, ``_inner_count +=1`` must be implemented.
+
         Args:
             loss (torch.Tensor): The loss of current iteration.
         """
         loss.backward()
+        self._inner_count += 1
 
     def zero_grad(self) -> None:
         """A wrapper of ``Optimizer.zero_grad``.
@@ -218,7 +226,7 @@ class OptimWrapper:
         Provide unified interface to get learning rate of optimizer.
 
         Returns:
-            List[float]: Learning rate of the optimizer.
+            Dict[str, List[float]]: Learning rate of the optimizer.
         """
         lr = [group['lr'] for group in self.param_groups]
         return dict(lr=lr)
@@ -229,7 +237,7 @@ class OptimWrapper:
         Provide unified interface to get momentum of optimizer.
 
         Returns:
-            List[float]: Momentum of the optimizer.
+            Dict[str, List[float]]: Momentum of the optimizer.
         """
         momentum = []
         for group in self.param_groups:
@@ -244,48 +252,34 @@ class OptimWrapper:
         return dict(momentum=momentum)
 
     @contextmanager
-    def accumulate_grad(self, model: nn.Module, cur_iter: int, max_iters: int):
-        """A Context manager for gradient accumulation and avoiding unnecessary
-        gradient synchronization during gradient accumulation.
+    def optim_context(self, model: nn.Module):
+        """A Context for gradient accumulation and automatic mix precision
+        training.
+
+        If subclasses need to enable the context for mix precision training,
+        e.g., ``:class:`AmpOptimWrapper``,  the corresponding context should be
+        enabled in `optim_context`. Since ``OptimWrapper`` uses default fp32
+        training, ``optim_context`` will only enable the context for
+        blocking the unnecessary gradient synchronization during gradient
+        accumulation
 
         If model is an instance with ``no_sync`` method (which means
         blocking the gradient synchronization) and
-        ``self.accumulative_iters != 1``. The model will not automatically
+        ``self._accumulative_counts != 1``. The model will not automatically
         synchronize gradients if ``cur_iter`` is divisible by
-        ``self.accumulative_iters``. Otherwise, this method will enable an
+        ``self._accumulative_counts``. Otherwise, this method will enable an
         empty context.
-
-        Warnings:
-            This context manager must be enabled if you want to use
-            gradient accumulation.
 
         Args:
             model (nn.Module): The training model.
-            cur_iter (int): Current iteration during training process.
-            max_iters (int): Maximum training iteration.
         """
-        assert max_iters > 0, '`max_iters` must be larger than zero'
-        self.cur_iter = cur_iter
-        self.max_iters = max_iters
-        if not self.iter_status_initialized:
-            self._initilize_iter_status(model)
         # During gradient accumulation process, the gradient synchronize
         # should only happen before updating parameters.
-        if (not self._should_update(cur_iter, max_iters)
-                and hasattr(model, 'no_sync')):
+        if not self.should_sync() and hasattr(model, 'no_sync'):
             with model.no_sync():
                 yield
         else:
             yield
-
-    @contextmanager
-    def precision_context(self):
-        """precision context which enables an empty context by default.
-
-        The subclass used for mixed or low precision training needs to override
-        this method.
-        """
-        yield
 
     def _clip_grad(self) -> None:
         """Clip the gradients of parameters."""
@@ -300,50 +294,117 @@ class OptimWrapper:
                                                   **self.clip_grad_kwargs)
             self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
 
-    def _initilize_iter_status(self, model: nn.Module) -> None:
+    def initialize_count_status(self, model: nn.Module, init_counts: int,
+                                max_counts: int) -> None:
         """Initialize gradient accumulation related attributes.
+
+        ``OptimWrapper`` can be used without calling
+        ``initialize_iter_status``. However, Consider the case of  ``len(
+        dataloader) == 10``, and the ``accumulative_iter == 3``. Since 10 is
+        not divisible by 3, the last iteration will not trigger
+        ``optimizer.step()``, resulting in one less parameter updating.
 
         Args:
             model (nn.Module): Training model
+            init_counts (int): The initial value of the inner count.
+            max_counts (int): The maximum value of the inner count.
         """
-        if self.max_iters % self.accumulative_iters != 0:
+        self._inner_count = init_counts
+        self._max_counts = max_counts
+        if self._inner_count % self._accumulative_counts != 0:
             self.logger.warning(
-                'Resume iter number is not divisible by accumulative_iters in '
-                'GradientCumulativeOptimizerHook, which means the gradient of '
-                'some iters is lost and the result may be influenced slightly.'
-            )
+                'Resumed iteration number is not divisible by '
+                '`_accumulative_counts` in `GradientCumulativeOptimizerHook`, '
+                'which means the gradient of some iterations is lost and the '
+                'result may be influenced slightly.')
 
-        if has_batch_norm(model) and self.accumulative_iters > 1:
+        if has_batch_norm(model) and self._accumulative_counts > 1:
             self.logger.warning(
                 'Gradient accumulative may slightly decrease '
                 'performance because the model has BatchNorm layers.')
-        residual_iters = self.max_iters - self.cur_iter
+        residual_counts = max_counts - init_counts
         # The maximum number of training iteration that is divisible by
-        # accumulative_iters.
-        self.divisible_iters = (
-            residual_iters // self.accumulative_iters *
-            self.accumulative_iters)
-        # Remainder of ``self.max_iters`` divided by ``self.max_iters``
-        self.remainder_iters = residual_iters - self.divisible_iters
-        self.iter_status_initialized = True
+        # `_accumulative_counts`.
+        self._divisible_counts = (
+            residual_counts // self._accumulative_counts *
+            self._accumulative_counts)
+        # Remainder of `_max_counts` divided by `_accumulative_counts`
+        self._remainder_counts = residual_counts - self._divisible_counts
 
-    def _should_update(self, cur_iter: int, max_iters: int) -> bool:
-        """Should optim_wrapper update parameters or synchronized gradient at
-        current iteration.
+    def should_update(self) -> bool:
+        """Decide whether the parameters should be updated at the current
+        iteration.
 
-        Args:
-            cur_iter (int): Current iteration of training process.
-            max_iters (int): Maximum iterations of training process.
+        Called by :meth:`update_params` and check whether the optimizer
+        wrapper should update parameters at current iteration.
 
         Returns:
-            bool: Whether to update parameters or synchronized gradient.
+            bool: Whether to update parameters.
         """
-        return ((cur_iter + 1) % self.accumulative_iters == 0
-                or cur_iter + 1 == max_iters)
+        return (self._inner_count % self._accumulative_counts == 0
+                or self._inner_count == self._max_counts)
+
+    def should_sync(self) -> bool:
+        """Decide whether the automatic gradient synchronization should be
+        allowed at the current iteration.
+
+        It takes effect when gradient accumulation is used to skip
+        synchronization at the iterations where the parameter is not updated.
+
+        Since ``should_sync`` is called by :meth:`optim_context`, and it is
+        called before :meth:`backward` which means ``self._inner_count += 1``
+        has not happened yet. Therefore, ``self._inner_count += 1`` should be
+        performed manually here.
+
+        Returns:
+            bool: Whether to block the automatic gradient synchronization.
+        """
+        return ((self._inner_count + 1) % self._accumulative_counts == 0
+                or (self._inner_count + 1) == self._max_counts)
+
+    def scale_loss(self, loss: torch.Tensor) -> torch.Tensor:
+        """Get scaled loss according to ``_accumulative_counts``,
+        ``_inner_count`` and max_counts.
+
+        Args:
+            loss (torch.Tensor): Original loss calculated by model.
+
+        Returns:
+            loss (torch.Tensor): Scaled loss.
+        """
+        if self._accumulative_counts == 1:
+            # update parameters without gradient accumulation. The gradient
+            # should not be rescaled and `loss_factor=1`.
+            loss_factor = 1
+        elif self._max_counts == -1:
+            loss_factor = self._accumulative_counts
+        else:
+            # if `self._accumulative_counts > 1`, the gradient needs to be
+            # rescaled and accumulated. In most cases, `loss_factor` equals to
+            # `self._accumulative_counts`. However, `self._max_counts` may not
+            # be divisible by `self._accumulative_counts`, so the
+            # `loss_scale` for the last few iterations needs to be
+            # recalculated.
+            if self._inner_count < self._divisible_counts:
+                loss_factor = self._accumulative_counts
+            else:
+                loss_factor = self._remainder_counts
+            assert loss_factor > 0, (
+                'loss_factor should be larger than zero! This error could '
+                'happened when initialize_iter_status called with an '
+                'error `init_counts` or `max_counts`')
+
+        loss = loss / loss_factor
+        return loss
+
+    @property
+    def inner_count(self):
+        """Get the number of updating parameters of optimizer wrapper."""
+        return self._inner_count
 
     def __repr__(self):
-        wrapper_info = f'Type: {type(self).__name__}\n' \
-                       f'accumulative_iters: {self.accumulative_iters}\n' \
-                       f'optimizer: \n'
+        wrapper_info = (f'Type: {type(self).__name__}\n'
+                        f'_accumulative_counts: {self._accumulative_counts}\n'
+                        'optimizer: \n')
         optimizer_str = repr(self.optimizer) + '\n'
         return wrapper_info + optimizer_str

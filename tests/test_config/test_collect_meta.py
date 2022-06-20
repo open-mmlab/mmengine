@@ -20,7 +20,7 @@ def test_get_external_cfg_base_path(tmp_path):
     assert cfg_path == f'{os.path.join(str(cfg_dir), "cfg_file")}'
 
 
-def test_parse_external_cfg_path():
+def test_get_external_cfg_path():
     external_cfg_path = 'mmdet::path/cfg'
     package, rel_cfg_path = _get_package_and_cfg_path(external_cfg_path)
     assert package == 'mmdet'

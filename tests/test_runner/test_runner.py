@@ -23,12 +23,13 @@ from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import BaseModel
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, HOOKS, LOG_PROCESSORS, LOOPS, METRICS,
-                               MODEL_WRAPPERS, MODELS,
+from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
+                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
                                RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
+from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import is_list_of
 from mmengine.visualization import Visualizer
@@ -260,7 +261,7 @@ class CustomRunner(Runner):
                  train_cfg=None,
                  val_cfg=None,
                  test_cfg=None,
-                 auto_scale_lr_cfg=None,
+                 auto_scale_lr=None,
                  optim_wrapper=None,
                  param_scheduler=None,
                  val_evaluator=None,
@@ -282,6 +283,13 @@ class CustomRunner(Runner):
 
     def setup_env(self, env_cfg):
         pass
+
+
+@EVALUATOR.register_module()
+class ToyEvaluator(Evaluator):
+
+    def __init__(self, metrics):
+        super().__init__(metrics)
 
 
 def collate_fn(data_batch):
@@ -310,7 +318,7 @@ class TestRunner(TestCase):
                 sampler=dict(type='DefaultSampler', shuffle=False),
                 batch_size=3,
                 num_workers=0),
-            auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
+            auto_scale_lr=dict(base_batch_size=16, enable=False),
             optim_wrapper=dict(
                 type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -697,35 +705,35 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_scale_lr'
         runner = Runner.from_cfg(cfg)
 
-        # When no base_batch_size in auto_scale_lr_cfg, an
+        # When no base_batch_size in auto_scale_lr, an
         # assertion error will raise.
-        auto_scale_lr_cfg = dict(enable=True)
+        auto_scale_lr = dict(enable=True)
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         with self.assertRaises(AssertionError):
-            runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+            runner.scale_lr(optim_wrapper, auto_scale_lr)
 
-        # When auto_scale_lr_cfg is None or enable is False, the lr will
+        # When auto_scale_lr is None or enable is False, the lr will
         # not be linearly scaled.
-        auto_scale_lr_cfg = dict(base_batch_size=16, enable=False)
+        auto_scale_lr = dict(base_batch_size=16, enable=False)
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         runner.scale_lr(optim_wrapper)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
-        runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+        runner.scale_lr(optim_wrapper, auto_scale_lr)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
 
-        # When auto_scale_lr_cfg is correct and enable is True, the lr will
+        # When auto_scale_lr is correct and enable is True, the lr will
         # be linearly scaled.
-        auto_scale_lr_cfg = dict(base_batch_size=16, enable=True)
+        auto_scale_lr = dict(base_batch_size=16, enable=True)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
-        runner.scale_lr(optim_wrapper, auto_scale_lr_cfg)
+        runner.scale_lr(optim_wrapper, auto_scale_lr)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'],
                          0.01 * (real_bs / 16))
 
         # Test when optim_wrapper is an OptimWrapperDict
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         wrapper_dict = OptimWrapperDict(wrapper=optim_wrapper)
-        runner.scale_lr(wrapper_dict, auto_scale_lr_cfg)
+        runner.scale_lr(wrapper_dict, auto_scale_lr)
         scaled_lr = wrapper_dict['wrapper'].optimizer.param_groups[0]['lr']
         self.assertEqual(scaled_lr, 0.01 * (real_bs / 16))
 
@@ -930,6 +938,18 @@ class TestRunner(TestCase):
         self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
         self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
 
+        # test build a customize evaluator
+        evaluator = dict(
+            type='ToyEvaluator',
+            metrics=[
+                dict(type='ToyMetric1', collect_device='cpu'),
+                dict(type='ToyMetric2', collect_device='gpu')
+            ])
+        _evaluator = runner.build_evaluator(evaluator)
+        self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator)
+        self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
+        self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
+
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_dataloader'
@@ -1116,8 +1136,9 @@ class TestRunner(TestCase):
         cfg.custom_hooks = [dict(type='TestEpochHook', priority=50)]
         cfg.train_cfg = dict(by_epoch=True, max_epochs=3, val_begin=2)
         runner = Runner.from_cfg(cfg)
-
         runner.train()
+        self.assertEqual(runner.optim_wrapper._inner_count, 12)
+        self.assertEqual(runner.optim_wrapper._max_counts, 12)
 
         assert isinstance(runner.train_loop, EpochBasedTrainLoop)
 
@@ -1164,7 +1185,53 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
+        self.assertEqual(runner.optim_wrapper._inner_count, 12)
+        self.assertEqual(runner.optim_wrapper._max_counts, 12)
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
+
+        self.assertEqual(len(epoch_results), 1)
+        self.assertEqual(epoch_results[0], 0)
+        self.assertEqual(runner.val_interval, 4)
+        self.assertEqual(runner.val_begin, 4)
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(batch_idx_results, batch_idx_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_iter_results, val_iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_batch_idx_results,
+                                   val_batch_idx_targets):
+            self.assertEqual(result, target)
+
+        # 4. test iter and epoch counter of IterBasedTrainLoop and timing of
+        # running ValLoop without InfiniteSampler
+        epoch_results = []
+        iter_results = []
+        batch_idx_results = []
+        val_iter_results = []
+        val_batch_idx_results = []
+        iter_targets = [i for i in range(12)]
+        batch_idx_targets = [i for i in range(12)]
+        val_iter_targets = [i for i in range(4, 12)]
+        val_batch_idx_targets = [i for i in range(4)] * 2
+
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train4'
+        cfg.train_dataloader.sampler = dict(
+            type='DefaultSampler', shuffle=True)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.train_cfg = dict(
+            by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
+        runner = Runner.from_cfg(cfg)
+        with self.assertWarnsRegex(
+                Warning,
+                'Reach the end of the dataloader, it will be restarted and '
+                'continue to iterate.'):
+            runner.train()
+
+        assert isinstance(runner.train_loop, IterBasedTrainLoop)
+        assert isinstance(runner.train_loop.dataloader_iterator,
+                          _InfiniteDataloaderIterator)
 
         self.assertEqual(len(epoch_results), 1)
         self.assertEqual(epoch_results[0], 0)
@@ -1222,6 +1289,8 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_test2'
         runner = Runner.from_cfg(cfg)
         runner.test()
+        # Test run test without building train loop.
+        self.assertIsInstance(runner._train_loop, dict)
 
         # test run test without train and test components
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1436,7 +1505,6 @@ class TestRunner(TestCase):
         # 1.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'epoch_3.pth')
         self.assertTrue(osp.exists(path))
-        self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_4.pth')))
 
         ckpt = torch.load(path)
@@ -1603,7 +1671,6 @@ class TestRunner(TestCase):
         # 2.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
-        self.assertTrue(osp.exists(osp.join(self.temp_dir, 'latest.pth')))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
 
         ckpt = torch.load(path)

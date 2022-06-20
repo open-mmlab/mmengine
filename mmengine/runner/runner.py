@@ -3,7 +3,7 @@ import copy
 import os.path as osp
 import platform
 import random
-import shutil
+import resource
 import time
 import warnings
 from collections import OrderedDict
@@ -20,27 +20,29 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
+from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, HOOKS, LOOPS,
-                               MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
+                               LOOPS, MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, digit_version,
-                            find_latest_checkpoint, get_git_hash, is_list_of,
-                            set_multi_processing, symlink)
+from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
+                            is_list_of, set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         get_state_dict, save_checkpoint, weights_to_cpu)
+                         find_latest_checkpoint, get_state_dict,
+                         save_checkpoint, weights_to_cpu)
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
@@ -102,7 +104,7 @@ class Runner:
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
             specified. Defaults to None.
             See :meth:`build_test_loop` for more details.
-        auto_scale_lr_cfg (dict, Optional): Config to scale the learning rate
+        auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
             based on. ``enable`` is the switch to turn on and off the feature.
@@ -189,7 +191,7 @@ class Runner:
         >>>         sampler=dict(type='DefaultSampler', shuffle=False),
         >>>         batch_size=1,
         >>>         num_workers=0),
-        >>>     auto_scale_lr_cfg=dict(base_batch_size=16, enable=False),
+        >>>     auto_scale_lr=dict(base_batch_size=16, enable=False),
         >>>     optim_wrapper=dict(type='OptimizerWrapper', optimizer=dict(
         >>>         type='SGD', lr=0.01)),
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -231,7 +233,7 @@ class Runner:
         train_cfg: Optional[Dict] = None,
         val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
-        auto_scale_lr_cfg: Optional[Dict] = None,
+        auto_scale_lr: Optional[Dict] = None,
         optim_wrapper: Optional[Union[OptimWrapper, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         val_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
@@ -279,7 +281,7 @@ class Runner:
         self.optim_wrapper: Optional[Union[OptimWrapper, dict]]
         self.optim_wrapper = optim_wrapper
 
-        self.auto_scale_lr_cfg = auto_scale_lr_cfg
+        self.auto_scale_lr = auto_scale_lr
 
         # If there is no need to adjust learning rate, momentum or other
         # parameters of optimizer, param_scheduler can be None
@@ -420,7 +422,7 @@ class Runner:
             train_cfg=cfg.get('train_cfg'),
             val_cfg=cfg.get('val_cfg'),
             test_cfg=cfg.get('test_cfg'),
-            auto_scale_lr_cfg=cfg.get('auto_scale_lr_cfg'),
+            auto_scale_lr=cfg.get('auto_scale_lr'),
             optim_wrapper=cfg.get('optim_wrapper'),
             param_scheduler=cfg.get('param_scheduler'),
             val_evaluator=cfg.get('val_evaluator'),
@@ -604,6 +606,7 @@ class Runner:
                     opencv_num_threads=0
                 ),
                 dist_cfg=dict(backend='nccl'),
+                resource_limit=4096
             )
 
         Args:
@@ -627,6 +630,18 @@ class Runner:
         broadcast(timestamp)
         self._timestamp = time.strftime('%Y%m%d_%H%M%S',
                                         time.localtime(timestamp.item()))
+
+        # https://github.com/pytorch/pytorch/issues/973
+        # set resource limit
+        if platform.system() != 'Windows':
+            rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+            base_soft_limit = rlimit[0]
+            hard_limit = rlimit[1]
+            soft_limit = min(
+                max(env_cfg.get('resource_limit', 4096), base_soft_limit),
+                hard_limit)
+            resource.setrlimit(resource.RLIMIT_NOFILE,
+                               (soft_limit, hard_limit))
 
     def set_randomness(self, seed, deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
@@ -807,8 +822,7 @@ class Runner:
             return model
 
         # Set `export CUDA_VISIBLE_DEVICES=-1` to enable CPU training.
-        if torch.cuda.is_available():
-            model = model.cuda()
+        model = model.to(get_device())
 
         if not self.distributed:
             return model
@@ -830,7 +844,7 @@ class Runner:
 
     def scale_lr(self,
                  optim_wrapper: OptimWrapper,
-                 auto_scale_lr_cfg: Optional[Dict] = None) -> None:
+                 auto_scale_lr: Optional[Dict] = None) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size.
@@ -845,23 +859,22 @@ class Runner:
         Args:
             optim_wrapper (OptimWrapper): An OptimWrapper object whose
                 parameter groups' learning rate need to be scaled.
-            auto_scale_lr_cfg (Dict, Optional): Config to scale the learning
+            auto_scale_lr (Dict, Optional): Config to scale the learning
                 rate automatically. It includes ``base_batch_size`` and
                 ``enable``. ``base_batch_size`` is the batch size that the
                 optimizer lr is based on. ``enable`` is the switch to turn on
                 and off the feature.
         """
-        if (auto_scale_lr_cfg is None
-                or not auto_scale_lr_cfg.get('enable', False)):
+        if (auto_scale_lr is None or not auto_scale_lr.get('enable', False)):
             return None
 
-        assert 'base_batch_size' in auto_scale_lr_cfg, \
-            'Lack of `base_batch_size` in `auto_scale_lr_cfg`.'
+        assert 'base_batch_size' in auto_scale_lr, \
+            'Lack of `base_batch_size` in `auto_scale_lr`.'
         dataloader: Union[DataLoader, Dict] = self._train_dataloader
         bs = dataloader.batch_size if isinstance(
             dataloader, DataLoader) else dataloader['batch_size']
         real_bs = self.world_size * bs
-        base_bs = auto_scale_lr_cfg['base_batch_size']
+        base_bs = auto_scale_lr['base_batch_size']
         ratio = float(real_bs) / float(base_bs)
         self.logger.info(f'LR is set based on batch size of {base_bs} '
                          f'and the current batch size is {real_bs}. '
@@ -927,7 +940,7 @@ class Runner:
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -942,7 +955,7 @@ class Runner:
             >>> optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
             >>> optim_wrapper
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -966,7 +979,7 @@ class Runner:
             >>> optim_wrapper
             name: generator
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             SGD (
             Parameter Group 0
@@ -978,7 +991,7 @@ class Runner:
             )
             name: discriminator
             Type: OptimWrapper
-            accumulative_iters: 1
+            accumulative_counts: 1
             optimizer:
             'discriminator': Adam (
             Parameter Group 0
@@ -1210,7 +1223,17 @@ class Runner:
         """
         if isinstance(evaluator, Evaluator):
             return evaluator
-        elif isinstance(evaluator, dict) or is_list_of(evaluator, dict):
+        elif isinstance(evaluator, dict):
+            # if `metrics` in dict keys, it means to build customized evalutor
+            if 'metrics' in evaluator:
+                assert 'type' in evaluator, 'expected customized evaluator' \
+                                    f' with key `type`, but got {evaluator}'
+                return EVALUATOR.build(evaluator)
+            # otherwise, default evalutor will be built
+            else:
+                return Evaluator(evaluator)  # type: ignore
+        elif is_list_of(evaluator, dict):
+            # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
         else:
             raise TypeError(
@@ -1519,9 +1542,8 @@ class Runner:
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
-
         # Automatically scaling lr by linear scaling rule
-        self.scale_lr(self.optim_wrapper, self.auto_scale_lr_cfg)
+        self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
         if self.param_schedulers:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -1531,9 +1553,14 @@ class Runner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
+        # Initiate inner count of `optim_wrapper`.
+        self.optim_wrapper.initialize_count_status(
+            self.model,
+            self._train_loop.iter,  # type: ignore
+            self._train_loop.max_iters)  # type: ignore
 
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
@@ -1797,8 +1824,8 @@ class Runner:
                 self.logger.info(
                     'Number of GPU used for current experiment is not '
                     'consistent with resuming from checkpoint')
-                if (self.auto_scale_lr_cfg is None
-                        or not self.auto_scale_lr_cfg.get('enable', False)):
+                if (self.auto_scale_lr is None
+                        or not self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
                         'Cannot automatically rescale lr in resuming. Please '
                         'make sure the number of GPU is consistent with the '
@@ -1893,10 +1920,10 @@ class Runner:
     def save_checkpoint(self,
                         out_dir: str,
                         filename: str,
+                        file_client_args: Optional[dict] = None,
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
-                        create_symlink: bool = True,
                         by_epoch: bool = True):
         """Save checkpoints.
 
@@ -1906,15 +1933,16 @@ class Runner:
         Args:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
+            file_client_args (dict, optional): Arguments to instantiate a
+                FileClient. Default: None.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
                 to the checkpoint. Defaults to True.
             meta (dict, optional): The meta information to be saved in the
                 checkpoint. Defaults to None.
-            create_symlink (bool): Whether to create a symlink
-                "latest.pth" to point to the latest checkpoint.
-                Defaults to True.
+            by_epoch (bool): Whether the scheduled momentum is updated by
+                epochs. Defaults to True.
         """
         if meta is None:
             meta = {}
@@ -1934,7 +1962,8 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        filepath = osp.join(out_dir, filename)
+        file_client = FileClient.infer_client(file_client_args, out_dir)
+        filepath = file_client.join_path(out_dir, filename)
 
         meta.update(
             cfg=self.cfg.pretty_text,
@@ -1980,14 +2009,10 @@ class Runner:
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
-        # in some environments, `os.symlink` is not supported, you may need to
-        # set `create_symlink` to False
-        if create_symlink:
-            dst_file = osp.join(out_dir, 'latest.pth')
-            if platform.system() != 'Windows':
-                symlink(filename, dst_file)
-            else:
-                shutil.copy(filepath, dst_file)
+
+        save_file = osp.join(self.work_dir, 'last_checkpoint')
+        with open(save_file, 'w') as f:
+            f.write(filepath)
 
     @master_only
     def dump_config(self) -> None:

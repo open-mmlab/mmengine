@@ -74,9 +74,10 @@ def get_model(cfg_path: str,
     cfg = get_config(cfg_path, pretrained)
     package = cfg_path.split('::')[0]
 
-    models_module = importlib.import_module(f'{package}.models')
+    models_module = importlib.import_module(f'{package}.utils')
     models_module.register_all_modules()
-    with DefaultScope.
-    model = MODELS.build(cfg, default_args=kwargs)
-    model = mmengine.runner.load_checkpoint(model, cfg.model_path)
-    return model
+    with DefaultScope.overwrite_default_scope(package):
+        model = MODELS.build(cfg.model, default_args=kwargs)
+        if pretrained:
+            model = mmengine.runner.load_checkpoint(model, cfg.model_path)
+        return model

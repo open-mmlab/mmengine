@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import time
 import warnings
 from typing import Dict, List, Sequence, Union
 
@@ -101,12 +102,9 @@ class EpochBasedTrainLoop(BaseLoop):
             'before_train_iter', batch_idx=idx, data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
         # synchronization during gradient accumulation process.
-        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
-                                                       self._iter,
-                                                       self._max_iters):
-            # outputs should be a dict of loss.
-            outputs = self.runner.model.train_step(
-                data_batch, optim_wrapper=self.runner.optim_wrapper)
+        # outputs should be a dict of loss.
+        outputs = self.runner.model.train_step(
+            data_batch, optim_wrapper=self.runner.optim_wrapper)
 
         self.runner.call_hook(
             'after_train_iter',
@@ -114,6 +112,51 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=outputs)
         self._iter += 1
+
+
+class _InfiniteDataloaderIterator:
+    """An infinite dataloader iterator wrapper for IterBasedTrainLoop.
+
+    It resets the dataloader to continue iterating when the iterator has
+    iterated over all the data. However, this approach is not efficient, as the
+    workers need to be restarted every time the dataloader is reset. It is
+    recommended to use `mmengine.data.InfiniteSampler` to enable the dataloader
+    to iterate infinitely.
+    """
+
+    def __init__(self, dataloader: DataLoader) -> None:
+        self._dataloader = dataloader
+        self._iterator = iter(self._dataloader)
+        self._epoch = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> Sequence[dict]:
+        try:
+            data = next(self._iterator)
+        except StopIteration:
+            warnings.warn('Reach the end of the dataloader, it will be '
+                          'restarted and continue to iterate. It is '
+                          'recommended to use `mmengine.data.InfiniteSampler` '
+                          'to enable the dataloader to iterate infinitely.')
+            self._epoch += 1
+            if hasattr(self._dataloader, 'sampler') and hasattr(
+                    self._dataloader.sampler, 'set_epoch'):
+                # In case the` _SingleProcessDataLoaderIter` has no sampler,
+                # or data loader uses `SequentialSampler` in Pytorch.
+                self._dataloader.sampler.set_epoch(self._epoch)
+
+            elif hasattr(self._dataloader, 'batch_sampler') and hasattr(
+                    self._dataloader.batch_sampler.sampler, 'set_epoch'):
+                # In case the` _SingleProcessDataLoaderIter` has no batch
+                # sampler. batch sampler in pytorch warps the sampler as its
+                # attributes.
+                self._dataloader.batch_sampler.sampler.set_epoch(self._epoch)
+            time.sleep(2)  # Prevent possible deadlock during epoch transition
+            self._iterator = iter(self._dataloader)
+            data = next(self._iterator)
+        return data
 
 
 @LOOPS.register_module()
@@ -152,7 +195,7 @@ class IterBasedTrainLoop(BaseLoop):
                 'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
         # get the iterator of the dataloader
-        self.dataloader_iterator = iter(self.dataloader)
+        self.dataloader_iterator = _InfiniteDataloaderIterator(self.dataloader)
 
     @property
     def max_epochs(self):
@@ -204,19 +247,16 @@ class IterBasedTrainLoop(BaseLoop):
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
         # synchronization during gradient accumulation process.
-        with self.runner.optim_wrapper.accumulate_grad(self.runner.model,
-                                                       self._iter,
-                                                       self._max_iters):
-            # train_logs should be a dict of loss.
-            train_logs = self.runner.model.train_step(
-                data_batch, optim_wrapper=self.runner.optim_wrapper)
-        self.runner.message_hub.update_info('train_logs', train_logs)
+        # outputs should be a dict of loss.
+        outputs = self.runner.model.train_step(
+            data_batch, optim_wrapper=self.runner.optim_wrapper)
+        self.runner.message_hub.update_info('train_logs', outputs)
 
         self.runner.call_hook(
             'after_train_iter',
             batch_idx=self._iter,
             data_batch=data_batch,
-            outputs=train_logs)
+            outputs=outputs)
         self._iter += 1
 
 

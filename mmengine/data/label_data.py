@@ -40,7 +40,7 @@ class LabelData(BaseDataElement):
             torch.Tensor: The converted results.
         """
         assert isinstance(label, torch.Tensor)
-        onehot = torch.zeros((num_classes, ), dtype=torch.int64)
-        assert label.max().item() < num_classes
+        onehot = label.new_zeros((num_classes, ))
+        assert max(label, default=torch.tensor(0)).item() < num_classes
         onehot[label] = 1
         return onehot

@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional
+import copy
+import time
+from contextlib import contextmanager
+from typing import Generator, Optional
 
 from mmengine.utils.manager import ManagerMixin, _accquire_lock, _release_lock
 
@@ -71,3 +74,17 @@ class DefaultScope(ManagerMixin):
             instance = None
         _release_lock()
         return instance
+
+    @classmethod
+    @contextmanager
+    def overwrite_default_scope(cls, scope_name: Optional[str]) -> Generator:
+        """overwrite the current default scope with `scope_name`"""
+        if scope_name is None:
+            yield
+        else:
+            tmp = copy.deepcopy(cls._instance_dict)
+            cls.get_instance(f'overwrite-{time.time()}', scope_name=scope_name)
+            try:
+                yield
+            finally:
+                cls._instance_dict = tmp

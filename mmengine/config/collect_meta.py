@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import re
+import warnings
 from typing import Tuple
 
 from mmengine.fileio import load
@@ -43,6 +44,9 @@ def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
         meta_path = osp.join(package_path, '.mim', meta_path)
         cfg_meta = load(meta_path)
         for model_cfg in cfg_meta['Models']:
+            if 'Config' not in model_cfg:
+                warnings.warn(f'There is not `Config` define in {model_cfg}')
+                continue
             cfg_name = model_cfg['Config'].partition('/')[-1]
             cfg_dict[cfg_name] = model_cfg
     if cfg_path not in cfg_dict:
