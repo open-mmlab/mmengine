@@ -26,12 +26,12 @@ PKG2PROJECT = {
 }
 
 
-def _get_cfg_meta(package_path: str, cfg_file: str) -> dict:
+def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
     """Get target meta information from 'metafile.yml' of external package.
 
     Args:
         package_path (str): Path of external package.
-        cfg_file (str): Name of experiment config.
+        cfg_path (str): Name of experiment config.
 
     Returns:
         dict: Meta information of target experiment.
@@ -45,10 +45,10 @@ def _get_cfg_meta(package_path: str, cfg_file: str) -> dict:
         for model_cfg in cfg_meta['Models']:
             cfg_name = model_cfg['Config'].split('/')[-1].strip('.py')
             cfg_dict[cfg_name] = model_cfg
-    if cfg_file not in cfg_dict:
+    if cfg_path not in cfg_dict:
         raise ValueError(f'Expected configs: {cfg_dict.keys()}, but got '
-                         f'{cfg_file}')
-    return cfg_dict[cfg_file]
+                         f'{cfg_path}')
+    return cfg_dict[cfg_path]
 
 
 def _get_external_cfg_path(package_path: str, cfg_file: str):
@@ -82,41 +82,27 @@ def _get_external_cfg_base_path(package_path: str, cfg_name: str):
     return cfg_path
 
 
-def _parse_external_cfg_path(cfg_name: str) -> Tuple[str, str]:
+def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
     """Get package name and relative config path.
 
     Args:
-        cfg_name (str): External relative config path with 'package::'.
+        cfg_path (str): External relative config path with 'package::'.
 
     Returns:
         Tuple(str, str): Package name and relative config path.
     """
-    if re.match(r'\w*::\w*/\w*', cfg_name) is None:
+    if re.match(r'\w*::\w*/\w*', cfg_path) is None:
         raise ValueError('`_parse_external_cfg_path` is used for parse '
                          'external package, please specify the package name '
                          'and relative config path, just like '
                          '`mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco` ')
-    package_cfg = cfg_name.split('::')
+    package_cfg = cfg_path.split('::')
     if len(package_cfg) > 2:
         raise ValueError('`::` should only be used to separate package and '
                          'config name, but found multiple `::` in '
-                         f'{cfg_name}')
-    package, cfg_name = package_cfg
+                         f'{cfg_path}')
+    package, cfg_path = package_cfg
     assert package in PKG2PROJECT, 'mmengine does not support to load ' \
                                    f'{package} config.'
     package = PKG2PROJECT[package]
-    return package, cfg_name
-
-
-def _parse_cfg_name(cfg_name: str) -> str:
-    """Get the econfig name.
-
-    Args:
-        cfg_name (str): External relative config path.
-
-    Returns:
-        str: The config name.
-    """
-    cfg_path_list = cfg_name.split('/')
-    cfg_name = cfg_path_list[-1]
-    return cfg_name
+    return package, cfg_path

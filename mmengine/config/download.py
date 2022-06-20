@@ -5,18 +5,19 @@ import os.path as osp
 import torch.nn as nn
 
 import mmengine.runner
+from mmengine.registry import MODELS
 from mmengine.utils import check_install_package, get_installed_path
 from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
-                           _parse_cfg_name, _parse_external_cfg_path)
+                           _get_package_and_cfg_path)
 from .config import Config
 
 
-def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
+def get_config(cfg_path: str, pretrained: bool = False, suffix='.py', )\
         -> Config:
     """Get config from external package.
 
     Args:
-        cfg_name (str): External relative config path with prefix
+        cfg_path (str): External relative config path with prefix
             'package::' and without suffix.
         pretrained (bool): Whether to save pretrained model path. If
             ``pretrained==True``, the url of pretrained model can be accessed
@@ -35,16 +36,15 @@ def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
 
     Returns:
         Config: A `Config` parsed from external package.
-    """ # noqa E301
+    """  # noqa E301
     # Get package name and relative config path.
-    package, cfg_name = _parse_external_cfg_path(cfg_name)
+    package, cfg_path = _get_package_and_cfg_path(cfg_path)
     # Check package is installed.
     check_install_package(package)
     package_path = get_installed_path(package)
     try:
-        # Use `cfg_name` to search target config file.
-        rel_cfg_file = _parse_cfg_name(cfg_name)
-        cfg_meta = _get_cfg_meta(package_path, rel_cfg_file)
+        # Use `cfg_path` to search target config file.
+        cfg_meta = _get_cfg_meta(package_path, cfg_path)
         cfg_path = osp.join(package_path, '.mim', cfg_meta['Config'])
         cfg = Config.fromfile(cfg_path)
         cfg.model_path = cfg_meta['Weights']
@@ -55,24 +55,21 @@ def get_config(cfg_name: str, pretrained: bool = False, suffix='.py', )\
     except ValueError:
         # Since the base config does not contain a metafile, the absolute
         # config is `osp.join(package_path, cfg_path_prefix, cfg_name)`
-        cfg_path = _get_external_cfg_base_path(package_path, cfg_name + suffix)
+        cfg_path = _get_external_cfg_base_path(package_path, cfg_path + suffix)
         cfg = Config.fromfile(cfg_path)
     return cfg
 
 
-def get_model(cfg_name: str,
-              pretrained=False,
-              build_func_name: str = 'build_model',
+def get_model(cfg_path: str,
+              pretrained: bool = False,
               suffix='.py',
               **kwargs) -> nn.Module:
     """Get built model from external package.
 
     Args:
-        cfg_name (str): External relative config path with prefix
+        cfg_path (str): External relative config path with prefix
             'package::' and without suffix.
         pretrained (bool): Whether to load pretrained model. Defaults to False.
-        build_func_name (str): Name of model build function. Defaults to
-            'build_model'
         suffix (str): Suffix of ``cfg_name``. If cfg_name is a base
             cfg, the `suffix` will be used to get the absolute config path.
             Defaults to '.py'.
@@ -80,14 +77,11 @@ def get_model(cfg_name: str,
     Returns:
         nn.Module: Built model.
     """
-    cfg = get_config(cfg_name, pretrained, suffix)
-    package = cfg_name.split('::')[0]
+    cfg = get_config(cfg_path, pretrained, suffix)
+    package = cfg_path.split('::')[0]
 
     models_module = importlib.import_module(f'{package}.models')
-    build_func = getattr(models_module, build_func_name, None)
-    if build_func is None:
-        raise RuntimeError(f'`{build_func_name}` is not defined in '
-                           f'`{package}.models`')
-    model = build_func(cfg.model, **kwargs)
+    models_module.register_all_modules()
+    model = MODELS.build(cfg, default_args=kwargs)
     model = mmengine.runner.load_checkpoint(model, cfg.model_path)
     return model

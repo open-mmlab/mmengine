@@ -4,8 +4,7 @@ import os.path
 import pytest
 
 from mmengine.config.collect_meta import (_get_external_cfg_base_path,
-                                          _parse_cfg_name,
-                                          _parse_external_cfg_path)
+                                          _get_package_and_cfg_path)
 
 
 def test_get_external_cfg_base_path(tmp_path):
@@ -23,28 +22,22 @@ def test_get_external_cfg_base_path(tmp_path):
 
 def test_parse_external_cfg_path():
     external_cfg_path = 'mmdet::path/cfg'
-    package, rel_cfg_path = _parse_external_cfg_path(external_cfg_path)
+    package, rel_cfg_path = _get_package_and_cfg_path(external_cfg_path)
     assert package == 'mmdet'
     assert rel_cfg_path == 'path/cfg'
     # external config must contain `::`.
     external_cfg_path = 'path/cfg'
     with pytest.raises(ValueError):
-        _parse_external_cfg_path(external_cfg_path)
+        _get_package_and_cfg_path(external_cfg_path)
     # Use `:::` as operator will raise an error.
     external_cfg_path = 'mmdet:::path/cfg'
     with pytest.raises(ValueError):
-        _parse_external_cfg_path(external_cfg_path)
+        _get_package_and_cfg_path(external_cfg_path)
     # Use `:` as operator will raise an error.
     external_cfg_path = 'mmdet:path/cfg'
     with pytest.raises(ValueError):
-        _parse_external_cfg_path(external_cfg_path)
+        _get_package_and_cfg_path(external_cfg_path)
     # Too much `::`
     external_cfg_path = 'mmdet::path/cfg::error'
     with pytest.raises(ValueError):
-        _parse_external_cfg_path(external_cfg_path)
-
-
-def test_parse_rel_cfg_path():
-    rel_cfg_path = 'cfg_dir/cfg_file'
-    cfg_name = _parse_cfg_name(rel_cfg_path)
-    assert cfg_name == 'cfg_file'
+        _get_package_and_cfg_path(external_cfg_path)

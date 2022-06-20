@@ -23,7 +23,7 @@ from mmengine.fileio import dump, load
 from mmengine.utils import (check_file_exist, check_install_package,
                             get_installed_path, import_modules_from_strings)
 from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
-                           _parse_cfg_name, _parse_external_cfg_path)
+                           _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -442,8 +442,11 @@ class Config:
             cfg_dict_list = list()
             cfg_text_list = list()
             for base_file in base_filename:
-                cfg_path = Config._get_cfg_path(base_file, filename)
+                cfg_path, scope = Config._get_cfg_path(base_file, filename)
                 _cfg_dict, _cfg_text = Config._file2dict(cfg_path)
+                # Add _scope_ to dict config with type.
+                if scope is not None:
+                    Config._parse_scope(_cfg_dict, scope)
                 cfg_dict_list.append(_cfg_dict)
                 cfg_text_list.append(_cfg_text)
 
@@ -469,27 +472,35 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _get_cfg_path(cfg_path: str, filename: str) -> str:
+    def _parse_scope(cfg_dict, scope):
+        for value in cfg_dict.values():
+            if isinstance(value, dict) and 'type' in value:
+                value['_scope_'] = scope
+                Config._parse_scope(value, scope)
+
+    @staticmethod
+    def _get_cfg_path(cfg_path: str,
+                      filename: str) -> Tuple[str, Optional[str]]:
         """Get the config path from the current or external package.
 
         Args:
-            cfg_name (str): Relative path of config.
+            cfg_path (str): Relative path of config.
             filename (str): The config file being parsed.
 
         Returns:
-            str: The absolute path of `cfg_name`.
+            Tuple[str, Optional[str]]: The absolute path of `cfg_path` and
+            scope if
         """
         if '::' in cfg_path:
             # `cfg_path` startswith '::' means an external config path.
             # Get package name and relative config path.
-            package, cfg_path = _parse_external_cfg_path(cfg_path)
+            package, cfg_path = _get_package_and_cfg_path(cfg_path)
             # Get installed package path.
             check_install_package(package)
             package_path = get_installed_path(package)
             try:
                 # Get config path from meta file.
-                cfg_name = _parse_cfg_name(cfg_path)
-                cfg_path = _get_external_cfg_path(package_path, cfg_name)
+                cfg_path = _get_external_cfg_path(package_path, cfg_path)
             except ValueError:
                 # Since base config does not have a metafile, it should be
                 # concatenated with package path and relative config path.
@@ -498,7 +509,7 @@ class Config:
             # Get local config path.
             cfg_dir = osp.dirname(filename)
             cfg_path = osp.join(cfg_dir, cfg_path)
-        return cfg_path
+            return cfg_path, None
 
     @staticmethod
     def _merge_a_into_b(a: dict,
