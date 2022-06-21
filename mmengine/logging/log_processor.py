@@ -204,6 +204,8 @@ class LogProcessor:
         custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
         # tag is used to write log information to different backends.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        tag.pop('time', None)
+        tag.pop('data_time', None)
         # By epoch:
         #     Epoch(val) [10][1000/1000]  ...
         #     Epoch(test) [1000/1000] ...
@@ -225,8 +227,6 @@ class LogProcessor:
         # message.
         log_items = []
         for name, val in tag.items():
-            if name in ('time', 'data_time'):
-                continue
             if isinstance(val, float):
                 val = f'{val:.4f}'
             log_items.append(f'{name}: {val}')

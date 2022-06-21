@@ -459,6 +459,10 @@ class Runner:
         return self._work_dir
 
     @property
+    def log_dir(self):
+        return self._log_dir
+
+    @property
     def max_epochs(self):
         """int: Total epochs to train model."""
         if isinstance(self.train_loop, BaseLoop):
