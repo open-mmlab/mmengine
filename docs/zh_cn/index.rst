@@ -25,7 +25,9 @@
 
    mmengine.runner <api/runner>
    mmengine.hooks <api/hooks>
+   mmengine.optim <api/optim>
    mmengine.evaluator <api/evaluator>
+   mmengine.dist <api/dist>
 
 .. toctree::
    :caption: 语言切换
