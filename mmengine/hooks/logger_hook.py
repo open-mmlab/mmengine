@@ -209,6 +209,11 @@ class LoggerHook(Hook):
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
         if self.log_metric_by_epoch:
+            # when `log_metric_by_epoch` is set to True, it's expected
+            # that validation metric can be logged by epoch rather than
+            # by iter. At the same time, scalars related to time should
+            # still be logged by iter to avoid messy visualized result.
+            # see details in PR #278
             time_tags = {k: v for k, v in tag.items() if 'time' in k}
             metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
             runner.visualizer.add_scalars(
