@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 
@@ -118,6 +118,22 @@ class TestLoggerHook:
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
         runner.visualizer.add_scalars.assert_called()
+
+        # Test `log_metric_by_epoch`
+        runner.log_processor.get_log_after_epoch = MagicMock(
+            return_value=({
+                'time': 1,
+                'datatime': 1,
+                'acc': 0.8
+            }, 'string'))
+        logger_hook.after_val_epoch(runner)
+        args = {'step': ANY, 'file_path': ANY}
+        runner.visualizer.add_scalars.assert_any_call(
+            {
+                'time': 1,
+                'datatime': 1
+            }, **args)
+        runner.visualizer.add_scalars.assert_any_call({'acc': 0.8}, **args)
 
     def test_after_test_epoch(self):
         logger_hook = LoggerHook()
