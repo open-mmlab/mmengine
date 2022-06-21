@@ -260,6 +260,9 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
+        if not self.save_best:
+            return
+
         if self.by_epoch:
             ckpt_filename = self.args.get(
                 'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
@@ -270,44 +273,42 @@ class CheckpointHook(Hook):
             cur_type, cur_time = 'iter', runner.iter + 1
 
         # save best logic
-        if self.save_best:
-            # get score from messagehub
-            # notice `_get_metirc_score` helps to infer
-            # self.rule when self.save_best is `auto`
-            key_score = self._get_metric_score(metrics)
-            if 'best_score' not in runner.message_hub.runtime_info:
-                best_score = self.init_value_map[self.rule]
-            else:
-                best_score = runner.message_hub.get_info('best_score')
+        # get score from messagehub
+        # notice `_get_metirc_score` helps to infer
+        # self.rule when self.save_best is `auto`
+        key_score = self._get_metric_score(metrics)
+        if 'best_score' not in runner.message_hub.runtime_info:
+            best_score = self.init_value_map[self.rule]
+        else:
+            best_score = runner.message_hub.get_info('best_score')
 
-            if key_score and self.compare_func(key_score, best_score):
-                best_score = key_score
-                runner.message_hub.update_info('best_score', best_score)
+        if key_score and self.compare_func(key_score, best_score):
+            best_score = key_score
+            runner.message_hub.update_info('best_score', best_score)
 
-                if self.best_ckpt_path and self.file_client.isfile(
-                        self.best_ckpt_path):
-                    self.file_client.remove(self.best_ckpt_path)
-                    runner.logger.info(
-                        f'The previous best checkpoint {self.best_ckpt_path} '
-                        'was removed')
-
-                best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
-                self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
-                    self.out_dir, best_ckpt_name)
-                runner.message_hub.update_info('best_ckpt',
-                                               self.best_ckpt_path)
-                runner.save_checkpoint(
-                    self.out_dir,
-                    filename=best_ckpt_name,
-                    file_client_args=self.file_client_args,
-                    save_optimizer=False,
-                    save_param_scheduler=False,
-                    by_epoch=False)
+            if self.best_ckpt_path and self.file_client.isfile(
+                    self.best_ckpt_path):
+                self.file_client.remove(self.best_ckpt_path)
                 runner.logger.info(
-                    f'Now best checkpoint is saved as {best_ckpt_name}.')
-                runner.logger.info(
-                    f'Best {self.key_indicator} is {best_score:0.4f} '
-                    f'at {cur_time} {cur_type}.')
+                    f'The previous best checkpoint {self.best_ckpt_path} '
+                    'was removed')
+
+            best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
+            self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
+                self.out_dir, best_ckpt_name)
+            runner.message_hub.update_info('best_ckpt', self.best_ckpt_path)
+            runner.save_checkpoint(
+                self.out_dir,
+                filename=best_ckpt_name,
+                file_client_args=self.file_client_args,
+                save_optimizer=False,
+                save_param_scheduler=False,
+                by_epoch=False)
+            runner.logger.info(
+                f'Now best checkpoint is saved as {best_ckpt_name}.')
+            runner.logger.info(
+                f'Best {self.key_indicator} is {best_score:0.4f} '
+                f'at {cur_time} {cur_type}.')
 
     def _init_rule(self, rule, key_indicator) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score.
@@ -333,26 +334,25 @@ class CheckpointHook(Hook):
             raise KeyError(f'rule must be greater, less or None, '
                            f'but got {rule}.')
 
-        if rule is None:
-            if key_indicator != 'auto':
-                # `_lc` here means we use the lower case of keys for
-                # case-insensitive matching
-                key_indicator_lc = key_indicator.lower()
-                greater_keys = [key.lower() for key in self.greater_keys]
-                less_keys = [key.lower() for key in self.less_keys]
+        if rule is None and key_indicator != 'auto':
+            # `_lc` here means we use the lower case of keys for
+            # case-insensitive matching
+            key_indicator_lc = key_indicator.lower()
+            greater_keys = [key.lower() for key in self.greater_keys]
+            less_keys = [key.lower() for key in self.less_keys]
 
-                if key_indicator_lc in greater_keys:
-                    rule = 'greater'
-                elif key_indicator_lc in less_keys:
-                    rule = 'less'
-                elif any(key in key_indicator_lc for key in greater_keys):
-                    rule = 'greater'
-                elif any(key in key_indicator_lc for key in less_keys):
-                    rule = 'less'
-                else:
-                    raise ValueError('Cannot infer the rule for key '
-                                     f'{key_indicator}, thus a specific rule '
-                                     'must be specified.')
+            if key_indicator_lc in greater_keys:
+                rule = 'greater'
+            elif key_indicator_lc in less_keys:
+                rule = 'less'
+            elif any(key in key_indicator_lc for key in greater_keys):
+                rule = 'greater'
+            elif any(key in key_indicator_lc for key in less_keys):
+                rule = 'less'
+            else:
+                raise ValueError('Cannot infer the rule for key '
+                                 f'{key_indicator}, thus a specific rule '
+                                 'must be specified.')
         self.rule = rule
         self.key_indicator = key_indicator
         if self.rule is not None:
