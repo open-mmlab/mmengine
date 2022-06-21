@@ -41,7 +41,7 @@ import torch.nn as nn
 def forward_hook_fn(
     module,  # 被注册钩子的对象
     input,  # module 前向计算的输入
-    output  # module 前向计算的输出
+    output,  # module 前向计算的输出
 ):
     print(f'"forward_hook_fn" is invoked by {module.name}')
     print('weight:', module.weight.data)
@@ -129,13 +129,14 @@ def main():
             accuracy = ...
 ```
 
-上面的伪代码是训练模型的基本步骤。如果要在上面的代码中加入定制化的逻辑，我们需要不断修改和拓展 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们可以在 `main` 方法中插入 16 个位点，并在对应位点实现调用 hook 的抽象逻辑。此时只需在这些位点插入 hook 来实现定制化逻辑，即可添加定制化功能，例如加载模型权重、更新模型参数等。
+上面的伪代码是训练模型的基本步骤。如果要在上面的代码中加入定制化的逻辑，我们需要不断修改和拓展 `main` 函数。为了提高 `main` 函数的灵活性和拓展性，我们可以在 `main` 方法中插入位点，并在对应位点实现调用 hook 的抽象逻辑。此时只需在这些位点插入 hook 来实现定制化逻辑，即可添加定制化功能，例如加载模型权重、更新模型参数等。
 
 ```python
 def main():
     ...
-    call_hooks('before_run', hooks)  # 训练开始前执行的逻辑
+    call_hooks('before_run', hooks)  # 任务开始前执行的逻辑
     call_hooks('after_load_checkpoint', hooks)  # 加载权重后执行的逻辑
+    call_hooks('before_train', hooks)  # 训练开始前执行的逻辑
     for i in range(max_epochs):
         call_hooks('before_train_epoch', hooks)  # 遍历训练数据集前执行的逻辑
         for inputs, labels in train_dataloader:
@@ -157,6 +158,7 @@ def main():
         call_hooks('after_val_epoch', hooks)  # 遍历完验证数据集前执行
 
         call_hooks('before_save_checkpoint', hooks)  # 保存权重前执行的逻辑
+    call_hooks('after_train', hooks)  # 训练结束后执行的逻辑
 
     call_hooks('before_test_epoch', hooks)  # 遍历测试数据集前执行的逻辑
     with torch.no_grad():
@@ -167,12 +169,37 @@ def main():
             call_hooks('after_test_iter', hooks)  # 遍历完成测试数据集后执行的逻辑
     call_hooks('after_test_epoch', hooks)  # 遍历完测试数据集后执行
 
-    call_hooks('after_run', hooks)  # 训练结束后执行的逻辑
+    call_hooks('after_run', hooks)  # 任务结束后执行的逻辑
 ```
 
-在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[执行器文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
 
-为了方便管理，MMEngine 将 16 个位点定义为方法并集成到钩子基类（Hook）中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
+为了方便管理，MMEngine 将位点定义为方法并集成到[钩子基类（Hook）](https://mmengine.readthedocs.io/zh/latest/api.html#hook)中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
+
+钩子中一共有 22 个位点：
+
+- before_run
+- after_run
+- before_train
+- after_train
+- before_train_epoch
+- after_train_epoch
+- before_train_iter
+- after_train_iter
+- before_val
+- after_val
+- before_test_epoch
+- after_test_epoch
+- before_val_iter
+- after_val_iter
+- before_test
+- after_test
+- before_test_epoch
+- after_test_epoch
+- before_test_iter
+- after_test_iter
+- before_save_checkpoint
+- after_load_checkpoint
 
 ## 内置钩子
 
@@ -192,23 +219,23 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **默认钩子**
 
-|        名称         |                用途                |      优先级       |
-| :-----------------: | :--------------------------------: | :---------------: |
-|   RuntimeInfoHook   |   向 message hub 更新运行时信息    |  VERY_HIGH (10)   |
-|    OptimizerHook    |        反向传播以及参数更新        |     HIGH (30)     |
-| DistSamplerSeedHook | 确保分布式 Sampler 的 shuffle 生效 |    NORMAL (50)    |
-|   SyncBuffersHook   |         同步模型的 buffer          |    NORMAL (50)    |
-|   EmptyCacheHook    |       PyTorch CUDA 缓存清理        |    NORMAL (50)    |
-|    IterTimerHook    |            统计迭代耗时            |    NORMAL (50)    |
-|     LoggerHook      |              打印日志              | BELOW_NORMAL (60) |
-| ParamSchedulerHook  |  调用 ParamScheduler 的 step 方法  |     LOW (70)      |
-|   CheckpointHook    |         按指定间隔保存权重         |   VERY_LOW (90)   |
+|                    名称                     |                用途                |      优先级       |
+| :-----------------------------------------: | :--------------------------------: | :---------------: |
+|     [RuntimeInfoHook](#runtimeinfohook)     |   往 message hub 更新运行时信息    |  VERY_HIGH (10)   |
+|       [IterTimerHook](#itertimerhook)       |            统计迭代耗时            |    NORMAL (50)    |
+| [DistSamplerSeedHook](#distsamplerseedhook) | 确保分布式 Sampler 的 shuffle 生效 |    NORMAL (50)    |
+|          [LoggerHook](#loggerhook)          |              打印日志              | BELOW_NORMAL (60) |
+|  [ParamSchedulerHook](#paramschedulerhook)  |  调用 ParamScheduler 的 step 方法  |     LOW (70)      |
+|      [CheckpointHook](#checkpointhook)      |         按指定间隔保存权重         |   VERY_LOW (90)   |
 
 **自定义钩子**
 
-|      名称      |  用途  |    优先级    |
-| :------------: | :----: | :----------: |
-| VisualizerHook | 可视化 | LOWEST (100) |
+|                名称                 |         用途          |    优先级    |
+| :---------------------------------: | :-------------------: | :----------: |
+|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50)  |
+|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50)  |
+| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50)  |
+|       NaiveVisualizationHook        |        可视化         | LOWEST (100) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -221,7 +248,6 @@ from mmengine import Runner
 
 default_hooks = dict(
     runtime_info=dict(type='RuntimeInfoHook'),
-    optimizer=dict(type='OptimizerHook', grad_clip=None),
     timer=dict(type='IterTimerHook'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     logger=dict(type='LoggerHook'),
@@ -230,7 +256,7 @@ default_hooks = dict(
 )
 
 custom_hooks = [
-    dict(type='VisualizerHook', priority='LOWEST'),
+    dict(type='NaiveVisualizationHook', priority='LOWEST'),
 ]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
@@ -279,62 +305,20 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 
 上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
 
-### OptimizerHook
+### LoggerHook
 
-`OptimizerHook` 包含一些 optimizer 相关的操作：
+`LoggerHook` 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
 
-- 梯度清零 runner.optimizer.zero_grad()
-- 反向传播 runner.output\['loss'\].backward()
-- 梯度截断 clip_grads（可选）
-- 参数更新 runner.optimizer.step()
+如果我们希望每迭代 20 次就输出（或保存）一次日志，我们可以设置 interval 参数，配置如下：
 
 ```python
-from mmengine import HOOKS
-
-optimizer_config = dict(type='OptimizerHook')
-HOOKS.build(optimizer_config)
+config = dict(type='LoggerHook', interval=20)
 ```
 
-使用以上配置即可实现在 Trainer 中完成梯度清零、反向传播以及参数更新。
-
-如果我们想对梯度进行截断，避免梯度爆炸，则可以设置 grad_clip 参数，该参数的设置可参考 [clip_grad_norm\_](https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+如果我们希望训练结束后把指定后缀的文件转存到其他路径，例如 Ceph。我们可以设置 out_dir、out_suffix 和 keep_loal 三个参数。第一个参数表示将文件转存到指定的路径；第二个参数表示需要转存以哪些后缀结尾的文件，默认是 .json、.log、.py 和 yaml；第三个参数表示当我们把文件转存到其他路径后是否删除被转存的文件。
 
 ```python
-optimizer_config=dict(type='OptimizerHook', grad_clip=dict(max_norm=35, norm_type=2))
-```
-
-模型中可能存在不参与计算图的模型参数，有两种可能，一种是该参数没有参与前向计算，另一种参与了前向计算但没有参与 loss 的计算。而如果模型中存在这种参数，会导致 PyTorch 抛出错误 `RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one`。我们可以通过设置 `detect_anomalous_params=True` 来检测并找出这种参数。
-
-```python
-optimizer_config=dict(type='OptimizerHook', detect_anomalous_params=True))
-```
-
-```{note}
-`detect_anomalous_params=True` 会降低训练速度，推荐只用于调试。
-```
-
-除了 `OptimizerHook`，MMEngine 还提供了 `Fp16OptimizerHook` 和 `GradientCumulativeOptimizerHook`，前者用于混合精度训练，后者用于梯度累计。
-
-`Fp16OptimizerHook` 是混合精度训练在 MMEngine 中的实现，主要逻辑如下：
-
-- 维护一个 FP32 数值精度模型的副本
-- 在每个 iteration
-  - 拷贝并且转换成 FP16 模型
-  - 前向传播（FP16 的模型参数)，此时 weights, activations 都是 FP16
-  - loss 乘缩放参数 s，避免非 0 梯度溢出
-  - 反向传播（FP16 的模型参数和参数梯度)， 此时 gradients 也是 FP16
-  - 参数梯度乘 1/s
-  - 利用 FP16 的梯度更新 FP32 的模型参数
-
-![Fp16OptimizerHook](https://user-images.githubusercontent.com/58739961/154833936-abd7de05-ab67-4176-afef-bb647363736c.png)
-
-关于 `Fp16OptimizerHook` 的使用请阅读[如何节省显存消耗](TODO)。
-
-`GradientCumulativeOptimizerHook` 用于节省显存，即通过指定梯度累积的次数，实现反向传播多次才更新参数，常常用于显存不足但希望用较大的 batch size 训练模型。
-
-```python
-# cumulative_iters=4 表示累加参数梯度 4 次才更新一次参数
-optimizer_config = dict(type="GradientCumulativeOptimizerHook", cumulative_iters=4)
+config = dict(type='LoggerHook', out_dir='s3://save_log/', out_suffix=('.json', '.py'), keep_local=True)
 ```
 
 ### ParamSchedulerHook
@@ -367,6 +351,14 @@ config = dict(type='IterTimerHook')
 config = dict(type='DistSamplerSeedHook')
 ```
 
+### EMAHook
+
+`EMAHook` 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
+
+```python
+config = dict(type='EMAHook')
+```
+
 ### EmptyCacheHook
 
 `EmptyCacheHook` 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
@@ -387,6 +379,10 @@ config = dict(type='SyncBuffersHook')
 
 `RuntimeInfoHook` 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
 以便其他无法访问执行器的模块能够获取到这些信息。
+
+```python
+config = dict(type='RuntimeInfoHook')
+```
 
 ## 添加自定义钩子
 
@@ -420,8 +416,8 @@ class CheckInvalidLossHook(Hook):
         """All subclasses should override this method, if they need any
         operations after each training iteration.
 
-         Args:
-             runner (Runner): The runner of the training process.
+        Args:
+            runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (Sequence[dict], optional): Data from dataloader.
                 Defaults to None.

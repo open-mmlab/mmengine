@@ -1,4 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from mmengine.utils.parrots_wrapper import TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
 from .averaged_model import (ExponentialMovingAverage, MomentumAnnealingEMA,
                              StochasticWeightAverage)
 from .base_model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
@@ -15,3 +17,7 @@ __all__ = [
     'merge_dict', 'detect_anomalous_params', 'ModuleList', 'ModuleDict',
     'Sequential'
 ]
+
+if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+    from .wrappers import MMFullyShardedDataParallel  # noqa:F401
+    __all__.append('MMFullyShardedDataParallel')
