@@ -282,33 +282,34 @@ class CheckpointHook(Hook):
         else:
             best_score = runner.message_hub.get_info('best_score')
 
-        if key_score and self.compare_func(key_score, best_score):
-            best_score = key_score
-            runner.message_hub.update_info('best_score', best_score)
+        if not key_score or not self.is_better_than(key_score, best_score):
+            return
 
-            if self.best_ckpt_path and self.file_client.isfile(
-                    self.best_ckpt_path):
-                self.file_client.remove(self.best_ckpt_path)
-                runner.logger.info(
-                    f'The previous best checkpoint {self.best_ckpt_path} '
-                    'was removed')
+        best_score = key_score
+        runner.message_hub.update_info('best_score', best_score)
 
-            best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
-            self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
-                self.out_dir, best_ckpt_name)
-            runner.message_hub.update_info('best_ckpt', self.best_ckpt_path)
-            runner.save_checkpoint(
-                self.out_dir,
-                filename=best_ckpt_name,
-                file_client_args=self.file_client_args,
-                save_optimizer=False,
-                save_param_scheduler=False,
-                by_epoch=False)
+        if self.best_ckpt_path and self.file_client.isfile(
+                self.best_ckpt_path):
+            self.file_client.remove(self.best_ckpt_path)
             runner.logger.info(
-                f'Now best checkpoint is saved as {best_ckpt_name}.')
-            runner.logger.info(
-                f'Best {self.key_indicator} is {best_score:0.4f} '
-                f'at {cur_time} {cur_type}.')
+                f'The previous best checkpoint {self.best_ckpt_path} '
+                'was removed')
+
+        best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
+        self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
+            self.out_dir, best_ckpt_name)
+        runner.message_hub.update_info('best_ckpt', self.best_ckpt_path)
+        runner.save_checkpoint(
+            self.out_dir,
+            filename=best_ckpt_name,
+            file_client_args=self.file_client_args,
+            save_optimizer=False,
+            save_param_scheduler=False,
+            by_epoch=False)
+        runner.logger.info(
+            f'Now best checkpoint is saved as {best_ckpt_name}.')
+        runner.logger.info(f'Best {self.key_indicator} is {best_score:0.4f} '
+                           f'at {cur_time} {cur_type}.')
 
     def _init_rule(self, rule, key_indicator) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score.
@@ -356,7 +357,7 @@ class CheckpointHook(Hook):
         self.rule = rule
         self.key_indicator = key_indicator
         if self.rule is not None:
-            self.compare_func = self.rule_map[self.rule]
+            self.is_better_than = self.rule_map[self.rule]
 
     def after_train_iter(self,
                          runner,
