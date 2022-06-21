@@ -20,10 +20,12 @@
    tutorials/visualizer.md
 
 .. toctree::
-   :maxdepth: 2
-   :caption: API 文档
+   :maxdepth: 1
+   :caption: API Reference
 
-   api.rst
+   mmengine.runner <api/runner>
+   mmengine.hooks <api/hooks>
+   mmengine.evaluator <api/evaluator>
 
 .. toctree::
    :caption: 语言切换

@@ -9,10 +9,12 @@ You can switch between Chinese and English documents in the lower-left corner of
    tutorials/registry.md
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API Reference
 
-   api.rst
+   mmengine.runner <api/runner>
+   mmengine.hooks <api/hooks>
+   mmengine.evaluator <api/evaluator>
 
 .. toctree::
    :caption: Switch Language
