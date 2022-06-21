@@ -44,7 +44,7 @@ EMA
    :nosignatures:
    :template: classtemplate.rst
 
-   xponentialMovingAverage
+   ExponentialMovingAverage
    MomentumAnnealingEMA
    StochasticWeightAverage
 
