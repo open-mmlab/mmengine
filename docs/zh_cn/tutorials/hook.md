@@ -219,23 +219,23 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **默认钩子**
 
-|                     名称                      |             用途              |        优先级        |
-| :-----------------------------------------: | :-------------------------: | :---------------: |
-|     [RuntimeInfoHook](#runtimeinfohook)     |    往 message hub 更新运行时信息    |  VERY_HIGH (10)   |
-|       [IterTimerHook](#itertimerhook)       |           统计迭代耗时            |    NORMAL (50)    |
-| [DistSamplerSeedHook](#distsamplerseedhook) | 确保分布式 Sampler 的 shuffle 生效  |    NORMAL (50)    |
-|          [LoggerHook](#loggerhook)          |            打印日志             | BELOW_NORMAL (60) |
-|  [ParamSchedulerHook](#paramschedulerhook)  | 调用 ParamScheduler 的 step 方法 |     LOW (70)      |
-|      [CheckpointHook](#checkpointhook)      |          按指定间隔保存权重          |   VERY_LOW (90)   |
+|                    名称                     |                用途                |      优先级       |
+| :-----------------------------------------: | :--------------------------------: | :---------------: |
+|     [RuntimeInfoHook](#runtimeinfohook)     |   往 message hub 更新运行时信息    |  VERY_HIGH (10)   |
+|       [IterTimerHook](#itertimerhook)       |            统计迭代耗时            |    NORMAL (50)    |
+| [DistSamplerSeedHook](#distsamplerseedhook) | 确保分布式 Sampler 的 shuffle 生效 |    NORMAL (50)    |
+|          [LoggerHook](#loggerhook)          |              打印日志              | BELOW_NORMAL (60) |
+|  [ParamSchedulerHook](#paramschedulerhook)  |  调用 ParamScheduler 的 step 方法  |     LOW (70)      |
+|      [CheckpointHook](#checkpointhook)      |         按指定间隔保存权重         |   VERY_LOW (90)   |
 
 **自定义钩子**
 
-|                 名称                  |        用途         |     优先级      |
-| :---------------------------------: | :---------------: | :----------: |
-|         [EMAHook](#emahook)         |    模型参数指数滑动平均     | NORMAL (50)  |
+|                名称                 |         用途          |    优先级    |
+| :---------------------------------: | :-------------------: | :----------: |
+|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50)  |
 |  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50)  |
-| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer    | NORMAL (50)  |
-|       NaiveVisualizationHook        |        可视化        | LOWEST (100) |
+| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50)  |
+|       NaiveVisualizationHook        |        可视化         | LOWEST (100) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
