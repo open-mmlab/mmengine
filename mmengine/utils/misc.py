@@ -499,6 +499,7 @@ def has_batch_norm(model: nn.Module) -> bool:
 
 class RemoveAssignFromAST(ast.NodeTransformer):
     """Remove Assign node if the target's name match the key.
+
     Args:
         key (str): The target name of the Assign node.
     """

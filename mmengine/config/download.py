@@ -25,7 +25,7 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
         >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco',
         >>>                  pretrained=True)
         >>> # Equivalent to
-        >>> Config.fromfile('/path/tofaster_rcnn_r50_fpn_1x_coco.py')
+        >>> Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
         >>> cfg.model_path
         https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 
@@ -55,18 +55,13 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     return cfg
 
 
-def get_model(cfg_path: str,
-              pretrained: bool = False,
-              **kwargs) -> nn.Module:
+def get_model(cfg_path: str, pretrained: bool = False, **kwargs) -> nn.Module:
     """Get built model from external package.
 
     Args:
         cfg_path (str): External relative config path with prefix
             'package::' and without suffix.
         pretrained (bool): Whether to load pretrained model. Defaults to False.
-        suffix (str): Suffix of ``cfg_name``. If cfg_name is a base
-            cfg, the `suffix` will be used to get the absolute config path.
-            Defaults to '.py'.
 
     Returns:
         nn.Module: Built model.
@@ -75,7 +70,7 @@ def get_model(cfg_path: str,
     package = cfg_path.split('::')[0]
 
     models_module = importlib.import_module(f'{package}.utils')
-    models_module.register_all_modules()
+    models_module.register_all_modules()  # type: ignore
     with DefaultScope.overwrite_default_scope(package):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:

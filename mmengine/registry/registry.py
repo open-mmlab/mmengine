@@ -3,11 +3,11 @@ import inspect
 import sys
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
 from importlib import import_module
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ..config import Config, ConfigDict
-from ..utils import ManagerMixin, is_seq_of, is_installed
+from ..utils import ManagerMixin, is_installed, is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -507,20 +507,23 @@ class Registry:
             >>> cfg = dict(type='ResNet', depth=50)
             >>> model = MODELS.build(cfg)
         """
+        registry: Optional['Registry']
         with DefaultScope.overwrite_default_scope(cfg.pop('_scope_', None)):
             # get the global default scope
             default_scope = DefaultScope.get_current_instance()
-            if default_scope is not None:
+            if default_scope is None:
+                registry = self
+            elif default_scope.scope_name is None:
+                registry = self
+            else:
                 scope_name = default_scope.scope_name
                 # Check installed external repo.
                 from mmengine.config.collect_meta import PKG2PROJECT
-                assert scope_name in PKG2PROJECT, (
-                    f'scope name should be one of {PKG2PROJECT.keys()}, '
-                    f'but got {default_scope.scope_name}')
-                is_installed(PKG2PROJECT[scope_name])
-                # TODO replace with import from.
-                module = import_module(f'{scope_name}.utils')
-                module.register_all_modules()  # type: ignore
+                if scope_name in PKG2PROJECT:
+                    is_installed(PKG2PROJECT[scope_name])
+                    # TODO replace with import from.
+                    module = import_module(f'{scope_name}.utils')
+                    module.register_all_modules()  # type: ignore
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
@@ -535,8 +538,6 @@ class Registry:
                         f'correct scope, or whether the registry is '
                         f'initialized.')
                     registry = self
-            else:
-                registry = self
             return registry.build_func(cfg, *args, **kwargs, registry=registry)
 
     def _add_child(self, registry: 'Registry') -> None:

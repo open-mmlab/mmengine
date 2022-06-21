@@ -5,24 +5,22 @@ import os
 import os.path as osp
 import platform
 import shutil
-import sys
 import tempfile
 import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
-from importlib import import_module
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
-from mmengine.fileio import dump, load
-from mmengine.utils import (check_file_exist, check_install_package,
-                            get_installed_path, import_modules_from_strings,
-                            RemoveAssignFromAST)
+from mmengine.fileio import dump
+from mmengine.utils import (RemoveAssignFromAST, check_file_exist,
+                            check_install_package, get_installed_path,
+                            import_modules_from_strings)
 from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
                            _get_package_and_cfg_path)
 
@@ -367,7 +365,7 @@ class Config:
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
         if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
-            raise IOError('Only py/yml/yaml/json type are supported now!')
+            raise OSError('Only py/yml/yaml/json type are supported now!')
 
         with tempfile.TemporaryDirectory() as temp_config_dir:
             temp_config_file = tempfile.NamedTemporaryFile(
@@ -389,8 +387,8 @@ class Config:
             cfg_text_list = list()
             for base_cfg_path in Config.parse_base_files(
                     temp_config_file.name):
-                base_cfg_path, scope = Config._get_cfg_path(base_cfg_path,
-                                                            filename)
+                base_cfg_path, scope = Config._get_cfg_path(
+                    base_cfg_path, filename)
                 _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
                 cfg_text_list.append(_cfg_text)
                 duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
@@ -403,7 +401,7 @@ class Config:
 
             if filename.endswith('.py'):
                 cfg_dict = {}
-                with open(temp_config_file.name, 'r') as f:
+                with open(temp_config_file.name) as f:
                     codes = ast.parse(f.read())
                     codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
                 codeobj = compile(codes, '', mode='exec')
@@ -431,7 +429,7 @@ class Config:
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
@@ -940,4 +938,3 @@ class DictAction(Action):
                 key, val = kv.split('=', maxsplit=1)
                 options[key] = self._parse_iterable(val)
         setattr(namespace, self.dest, options)
-
