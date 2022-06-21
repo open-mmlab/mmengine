@@ -4,9 +4,10 @@ import sys
 import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from importlib import import_module
 
 from ..config import Config, ConfigDict
-from ..utils import ManagerMixin, is_seq_of
+from ..utils import ManagerMixin, is_seq_of, is_installed
 from .default_scope import DefaultScope
 
 
@@ -143,11 +144,18 @@ def build_from_cfg(
             f'but got {type(default_args)}')
 
     args = cfg.copy()
-
     if default_args is not None:
         for name, value in default_args.items():
             args.setdefault(name, value)
 
+    # remove scope in cfg.
+    def remove_scope(_args):
+        for value in _args.values():
+            if isinstance(value, dict):
+                value.pop('_scope_', None)
+                remove_scope(value)
+
+    remove_scope(args)
     obj_type = args.pop('type')
     if isinstance(obj_type, str):
         obj_cls = registry.get(obj_type)
@@ -504,6 +512,15 @@ class Registry:
             default_scope = DefaultScope.get_current_instance()
             if default_scope is not None:
                 scope_name = default_scope.scope_name
+                # Check installed external repo.
+                from mmengine.config.collect_meta import PKG2PROJECT
+                assert scope_name in PKG2PROJECT, (
+                    f'scope name should be one of {PKG2PROJECT.keys()}, '
+                    f'but got {default_scope.scope_name}')
+                is_installed(PKG2PROJECT[scope_name])
+                # TODO replace with import from.
+                module = import_module(f'{scope_name}.utils')
+                module.register_all_modules()  # type: ignore
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:

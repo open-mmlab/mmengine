@@ -12,6 +12,8 @@ import pytest
 
 from mmengine import Config, ConfigDict, DictAction
 from mmengine.fileio import dump, load
+from mmengine.utils import is_installed, get_installed_path
+from mmengine.registry import Registry, DefaultScope, MODELS
 
 
 class TestConfig:
@@ -48,7 +50,7 @@ class TestConfig:
         # reserved keys cannot be set in config
         with pytest.raises(
                 KeyError, match='filename is reserved for config '
-                'file'):
+                                'file'):
             Config.fromfile(cfg_file)
 
     def test_fromfile(self):
@@ -540,8 +542,8 @@ class TestConfig:
 
     def _base_variables(self):
         for file in [
-                'py_config/test_base_variables.py',
-                'json_config/test_base.json', 'yaml_config/test_base.yaml'
+            'py_config/test_base_variables.py',
+            'json_config/test_base.json', 'yaml_config/test_base.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -560,9 +562,9 @@ class TestConfig:
 
         # test nested base
         for file in [
-                'py_config/test_base_variables_nested.py',
-                'json_config/test_base_variables_nested.json',
-                'yaml_config/test_base_variables_nested.yaml'
+            'py_config/test_base_variables_nested.py',
+            'json_config/test_base_variables_nested.json',
+            'yaml_config/test_base_variables_nested.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
             cfg_dict = Config._file2dict(cfg_file)[0]
@@ -705,11 +707,52 @@ class TestConfig:
         assert new_cfg._text == cfg._text
 
     def test_get_external_cfg(self):
-        ext_cfg_path = osp.join(self.data_path,
-                       'config/py_config/test_get_config_from_remote.py')
-        cfg_path = osp.join(self.data_path,
-                           'config/py_config/faster_rcnn_r50_fpn_1x_coco.py')
+        ext_cfg_path = osp.join(
+            self.data_path,
+            'config/py_config/test_get_external_cfg.py')
+        package_path = get_installed_path('mmdet')
+        cfg_path = osp.join(
+            package_path,
+            '.mim',
+            'configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
         ext_cfg = Config.fromfile(ext_cfg_path)
         cfg = Config.fromfile(cfg_path)
         Config._parse_scope(cfg, 'mmdet')
         assert cfg._cfg_dict == ext_cfg._cfg_dict
+
+    @pytest.mark.skipif(
+        not is_installed('mmdet'), reason='mmdet should be installed')
+    def test_build_external_package(self):
+        # Test load base config.
+        ext_cfg_path = osp.join(
+            self.data_path,
+            'config/py_config/test_get_external_cfg.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+
+        LOCAL_MODELS = Registry('local_model', parent=MODELS, scope='test')
+        LOCAL_MODELS.build(ext_cfg.model)
+
+        # Test load non-base config
+        ext_cfg_path = osp.join(
+            self.data_path,
+            'config/py_config/test_get_external_cfg2.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+        LOCAL_MODELS.build(ext_cfg.model)
+
+        # Test override base variable.
+        ext_cfg_path = osp.join(
+            self.data_path,
+            'config/py_config/test_get_external_cfg3.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+
+        @LOCAL_MODELS.register_module()
+        class ToyLoss:
+            pass
+        DefaultScope.get_instance('test1', scope_name='test')
+        model = LOCAL_MODELS.build(ext_cfg.model)
+        assert model.backbone.style == 'pytorch'
+        assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
+        DefaultScope._instance_dict.clear()
+
+
+

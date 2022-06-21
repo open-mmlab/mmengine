@@ -3,25 +3,31 @@ import pytest
 import os.path as osp
 
 from mmengine import get_config, get_model, Config
-from mmengine.utils import is_installed
+from mmengine.utils import is_installed, get_installed_path
 
 data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'data/')
 
 
+# mmdet has a more typical config structure, while mmpose has a complex
+# config structure
 @pytest.mark.skipif(not (is_installed('mmdet') and is_installed('mmpose')),
                     reason='mmdet and mmpose should be installed')
 def test_get_config():
     # Test load base config.
-    base_cfg = get_config('mmdet::_base_/models/fast_rcnn_r50_fpn.py')
+    base_cfg = get_config('mmdet::_base_/models/faster_rcnn_r50_fpn.py')
+    package_path = get_installed_path('mmdet')
     test_base_cfg = Config.fromfile(
-        osp.join(data_path, 'config/py_config/base_faster_rcnn.py'))
+        osp.join(package_path,
+                 '.mim',
+                 'configs/_base_/models/faster_rcnn_r50_fpn.py'))
     assert test_base_cfg._cfg_dict == base_cfg._cfg_dict
 
     # Test load faster_rcnn config
     cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
     test_cfg = Config.fromfile(
-        osp.join(data_path,
-                 'config/py_config/faster_rcnn_r50_fpn_1x_coco.py'))
+        osp.join(package_path,
+                 '.mim',
+                 'configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'))
     assert cfg._cfg_dict == test_cfg._cfg_dict
 
     # Test pretrained
