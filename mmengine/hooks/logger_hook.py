@@ -213,7 +213,7 @@ class LoggerHook(Hook):
             # that validation metric can be logged by epoch rather than
             # by iter. At the same time, scalars related to time should
             # still be logged by iter to avoid messy visualized result.
-            # see details in PR #278
+            # see details in PR #278.
             time_tags = {k: v for k, v in tag.items() if 'time' in k}
             metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
             runner.visualizer.add_scalars(
