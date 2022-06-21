@@ -52,6 +52,8 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
         # config is `osp.join(package_path, cfg_path_prefix, cfg_name)`
         cfg_path = _get_external_cfg_base_path(package_path, cfg_path)
         cfg = Config.fromfile(cfg_path)
+    except Exception as e:
+        raise e
     return cfg
 
 

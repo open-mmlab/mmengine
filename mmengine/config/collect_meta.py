@@ -28,7 +28,8 @@ PKG2PROJECT = {
 
 
 def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
-    """Get target meta information from 'metafile.yml' of external package.
+    """Get target meta information from all 'metafile.yml' defined in `mode-
+    index.yml` of external package.
 
     Args:
         package_path (str): Path of external package.
@@ -55,8 +56,8 @@ def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
     return cfg_dict[cfg_path]
 
 
-def _get_external_cfg_path(package_path: str, cfg_file: str):
-    """Get relative config path from 'metafile.yml' of external package.
+def _get_external_cfg_path(package_path: str, cfg_file: str) -> str:
+    """Get config path of external package.
 
     Args:
         package_path (str): Path of external package.
@@ -72,8 +73,9 @@ def _get_external_cfg_path(package_path: str, cfg_file: str):
     return cfg_path
 
 
-def _get_external_cfg_base_path(package_path: str, cfg_name: str):
-    """ Get base config path from external package.
+def _get_external_cfg_base_path(package_path: str, cfg_name: str) -> str:
+    """Get base config path of external package.
+
     Args:
         package_path (str): Path of external package.
         cfg_name (str): External relative config path with 'package::'.
@@ -96,10 +98,10 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
         Tuple(str, str): Package name and relative config path.
     """
     if re.match(r'\w*::\w*/\w*', cfg_path) is None:
-        raise ValueError('`_parse_external_cfg_path` is used for parse '
-                         'external package, please specify the package name '
-                         'and relative config path, just like '
-                         '`mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco` ')
+        raise ValueError(
+            '`_get_package_and_cfg_path` is used for get external package, '
+            'please specify the package name and relative config path, just '
+            'like `mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py`')
     package_cfg = cfg_path.split('::')
     if len(package_cfg) > 2:
         raise ValueError('`::` should only be used to separate package and '

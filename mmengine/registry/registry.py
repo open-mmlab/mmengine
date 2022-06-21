@@ -511,11 +511,7 @@ class Registry:
         with DefaultScope.overwrite_default_scope(cfg.pop('_scope_', None)):
             # get the global default scope
             default_scope = DefaultScope.get_current_instance()
-            if default_scope is None:
-                registry = self
-            elif default_scope.scope_name is None:
-                registry = self
-            else:
+            if default_scope is not None:
                 scope_name = default_scope.scope_name
                 # Check installed external repo.
                 from mmengine.config.collect_meta import PKG2PROJECT
@@ -538,6 +534,8 @@ class Registry:
                         f'correct scope, or whether the registry is '
                         f'initialized.')
                     registry = self
+            else:
+                registry = self
             return registry.build_func(cfg, *args, **kwargs, registry=registry)
 
     def _add_child(self, registry: 'Registry') -> None:
