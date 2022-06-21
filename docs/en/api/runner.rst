@@ -38,3 +38,23 @@ Loop
    ValLoop
 
    TestLoop
+
+Checkpoints
+----------------
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: classtemplate.rst
+
+   CheckpointLoader
+   find_latest_checkpoint
+   get_deprecated_model_names
+   get_external_models
+   get_mmcls_models
+   get_state_dict
+   get_torchvision_models
+   load_checkpoint
+   load_state_dict
+   save_checkpoint
+   weights_to_cpu
