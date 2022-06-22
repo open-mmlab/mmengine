@@ -103,7 +103,6 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
-        runner.meta = dict(exp_name='retinanet')
         runner.logger = MagicMock()
         logger_hook = LoggerHook()
         logger_hook.after_train_iter(runner, batch_idx=999)

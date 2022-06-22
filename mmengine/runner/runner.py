@@ -396,8 +396,6 @@ class Runner:
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
 
-        self.meta: dict = dict()
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1812,13 +1810,6 @@ class Runner:
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
 
-        if self.meta is None:
-            self.meta = {}
-
-        self.meta.setdefault('hook_msgs', {})
-        # load `last_ckpt`, `best_score`, `best_ckpt`, etc. for hook messages
-        self.meta['hook_msgs'].update(checkpoint['meta'].get('hook_msgs', {}))
-
         # check whether the number of GPU used for current experiment
         # is consistent with resuming from checkpoint
         if 'config' in checkpoint['meta']:
@@ -1958,9 +1949,6 @@ class Runner:
         elif not isinstance(meta, dict):
             raise TypeError(
                 f'meta should be a dict or None, but got {type(meta)}')
-
-        if self.meta is not None:
-            meta.update(self.meta)
 
         if by_epoch:
             # self.epoch increments 1 after

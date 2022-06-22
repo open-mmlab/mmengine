@@ -1682,7 +1682,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 0)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        # self.assertEqual(ckpt['meta']['hook_msgs']['last_ckpt'], path)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
         self.assertIsInstance(ckpt['message_hub'], MessageHub)
