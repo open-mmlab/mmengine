@@ -97,13 +97,15 @@ class Runner:
         val_cfg (dict, optional): A dict to build a validation loop. If it does
             not provide "type" key, :class:`ValLoop` will be used by default.
             If ``val_cfg`` specified, :attr:`val_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_val_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_val_loop` for more details.
         test_cfg (dict, optional): A dict to build a test loop. If it does
             not provide "type" key, :class:`TestLoop` will be used by default.
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_test_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_test_loop` for more details.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -1424,6 +1426,7 @@ class Runner:
                     evaluator=self._val_evaluator))
         else:
             loop = ValLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1465,6 +1468,7 @@ class Runner:
                     evaluator=self._test_evaluator))
         else:
             loop = TestLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
