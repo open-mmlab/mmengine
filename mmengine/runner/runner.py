@@ -3,7 +3,6 @@ import copy
 import os.path as osp
 import platform
 import random
-import resource
 import time
 import warnings
 from collections import OrderedDict
@@ -634,6 +633,7 @@ class Runner:
         # https://github.com/pytorch/pytorch/issues/973
         # set resource limit
         if platform.system() != 'Windows':
+            import resource
             rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
             base_soft_limit = rlimit[0]
             hard_limit = rlimit[1]
@@ -1687,9 +1687,9 @@ class Runner:
         +======================+=========================+
         | RuntimeInfoHook      | VERY_HIGH (10)          |
         +----------------------+-------------------------+
-        | IterTimerHook        | NORMAL (40)             |
+        | IterTimerHook        | NORMAL (50)             |
         +----------------------+-------------------------+
-        | DistSamplerSeedHook  | NORMAL (40)             |
+        | DistSamplerSeedHook  | NORMAL (50)             |
         +----------------------+-------------------------+
         | LoggerHook           | BELOW_NORMAL (60)       |
         +----------------------+-------------------------+
@@ -1716,8 +1716,9 @@ class Runner:
 
             hooks = dict(timer=None)
 
-        The final registered default hooks will be :obj:`OptimizerHook`,
-        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+        The final registered default hooks will be :obj:`RuntimeInfoHook`,
+        :obj:`DistSamplerSeedHook`, :obj:`LoggerHook`,
+        :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
 
         Args:
             hooks (dict[str, Hook or dict], optional): Default hooks or configs
@@ -1726,10 +1727,10 @@ class Runner:
         default_hooks: dict = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
             timer=dict(type='IterTimerHook'),
+            sampler_seed=dict(type='DistSamplerSeedHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
-            sampler_seed=dict(type='DistSamplerSeedHook'),
         )
         if hooks is not None:
             for name, hook in hooks.items():
@@ -1852,6 +1853,8 @@ class Runner:
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
                 'dataset.')
+
+        self.message_hub = checkpoint['message_hub']
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
@@ -1980,7 +1983,8 @@ class Runner:
 
         checkpoint = {
             'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model))
+            'state_dict': weights_to_cpu(get_state_dict(model)),
+            'message_hub': self.message_hub
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
