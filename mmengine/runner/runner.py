@@ -826,11 +826,9 @@ class Runner:
         model = model.to(get_device())
 
         if not self.distributed:
-            warnings.warn(
-                'SyncBN is only supported with distributed training. '
-                'To be compatible with non-distrubuted training, '
-                'we convert SyncBN to BN. Please set `launcher` to '
-                'avoid this error.')
+            self.logger.info(
+                'Distributed training is not used, SyncBN layers '
+                'will be automatically reverted to BN if they are used.')
             model = revert_sync_batchnorm(model)
             return model
 
