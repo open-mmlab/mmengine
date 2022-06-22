@@ -66,6 +66,30 @@ class ToyModel1(ToyModel):
 
 
 @MODELS.register_module()
+class ToySyncBNModel(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 8, 2)
+        self.bn = nn.SyncBatchNorm(8)
+
+    def forward(self, batch_inputs, labels, mode='tensor'):
+        labels = torch.stack(labels)
+        outputs = self.conv(batch_inputs)
+        outputs = self.bn(outputs)
+
+        if mode == 'tensor':
+            return outputs
+        elif mode == 'loss':
+            loss = (labels - outputs).sum()
+            outputs = dict(loss=loss)
+            return outputs
+        elif mode == 'predict':
+            outputs = dict(log_vars=dict(a=1, b=0.5))
+            return outputs
+
+
+@MODELS.register_module()
 class TopGANModel(BaseModel):
 
     def __init__(self):
@@ -683,6 +707,14 @@ class TestRunner(TestCase):
         self.assertFalse(model.initiailzed)
 
     def test_wrap_model(self):
+        # revert sync batchnorm
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_revert_syncbn'
+        cfg.model = dict(type='ToySyncBNModel')
+        runner = Runner.from_cfg(cfg)
+        self.assertIsInstance(runner.model, BaseModel)
+        assert not isinstance(runner.model.bn, nn.SyncBatchNorm)
+
         # custom model wrapper
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_wrap_model'

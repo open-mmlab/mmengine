@@ -37,7 +37,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, set_multi_processing)
+                            is_list_of, revert_sync_batchnorm,
+                            set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -830,6 +831,11 @@ class Runner:
         model = model.to(get_device())
 
         if not self.distributed:
+            self.logger.info(
+                'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+                'layers in the model will be automatically reverted to '
+                'BatchNormXd layers if they are used.')
+            model = revert_sync_batchnorm(model)
             return model
 
         if model_wrapper_cfg is None:
