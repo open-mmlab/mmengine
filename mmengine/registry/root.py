@@ -6,7 +6,7 @@ More datails can be found at
 https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 """
 
-from .registry import Registry, build_runner_from_cfg
+from .registry import Registry, build_model_from_cfg, build_runner_from_cfg
 
 # manage all kinds of runners like `EpochBasedRunner` and `IterBasedRunner`
 RUNNERS = Registry('runner', build_func=build_runner_from_cfg)
@@ -47,7 +47,7 @@ VISUALIZERS = Registry('visualizer')
 VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
-LOG_PROCESSORS = Registry('log_processor')
+LOG_PROCESSORS = Registry('log_processor', build_func=build_model_from_cfg)
 
 # manage optimizer wrapper
 OPTIM_WRAPPERS = Registry('optim_wrapper')
