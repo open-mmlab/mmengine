@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
-from .amp import auto_cast
+from .amp import autocast
 from .base_loop import BaseLoop
 
 
@@ -320,7 +320,7 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        with auto_cast(enabled=self.fp16):
+        with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
@@ -388,7 +388,7 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        with auto_cast(enabled=self.fp16):
+        with autocast(enabled=self.fp16):
             predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(

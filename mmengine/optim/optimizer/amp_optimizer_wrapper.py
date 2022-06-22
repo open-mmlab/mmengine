@@ -120,6 +120,6 @@ class AmpOptimWrapper(OptimWrapper):
         Args:
             model (nn.Module): The training model.
         """
-        from mmengine.runner.amp import auto_cast
-        with super().optim_context(model), auto_cast():
+        from mmengine.runner.amp import autocast
+        with super().optim_context(model), autocast():
             yield

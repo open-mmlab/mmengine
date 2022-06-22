@@ -7,7 +7,7 @@ from mmengine.utils import TORCH_VERSION, digit_version
 
 
 @contextmanager
-def auto_cast(enabled: bool = True, **kwargs):
+def autocast(enabled: bool = True, **kwargs):
     """A wrapper of ``torch.autocast`` and ``toch.cuda.amp.autocast``.
 
     Pytorch 1.6.0 provide ``torch.cuda.amp.autocast`` for running in
@@ -23,27 +23,27 @@ def auto_cast(enabled: bool = True, **kwargs):
     to achieve maximized compatibility of different PyTorch versions.
 
     Note:
-        ``auto_cast`` requires pytorch version >= 1.5.0. If pytorch version
+        ``autocast`` requires pytorch version >= 1.5.0. If pytorch version
         <= 1.10.0 and cuda is not available, it will raise an error with
         ``enabled=True``, since ``torch.cuda.amp.autocast`` only support cuda
         mode.
 
     Examples:
          >>> # case1: 1.10 > Pytorch version >= 1.5.0
-         >>> with auto_cast():
+         >>> with autocast():
          >>>    # run in mixed precision context
          >>>    pass
-         >>> with auto_cast(device_type='cpu')::
+         >>> with autocast(device_type='cpu')::
          >>>    # raise error, torch.cuda.amp.autocast only support cuda mode.
          >>>    pass
          >>> # case2: Pytorch version >= 1.10.0
-         >>> with auto_cast():
+         >>> with autocast():
          >>>    # default cuda mixed precision context
          >>>    pass
-         >>> with auto_cast(device_type='cpu'):
+         >>> with autocast(device_type='cpu'):
          >>>    # cpu mixed precision context
          >>>    pass
-         >>> with auto_cast(
+         >>> with autocast(
          >>>     device_type='cuda', enabled=True, cache_enabled=True):
          >>>    # enable precision context with more specific arguments.
          >>>    pass
@@ -59,12 +59,12 @@ def auto_cast(enabled: bool = True, **kwargs):
         'The minimum pytorch version requirements of mmengine is 1.5.0, but '
         f'got {TORCH_VERSION}')
 
-    if digit_version('1.5.0') <= digit_version(TORCH_VERSION)\
-            < digit_version('1.10.0'):
+    if (digit_version('1.5.0') <= digit_version(TORCH_VERSION) <
+            digit_version('1.10.0')):
         # If pytorch version is between 1.5.0 and 1.10.0, the default value of
         # dtype for `torch.cuda.amp.autocast` is torch.float16.
         assert not kwargs, (
-            f'auto_cast under pytorch {TORCH_VERSION} only accept `enabled` '
+            f'autocast under pytorch {TORCH_VERSION} only accept `enabled` '
             'arguments.')
         if torch.cuda.is_available():
             with torch.cuda.amp.autocast(enabled=enabled):
@@ -75,7 +75,7 @@ def auto_cast(enabled: bool = True, **kwargs):
             else:
                 raise RuntimeError(
                     'If pytorch versions is between 1.5.0 and 1.10, '
-                    '`auto_cast` is only available in gpu mode')
+                    '`autocast` is only available in gpu mode')
 
     elif digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
         if torch.cuda.is_available():

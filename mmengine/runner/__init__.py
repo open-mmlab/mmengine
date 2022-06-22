@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .amp import auto_cast
+from .amp import autocast
 from .base_loop import BaseLoop
 from .checkpoint import (CheckpointLoader, find_latest_checkpoint,
                          get_deprecated_model_names, get_external_models,
@@ -14,5 +14,5 @@ __all__ = [
     'get_external_models', 'get_mmcls_models', 'get_deprecated_model_names',
     'CheckpointLoader', 'load_checkpoint', 'weights_to_cpu', 'get_state_dict',
     'save_checkpoint', 'EpochBasedTrainLoop', 'IterBasedTrainLoop', 'ValLoop',
-    'TestLoop', 'Runner', 'find_latest_checkpoint', 'auto_cast'
+    'TestLoop', 'Runner', 'find_latest_checkpoint', 'autocast'
 ]

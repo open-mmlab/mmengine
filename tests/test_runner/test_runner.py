@@ -1273,7 +1273,7 @@ class TestRunner(TestCase):
         cfg.pop('test_evaluator')
         runner = Runner.from_cfg(cfg)
 
-        # Test default fp32 `auto_cast` context.
+        # Test default fp32 `autocast` context.
         predictions = []
 
         def get_outputs_callback(module, inputs, outputs):
@@ -1284,7 +1284,7 @@ class TestRunner(TestCase):
         self.assertEqual(predictions[0].dtype, torch.float32)
         predictions.clear()
 
-        # Test fp16 `auto_cast` context.
+        # Test fp16 `autocast` context.
         cfg.experiment_name = 'test_val3'
         cfg.val_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
@@ -1327,7 +1327,7 @@ class TestRunner(TestCase):
         cfg.pop('val_evaluator')
         runner = Runner.from_cfg(cfg)
 
-        # Test default fp32 `auto_cast` context.
+        # Test default fp32 `autocast` context.
         predictions = []
 
         def get_outputs_callback(module, inputs, outputs):
@@ -1338,7 +1338,7 @@ class TestRunner(TestCase):
         self.assertEqual(predictions[0].dtype, torch.float32)
         predictions.clear()
 
-        # Test fp16 `auto_cast` context.
+        # Test fp16 `autocast` context.
         cfg.experiment_name = 'test_val3'
         cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
