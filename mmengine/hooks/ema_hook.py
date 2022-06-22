@@ -1,6 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import itertools
 from typing import Dict, Optional
+
+import torch
 
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
@@ -80,6 +83,16 @@ class EMAHook(Hook):
 
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Resume ema parameters from checkpoint."""
+        # Support load checkpoint without ema state dict.
+        if 'ema_state_dict' not in checkpoint['state_dict']:
+            state_dict = checkpoint['state_dict']
+            ema_state_dict = dict()
+            for key, value in state_dict.items():
+                ema_state_dict[f'module.{key}'] = copy.deepcopy(
+                    state_dict[key])
+            ema_state_dict['steps'] = torch.tensor(0, dtype=torch.long)
+            checkpoint['ema_state_dict'] = ema_state_dict
+
         # The original model parameters are actually saved in ema field.
         # swap the weights back to resume ema state.
         self._swap_ema_state_dict(checkpoint)
