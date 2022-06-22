@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import platform
 import random
@@ -836,9 +837,10 @@ class Runner:
                                                   False)
             # Sets the `find_unused_parameters` parameter in
             # torch.nn.parallel.DistributedDataParallel
+            # TODO: may use a more elegant way to get local device ID.
             model = MMDistributedDataParallel(
                 module=model,
-                device_ids=[torch.cuda.current_device()],
+                device_ids=[int(os.environ['LOCAL_RANK'])],
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
@@ -1797,10 +1799,10 @@ class Runner:
         """
         if map_location == 'default':
             if torch.cuda.is_available():
-                device_id = torch.cuda.current_device()
+                device = get_device()
                 checkpoint = self.load_checkpoint(
                     filename,
-                    map_location=lambda storage, loc: storage.cuda(device_id))
+                    map_location=lambda storage, loc: storage.to(device))
             else:
                 checkpoint = self.load_checkpoint(filename)
         else:
