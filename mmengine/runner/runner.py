@@ -1687,9 +1687,9 @@ class Runner:
         +======================+=========================+
         | RuntimeInfoHook      | VERY_HIGH (10)          |
         +----------------------+-------------------------+
-        | IterTimerHook        | NORMAL (40)             |
+        | IterTimerHook        | NORMAL (50)             |
         +----------------------+-------------------------+
-        | DistSamplerSeedHook  | NORMAL (40)             |
+        | DistSamplerSeedHook  | NORMAL (50)             |
         +----------------------+-------------------------+
         | LoggerHook           | BELOW_NORMAL (60)       |
         +----------------------+-------------------------+
@@ -1716,8 +1716,9 @@ class Runner:
 
             hooks = dict(timer=None)
 
-        The final registered default hooks will be :obj:`OptimizerHook`,
-        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+        The final registered default hooks will be :obj:`RuntimeInfoHook`,
+        :obj:`DistSamplerSeedHook`, :obj:`LoggerHook`,
+        :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
 
         Args:
             hooks (dict[str, Hook or dict], optional): Default hooks or configs
@@ -1726,10 +1727,10 @@ class Runner:
         default_hooks: dict = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
             timer=dict(type='IterTimerHook'),
+            sampler_seed=dict(type='DistSamplerSeedHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
-            sampler_seed=dict(type='DistSamplerSeedHook'),
         )
         if hooks is not None:
             for name, hook in hooks.items():
