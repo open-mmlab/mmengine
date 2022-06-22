@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import platform
 import random
-import resource
 import time
 import warnings
 from collections import OrderedDict
@@ -37,7 +37,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, set_multi_processing)
+                            is_list_of, revert_sync_batchnorm,
+                            set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -97,13 +98,15 @@ class Runner:
         val_cfg (dict, optional): A dict to build a validation loop. If it does
             not provide "type" key, :class:`ValLoop` will be used by default.
             If ``val_cfg`` specified, :attr:`val_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_val_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_val_loop` for more details.
         test_cfg (dict, optional): A dict to build a test loop. If it does
             not provide "type" key, :class:`TestLoop` will be used by default.
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_test_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_test_loop` for more details.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -396,8 +399,6 @@ class Runner:
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
 
-        self.meta: dict = dict()
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -458,6 +459,10 @@ class Runner:
     def work_dir(self):
         """str: The working directory to save checkpoints and logs."""
         return self._work_dir
+
+    @property
+    def log_dir(self):
+        return self._log_dir
 
     @property
     def max_epochs(self):
@@ -634,6 +639,7 @@ class Runner:
         # https://github.com/pytorch/pytorch/issues/973
         # set resource limit
         if platform.system() != 'Windows':
+            import resource
             rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
             base_soft_limit = rlimit[0]
             hard_limit = rlimit[1]
@@ -825,6 +831,11 @@ class Runner:
         model = model.to(get_device())
 
         if not self.distributed:
+            self.logger.info(
+                'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+                'layers in the model will be automatically reverted to '
+                'BatchNormXd layers if they are used.')
+            model = revert_sync_batchnorm(model)
             return model
 
         if model_wrapper_cfg is None:
@@ -832,9 +843,10 @@ class Runner:
                                                   False)
             # Sets the `find_unused_parameters` parameter in
             # torch.nn.parallel.DistributedDataParallel
+            # TODO: may use a more elegant way to get local device ID.
             model = MMDistributedDataParallel(
                 module=model,
-                device_ids=[torch.cuda.current_device()],
+                device_ids=[int(os.environ['LOCAL_RANK'])],
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
@@ -1420,6 +1432,7 @@ class Runner:
                     evaluator=self._val_evaluator))
         else:
             loop = ValLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1461,6 +1474,7 @@ class Runner:
                     evaluator=self._test_evaluator))
         else:
             loop = TestLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
@@ -1687,9 +1701,9 @@ class Runner:
         +======================+=========================+
         | RuntimeInfoHook      | VERY_HIGH (10)          |
         +----------------------+-------------------------+
-        | IterTimerHook        | NORMAL (40)             |
+        | IterTimerHook        | NORMAL (50)             |
         +----------------------+-------------------------+
-        | DistSamplerSeedHook  | NORMAL (40)             |
+        | DistSamplerSeedHook  | NORMAL (50)             |
         +----------------------+-------------------------+
         | LoggerHook           | BELOW_NORMAL (60)       |
         +----------------------+-------------------------+
@@ -1716,8 +1730,9 @@ class Runner:
 
             hooks = dict(timer=None)
 
-        The final registered default hooks will be :obj:`OptimizerHook`,
-        :obj:`LoggerHook`, :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
+        The final registered default hooks will be :obj:`RuntimeInfoHook`,
+        :obj:`DistSamplerSeedHook`, :obj:`LoggerHook`,
+        :obj:`ParamSchedulerHook` and :obj:`CheckpointHook`.
 
         Args:
             hooks (dict[str, Hook or dict], optional): Default hooks or configs
@@ -1726,10 +1741,10 @@ class Runner:
         default_hooks: dict = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
             timer=dict(type='IterTimerHook'),
+            sampler_seed=dict(type='DistSamplerSeedHook'),
             logger=dict(type='LoggerHook'),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1),
-            sampler_seed=dict(type='DistSamplerSeedHook'),
         )
         if hooks is not None:
             for name, hook in hooks.items():
@@ -1792,10 +1807,10 @@ class Runner:
         """
         if map_location == 'default':
             if torch.cuda.is_available():
-                device_id = torch.cuda.current_device()
+                device = get_device()
                 checkpoint = self.load_checkpoint(
                     filename,
-                    map_location=lambda storage, loc: storage.cuda(device_id))
+                    map_location=lambda storage, loc: storage.to(device))
             else:
                 checkpoint = self.load_checkpoint(filename)
         else:
@@ -1804,13 +1819,6 @@ class Runner:
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
-
-        if self.meta is None:
-            self.meta = {}
-
-        self.meta.setdefault('hook_msgs', {})
-        # load `last_ckpt`, `best_score`, `best_ckpt`, etc. for hook messages
-        self.meta['hook_msgs'].update(checkpoint['meta'].get('hook_msgs', {}))
 
         # check whether the number of GPU used for current experiment
         # is consistent with resuming from checkpoint
@@ -1852,6 +1860,8 @@ class Runner:
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
                 'dataset.')
+
+        self.message_hub = checkpoint['message_hub']
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
@@ -1950,9 +1960,6 @@ class Runner:
             raise TypeError(
                 f'meta should be a dict or None, but got {type(meta)}')
 
-        if self.meta is not None:
-            meta.update(self.meta)
-
         if by_epoch:
             # self.epoch increments 1 after
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
@@ -1980,7 +1987,8 @@ class Runner:
 
         checkpoint = {
             'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model))
+            'state_dict': weights_to_cpu(get_state_dict(model)),
+            'message_hub': self.message_hub
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:

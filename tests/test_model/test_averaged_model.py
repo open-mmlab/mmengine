@@ -24,7 +24,7 @@ class TestAveragedModel(TestCase):
         averaged_params = [
             torch.zeros_like(param) for param in model.parameters()
         ]
-        n_updates = 10
+        n_updates = 2
         for i in range(n_updates):
             for p, p_avg in zip(model.parameters(), averaged_params):
                 p.detach().add_(torch.randn_like(p))
