@@ -483,8 +483,7 @@ class Config:
                 else:
                     base_files = []
         elif file_format in ('yml', 'yaml', 'json'):
-            import mmengine
-            cfg_dict = mmengine.load(file_path)
+            cfg_dict = load(file_path)
             base_files = cfg_dict.get(BASE_KEY, [])
         else:
             raise TypeError('The config type should be py, json, yaml or '
