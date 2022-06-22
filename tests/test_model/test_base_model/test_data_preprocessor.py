@@ -164,7 +164,7 @@ class TestImgataPreprocessor(TestBaseDataPreprocessor):
             dict(inputs=torch.ones(10, 10))
         ]
         with self.assertRaisesRegex(AssertionError,
-                                    'If the length of mean is'):
+                                    'If the mean has 3 values'):
             data_preprocessor(data)
 
         data = [
@@ -172,7 +172,7 @@ class TestImgataPreprocessor(TestBaseDataPreprocessor):
             dict(inputs=torch.ones(1, 10, 10))
         ]
         with self.assertRaisesRegex(AssertionError,
-                                    'If the length of mean is'):
+                                    'If the mean has 3 values'):
             data_preprocessor(data)
 
         # Test empty `data_sample`
