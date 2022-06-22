@@ -1880,7 +1880,6 @@ class Runner:
 
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
 
-    @master_only
     def load_checkpoint(self,
                         filename: str,
                         map_location: Union[str, Callable] = 'cpu',
