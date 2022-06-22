@@ -833,6 +833,7 @@ class Runner:
                                                   False)
             # Sets the `find_unused_parameters` parameter in
             # torch.nn.parallel.DistributedDataParallel
+            # TODO: may use a more elegant way to get local device ID.
             model = MMDistributedDataParallel(
                 module=model,
                 device_ids=[int(os.environ['LOCAL_RANK'])],
