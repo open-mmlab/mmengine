@@ -2,9 +2,11 @@
 import time
 
 import pytest
+import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict  # type: ignore
-from mmengine.registry import DefaultScope, Registry, build_from_cfg
+from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
+                               build_model_from_cfg)
 from mmengine.utils import ManagerMixin
 
 
@@ -207,10 +209,10 @@ class TestRegistry:
         registries = self._build_registry()
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
 
-        assert DOGS._get_root_registry() is DOGS
-        assert HOUNDS._get_root_registry() is DOGS
-        assert LITTLE_HOUNDS._get_root_registry() is DOGS
-        assert MID_HOUNDS._get_root_registry() is DOGS
+        assert DOGS.get_root_registry() is DOGS
+        assert HOUNDS.get_root_registry() is DOGS
+        assert LITTLE_HOUNDS.get_root_registry() is DOGS
+        assert MID_HOUNDS.get_root_registry() is DOGS
 
     def test_get(self):
         #        Hierarchical Registry
@@ -318,11 +320,11 @@ class TestRegistry:
         registries = self._build_registry()
         DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
 
-        assert DOGS._search_child('hound') is HOUNDS
-        assert DOGS._search_child('not a child') is None
-        assert DOGS._search_child('little_hound') is LITTLE_HOUNDS
-        assert LITTLE_HOUNDS._search_child('hound') is None
-        assert LITTLE_HOUNDS._search_child('mid_hound') is None
+        assert DOGS.search_child('hound') is HOUNDS
+        assert DOGS.search_child('not a child') is None
+        assert DOGS.search_child('little_hound') is LITTLE_HOUNDS
+        assert LITTLE_HOUNDS.search_child('hound') is None
+        assert LITTLE_HOUNDS.search_child('mid_hound') is None
 
     @pytest.mark.parametrize('cfg_type', [dict, ConfigDict, Config])
     def test_build(self, cfg_type):
@@ -552,3 +554,61 @@ def test_build_from_cfg(cfg_type):
     cfg = dict(type='Visualizer', name='visualizer')
     build_from_cfg(cfg, VISUALIZER)
     Visualizer.get_current_instance()
+
+
+def test_build_model_from_cfg():
+    BACKBONES = Registry('backbone', build_func=build_model_from_cfg)
+
+    @BACKBONES.register_module()
+    class ResNet(nn.Module):
+
+        def __init__(self, depth, stages=4):
+            super().__init__()
+            self.depth = depth
+            self.stages = stages
+
+        def forward(self, x):
+            return x
+
+    @BACKBONES.register_module()
+    class ResNeXt(nn.Module):
+
+        def __init__(self, depth, stages=4):
+            super().__init__()
+            self.depth = depth
+            self.stages = stages
+
+        def forward(self, x):
+            return x
+
+    cfg = dict(type='ResNet', depth=50)
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, ResNet)
+    assert model.depth == 50 and model.stages == 4
+
+    cfg = dict(type='ResNeXt', depth=50, stages=3)
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, ResNeXt)
+    assert model.depth == 50 and model.stages == 3
+
+    cfg = [
+        dict(type='ResNet', depth=50),
+        dict(type='ResNeXt', depth=50, stages=3)
+    ]
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, nn.Sequential)
+    assert isinstance(model[0], ResNet)
+    assert model[0].depth == 50 and model[0].stages == 4
+    assert isinstance(model[1], ResNeXt)
+    assert model[1].depth == 50 and model[1].stages == 3
+
+    # test inherit `build_func` from parent
+    NEW_MODELS = Registry('models', parent=BACKBONES, scope='new')
+    assert NEW_MODELS.build_func is build_model_from_cfg
+
+    # test specify `build_func`
+    def pseudo_build(cfg):
+        return cfg
+
+    NEW_MODELS = Registry('models', parent=BACKBONES, build_func=pseudo_build)
+    assert NEW_MODELS.build_func is pseudo_build
