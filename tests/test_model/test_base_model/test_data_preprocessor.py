@@ -79,10 +79,10 @@ class TestImgataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(data_processor.pad_value, torch.tensor(10))
         self.assertEqual(data_processor.pad_size_divisor, 16)
 
-        with self.assertRaisesRegex(AssertionError, 'The length of mean'):
+        with self.assertRaisesRegex(AssertionError, '`mean` should have'):
             ImgDataPreprocessor(mean=(1, 2), std=(1, 2, 3))
 
-        with self.assertRaisesRegex(AssertionError, 'The length of std'):
+        with self.assertRaisesRegex(AssertionError, '`std` should have'):
             ImgDataPreprocessor(mean=(1, 2, 3), std=(1, 2))
 
         with self.assertRaisesRegex(AssertionError, '`bgr2rgb` and `rgb2bgr`'):
