@@ -598,11 +598,58 @@ class TestConfig:
             }]],
             e='test_base_variables.py')
 
-        cfg_file = osp.join(self.data_path,
-                            'config/py_config/test_modify_base_variables.py')
+        cfg_file = osp.join(self.data_path, 'config/py_config/test_py_base.py')
         cfg = Config.fromfile(cfg_file)
-        assert cfg.item == dict(
-            a=[0, 1, 2], b=dict(c=[3.1, 4.2, 5.3], a=100, d=100))
+        assert isinstance(cfg, Config)
+        assert cfg.filename == cfg_file
+        # cfg.field
+        assert cfg.item1 == [1, 2]
+        assert cfg.item2.a == 0
+        assert cfg.item2.b == [5, 6]
+        assert cfg.item3 is False
+        assert cfg.item4 == 'test'
+        assert cfg.item5 == dict(a=0, b=1)
+        assert cfg.item6 == [dict(c=0), dict(b=1)]
+        assert cfg.item7 == dict(a=[0, 1, 2], b=dict(c=[3.1, 4.2, 5.3]))
+        assert cfg.item8 == 'test_py_base.py'
+        assert cfg.item9 == 3.1
+        assert cfg.item10 == 4.2
+        assert cfg.item11 == 5.3
+
+        # test nested base
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_py_nested_path.py')
+        cfg = Config.fromfile(cfg_file)
+        assert isinstance(cfg, Config)
+        assert cfg.filename == cfg_file
+        # cfg.field
+        assert cfg.item1 == [1, 2]
+        assert cfg.item2.a == 0
+        assert cfg.item2.b == [5, 6]
+        assert cfg.item3 is False
+        assert cfg.item4 == 'test'
+        assert cfg.item5 == dict(a=0, b=1)
+        assert cfg.item6 == [dict(c=0), dict(b=1)]
+        assert cfg.item7 == dict(a=[0, 1, 2], b=dict(c=[3.1, 4.2, 5.3]))
+        assert cfg.item8 == 'test_py_base.py'
+        assert cfg.item9 == 3.1
+        assert cfg.item10 == 4.2
+        assert cfg.item11 == 5.3
+        assert cfg.item12 == 'test_py_base.py'
+        assert cfg.item13 == 3.1
+        assert cfg.item14 == [1, 2]
+        assert cfg.item15 == dict(
+            a=dict(b=dict(a=0, b=[5, 6])),
+            b=[False],
+            c=['test'],
+            d=[[{
+                'e': 0
+            }], [{
+                'c': 0
+            }, {
+                'b': 1
+            }]],
+            e=[1, 2])
 
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
