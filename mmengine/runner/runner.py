@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import platform
 import random
@@ -834,7 +835,7 @@ class Runner:
             # torch.nn.parallel.DistributedDataParallel
             model = MMDistributedDataParallel(
                 module=model,
-                device_ids=[torch.cuda.current_device()],
+                device_ids=[int(os.environ['LOCAL_RANK'])],
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
