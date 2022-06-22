@@ -32,7 +32,11 @@
    mmengine.evaluator <api/evaluator>
    mmengine.data <api/data>
    mmengine.dataset <api/dataset>
+   mmengine.device <api/device>
+   mmengine.logging <api/logging>
+   mmengine.fileio <api/fileio>
    mmengine.dist <api/dist>
+   mmengine.utils <api/utils>
 
 .. toctree::
    :caption: 语言切换

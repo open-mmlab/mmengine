@@ -10,10 +10,13 @@ Evaluator
 ----------------
 
 .. autoclass:: Evaluator
+   :members:
 
 Metric
 ----------------
 
 .. autoclass:: BaseMetric
+   :members:
 
 .. autoclass:: DumpResults
+   :members:

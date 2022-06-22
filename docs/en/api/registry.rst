@@ -7,8 +7,10 @@ mmengine.registry
 .. currentmodule:: mmengine.registry
 
 .. autoclass:: Registry
+   :members:
 
 .. autoclass:: DefaultScope
+   :members:
 
 .. autofunction:: build_from_cfg
 
