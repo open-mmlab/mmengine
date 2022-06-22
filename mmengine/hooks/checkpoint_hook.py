@@ -293,7 +293,7 @@ class CheckpointHook(Hook):
             self.file_client.remove(self.best_ckpt_path)
             runner.logger.info(
                 f'The previous best checkpoint {self.best_ckpt_path} '
-                'was removed')
+                'is removed')
 
         best_ckpt_name = f'best_{self.key_indicator}_{ckpt_filename}'
         self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
@@ -307,9 +307,8 @@ class CheckpointHook(Hook):
             save_param_scheduler=False,
             by_epoch=False)
         runner.logger.info(
-            f'Now best checkpoint is saved as {best_ckpt_name}.')
-        runner.logger.info(f'Best {self.key_indicator} is {best_score:0.4f} '
-                           f'at {cur_time} {cur_type}.')
+            f'The best checkpoint with {best_score:0.4f} {self.key_indicator} '
+            f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')
 
     def _init_rule(self, rule, key_indicator) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score.
@@ -332,7 +331,7 @@ class CheckpointHook(Hook):
         """
 
         if rule not in self.rule_map and rule is not None:
-            raise KeyError(f'rule must be greater, less or None, '
+            raise KeyError('rule must be greater, less or None, '
                            f'but got {rule}.')
 
         if rule is None and key_indicator != 'auto':
