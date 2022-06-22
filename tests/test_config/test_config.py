@@ -598,6 +598,12 @@ class TestConfig:
             }]],
             e='test_base_variables.py')
 
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_modify_base_variables.py')
+        cfg = Config.fromfile(cfg_file)
+        assert cfg.item == dict(
+            a=[0, 1, 2], b=dict(c=[3.1, 4.2, 5.3], a=100, d=100))
+
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_recursive_bases.py')
@@ -617,10 +623,10 @@ class TestConfig:
         assert cfg_dict['item2'] == dict(a=0, b=0)
         assert cfg_dict['item3'] is True
         assert cfg_dict['item4'] == 'test'
-        assert '_delete_' not in cfg_dict['item2']
+        assert '_delete_' not in cfg_dict['item1']
 
         assert type(cfg_dict['item1']) == ConfigDict
-        assert type(cfg_dict['item2']) == dict
+        assert type(cfg_dict['item2']) == ConfigDict
 
     def _merge_intermediate_variable(self):
 
