@@ -47,7 +47,8 @@ class LogProcessor:
             - For those statistic methods with the ``window_size`` argument,
               if ``by_epoch`` is set to False, ``windows_size`` should not be
               `epoch` to statistics log value by epoch.
-        significant_digit (int): The significant digit of logging message.
+        num_digits (int): The number of significant digit shown in the
+            logging message.
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -94,11 +95,11 @@ class LogProcessor:
                  window_size=10,
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
-                 significant_digit: int = 4):
+                 num_digits: int = 4):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
-        self.significant_digit = significant_digit
+        self.num_digits = num_digits
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -129,8 +130,7 @@ class LogProcessor:
         for key, value in tag.items():
             if key.endswith('lr'):
                 log_tag.pop(key)
-                lr_str_list.append(f'{key}: '
-                                   f'{value:.{self.significant_digit}e}')
+                lr_str_list.append(f'{key}: ' f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
         # Format log header.
         # by_epoch == True
@@ -163,9 +163,9 @@ class LogProcessor:
             eta = runner.message_hub.get_info('eta')
             eta_str = str(datetime.timedelta(seconds=int(eta)))
             log_str += f'eta: {eta_str}  '
-            log_str += (f'time: {tag["time"]:.{self.significant_digit}f}  '
+            log_str += (f'time: {tag["time"]:.{self.num_digits}f}  '
                         f'data_time: '
-                        f'{tag["data_time"]:.{self.significant_digit}f}  ')
+                        f'{tag["data_time"]:.{self.num_digits}f}  ')
             # Pop recorded keys
             log_tag.pop('time')
             log_tag.pop('data_time')
@@ -180,7 +180,7 @@ class LogProcessor:
                 if mode == 'val' and not name.startswith('val/loss'):
                     continue
                 if isinstance(val, float):
-                    val = f'{val:.{self.significant_digit}f}'
+                    val = f'{val:.{self.num_digits}f}'
                 log_items.append(f'{name}: {val}')
             log_str += '  '.join(log_items)
         return tag, log_str
@@ -233,7 +233,7 @@ class LogProcessor:
             if name in ('time', 'data_time'):
                 continue
             if isinstance(val, float):
-                val = f'{val:.{self.significant_digit}f}'
+                val = f'{val:.{self.num_digits}f}'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
         return tag, log_str
