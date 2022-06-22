@@ -528,10 +528,16 @@ class Registry:
 
         return None
 
-    def build(self, cfg, *args, **kwargs) -> Any:
+    def build(self, cfg: dict, *args, **kwargs) -> Any:
         """Build an instance.
 
         Build an instance by calling :attr:`build_func`.
+
+        Args:
+            cfg (dict): Config dict needs to be built.
+
+        Returns:
+            Any: The constructed object.
 
         Examples:
             >>> from mmengine import Registry
