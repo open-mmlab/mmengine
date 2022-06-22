@@ -827,8 +827,9 @@ class Runner:
 
         if not self.distributed:
             self.logger.info(
-                'Distributed training is not used, SyncBN layers '
-                'will be automatically reverted to BN if they are used.')
+                'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+                'layers in the model will be automatically reverted to '
+                'BatchNormXd layers if they are used.')
             model = revert_sync_batchnorm(model)
             return model
 
