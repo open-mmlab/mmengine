@@ -17,7 +17,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
-from mmengine.fileio import dump
+from mmengine.fileio import dump, load
 from mmengine.utils import (RemoveAssignFromAST, check_file_exist,
                             check_install_package, get_installed_path,
                             import_modules_from_strings)
@@ -417,8 +417,7 @@ class Config:
                 codeobj = compile(codes, '', mode='exec')
                 eval(codeobj, {'_base_': base_cfg_dict}, cfg_dict)
             elif filename.endswith(('.yml', '.yaml', '.json')):
-                import mmcv
-                cfg_dict = mmcv.load(temp_config_file.name)
+                cfg_dict = load(temp_config_file.name)
             # close temp file
             for key, value in list(cfg_dict.items()):
                 if isinstance(value, (types.FunctionType, types.ModuleType)):

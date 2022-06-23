@@ -192,7 +192,7 @@ def build_from_cfg(
                 is_installed(PKG2PROJECT[scope_name])
                 # TODO replace with import from.
                 module = import_module(f'{scope_name}.utils')
-                module.register_all_modules()  # type: ignore
+                module.register_all_modules()  # type: ignore # noqa: E501
 
             root = registry.get_root_registry()
             _registry = root.search_child(scope_name)
