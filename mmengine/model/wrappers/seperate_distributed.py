@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.data import BaseDataElement
+from mmengine.device.utils import get_device
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
 from .distributed import MMDistributedDataParallel
@@ -42,17 +43,18 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
     def __init__(self, module: nn.Module, *args, **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
+        device = get_device()
         # Wrap the submodule with parameters of `self.module` to
         # `MMDistributedDataParallel`
         for name, _module in module._modules.items():
             # module without parameters.
             if next(_module.parameters(), None) is None:
-                _module = _module.cuda()
+                _module = _module.to(device)
             elif all(not p.requires_grad for p in module.parameters()):
-                _module = _module.cuda()
+                _module = _module.to(device)
             else:
                 _module = MMDistributedDataParallel(
-                    module=_module.cuda(), *args, **kwargs)
+                    module=_module.to(device), *args, **kwargs)
             module._modules[name] = _module
 
     def train_step(self, data: List[dict],

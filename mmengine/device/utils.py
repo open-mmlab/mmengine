@@ -37,15 +37,25 @@ def is_mlu_available() -> bool:
     return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
 
 
+def is_mps_available() -> bool:
+    """Return True if mps devices exist.
+
+    It's specialized for mac m1 chips and require torch version 1.12 or higher.
+    """
+    return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+
+
 def get_device() -> str:
     """Returns the currently existing device type.
 
     Returns:
-        str: cuda | mlu | cpu.
+        str: cuda | mlu | mps | cpu.
     """
     if is_cuda_available():
         return 'cuda'
     elif is_mlu_available():
         return 'mlu'
+    elif is_mps_available():
+        return 'mps'
     else:
         return 'cpu'

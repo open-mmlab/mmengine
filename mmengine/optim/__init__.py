@@ -10,7 +10,8 @@ from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         LinearLR, LinearMomentum, LinearParamScheduler,
                         MultiStepLR, MultiStepMomentum,
                         MultiStepParamScheduler, OneCycleLR,
-                        OneCycleParamScheduler, StepLR, StepMomentum,
+                        OneCycleParamScheduler, PolyLR, PolyMomentum,
+                        PolyParamScheduler, StepLR, StepMomentum,
                         StepParamScheduler, _ParamScheduler)
 
 # yapf: enable
@@ -23,5 +24,6 @@ __all__ = [
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
     '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict',
-    'OneCycleParamScheduler', 'OneCycleLR'
+    'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR', 'PolyMomentum',
+    'PolyParamScheduler'
 ]

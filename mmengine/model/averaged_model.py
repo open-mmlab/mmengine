@@ -129,7 +129,7 @@ class StochasticWeightAverage(BaseAveragedModel):
         """
         averaged_param.add_(
             source_param - averaged_param,
-            alpha=1 / (steps // self.interval + 1))
+            alpha=1 / float(steps // self.interval + 1))
 
 
 @MODELS.register_module()
