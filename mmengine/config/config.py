@@ -361,6 +361,16 @@ class Config:
 
     @staticmethod
     def _file2dict(filename, use_predefined_variables=True):
+        """Transform file to variables dictionary.
+
+        Args:
+            filename (str): Name of config file.
+            use_predefined_variables (bool, optional): Whether to use
+                predefined variables. Defaults to True.
+
+        Returns:
+            Tuple[dict, str]: Variables dictionary and text of Config.
+        """
         filename = osp.abspath(osp.expanduser(filename))
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
