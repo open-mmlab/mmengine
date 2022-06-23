@@ -21,6 +21,11 @@ File Client
 
    BaseStorageBackend
    FileClient
+   HardDiskBackend
+   HTTPBackend
+   LmdbBackend
+   MemcachedBackend
+   PetrelBackend
 
 File Handler
 ----------------
