@@ -1806,13 +1806,8 @@ class Runner:
                 Defaults to 'default'.
         """
         if map_location == 'default':
-            if torch.cuda.is_available():
-                device = get_device()
-                checkpoint = self.load_checkpoint(
-                    filename,
-                    map_location=lambda storage, loc: storage.to(device))
-            else:
-                checkpoint = self.load_checkpoint(filename)
+            device = get_device()
+            checkpoint = self.load_checkpoint(filename, map_location=device)
         else:
             checkpoint = self.load_checkpoint(
                 filename, map_location=map_location)
