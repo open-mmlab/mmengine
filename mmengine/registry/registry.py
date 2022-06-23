@@ -307,9 +307,16 @@ class Registry:
         # frame-0: `infer_scope` itself
         # frame-1: `__init__` of `Registry` which calls the `infer_scope`
         # frame-2: Where the `Registry(...)` is called
-        filename = inspect.getmodule(sys._getframe(2)).__name__  # type: ignore
-        split_filename = filename.split('.')
-        return split_filename[0]
+        try:
+            filename = inspect.getmodule(  # type: ignore
+                sys._getframe(2)).__name__
+            split_filename = filename.split('.')
+            scope = split_filename[0]
+        except AttributeError:
+            # use "None" to handle some cases which can not infer the scope
+            # like initializing Registry in interactive mode
+            scope = 'None'
+        return scope
 
     @staticmethod
     def split_scope_key(key: str) -> Tuple[Optional[str], str]:
