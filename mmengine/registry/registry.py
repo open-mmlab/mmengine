@@ -180,7 +180,8 @@ def build_from_cfg(
     # Instance should be built under target scope, if `_scope_` is defined
     # in cfg, current default scope should switch to specified scope
     # temporarily.
-    with DefaultScope.overwrite_default_scope(args.pop('_scope_', None)):
+    scope = args.get('_scope_', None)
+    with DefaultScope.overwrite_default_scope(scope):
         # get the global default scope
         default_scope = DefaultScope.get_current_instance()
         if default_scope is not None:
@@ -210,14 +211,17 @@ def build_from_cfg(
                 registry = _registry
 
         # remove _scope_ defined in cfg.
-        def _remove_scope(cfg_dict):
+        def _remove_scope(cfg_dict, scope):
             if isinstance(cfg_dict, dict):
-                cfg_dict.pop('_scope_', None)
-                [_remove_scope(_value) for _value in cfg_dict.values()]
+                _scope_ = cfg_dict.get('_scope_', None)
+                if _scope_ == scope:
+                    cfg_dict.pop('_scope_')
+                [_remove_scope(_value, scope) for _value in cfg_dict.values()]
             elif isinstance(cfg_dict, (list, tuple)):
-                [_remove_scope(_value) for _value in cfg_dict]
+                [_remove_scope(_value, scope) for _value in cfg_dict]
 
-        _remove_scope(args)
+        if '_scope_' in args:
+            _remove_scope(args, scope)
 
         obj_type = args.pop('type')
         if isinstance(obj_type, str):
