@@ -38,7 +38,10 @@ def is_mlu_available() -> bool:
 
 
 def is_mps_available() -> bool:
-    """Return True if mps devices exist."""
+    """Return True if mps devices exist.
+
+    It's specialized for mac m1 chips and require torch version 1.12 or higher.
+    """
     return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
 
 
