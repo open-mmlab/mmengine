@@ -748,4 +748,4 @@ class TestConfig:
         model = LOCAL_MODELS.build(ext_cfg.model)
         assert model.backbone.style == 'pytorch'
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
-        DefaultScope._instance_dict.clear()
+        DefaultScope._instance_dict.pop('test1')
