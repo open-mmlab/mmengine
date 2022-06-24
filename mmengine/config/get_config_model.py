@@ -76,5 +76,5 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs) -> nn.Module:
     with DefaultScope.overwrite_default_scope(package):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
-            model = mmengine.runner.load_checkpoint(model, cfg.model_path)
+            mmengine.runner.load_checkpoint(model, cfg.model_path)
         return model
