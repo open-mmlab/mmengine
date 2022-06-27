@@ -79,7 +79,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         # Test update params every iteration.
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_counts=1)
         self._mock_method(optim_wrapper)
-        loss = torch.tensor(1.)
+        loss = torch.tensor(1)
         optim_wrapper.update_params(loss)
         self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
         optim_wrapper.step.assert_called_with()
@@ -89,15 +89,15 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_counts=3)
         self._mock_method(optim_wrapper)
         # `iter=0`, accumulate gradient and do not update params.
-        loss = torch.tensor(1.)
+        loss = torch.tensor(1)
         optim_wrapper.update_params(loss)
-        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1.) / 3)
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1) / 3)
         optim_wrapper.step.assert_not_called()
         optim_wrapper.zero_grad.assert_not_called()
 
         # gradient accumulate
         optim_wrapper.update_params(loss)
-        self.assertEqual(optim_wrapper._inner_count, 2.)
+        self.assertEqual(optim_wrapper._inner_count, 2)
 
         # `iter=2`, update params.
         optim_wrapper.update_params(loss)
@@ -110,7 +110,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_not_called()
         optim_wrapper.zero_grad.assert_not_called()
-        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1.) / 3)
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1) / 3)
         self._mock_method(optim_wrapper)
 
         # After calling `initialize_iter_status`, params will be updated at the
@@ -119,7 +119,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_called()
         optim_wrapper.zero_grad.assert_called()
-        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1.))
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
 
     def test_initialize_iter_status(self):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_counts=3)
