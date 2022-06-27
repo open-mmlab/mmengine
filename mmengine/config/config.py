@@ -360,7 +360,8 @@ class Config:
         return cfg
 
     @staticmethod
-    def _file2dict(filename, use_predefined_variables=True):
+    def _file2dict(filename: str,
+                   use_predefined_variables: bool = True) -> Tuple[dict, str]:
         """Transform file to variables dictionary.
 
         Args:
@@ -395,8 +396,7 @@ class Config:
             # Handle base files
             base_cfg_dict = ConfigDict()
             cfg_text_list = list()
-            for base_cfg_path in Config.parse_base_files(
-                    temp_config_file.name):
+            for base_cfg_path in Config._get_base_files(temp_config_file.name):
                 base_cfg_path, scope = Config._get_cfg_path(
                     base_cfg_path, filename)
                 _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
@@ -410,7 +410,7 @@ class Config:
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
-                cfg_dict = {}
+                cfg_dict: dict = {}
                 with open(temp_config_file.name) as f:
                     codes = ast.parse(f.read())
                     codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
@@ -460,14 +460,39 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _parse_scope(cfg_dict, scope):
-        for value in cfg_dict.values():
-            if isinstance(value, dict) and 'type' in value:
-                value['_scope_'] = scope
+    def _parse_scope(cfg: dict, scope: str) -> None:
+        """Recursively add scope to config dict containing ``type`` field.
+
+        If the config dict already has the scope, scope will not be
+        overwritten.
+
+        Args:
+            cfg (dict): Config needs to be parsed with scope.
+            scope (str): scope of external package.
+        """
+        if isinstance(cfg, dict):
+            if 'type' in cfg and '_scope_' not in cfg:
+                cfg['_scope_'] = scope
+            for value in cfg.values():
                 Config._parse_scope(value, scope)
+        elif isinstance(cfg, (tuple, list)):
+            [Config._parse_scope(value, scope) for value in cfg]
+        else:
+            return
 
     @staticmethod
-    def parse_base_files(filename):
+    def _get_base_files(filename: str) -> list:
+        """Get the base config file.
+
+        Args:
+            filename (str): The config file.
+
+        Raises:
+            TypeError: Name of config file.
+
+        Returns:
+            list: A list of base config
+        """
         file_format = filename.partition('.')[-1]
         if file_format == 'py':
             Config._validate_py_syntax(filename)
@@ -480,7 +505,8 @@ class Config:
 
                 base_code = next((c for c in codes if is_base_line(c)), None)
                 if base_code is not None:
-                    base_code = ast.Expression(body=base_code.value)
+                    base_code = ast.Expression(
+                        body=base_code.value)  # type: ignore # noqa: E501
                     base_files = eval(compile(base_code, '', mode='eval'))
                 else:
                     base_files = []

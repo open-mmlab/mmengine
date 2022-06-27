@@ -6,8 +6,4 @@ _base_ = [
     'mmdet::_base_/default_runtime.py'
 ]
 
-backbone = _base_.model.backbone
-backbone.style = 'pytorch'
-_base_.model.roi_head.bbox_head.loss_cls = dict(type='test.ToyLoss')
-
-student = dict(detector=_base_.model)
+custom_hooks = [dict(type='mmdet.DetVisualizationHook')]
