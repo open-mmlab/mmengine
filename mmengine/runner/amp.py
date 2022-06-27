@@ -63,9 +63,12 @@ def autocast(enabled: bool = True, **kwargs):
             digit_version('1.10.0')):
         # If pytorch version is between 1.5.0 and 1.10.0, the default value of
         # dtype for `torch.cuda.amp.autocast` is torch.float16.
-        assert not kwargs, (
-            f'autocast under pytorch {TORCH_VERSION} only accept `enabled` '
-            'arguments.')
+        assert kwargs.pop('device_type', 'cuda') == 'cuda', (
+            'Pytorch version under 1.5.0 only supports running automatic '
+            'mixed training with cuda')
+        assert not kwargs, ('Pytorch version under 1.5.0 should not accept '
+                            'any arguments except for `device_type`')
+
         if torch.cuda.is_available():
             with torch.cuda.amp.autocast(enabled=enabled):
                 yield
@@ -85,7 +88,8 @@ def autocast(enabled: bool = True, **kwargs):
             kwargs.setdefault('device_type', 'cpu')
             # torch.autocast only support `dtype=torch.bfloat16` in
             # pytorch 1.10
-            kwargs.setdefault('dtype', torch.bfloat16)
+        if kwargs['device_type'] == 'cpu':
+            kwargs['dtype'] = torch.bfloat16
 
         with torch.autocast(enabled=enabled, **kwargs):
             yield
