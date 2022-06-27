@@ -82,7 +82,7 @@ def build_model_from_cfg(cfg, registry, default_args=None):
     ``build_from_cfg``, if cfg is a list, a ``nn.Sequential`` will be built.
 
     Args:
-        cfg (dict, list[dict]): The config of modules, is is either a config
+        cfg (dict, list[dict]): The config of modules, which is either a config
             dict or a list of config dicts. If cfg is a list, a
             the built modules will be wrapped with ``nn.Sequential``.
         registry (:obj:`Registry`): A registry the module belongs to.
@@ -90,12 +90,12 @@ def build_model_from_cfg(cfg, registry, default_args=None):
             Defaults to None.
 
     Returns:
-        nn.Module: A built nn module.
+        nn.Module: A built nn.Module.
     """
     from ..model import Sequential
     if isinstance(cfg, list):
         modules = [
-            build_from_cfg(cfg_, registry, default_args) for cfg_ in cfg
+            build_from_cfg(_cfg, registry, default_args) for _cfg in cfg
         ]
         return Sequential(*modules)
     else:
