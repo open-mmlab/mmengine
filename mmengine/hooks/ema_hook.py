@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import itertools
+import warnings
 from typing import Dict, Optional
 
 import torch
@@ -73,7 +74,8 @@ class EMAHook(Hook):
 
     def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """Save ema parameters to checkpoint."""
-        checkpoint['ema_state_dict'] = self.ema_model.state_dict()
+        checkpoint['ema_state_dict'] = self.ema_model.module.state_dict()
+        checkpoint['ema_state_dict']['steps'] = self.ema_model.steps
         # Save ema parameters to the source model's state dict so that we can
         # directly load the averaged model weights for deployment.
         # Swapping the state_dict key-values instead of swapping model
@@ -85,18 +87,22 @@ class EMAHook(Hook):
         """Resume ema parameters from checkpoint."""
         # Support load checkpoint without ema state dict.
         if 'ema_state_dict' not in checkpoint['state_dict']:
+            warnings.warn('There is no `ema_state_dict` in checkpoint. '
+                          '`EMAHook` will make a copy of `state_dict` as the'
+                          'initial `ema_state_dict`')
             state_dict = checkpoint['state_dict']
             ema_state_dict = dict()
             for key, value in state_dict.items():
-                ema_state_dict[f'module.{key}'] = copy.deepcopy(
-                    state_dict[key])
+                ema_state_dict[key] = copy.deepcopy(state_dict[key])
             ema_state_dict['steps'] = torch.tensor(0, dtype=torch.long)
             checkpoint['ema_state_dict'] = ema_state_dict
 
         # The original model parameters are actually saved in ema field.
         # swap the weights back to resume ema state.
         self._swap_ema_state_dict(checkpoint)
-        self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
+        steps = checkpoint['ema_state_dict'].pop('steps')
+        self.ema_model.step = steps
+        self.ema_model.module.load_state_dict(checkpoint['ema_state_dict'])
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
