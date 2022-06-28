@@ -27,7 +27,8 @@ class LogProcessor:
         custom_cfg (list[dict], optional): Contains multiple log config dict,
             in which key means the data source name of log and value means the
             statistic method and corresponding arguments used to count the
-            data source. Defaults to None
+            data source. Defaults to None.
+
             - If custom_cfg is None, all logs will be formatted via default
               methods, such as smoothing loss by default window_size. If
               custom_cfg is defined as a list of config dict, for example:
@@ -35,12 +36,12 @@ class LogProcessor:
               window_size='global')]. It means the log item ``loss`` will be
               counted as global mean and additionally logged as ``global_loss``
               (defined by ``log_name``). If ``log_name`` is not defined in
-               config dict, the original logged key will be overwritten.
+              config dict, the original logged key will be overwritten.
 
             - The original log item cannot be overwritten twice. Here is
               an error example:
               [dict(data_src=loss, method='mean', window_size='global'),
-               dict(data_src=loss, method='mean', window_size='epoch')].
+              dict(data_src=loss, method='mean', window_size='epoch')].
               Both log config dict in custom_cfg do not have ``log_name`` key,
               which means the loss item will be overwritten twice.
 
