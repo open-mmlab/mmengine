@@ -1,11 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import itertools
-import warnings
+import logging
 from typing import Dict, Optional
 
 import torch
 
+from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
 from .hook import DATA_BATCH, Hook
@@ -87,9 +88,10 @@ class EMAHook(Hook):
         """Resume ema parameters from checkpoint."""
         # Support load checkpoint without ema state dict.
         if 'ema_state_dict' not in checkpoint['state_dict']:
-            warnings.warn('There is no `ema_state_dict` in checkpoint. '
-                          '`EMAHook` will make a copy of `state_dict` as the'
-                          'initial `ema_state_dict`')
+            print_log(
+                'There is no `ema_state_dict` in checkpoint. '
+                '`EMAHook` will make a copy of `state_dict` as the '
+                'initial `ema_state_dict`', 'current', logging.WARNING)
             state_dict = checkpoint['state_dict']
             ema_state_dict = dict()
             for key, value in state_dict.items():
