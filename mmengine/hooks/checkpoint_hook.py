@@ -186,8 +186,13 @@ class CheckpointHook(Hook):
             self._save_checkpoint(runner)
 
     def after_val_epoch(self, runner, metrics):
-        if not self.by_epoch:
-            return
+        """Save the checkpoint and synchronize buffers after each evaluation
+        epoch.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            metrics (dict): Evaluation results of all metrics
+        """
         self._save_best_checkpoint(runner, metrics)
 
     def _get_metric_score(self, metrics):
