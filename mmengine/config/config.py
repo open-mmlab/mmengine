@@ -525,8 +525,8 @@ class Config:
 
                 base_code = next((c for c in codes if is_base_line(c)), None)
                 if base_code is not None:
-                    base_code = ast.Expression(
-                        body=base_code.value)  # type: ignore # noqa: E501
+                    base_code = ast.Expression(  # type: ignore
+                        body=base_code.value)  # type: ignore
                     base_files = eval(compile(base_code, '', mode='eval'))
                 else:
                     base_files = []
