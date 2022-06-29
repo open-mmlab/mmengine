@@ -188,6 +188,21 @@ class TestConfig:
         #  overwritten by int
         sys.argv.extend(tmp)
 
+    def test_dict_to_config_dict(self):
+        cfg_dict = dict(
+            a=1, b=dict(c=dict()), d=[dict(e=dict(f=(dict(g=1), [])))])
+        cfg_dict = Config._dict_to_config_dict(cfg_dict)
+        assert isinstance(cfg_dict, ConfigDict)
+        assert isinstance(cfg_dict.a, int)
+        assert isinstance(cfg_dict.b, ConfigDict)
+        assert isinstance(cfg_dict.b.c, ConfigDict)
+        assert isinstance(cfg_dict.d, list)
+        assert isinstance(cfg_dict.d[0], ConfigDict)
+        assert isinstance(cfg_dict.d[0].e, ConfigDict)
+        assert isinstance(cfg_dict.d[0].e.f, tuple)
+        assert isinstance(cfg_dict.d[0].e.f[0], ConfigDict)
+        assert isinstance(cfg_dict.d[0].e.f[1], list)
+
     def test_dump(self, tmp_path):
         file_path = 'config/py_config/test_merge_from_multiple_bases.py'
         cfg_file = osp.join(self.data_path, file_path)

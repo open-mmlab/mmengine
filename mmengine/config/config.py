@@ -405,6 +405,7 @@ class Config:
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
+                _cfg_dict = Config._dict_to_config_dict(_cfg_dict)
                 if scope is not None:
                     Config._parse_scope(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
@@ -458,6 +459,18 @@ class Config:
         cfg_text = '\n'.join(cfg_text_list)
 
         return cfg_dict, cfg_text
+
+    @staticmethod
+    def _dict_to_config_dict(cfg):
+        if isinstance(cfg, dict):
+            cfg = ConfigDict(cfg)
+            for key, value in cfg.items():
+                cfg[key] = Config._dict_to_config_dict(value)
+        elif isinstance(cfg, tuple):
+            cfg = tuple(Config._dict_to_config_dict(_cfg) for _cfg in cfg)
+        elif isinstance(cfg, list):
+            cfg = [Config._dict_to_config_dict(_cfg) for _cfg in cfg]
+        return cfg
 
     @staticmethod
     def _parse_scope(cfg: dict, scope: str) -> None:
