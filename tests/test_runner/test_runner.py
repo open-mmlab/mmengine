@@ -1283,6 +1283,41 @@ class TestRunner(TestCase):
                                    val_batch_idx_targets):
             self.assertEqual(result, target)
 
+        # 5. test dynamic interval in IterBasedTrainLoop
+        max_iters = 12
+        interval = 5
+        dynamic_intervals = [(11, 2)]
+        iter_results = []
+        iter_targets = [5, 10, 12]
+        val_interval_results = []
+        val_interval_targets = [5] * 10 + [2] * 2
+
+        @HOOKS.register_module()
+        class TestDynamicIntervalHook(Hook):
+
+            def before_val(self, runner):
+                iter_results.append(runner.iter)
+
+            def before_train_iter(self, runner, batch_idx, data_batch=None):
+                val_interval_results.append(runner.train_loop.val_interval)
+
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train5'
+        cfg.train_dataloader.sampler = dict(
+            type='DefaultSampler', shuffle=True)
+        cfg.custom_hooks = [dict(type='TestDynamicIntervalHook', priority=50)]
+        cfg.train_cfg = dict(
+            by_epoch=False,
+            max_iters=max_iters,
+            val_interval=interval,
+            dynamic_intervals=dynamic_intervals)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        for result, target, in zip(iter_results, iter_targets):
+            self.assertEqual(result, target)
+        for result, target, in zip(val_interval_results, val_interval_targets):
+            self.assertEqual(result, target)
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'

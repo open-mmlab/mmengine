@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import bisect
 import time
 import warnings
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch.utils.data import DataLoader
@@ -172,14 +173,19 @@ class IterBasedTrainLoop(BaseLoop):
         val_begin (int): The iteration that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1000.
+        dynamic_intervals (List[Tuple[int, int]]): The first element in the tuple
+            is milestone and the second element is interval. The interval is used
+            after the corresponding milestone. Defaults to None.
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 max_iters: int,
-                 val_begin: int = 1,
-                 val_interval: int = 1000) -> None:
+    def __init__(
+            self,
+            runner,
+            dataloader: Union[DataLoader, Dict],
+            max_iters: int,
+            val_begin: int = 1,
+            val_interval: int = 1000,
+            dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
@@ -197,6 +203,11 @@ class IterBasedTrainLoop(BaseLoop):
                 'None.')
         # get the iterator of the dataloader
         self.dataloader_iterator = _InfiniteDataloaderIterator(self.dataloader)
+
+        self.use_dynamic_intervals = dynamic_intervals is not None
+        if self.use_dynamic_intervals:
+            self.dynamic_milestones, self.dynamic_intervals = \
+                self._calc_dynamic_intervals(self.val_interval, dynamic_intervals)
 
     @property
     def max_epochs(self):
@@ -244,6 +255,7 @@ class IterBasedTrainLoop(BaseLoop):
         Args:
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
+        self._decide_interval()
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
@@ -259,6 +271,27 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=outputs)
         self._iter += 1
+
+    def _calc_dynamic_intervals(
+        self, start_interval: int, dynamic_interval_list: List[Tuple[int]]
+    ) -> Tuple[List[int], List[int]]:
+        """Calculate dynamic intervals."""
+        assert is_list_of(dynamic_interval_list, tuple)
+        dynamic_milestones = [0]
+        dynamic_milestones.extend([
+            dynamic_interval[0] for dynamic_interval in dynamic_interval_list
+        ])
+        dynamic_intervals = [start_interval]
+        dynamic_intervals.extend([
+            dynamic_interval[1] for dynamic_interval in dynamic_interval_list
+        ])
+        return dynamic_milestones, dynamic_intervals
+
+    def _decide_interval(self) -> None:
+        """Dynamically modify the ``val_interval``."""
+        if self.use_dynamic_intervals:
+            step = bisect.bisect(self.dynamic_milestones, (self._iter + 1))
+            self.val_interval = self.dynamic_intervals[step - 1]
 
 
 @LOOPS.register_module()
