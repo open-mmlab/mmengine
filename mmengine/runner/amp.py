@@ -16,7 +16,7 @@ def autocast(device_type: Optional[str] = None,
              cache_enabled: Optional[bool] = None):
     """A wrapper of ``torch.autocast`` and ``toch.cuda.amp.autocast``.
 
-    Pytorch 1.6.0 provide ``torch.cuda.amp.autocast`` for running in
+    Pytorch 1.5.0 provide ``torch.cuda.amp.autocast`` for running in
     mixed precision , and update it to ``torch.autocast`` in 1.10.0.
     Both interfaces have different arguments, and ``torch.autocast``
     support running with cpu additionally.
