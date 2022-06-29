@@ -461,7 +461,15 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _dict_to_config_dict(cfg):
+    def _dict_to_config_dict(cfg: dict):
+        """Recursively converts ``dict`` to :obj:`ConfigDict`.
+
+        Args:
+            cfg (dict): Config dict.
+
+        Returns:
+            ConfigDict: Converted dict.
+        """
         if isinstance(cfg, dict):
             cfg = ConfigDict(cfg)
             for key, value in cfg.items():
