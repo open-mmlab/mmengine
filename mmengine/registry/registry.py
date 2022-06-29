@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import logging
 import sys
-import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -32,7 +32,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     Returns:
         object: The constructed runner object.
     """
-    from ..logging.logger import MMLogger
+    from ..logging import print_log
 
     assert isinstance(
         cfg,
@@ -61,11 +61,11 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
 
     try:
         runner = runner_cls.from_cfg(args)  # type: ignore
-        logger: MMLogger = MMLogger.get_current_instance()
-        logger.info(
-            f'An `{runner_cls.__name__}` instance is built '  # type: ignore
-            f'from registry, its implementation can be found in'
-            f'{runner_cls.__module__}')  # type: ignore
+        print_log(
+            f'An `{runner_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+            'registry, its implementation can be found in'
+            f'{runner_cls.__module__}',  # type: ignore
+            logger='current')
         return runner
 
     except Exception as e:
@@ -83,8 +83,8 @@ def build_model_from_cfg(cfg, registry, default_args=None):
 
     Args:
         cfg (dict, list[dict]): The config of modules, which is either a config
-            dict or a list of config dicts. If cfg is a list, a
-            the built modules will be wrapped with ``nn.Sequential``.
+            dict or a list of config dicts. If cfg is a list, the built
+            modules will be wrapped with ``nn.Sequential``.
         registry (:obj:`Registry`): A registry the module belongs to.
         default_args (dict, optional): Default arguments to build the module.
             Defaults to None.
@@ -149,7 +149,7 @@ def build_from_cfg(
         object: The constructed object.
     """
     # Avoid circular import
-    from ..logging.logger import MMLogger
+    from ..logging import print_log
 
     if not isinstance(cfg, (dict, ConfigDict, Config)):
         raise TypeError(
@@ -185,20 +185,23 @@ def build_from_cfg(
         if default_scope is not None:
             scope_name = default_scope.scope_name
             root = registry.get_root_registry()
-            _registry = root.search_child(scope_name)
-            if _registry is None:
-                # if `default_scope` can not be found, fallback to use self
-                warnings.warn(
+            child_registry = root.search_child(scope_name)
+            if child_registry is None:
+                # if `default_scope` can not be found, fallback to argument
+                # `registry`
+                print_log(
                     f'Failed to search registry with scope "{scope_name}" '
                     f'in the "{root.name}" registry tree. '
                     f'As a workaround, the current "{registry.name}" registry '
                     f'in "{registry.scope}" is used to build instance. This '
-                    f'may cause unexpected failure when running the built '
+                    'may cause unexpected failure when running the built '
                     f'modules. Please check whether "{scope_name}" is a '
-                    f'correct scope, or whether the registry is '
-                    f'initialized.')
+                    'correct scope, or whether the registry is '
+                    'initialized.',
+                    logger='current',
+                    level=logging.WARNING)
             else:
-                registry = _registry
+                registry = child_registry
 
         obj_type = args.pop('type')
         if isinstance(obj_type, str):
@@ -226,11 +229,11 @@ def build_from_cfg(
             else:
                 obj = obj_cls(**args)  # type: ignore
 
-            logger: MMLogger = MMLogger.get_current_instance()
-            logger.info(
+            print_log(
                 f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
-                f'registry, its implementation can be found in '
-                f'{obj_cls.__module__}')  # type: ignore
+                'registry, its implementation can be found in '
+                f'{obj_cls.__module__}',  # type: ignore
+                logger='current')
             return obj
 
         except Exception as e:
