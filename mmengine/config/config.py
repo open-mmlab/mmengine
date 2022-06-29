@@ -21,8 +21,8 @@ from mmengine.fileio import dump, load
 from mmengine.utils import (RemoveAssignFromAST, check_file_exist,
                             check_install_package, get_installed_path,
                             import_modules_from_strings)
-from .collect_meta import (_get_external_cfg_base_path, _get_external_cfg_path,
-                           _get_package_and_cfg_path)
+from .utils import (_get_external_cfg_base_path, _get_external_cfg_path,
+                    _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -124,7 +124,6 @@ class Config:
         :"
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
     """
-    _valid_format = ('.py', '.json', '.yaml', '.yml')
 
     def __init__(self,
                  cfg_dict: dict = None,
@@ -552,8 +551,8 @@ class Config:
             filename (str): The config file being parsed.
 
         Returns:
-            Tuple[str, Optional[str]]: The absolute path of `cfg_path` and
-            scope if
+            Tuple[str, str or None]: Path and scope of config. If the config
+            is not an external config, the scope will be `None`.
         """
         if '::' in cfg_path:
             # `cfg_path` startswith '::' means an external config path.

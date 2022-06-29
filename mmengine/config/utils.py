@@ -27,7 +27,7 @@ PKG2PROJECT = {
 }
 
 
-def _get_cfg_meta(package_path: str, cfg_path: str) -> dict:
+def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
     """Get target meta information from all 'metafile.yml' defined in `mode-
     index.yml` of external package.
 
@@ -67,7 +67,7 @@ def _get_external_cfg_path(package_path: str, cfg_file: str) -> str:
         str: Absolute config path from external package.
     """
     cfg_file = cfg_file.split('.')[0]
-    model_cfg = _get_cfg_meta(package_path, cfg_file)
+    model_cfg = _get_cfg_metainfo(package_path, cfg_file)
     cfg_path = osp.join(package_path, model_cfg['Config'])
     check_file_exist(cfg_path)
     return cfg_path
@@ -95,7 +95,7 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
         cfg_path (str): External relative config path with 'package::'.
 
     Returns:
-        Tuple(str, str): Package name and relative config path.
+        Tuple[str, str]: Package name and config path.
     """
     if re.match(r'\w*::\w*/\w*', cfg_path) is None:
         raise ValueError(

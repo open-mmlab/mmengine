@@ -187,7 +187,7 @@ def build_from_cfg(
         if default_scope is not None:
             scope_name = default_scope.scope_name
             # Check installed external repo.
-            from mmengine.config.collect_meta import PKG2PROJECT
+            from mmengine.config.utils import PKG2PROJECT
             if scope_name in PKG2PROJECT:
                 is_installed(PKG2PROJECT[scope_name])
                 # TODO replace with import from.

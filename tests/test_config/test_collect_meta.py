@@ -3,8 +3,8 @@ import os.path
 
 import pytest
 
-from mmengine.config.collect_meta import (_get_external_cfg_base_path,
-                                          _get_package_and_cfg_path)
+from mmengine.config.utils import (_get_external_cfg_base_path,
+                                   _get_package_and_cfg_path)
 
 
 def test_get_external_cfg_base_path(tmp_path):

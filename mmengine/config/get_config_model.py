@@ -7,9 +7,9 @@ import torch.nn as nn
 import mmengine.runner
 from mmengine.registry import MODELS, DefaultScope
 from mmengine.utils import check_install_package, get_installed_path
-from .collect_meta import (_get_cfg_meta, _get_external_cfg_base_path,
-                           _get_package_and_cfg_path)
 from .config import Config
+from .utils import (_get_cfg_metainfo, _get_external_cfg_base_path,
+                    _get_package_and_cfg_path)
 
 
 def get_config(cfg_path: str, pretrained: bool = False) -> Config:
@@ -39,7 +39,7 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     package_path = get_installed_path(package)
     try:
         # Use `cfg_path` to search target config file.
-        cfg_meta = _get_cfg_meta(package_path, cfg_path)
+        cfg_meta = _get_cfg_metainfo(package_path, cfg_path)
         cfg_path = osp.join(package_path, '.mim', cfg_meta['Config'])
         cfg = Config.fromfile(cfg_path)
         if pretrained:
@@ -64,6 +64,7 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs) -> nn.Module:
         cfg_path (str): External relative config path with prefix
             'package::' and without suffix.
         pretrained (bool): Whether to load pretrained model. Defaults to False.
+        kwargs (dict): Default arguments to build model.
 
     Returns:
         nn.Module: Built model.
