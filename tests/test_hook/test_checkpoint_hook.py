@@ -150,18 +150,28 @@ class TestCheckpointHook:
         runner.message_hub = MessageHub.get_instance(
             'test_after_val_epoch_by_epoch_is_false')
 
+        # check best ckpt name and best score
         metrics = {'acc': 0.5, 'map': 0.3}
         eval_hook = CheckpointHook(
             interval=2, by_epoch=False, save_best='acc', rule='greater')
         eval_hook.before_train(runner)
         eval_hook.after_val_epoch(runner, metrics)
+        assert eval_hook.key_indicator == 'acc'
+        assert eval_hook.rule == 'greater'
+        best_ckpt_name = 'best_acc_iter_10.pth'
+        best_ckpt_path = eval_hook.file_client.join_path(
+            eval_hook.out_dir, best_ckpt_name)
+        assert 'best_ckpt' in runner.message_hub.runtime_info and \
+            runner.message_hub.get_info('best_ckpt') == best_ckpt_path
+        assert 'best_score' in runner.message_hub.runtime_info and \
+            runner.message_hub.get_info('best_score') == 0.5
+
+        # check best score updating
         metrics['acc'] = 0.666
         eval_hook.after_val_epoch(runner, metrics)
         best_ckpt_name = 'best_acc_iter_10.pth'
         best_ckpt_path = eval_hook.file_client.join_path(
             eval_hook.out_dir, best_ckpt_name)
-        assert eval_hook.key_indicator == 'acc'
-        assert eval_hook.rule == 'greater'
         assert 'best_ckpt' in runner.message_hub.runtime_info and \
             runner.message_hub.get_info('best_ckpt') == best_ckpt_path
         assert 'best_score' in runner.message_hub.runtime_info and \
