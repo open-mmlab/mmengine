@@ -176,7 +176,7 @@ class IterBasedTrainLoop(BaseLoop):
         dynamic_intervals (List[Tuple[int, int]]): The first element in
             the tuple is milestone and the second element is interval.
             The interval is used after the corresponding milestone.
-            Defaults to None.
+            Defaults to [].
     """
 
     def __init__(self,
