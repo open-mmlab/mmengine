@@ -537,6 +537,9 @@ class TestConfig:
             assert cfg_dict['item8'] == file.split('/')[-1]
             assert cfg_dict['item9'] == dict(a=0)
             assert cfg_dict['item10'] == [3.1, 4.2, 5.3]
+            if file.endswith('py'):
+                assert cfg_dict['item11']
+                assert cfg_dict['item12'] == dict(a=0, b=0)
 
         # test nested base
         for file in [
@@ -560,7 +563,7 @@ class TestConfig:
             assert cfg_dict['item9'] == dict(a=0)
             assert cfg_dict['item10'] == [3.1, 4.2, 5.3]
             assert cfg_dict['item11'] == 'test_base_variables.py'
-            assert cfg_dict['item12'] == dict(a=0)
+            assert cfg_dict['item12'] == dict(a=0, b=0)
             assert cfg_dict['item13'] == [3.1, 4.2, 5.3]
             assert cfg_dict['item14'] == [1, 2]
             assert cfg_dict['item15'] == dict(
