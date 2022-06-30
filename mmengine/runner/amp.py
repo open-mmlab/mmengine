@@ -6,6 +6,7 @@ from typing import Optional
 import torch
 
 from mmengine import print_log
+from mmengine.device import get_device
 from mmengine.utils import TORCH_VERSION, digit_version
 
 
@@ -98,14 +99,8 @@ def autocast(device_type: Optional[str] = None,
     else:
         if cache_enabled is None:
             cache_enabled = torch.is_autocast_cache_enabled()
-        if torch.cuda.is_available():
-            device_type = 'cuda' if device_type is None else device_type
-
-        else:
-            if device_type is not None or device_type != 'cpu':
-                raise ValueError('cuda is not available, device_type must be '
-                                 f'cpu, but got {device_type}')
-            device_type = 'cpu'
+        device = get_device()
+        device_type = device if device_type is None else device_type
 
         if device_type == 'cuda':
             if dtype is None:
@@ -117,11 +112,15 @@ def autocast(device_type: Optional[str] = None,
                     'Current CUDA Device does not support bfloat16. Please '
                     'switch dtype to float16.')
 
-        else:
+        elif device_type == 'cpu':
             if dtype is None:
                 dtype = torch.bfloat16
             assert dtype == torch.bfloat16, (
                 'In CPU autocast, only support `torch.bfloat16` dtype')
+
+        else:
+            # MLU does not need to accept `device_type` argument.
+            dtype = None
 
         with torch.autocast(
                 device_type=device_type,
