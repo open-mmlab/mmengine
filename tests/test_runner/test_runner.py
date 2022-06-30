@@ -20,7 +20,7 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
-from mmengine.model import BaseModel
+from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
@@ -38,8 +38,8 @@ from mmengine.visualization import Visualizer
 @MODELS.register_module()
 class ToyModel(BaseModel):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, data_preprocessor=None):
+        super().__init__(data_preprocessor=data_preprocessor)
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
@@ -291,6 +291,7 @@ class CustomRunner(Runner):
                  test_evaluator=None,
                  default_hooks=None,
                  custom_hooks=None,
+                 preprocess_cfg=None,
                  load_from=None,
                  resume=False,
                  launcher='none',
@@ -360,6 +361,7 @@ class TestRunner(TestCase):
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=True),
                 sampler_seed=dict(type='DistSamplerSeedHook')),
+            preprocess_cfg=None,
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
         )
@@ -687,6 +689,17 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_build_model'
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, ToyModel)
+        self.assertIsInstance(runner.model.data_preprocessor,
+                              BaseDataPreprocessor)
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_preprocess_cfg'
+        cfg.preprocess_cfg = dict(type='ImgDataPreprocessor')
+        runner = Runner.from_cfg(cfg)
+        # preprocess_cfg is passed to used if no `data_preprocessor` in model
+        # config.
+        self.assertIsInstance(runner.model.data_preprocessor,
+                              ImgDataPreprocessor)
 
         # input should be a nn.Module object or dict
         with self.assertRaisesRegex(TypeError, 'model should be'):

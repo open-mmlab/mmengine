@@ -243,6 +243,7 @@ class Runner:
         test_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
+        preprocess_cfg: Union[nn.Module, Dict, None] = None,
         load_from: Optional[str] = None,
         resume: bool = False,
         launcher: str = 'none',
@@ -384,6 +385,9 @@ class Runner:
         self._has_loaded = False
 
         # build a model
+        if isinstance(model, dict) and preprocess_cfg is not None:
+            # Merge the preprocess_cfg to model config.
+            model.setdefault('data_preprocessor', preprocess_cfg)
         self.model = self.build_model(model)
         # wrap model
         self.model = self.wrap_model(
@@ -430,6 +434,7 @@ class Runner:
             test_evaluator=cfg.get('test_evaluator'),
             default_hooks=cfg.get('default_hooks'),
             custom_hooks=cfg.get('custom_hooks'),
+            preprocess_cfg=cfg.get('preprocess_cfg'),
             load_from=cfg.get('load_from'),
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),
