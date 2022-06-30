@@ -4,8 +4,6 @@ import itertools
 import logging
 from typing import Dict, Optional
 
-import torch
-
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
@@ -75,8 +73,7 @@ class EMAHook(Hook):
 
     def before_save_checkpoint(self, runner, checkpoint: dict) -> None:
         """Save ema parameters to checkpoint."""
-        checkpoint['ema_state_dict'] = self.ema_model.module.state_dict()
-        checkpoint['ema_state_dict']['steps'] = self.ema_model.steps
+        checkpoint['ema_state_dict'] = self.ema_model.state_dict()
         # Save ema parameters to the source model's state dict so that we can
         # directly load the averaged model weights for deployment.
         # Swapping the state_dict key-values instead of swapping model
@@ -86,25 +83,21 @@ class EMAHook(Hook):
 
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Resume ema parameters from checkpoint."""
+
+        if 'ema_state_dict' in checkpoint['state_dict']:
+            # The original model parameters are actually saved in ema field.
+            # swap the weights back to resume ema state.
+            self._swap_ema_state_dict(checkpoint)
+            self.ema_model.module.load_state_dict(checkpoint['ema_state_dict'])
+
         # Support load checkpoint without ema state dict.
-        if 'ema_state_dict' not in checkpoint['state_dict']:
+        else:
             print_log(
                 'There is no `ema_state_dict` in checkpoint. '
                 '`EMAHook` will make a copy of `state_dict` as the '
                 'initial `ema_state_dict`', 'current', logging.WARNING)
-            state_dict = checkpoint['state_dict']
-            ema_state_dict = dict()
-            for key, value in state_dict.items():
-                ema_state_dict[key] = copy.deepcopy(state_dict[key])
-            ema_state_dict['steps'] = torch.tensor(0, dtype=torch.long)
-            checkpoint['ema_state_dict'] = ema_state_dict
-
-        # The original model parameters are actually saved in ema field.
-        # swap the weights back to resume ema state.
-        self._swap_ema_state_dict(checkpoint)
-        steps = checkpoint['ema_state_dict'].pop('steps')
-        self.ema_model.step = steps
-        self.ema_model.module.load_state_dict(checkpoint['ema_state_dict'])
+            self.ema_model.module.load_state_dict(
+                copy.deepcopy(checkpoint['state_dict']))
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
