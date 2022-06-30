@@ -9,9 +9,10 @@ from torch.utils.data import DataLoader
 
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
-from mmengine.utils import calc_dynamic_intervals, is_list_of
+from mmengine.utils import is_list_of
 from .amp import autocast
 from .base_loop import BaseLoop
+from .utils import calc_dynamic_intervals
 
 
 @LOOPS.register_module()
@@ -26,7 +27,7 @@ class EpochBasedTrainLoop(BaseLoop):
         val_begin (int): The epoch that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1.
-        dynamic_interval_list (List[Tuple[int, int]], optional): The
+        dynamic_intervals (List[Tuple[int, int]], optional): The
             first element in the tuple is a milestone and the second
             element is a interval. The interval is used after the
             corresponding milestone. Defaults to None.
@@ -189,7 +190,7 @@ class IterBasedTrainLoop(BaseLoop):
         val_begin (int): The iteration that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1000.
-        dynamic_interval_list (List[Tuple[int, int]], optional): The
+        dynamic_intervals (List[Tuple[int, int]], optional): The
             first element in the tuple is a milestone and the second
             element is a interval. The interval is used after the
             corresponding milestone. Defaults to None.
