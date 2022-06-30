@@ -413,6 +413,49 @@ class TestRegistry:
         assert isinstance(dog.friend, YourSamoyed)
         assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
+    def test_get_registry_by_scope(self):
+        DOGS = Registry('dogs')
+        HOUNDS = Registry('hounds', scope='hound', parent=DOGS)
+        SAMOYEDS = Registry('samoyeds', scope='samoyed', parent=DOGS)
+        CHIHUAHUA = Registry('chihuahuas', scope='chihuahua', parent=DOGS)
+
+        #                         Hierarchical Registry
+        #                                 DOGS
+        #               ___________________|___________________
+        #              |                   |                   |
+        #     HOUNDS (hound)         SAMOYEDS (samoyed) CHIHUAHUA (chihuahua)
+
+        DefaultScope.get_instance(
+            f'scope_{time.time()}', scope_name='chihuahua')
+        assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
+
+        # Test switch scope and get target registry.
+        with CHIHUAHUA.get_registry_by_scope(scope='hound') as \
+                registry:
+            assert DefaultScope.get_current_instance().scope_name == 'hound'
+            assert id(registry) == id(HOUNDS)
+
+        # Test nested-ly switch scope.
+        with CHIHUAHUA.get_registry_by_scope(scope='samoyed') as \
+                samoyed_registry:
+            assert DefaultScope.get_current_instance().scope_name == 'samoyed'
+            assert id(samoyed_registry) == id(SAMOYEDS)
+
+            with CHIHUAHUA.get_registry_by_scope(scope='hound') as \
+                    hound_registry:
+                assert DefaultScope.get_current_instance().scope_name == \
+                       'hound'
+                assert id(hound_registry) == id(HOUNDS)
+
+        # Test switch to original scope
+        assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
+
+        # Test get an unknown registry.
+        with CHIHUAHUA.get_registry_by_scope(scope='unknown') as \
+                registry:
+            assert id(registry) == id(CHIHUAHUA)
+            assert DefaultScope.get_current_instance().scope_name == 'unknown'
+
     def test_repr(self):
         CATS = Registry('cat')
 

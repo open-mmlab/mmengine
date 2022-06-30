@@ -396,13 +396,58 @@ class Registry:
 
     @contextmanager
     def get_registry_by_scope(self, scope: str) -> Generator:
-        """Get the corresponding registry of the target scope.
+        """Temporarily switch default scope to the target scope, and get the
+        corresponding registry.
 
-        If the registry of the corresponding scope exists, return the
-        registry, otherwise return the current itself.
+        If the registry of the corresponding scope exists, yield the
+        registry, otherwise yield the current itself.
 
         Args:
             scope (str): The target scope.
+
+        Examples:
+        >>> from mmengine import Registry, DefaultScope
+        >>> from mmengine.registry import MODELS
+        >>> import time
+        >>> # External Registry
+        >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
+        >>>     parent=MODELS)
+        >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
+        >>>     parent=MODELS)
+        >>> # Local Registry
+        >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
+        >>>     parent=MODELS)
+        >>>
+        >>> # Initiate DefaultScope
+        >>> DefaultScope.get_instance(f'scope_{time.time()}',
+        >>>     scope_name='custom')
+        >>> # Check default scope
+        >>> DefaultScope.get_current_instance().scope_name
+        custom
+        >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
+        >>> with CUSTOM_MODELS.get_registry_by_scope(scope='mmcls') as \
+        >>>     registry:
+        >>>     DefaultScope.get_current_instance().scope_name
+        mmcls
+        >>>     registry.scope
+        mmcls
+        >>> # Nested switch scope
+        >>> with CUSTOM_MODELS.get_registry_by_scope(scope='mmdet') as \
+        >>>     mmdet_registry:
+        >>>     DefaultScope.get_current_instance().scope_name
+        mmdet
+        >>>     mmdet_registry.scope
+        mmdet
+        >>>     with CUSTOM_MODELS.get_registry_by_scope(scope='mmcls') as \
+        >>>         mmcls_registry:
+        >>>         DefaultScope.get_current_instance().scope_name
+        mmcls
+        >>>         mmcls_registry.scope
+        mmcls
+        >>>
+        >>> # Check switch back to original scope.
+        >>> DefaultScope.get_current_instance().scope_name
+        custom
         """
         from ..logging import print_log
 
