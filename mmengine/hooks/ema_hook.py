@@ -88,7 +88,7 @@ class EMAHook(Hook):
             # The original model parameters are actually saved in ema field.
             # swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
-            self.ema_model.module.load_state_dict(checkpoint['ema_state_dict'])
+            self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
 
         # Support load checkpoint without ema state dict.
         else:
