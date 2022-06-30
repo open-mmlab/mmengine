@@ -101,6 +101,13 @@ def autocast(device_type: Optional[str] = None,
         if torch.cuda.is_available():
             device_type = 'cuda' if device_type is None else device_type
 
+        else:
+            if device_type is not None or device_type != 'cpu':
+                raise ValueError('cuda is not available, device_type must be '
+                                 f'cpu, but got {device_type}')
+            device_type = 'cpu'
+
+        if device_type == 'cuda':
             if dtype is None:
                 dtype = torch.get_autocast_gpu_dtype()
 
@@ -109,17 +116,12 @@ def autocast(device_type: Optional[str] = None,
                 raise RuntimeError(
                     'Current CUDA Device does not support bfloat16. Please '
                     'switch dtype to float16.')
+
         else:
             if dtype is None:
-                dtype = torch.get_autocast_cpu_dtype()
-
+                dtype = torch.bfloat16
             assert dtype == torch.bfloat16, (
                 'In CPU autocast, only support `torch.bfloat16` dtype')
-
-            if device_type is not None or device_type != 'cpu':
-                raise ValueError('cuda is not available, device_type must be '
-                                 f'cpu, but got {device_type}')
-            device_type = 'cpu'
 
         with torch.autocast(
                 device_type=device_type,
