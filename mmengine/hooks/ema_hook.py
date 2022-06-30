@@ -84,7 +84,7 @@ class EMAHook(Hook):
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Resume ema parameters from checkpoint."""
 
-        if 'ema_state_dict' in checkpoint['state_dict']:
+        if 'ema_state_dict' in checkpoint:
             # The original model parameters are actually saved in ema field.
             # swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
