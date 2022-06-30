@@ -196,7 +196,7 @@ class TestRegistry:
 
         return registries
 
-    def test_get_root_registry(self):
+    def test__get_root_registry(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
@@ -209,10 +209,10 @@ class TestRegistry:
         registries = self._build_registry()
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS = registries[:4]
 
-        assert DOGS.get_root_registry() is DOGS
-        assert HOUNDS.get_root_registry() is DOGS
-        assert LITTLE_HOUNDS.get_root_registry() is DOGS
-        assert MID_HOUNDS.get_root_registry() is DOGS
+        assert DOGS._get_root_registry() is DOGS
+        assert HOUNDS._get_root_registry() is DOGS
+        assert LITTLE_HOUNDS._get_root_registry() is DOGS
+        assert MID_HOUNDS._get_root_registry() is DOGS
 
     def test_get(self):
         #        Hierarchical Registry
@@ -307,7 +307,7 @@ class TestRegistry:
         assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
 
-    def test_search_child(self):
+    def test__search_child(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
@@ -320,11 +320,11 @@ class TestRegistry:
         registries = self._build_registry()
         DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
 
-        assert DOGS.search_child('hound') is HOUNDS
-        assert DOGS.search_child('not a child') is None
-        assert DOGS.search_child('little_hound') is LITTLE_HOUNDS
-        assert LITTLE_HOUNDS.search_child('hound') is None
-        assert LITTLE_HOUNDS.search_child('mid_hound') is None
+        assert DOGS._search_child('hound') is HOUNDS
+        assert DOGS._search_child('not a child') is None
+        assert DOGS._search_child('little_hound') is LITTLE_HOUNDS
+        assert LITTLE_HOUNDS._search_child('hound') is None
+        assert LITTLE_HOUNDS._search_child('mid_hound') is None
 
     @pytest.mark.parametrize('cfg_type', [dict, ConfigDict, Config])
     def test_build(self, cfg_type):
