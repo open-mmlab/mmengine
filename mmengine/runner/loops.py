@@ -87,6 +87,7 @@ class EpochBasedTrainLoop(BaseLoop):
         while self._epoch < self._max_epochs:
             self.run_epoch()
 
+            self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._epoch >= self.val_begin
                     and self._epoch % self.val_interval == 0):
@@ -96,7 +97,6 @@ class EpochBasedTrainLoop(BaseLoop):
 
     def run_epoch(self) -> None:
         """Iterate one epoch."""
-        self._decide_current_val_interval()
         self.runner.call_hook('before_train_epoch')
         self.runner.model.train()
         for idx, data_batch in enumerate(self.dataloader):
@@ -257,6 +257,7 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch = next(self.dataloader_iterator)
             self.run_iter(data_batch)
 
+            self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
                     and self._iter % self.val_interval == 0):
@@ -271,7 +272,6 @@ class IterBasedTrainLoop(BaseLoop):
         Args:
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
-        self._decide_current_val_interval()
         self.runner.call_hook(
             'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
