@@ -119,7 +119,17 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.update_params(loss)
         optim_wrapper.step.assert_called()
         optim_wrapper.zero_grad.assert_called()
-        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1))
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1.))
+        self._mock_method(optim_wrapper)
+
+        # optim_wrapper.step should not be called at iteration 97 98, and the
+        # loss factor should be 3 at iteration 99.
+        optim_wrapper.initialize_count_status(self.model, 96, 100)
+        for _ in range(2):
+            optim_wrapper.update_params(loss)
+            optim_wrapper.step.assert_not_called()
+            optim_wrapper.zero_grad.assert_not_called()
+        self.assertEqual(optim_wrapper.scaled_loss, torch.tensor(1.) / 3)
 
     def test_initialize_iter_status(self):
         optim_wrapper = OptimWrapper(self.optimizer, accumulative_counts=3)
