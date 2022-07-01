@@ -1,4 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+# ------------------------------------------------------------------------
+# Modified from https://github.com/pytorch/pytorch
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# ------------------------------------------------------------------------
+
 import math
 import warnings
 import weakref

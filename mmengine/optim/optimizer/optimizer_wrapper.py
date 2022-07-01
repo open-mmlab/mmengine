@@ -220,6 +220,17 @@ class OptimWrapper:
         """
         return self.optimizer.param_groups
 
+    @property
+    def defaults(self) -> dict:
+        """A wrapper of ``Optimizer.defaults``.
+
+        Make OptimizeWrapper compatible with :class:`_ParamScheduler`.
+
+        Returns:
+             dict: the ``param_groups`` of :attr:`optimizer`.
+        """
+        return self.optimizer.defaults
+
     def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of the optimizer.
 

@@ -36,10 +36,22 @@ class TestMomentumScheduler(TestCase):
         self.model = ToyModel()
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=0.01, momentum=0.05, weight_decay=5e-4)
+        self.optimizer_with_betas = optim.Adam(
+            self.model.parameters(),
+            lr=0.01,
+            betas=(0.05, 0.999),
+            weight_decay=5e-4)
 
     def test_invalid_optimizer(self):
-        with self.assertRaisesRegex(TypeError, 'should be an Optimizer'):
-            StepMomentum('invalid_optimizer', step_size=1)
+        with self.assertRaisesRegex(
+                ValueError,
+                'optimizer must support momentum when using momentum scheduler'
+        ):
+            optimizer = optim.ASGD(
+                self.model.parameters(),
+                lr=0.01,
+            )
+            StepMomentum(optimizer, step_size=1)
 
     def test_overwrite_optimzer_step(self):
         # raise warning if the counter in optimizer.step() is overwritten
