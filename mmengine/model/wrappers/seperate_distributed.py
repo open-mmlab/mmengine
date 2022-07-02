@@ -46,16 +46,16 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         device = get_device()
         # Wrap the submodule with parameters of `self.module` to
         # `MMDistributedDataParallel`
-        for name, _module in module._modules.items():
+        for name, sub_module in module._modules.items():
             # module without parameters.
-            if next(_module.parameters(), None) is None:
-                _module = _module.to(device)
-            elif all(not p.requires_grad for p in module.parameters()):
-                _module = _module.to(device)
+            if next(sub_module.parameters(), None) is None:
+                sub_module = sub_module.to(device)
+            elif all(not p.requires_grad for p in sub_module.parameters()):
+                sub_module = sub_module.to(device)
             else:
-                _module = MMDistributedDataParallel(
-                    module=_module.to(device), *args, **kwargs)
-            module._modules[name] = _module
+                sub_module = MMDistributedDataParallel(
+                    module=sub_module.to(device), *args, **kwargs)
+            module._modules[name] = sub_module
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:

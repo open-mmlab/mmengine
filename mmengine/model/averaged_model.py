@@ -17,25 +17,28 @@ class BaseAveragedModel(nn.Module):
     training neural networks. This class implements the averaging process
     for a model. All subclasses must implement the `avg_func` method.
     This class creates a copy of the provided module :attr:`model`
-    on the device :attr:`device` and allows computing running averages of the
+    on the :attr:`device` and allows computing running averages of the
     parameters of the :attr:`model`.
+
     The code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/optim/swa_utils.py.
+
     Different from the `AveragedModel` in PyTorch, we use in-place operation
     to improve the parameter updating speed, which is about 5 times faster
     than the non-in-place version.
 
     In mmengine, we provide two ways to use the model averaging:
+
     1. Use the model averaging module in hook:
-        We provide an EMAHook to apply the model averaging during training.
-        Add ``custom_hooks=[dict(type='EMAHook')]`` to the config or the runner.
-        The hook is implemented in mmengine/hooks/ema_hook.py
+       We provide an EMAHook to apply the model averaging during training.
+       Add ``custom_hooks=[dict(type='EMAHook')]`` to the config or the runner.
+       The hook is implemented in mmengine/hooks/ema_hook.py
 
     2. Use the model averaging module directly in the algorithm. Take the ema
        teacher in semi-supervise as an example:
-        >>> from mmengine.model import ExponentialMovingAverage
-        >>> student = ResNet(depth=50)
-        >>> # use ema model as teacher
-        >>> ema_teacher = ExponentialMovingAverage(student)
+       >>> from mmengine.model import ExponentialMovingAverage
+       >>> student = ResNet(depth=50)
+       >>> # use ema model as teacher
+       >>> ema_teacher = ExponentialMovingAverage(student)
 
     Args:
         model (nn.Module): The model to be averaged.
@@ -134,7 +137,7 @@ class StochasticWeightAverage(BaseAveragedModel):
 
 @MODELS.register_module()
 class ExponentialMovingAverage(BaseAveragedModel):
-    """Implements the exponential moving average (EMA) of the model.
+    r"""Implements the exponential moving average (EMA) of the model.
 
     All parameters are updated by the formula as below:
 
@@ -145,9 +148,10 @@ class ExponentialMovingAverage(BaseAveragedModel):
     Args:
         model (nn.Module): The model to be averaged.
         momentum (float): The momentum used for updating ema parameter.
-            Ema's parameter are updated with the formula:
-           `averaged_param = (1-momentum) * averaged_param + momentum *
-           source_param`. Defaults to 0.0002.
+            Defaults to 0.0002.
+            Ema's parameter are updated with the formula
+            :math:`averaged\_param = (1-momentum) * averaged\_param +
+            momentum * source\_param`.
         interval (int): Interval between two updates. Defaults to 1.
         device (torch.device, optional): If provided, the averaged model will
             be stored on the :attr:`device`. Defaults to None.
@@ -184,14 +188,15 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
 @MODELS.register_module()
 class MomentumAnnealingEMA(ExponentialMovingAverage):
-    """Exponential moving average (EMA) with momentum annealing strategy.
+    r"""Exponential moving average (EMA) with momentum annealing strategy.
 
     Args:
         model (nn.Module): The model to be averaged.
         momentum (float): The momentum used for updating ema parameter.
-            Ema's parameter are updated with the formula:
-           `averaged_param = (1-momentum) * averaged_param + momentum *
-           source_param`. Defaults to 0.0002.
+            Defaults to 0.0002.
+            Ema's parameter are updated with the formula
+            :math:`averaged\_param = (1-momentum) * averaged\_param +
+            momentum * source\_param`.
         gamma (int): Use a larger momentum early in training and gradually
             annealing to a smaller value to update the ema model smoothly. The
             momentum is calculated as max(momentum, gamma / (gamma + steps))

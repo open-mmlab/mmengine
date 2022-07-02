@@ -20,8 +20,11 @@ class BaseLoop(metaclass=ABCMeta):
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
         if isinstance(dataloader, dict):
+            # Determine whether or not different ranks use different seed.
+            diff_rank_seed = runner._randomness_cfg.get(
+                'diff_rank_seed', False)
             self.dataloader = runner.build_dataloader(
-                dataloader, seed=runner.seed)
+                dataloader, seed=runner.seed, diff_rank_seed=diff_rank_seed)
         else:
             self.dataloader = dataloader
 
