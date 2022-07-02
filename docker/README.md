@@ -58,10 +58,6 @@ git clone https://github.com/open-mmlab/mmengine.git && cd mmengine
 docker build -t mmengine -f docker/dev/Dockerfile .
 ```
 
-Note that `CUDA_ARCH` is the cumpute capability of your GPU and you can find it at [Compute Capability](https://developer.nvidia.com/cuda-gpus#compute).
-
-The building process may take 10 minutes or more.
-
 ## Run images
 
 ```bash
