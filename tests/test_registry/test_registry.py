@@ -430,18 +430,18 @@ class TestRegistry:
         assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
 
         # Test switch scope and get target registry.
-        with CHIHUAHUA.get_registry_by_scope(scope='hound') as \
+        with CHIHUAHUA.switch_scope_and_registry(scope='hound') as \
                 registry:
             assert DefaultScope.get_current_instance().scope_name == 'hound'
             assert id(registry) == id(HOUNDS)
 
         # Test nested-ly switch scope.
-        with CHIHUAHUA.get_registry_by_scope(scope='samoyed') as \
+        with CHIHUAHUA.switch_scope_and_registry(scope='samoyed') as \
                 samoyed_registry:
             assert DefaultScope.get_current_instance().scope_name == 'samoyed'
             assert id(samoyed_registry) == id(SAMOYEDS)
 
-            with CHIHUAHUA.get_registry_by_scope(scope='hound') as \
+            with CHIHUAHUA.switch_scope_and_registry(scope='hound') as \
                     hound_registry:
                 assert DefaultScope.get_current_instance().scope_name == \
                        'hound'
@@ -451,7 +451,7 @@ class TestRegistry:
         assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
 
         # Test get an unknown registry.
-        with CHIHUAHUA.get_registry_by_scope(scope='unknown') as \
+        with CHIHUAHUA.switch_scope_and_registry(scope='unknown') as \
                 registry:
             assert id(registry) == id(CHIHUAHUA)
             assert DefaultScope.get_current_instance().scope_name == 'unknown'

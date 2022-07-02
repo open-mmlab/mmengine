@@ -48,7 +48,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     # in cfg, current default scope should switch to specified scope
     # temporarily.
     scope = args.pop('_scope_', None)
-    with registry.get_registry_by_scope(scope) as registry:
+    with registry.switch_scope_and_registry(scope) as registry:
         obj_type = args.pop('runner_type', 'mmengine.Runner')
         if isinstance(obj_type, str):
             runner_cls = registry.get(obj_type)
@@ -186,7 +186,7 @@ def build_from_cfg(
     # in cfg, current default scope should switch to specified scope
     # temporarily.
     scope = args.pop('_scope_', None)
-    with registry.get_registry_by_scope(scope) as registry:
+    with registry.switch_scope_and_registry(scope) as registry:
         obj_type = args.pop('type')
         if isinstance(obj_type, str):
             obj_cls = registry.get(obj_type)
@@ -395,7 +395,7 @@ class Registry:
         return self._get_root_registry()
 
     @contextmanager
-    def get_registry_by_scope(self, scope: str) -> Generator:
+    def switch_scope_and_registry(self, scope: str) -> Generator:
         """Temporarily switch default scope to the target scope, and get the
         corresponding registry.
 
