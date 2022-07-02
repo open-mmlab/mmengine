@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from io import StringIO
 
-from .file_client import FileClient
+from .io import get_text
 
 
 def list_from_file(filename,
@@ -9,7 +9,7 @@ def list_from_file(filename,
                    offset=0,
                    max_num=0,
                    encoding='utf-8',
-                   file_client_args=None):
+                   backend_args=None):
     """Load a text file and parse the content as a list of strings.
 
     ``list_from_file`` supports loading a text file which can be storaged in
@@ -22,9 +22,8 @@ def list_from_file(filename,
         max_num (int): The maximum number of lines to be read,
             zeros and negatives mean no limitation.
         encoding (str): Encoding used to open the file. Default utf-8.
-        file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
 
     Examples:
         >>> list_from_file('/path/of/your/file')  # disk
@@ -37,8 +36,8 @@ def list_from_file(filename,
     """
     cnt = 0
     item_list = []
-    file_client = FileClient.infer_client(file_client_args, filename)
-    with StringIO(file_client.get_text(filename, encoding)) as f:
+    content = get_text(filename, encoding, backend_args=backend_args)
+    with StringIO(content) as f:
         for _ in range(offset):
             f.readline()
         for line in f:
@@ -52,7 +51,7 @@ def list_from_file(filename,
 def dict_from_file(filename,
                    key_type=str,
                    encoding='utf-8',
-                   file_client_args=None):
+                   backend_args=None):
     """Load a text file and parse the content as a dict.
 
     Each line of the text file will be two or more columns split by
@@ -67,9 +66,8 @@ def dict_from_file(filename,
         key_type(type): Type of the dict keys. str is user by default and
             type conversion will be performed if specified.
         encoding (str): Encoding used to open the file. Default utf-8.
-        file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+        backend_args (dict, optional): Arguments to instantiate the preifx of
+            uri corresponding backend. Defaults to None.
 
     Examples:
         >>> dict_from_file('/path/of/your/file')  # disk
@@ -81,8 +79,8 @@ def dict_from_file(filename,
         dict: The parsed contents.
     """
     mapping = {}
-    file_client = FileClient.infer_client(file_client_args, filename)
-    with StringIO(file_client.get_text(filename, encoding)) as f:
+    content = get_text(filename, encoding, backend_args=backend_args)
+    with StringIO(content) as f:
         for line in f:
             items = line.rstrip('\n').split()
             assert len(items) >= 2

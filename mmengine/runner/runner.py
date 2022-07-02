@@ -18,13 +18,13 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
+from mmengine import fileio
 from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
-from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
@@ -1981,7 +1981,7 @@ class Runner:
     def save_checkpoint(self,
                         out_dir: str,
                         filename: str,
-                        file_client_args: Optional[dict] = None,
+                        backend_args: Optional[dict] = None,
                         save_optimizer: bool = True,
                         save_param_scheduler: bool = True,
                         meta: dict = None,
@@ -1994,8 +1994,8 @@ class Runner:
         Args:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
-            file_client_args (dict, optional): Arguments to instantiate a
-                FileClient. Default: None.
+            backend_args (dict, optional): Arguments to instantiate the preifx
+                of uri corresponding backend. Defaults to None.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -2019,9 +2019,6 @@ class Runner:
             meta.update(epoch=self.epoch + 1, iter=self.iter)
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
-
-        file_client = FileClient.infer_client(file_client_args, out_dir)
-        filepath = file_client.join_path(out_dir, filename)
 
         meta.update(
             cfg=self.cfg.pretty_text,
@@ -2066,12 +2063,14 @@ class Runner:
                     state_dict = scheduler.state_dict()  # type: ignore
                     checkpoint['param_schedulers'].append(state_dict)
 
+        filepath = fileio.join_path(
+            out_dir, filename, backend_args=backend_args)
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
 
         save_file = osp.join(self.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
-            f.write(filepath)
+            f.write(filepath)  # type: ignore
 
     @master_only
     def dump_config(self) -> None:

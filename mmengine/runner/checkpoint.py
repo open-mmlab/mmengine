@@ -14,8 +14,8 @@ import torch
 import torchvision
 
 import mmengine
+from mmengine import fileio
 from mmengine.dist import get_dist_info
-from mmengine.fileio import FileClient
 from mmengine.fileio import load as load_file
 from mmengine.model import is_model_wrapper
 from mmengine.utils import load_url, mkdir_or_exist
@@ -333,8 +333,9 @@ def load_from_pavi(filename, map_location=None):
     return checkpoint
 
 
-@CheckpointLoader.register_scheme(prefixes=r'(\S+\:)?s3://')
-def load_from_ceph(filename, map_location=None, backend='petrel'):
+@CheckpointLoader.register_scheme(
+    prefixes=[r'(\S+\:)?s3://', r'(\S+\:)?petrel://'])
+def load_from_ceph(filename, map_location=None):
     """load checkpoint through the file path prefixed with s3.  In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
@@ -342,35 +343,11 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     Args:
         filename (str): checkpoint file path with s3 prefix
         map_location (str, optional): Same as :func:`torch.load`.
-        backend (str, optional): The storage backend type. Options are 'ceph',
-            'petrel'. Default: 'petrel'.
-
-    .. warning::
-        :class:`mmengine.fileio.file_client.CephBackend` will be deprecated,
-        please use :class:`mmengine.fileio.file_client.PetrelBackend` instead.
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    allowed_backends = ['ceph', 'petrel']
-    if backend not in allowed_backends:
-        raise ValueError(f'Load from Backend {backend} is not supported.')
-
-    if backend == 'ceph':
-        warnings.warn(
-            'CephBackend will be deprecated, please use PetrelBackend instead',
-            DeprecationWarning)
-
-    # CephClient and PetrelBackend have the same prefix 's3://' and the latter
-    # will be chosen as default. If PetrelBackend can not be instantiated
-    # successfully, the CephClient will be chosen.
-    try:
-        file_client = FileClient(backend=backend)
-    except ImportError:
-        allowed_backends.remove(backend)
-        file_client = FileClient(backend=allowed_backends[0])
-
-    with io.BytesIO(file_client.get(filename)) as buffer:
+    with io.BytesIO(fileio.get_bytes(filename)) as buffer:
         checkpoint = torch.load(buffer, map_location=map_location)
     return checkpoint
 
@@ -657,21 +634,16 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
     return destination
 
 
-def save_checkpoint(checkpoint, filename, file_client_args=None):
+def save_checkpoint(checkpoint, filename, backend_args=None):
     """Save checkpoint to file.
 
     Args:
         checkpoint (dict): Module whose params are to be saved.
         filename (str): Checkpoint filename.
-        file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Defaults to None.
+        backend_args (dict, optional): Arguments to instantiate the preifx of
+            uri corresponding backend. Defaults to None.
     """
     if filename.startswith('pavi://'):
-        if file_client_args is not None:
-            raise ValueError(
-                'file_client_args should be "None" if filename starts with'
-                f'"pavi://", but got {file_client_args}')
         try:
             from pavi import exception, modelcloud
         except ImportError:
@@ -691,10 +663,9 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
                 f.flush()
             model.create_file(checkpoint_file, name=model_name)
     else:
-        file_client = FileClient.infer_client(file_client_args, filename)
         with io.BytesIO() as f:
             torch.save(checkpoint, f)
-            file_client.put(f.getvalue(), filename)
+            fileio.put_bytes(f.getvalue(), filename, backend_args=backend_args)
 
 
 def find_latest_checkpoint(path: str):

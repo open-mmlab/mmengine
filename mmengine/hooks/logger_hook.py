@@ -4,8 +4,8 @@ import os.path as osp
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
 
+from mmengine import fileio
 from mmengine.data import BaseDataElement
-from mmengine.fileio import FileClient, dump
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
@@ -49,9 +49,8 @@ class LoggerHook(Hook):
         keep_local (bool): Whether to keep local logs in the local machine
             when :attr:`out_dir` is specified. If False, the local log will be
             removed. Defaults to True.
-        file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Defaults to None.
+        backend_args (dict, optional): Arguments to instantiate the preifx of
+            uri corresponding backend. Defaults to None.
         log_metric_by_epoch (bool): Whether to output metric in validation step
             by epoch. It can be true when running in epoch based runner.
             If set to True, `after_val_epoch` will set `step` to self.epoch in
@@ -71,35 +70,27 @@ class LoggerHook(Hook):
                  out_dir: Optional[Union[str, Path]] = None,
                  out_suffix: SUFFIX_TYPE = ('.json', '.log', '.py', 'yaml'),
                  keep_local: bool = True,
-                 file_client_args: Optional[dict] = None,
+                 backend_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True):
         self.interval = interval
         self.ignore_last = ignore_last
         self.interval_exp_name = interval_exp_name
 
-        if out_dir is None and file_client_args is not None:
-            raise ValueError(
-                'file_client_args should be "None" when `out_dir` is not'
-                'specified.')
-        self.out_dir = out_dir
-
         if not (out_dir is None or isinstance(out_dir, str)
                 or is_tuple_of(out_dir, str)):
             raise TypeError('out_dir should be None or string or tuple of '
                             f'string, but got {type(out_dir)}')
-        self.out_suffix = out_suffix
+        self.out_dir = out_dir
 
+        self.out_suffix = out_suffix
         self.keep_local = keep_local
-        self.file_client_args = file_client_args
+        self.backend_args = backend_args
+
         self.json_log_path: Optional[str] = None
-        if self.out_dir is not None:
-            self.file_client = FileClient.infer_client(file_client_args,
-                                                       self.out_dir)
         self.log_metric_by_epoch = log_metric_by_epoch
 
     def before_run(self, runner) -> None:
-        """Infer ``self.file_client`` from ``self.out_dir``. Initialize the
-        ``self.start_iter`` and record the meta information.
+        """Initialize the ``self.start_iter`` and record the meta information.
 
         Args:
             runner (Runner): The runner of the training process.
@@ -108,10 +99,11 @@ class LoggerHook(Hook):
             # The final `self.out_dir` is the concatenation of `self.out_dir`
             # and the last level directory of `runner.work_dir`
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-            self.out_dir = self.file_client.join_path(self.out_dir, basename)
+            self.out_dir = fileio.join_path(
+                self.out_dir, basename, backend_args=self.backend_args)
             runner.logger.info(
-                f'Text logs will be saved to {self.out_dir} by '
-                f'{self.file_client.name} after the training process.')
+                f'Text logs will be saved to {self.out_dir} after the '
+                'training process.')
 
         self.json_log_path = f'{runner.timestamp}.json'
 
@@ -236,7 +228,10 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test')
         runner.logger.info(log_str)
-        dump(tag, osp.join(runner.log_dir, self.json_log_path))  # type: ignore
+        fileio.dump(
+            tag,
+            osp.join(runner.log_dir, self.json_log_path),  # type: ignore
+            backend_args=self.backend_args)
 
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
@@ -250,9 +245,10 @@ class LoggerHook(Hook):
             return
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
-            out_filepath = self.file_client.join_path(self.out_dir, filename)
+            out_filepath = fileio.join_path(self.out_dir, filename)
             with open(local_filepath) as f:
-                self.file_client.put_text(f.read(), out_filepath)
+                fileio.put_text(
+                    f.read(), out_filepath, backend_args=self.backend_args)
 
             runner.logger.info(
                 f'The file {local_filepath} has been uploaded to '

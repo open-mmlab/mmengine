@@ -4,7 +4,6 @@ from unittest.mock import ANY, MagicMock
 
 import pytest
 
-from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
 
 
@@ -17,14 +16,10 @@ class TestLoggerHook:
         assert logger_hook.interval_exp_name == 1000
         assert logger_hook.out_suffix == ('.json', '.log', '.py', 'yaml')
         assert logger_hook.keep_local
-        assert logger_hook.file_client_args is None
-        assert isinstance(logger_hook.file_client.client, HardDiskBackend)
+        assert logger_hook.backend_args is None
         # out_dir should be None or string or tuple of string.
         with pytest.raises(TypeError):
             LoggerHook(out_dir=1)
-
-        with pytest.raises(ValueError):
-            LoggerHook(file_client_args=dict(enable_mc=True))
 
     def test_before_run(self):
         runner = MagicMock()
