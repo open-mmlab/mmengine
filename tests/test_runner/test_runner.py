@@ -549,7 +549,7 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
-        # 5. Test build multiple runner
+        # 5. Test building multiple runners
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init15'
         cfg.launcher = 'pytorch'
