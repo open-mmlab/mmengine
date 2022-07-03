@@ -550,17 +550,18 @@ class TestRunner(TestCase):
         runner.test()
 
         # 5. Test building multiple runners
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_init15'
-        cfg.launcher = 'pytorch'
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29600'
-        os.environ['RANK'] = '0'
-        os.environ['WORLD_SIZE'] = '1'
-        os.environ['LOCAL_RANK'] = '0'
-        runner = Runner(**cfg)
-        cfg.experiment_name = 'test_init16'
-        runner = Runner(**cfg)
+        if torch.cuda.is_available():
+            cfg = copy.deepcopy(self.epoch_based_cfg)
+            cfg.experiment_name = 'test_init15'
+            cfg.launcher = 'pytorch'
+            os.environ['MASTER_ADDR'] = '127.0.0.1'
+            os.environ['MASTER_PORT'] = '29600'
+            os.environ['RANK'] = '0'
+            os.environ['WORLD_SIZE'] = '1'
+            os.environ['LOCAL_RANK'] = '0'
+            runner = Runner(**cfg)
+            cfg.experiment_name = 'test_init16'
+            runner = Runner(**cfg)
 
     def test_dump_config(self):
         # dump config from dict.
