@@ -27,7 +27,8 @@ class LogProcessor:
         custom_cfg (list[dict], optional): Contains multiple log config dict,
             in which key means the data source name of log and value means the
             statistic method and corresponding arguments used to count the
-            data source. Defaults to None
+            data source. Defaults to None.
+
             - If custom_cfg is None, all logs will be formatted via default
               methods, such as smoothing loss by default window_size. If
               custom_cfg is defined as a list of config dict, for example:
@@ -35,18 +36,20 @@ class LogProcessor:
               window_size='global')]. It means the log item ``loss`` will be
               counted as global mean and additionally logged as ``global_loss``
               (defined by ``log_name``). If ``log_name`` is not defined in
-               config dict, the original logged key will be overwritten.
+              config dict, the original logged key will be overwritten.
 
             - The original log item cannot be overwritten twice. Here is
               an error example:
               [dict(data_src=loss, method='mean', window_size='global'),
-               dict(data_src=loss, method='mean', window_size='epoch')].
+              dict(data_src=loss, method='mean', window_size='epoch')].
               Both log config dict in custom_cfg do not have ``log_name`` key,
               which means the loss item will be overwritten twice.
 
             - For those statistic methods with the ``window_size`` argument,
               if ``by_epoch`` is set to False, ``windows_size`` should not be
               `epoch` to statistics log value by epoch.
+        num_digits (int): The number of significant digit shown in the
+            logging message.
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -92,10 +95,12 @@ class LogProcessor:
     def __init__(self,
                  window_size=10,
                  by_epoch=True,
-                 custom_cfg: Optional[List[dict]] = None):
+                 custom_cfg: Optional[List[dict]] = None,
+                 num_digits: int = 4):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
+        self.num_digits = num_digits
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -124,9 +129,9 @@ class LogProcessor:
         # Record learning rate.
         lr_str_list = []
         for key, value in tag.items():
-            if key.startswith('lr'):
+            if key.endswith('lr'):
                 log_tag.pop(key)
-                lr_str_list.append(f'{key}: {value:.3e}')
+                lr_str_list.append(f'{key}: ' f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
         # Format log header.
         # by_epoch == True
@@ -159,8 +164,9 @@ class LogProcessor:
             eta = runner.message_hub.get_info('eta')
             eta_str = str(datetime.timedelta(seconds=int(eta)))
             log_str += f'eta: {eta_str}  '
-            log_str += (f'time: {tag["time"]:.3f}  '
-                        f'data_time: {tag["data_time"]:.3f}  ')
+            log_str += (f'time: {tag["time"]:.{self.num_digits}f}  '
+                        f'data_time: '
+                        f'{tag["data_time"]:.{self.num_digits}f}  ')
             # Pop recorded keys
             log_tag.pop('time')
             log_tag.pop('data_time')
@@ -175,7 +181,7 @@ class LogProcessor:
                 if mode == 'val' and not name.startswith('val/loss'):
                     continue
                 if isinstance(val, float):
-                    val = f'{val:.4f}'
+                    val = f'{val:.{self.num_digits}f}'
                 log_items.append(f'{name}: {val}')
             log_str += '  '.join(log_items)
         return tag, log_str
@@ -204,6 +210,8 @@ class LogProcessor:
         custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
         # tag is used to write log information to different backends.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        tag.pop('time', None)
+        tag.pop('data_time', None)
         # By epoch:
         #     Epoch(val) [10][1000/1000]  ...
         #     Epoch(test) [1000/1000] ...
@@ -225,10 +233,8 @@ class LogProcessor:
         # message.
         log_items = []
         for name, val in tag.items():
-            if name in ('time', 'data_time'):
-                continue
             if isinstance(val, float):
-                val = f'{val:.4f}'
+                val = f'{val:.{self.num_digits}f}'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
         return tag, log_str

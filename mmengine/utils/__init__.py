@@ -15,6 +15,7 @@ from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_abs, is_filepath,
                    mkdir_or_exist, scandir, symlink)
 from .setup_env import set_multi_processing
+from .sync_bn import revert_sync_batchnorm
 from .version_utils import digit_version, get_git_hash
 
 # TODO: creates intractable circular import issues
@@ -31,5 +32,6 @@ __all__ = [
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'ManagerMeta', 'ManagerMixin', 'set_multi_processing', 'has_batch_norm',
     'is_abs', 'is_installed', 'call_command', 'get_installed_path',
-    'check_install_package', 'RemoveAssignFromAST'
+    'check_install_package', 'RemoveAssignFromAST', 'is_abs',
+    'revert_sync_batchnorm'
 ]

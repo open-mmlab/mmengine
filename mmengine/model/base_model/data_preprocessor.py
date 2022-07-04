@@ -153,11 +153,15 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
     Args:
         mean (Sequence[float or int], optional): The pixel mean of image
             channels. If ``bgr_to_rgb=True`` it means the mean value of R,
-            G, B channels. If it is not specified, images will not be
-            normalized. Defaults None.
+            G, B channels. If the length of `mean` is 1, it means all
+            channels have the same mean value, or the input is a gray image.
+            If it is not specified, images will not be normalized. Defaults
+            None.
         std (Sequence[float or int], optional): The pixel standard deviation of
             image channels. If ``bgr_to_rgb=True`` it means the standard
-            deviation of R, G, B channels. If it is not specified, images will
+            deviation of R, G, B channels. If the length of `std` is 1,
+            it means all channels have the same standard deviation, or the
+            input is a gray image.  If it is not specified, images will
             not be normalized. Defaults None.
         pad_size_divisor (int): The size of padded image should be
             divisible by ``pad_size_divisor``. Defaults to 1.
@@ -187,11 +191,11 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             'mean and std should be both None or tuple')
         if mean is not None:
             assert len(mean) == 3 or len(mean) == 1, (
-                'The length of mean should be 1 or 3 to be compatible with '
-                f'RGB or gray image, but got {len(mean)}')
+                '`mean` should have 1 or 3 values, to be compatible with '
+                f'RGB or gray image, but got {len(mean)} values')
             assert len(std) == 3 or len(std) == 1, (  # type: ignore
-                'The length of std should be 1 or 3 to be compatible with RGB '  # type: ignore # noqa: E501
-                f'or gray image, but got {len(std)}')  # type: ignore
+                '`std` should have 1 or 3 values, to be compatible with RGB '  # type: ignore # noqa: E501
+                f'or gray image, but got {len(std)} values')
             self._enable_normalize = True
             self.register_buffer('mean',
                                  torch.tensor(mean).view(-1, 1, 1), False)
@@ -221,12 +225,19 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             model input.
         """
         inputs, batch_data_samples = self.collate_data(data)
-        # channel transform
-        if self.channel_conversion:
-            inputs = [_input[[2, 1, 0], ...] for _input in inputs]
-        # Normalization.
-        if self._enable_normalize:
-            inputs = [(_input - self.mean) / self.std for _input in inputs]
+        for idx, _input in enumerate(inputs):
+            # channel transform
+            if self.channel_conversion:
+                _input = _input[[2, 1, 0], ...]
+            # Normalization.
+            if self._enable_normalize:
+                if self.mean.shape[0] == 3:
+                    assert _input.dim() == 3 and _input.shape[0] == 3, (
+                        'If the mean has 3 values, the input tensor should in '
+                        'shape of (3, H, W), but got the tensor with shape '
+                        f'{_input.shape}')
+                _input = (_input - self.mean) / self.std
+            inputs[idx] = _input
         # Pad and stack Tensor.
         batch_inputs = stack_batch(inputs, self.pad_size_divisor,
                                    self.pad_value)

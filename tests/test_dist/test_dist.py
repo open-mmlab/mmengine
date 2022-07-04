@@ -132,8 +132,9 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
 
     def test_all_reduce(self):
         self._init_dist_env(self.rank, self.world_size)
-        for tensor_type, reduce_op in zip([torch.int64, torch.float32],
-                                          ['sum', 'mean']):
+        tensor_types = [torch.int64, torch.float32, torch.int64]
+        reduce_ops = ['sum', 'mean', 'mean']
+        for tensor_type, reduce_op in zip(tensor_types, reduce_ops):
             if dist.get_rank() == 0:
                 data = torch.tensor([1, 2], dtype=tensor_type)
             else:

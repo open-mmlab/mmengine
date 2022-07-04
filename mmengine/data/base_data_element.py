@@ -88,7 +88,7 @@ class BaseDataElement:
         >>> gt_instances1 = gt_instance.new(
         ...                     metainfo=dict(img_id=1, img_shape=(640, 640)),
         ...                     bboxes=torch.rand((5, 4)),
-...                             scores=torch.rand((5,)))
+        ...                     scores=torch.rand((5,)))
         >>> gt_instances2 = gt_instances1.new()
 
         >>> # add and process property
