@@ -56,11 +56,16 @@ class CheckpointHook(Hook):
             detection and instance segmentation. ``AR@100`` for proposal
             recall. If ``save_best`` is ``auto``, the first key of the returned
             ``OrderedDict`` result will be used. Defaults to None.
-        rule (str, optional): Comparison rule for best score. If set to
-            None, it will infer a reasonable rule. Keys such as 'acc', 'top'
-            .etc will be inferred by 'greater' rule. Keys contain 'loss' will
-            be inferred by 'less' rule. Options are 'greater', 'less', None.
-            Defaults to None.
+        rule (str, optional | List[str]): Comparison rule for best score. If
+            set to None, it will infer a reasonable rule. Keys such as 'acc',
+            'top' .etc will be inferred by 'greater' rule. Keys contain 'loss'
+            will be inferred by 'less' rule. If ``save_best`` is a list of
+            metrics and ``rule`` is a str, all metrics in ``save_best`` will
+            share the comparison rule. If ``save_best`` and ``rule`` are both
+            lists, their length must be the same, and metrics in ``save_best``
+            will use the corresponding comparison rule in ``rule``. Options
+            are 'greater', 'less', None and list which contains 'greater' and
+            'less'. Defaults to None.
         greater_keys (List[str], optional): Metric keys that will be
             inferred by 'greater' comparison rule. If ``None``,
             _default_greater_keys will be used. Defaults to None.
@@ -70,6 +75,17 @@ class CheckpointHook(Hook):
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Defaults to None.
+
+    Examples:
+        >>> # Save best based on single metric
+        >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
+        >>>                rule='less')
+        >>> # Save best based on multi metrics with the same comparison rule
+        >>> CheckpointHook(interval=2, by_epoch=True,
+        >>>                save_best=['acc', 'mIoU'], rule='greater')
+        >>> # Save best based on multi metrics with different comparison rule
+        >>> CheckpointHook(interval=2, by_epoch=True,
+        >>>                save_best=['FID', 'IS'], rule=['less', 'greater'])
     """
     out_dir: str
 
