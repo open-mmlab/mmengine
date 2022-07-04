@@ -205,9 +205,10 @@ class TestMomentumScheduler(TestCase):
             start_factor=start_factor,
             begin=begin,
             end=begin + iters + 1)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
 
     def _test_scheduler_value(self,
+                              optimizer,
                               schedulers,
                               targets,
                               epochs=10,
@@ -215,8 +216,7 @@ class TestMomentumScheduler(TestCase):
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
-            for param_group, target in zip(self.optimizer.param_groups,
-                                           targets):
+            for param_group, target in zip(optimizer.param_groups, targets):
                 assert_allclose(
                     target[epoch],
                     param_group[param_name],
@@ -225,6 +225,15 @@ class TestMomentumScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
+                if 'betas' in optimizer.defaults:
+                    assert_allclose(
+                        target[epoch],
+                        param_group['betas'][0],
+                        msg='{} is wrong in epoch {}: expected {}, got {}'.
+                        format('betas_0', epoch, target[epoch],
+                               param_group['betas'][0]),
+                        atol=1e-5,
+                        rtol=0)
             [scheduler.step() for scheduler in schedulers]
 
     def test_step_scheduler(self):
@@ -240,7 +249,12 @@ class TestMomentumScheduler(TestCase):
         ]
         scheduler = StepMomentum(
             self.optimizer, gamma=0.1, step_size=3, verbose=True)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = StepMomentum(
+            self.optimizer_with_betas, gamma=0.1, step_size=3, verbose=True)
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_multi_step_scheduler(self):
         # momentum = 0.05     if epoch < 2
@@ -255,7 +269,12 @@ class TestMomentumScheduler(TestCase):
         ]
         scheduler = MultiStepMomentum(
             self.optimizer, gamma=0.1, milestones=[2, 5, 9])
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = MultiStepMomentum(
+            self.optimizer_with_betas, gamma=0.1, milestones=[2, 5, 9])
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_constant_scheduler(self):
         # factor should between 0~1
@@ -270,7 +289,12 @@ class TestMomentumScheduler(TestCase):
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = ConstantMomentum(self.optimizer, factor=1.0 / 2, end=5)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = ConstantMomentum(
+            self.optimizer_with_betas, factor=1.0 / 2, end=5)
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_linear_scheduler(self):
         with self.assertRaises(ValueError):
@@ -299,7 +323,14 @@ class TestMomentumScheduler(TestCase):
         ]
         scheduler = LinearMomentum(
             self.optimizer, start_factor=start_factor, end=iters + 1)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = LinearMomentum(
+            self.optimizer_with_betas,
+            start_factor=start_factor,
+            end=iters + 1)
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_exp_scheduler(self):
         epochs = 10
@@ -308,7 +339,11 @@ class TestMomentumScheduler(TestCase):
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = ExponentialMomentum(self.optimizer, gamma=0.9)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = ExponentialMomentum(self.optimizer_with_betas, gamma=0.9)
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_cos_anneal_scheduler(self):
         epochs = 12
@@ -323,7 +358,12 @@ class TestMomentumScheduler(TestCase):
         ]
         scheduler = CosineAnnealingMomentum(
             self.optimizer, T_max=t, eta_min=eta_min)
-        self._test_scheduler_value(scheduler, targets, epochs)
+        self._test_scheduler_value(self.optimizer, scheduler, targets, epochs)
+
+        scheduler = CosineAnnealingMomentum(
+            self.optimizer_with_betas, T_max=t, eta_min=eta_min)
+        self._test_scheduler_value(self.optimizer_with_betas, scheduler,
+                                   targets, epochs)
 
     def test_poly_scheduler(self):
         epochs = 10
@@ -343,7 +383,16 @@ class TestMomentumScheduler(TestCase):
         targets = [layer1_targets, layer2_targets]
         scheduler = PolyMomentum(
             self.optimizer, power=power, eta_min=min_lr, end=iters + 1)
-        self._test_scheduler_value(scheduler, targets, epochs=10)
+        self._test_scheduler_value(
+            self.optimizer, scheduler, targets, epochs=10)
+
+        scheduler = PolyMomentum(
+            self.optimizer_with_betas,
+            power=power,
+            eta_min=min_lr,
+            end=iters + 1)
+        self._test_scheduler_value(
+            self.optimizer_with_betas, scheduler, targets, epochs=10)
 
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
         scheduler = construct()
@@ -412,7 +461,8 @@ class TestMomentumScheduler(TestCase):
             self.optimizer, start_factor=1 / 2, begin=0, end=5)
         scheduler2 = MultiStepMomentum(
             self.optimizer, gamma=0.1, milestones=[3, 6], begin=5, end=12)
-        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+        self._test_scheduler_value(self.optimizer, [scheduler1, scheduler2],
+                                   targets, epochs)
 
     def test_multi_scheduler_without_overlap_exp_cosine(self):
         # use Exp in the first 5 epochs and then use Cosine
@@ -433,7 +483,8 @@ class TestMomentumScheduler(TestCase):
         scheduler2 = CosineAnnealingMomentum(
             self.optimizer, T_max=5, eta_min=eta_min, begin=5, end=10)
 
-        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+        self._test_scheduler_value(self.optimizer, [scheduler1, scheduler2],
+                                   targets, epochs)
 
     def test_multi_scheduler_with_overlap(self):
         # use Linear at first 5 epochs together with MultiStep
@@ -447,7 +498,8 @@ class TestMomentumScheduler(TestCase):
             self.optimizer, start_factor=1 / 2, begin=0, end=5)
         scheduler2 = MultiStepMomentum(
             self.optimizer, gamma=0.1, milestones=[3, 6, 9])
-        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+        self._test_scheduler_value(self.optimizer, [scheduler1, scheduler2],
+                                   targets, epochs)
 
     def test_multi_scheduler_with_gap(self):
         # use Exp in the first 5 epochs and the last 5 epochs use Cosine
@@ -470,4 +522,5 @@ class TestMomentumScheduler(TestCase):
         scheduler2 = CosineAnnealingMomentum(
             self.optimizer, T_max=5, eta_min=eta_min, begin=10, end=15)
 
-        self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
+        self._test_scheduler_value(self.optimizer, [scheduler1, scheduler2],
+                                   targets, epochs)
