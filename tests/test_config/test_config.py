@@ -13,7 +13,7 @@ import pytest
 from mmengine import Config, ConfigDict, DictAction
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
-from mmengine.utils import get_installed_path, is_installed
+from mmengine.utils import is_installed
 
 
 class TestConfig:
@@ -724,14 +724,14 @@ class TestConfig:
     def test_get_external_cfg(self):
         ext_cfg_path = osp.join(self.data_path,
                                 'config/py_config/test_get_external_cfg.py')
-        package_path = get_installed_path('mmdet')
-        cfg_path = osp.join(
-            package_path, '.mim',
-            'configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
         ext_cfg = Config.fromfile(ext_cfg_path)
-        cfg = Config.fromfile(cfg_path)
-        Config._parse_scope(cfg, 'mmdet')
-        assert cfg._cfg_dict == ext_cfg._cfg_dict
+        assert ext_cfg._cfg_dict.model.neck == dict(
+            type='FPN',
+            in_channels=[256, 512, 1024, 2048],
+            out_channels=256,
+            num_outs=5,
+        )
+        assert '_scope_' in ext_cfg._cfg_dict.model
 
     @pytest.mark.skipif(
         not is_installed('mmdet'), reason='mmdet should be installed')

@@ -7,3 +7,11 @@ _base_ = [
 ]
 
 custom_hooks = [dict(type='mmdet.DetVisualizationHook')]
+
+model = dict(
+    roi_head=dict(
+        bbox_head=dict(
+            loss_cls=dict(_delete_=True, type='test.ToyLoss')
+        )
+    )
+)

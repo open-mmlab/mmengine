@@ -404,9 +404,7 @@ class Config:
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
-                _cfg_dict = Config._dict_to_config_dict(_cfg_dict)
-                if scope is not None:
-                    Config._parse_scope(_cfg_dict, scope)
+                _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
@@ -423,6 +421,7 @@ class Config:
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
             temp_config_file.close()
+            Config._parse_scope(cfg_dict)
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
@@ -460,43 +459,54 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _dict_to_config_dict(cfg: dict):
+    def _dict_to_config_dict(cfg: dict,
+                             scope: Optional[str] = None,
+                             has_scope=True):
         """Recursively converts ``dict`` to :obj:`ConfigDict`.
 
         Args:
             cfg (dict): Config dict.
+            scope (str, optional): Scope of instance.
+            has_scope (bool): Whether to add `_scope_` key to config dict.
 
         Returns:
             ConfigDict: Converted dict.
         """
+        # Only the outer dict with key `type` should have the key `_scope_`.
         if isinstance(cfg, dict):
+            if has_scope and 'type' in cfg:
+                has_scope = False
+                cfg._scope_ = scope  # type: ignore
             cfg = ConfigDict(cfg)
+            dict.__setattr__(cfg, 'scope', scope)
             for key, value in cfg.items():
-                cfg[key] = Config._dict_to_config_dict(value)
+                cfg[key] = Config._dict_to_config_dict(
+                    value, scope=scope, has_scope=has_scope)
         elif isinstance(cfg, tuple):
-            cfg = tuple(Config._dict_to_config_dict(_cfg) for _cfg in cfg)
+            cfg = tuple(
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg)
         elif isinstance(cfg, list):
-            cfg = [Config._dict_to_config_dict(_cfg) for _cfg in cfg]
+            cfg = [
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg
+            ]
         return cfg
 
     @staticmethod
-    def _parse_scope(cfg: dict, scope: str) -> None:
-        """Recursively add scope to config dict containing ``type`` field.
+    def _parse_scope(cfg: dict) -> None:
+        """Adds ``_scope_`` to :obj:`ConfigDict` instance.
 
         If the config dict already has the scope, scope will not be
         overwritten.
 
         Args:
             cfg (dict): Config needs to be parsed with scope.
-            scope (str): scope of external package.
         """
-        if isinstance(cfg, dict):
-            if 'type' in cfg and '_scope_' not in cfg:
-                cfg['_scope_'] = scope
-            for value in cfg.values():
-                Config._parse_scope(value, scope)
+        if isinstance(cfg, ConfigDict):
+            cfg._scope_ = cfg.scope
         elif isinstance(cfg, (tuple, list)):
-            [Config._parse_scope(value, scope) for value in cfg]
+            [Config._parse_scope(value) for value in cfg]
         else:
             return
 

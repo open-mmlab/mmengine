@@ -205,18 +205,6 @@ def build_from_cfg(
             raise TypeError(
                 f'type must be a str or valid type, but got {type(obj_type)}')
 
-        # TODO remove it and PR in mmcv
-        def _remove_scope(cfg_dict, scope):
-            if isinstance(cfg_dict, dict):
-                _scope_ = cfg_dict.get('_scope_', None)
-                if _scope_ == scope:
-                    cfg_dict.pop('_scope_', None)
-                [_remove_scope(_value, scope) for _value in cfg_dict.values()]
-            elif isinstance(cfg_dict, (list, tuple)):
-                [_remove_scope(_value, scope) for _value in cfg_dict]
-
-        _remove_scope(args, scope)
-
         try:
             # If `obj_cls` inherits from `ManagerMixin`, it should be
             # instantiated by `ManagerMixin.get_instance` to ensure that it
