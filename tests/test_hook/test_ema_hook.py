@@ -149,3 +149,25 @@ class TestEMAHook(TestCase):
             custom_hooks=[dict(type='EMAHook')],
             experiment_name='test3')
         runner.test()
+
+        # Test load checkpoint without ema_state_dict
+        ckpt = torch.load(osp.join(self.temp_dir.name, 'epoch_2.pth'))
+        ckpt.pop('ema_state_dict')
+        torch.save(ckpt,
+                   osp.join(self.temp_dir.name, 'without_ema_state_dict.pth'))
+        runner = Runner(
+            model=DummyWrapper(ToyModel()),
+            test_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            test_evaluator=evaluator,
+            test_cfg=dict(),
+            work_dir=self.temp_dir.name,
+            load_from=osp.join(self.temp_dir.name,
+                               'without_ema_state_dict.pth'),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook')],
+            experiment_name='test4')
+        runner.test()
