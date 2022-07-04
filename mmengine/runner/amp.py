@@ -97,7 +97,7 @@ def autocast(device_type: Optional[str] = None,
                     '`autocast` is only available in gpu mode')
 
     else:
-        # Extracted from https://github.com/pytorch/pytorch/blob/master/torch/amp/autocast_mode.py # noqa: E501
+        # Modified from https://github.com/pytorch/pytorch/blob/master/torch/amp/autocast_mode.py # noqa: E501
         # This code should update with the `torch.autocast`.
         if cache_enabled is None:
             cache_enabled = torch.is_autocast_cache_enabled()
