@@ -168,9 +168,6 @@ class CheckpointHook(Hook):
                 self.best_ckpt_path: Optional[str] = None
             else:
                 self.best_ckpt_path_dict: Dict = dict()
-            # self.best_ckpt_path: Tuple[str, Dict, None]
-            # self.best_ckpt_path = None if len(self.key_indicators) == 1 \
-            #     else dict()  # type: ignore[assignment]
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
