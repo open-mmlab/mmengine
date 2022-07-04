@@ -1,11 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .hub import load_url
 from .manager import ManagerMeta, ManagerMixin
-from .misc import (RemoveAssignFromAST, check_prerequisites, concat_list,
-                   deprecated_api_warning, has_batch_norm, has_method,
-                   import_modules_from_strings, is_list_of,
-                   is_method_overridden, is_seq_of, is_str, is_tuple_of,
-                   iter_cast, list_cast, mmcv_full_available,
+from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
+                   has_batch_norm, has_method, import_modules_from_strings,
+                   is_list_of, is_method_overridden, is_seq_of, is_str,
+                   is_tuple_of, iter_cast, list_cast, mmcv_full_available,
                    requires_executable, requires_package, slice_list,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
                    tuple_cast)
@@ -32,6 +31,5 @@ __all__ = [
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'ManagerMeta', 'ManagerMixin', 'set_multi_processing', 'has_batch_norm',
     'is_abs', 'is_installed', 'call_command', 'get_installed_path',
-    'check_install_package', 'RemoveAssignFromAST', 'is_abs',
-    'revert_sync_batchnorm'
+    'check_install_package', 'is_abs', 'revert_sync_batchnorm'
 ]

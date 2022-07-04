@@ -18,11 +18,10 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import (RemoveAssignFromAST, check_file_exist,
-                            check_install_package, get_installed_path,
-                            import_modules_from_strings)
-from .utils import (_get_external_cfg_base_path, _get_external_cfg_path,
-                    _get_package_and_cfg_path)
+from mmengine.utils import (check_file_exist, check_install_package,
+                            get_installed_path, import_modules_from_strings)
+from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
+                    _get_external_cfg_path, _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'

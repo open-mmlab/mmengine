@@ -4,7 +4,6 @@ import os.path as osp
 
 import torch.nn as nn
 
-import mmengine.runner
 from mmengine.registry import MODELS, DefaultScope
 from mmengine.utils import check_install_package, get_installed_path
 from .config import Config
@@ -69,6 +68,7 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs) -> nn.Module:
     Returns:
         nn.Module: Built model.
     """
+    import mmengine.runner
     package = cfg_path.split('::')[0]
     with DefaultScope.overwrite_default_scope(package):  # type: ignore
         cfg = get_config(cfg_path, pretrained)
