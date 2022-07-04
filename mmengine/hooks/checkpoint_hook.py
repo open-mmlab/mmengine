@@ -335,7 +335,6 @@ class CheckpointHook(Hook):
         for key_indicator, rule in zip(self.key_indicators, self.rules):
             key_score = self._get_metric_score(metrics, key_indicator)
 
-            # best_ckpt_path: str
             if len(self.key_indicators) == 1:
                 best_score_key = 'best_score'
                 runtime_best_ckpt_key = 'best_ckpt'
@@ -373,8 +372,9 @@ class CheckpointHook(Hook):
                 self.best_ckpt_path_dict[
                     key_indicator] = self.file_client.join_path(  # type: ignore # noqa: E501
                         self.out_dir, best_ckpt_name)
-                runner.message_hub.update_info(runtime_best_ckpt_key,
-                                               self.best_ckpt_path_dict)
+                runner.message_hub.update_info(
+                    runtime_best_ckpt_key,
+                    self.best_ckpt_path_dict[key_indicator])
             runner.save_checkpoint(
                 self.out_dir,
                 filename=best_ckpt_name,
