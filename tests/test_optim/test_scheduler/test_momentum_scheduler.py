@@ -34,12 +34,26 @@ class TestMomentumScheduler(TestCase):
         tearDown() -> cleanUp()
         """
         self.model = ToyModel()
-        self.optimizer = optim.SGD(
-            self.model.parameters(), lr=0.01, momentum=0.05, weight_decay=5e-4)
+        momentum = 0.05
+        self.layer2_mult = 10
+        self.optimizer = optim.SGD([{
+            'params': self.model.conv1.parameters()
+        }, {
+            'params': self.model.conv2.parameters(),
+            'momentum': momentum * self.layer2_mult
+        }],
+                                   lr=0.01,
+                                   momentum=momentum,
+                                   weight_decay=5e-4)
         self.optimizer_with_betas = optim.Adam(
-            self.model.parameters(),
+            [{
+                'params': self.model.conv1.parameters()
+            }, {
+                'params': self.model.conv2.parameters(),
+                'betas': (momentum * self.layer2_mult, 0.999)
+            }],
             lr=0.01,
-            betas=(0.05, 0.999),
+            betas=(momentum, 0.999),
             weight_decay=5e-4)
 
     def test_invalid_optimizer(self):
@@ -78,21 +92,19 @@ class TestMomentumScheduler(TestCase):
 
         results = []
         for epoch in range(5):
-            for param_group in self.optimizer.param_groups:
-                results.append(param_group['momentum'])
-                # The order should be
-                # train_epoch() -> save_checkpoint() -> scheduler.step().
-                # Break at here to simulate the checkpoint is saved before
-                # the scheduler.step().
-                if epoch == 4:
-                    break
-                scheduler.step()
+            results.append(self.optimizer.param_groups[0]['momentum'])
+            # The order should be
+            # train_epoch() -> save_checkpoint() -> scheduler.step().
+            # Break at here to simulate the checkpoint is saved before
+            # the scheduler.step().
+            if epoch == 4:
+                break
+            scheduler.step()
         scheduler2 = ExponentialMomentum(
             self.optimizer, gamma=0.9, last_step=4)
         for epoch in range(6):
-            for param_group in self.optimizer.param_groups:
-                results.append(param_group['momentum'])
-                scheduler2.step()
+            results.append(self.optimizer.param_groups[0]['momentum'])
+            scheduler2.step()
 
         for epoch in range(epochs):
             assert_allclose(
@@ -131,7 +143,10 @@ class TestMomentumScheduler(TestCase):
 
     def test_get_last_value(self):
         epochs = 10
-        targets = [[0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]]
+        single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
         scheduler = StepMomentum(self.optimizer, 3, gamma=0.1)
         for epoch in range(epochs):
             result = scheduler.get_last_value()
@@ -182,7 +197,9 @@ class TestMomentumScheduler(TestCase):
         single_targets = [0.05] * begin + [x * 0.05
                                            for x in interpolation] + [0.05] * (
                                                epochs - iters - begin)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = LinearMomentum(
             self.optimizer,
             start_factor=start_factor,
@@ -218,7 +235,9 @@ class TestMomentumScheduler(TestCase):
         epochs = 10
         single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005
                                                                     ] * 3
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = StepMomentum(
             self.optimizer, gamma=0.1, step_size=3, verbose=True)
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -231,7 +250,9 @@ class TestMomentumScheduler(TestCase):
         epochs = 10
         single_targets = [0.05] * 2 + [0.005] * 3 + [0.0005] * 4 + [0.00005
                                                                     ] * 3
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = MultiStepMomentum(
             self.optimizer, gamma=0.1, milestones=[2, 5, 9])
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -245,7 +266,9 @@ class TestMomentumScheduler(TestCase):
         # momentum = 0.005    if 5 <= epoch
         epochs = 10
         single_targets = [0.025] * 4 + [0.05] * 6
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = ConstantMomentum(self.optimizer, factor=1.0 / 2, end=5)
         self._test_scheduler_value(scheduler, targets, epochs)
 
@@ -271,7 +294,9 @@ class TestMomentumScheduler(TestCase):
         ]
         single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
             epochs - iters)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = LinearMomentum(
             self.optimizer, start_factor=start_factor, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -279,7 +304,9 @@ class TestMomentumScheduler(TestCase):
     def test_exp_scheduler(self):
         epochs = 10
         single_targets = [0.05 * (0.9**x) for x in range(epochs)]
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = ExponentialMomentum(self.optimizer, gamma=0.9)
         self._test_scheduler_value(scheduler, targets, epochs)
 
@@ -291,7 +318,9 @@ class TestMomentumScheduler(TestCase):
             eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
             for x in range(epochs)
         ]
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = CosineAnnealingMomentum(
             self.optimizer, T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -301,12 +330,17 @@ class TestMomentumScheduler(TestCase):
         power = 0.9
         min_lr = 0.001
         iters = 4
-        single_targets = [
+        layer1_targets = [
             min_lr + (0.05 - min_lr) * (1 - i / iters)**power
             for i in range(iters)
         ] + [min_lr] * (
             epochs - iters)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        layer2_targets = [
+            min_lr + (0.05 * self.layer2_mult - min_lr) *
+            (1 - i / iters)**power for i in range(iters)
+        ] + [min_lr] * (
+            epochs - iters)
+        targets = [layer1_targets, layer2_targets]
         scheduler = PolyMomentum(
             self.optimizer, power=power, eta_min=min_lr, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
@@ -371,7 +405,9 @@ class TestMomentumScheduler(TestCase):
         epochs = 12
         single_targets = [0.025, 0.03125, 0.0375, 0.04375
                           ] + [0.05] * 4 + [0.005] * 3 + [0.0005] * 1
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler1 = LinearMomentum(
             self.optimizer, start_factor=1 / 2, begin=0, end=5)
         scheduler2 = MultiStepMomentum(
@@ -391,7 +427,9 @@ class TestMomentumScheduler(TestCase):
             (1 + math.cos(math.pi * x / 5)) / 2 for x in range(5)
         ]
         single_targets = single_targets1 + single_targets2
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler2 = CosineAnnealingMomentum(
             self.optimizer, T_max=5, eta_min=eta_min, begin=5, end=10)
 
@@ -402,7 +440,9 @@ class TestMomentumScheduler(TestCase):
         epochs = 10
         single_targets = [0.025, 0.03125, 0.0375, 0.004375
                           ] + [0.005] * 2 + [0.0005] * 3 + [0.00005] * 1
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler1 = LinearMomentum(
             self.optimizer, start_factor=1 / 2, begin=0, end=5)
         scheduler2 = MultiStepMomentum(
@@ -424,7 +464,9 @@ class TestMomentumScheduler(TestCase):
         ]
         single_targets = single_targets1 + [single_targets1[-1]
                                             ] * 5 + single_targets2
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler2 = CosineAnnealingMomentum(
             self.optimizer, T_max=5, eta_min=eta_min, begin=10, end=15)
 
