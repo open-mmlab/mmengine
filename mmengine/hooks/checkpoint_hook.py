@@ -418,8 +418,8 @@ class CheckpointHook(Hook):
             key_indicator, the rule will be specified as 'less'.
 
         Args:
-            rule (str, List[str] | None): Comparison rule for best score.
-            key_indicator (str, List[str] | None): Key indicator to determine
+            rule (List[Optional[str]]): Comparison rule for best score.
+            key_indicator (List[str]): Key indicator to determine
                 the comparison rule.
         """
         if len(rules) == 1:
