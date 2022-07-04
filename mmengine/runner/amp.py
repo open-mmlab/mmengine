@@ -97,6 +97,8 @@ def autocast(device_type: Optional[str] = None,
                     '`autocast` is only available in gpu mode')
 
     else:
+        # Extracted from https://github.com/pytorch/pytorch/blob/master/torch/amp/autocast_mode.py # noqa: E501
+        # This code should update with the `torch.autocast`.
         if cache_enabled is None:
             cache_enabled = torch.is_autocast_cache_enabled()
         device = get_device()
@@ -119,8 +121,8 @@ def autocast(device_type: Optional[str] = None,
                 'In CPU autocast, only support `torch.bfloat16` dtype')
 
         else:
-            # MLU does not need to accept `device_type` argument.
-            dtype = None
+            raise ValueError('User specified autocast device_type must be '
+                             F'cuda or cpu, but got {device_type}')
 
         with torch.autocast(
                 device_type=device_type,
