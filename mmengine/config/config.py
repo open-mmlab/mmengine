@@ -404,6 +404,8 @@ class Config:
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
+                # Recursively add scope attribute to each config dict. and the
+                # outer `dict` variable with key type will have `_scope_` key.
                 _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
 
@@ -476,7 +478,8 @@ class Config:
         if isinstance(cfg, dict):
             if has_scope and 'type' in cfg:
                 has_scope = False
-                cfg._scope_ = scope  # type: ignore
+                if scope is not None:
+                    cfg._scope_ = scope  # type: ignore
             cfg = ConfigDict(cfg)
             dict.__setattr__(cfg, 'scope', scope)
             for key, value in cfg.items():

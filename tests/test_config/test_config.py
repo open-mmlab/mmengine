@@ -759,8 +759,18 @@ class TestConfig:
         class ToyLoss:
             pass
 
+        @LOCAL_MODELS.register_module()
+        class ToyModel:
+            pass
+
         DefaultScope.get_instance('test1', scope_name='test')
+        assert ext_cfg.model._scope_ == 'mmdet'
         model = LOCAL_MODELS.build(ext_cfg.model)
+
+        # Local base config should not have scope.
+        assert '_scope_' not in ext_cfg.toy_model
+        toy_model = LOCAL_MODELS.build(ext_cfg.toy_model)
+        assert isinstance(toy_model, ToyModel)
         assert model.backbone.style == 'pytorch'
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
         DefaultScope._instance_dict.pop('test1')
