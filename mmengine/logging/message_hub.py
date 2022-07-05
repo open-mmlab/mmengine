@@ -1,4 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
+import logging
 from collections import OrderedDict
 from typing import Any, Optional, Union
 
@@ -7,6 +9,7 @@ import torch
 
 from mmengine.utils import ManagerMixin
 from .history_buffer import HistoryBuffer
+from .logger import print_log
 
 
 class MessageHub(ManagerMixin):
@@ -217,7 +220,7 @@ class MessageHub(ManagerMixin):
         else:
             assert self._resumed_keys[key] == resumed, \
                 f'{key} used to be {self._resumed_keys[key]}, but got ' \
-                '{resumed} now. resumed keys cannot be modified repeatedly'
+                '{resumed} now. resumed keys cannot be modified repeatedly.'
 
     @property
     def log_scalars(self) -> OrderedDict:
@@ -301,20 +304,47 @@ class MessageHub(ManagerMixin):
             assert isinstance(value, (int, float))
         return value  # type: ignore
 
-    def __getstate__(self):
-        for key in list(self._log_scalars.keys()):
-            assert key in self._resumed_keys, (
-                f'Cannot found {key} in {self}._resumed_keys, '
-                'please make sure you do not change the _resumed_keys '
-                'outside the class')
-            if not self._resumed_keys[key]:
-                self._log_scalars.pop(key)
+    def state_dict(self) -> dict:
+        """Returns a dictionary containing log scalars and runtime information,
+        which should be resumed.
 
-        for key in list(self._runtime_info.keys()):
-            assert key in self._resumed_keys, (
-                f'Cannot found {key} in {self}._resumed_keys, '
-                'please make sure you do not change the _resumed_keys '
-                'outside the class')
-            if not self._resumed_keys[key]:
-                self._runtime_info.pop(key)
-        return self.__dict__
+        The returned ``state_dict`` can be loaded by :meth:`load_state_dict`.
+
+        Returns:
+            dict: A dictionary contains ``log_scalars``, ``runtime_info`` and
+            ``resumed_keys``.
+        """
+        saved_scalars = OrderedDict()
+        saved_info = OrderedDict()
+
+        for key, value in self._log_scalars.items():
+            if key in self._resumed_keys:
+                saved_scalars[key] = copy.deepcopy(value)
+
+        for key, value in self._runtime_info.items():
+            if key in self._resumed_keys:
+                try:
+                    saved_info[key] = copy.deepcopy(value)
+                except:  # noqa: E722
+                    print_log(
+                        f'{key} in message_hub cannot be copied, '
+                        f'just return its reference. ',
+                        logger='current',
+                        level=logging.WARNING)
+                    saved_scalars[key] = value
+        return dict(
+            log_scalars=saved_scalars,
+            runtime_info=saved_info,
+            resumed_keys=self._resumed_keys)
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        """Loads log scalars, runtime information and resumed keys from
+        ``state_dict``.
+
+        Args:
+            state_dict (dict): A dictionary contains key ``log_scalars``
+                 ``runtime_info`` and ``resumed_keys``.
+        """
+        self._log_scalars = state_dict['log_scalars']
+        self._runtime_info = state_dict['runtime_info']
+        self._resumed_keys = state_dict['resumed_keys']
