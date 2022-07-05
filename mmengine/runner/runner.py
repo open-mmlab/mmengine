@@ -858,8 +858,15 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
+            model_type = MODEL_WRAPPERS.get(
+                model_wrapper_cfg.get('type'))  # type: ignore
+            default_args: dict = dict()
+            if issubclass(model_type, DistributedDataParallel):  # type: ignore
+                default_args['device_ids'] = [int(os.environ['LOCAL_RANK'])]
+                model_wrapper_cfg.setdefault('broadcast_buffers', False)
+            default_args['module'] = model
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(module=model))
+                model_wrapper_cfg, default_args=default_args)
         return model
 
     def scale_lr(self,
@@ -1045,7 +1052,8 @@ class Runner:
             # `optim_wrapper` could also be defined as:
             # optim_wrapper = dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.1))  # noqa: E501
             # to build specific optimizer wrapper.
-            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper:
+            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper or \
+                    'constructor' in optim_wrapper:
                 optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
                 return optim_wrapper
             elif 'constructor' not in optim_wrapper:
@@ -1066,8 +1074,8 @@ class Runner:
                             f'optimizer, but got {name}={optim}')
                     optim_wrappers[name] = optim
                 return OptimWrapperDict(**optim_wrappers)
-                # If constructor is defined, directly build the optimizer
-                # wrapper instance from the config dict.
+            # If constructor is defined, directly build the optimizer
+            # wrapper instance from the config dict.
             else:
                 optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
                 return optim_wrapper
