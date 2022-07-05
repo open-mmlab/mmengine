@@ -22,7 +22,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           master_only, sync_random_seed)
+                           is_distributed, master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
@@ -624,7 +624,7 @@ class Runner:
         set_multi_processing(**mp_cfg, distributed=self.distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if self.distributed:
+        if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
             init_dist(self.launcher, **dist_cfg)
 
