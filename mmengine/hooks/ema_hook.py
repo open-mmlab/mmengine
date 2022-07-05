@@ -96,7 +96,7 @@ class EMAHook(Hook):
                 'There is no `ema_state_dict` in checkpoint. '
                 '`EMAHook` will make a copy of `state_dict` as the '
                 'initial `ema_state_dict`', 'current', logging.WARNING)
-            self.ema_model.module.load_state_dict(
+            self.ema_model.load_state_dict(
                 copy.deepcopy(checkpoint['state_dict']))
 
     def _swap_ema_parameters(self) -> None:

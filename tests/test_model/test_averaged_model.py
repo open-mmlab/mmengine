@@ -1,11 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import itertools
 from unittest import TestCase
 
 import torch
+import torch.nn as nn
 
 from mmengine.model import (ExponentialMovingAverage, MomentumAnnealingEMA,
                             StochasticWeightAverage)
+from mmengine.runner import load_state_dict
 from mmengine.testing import assert_allclose
 
 
@@ -253,3 +256,31 @@ class TestAveragedModel(TestCase):
         ]
         for p_target, p_ema in zip(averaged_params, ema_params):
             assert_allclose(p_target, p_ema)
+
+    def test_load_from_state_dict(self):
+
+        class ToyModel1(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.layer = nn.Linear(1, 1)
+                self.ema = ExponentialMovingAverage(self.layer)
+
+        class ToyModel2(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.layer = nn.Linear(1, 1)
+                self.ema = copy.deepcopy(self.layer)
+
+        # 1. Test load state dict from another the same type instance.
+        toy_model1_1 = ToyModel1()
+        toy_model1_2 = ToyModel1()
+        load_state_dict(toy_model1_1, toy_model1_2.state_dict(), strict=True)
+
+        # 2. Test load state dict from another instance, which does not wrap
+        # the ema module with `ExponentialMovingAverage`. This is to support
+        # loading the pre-trained model of `mmgeneration` in OpenMMLab 1.0
+
+        toy_model_2 = ToyModel2()
+        load_state_dict(toy_model1_1, toy_model_2.state_dict(), strict=True)
