@@ -3,12 +3,8 @@ _base_ = [
     './base1.py', '../yaml_config/base2.yaml', '../json_config/base3.json',
     './base4.py'
 ]
-
 item3 = False
 item4 = 'test'
 item8 = '{{fileBasename}}'
 item9 = {{_base_.item2}}
-item10 = _base_.item7.b.c
-item11 = _base_.item3
-item12 = _base_.item2.copy()
-item12['b'] = 0
+item10 = {{_base_.item7.b.c}}
