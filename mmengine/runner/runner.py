@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 import platform
 import random
@@ -36,7 +37,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, set_multi_processing)
+                            is_list_of, revert_sync_batchnorm,
+                            set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -96,13 +98,15 @@ class Runner:
         val_cfg (dict, optional): A dict to build a validation loop. If it does
             not provide "type" key, :class:`ValLoop` will be used by default.
             If ``val_cfg`` specified, :attr:`val_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_val_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_val_loop` for more details.
         test_cfg (dict, optional): A dict to build a test loop. If it does
             not provide "type" key, :class:`TestLoop` will be used by default.
             If ``test_cfg`` specified, :attr:`test_dataloader` should also be
-            specified. Defaults to None.
-            See :meth:`build_test_loop` for more details.
+            specified. If ``ValLoop`` is built with `fp16=True``,
+            ``runner.val()`` will be performed under fp16 precision.
+            Defaults to None. See :meth:`build_test_loop` for more details.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -395,8 +399,6 @@ class Runner:
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
 
-        self.meta: dict = dict()
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -457,6 +459,10 @@ class Runner:
     def work_dir(self):
         """str: The working directory to save checkpoints and logs."""
         return self._work_dir
+
+    @property
+    def log_dir(self):
+        return self._log_dir
 
     @property
     def max_epochs(self):
@@ -643,11 +649,16 @@ class Runner:
             resource.setrlimit(resource.RLIMIT_NOFILE,
                                (soft_limit, hard_limit))
 
-    def set_randomness(self, seed, deterministic: bool = False) -> None:
+    def set_randomness(self,
+                       seed,
+                       diff_rank_seed: bool = False,
+                       deterministic: bool = False) -> None:
         """Set random seed to guarantee reproducible results.
 
         Args:
             seed (int): A number to set random modules.
+            diff_rank_seed (bool): Whether or not set different seeds according
+                to global rank. Defaults to False.
             deterministic (bool): Whether to set the deterministic option for
                 CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
                 to True and `torch.backends.cudnn.benchmark` to False.
@@ -660,6 +671,9 @@ class Runner:
         if self._seed is None:
             self._seed = sync_random_seed()
 
+        if diff_rank_seed:
+            # set different seeds for different ranks
+            self._seed = self._seed + get_rank()
         random.seed(self._seed)
         np.random.seed(self._seed)
         torch.manual_seed(self._seed)
@@ -825,6 +839,11 @@ class Runner:
         model = model.to(get_device())
 
         if not self.distributed:
+            self.logger.info(
+                'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+                'layers in the model will be automatically reverted to '
+                'BatchNormXd layers if they are used.')
+            model = revert_sync_batchnorm(model)
             return model
 
         if model_wrapper_cfg is None:
@@ -832,9 +851,10 @@ class Runner:
                                                   False)
             # Sets the `find_unused_parameters` parameter in
             # torch.nn.parallel.DistributedDataParallel
+            # TODO: may use a more elegant way to get local device ID.
             model = MMDistributedDataParallel(
                 module=model,
-                device_ids=[torch.cuda.current_device()],
+                device_ids=[int(os.environ['LOCAL_RANK'])],
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
@@ -1242,7 +1262,8 @@ class Runner:
 
     @staticmethod
     def build_dataloader(dataloader: Union[DataLoader, Dict],
-                         seed: Optional[int] = None) -> DataLoader:
+                         seed: Optional[int] = None,
+                         diff_rank_seed: bool = False) -> DataLoader:
         """Build dataloader.
 
         The method builds three components:
@@ -1265,6 +1286,11 @@ class Runner:
                 build Dataloader object. If ``dataloader`` is a Dataloader
                 object, just returns itself.
             seed (int, optional): Random seed. Defaults to None.
+            diff_rank_seed (bool): Whether or not set different seeds to
+                different ranks. If True, the seed passed to sampler is set
+                to None, in order to synchronize the seeds used in samplers
+                across different ranks.
+
 
         Returns:
             Dataloader: DataLoader build from ``dataloader_cfg``.
@@ -1288,8 +1314,10 @@ class Runner:
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
+            sampler_seed = None if diff_rank_seed else seed
             sampler = DATA_SAMPLERS.build(
-                sampler_cfg, default_args=dict(dataset=dataset, seed=seed))
+                sampler_cfg,
+                default_args=dict(dataset=dataset, seed=sampler_seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -1420,6 +1448,7 @@ class Runner:
                     evaluator=self._val_evaluator))
         else:
             loop = ValLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1461,6 +1490,7 @@ class Runner:
                     evaluator=self._test_evaluator))
         else:
             loop = TestLoop(
+                **loop_cfg,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
@@ -1792,26 +1822,14 @@ class Runner:
                 Defaults to 'default'.
         """
         if map_location == 'default':
-            if torch.cuda.is_available():
-                device_id = torch.cuda.current_device()
-                checkpoint = self.load_checkpoint(
-                    filename,
-                    map_location=lambda storage, loc: storage.cuda(device_id))
-            else:
-                checkpoint = self.load_checkpoint(filename)
+            device = get_device()
+            checkpoint = self.load_checkpoint(filename, map_location=device)
         else:
             checkpoint = self.load_checkpoint(
                 filename, map_location=map_location)
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
-
-        if self.meta is None:
-            self.meta = {}
-
-        self.meta.setdefault('hook_msgs', {})
-        # load `last_ckpt`, `best_score`, `best_ckpt`, etc. for hook messages
-        self.meta['hook_msgs'].update(checkpoint['meta'].get('hook_msgs', {}))
 
         # check whether the number of GPU used for current experiment
         # is consistent with resuming from checkpoint
@@ -1952,9 +1970,6 @@ class Runner:
         elif not isinstance(meta, dict):
             raise TypeError(
                 f'meta should be a dict or None, but got {type(meta)}')
-
-        if self.meta is not None:
-            meta.update(self.meta)
 
         if by_epoch:
             # self.epoch increments 1 after

@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import bisect
 import time
 import warnings
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch.utils.data import DataLoader
@@ -9,7 +10,9 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.registry import LOOPS
 from mmengine.utils import is_list_of
+from .amp import autocast
 from .base_loop import BaseLoop
+from .utils import calc_dynamic_intervals
 
 
 @LOOPS.register_module()
@@ -24,14 +27,20 @@ class EpochBasedTrainLoop(BaseLoop):
         val_begin (int): The epoch that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1.
+        dynamic_intervals (List[Tuple[int, int]], optional): The
+            first element in the tuple is a milestone and the second
+            element is a interval. The interval is used after the
+            corresponding milestone. Defaults to None.
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 max_epochs: int,
-                 val_begin: int = 1,
-                 val_interval: int = 1) -> None:
+    def __init__(
+            self,
+            runner,
+            dataloader: Union[DataLoader, Dict],
+            max_epochs: int,
+            val_begin: int = 1,
+            val_interval: int = 1,
+            dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = max_epochs
         self._max_iters = max_epochs * len(self.dataloader)
@@ -47,6 +56,10 @@ class EpochBasedTrainLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
                 'None.')
+
+        self.dynamic_milestones, self.dynamic_intervals = \
+            calc_dynamic_intervals(
+                self.val_interval, dynamic_intervals)
 
     @property
     def max_epochs(self):
@@ -75,6 +88,7 @@ class EpochBasedTrainLoop(BaseLoop):
         while self._epoch < self._max_epochs:
             self.run_epoch()
 
+            self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._epoch >= self.val_begin
                     and self._epoch % self.val_interval == 0):
@@ -112,6 +126,11 @@ class EpochBasedTrainLoop(BaseLoop):
             data_batch=data_batch,
             outputs=outputs)
         self._iter += 1
+
+    def _decide_current_val_interval(self) -> None:
+        """Dynamically modify the ``val_interval``."""
+        step = bisect.bisect(self.dynamic_milestones, (self.epoch + 1))
+        self.val_interval = self.dynamic_intervals[step - 1]
 
 
 class _InfiniteDataloaderIterator:
@@ -171,14 +190,20 @@ class IterBasedTrainLoop(BaseLoop):
         val_begin (int): The iteration that begins validating.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1000.
+        dynamic_intervals (List[Tuple[int, int]], optional): The
+            first element in the tuple is a milestone and the second
+            element is a interval. The interval is used after the
+            corresponding milestone. Defaults to None.
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 max_iters: int,
-                 val_begin: int = 1,
-                 val_interval: int = 1000) -> None:
+    def __init__(
+            self,
+            runner,
+            dataloader: Union[DataLoader, Dict],
+            max_iters: int,
+            val_begin: int = 1,
+            val_interval: int = 1000,
+            dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = max_iters
         self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
@@ -196,6 +221,10 @@ class IterBasedTrainLoop(BaseLoop):
                 'None.')
         # get the iterator of the dataloader
         self.dataloader_iterator = _InfiniteDataloaderIterator(self.dataloader)
+
+        self.dynamic_milestones, self.dynamic_intervals = \
+            calc_dynamic_intervals(
+                self.val_interval, dynamic_intervals)
 
     @property
     def max_epochs(self):
@@ -229,6 +258,7 @@ class IterBasedTrainLoop(BaseLoop):
             data_batch = next(self.dataloader_iterator)
             self.run_iter(data_batch)
 
+            self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
                     and self._iter % self.val_interval == 0):
@@ -259,6 +289,11 @@ class IterBasedTrainLoop(BaseLoop):
             outputs=outputs)
         self._iter += 1
 
+    def _decide_current_val_interval(self) -> None:
+        """Dynamically modify the ``val_interval``."""
+        step = bisect.bisect(self.dynamic_milestones, (self._iter + 1))
+        self.val_interval = self.dynamic_intervals[step - 1]
+
 
 @LOOPS.register_module()
 class ValLoop(BaseLoop):
@@ -269,10 +304,15 @@ class ValLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
+        fp16 (bool): Whether to enable fp16 validation. Defaults to
+            False.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[Evaluator, Dict, List]) -> None:
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 evaluator: Union[Evaluator, Dict, List],
+                 fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -288,6 +328,7 @@ class ValLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
+        self.fp16 = fp16
 
     def run(self):
         """Launch validation."""
@@ -313,7 +354,8 @@ class ValLoop(BaseLoop):
         self.runner.call_hook(
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
-        outputs = self.runner.model.val_step(data_batch)
+        with autocast(enabled=self.fp16):
+            outputs = self.runner.model.val_step(data_batch)
         self.evaluator.process(data_batch, outputs)
         self.runner.call_hook(
             'after_val_iter',
@@ -331,10 +373,15 @@ class TestLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         evaluator (Evaluator or dict or list): Used for computing metrics.
+        fp16 (bool): Whether to enable fp16 testing. Defaults to
+            False.
     """
 
-    def __init__(self, runner, dataloader: Union[DataLoader, Dict],
-                 evaluator: Union[Evaluator, Dict, List]):
+    def __init__(self,
+                 runner,
+                 dataloader: Union[DataLoader, Dict],
+                 evaluator: Union[Evaluator, Dict, List],
+                 fp16: bool = False):
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or is_list_of(evaluator, dict):
@@ -350,6 +397,7 @@ class TestLoop(BaseLoop):
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
                 'visualizer will be None.')
+        self.fp16 = fp16
 
     def run(self) -> None:
         """Launch test."""
@@ -374,7 +422,8 @@ class TestLoop(BaseLoop):
         self.runner.call_hook(
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
-        predictions = self.runner.model.test_step(data_batch)
+        with autocast(enabled=self.fp16):
+            predictions = self.runner.model.test_step(data_batch)
         self.evaluator.process(data_batch, predictions)
         self.runner.call_hook(
             'after_test_iter',

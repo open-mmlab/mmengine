@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, dump
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
@@ -236,9 +236,10 @@ class LoggerHook(Hook):
                 metrics on test dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
         """
-        _, log_str = runner.log_processor.get_log_after_epoch(
+        tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test')
         runner.logger.info(log_str)
+        dump(tag, osp.join(runner.log_dir, self.json_log_path))  # type: ignore
 
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``

@@ -103,7 +103,6 @@ class TestLoggerHook:
         runner = MagicMock()
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
-        runner.meta = dict(exp_name='retinanet')
         runner.logger = MagicMock()
         logger_hook = LoggerHook()
         logger_hook.after_train_iter(runner, batch_idx=999)
@@ -162,14 +161,18 @@ class TestLoggerHook:
         with pytest.raises(AssertionError):
             runner.visualizer.add_scalars.assert_any_call({'acc': 0.5}, **args)
 
-    def test_after_test_epoch(self):
+    def test_after_test_epoch(self, tmp_path):
         logger_hook = LoggerHook()
         runner = MagicMock()
+        runner.log_dir = tmp_path
+        runner.timestamp = 'test_after_test_epoch'
         runner.log_processor.get_log_after_epoch = MagicMock(
-            return_value=(dict(), 'log_str'))
+            return_value=(dict(a=1, b=2), 'log_str'))
+        logger_hook.before_run(runner)
         logger_hook.after_test_epoch(runner)
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
+        osp.isfile(osp.join(runner.log_dir, 'test_after_test_epoch.json'))
 
     def test_after_val_iter(self):
         logger_hook = LoggerHook()
