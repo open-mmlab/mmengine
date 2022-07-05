@@ -858,10 +858,12 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
-            model_type = MODEL_WRAPPERS.get(
+            model_wrapper_type = MODEL_WRAPPERS.get(
                 model_wrapper_cfg.get('type'))  # type: ignore
             default_args: dict = dict()
-            if issubclass(model_type, DistributedDataParallel):  # type: ignore
+            if issubclass(
+                    model_wrapper_type,  # type: ignore
+                    DistributedDataParallel):
                 default_args['device_ids'] = [int(os.environ['LOCAL_RANK'])]
             default_args['module'] = model
             model = MODEL_WRAPPERS.build(
