@@ -328,21 +328,18 @@ class Registry:
         >>> DefaultScope.get_current_instance().scope_name
         custom
         >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
-        >>> with CUSTOM_MODELS.get_registry_by_scope(scope='mmcls') as \
-        >>>     registry:
+        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:  # noqa: E501
         >>>     DefaultScope.get_current_instance().scope_name
         mmcls
         >>>     registry.scope
         mmcls
         >>> # Nested switch scope
-        >>> with CUSTOM_MODELS.get_registry_by_scope(scope='mmdet') as \
-        >>>     mmdet_registry:
+        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:  # noqa: E501
         >>>     DefaultScope.get_current_instance().scope_name
         mmdet
         >>>     mmdet_registry.scope
         mmdet
-        >>>     with CUSTOM_MODELS.get_registry_by_scope(scope='mmcls') as \
-        >>>         mmcls_registry:
+        >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:  # noqa: E501
         >>>         DefaultScope.get_current_instance().scope_name
         mmcls
         >>>         mmcls_registry.scope
