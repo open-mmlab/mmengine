@@ -49,8 +49,8 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
 
     def __init__(self,
                  module: nn.Module,
-                 broadcast_buffers=False,
-                 find_unused_parameters=False,
+                 broadcast_buffers: bool = False,
+                 find_unused_parameters: bool = False,
                  *args,
                  **kwargs):
         super(DistributedDataParallel, self).__init__()
