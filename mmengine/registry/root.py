@@ -6,7 +6,8 @@ More datails can be found at
 https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 """
 
-from .registry import Registry, build_model_from_cfg, build_runner_from_cfg
+from mmengine.registry import build_model_from_cfg, build_runner_from_cfg
+from .registry import Registry
 
 # manage all kinds of runners like `EpochBasedRunner` and `IterBasedRunner`
 RUNNERS = Registry('runner', build_func=build_runner_from_cfg)
