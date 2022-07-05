@@ -36,11 +36,23 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
     Args:
         module (nn.Module): model contain multiple submodules which have
             separately updating strategy.
+        broadcast_buffers (bool): Same as that in
+            `torch.nn.parallel.distributed.DistributedDataParallel`.
+            Defaults to False.
+        find_unused_parameters (bool, optional): Same as that in
+            `torch.nn.parallel.distributed.DistributedDataParallel`.
+            Traverse the autograd graph of all tensors contained in returned
+            value of the wrapped module’s forward function. Defaults to False.
         *args: list arguments passed to ``MMDistributedDataParallel``
         **kwargs: keyword arguments passed to ``MMDistributedDataParallel``.
     """
 
-    def __init__(self, module: nn.Module, *args, **kwargs):
+    def __init__(self,
+                 module: nn.Module,
+                 broadcast_buffers=False,
+                 find_unused_parameters=False,
+                 *args,
+                 **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
         device = get_device()
@@ -54,7 +66,11 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                 sub_module = sub_module.to(device)
             else:
                 sub_module = MMDistributedDataParallel(
-                    module=sub_module.to(device), *args, **kwargs)
+                    module=sub_module.to(device),
+                    broadcast_buffers=broadcast_buffers,
+                    find_unused_parameters=find_unused_parameters,
+                    *args,
+                    **kwargs)
             module._modules[name] = sub_module
 
     def train_step(self, data: List[dict],
