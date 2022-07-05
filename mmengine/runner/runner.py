@@ -863,7 +863,6 @@ class Runner:
             default_args: dict = dict()
             if issubclass(model_type, DistributedDataParallel):  # type: ignore
                 default_args['device_ids'] = [int(os.environ['LOCAL_RANK'])]
-                model_wrapper_cfg.setdefault('broadcast_buffers', False)
             default_args['module'] = model
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg, default_args=default_args)
