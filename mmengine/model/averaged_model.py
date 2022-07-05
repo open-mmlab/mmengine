@@ -117,8 +117,8 @@ class BaseAveragedModel(nn.Module):
 
         In OpenMMLab 1.0, model will not wrap ema submodule with
         ``BaseAveragedModel``, and the ema weight key in `state_dict` will
-        miss `module` prefix. Therefore, ``BaseAveragedModel`` will
-        automatically add the module prefix if the corresponding key in
+        miss `module` prefix. Therefore, ``BaseAveragedModel`` need to
+        automatically add the ``module`` prefix if the corresponding key in
         ``state_dict`` misses it.
 
         Args:
