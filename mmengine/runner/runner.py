@@ -1052,8 +1052,7 @@ class Runner:
             # `optim_wrapper` could also be defined as:
             # optim_wrapper = dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.1))  # noqa: E501
             # to build specific optimizer wrapper.
-            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper or \
-                    'constructor' in optim_wrapper:
+            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper:
                 optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
                 return optim_wrapper
             elif 'constructor' not in optim_wrapper:
@@ -1074,8 +1073,8 @@ class Runner:
                             f'optimizer, but got {name}={optim}')
                     optim_wrappers[name] = optim
                 return OptimWrapperDict(**optim_wrappers)
-            # If constructor is defined, directly build the optimizer
-            # wrapper instance from the config dict.
+                # If constructor is defined, directly build the optimizer
+                # wrapper instance from the config dict.
             else:
                 optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
                 return optim_wrapper
