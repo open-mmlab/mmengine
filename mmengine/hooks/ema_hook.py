@@ -24,11 +24,18 @@ class EMAHook(Hook):
         ema_type (str): The type of EMA strategy to use. You can find the
             supported strategies in ``mmengine.model.averaged_model``.
             Defaults to 'ExponentialMovingAverage'
+        strict (bool): Whether to strictly enforce that the keys of
+            ``state_dict`` in checkpoint match the keys returned by
+            ``self.module.state_dict``. Defaults to True.
     """
 
     priority = 'NORMAL'
 
-    def __init__(self, ema_type: str = 'ExponentialMovingAverage', **kwargs):
+    def __init__(self,
+                 ema_type: str = 'ExponentialMovingAverage',
+                 strict: bool = True,
+                 **kwargs):
+        self.strict = strict
         self.ema_cfg = dict(type=ema_type, **kwargs)
 
     def before_run(self, runner) -> None:
@@ -88,7 +95,8 @@ class EMAHook(Hook):
             # The original model parameters are actually saved in ema field.
             # swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
-            self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
+            self.ema_model.load_state_dict(
+                checkpoint['ema_state_dict'], strict=self.strict)
 
         # Support load checkpoint without ema state dict.
         else:
@@ -97,7 +105,7 @@ class EMAHook(Hook):
                 '`EMAHook` will make a copy of `state_dict` as the '
                 'initial `ema_state_dict`', 'current', logging.WARNING)
             self.ema_model.load_state_dict(
-                copy.deepcopy(checkpoint['state_dict']))
+                copy.deepcopy(checkpoint['state_dict']), strict=self.strict)
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
