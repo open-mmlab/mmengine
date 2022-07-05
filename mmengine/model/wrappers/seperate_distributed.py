@@ -37,10 +37,10 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         module (nn.Module): model contain multiple submodules which have
             separately updating strategy.
         broadcast_buffers (bool): Same as that in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
             Defaults to False.
-        find_unused_parameters (bool, optional): Same as that in
-            `torch.nn.parallel.distributed.DistributedDataParallel`.
+        find_unused_parameters (bool): Same as that in
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
             Traverse the autograd graph of all tensors contained in returned
             value of the wrapped module’s forward function. Defaults to False.
         *args: list arguments passed to ``MMDistributedDataParallel``
