@@ -270,6 +270,7 @@ class RepeatDataset:
             'or `get_subset_` interfaces, please use them in the wrapped '
             'dataset first and then use `RepeatDataset`.')
 
+
 @DATASETS.register_module()
 class ClassBalancedDataset:
     """A wrapper of class balanced dataset.
