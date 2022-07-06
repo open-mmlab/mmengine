@@ -68,7 +68,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
             - gradient_as_bucket_view (bool): Defaults to False.
             - static_graph (bool): Defaults to False.
 
-    See more information about arguments in `https://pytorch.org/docs/stable/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel`_  # noqa E501
+    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
 
     Note:
         If model has multiple submodules and each module has
