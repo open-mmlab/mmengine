@@ -339,7 +339,7 @@ class MessageHub(ManagerMixin):
 
     def load_state_dict(self, state_dict: Union['MessageHub', dict]) -> None:
         """Loads log scalars, runtime information and resumed keys from
-        ``state_dict``.
+        ``state_dict`` or ``message_hub``.
 
         Args:
             state_dict (dict or MessageHub): A dictionary contains key
