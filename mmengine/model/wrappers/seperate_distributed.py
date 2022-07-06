@@ -53,7 +53,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
             - process_group (ProcessGroup, optional): The process group to be
               used for distributed data all-reduction.
             - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
-              to 25
+              to 25.
             - check_reduction (bool): This argument is deprecated. Defaults
               to False.
             - gradient_as_bucket_view (bool): Defaults to False.
