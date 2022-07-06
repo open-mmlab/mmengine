@@ -47,8 +47,30 @@ class MMDistributedDataParallel(DistributedDataParallel):
                   loss.
             Default: False.
 
-        *args: list arguments passed to ``DistributedDataParallel``
         **kwargs: keyword arguments passed to ``DistributedDataParallel``.
+
+            - device_ids (List[int] or torch.device, optional): CUDA devices
+              for module.
+            - output_device (int or torch.device, optional): Device location of
+              output for single-device CUDA modules.
+            - broadcast_buffers (bool): Same as that in
+              ``torch.nn.parallel.distributed.DistributedDataParallel``.
+              Defaults to True.
+            - broadcast_buffers (bool): Flag that enables syncing (
+                broadcasting) buffers of the module at beginning of the
+                ``forward`` function. Defaults to True
+            - find_unused_parameters (bool): Whether to find parameters of
+              module, which are not in the forward graph. Defaults to False.
+            - process_group (ProcessGroup, optional): The process group to be
+              used for distributed data all-reduction.
+            - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
+              to 25
+            - check_reduction (bool): This argument is deprecated. Defaults
+              to False.
+            - gradient_as_bucket_view (bool): Defaults to False.
+            - static_graph (bool): Defaults to False.
+
+    See more information about arguments in `https://pytorch.org/docs/stable/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel`_  # noqa E501
 
     Note:
         If model has multiple submodules and each module has
@@ -63,8 +85,11 @@ class MMDistributedDataParallel(DistributedDataParallel):
         override the ``train_step`` method.
     """
 
-    def __init__(self, detect_anomalous_params: bool = False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 module,
+                 detect_anomalous_params: bool = False,
+                 **kwargs):
+        super().__init__(module=module, **kwargs)
         self.detect_anomalous_params = detect_anomalous_params
 
     def train_step(self, data: List[dict],

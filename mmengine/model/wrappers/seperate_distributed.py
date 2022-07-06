@@ -43,15 +43,28 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
             ``torch.nn.parallel.distributed.DistributedDataParallel``.
             Traverse the autograd graph of all tensors contained in returned
             value of the wrapped module’s forward function. Defaults to False.
-        *args: list arguments passed to ``MMDistributedDataParallel``
-        **kwargs: keyword arguments passed to ``MMDistributedDataParallel``.
+        **kwargs: Keyword arguments passed to ``MMDistributedDataParallel``.
+
+            - device_ids (List[int] or torch.device, optional): CUDA devices
+              for module.
+            - output_device (int or torch.device, optional): Device location of
+              output for single-device CUDA modules.
+            - process_group (ProcessGroup, optional): The process group to be
+              used for distributed data all-reduction.
+            - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
+              to 25
+            - check_reduction (bool): This argument is deprecated. Defaults
+              to False.
+            - gradient_as_bucket_view (bool): Defaults to False.
+            - static_graph (bool): Defaults to False.
+
+    See more information about arguments in `https://pytorch.org/docs/stable/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel`_  # noqa E501
     """
 
     def __init__(self,
                  module: nn.Module,
                  broadcast_buffers: bool = False,
                  find_unused_parameters: bool = False,
-                 *args,
                  **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
@@ -69,7 +82,6 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                     module=sub_module.to(device),
                     broadcast_buffers=broadcast_buffers,
                     find_unused_parameters=find_unused_parameters,
-                    *args,
                     **kwargs)
             module._modules[name] = sub_module
 
