@@ -337,18 +337,24 @@ class MessageHub(ManagerMixin):
             runtime_info=saved_info,
             resumed_keys=self._resumed_keys)
 
-    def load_state_dict(self, state_dict: dict) -> None:
+    def load_state_dict(self, state_dict: Union['MessageHub', dict]) -> None:
         """Loads log scalars, runtime information and resumed keys from
         ``state_dict``.
 
         Args:
-            state_dict (dict): A dictionary contains key ``log_scalars``
-                 ``runtime_info`` and ``resumed_keys``.
+            state_dict (dict or MessageHub): A dictionary contains key
+                ``log_scalars`` ``runtime_info`` and ``resumed_keys``, or a
+                MessageHub instance.
         """
-        for key in ('log_scalars', 'runtime_info', 'resumed_keys'):
-            assert key in state_dict, (
-                'The loaded `state_dict` of `MessageHub` must contain key: '
-                f'`{key}`')
-        self._log_scalars = state_dict['log_scalars']
-        self._runtime_info = state_dict['runtime_info']
-        self._resumed_keys = state_dict['resumed_keys']
+        if isinstance(state_dict, dict):
+            for key in ('log_scalars', 'runtime_info', 'resumed_keys'):
+                assert key in state_dict, (
+                    'The loaded `state_dict` of `MessageHub` must contain '
+                    f'key: `{key}`')
+            self._log_scalars = copy.deepcopy(state_dict['log_scalars'])
+            self._runtime_info = copy.deepcopy(state_dict['runtime_info'])
+            self._resumed_keys = copy.deepcopy(state_dict['resumed_keys'])
+        else:
+            self._log_scalars = copy.deepcopy(state_dict._log_scalars)
+            self._runtime_info = copy.deepcopy(state_dict._runtime_info)
+            self._resumed_keys = copy.deepcopy(state_dict._resumed_keys)

@@ -110,19 +110,28 @@ class TestMessageHub:
         assert 'tensor' not in state_dict
 
     def test_load_state_dict(self):
-        message_hub = MessageHub.get_instance('test_load_state_dict1')
+        message_hub1 = MessageHub.get_instance('test_load_state_dict1')
         # update log_scalars.
-        message_hub.update_scalar('loss', 0.1)
-        message_hub.update_scalar('lr', 0.1, resumed=False)
+        message_hub1.update_scalar('loss', 0.1)
+        message_hub1.update_scalar('lr', 0.1, resumed=False)
         # update runtime information
-        message_hub.update_info('iter', 1, resumed=True)
-        message_hub.update_info('tensor', [1, 2, 3], resumed=False)
-        state_dict = message_hub.state_dict()
-        message_hub = MessageHub.get_instance('test_load_state_dict2')
-        message_hub.load_state_dict(state_dict)
-        assert message_hub.get_scalar('loss').data == (np.array([0.1]),
-                                                       np.array([1]))
-        assert message_hub.get_info('iter') == 1
+        message_hub1.update_info('iter', 1, resumed=True)
+        message_hub1.update_info('tensor', [1, 2, 3], resumed=False)
+        state_dict = message_hub1.state_dict()
+
+        # Resume from state_dict
+        message_hub2 = MessageHub.get_instance('test_load_state_dict2')
+        message_hub2.load_state_dict(state_dict)
+        assert message_hub2.get_scalar('loss').data == (np.array([0.1]),
+                                                        np.array([1]))
+        assert message_hub2.get_info('iter') == 1
+
+        # Test resume from `MessageHub` instance.
+        message_hub3 = MessageHub.get_instance('test_load_state_dict3')
+        message_hub3.load_state_dict(state_dict)
+        assert message_hub3.get_scalar('loss').data == (np.array([0.1]),
+                                                        np.array([1]))
+        assert message_hub3.get_info('iter') == 1
 
     def test_getstate(self):
         message_hub = MessageHub.get_instance('name')
