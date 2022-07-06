@@ -305,8 +305,8 @@ class MessageHub(ManagerMixin):
         return value  # type: ignore
 
     def state_dict(self) -> dict:
-        """Returns a dictionary containing log scalars and runtime information,
-        which should be resumed.
+        """Returns a dictionary containing log scalars, runtime information and
+        resumed keys, which should be resumed.
 
         The returned ``state_dict`` can be loaded by :meth:`load_state_dict`.
 
@@ -318,11 +318,11 @@ class MessageHub(ManagerMixin):
         saved_info = OrderedDict()
 
         for key, value in self._log_scalars.items():
-            if key in self._resumed_keys:
+            if self._resumed_keys.get(key, False):
                 saved_scalars[key] = copy.deepcopy(value)
 
         for key, value in self._runtime_info.items():
-            if key in self._resumed_keys:
+            if self._resumed_keys.get(key, False):
                 try:
                     saved_info[key] = copy.deepcopy(value)
                 except:  # noqa: E722
@@ -345,6 +345,10 @@ class MessageHub(ManagerMixin):
             state_dict (dict): A dictionary contains key ``log_scalars``
                  ``runtime_info`` and ``resumed_keys``.
         """
+        for key in ('log_scalars', 'runtime_info', 'resumed_keys'):
+            assert key in state_dict, (
+                'The loaded `state_dict` of `MessageHub` must contain key: '
+                f'`{key}`')
         self._log_scalars = state_dict['log_scalars']
         self._runtime_info = state_dict['runtime_info']
         self._resumed_keys = state_dict['resumed_keys']

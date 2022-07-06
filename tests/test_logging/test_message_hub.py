@@ -94,6 +94,36 @@ class TestMessageHub:
             loss_dict = dict(error_type=dict(count=1))
             message_hub.update_scalars(loss_dict)
 
+    def test_state_dict(self):
+        message_hub = MessageHub.get_instance('test_state_dict')
+        # update log_scalars.
+        message_hub.update_scalar('loss', 0.1)
+        message_hub.update_scalar('lr', 0.1, resumed=False)
+        # update runtime information
+        message_hub.update_info('iter', 1, resumed=True)
+        message_hub.update_info('tensor', [1, 2, 3], resumed=False)
+        state_dict = message_hub.state_dict()
+        assert state_dict['log_scalars']['loss'].data == (np.array([0.1]),
+                                                          np.array([1]))
+        assert 'lr' not in state_dict['log_scalars']
+        assert state_dict['runtime_info']['iter'] == 1
+        assert 'tensor' not in state_dict
+
+    def test_load_state_dict(self):
+        message_hub = MessageHub.get_instance('test_load_state_dict1')
+        # update log_scalars.
+        message_hub.update_scalar('loss', 0.1)
+        message_hub.update_scalar('lr', 0.1, resumed=False)
+        # update runtime information
+        message_hub.update_info('iter', 1, resumed=True)
+        message_hub.update_info('tensor', [1, 2, 3], resumed=False)
+        state_dict = message_hub.state_dict()
+        message_hub = MessageHub.get_instance('test_load_state_dict2')
+        message_hub.load_state_dict(state_dict)
+        assert message_hub.get_scalar('loss').data == (np.array([0.1]),
+                                                       np.array([1]))
+        assert message_hub.get_info('iter') == 1
+
     def test_getstate(self):
         message_hub = MessageHub.get_instance('name')
         # update log_scalars.
@@ -116,8 +146,8 @@ class TestMessageHub:
     def test_get_instance(self):
         # Test get root mmengine message hub.
         MessageHub._instance_dict = OrderedDict()
-        root_logger = MessageHub.get_current_instance()
-        assert id(MessageHub.get_instance('mmengine')) == id(root_logger)
+        message_hub = MessageHub.get_current_instance()
+        assert id(MessageHub.get_instance('mmengine')) == id(message_hub)
         # Test original `get_current_instance` function.
         MessageHub.get_instance('mmdet')
         assert MessageHub.get_current_instance().instance_name == 'mmdet'

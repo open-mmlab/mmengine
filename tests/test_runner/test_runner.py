@@ -1900,6 +1900,17 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
 
+        # 2.6 test resumed message_hub has the history value.
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint13'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        assert len(runner.message_hub.log_scalars['train/lr'].data[1]) == 3
+        assert len(MessageHub.get_current_instance().log_scalars['train/lr'].
+                   data[1]) == 3
+
     def test_build_runner(self):
         # No need to test other cases which have been tested in
         # `test_build_from_cfg`
