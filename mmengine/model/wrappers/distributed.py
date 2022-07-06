@@ -53,9 +53,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
               for module.
             - output_device (int or torch.device, optional): Device location of
               output for single-device CUDA modules.
-            - broadcast_buffers (bool): Same as that in
-              ``torch.nn.parallel.distributed.DistributedDataParallel``.
-              Defaults to True.
+            - dim (int): Defaults to 0.
             - broadcast_buffers (bool): Flag that enables syncing (
                 broadcasting) buffers of the module at beginning of the
                 ``forward`` function. Defaults to True

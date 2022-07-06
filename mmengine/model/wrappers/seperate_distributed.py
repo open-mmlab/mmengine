@@ -49,6 +49,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
               for module.
             - output_device (int or torch.device, optional): Device location of
               output for single-device CUDA modules.
+            - dim (int): Defaults to 0.
             - process_group (ProcessGroup, optional): The process group to be
               used for distributed data all-reduction.
             - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
