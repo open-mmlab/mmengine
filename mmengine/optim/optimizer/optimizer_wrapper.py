@@ -115,11 +115,6 @@ class OptimWrapper:
         # lost when the `_max_counts` is not divisible by
         # `accumulative_counts`.
         self._max_counts = -1
-        # If `_inner_count` is smaller than `_divisible_counts`, the loss
-        # factor used for gradient accumulation should be the same as
-        # `_accumulative_counts`. If `_max_counts` has not been initialized,
-        # the loss factor will always be the same as `_accumulative_counts`.
-        self._divisible_counts = -1
         # The `_remainder_iter` is used for calculating loss factor at the
         # last few iterations. If `_max_counts` has not been initialized,
         # the loss factor will always be the same as `_accumulative_counts`.
@@ -333,14 +328,8 @@ class OptimWrapper:
             self.logger.warning(
                 'Gradient accumulative may slightly decrease '
                 'performance because the model has BatchNorm layers.')
-        residual_counts = max_counts - init_counts
-        # The maximum number of training iteration that is divisible by
-        # `_accumulative_counts`.
-        self._divisible_counts = (
-            residual_counts // self._accumulative_counts *
-            self._accumulative_counts)
         # Remainder of `_max_counts` divided by `_accumulative_counts`
-        self._remainder_counts = residual_counts - self._divisible_counts
+        self._remainder_counts = self._max_counts % self._accumulative_counts
 
     def should_update(self) -> bool:
         """Decide whether the parameters should be updated at the current
@@ -396,7 +385,7 @@ class OptimWrapper:
             # be divisible by `self._accumulative_counts`, so the
             # `loss_scale` for the last few iterations needs to be
             # recalculated.
-            if self._inner_count < self._divisible_counts:
+            if self._inner_count < self._max_counts - self._remainder_counts:
                 loss_factor = self._accumulative_counts
             else:
                 loss_factor = self._remainder_counts
