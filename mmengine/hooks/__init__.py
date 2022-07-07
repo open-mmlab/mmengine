@@ -5,6 +5,7 @@ from .empty_cache_hook import EmptyCacheHook
 from .hook import Hook
 from .iter_timer_hook import IterTimerHook
 from .logger_hook import LoggerHook
+from .modify_state_dict_hook import ModifyStateDictHook
 from .naive_visualization_hook import NaiveVisualizationHook
 from .param_scheduler_hook import ParamSchedulerHook
 from .runtime_info_hook import RuntimeInfoHook
@@ -14,5 +15,6 @@ from .sync_buffer_hook import SyncBuffersHook
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
-    'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook'
+    'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook',
+    'ModifyStateDictHook'
 ]
