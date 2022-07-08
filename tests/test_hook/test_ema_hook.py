@@ -221,7 +221,7 @@ class TestEMAHook(TestCase):
             val_cfg=dict(),
             default_hooks=dict(logger=None),
             custom_hooks=[dict(type='EMAHook', begin=5)],
-            experiment_name='test1')
+            experiment_name='test6')
         runner.train()
         state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_4.pth'))
         self.assertNotIn('ema_state_dict', state_dict)
@@ -251,7 +251,7 @@ class TestEMAHook(TestCase):
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=False)),
             custom_hooks=[dict(type='EMAHook', begin=5, by_epoch=False)],
-            experiment_name='test1')
+            experiment_name='test7')
         runner.train()
         state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_4.pth'))
         self.assertNotIn('ema_state_dict', state_dict)
