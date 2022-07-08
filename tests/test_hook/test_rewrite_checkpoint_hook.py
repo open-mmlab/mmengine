@@ -112,20 +112,21 @@ class TestModifyStateDictHook(TestCase):
         # Test with default constructor
         hook = RewriteCheckPointHook()
         self.assertEqual(hook.applied_key, 'state_dict')
-        self.assertEqual(hook.removed_keys, [])
-        self.assertEqual(hook.name_mappings, [])
+        self.assertEqual(hook.removed_prefix, [])
+        self.assertEqual(hook.prefix_mapping, [])
         self.assertEqual(hook.merged_state_dicts, [])
 
         # Test with non-list arguments
         hook = RewriteCheckPointHook(
             applied_key='ema_state_dict',
-            removed_keys='module',
-            name_mappings=dict(src='layer', dst='linear'),
+            removed_prefix='module',
+            prefix_mapping=dict(src='layer', dst='linear'),
             merged_state_dicts='path_to_ckpt',
         )
         self.assertEqual(hook.applied_key, 'ema_state_dict')
-        self.assertEqual(hook.removed_keys, ['module'])
-        self.assertEqual(hook.name_mappings, [dict(src='layer', dst='linear')])
+        self.assertEqual(hook.removed_prefix, ['module'])
+        self.assertEqual(hook.prefix_mapping,
+                         [dict(src='layer', dst='linear')])
         self.assertEqual(hook.merged_state_dicts, ['path_to_ckpt'])
 
         # Test with error format arguments.
@@ -134,12 +135,12 @@ class TestModifyStateDictHook(TestCase):
             RewriteCheckPointHook(applied_key=dict())
 
         with self.assertRaisesRegex(AssertionError,
-                                    'removed_keys should be a list'):
-            RewriteCheckPointHook(removed_keys=dict())
+                                    'removed_prefix should be a list'):
+            RewriteCheckPointHook(removed_prefix=dict())
 
         with self.assertRaisesRegex(AssertionError,
-                                    'name_mappings should be a list'):
-            RewriteCheckPointHook(name_mappings='unknown')
+                                    'prefix_mapping should be a list'):
+            RewriteCheckPointHook(prefix_mapping='unknown')
 
     def test_after_load_checkpoint(self):
         model = Model()
@@ -165,7 +166,7 @@ class TestModifyStateDictHook(TestCase):
         self.assertIn('module3.module2.module2.linear1.weight', state_dict)
         self.assertIn('module3.module2.module2.linear2.weight', state_dict)
         ori_state_dict = copy.deepcopy(state_dict)
-        hook = RewriteCheckPointHook(removed_keys=[
+        hook = RewriteCheckPointHook(removed_prefix=[
             'module3.module2.module2.linear1.weight',
             'module3.module2.module2.linear2.weight'
         ])
@@ -181,7 +182,7 @@ class TestModifyStateDictHook(TestCase):
 
         # 1.2 Test remove keys with prefix
         checkpoint = dict(state_dict=state_dict)
-        hook = RewriteCheckPointHook(removed_keys=['module2', 'module3'])
+        hook = RewriteCheckPointHook(removed_prefix=['module2', 'module3'])
         hook.after_load_checkpoint(Mock(), checkpoint)
         target_state_dict = dict()
         for key, value in state_dict.items():
@@ -191,10 +192,10 @@ class TestModifyStateDictHook(TestCase):
 
         # 1.3 Test overlapped removed keys
         with self.assertRaisesRegex(ValueError,
-                                    'removed_keys have a vague meaning'):
+                                    'removed_prefix have a vague meaning'):
             checkpoint = dict(state_dict=state_dict)
             hook = RewriteCheckPointHook(
-                removed_keys=['module2.module1', 'module2'])
+                removed_prefix=['module2.module1', 'module2'])
             hook.after_load_checkpoint(Mock(), checkpoint)
 
         # 2. Test merge state dict
@@ -213,7 +214,7 @@ class TestModifyStateDictHook(TestCase):
         # 3.1 Test modify single key
         checkpoint = dict(state_dict=state_dict)
         self.assertNotIn('module3.module2.module2.linear3.weight', state_dict)
-        hook = RewriteCheckPointHook(name_mappings=[
+        hook = RewriteCheckPointHook(prefix_mapping=[
             dict(
                 src='module3.module2.module2.linear1.weight',
                 dst='module3.module2.module2.linear3.weight')
@@ -227,8 +228,9 @@ class TestModifyStateDictHook(TestCase):
         # 3.2 Test remapping prefix
         checkpoint = dict(state_dict=state_dict)
         self.assertNotIn('module3.linear2.weight', state_dict)
-        hook = RewriteCheckPointHook(
-            name_mappings=[dict(src='module3.module2.module2', dst='module3')])
+        hook = RewriteCheckPointHook(prefix_mapping=[
+            dict(src='module3.module2.module2', dst='module3')
+        ])
         hook.after_load_checkpoint(Mock(), checkpoint)
         self.assertIn('module3.linear2.weight', checkpoint['state_dict'])
 
@@ -236,7 +238,7 @@ class TestModifyStateDictHook(TestCase):
         checkpoint = dict(state_dict=state_dict)
         old_model = ModelOld()
         hook = RewriteCheckPointHook(
-            name_mappings=[dict(src='module1.', dst='')])
+            prefix_mapping=[dict(src='module1.', dst='')])
         hook.after_load_checkpoint(Mock(), checkpoint)
         old_model.load_state_dict(checkpoint['state_dict'])
 
@@ -275,11 +277,13 @@ class TestModifyStateDictHook(TestCase):
                 dict(type='EMAHook'),
                 dict(
                     type='RewriteCheckPointHook',
-                    name_mappings=[dict(src='module1.', dst='')]),
+                    prefix_mapping=[dict(src='module1.', dst='')]),
                 dict(
                     type='RewriteCheckPointHook',
                     applied_key='ema_state_dict',
-                    name_mappings=[dict(src='module.module1.', dst='module.')])
+                    prefix_mapping=[
+                        dict(src='module.module1.', dst='module.')
+                    ])
             ],
             experiment_name='test_rewrite_hook2',
             load_from=osp.join(self.temp_dir.name, 'epoch_2.pth'))

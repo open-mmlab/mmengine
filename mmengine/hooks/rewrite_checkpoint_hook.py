@@ -25,8 +25,9 @@ class RewriteCheckPointHook(Hook):
     Args:
         applied_key (str): Target state dictionary saved in checkpoints, which
             needs to be overwritten. Defaults to "state_dict".
-        removed_keys (List[str]): Keys need to be removed. Defaults to [].
-        name_mappings (List[dict]): A list of dictionary. Each dictionary has
+        removed_prefix (List[str]): Key starts with corresponding prefix will
+            be removed. Defaults to [].
+        prefix_mapping (List[dict]): A list of dictionary. Each dictionary has
             two keys: ``src`` and ``dst``. ``src`` means the original key
             prefix and ``src`` means the target key prefix, see more
             information in examples. Defaults to [].
@@ -36,15 +37,15 @@ class RewriteCheckPointHook(Hook):
     Examples:
         >>> # Config example:
         >>> # remove key starts with `module`
-        >>> cfg = dict(type='RewriteCheckPointHook', removed_keys='module')
+        >>> cfg = dict(type='RewriteCheckPointHook', removed_prefix='module')
         >>>
         >>> # remapping prefix `submodule` to `module`
         >>> cfg = dict(type='RewriteCheckPointHook',
-                       name_mappings=dict(src='submodule', dst='module'))
+                       prefix_mapping=dict(src='submodule', dst='module'))
         >>>
         >>> merge keys from checkpoint.
         >>> cfg = dict(type='RewriteCheckPointHook',
-        >>>            name_mappings=dict(src='submodule', dst='module'))
+        >>>            prefix_mapping=dict(src='submodule', dst='module'))
         >>>
         >>> # Example of specific changes to the `state_dict`
         >>> import torch
@@ -74,7 +75,7 @@ class RewriteCheckPointHook(Hook):
         >>>
         >>> # remove `layer1` in `state_dict`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(removed_keys='layer1')
+        >>> hook = RewriteCheckPointHook(removed_prefix='layer1')
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer2.weight', 'layer2.bias', 'submodule.layer1.weight',
@@ -83,14 +84,14 @@ class RewriteCheckPointHook(Hook):
         >>>
         >>> # remove key with prefix `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(removed_keys='submodule')
+        >>> hook = RewriteCheckPointHook(removed_prefix='submodule')
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias']
         >>>
         >>> # remapping prefix `module` to `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(name_mappings=[dict(src='submodule', dst='module')])  # noqa: E501
+        >>> hook = RewriteCheckPointHook(prefix_mapping=[dict(src='submodule', dst='module')])  # noqa: E501
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias',
@@ -100,7 +101,7 @@ class RewriteCheckPointHook(Hook):
         >>> # remapping prefix `module` to `submodule`, `layer1` to `linear1`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> hook = RewriteCheckPointHook(
-        >>>     name_mappings=[dict(src='submodule', dst='module'),
+        >>>     prefix_mapping=[dict(src='submodule', dst='module'),
         >>>                 dict(src='layer1', dst='linear1')])
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
@@ -127,39 +128,39 @@ class RewriteCheckPointHook(Hook):
     def __init__(
         self,
         applied_key: str = 'state_dict',
-        removed_keys: List[str] = [],
-        name_mappings: List[dict] = [],
+        removed_prefix: List[str] = [],
+        prefix_mapping: List[dict] = [],
         merged_state_dicts: List[str] = [],
     ):
         assert isinstance(applied_key, str), (
             f'applied_key should be a string, but got {type(applied_key)}: '
             f'{applied_key}')
-        if not isinstance(removed_keys, list):
-            removed_keys = [removed_keys]  # type: ignore
+        if not isinstance(removed_prefix, list):
+            removed_prefix = [removed_prefix]  # type: ignore
 
-        if not isinstance(name_mappings, list):
-            name_mappings = [name_mappings]  # type: ignore
+        if not isinstance(prefix_mapping, list):
+            prefix_mapping = [prefix_mapping]  # type: ignore
 
         if not isinstance(merged_state_dicts, list):
             merged_state_dicts = [merged_state_dicts]  # type: ignore
 
-        assert is_list_of(removed_keys, str), (
-            'removed_keys should be a list instance or a single string, '
-            f'but got a {type(removed_keys)}: {removed_keys}')
+        assert is_list_of(removed_prefix, str), (
+            'removed_prefix should be a list instance or a single string, '
+            f'but got a {type(removed_prefix)}: {removed_prefix}')
 
         assert is_list_of(merged_state_dicts, str), (
             'merged_state_dicts should be a list or a single string, but got '
             f'{type(merged_state_dicts)}: {merged_state_dicts}')
 
         assert is_list_of(
-            name_mappings,
-            dict), ('name_mappings should be a list of dict a dict, but got '
-                    f'{type(name_mappings)}: {name_mappings}')
+            prefix_mapping,
+            dict), ('prefix_mapping should be a list of dict a dict, but got '
+                    f'{type(prefix_mapping)}: {prefix_mapping}')
 
         self.applied_key = applied_key
-        self.removed_keys = removed_keys
+        self.removed_prefix = removed_prefix
         self.merged_state_dicts = merged_state_dicts
-        self.name_mappings = name_mappings
+        self.prefix_mapping = prefix_mapping
 
     def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
         """Overwrites the key of corresponding status dictionary in checkpoint.
@@ -187,20 +188,21 @@ class RewriteCheckPointHook(Hook):
         Returns:
             bool: Whether to remove the key.
         """
-        matched_removed_keys = []
-        for removed_key in self.removed_keys:
+        matched_removed_prefix = []
+        for removed_key in self.removed_prefix:
             if re.match(rf'{removed_key}(.*)', key) is not None:
-                matched_removed_keys.append(key)
+                matched_removed_prefix.append(key)
 
-        # Each key in `state_dict` should only match one removed_keys at most.
-        if len(matched_removed_keys) == 0:
+        # Each key in `state_dict` should only match one removed_prefix at
+        # most.
+        if len(matched_removed_prefix) == 0:
             return False
-        elif len(matched_removed_keys) == 1:
+        elif len(matched_removed_prefix) == 1:
             return True
         else:
             raise ValueError(
-                f'removed_keys have a vague meaning, key: {key} '
-                f'matched with {matched_removed_keys} at the same time')
+                f'removed_prefix have a vague meaning, key: {key} '
+                f'matched with {matched_removed_prefix} at the same time')
 
     def _remapping_key(self, key: str, state_dict: dict,
                        new_state_dict: dict) -> None:
@@ -213,7 +215,7 @@ class RewriteCheckPointHook(Hook):
                 from original dictionary.
         """
         matched_remapping_keys = []
-        for name_mapping in self.name_mappings:
+        for name_mapping in self.prefix_mapping:
             src, dst = name_mapping['src'], name_mapping['dst']
             if re.match(rf'{src}(.*)', key) is not None:
                 matched_remapping_keys.append((src, dst))
@@ -226,7 +228,7 @@ class RewriteCheckPointHook(Hook):
             src, dst = matched_remapping_keys[0]
         else:
             raise ValueError(
-                f'name_mappings have a vague meaning, key: {key} '
+                f'prefix_mapping have a vague meaning, key: {key} '
                 f'matched with {matched_remapping_keys} at the same time')
         new_key = key.replace(src, dst)
         new_state_dict[new_key] = copy.deepcopy(state_dict[key])
