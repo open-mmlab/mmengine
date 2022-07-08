@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.data import BaseDataElement
+from mmengine.device.utils import get_device
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
 from .distributed import MMDistributedDataParallel
@@ -35,25 +36,55 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
     Args:
         module (nn.Module): model contain multiple submodules which have
             separately updating strategy.
-        *args: list arguments passed to ``MMDistributedDataParallel``
-        **kwargs: keyword arguments passed to ``MMDistributedDataParallel``.
+        broadcast_buffers (bool): Same as that in
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
+            Defaults to False.
+        find_unused_parameters (bool): Same as that in
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
+            Traverse the autograd graph of all tensors contained in returned
+            value of the wrapped module’s forward function. Defaults to False.
+        **kwargs: Keyword arguments passed to ``MMDistributedDataParallel``.
+
+            - device_ids (List[int] or torch.device, optional): CUDA devices
+              for module.
+            - output_device (int or torch.device, optional): Device location of
+              output for single-device CUDA modules.
+            - dim (int): Defaults to 0.
+            - process_group (ProcessGroup, optional): The process group to be
+              used for distributed data all-reduction.
+            - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
+              to 25.
+            - check_reduction (bool): This argument is deprecated. Defaults
+              to False.
+            - gradient_as_bucket_view (bool): Defaults to False.
+            - static_graph (bool): Defaults to False.
+
+    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
     """
 
-    def __init__(self, module: nn.Module, *args, **kwargs):
+    def __init__(self,
+                 module: nn.Module,
+                 broadcast_buffers: bool = False,
+                 find_unused_parameters: bool = False,
+                 **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
+        device = get_device()
         # Wrap the submodule with parameters of `self.module` to
         # `MMDistributedDataParallel`
-        for name, _module in module._modules.items():
+        for name, sub_module in module._modules.items():
             # module without parameters.
-            if next(_module.parameters(), None) is None:
-                _module = _module.cuda()
-            elif all(not p.requires_grad for p in module.parameters()):
-                _module = _module.cuda()
+            if next(sub_module.parameters(), None) is None:
+                sub_module = sub_module.to(device)
+            elif all(not p.requires_grad for p in sub_module.parameters()):
+                sub_module = sub_module.to(device)
             else:
-                _module = MMDistributedDataParallel(
-                    module=_module.cuda(), *args, **kwargs)
-            module._modules[name] = _module
+                sub_module = MMDistributedDataParallel(
+                    module=sub_module.to(device),
+                    broadcast_buffers=broadcast_buffers,
+                    find_unused_parameters=find_unused_parameters,
+                    **kwargs)
+            module._modules[name] = sub_module
 
     def train_step(self, data: List[dict],
                    optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:

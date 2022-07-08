@@ -376,7 +376,7 @@ class Registry:
 
         - ``key`` contains a scope name and it is not equal to the scope of
           the current registry (e.g., "mmdet"), e.g., "mmcls.FCNet": If the
-          scope exists in its children, :meth:`get`will get "FCNet" from
+          scope exists in its children, :meth:`get` will get "FCNet" from
           them. If not, :meth:`get` will first get the root registry and root
           registry call its own :meth:`get` method.
 

@@ -94,7 +94,11 @@ def all_reduce(data: Tensor,
         # it with 'sum' operation.
         if op.lower() == 'mean':
             torch_dist.all_reduce(data_on_device, _get_reduce_op('sum'), group)
-            data_on_device.div_(world_size)  # type: ignore
+
+            # When the type of `data_on_device` is int64,
+            # `data_on_device.div_(world_size)` will  appear RuntimeError:
+            # result type Float can't be cast to  the desired output type Long.
+            data_on_device = data_on_device / world_size  # type: ignore
         else:
             torch_dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 

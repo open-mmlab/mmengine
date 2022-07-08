@@ -120,5 +120,6 @@ class AmpOptimWrapper(OptimWrapper):
         Args:
             model (nn.Module): The training model.
         """
-        with super().optim_context(model), torch.cuda.amp.autocast():
+        from mmengine.runner.amp import autocast
+        with super().optim_context(model), autocast():
             yield

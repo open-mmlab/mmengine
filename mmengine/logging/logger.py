@@ -246,6 +246,7 @@ def print_log(msg,
         logger (Logger or str, optional): If the type of logger is
         ``logging.Logger``, we directly use logger to log messages.
             Some special loggers are:
+
             - "silent": No message will be printed.
             - "current": Use latest created logger to log message.
             - other str: Instance name of logger. The corresponding logger
