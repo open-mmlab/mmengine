@@ -36,9 +36,9 @@ class RewriteCheckPointHook(Hook):
     Examples:
         >>> import torch
         >>> import torch.nn as nn
-
+        >>>
         >>> from mmengine.hooks import RewriteCheckPointHook
-
+        >>>
         >>> class SubModule(nn.Module):
         >>>     def __init__(self) -> None:
         >>>         super().__init__()
@@ -51,13 +51,15 @@ class RewriteCheckPointHook(Hook):
         >>>         self.layer1 = nn.Linear(1, 1)
         >>>         self.layer2 = nn.Linear(1, 1)
         >>>         self.submodule = SubModule()
-
+        >>>
+        >>> # original `state_dict`.
         >>> model = Model()
         >>> model.state_dict().keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias',
         >>> #  'submodule.layer1.weight', 'submodule.layer1.bias',
         >>> #  'submodule.layer2.weight', 'submodule.layer2.bias']
         >>>
+        >>> # remove `layer1` in `state_dict`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> hook = RewriteCheckPointHook(removed_keys='layer1')
         >>> hook.after_load_checkpoint(None, checkpoint)
@@ -66,12 +68,14 @@ class RewriteCheckPointHook(Hook):
         >>> #  'submodule.layer1.bias', 'submodule.layer2.weight',
         >>> #  'submodule.layer2.bias']
         >>>
+        >>> # remove key with prefix `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> hook = RewriteCheckPointHook(removed_keys='submodule')
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias']
         >>>
+        >>> # remapping prefix `module` to `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> hook = RewriteCheckPointHook(name_mappings=[dict(src='submodule', dst='module')])  # noqa: E501
         >>> hook.after_load_checkpoint(None, checkpoint)
@@ -80,6 +84,7 @@ class RewriteCheckPointHook(Hook):
         >>> #  'module.layer1.weight', 'module.layer1.bias',
         >>> #  'module.layer2.weight', 'module.layer2.bias']
         >>>
+        >>> # remapping prefix `module` to `submodule`, `layer1` to `linear1`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> hook = RewriteCheckPointHook(
         >>>     name_mappings=[dict(src='submodule', dst='module'),
@@ -90,6 +95,7 @@ class RewriteCheckPointHook(Hook):
         >>> #  'layer2.bias', 'module.layer1.weight', 'module.layer1.bias',
         >>> #  'module.layer2.weight', 'module.layer2.bias']
         >>>
+        >>> # merge other `state_dict`.
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> merged_ckpt = dict(state_dict=nn.Conv2d(1, 1, 1).state_dict())
         >>> torch.save(merged_ckpt, 'docs_demo.pth')
