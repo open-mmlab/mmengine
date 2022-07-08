@@ -341,11 +341,20 @@ class MessageHub(ManagerMixin):
         """Loads log scalars, runtime information and resumed keys from
         ``state_dict`` or ``message_hub``.
 
+        If ``state_dict`` is a dictionary returned by :meth:`state_dict`, it
+        will only make copies of data from the source ``message_hub``.
+
+        If ``state_dict`` is a ``message_hub`` instance, it will make copies of
+        all data contained from the source message_hub.
+
         Args:
             state_dict (dict or MessageHub): A dictionary contains key
                 ``log_scalars`` ``runtime_info`` and ``resumed_keys``, or a
                 MessageHub instance.
         """
+        # `MessageHub` supports loading data from another message_hub instance.
+        # directly. If `state_dict` is a `MessageHub` instance, it will make a
+        # copy of all data contained from the source message_hub.
         if isinstance(state_dict, dict):
             for key in ('log_scalars', 'runtime_info', 'resumed_keys'):
                 assert key in state_dict, (
@@ -354,6 +363,8 @@ class MessageHub(ManagerMixin):
             self._log_scalars = copy.deepcopy(state_dict['log_scalars'])
             self._runtime_info = copy.deepcopy(state_dict['runtime_info'])
             self._resumed_keys = copy.deepcopy(state_dict['resumed_keys'])
+        # If `state_dict` is dict returned by `MessageHub.state_dict`, it
+        # will make a copy of data which should be resume.
         else:
             self._log_scalars = copy.deepcopy(state_dict._log_scalars)
             self._runtime_info = copy.deepcopy(state_dict._runtime_info)
