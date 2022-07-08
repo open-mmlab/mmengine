@@ -36,11 +36,37 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
     Args:
         module (nn.Module): model contain multiple submodules which have
             separately updating strategy.
-        *args: list arguments passed to ``MMDistributedDataParallel``
-        **kwargs: keyword arguments passed to ``MMDistributedDataParallel``.
+        broadcast_buffers (bool): Same as that in
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
+            Defaults to False.
+        find_unused_parameters (bool): Same as that in
+            ``torch.nn.parallel.distributed.DistributedDataParallel``.
+            Traverse the autograd graph of all tensors contained in returned
+            value of the wrapped module’s forward function. Defaults to False.
+        **kwargs: Keyword arguments passed to ``MMDistributedDataParallel``.
+
+            - device_ids (List[int] or torch.device, optional): CUDA devices
+              for module.
+            - output_device (int or torch.device, optional): Device location of
+              output for single-device CUDA modules.
+            - dim (int): Defaults to 0.
+            - process_group (ProcessGroup, optional): The process group to be
+              used for distributed data all-reduction.
+            - bucket_cap_mb (int): bucket size in MegaBytes (MB). Defaults
+              to 25.
+            - check_reduction (bool): This argument is deprecated. Defaults
+              to False.
+            - gradient_as_bucket_view (bool): Defaults to False.
+            - static_graph (bool): Defaults to False.
+
+    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
     """
 
-    def __init__(self, module: nn.Module, *args, **kwargs):
+    def __init__(self,
+                 module: nn.Module,
+                 broadcast_buffers: bool = False,
+                 find_unused_parameters: bool = False,
+                 **kwargs):
         super(DistributedDataParallel, self).__init__()
         self.module = module
         device = get_device()
@@ -54,7 +80,10 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                 sub_module = sub_module.to(device)
             else:
                 sub_module = MMDistributedDataParallel(
-                    module=sub_module.to(device), *args, **kwargs)
+                    module=sub_module.to(device),
+                    broadcast_buffers=broadcast_buffers,
+                    find_unused_parameters=find_unused_parameters,
+                    **kwargs)
             module._modules[name] = sub_module
 
     def train_step(self, data: List[dict],
