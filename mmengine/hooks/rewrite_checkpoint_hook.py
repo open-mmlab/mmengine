@@ -18,7 +18,7 @@ class RewriteCheckPointHook(Hook):
     ``RewriteCheckPointHook`` has three mode to rewrite original checkpoint:
 
     - remove: Removes specified keys in target dictionary saved in checkpoint.
-    - merge: Merge another state dictionary into the target dictionary.
+    - merge: Merges another state dictionary into the target dictionary.
     - name_mapping: Maps the original key to the target one, and overwrites it.
 
 
@@ -34,6 +34,19 @@ class RewriteCheckPointHook(Hook):
             merged. Defaults to [].
 
     Examples:
+        >>> # Config example:
+        >>> # remove key starts with `module`
+        >>> cfg = dict(type='RewriteCheckPointHook', removed_keys='module')
+        >>>
+        >>> # remapping prefix `submodule` to `module`
+        >>> cfg = dict(type='RewriteCheckPointHook',
+                       name_mappings=dict(src='submodule', dst='module'))
+        >>>
+        >>> merge keys from checkpoint.
+        >>> cfg = dict(type='RewriteCheckPointHook',
+        >>>            name_mappings=dict(src='submodule', dst='module'))
+        >>>
+        >>> # Example of specific changes to the `state_dict`
         >>> import torch
         >>> import torch.nn as nn
         >>>
