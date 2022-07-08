@@ -61,7 +61,7 @@ class Registry:
                  build_func: Optional[Callable] = None,
                  parent: Optional['Registry'] = None,
                  scope: Optional[str] = None):
-        from .registry_builder import build_from_cfg
+        from .build_function import build_from_cfg
         self._name = name
         self._module_dict: Dict[str, Type] = dict()
         self._children: Dict[str, 'Registry'] = dict()
