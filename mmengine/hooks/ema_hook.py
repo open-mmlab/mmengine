@@ -29,7 +29,6 @@ class EMAHook(Hook):
             ``self.module.state_dict``. Defaults to True.
         begin (int): The number of iteration to enable ``EMAHook``. Defaults
             to 0.
-        by_epoch (bool): Initialized ``EMAHook`` by iteration or by epoch.
     """
 
     priority = 'NORMAL'
@@ -38,13 +37,11 @@ class EMAHook(Hook):
                  ema_type: str = 'ExponentialMovingAverage',
                  strict_load: bool = True,
                  begin: int = 0,
-                 by_epoch=True,
                  **kwargs):
         self.strict_load = strict_load
         self.ema_cfg = dict(type=ema_type, **kwargs)
         assert begin >= 0, f'begin must larger than 0, but got begin: {begin})'
         self.begin = begin
-        self.by_epoch = by_epoch
         self._init = False
 
     def before_run(self, runner) -> None:
@@ -53,8 +50,11 @@ class EMAHook(Hook):
         if is_model_wrapper(model):
             model = model.module
         self.src_model = model
+        self.ema_model = MODELS.build(
+            self.ema_cfg, default_args=dict(model=self.src_model))
+        self.enable_by_epoch = runner.max_epochs != 0
 
-        if self.by_epoch:
+        if self.enable_by_epoch:
             assert self.begin <= runner.max_epochs, (
                 'self.begin should be smaller than runner.max_epochs: '
                 f'{runner.max_epochs}, but got begin: {self.begin}')
@@ -169,12 +169,7 @@ class EMAHook(Hook):
         Returns:
             bool: Whether ``EMAHook`` has been initialized.
         """
-        if self.by_epoch:
-            initialized = runner.epoch + 1 >= self.begin
+        if self.enable_by_epoch:
+            return runner.epoch + 1 >= self.begin
         else:
-            initialized = runner.iter + 1 >= self.begin
-        if initialized and not self._init:
-            self.ema_model = MODELS.build(
-                self.ema_cfg, default_args=dict(model=self.src_model))
-            self._init = True
-        return initialized
+            return runner.iter + 1 >= self.begin
