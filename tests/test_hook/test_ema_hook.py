@@ -220,7 +220,7 @@ class TestEMAHook(TestCase):
             train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
             val_cfg=dict(),
             default_hooks=dict(logger=None),
-            custom_hooks=[dict(type='EMAHook', begin=5)],
+            custom_hooks=[dict(type='EMAHook', begin_epoch=5)],
             experiment_name='test6')
         runner.train()
         state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_4.pth'))
@@ -250,7 +250,7 @@ class TestEMAHook(TestCase):
             default_hooks=dict(
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=False)),
-            custom_hooks=[dict(type='EMAHook', begin=5, by_epoch=False)],
+            custom_hooks=[dict(type='EMAHook', begin_iter=5)],
             experiment_name='test7')
         runner.train()
         state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_4.pth'))
