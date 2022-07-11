@@ -35,8 +35,8 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
 @COLLATE_FUNCTIONS.register_module()
 def pseudo_collate(data_batch: DATA_BATCH) -> dict:
     """The default behavior of dataloader is to merge a list of samples to form
-    a mini-batch of Tensor(s). However, in MMEngine, ``pseudo_collate`` does
-    nothing just returns ``data_batch``.
+    a mini-batch of Tensor(s). However, in MMEngine, ``pseudo_collate``
+    converts data batch from list of dict to dict.
 
     Args:
         data_batch (Sequence[dict]): Batch of data from
