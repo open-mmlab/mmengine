@@ -1359,9 +1359,9 @@ class Runner:
 
         # The default behavior of `collat_fn` in dataloader is to
         # merge a list of samples to form a mini-batch of Tensor(s).
-        # However, to make this more flexible, if collate_fn is not defined
-        # in dataloader_cfg, Dataloader will do nothing with the data
-        # sampled from dataset, and data will be handled in model.
+        # However, In mmengine, if `collate_fn` is not defined in
+        # dataloader_cfg, `pseudo_collate` will only convert the list of
+        # samples into a dict without stacking the batch tensor.
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
         collate_fn_type = collate_fn_cfg.pop('type')
