@@ -1109,6 +1109,10 @@ class Runner:
                 param_schedulers.append(scheduler)
             elif isinstance(scheduler, dict):
                 _scheduler = copy.deepcopy(scheduler)
+                if _scheduler.get('by_epoch', True):
+                    _scheduler.setdefault('end', self.max_epochs)
+                else:
+                    _scheduler.setdefault('end', self.max_iters)
                 convert_to_iter = _scheduler.pop('convert_to_iter_based',
                                                  False)
                 if convert_to_iter:
