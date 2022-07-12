@@ -39,25 +39,14 @@ class Evaluator:
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[BaseDataElement]):
+    def process(self, predictions: Sequence[BaseDataElement]):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Sequence[dict]): A batch of data from the dataloader.
             predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
-        _data_batch = []
-        for data in data_batch:
-            if isinstance(data['data_sample'], BaseDataElement):
-                _data_batch.append(
-                    dict(
-                        inputs=data['inputs'],
-                        data_sample=data['data_sample'].to_dict()))
-            else:
-                _data_batch.append(data)
         _predictions = []
         for pred in predictions:
             if isinstance(pred, BaseDataElement):
@@ -66,7 +55,7 @@ class Evaluator:
                 _predictions.append(pred)
 
         for metric in self.metrics:
-            metric.process(_data_batch, _predictions)
+            metric.process(_predictions)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
@@ -98,11 +87,8 @@ class Evaluator:
             metrics.update(_results)
         return metrics
 
-    def offline_evaluate(self,
-                         data: Sequence,
-                         predictions: Sequence,
-                         chunk_size: int = 1):
-        """Offline evaluate the dumped predictions on the given data .
+    def offline_evaluate(self, predictions: Sequence, chunk_size: int = 1):
+        """Offline evaluate the dumped predictions on the given data.
 
         Args:
             data (Sequence): All data of the validation set.
@@ -127,9 +113,7 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for data_chunk, pred_chunk in zip(
-                get_chunks(iter(data), chunk_size),
-                get_chunks(iter(predictions), chunk_size)):
-            size += len(data_chunk)
-            self.process(data_chunk, pred_chunk)
+        for pred_chunk in get_chunks(iter(predictions), chunk_size):
+            size += len(pred_chunk)
+            self.process(pred_chunk)
         return self.evaluate(size)

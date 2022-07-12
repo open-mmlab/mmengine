@@ -37,11 +37,11 @@ class ToyMetric(BaseMetric):
         super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_batch, predictions):
+    def process(self, predictions):
         results = [{
             'pred': pred.get('pred'),
-            'label': data['data_sample'].get('label')
-        } for pred, data in zip(predictions, data_batch)]
+            'label': pred.get('label')
+        } for pred in predictions]
         self.results.extend(results)
 
     def compute_metrics(self, results: List):
@@ -66,26 +66,20 @@ class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[dict]) -> None:
+    def process(self, predictions: Sequence[dict]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
         return dict(dummy=0.0)
 
 
-def generate_test_results(size, batch_size, pred, label):
+def generate_test_results(size, batch_size, pred):
     num_batch = math.ceil(size / batch_size)
     bs_residual = size % batch_size
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
-        data_batch = [
-            dict(
-                inputs=np.zeros((3, 10, 10)),
-                data_sample=BaseDataElement(label=label)) for _ in range(bs)
-        ]
-        predictions = [BaseDataElement(pred=pred) for _ in range(bs)]
-        yield (data_batch, predictions)
+        predictions = [BaseDataElement(pred=pred, label=1) for _ in range(bs)]
+        yield predictions
 
 
 class TestEvaluator(TestCase):
@@ -97,9 +91,8 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
-                size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+        for predictions in generate_test_results(size, batch_size, pred=1):
+            evaluator.process(predictions)
 
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
@@ -122,9 +115,8 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
-                size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+        for predictions in generate_test_results(size, batch_size, pred=1):
+            evaluator.process(predictions)
 
         metrics = evaluator.evaluate(size=size)
 
@@ -143,9 +135,8 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
-                size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+        for predictions in generate_test_results(size, batch_size, pred=1):
+            evaluator.process(predictions)
 
         with self.assertRaisesRegex(
                 ValueError,
@@ -231,10 +222,7 @@ class TestEvaluator(TestCase):
 
         size = 10
 
-        all_data = [
-            dict(
-                inputs=np.zeros((3, 10, 10)),
-                data_sample=BaseDataElement(label=1)) for _ in range(size)
+        all_predictions = [
+            BaseDataElement(pred=0, label=1) for _ in range(size)
         ]
-        all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
-        evaluator.offline_evaluate(all_data, all_predictions)
+        evaluator.offline_evaluate(all_predictions)
