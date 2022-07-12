@@ -84,7 +84,7 @@ class BaseModel(BaseModule):
                             f'`nn.Module` instance, but got '
                             f'{type(data_preprocessor)}')
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Implements the default model training process including
         preprocessing, model forward propagation, loss calculation,
@@ -104,7 +104,7 @@ class BaseModel(BaseModule):
         4. Calls ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict): Data sampled from dataset.
             optim_wrapper (OptimWrapper): OptimWrapper instance
                 used to update model parameters.
 
@@ -119,7 +119,7 @@ class BaseModel(BaseModule):
         optim_wrapper.update_params(parsed_losses)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of given data.
 
         Calls ``self.data_preprocessor(data, False)`` and
@@ -127,7 +127,7 @@ class BaseModel(BaseModule):
         predictions which will be passed to evaluator.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict): Data sampled from dataset.
 
         Returns:
             List[BaseDataElement]: The predictions of given data.
@@ -135,11 +135,11 @@ class BaseModel(BaseModule):
         inputs, data_sample = self.data_preprocessor(data, False)
         return self(inputs, data_sample, mode='predict')
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: dict) -> List[BaseDataElement]:
         """``BaseModel`` implements ``test_step`` the same as ``val_step``.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict): Data sampled from dataset.
 
         Returns:
             List[BaseDataElement]: The predictions of given data.
