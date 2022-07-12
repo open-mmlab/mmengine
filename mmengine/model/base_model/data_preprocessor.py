@@ -10,7 +10,7 @@ from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-COLLATE_RESULT = Tuple[Union[torch.Tensor, List[torch.Tensor]], Optional[list]]
+CollatedResult = Tuple[Union[torch.Tensor, List[torch.Tensor]], Optional[list]]
 
 
 @MODELS.register_module()
@@ -30,15 +30,14 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self._device = torch.device('cpu')
 
-    def move_data(self, data: dict) -> COLLATE_RESULT:
+    def move_data(self, data: dict) -> CollatedResult:
         """Copying data to the target device.
 
         Args:
             data (dict): Data returned by ``DataLoader``.
 
         Returns:
-            Tuple[List[torch.Tensor], Optional[list]]: Inputs and data sample
-            at target device.
+            CollatedResult: Inputs and data sample at target device.
         """
         batch_inputs = data['inputs']
         batch_data_samples = data['data_sample']
