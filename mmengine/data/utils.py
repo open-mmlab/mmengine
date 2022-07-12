@@ -4,7 +4,8 @@ from typing import Dict, Optional, Sequence
 
 import numpy as np
 import torch
-from torch.utils.data._utils.collate import default_collate as _default_collate
+from torch.utils.data._utils.collate import \
+    default_collate as torch_default_collate
 
 from mmengine.registry import Registry
 
@@ -36,7 +37,8 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
 def pseudo_collate(data_batch: DATA_BATCH) -> dict:
     """The default behavior of dataloader is to merge a list of samples to form
     a mini-batch of Tensor(s). However, in MMEngine, ``pseudo_collate``
-    converts data batch from list of dict to dict.
+    converts data batch from list of dict to dict, and does not stack the batch
+    tensor.
 
     Args:
         data_batch (Sequence[dict]): Batch of data from
@@ -49,7 +51,6 @@ def pseudo_collate(data_batch: DATA_BATCH) -> dict:
         key: [d[key] for d in data_batch]
         for key in data_batch[0]
     }
-    collated_data['data_sample'] = collated_data.get('data_sample', None)
     return collated_data
 
 
@@ -75,6 +76,7 @@ def default_collate(data_batch: DATA_BATCH) -> dict:
         key: [d[key] for d in data_batch]
         for key in data_batch[0]
     }
-    collated_data['inputs'] = _default_collate(collated_data['inputs'])
-    collated_data['data_sample'] = collated_data.get('data_sample', None)
+
+    # Key `inputs` will be used by `BaseDataPreprocessor.cast_data_device`
+    collated_data['inputs'] = torch_default_collate(collated_data['inputs'])
     return collated_data
