@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .build_function import (build_from_cfg, build_model_from_cfg,
-                             build_runner_from_cfg)
+from .build_functions import (build_from_cfg, build_model_from_cfg,
+                              build_runner_from_cfg)
 from .default_scope import DefaultScope
 from .registry import Registry
 from .root import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
