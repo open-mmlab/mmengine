@@ -2,7 +2,7 @@
 from typing import Iterator, List, Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
-from ..data.utils import default_collate
+from ..data.utils import pseudo_collate
 from ..registry.root import METRICS
 from ..utils import is_list_of
 from .metric import BaseMetric
@@ -134,6 +134,6 @@ class Evaluator:
                 get_chunks(iter(data), chunk_size),
                 get_chunks(iter(predictions), chunk_size)):
             size += len(data_chunk)
-            data_chunk = default_collate(data_chunk)
+            data_chunk = pseudo_collate(data_chunk)
             self.process(data_chunk, pred_chunk)
         return self.evaluate(size)
