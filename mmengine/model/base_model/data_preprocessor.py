@@ -6,12 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-DATA_BATCH = Union[Sequence[dict], Tuple[torch.Tensor, List[BaseDataElement]]]
 COLLATE_RESULT = Tuple[Union[torch.Tensor, List[torch.Tensor]], Optional[list]]
 
 
