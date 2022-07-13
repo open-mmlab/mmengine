@@ -1592,15 +1592,16 @@ class Runner:
                 self._val_loop)  # type: ignore
 
         self.call_hook('before_run')
+
+        # TODO: add a contextmanager to avoid calling `before_run` many times
+        # make sure checkpoint-related hooks are triggered after `before_run`
+        self.load_or_resume()
+
         # Initiate inner count of `optim_wrapper`.
         self.optim_wrapper.initialize_count_status(
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
-
-        # TODO: add a contextmanager to avoid calling `before_run` many times
-        # make sure checkpoint-related hooks are triggered after `before_run`
-        self.load_or_resume()
 
         self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
