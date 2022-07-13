@@ -2,9 +2,11 @@
 import time
 
 import pytest
+import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict  # type: ignore
-from mmengine.registry import DefaultScope, Registry, build_from_cfg
+from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
+                               build_model_from_cfg)
 from mmengine.utils import ManagerMixin
 
 
@@ -411,6 +413,49 @@ class TestRegistry:
         assert isinstance(dog.friend, YourSamoyed)
         assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
+    def test_get_registry_by_scope(self):
+        DOGS = Registry('dogs')
+        HOUNDS = Registry('hounds', scope='hound', parent=DOGS)
+        SAMOYEDS = Registry('samoyeds', scope='samoyed', parent=DOGS)
+        CHIHUAHUA = Registry('chihuahuas', scope='chihuahua', parent=DOGS)
+
+        #                         Hierarchical Registry
+        #                                 DOGS
+        #               ___________________|___________________
+        #              |                   |                   |
+        #     HOUNDS (hound)         SAMOYEDS (samoyed) CHIHUAHUA (chihuahua)
+
+        DefaultScope.get_instance(
+            f'scope_{time.time()}', scope_name='chihuahua')
+        assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
+
+        # Test switch scope and get target registry.
+        with CHIHUAHUA.switch_scope_and_registry(scope='hound') as \
+                registry:
+            assert DefaultScope.get_current_instance().scope_name == 'hound'
+            assert id(registry) == id(HOUNDS)
+
+        # Test nested-ly switch scope.
+        with CHIHUAHUA.switch_scope_and_registry(scope='samoyed') as \
+                samoyed_registry:
+            assert DefaultScope.get_current_instance().scope_name == 'samoyed'
+            assert id(samoyed_registry) == id(SAMOYEDS)
+
+            with CHIHUAHUA.switch_scope_and_registry(scope='hound') as \
+                    hound_registry:
+                assert DefaultScope.get_current_instance().scope_name == \
+                       'hound'
+                assert id(hound_registry) == id(HOUNDS)
+
+        # Test switch to original scope
+        assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
+
+        # Test get an unknown registry.
+        with CHIHUAHUA.switch_scope_and_registry(scope='unknown') as \
+                registry:
+            assert id(registry) == id(CHIHUAHUA)
+            assert DefaultScope.get_current_instance().scope_name == 'unknown'
+
     def test_repr(self):
         CATS = Registry('cat')
 
@@ -552,3 +597,61 @@ def test_build_from_cfg(cfg_type):
     cfg = dict(type='Visualizer', name='visualizer')
     build_from_cfg(cfg, VISUALIZER)
     Visualizer.get_current_instance()
+
+
+def test_build_model_from_cfg():
+    BACKBONES = Registry('backbone', build_func=build_model_from_cfg)
+
+    @BACKBONES.register_module()
+    class ResNet(nn.Module):
+
+        def __init__(self, depth, stages=4):
+            super().__init__()
+            self.depth = depth
+            self.stages = stages
+
+        def forward(self, x):
+            return x
+
+    @BACKBONES.register_module()
+    class ResNeXt(nn.Module):
+
+        def __init__(self, depth, stages=4):
+            super().__init__()
+            self.depth = depth
+            self.stages = stages
+
+        def forward(self, x):
+            return x
+
+    cfg = dict(type='ResNet', depth=50)
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, ResNet)
+    assert model.depth == 50 and model.stages == 4
+
+    cfg = dict(type='ResNeXt', depth=50, stages=3)
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, ResNeXt)
+    assert model.depth == 50 and model.stages == 3
+
+    cfg = [
+        dict(type='ResNet', depth=50),
+        dict(type='ResNeXt', depth=50, stages=3)
+    ]
+    model = BACKBONES.build(cfg)
+    assert isinstance(model, nn.Sequential)
+    assert isinstance(model[0], ResNet)
+    assert model[0].depth == 50 and model[0].stages == 4
+    assert isinstance(model[1], ResNeXt)
+    assert model[1].depth == 50 and model[1].stages == 3
+
+    # test inherit `build_func` from parent
+    NEW_MODELS = Registry('models', parent=BACKBONES, scope='new')
+    assert NEW_MODELS.build_func is build_model_from_cfg
+
+    # test specify `build_func`
+    def pseudo_build(cfg):
+        return cfg
+
+    NEW_MODELS = Registry('models', parent=BACKBONES, build_func=pseudo_build)
+    assert NEW_MODELS.build_func is pseudo_build
