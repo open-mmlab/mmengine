@@ -22,7 +22,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.data import pseudo_collate, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           master_only, sync_random_seed)
+                           is_distributed, master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
@@ -624,7 +624,7 @@ class Runner:
         set_multi_processing(**mp_cfg, distributed=self.distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if self.distributed:
+        if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
             init_dist(self.launcher, **dist_cfg)
 
@@ -858,8 +858,16 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
+            model_wrapper_type = MODEL_WRAPPERS.get(
+                model_wrapper_cfg.get('type'))  # type: ignore
+            default_args: dict = dict()
+            if issubclass(
+                    model_wrapper_type,  # type: ignore
+                    DistributedDataParallel):
+                default_args['device_ids'] = [int(os.environ['LOCAL_RANK'])]
+            default_args['module'] = model
             model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=dict(module=model))
+                model_wrapper_cfg, default_args=default_args)
         return model
 
     def scale_lr(self,

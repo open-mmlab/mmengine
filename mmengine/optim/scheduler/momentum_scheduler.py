@@ -8,10 +8,37 @@ from .param_scheduler import (ConstantParamScheduler,
 
 
 class MomentumSchedulerMixin:
-    """A mixin class for momentum schedulers."""
+    """A mixin class for momentum schedulers.
+
+    It can schedule the momentum in SGD and the beta_0 in Adam series.
+    """
 
     def __init__(self, optimizer, *args, **kwargs):
-        super().__init__(optimizer, 'momentum', *args, **kwargs)
+        self.use_betas = False
+        if 'momentum' in optimizer.defaults:
+            param_name = 'momentum'
+        elif 'betas' in optimizer.defaults:
+            # for Adam series optimizer, the momentum is beta_0
+            self.use_betas = True
+            param_name = 'momentum'
+            for group in optimizer.param_groups:
+                # set a reference momentum in the param groups for scheduling
+                group[param_name] = group['betas'][0]
+        else:
+            raise ValueError(
+                'optimizer must support momentum when using momentum scheduler'
+            )
+        super().__init__(optimizer, param_name, *args, **kwargs)
+
+    def step(self):
+        """Adjusts the parameter value of each parameter group based on the
+        specified schedule."""
+        super().step()
+        if self.use_betas:
+            for group in self.optimizer.param_groups:
+                _, beta_1 = group['betas']
+                # update the betas with the calculated value
+                group['betas'] = (group['momentum'], beta_1)
 
 
 @PARAM_SCHEDULERS.register_module()
