@@ -48,34 +48,30 @@ class TestDataUtils(TestCase):
         self.assertIs(batch_data_sample[1], data_sample2)
 
         # Test with list of tuple, each tuple is a nested dict instance
-        data_batch = [(
-            dict(
-                inputs=input1,
-                data_sample=data_sample1,
-                value=1,
-                name='1',
-                nested=dict(data_sample=data_sample1)),
-            dict(
-                inputs=input2,
-                data_sample=data_sample2,
-                value=2,
-                name='2',
-                nested=dict(data_sample=data_sample2)),
-        ),
-                      (
-                          dict(
-                              inputs=input1,
-                              data_sample=data_sample1,
-                              value=1,
-                              name='1',
-                              nested=dict(data_sample=data_sample1)),
-                          dict(
-                              inputs=input2,
-                              data_sample=data_sample2,
-                              value=2,
-                              name='2',
-                              nested=dict(data_sample=data_sample2)),
-                      )]
+        data_batch = [(dict(
+            inputs=input1,
+            data_sample=data_sample1,
+            value=1,
+            name='1',
+            nested=dict(data_sample=data_sample1)),
+                       dict(
+                           inputs=input2,
+                           data_sample=data_sample2,
+                           value=2,
+                           name='2',
+                           nested=dict(data_sample=data_sample2))),
+                      (dict(
+                          inputs=input1,
+                          data_sample=data_sample1,
+                          value=1,
+                          name='1',
+                          nested=dict(data_sample=data_sample1)),
+                       dict(
+                           inputs=input2,
+                           data_sample=data_sample2,
+                           value=2,
+                           name='2',
+                           nested=dict(data_sample=data_sample2)))]
         data_batch = pseudo_collate(data_batch)
         batch_inputs_0 = data_batch[0]['inputs']
         batch_inputs_1 = data_batch[1]['inputs']
