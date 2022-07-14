@@ -117,9 +117,10 @@ def default_collate(data_batch: Sequence) -> Any:
     """
     elem = data_batch[0]
     elem_type = type(elem)
+
     if isinstance(elem, BaseDataElement):
         return data_batch
-    elif isinstance(elem, (str, bytes)):
+    elif isinstance(elem, (BaseDataElement, str, bytes)):
         return data_batch
     elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
         return elem_type(*(default_collate(samples)
