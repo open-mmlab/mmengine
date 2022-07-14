@@ -1881,7 +1881,7 @@ class Runner:
                 'check the correctness of the checkpoint or the training '
                 'dataset.')
 
-        self.message_hub = checkpoint['message_hub']
+        self.message_hub.load_state_dict(checkpoint['message_hub'])
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
@@ -2008,7 +2008,7 @@ class Runner:
         checkpoint = {
             'meta': meta,
             'state_dict': weights_to_cpu(get_state_dict(model)),
-            'message_hub': self.message_hub
+            'message_hub': self.message_hub.state_dict()
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:

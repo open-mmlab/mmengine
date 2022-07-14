@@ -1689,9 +1689,11 @@ class TestRunner(TestCase):
         self.assertEqual(ckpt['meta']['seed'], runner.seed)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
-        self.assertIsInstance(ckpt['message_hub'], MessageHub)
-        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 2)
-        self.assertEqual(ckpt['message_hub'].get_info('iter'), 11)
+        self.assertIsInstance(ckpt['message_hub'], dict)
+        message_hub = MessageHub.get_instance('test_ckpt')
+        message_hub.load_state_dict(ckpt['message_hub'])
+        self.assertEqual(message_hub.get_info('epoch'), 2)
+        self.assertEqual(message_hub.get_info('iter'), 11)
 
         # 1.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1728,6 +1730,10 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.message_hub, MessageHub)
         self.assertEqual(runner.message_hub.get_info('epoch'), 2)
         self.assertEqual(runner.message_hub.get_info('iter'), 11)
+        self.assertEqual(MessageHub.get_current_instance().get_info('epoch'),
+                         2)
+        self.assertEqual(MessageHub.get_current_instance().get_info('iter'),
+                         11)
 
         # 1.3.2 test resume with unmatched dataset_meta
         ckpt_modified = copy.deepcopy(ckpt)
@@ -1856,9 +1862,10 @@ class TestRunner(TestCase):
         self.assertEqual(ckpt['meta']['iter'], 12)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
-        self.assertIsInstance(ckpt['message_hub'], MessageHub)
-        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 0)
-        self.assertEqual(ckpt['message_hub'].get_info('iter'), 11)
+        self.assertIsInstance(ckpt['message_hub'], dict)
+        message_hub.load_state_dict(ckpt['message_hub'])
+        self.assertEqual(message_hub.get_info('epoch'), 0)
+        self.assertEqual(message_hub.get_info('iter'), 11)
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
@@ -1906,6 +1913,17 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.6 test resumed message_hub has the history value.
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint13'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        assert len(runner.message_hub.log_scalars['train/lr'].data[1]) == 3
+        assert len(MessageHub.get_current_instance().log_scalars['train/lr'].
+                   data[1]) == 3
 
     def test_build_runner(self):
         # No need to test other cases which have been tested in
