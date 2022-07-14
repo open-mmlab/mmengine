@@ -478,7 +478,7 @@ class Config:
         if isinstance(cfg, dict):
             if has_scope and 'type' in cfg:
                 has_scope = False
-                if scope is not None:
+                if scope is not None and cfg.get('_scope_', None) is None:
                     cfg._scope_ = scope  # type: ignore
             cfg = ConfigDict(cfg)
             dict.__setattr__(cfg, 'scope', scope)
