@@ -57,6 +57,7 @@ def pseudo_collate(data_batch: Sequence) -> Any:
     if isinstance(data_item, (str, bytes)):
         return data_batch
     elif isinstance(data_item, tuple) and hasattr(data_item, '_fields'):
+        # named tuple
         return data_item_type(*(pseudo_collate(samples)
                                 for samples in zip(*data_batch)))
     elif isinstance(data_item, Sequence):
@@ -119,11 +120,10 @@ def default_collate(data_batch: Sequence) -> Any:
     data_item = data_batch[0]
     data_item_type = type(data_item)
 
-    if isinstance(data_item, BaseDataElement):
-        return data_batch
-    elif isinstance(data_item, (BaseDataElement, str, bytes)):
+    if isinstance(data_item, (BaseDataElement, str, bytes)):
         return data_batch
     elif isinstance(data_item, tuple) and hasattr(data_item, '_fields'):
+        # named_tuple
         return data_item_type(*(default_collate(samples)
                                 for samples in zip(*data_batch)))
     elif isinstance(data_item, Sequence):
