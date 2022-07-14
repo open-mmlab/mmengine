@@ -404,8 +404,16 @@ class Config:
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
-                # Recursively add scope attribute to each config dict. and the
-                # outer `dict` variable with key type will have `_scope_` key.
+                # _dict_to_config_dict will do 3 things:
+                # 1. Recursively convert `dict` in base config to `ConfigDict`
+                # instance.
+                # 2. Add key `_scope_` to the outer `dict` variable, which
+                # has key `type`.
+                # 3. Add `scope` attribute to each dict variable. Different
+
+                # If the config accesses a base variable of base configs,
+                # The ``scope`` attribute of corresponding variable will be
+                # converted to the `_scope_`
                 _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
 
@@ -423,6 +431,7 @@ class Config:
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
             temp_config_file.close()
+            # Add `_scope_` to accessed base keys.
             Config._parse_scope(cfg_dict)
 
         # check deprecation information
@@ -498,7 +507,8 @@ class Config:
 
     @staticmethod
     def _parse_scope(cfg: dict) -> None:
-        """Adds ``_scope_`` to :obj:`ConfigDict` instance.
+        """Adds ``_scope_`` to :obj:`ConfigDict` instance, which means a base
+        variable.
 
         If the config dict already has the scope, scope will not be
         overwritten.
