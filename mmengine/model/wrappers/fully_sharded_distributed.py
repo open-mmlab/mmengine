@@ -153,7 +153,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         super().__init__(module, process_group, cpu_offload,
                          fsdp_auto_wrap_policy, backward_prefetch)
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -168,7 +168,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         - Return log messages of losses.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
             optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
@@ -184,11 +184,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         optim_wrapper.update_params(parsed_loss)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
@@ -196,11 +196,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         inputs, data_sample = self.module.data_preprocessor(data, False)
         return self(inputs, data_sample, mode='predict')
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             List[BaseDataElement]: The predictions of given data.
