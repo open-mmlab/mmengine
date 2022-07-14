@@ -72,7 +72,7 @@ def pseudo_collate(data_batch: Sequence) -> Any:
 
         if isinstance(data_item, tuple):
             return [pseudo_collate(samples)
-                    for samples in transposed]  # Backwards compatibility.
+                    for samples in transposed]  # Compat with Pytorch.
         else:
             try:
                 return data_item_type(
@@ -138,7 +138,7 @@ def default_collate(data_batch: Sequence) -> Any:
 
         if isinstance(data_item, tuple):
             return [default_collate(samples)
-                    for samples in transposed]  # Backwards compatibility.
+                    for samples in transposed]  # Compat with Pytorch.
         else:
             try:
                 return data_item_type(
