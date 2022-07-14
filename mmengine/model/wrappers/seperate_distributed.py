@@ -86,7 +86,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                     **kwargs)
             module._modules[name] = sub_module
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: dict,
                    optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -101,22 +101,22 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         """
         return self.module.train_step(data, optim_wrapper)
 
-    def val_step(self, data) -> List[BaseDataElement]:
+    def val_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
         return self.module.val_step(data)
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             ForwardResults: The predictions of given data.
