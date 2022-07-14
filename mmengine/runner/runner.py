@@ -792,7 +792,7 @@ class Runner:
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, BaseModel):
+        if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
