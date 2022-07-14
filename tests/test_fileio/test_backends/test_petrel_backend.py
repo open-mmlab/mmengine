@@ -354,7 +354,7 @@ except ImportError:
                  patch.object(backend._client, 'isdir', return_value=False) \
                  as patched_isdir:
                 backend.rmfile(self.petrel_path)
-                patched_delete.assert_called_once_with(self.petrel_path)
+                patched_delete.assert_called_once_with(self.expected_path)
                 patched_isdir.assert_called_once_with(self.expected_path)
 
         def test_rmtree(self):

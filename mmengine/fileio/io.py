@@ -23,11 +23,12 @@ There are two ways to call a method of a file backend:
 
 Examples:
     >>> # Initialize a file backend and call its methods
-    >>> backend = get_file_backend(backend_args={'backend': 'petrel'})
+    >>> import mmengine.fileio as fileio
+    >>> backend = fileio.get_file_backend(backend_args={'backend': 'petrel'})
     >>> backend.get_bytes('s3://path/of/your/file')
 
     >>> # Directory call unified I/O functions
-    >>> get_bytes('s3://path/of/your/file')
+    >>> fileio.get_bytes('s3://path/of/your/file')
 """
 import json
 from contextlib import contextmanager

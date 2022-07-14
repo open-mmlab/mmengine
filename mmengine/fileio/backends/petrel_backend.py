@@ -286,7 +286,7 @@ class PetrelBackend(BaseStorageBackend):
         ``with`` statement, the temporary path will be released.
 
         Args:
-            filepath (str | Path): Download a file from ``filepath``.
+            filepath (str or Path): Download a file from ``filepath``.
 
         Yields:
             Iterable[str]: Only yield one temporary path.
@@ -578,6 +578,7 @@ class PetrelBackend(BaseStorageBackend):
 
         filepath = self._map_path(filepath)
         filepath = self._format_path(filepath)
+        filepath = self._replace_prefix(filepath)
         self._client.delete(filepath)
 
     def rmtree(self, dir_path: Union[str, Path]) -> None:
@@ -679,6 +680,7 @@ class PetrelBackend(BaseStorageBackend):
 
         dir_path = self._map_path(dir_path)
         dir_path = self._format_path(dir_path)
+        dir_path = self._replace_prefix(dir_path)
         if list_dir and suffix is not None:
             raise TypeError(
                 '`list_dir` should be False when `suffix` is not None')
