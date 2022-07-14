@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
-from mmengine.data.utils import COLLATE_FUNCTIONS
+from mmengine.data.utils import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -317,12 +317,12 @@ class ToyEvaluator(Evaluator):
 
 
 def collate_fn(data_batch):
-    return data_batch
+    return pseudo_collate(data_batch)
 
 
 @COLLATE_FUNCTIONS.register_module()
 def custom_collate(data_batch, pad_value):
-    return data_batch
+    return pseudo_collate(data_batch)
 
 
 class TestRunner(TestCase):
