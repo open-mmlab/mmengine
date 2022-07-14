@@ -773,7 +773,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
+    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object
@@ -785,7 +785,7 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (BaseModel or dict): A nn.Module object or a dict to build
+            model (nn.Module or dict): A nn.Module object or a dict to build
                 nn.Module object. If ``model`` is a nn.Module object, just
                 returns itself.
 
