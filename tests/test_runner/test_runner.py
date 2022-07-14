@@ -701,25 +701,6 @@ class TestRunner(TestCase):
         model = runner.build_model(dict(type='ToyModel1'))
         self.assertIsInstance(model, ToyModel1)
 
-        # test init weights
-        @MODELS.register_module()
-        class ToyModel2(ToyModel):
-
-            def __init__(self):
-                super().__init__()
-                self.initiailzed = False
-
-            def init_weights(self):
-                self.initiailzed = True
-
-        model = runner.build_model(dict(type='ToyModel2'))
-        self.assertTrue(model.initiailzed)
-
-        # test init weights with model object
-        _model = ToyModel2()
-        model = runner.build_model(_model)
-        self.assertFalse(model.initiailzed)
-
     def test_wrap_model(self):
         # revert sync batchnorm
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1370,6 +1351,25 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(val_interval_results, val_interval_targets):
             self.assertEqual(result, target)
+
+        # 7. test init weights
+        @MODELS.register_module()
+        class ToyModel2(ToyModel):
+
+            def __init__(self):
+                super().__init__()
+                self.initiailzed = False
+
+            def init_weights(self):
+                self.initiailzed = True
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train7'
+        runner = Runner.from_cfg(cfg)
+        model = ToyModel2()
+        runner.model = model
+        runner.train()
+        self.assertTrue(model.initiailzed)
 
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

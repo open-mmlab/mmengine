@@ -797,8 +797,6 @@ class Runner:
         elif isinstance(model, dict):
             model = MODELS.build(model)
             # init weights
-            if hasattr(model, 'init_weights'):  # type: ignore
-                model.init_weights()  # type: ignore
             return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
@@ -1590,10 +1588,15 @@ class Runner:
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
-
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
 
-        # TODO: add a contextmanager to avoid calling `before_run` many times
+        # initialize model weights
+        model = self.model.module if is_model_wrapper(
+            self.model) else self.model
+        if hasattr(model, 'init_weights'):
+            model.init_weights()
+
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
