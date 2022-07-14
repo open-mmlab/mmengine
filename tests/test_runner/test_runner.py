@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
 from mmengine.data import DefaultSampler
+from mmengine.data.utils import COLLATE_FUNCTIONS
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -316,6 +317,11 @@ class ToyEvaluator(Evaluator):
 
 
 def collate_fn(data_batch):
+    return data_batch
+
+
+@COLLATE_FUNCTIONS.register_module()
+def custom_collate(data_batch, pad_value):
     return data_batch
 
 
@@ -1297,7 +1303,7 @@ class TestRunner(TestCase):
                                    val_batch_idx_targets):
             self.assertEqual(result, target)
 
-        # 5. test dynamic interval in IterBasedTrainLoop
+        # 5.1 test dynamic interval in IterBasedTrainLoop
         max_iters = 12
         interval = 5
         dynamic_intervals = [(11, 2)]
@@ -1334,7 +1340,7 @@ class TestRunner(TestCase):
         for result, target, in zip(val_interval_results, val_interval_targets):
             self.assertEqual(result, target)
 
-        # 6. test dynamic interval in EpochBasedTrainLoop
+        # 5.2 test dynamic interval in EpochBasedTrainLoop
         max_epochs = 12
         interval = 5
         dynamic_intervals = [(11, 2)]
@@ -1370,6 +1376,30 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
         for result, target, in zip(val_interval_results, val_interval_targets):
             self.assertEqual(result, target)
+
+        # 6.1 Test build dataloader with default collate function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train5'
+        cfg.train_dataloader.update(collate_fn=dict(type='default_collate'))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 6.2 Test build dataloader with custom collate function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train6.1'
+        cfg.train_dataloader.update(
+            collate_fn=dict(type='custom_collate', pad_value=100))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 6.3 test build dataloader without default arguments of collate
+        # function.
+        with self.assertRaises(TypeError):
+            cfg = copy.deepcopy(self.iter_based_cfg)
+            cfg.experiment_name = 'test_train6.2'
+            cfg.train_dataloader.update(collate_fn=dict(type='custom_collate'))
+            runner = Runner.from_cfg(cfg)
+            runner.train()
 
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
