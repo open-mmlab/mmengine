@@ -868,6 +868,17 @@ class Runner:
                 model_wrapper_cfg, default_args=default_args)
         return model
 
+    def _init_model_weights(self):
+        """initialize the model weights if the model has
+        :meth:`init_weights`"""
+        model = self.model.module if is_model_wrapper(
+            self.model) else self.model
+        if hasattr(model, 'init_weights'):
+            model.init_weights()
+            # sync params and buffers
+            for name, params in model.state_dict().items():
+                broadcast(params)
+
     def scale_lr(self,
                  optim_wrapper: OptimWrapper,
                  auto_scale_lr: Optional[Dict] = None) -> None:
@@ -1591,12 +1602,8 @@ class Runner:
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
 
-        # initialize model weights
-        model = self.model.module if is_model_wrapper(
-            self.model) else self.model
-        if hasattr(model, 'init_weights'):
-            model.init_weights()
-
+        # initialize the model weights
+        self._init_model_weights()
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
