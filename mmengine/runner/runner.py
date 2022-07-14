@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import pseudo_collate, worker_init_fn
+from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only, sync_random_seed)
@@ -1393,14 +1393,19 @@ class Runner:
 
         # The default behavior of `collat_fn` in dataloader is to
         # merge a list of samples to form a mini-batch of Tensor(s).
-        # However, to make this more flexible, collate_fn in MMengine does
-        # nothing. The action to merge a list of samples will be handled
-        # in model.
+        # However, in mmengine, if `collate_fn` is not defined in
+        # dataloader_cfg, `pseudo_collate` will only convert the list of
+        # samples into a dict without stacking the batch tensor.
+        collate_fn_cfg = dataloader_cfg.pop('collate_fn',
+                                            dict(type='pseudo_collate'))
+        collate_fn_type = collate_fn_cfg.pop('type')
+        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
             batch_sampler=batch_sampler,
-            collate_fn=pseudo_collate,
+            collate_fn=collate_fn,
             worker_init_fn=init_fn,
             **dataloader_cfg)
         return data_loader
