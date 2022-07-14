@@ -30,7 +30,7 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self._device = torch.device('cpu')
 
-    def move_data(self, data: dict) -> CollatedResult:
+    def cast_data(self, data: dict) -> CollatedResult:
         """Copying data to the target device.
 
         Args:
@@ -78,7 +78,7 @@ class BaseDataPreprocessor(nn.Module):
             f'Data must have key `inputs`, but got key: {data.keys()}')
         assert 'data_sample' in data, (
             f'Data must have key `data_sample`, but got key: {data.keys()}')
-        batch_inputs, batch_data_samples = self.move_data(data)
+        batch_inputs, batch_data_samples = self.cast_data(data)
         if is_list_of(batch_inputs, torch.Tensor):
             batch_inputs = torch.stack(batch_inputs)
         batch_inputs = batch_inputs.float()  # type: ignore
@@ -222,7 +222,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
             model input.
         """
-        _batch_inputs, batch_data_samples = self.move_data(data)
+        _batch_inputs, batch_data_samples = self.cast_data(data)
         # Process data with `pseudo_collate`.
         if is_list_of(_batch_inputs, torch.Tensor):
             batch_inputs = []
@@ -269,7 +269,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             batch_inputs = F.pad(_batch_inputs, (0, pad_w, 0, pad_h),
                                  'constant', self.pad_value)
         else:
-            raise TypeError('Output of `move_data` should be a list of dict '
+            raise TypeError('Output of `cast_data` should be a list of dict '
                             'or a tuple with inputs and data_samples, but got'
                             f'{type(data)}： {data}')
         return batch_inputs, batch_data_samples
