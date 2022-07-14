@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Any, Iterator, List, Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
 from ..data.utils import pseudo_collate
 from ..registry.root import METRICS
-from ..utils import is_list_of
 from .metric import BaseMetric
 
 
@@ -41,26 +40,15 @@ class Evaluator:
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta
 
-    def process(self, data_batch: dict,
-                predictions: Sequence[BaseDataElement]):
+    def process(self, data_batch: Any, predictions: Sequence[BaseDataElement]):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Sequence[dict]): A batch of data from the dataloader.
+            data_batch (Any): A batch of data from the dataloader.
             predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
         """
-        if is_list_of(data_batch['data_sample'], BaseDataElement):
-            _data_batch = [
-                dict(
-                    inputs=data_batch['inputs'][idx],
-                    data_sample=data_batch['data_sample'][idx])
-                for idx in range(len(data_batch['data_sample']))
-            ]
-        else:
-            _data_batch = [data for data in data_batch]
-
         _predictions = []
         for pred in predictions:
             if isinstance(pred, BaseDataElement):
@@ -69,7 +57,7 @@ class Evaluator:
                 _predictions.append(pred)
 
         for metric in self.metrics:
-            metric.process(_data_batch, _predictions)
+            metric.process(data_batch, _predictions)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics

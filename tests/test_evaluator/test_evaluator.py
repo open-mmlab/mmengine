@@ -39,9 +39,9 @@ class ToyMetric(BaseMetric):
 
     def process(self, data_batch, predictions):
         results = [{
-            'pred': pred.get('pred'),
-            'label': data['data_sample'].get('label')
-        } for pred, data in zip(predictions, data_batch)]
+            'pred': prediction['label'],
+            'label': prediction['label']
+        } for prediction in predictions]
         self.results.extend(results)
 
     def compute_metrics(self, results: List):
@@ -83,7 +83,9 @@ def generate_test_results(size, batch_size, pred, label):
             'inputs': [np.zeros((3, 10, 10)) for _ in range(bs)],
             'data_sample': [BaseDataElement(label=label) for _ in range(bs)]
         }
-        predictions = [BaseDataElement(pred=pred) for _ in range(bs)]
+        predictions = [
+            BaseDataElement(pred=pred, label=label) for _ in range(bs)
+        ]
         yield (data_batch, predictions)
 
 
@@ -230,10 +232,8 @@ class TestEvaluator(TestCase):
 
         size = 10
 
-        all_data = [
-            dict(
-                inputs=np.zeros((3, 10, 10)),
-                data_sample=BaseDataElement(label=1)) for _ in range(size)
+        all_data = dict()
+        all_predictions = [
+            BaseDataElement(pred=0, label=1) for _ in range(size)
         ]
-        all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
         evaluator.offline_evaluate(all_data, all_predictions)
