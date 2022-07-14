@@ -5,22 +5,21 @@ import os
 import os.path as osp
 import platform
 import shutil
-import sys
 import tempfile
 import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
-from importlib import import_module
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
 from mmengine.utils import check_file_exist, import_modules_from_strings
+from .utils import RemoveAssignFromAST
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -380,7 +379,7 @@ class Config:
                 dir=temp_config_dir, suffix=fileExtname)
             if platform.system() == 'Windows':
                 temp_config_file.close()
-            temp_config_name = osp.basename(temp_config_file.name)
+
             # Substitute predefined variables
             if use_predefined_variables:
                 Config._substitute_predefined_vars(filename,
@@ -391,37 +390,47 @@ class Config:
             base_var_dict = Config._pre_substitute_base_vars(
                 temp_config_file.name, temp_config_file.name)
 
+            # Handle base files
+            base_cfg_dict = ConfigDict()
+            cfg_text_list = list()
+            for base_cfg_path in Config._parse_base_files(
+                    temp_config_file.name):
+                cfg_dir = osp.dirname(filename)
+                _cfg_dict, _cfg_text = Config._file2dict(
+                    osp.join(cfg_dir, base_cfg_path))
+                cfg_text_list.append(_cfg_text)
+                duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
+                if len(duplicate_keys) > 0:
+                    raise KeyError('Duplicate key is not allowed among bases. '
+                                   f'Duplicate keys: {duplicate_keys}')
+                base_cfg_dict.update(_cfg_dict)
+
             if filename.endswith('.py'):
-                temp_module_name = osp.splitext(temp_config_name)[0]
-                sys.path.insert(0, temp_config_dir)
-                Config._validate_py_syntax(filename)
-                mod = import_module(temp_module_name)
-                sys.path.pop(0)
-                cfg_dict = {
-                    name: value
-                    for name, value in mod.__dict__.items()
-                    if not any((name.startswith('__'),
-                                isinstance(value, types.ModuleType),
-                                isinstance(value, types.FunctionType)))
-                }
-                # delete imported module
-                del sys.modules[temp_module_name]
+                cfg_dict: dict = dict()
+                with open(temp_config_file.name) as f:
+                    codes = ast.parse(f.read())
+                    codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
+                codeobj = compile(codes, '', mode='exec')
+                eval(codeobj, {'_base_': base_cfg_dict}, cfg_dict)
             elif filename.endswith(('.yml', '.yaml', '.json')):
                 cfg_dict = load(temp_config_file.name)
             # close temp file
+            for key, value in list(cfg_dict.items()):
+                if isinstance(value, (types.FunctionType, types.ModuleType)):
+                    cfg_dict.pop(key)
             temp_config_file.close()
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                          'in the future.'
+                'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                               'instead.'
+                    'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                               f'{deprecation_info["reference"]}'
+                    f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
@@ -429,40 +438,59 @@ class Config:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
-        if BASE_KEY in cfg_dict:
-            cfg_dir = osp.dirname(filename)
-            base_filename = cfg_dict.pop(BASE_KEY)
-            base_filename = base_filename if isinstance(
-                base_filename, list) else [base_filename]
+        # Substitute base variables from strings to their actual values
+        cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
+                                                base_cfg_dict)
+        cfg_dict.pop(BASE_KEY, None)
 
-            cfg_dict_list = list()
-            cfg_text_list = list()
-            for f in base_filename:
-                _cfg_dict, _cfg_text = Config._file2dict(
-                    osp.join(cfg_dir, str(f)))
-                cfg_dict_list.append(_cfg_dict)
-                cfg_text_list.append(_cfg_text)
+        cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
+        cfg_dict = {
+            k: v
+            for k, v in cfg_dict.items() if not k.startswith('__')
+        }
 
-            base_cfg_dict: dict = dict()
-            for c in cfg_dict_list:
-                duplicate_keys = base_cfg_dict.keys() & c.keys()
-                if len(duplicate_keys) > 0:
-                    raise KeyError('Duplicate key is not allowed among bases. '
-                                   f'Duplicate keys: {duplicate_keys}')
-                base_cfg_dict.update(c)
-
-            # Substitute base variables from strings to their actual values
-            cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
-                                                    base_cfg_dict)
-
-            base_cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
-            cfg_dict = base_cfg_dict
-
-            # merge cfg_text
-            cfg_text_list.append(cfg_text)
-            cfg_text = '\n'.join(cfg_text_list)
+        # merge cfg_text
+        cfg_text_list.append(cfg_text)
+        cfg_text = '\n'.join(cfg_text_list)
 
         return cfg_dict, cfg_text
+
+    @staticmethod
+    def _parse_base_files(file_path: str) -> List[str]:
+        """Get paths of all base config files.
+
+        Args:
+            file_path (str): Path of config.
+
+        Returns:
+            List[str]: paths of all base files .
+        """
+        file_format = file_path.partition('.')[-1]
+        if file_format == 'py':
+            Config._validate_py_syntax(file_path)
+            with open(file_path) as f:
+                codes = ast.parse(f.read()).body
+
+                def is_base_line(c):
+                    return (isinstance(c, ast.Assign)
+                            and c.targets[0].id == BASE_KEY)
+
+                base_code = next((c for c in codes if is_base_line(c)), None)
+                if base_code is not None:
+                    base_code = ast.Expression(  # type: ignore
+                        body=base_code.value)  # type: ignore
+                    base_files = eval(compile(base_code, '', mode='eval'))
+                else:
+                    base_files = []
+        elif file_format in ('yml', 'yaml', 'json'):
+            cfg_dict = load(file_path)
+            base_files = cfg_dict.get(BASE_KEY, [])
+        else:
+            raise TypeError('The config type should be py, json, yaml or '
+                            f'yml, but got {file_format}')
+        base_files = base_files if isinstance(base_files,
+                                              list) else [base_files]
+        return base_files
 
     @staticmethod
     def _merge_a_into_b(a: dict,
