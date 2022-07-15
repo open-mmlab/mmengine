@@ -27,8 +27,8 @@ class MMFormatter(logging.Formatter):
 
         super().__init__(**kwargs)
         # Get prefix format according to color.
-        error_prefix = self._get_prefix('ERROR', color)
-        warn_prefix = self._get_prefix('WARNING', color)
+        error_prefix = self._get_prefix('ERROR', color, blink=True)
+        warn_prefix = self._get_prefix('WARNING', color, blink=True)
         info_prefix = self._get_prefix('INFO', color)
         debug_prefix = self._get_prefix('DEBUG', color)
         # Config output format.
@@ -42,21 +42,22 @@ class MMFormatter(logging.Formatter):
         self.debug_format = (f'%(asctime)s - %(name)s - {debug_prefix} - %('
                              'message)s')
 
-    def _get_prefix(self, level: str, color: bool) -> str:
+    def _get_prefix(self, level: str, color: bool, blink=False) -> str:
         """Get the prefix of the target log level.
 
         Args:
             level (str): log level.
             color (bool): Whether to get colorful prefix.
+            blink (bool): Whether the prefix will blink.
 
         Returns:
             str: The plain or colorful prefix.
         """
         if color:
-            prefix = colored(
-                level,
-                self._color_mapping[level],
-                attrs=['blink', 'underline'])
+            attrs = ['underline']
+            if blink:
+                attrs.append('blink')
+            prefix = colored(level, self._color_mapping[level], attrs=attrs)
         else:
             prefix = level
         return prefix
