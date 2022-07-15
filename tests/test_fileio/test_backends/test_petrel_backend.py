@@ -519,6 +519,17 @@ else:
             with build_temporary_directory() as tmp_dir:
                 backend.copytree_from_local(tmp_dir, self.petrel_dir)
 
+            text1_path = f'{self.petrel_dir}/text1.txt'
+            text2_path = f'{self.petrel_dir}/text2.txt'
+            text3_path = f'{self.petrel_dir}/text3.txt'
+            text4_path = f'{self.petrel_dir}/text4.txt'
+            img_path = f'{self.petrel_dir}/img.jgp'
+            self.assertTrue(backend.isfile(text1_path))
+            self.assertTrue(backend.isfile(text2_path))
+            self.assertTrue(backend.isfile(text3_path))
+            self.assertTrue(backend.isfile(text4_path))
+            self.assertTrue(backend.isfile(img_path))
+
         def test_get_bytes(self):
             backend = PetrelBackend()
             img_path = f'{self.petrel_dir}/dir2/img.jpg'
