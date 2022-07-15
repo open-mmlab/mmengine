@@ -1109,10 +1109,16 @@ class Runner:
                 param_schedulers.append(scheduler)
             elif isinstance(scheduler, dict):
                 _scheduler = copy.deepcopy(scheduler)
-                if _scheduler.get('by_epoch', True):
-                    _scheduler.setdefault('end', self.max_epochs)
-                else:
-                    _scheduler.setdefault('end', self.max_iters)
+
+                # Set default end
+                if isinstance(self._train_loop, BaseLoop):
+                    default_end = self.max_epochs if _scheduler.get(
+                        'by_epoch', True) else self.max_iters
+                    _scheduler.setdefault('end', default_end)
+                    self.logger.debug(
+                        f'The `end` of {_scheduler["type"]} is not set. '
+                        'Use the max epochs/iters of train loop as default.')
+
                 convert_to_iter = _scheduler.pop('convert_to_iter_based',
                                                  False)
                 if convert_to_iter:

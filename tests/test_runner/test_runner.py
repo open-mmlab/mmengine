@@ -954,6 +954,25 @@ class TestRunner(TestCase):
         self.assertEqual(param_schedulers[0].begin, 4)
         self.assertEqual(param_schedulers[0].end, 28)
 
+        # 6. test set default end of schedulers
+        cfg = dict(type='MultiStepLR', milestones=[1, 2], begin=1)
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertTrue(param_schedulers[0].by_epoch)
+        self.assertEqual(param_schedulers[0].begin, 1)
+        # runner.max_epochs = 3
+        self.assertEqual(param_schedulers[0].end, 3)
+
+        cfg = dict(
+            type='MultiStepLR',
+            milestones=[1, 2],
+            begin=1,
+            convert_to_iter_based=True)
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertFalse(param_schedulers[0].by_epoch)
+        self.assertEqual(param_schedulers[0].begin, 4)
+        # runner.max_iters = 3*4
+        self.assertEqual(param_schedulers[0].end, 12)
+
     def test_build_evaluator(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_evaluator'
