@@ -59,14 +59,14 @@ class BaseMetric(metaclass=ABCMeta):
 
     @abstractmethod
     def process(self,
-                predictions: Sequence[dict],
+                outputs: Sequence[dict],
                 data_batch: Optional[Any] = None) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            predictions (Sequence[dict]): A batch of outputs from
+            outputs (Sequence[dict]): A batch of outputs from
                 the model.
             data_batch (Any, optional): A batch of data from the dataloader.
         """
