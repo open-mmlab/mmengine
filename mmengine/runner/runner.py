@@ -1097,6 +1097,12 @@ class Runner:
         Returns:
             list[_ParamScheduler]: List of parameter schedulers build from
             ``scheduler``.
+
+        Note:
+            If the train loop is built, when building parameter schedulers,
+            it supports setting the max epochs/iters as the default ``end``
+            of schedulers, and supports converting epoch-based schedulers
+            to iter-based according to the ``convert_to_iter_based`` key.
         """
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
@@ -1109,6 +1115,16 @@ class Runner:
                 param_schedulers.append(scheduler)
             elif isinstance(scheduler, dict):
                 _scheduler = copy.deepcopy(scheduler)
+
+                # Set default end
+                if isinstance(self._train_loop, BaseLoop):
+                    default_end = self.max_epochs if _scheduler.get(
+                        'by_epoch', True) else self.max_iters
+                    _scheduler.setdefault('end', default_end)
+                    self.logger.debug(
+                        f'The `end` of {_scheduler["type"]} is not set. '
+                        'Use the max epochs/iters of train loop as default.')
+
                 convert_to_iter = _scheduler.pop('convert_to_iter_based',
                                                  False)
                 if convert_to_iter:
