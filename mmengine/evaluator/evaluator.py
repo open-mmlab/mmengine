@@ -40,18 +40,18 @@ class Evaluator:
             metric.dataset_meta = dataset_meta
 
     def process(self,
-                predictions: Sequence[BaseDataElement],
+                outputs: Sequence[BaseDataElement],
                 data_batch: Optional[Any] = None):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            predictions (Sequence[BaseDataElement]): A batch of outputs from
+            outputs (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
             data_batch (Any, optional): A batch of data from the dataloader.
         """
         _predictions = []
-        for pred in predictions:
+        for pred in outputs:
             if isinstance(pred, BaseDataElement):
                 _predictions.append(pred.to_dict())
             else:
@@ -91,13 +91,13 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         predictions: Sequence,
+                         outputs: Sequence,
                          data: Optional[Sequence] = None,
                          chunk_size: int = 1):
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            predictions (Sequence): All predictions of the model on the
+            outputs (Sequence): All predictions of the model on the
                 validation set.
             data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
@@ -106,9 +106,9 @@ class Evaluator:
 
         # support chunking iterable objects
         if data is not None:
-            assert len(predictions) == len(data), (
+            assert len(outputs) == len(data), (
                 'predictions and data should have the same length, but got '
-                f'predictions length: {len(predictions)} '
+                f'predictions length: {len(outputs)} '
                 f'data length: {len(data)}')
 
         def get_chunks(seq: Iterator, chunk_size=1):
@@ -125,7 +125,7 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for pred_chunk in get_chunks(iter(predictions), chunk_size):
+        for pred_chunk in get_chunks(iter(outputs), chunk_size):
             if data:
                 data_chunk = pseudo_collate(data[size:size + chunk_size])
             else:

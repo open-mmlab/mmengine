@@ -146,10 +146,10 @@ class DumpResults(BaseMetric):
         self.out_file_path = out_file_path
 
     def process(self,
-                predictions: Sequence[dict],
+                outputs: Sequence[dict],
                 data_batch: Optional[Sequence] = None) -> None:
         """transfer tensors in predictions to CPU."""
-        self.results.extend(_to_cpu(predictions))
+        self.results.extend(_to_cpu(outputs))
 
     def compute_metrics(self, results: list) -> dict:
         """dump the prediction results to a pickle file."""
