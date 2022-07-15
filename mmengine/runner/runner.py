@@ -140,6 +140,11 @@ class Runner:
         custom_hooks (list[dict] or list[Hook], optional): Hooks to execute
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
+        data_preprocessor (dict, optional): The pre-process config of
+            :class:`BaseDataPreprocessor`. If the ``model`` argument
+            if a dict and has no ``data_preprocessor`` key, set the
+            argument as the ``data_preprocessor`` of the ``model`` dict.
+            Defaults to None.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
         resume (bool): Whether to resume training. Defaults to False. If
@@ -243,7 +248,7 @@ class Runner:
         test_evaluator: Optional[Union[Evaluator, Dict, List]] = None,
         default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
         custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
-        preprocess_cfg: Union[nn.Module, Dict, None] = None,
+        data_preprocessor: Union[nn.Module, Dict, None] = None,
         load_from: Optional[str] = None,
         resume: bool = False,
         launcher: str = 'none',
@@ -385,9 +390,9 @@ class Runner:
         self._has_loaded = False
 
         # build a model
-        if isinstance(model, dict) and preprocess_cfg is not None:
-            # Merge the preprocess_cfg to model config.
-            model.setdefault('data_preprocessor', preprocess_cfg)
+        if isinstance(model, dict) and data_preprocessor is not None:
+            # Merge the data_preprocessor to model config.
+            model.setdefault('data_preprocessor', data_preprocessor)
         self.model = self.build_model(model)
         # wrap model
         self.model = self.wrap_model(
@@ -434,7 +439,7 @@ class Runner:
             test_evaluator=cfg.get('test_evaluator'),
             default_hooks=cfg.get('default_hooks'),
             custom_hooks=cfg.get('custom_hooks'),
-            preprocess_cfg=cfg.get('preprocess_cfg'),
+            data_preprocessor=cfg.get('data_preprocessor'),
             load_from=cfg.get('load_from'),
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),

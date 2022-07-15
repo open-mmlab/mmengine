@@ -56,14 +56,14 @@ class TestBaseDataPreprocessor(TestCase):
 class TestImgataPreprocessor(TestBaseDataPreprocessor):
 
     def test_init(self):
-        # initiate model without `preprocess_cfg`
+        # initiate model without `data_preprocessor`
         data_processor = ImgDataPreprocessor()
         self.assertFalse(data_processor.channel_conversion)
         self.assertFalse(hasattr(data_processor, 'mean'))
         self.assertFalse(hasattr(data_processor, 'std'))
         self.assertEqual(data_processor.pad_size_divisor, 1)
         assert_allclose(data_processor.pad_value, torch.tensor(0))
-        # initiate model with preprocess_cfg` and feat keys
+        # initiate model with data_preprocessor` and feat keys
         data_processor = ImgDataPreprocessor(
             bgr_to_rgb=True,
             mean=[0, 0, 0],

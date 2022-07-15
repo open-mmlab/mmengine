@@ -291,7 +291,7 @@ class CustomRunner(Runner):
                  test_evaluator=None,
                  default_hooks=None,
                  custom_hooks=None,
-                 preprocess_cfg=None,
+                 data_preprocessor=None,
                  load_from=None,
                  resume=False,
                  launcher='none',
@@ -361,7 +361,7 @@ class TestRunner(TestCase):
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=True),
                 sampler_seed=dict(type='DistSamplerSeedHook')),
-            preprocess_cfg=None,
+            data_preprocessor=None,
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
         )
@@ -693,11 +693,11 @@ class TestRunner(TestCase):
                               BaseDataPreprocessor)
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_preprocess_cfg'
-        cfg.preprocess_cfg = dict(type='ImgDataPreprocessor')
+        cfg.experiment_name = 'test_data_preprocessor'
+        cfg.data_preprocessor = dict(type='ImgDataPreprocessor')
         runner = Runner.from_cfg(cfg)
-        # preprocess_cfg is passed to used if no `data_preprocessor` in model
-        # config.
+        # data_preprocessor is passed to used if no `data_preprocessor`
+        # in model config.
         self.assertIsInstance(runner.model.data_preprocessor,
                               ImgDataPreprocessor)
 

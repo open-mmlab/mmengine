@@ -43,7 +43,7 @@ class ToyModel(BaseModel):
 class TestBaseModel(TestCase):
 
     def test_init(self):
-        # initiate model without `preprocess_cfg`
+        # initiate model without `data_preprocessor`
         model = ToyModel()
         self.assertIsInstance(model.data_preprocessor, BaseDataPreprocessor)
         data_preprocessor = dict(type='CustomDataPreprocessor')
