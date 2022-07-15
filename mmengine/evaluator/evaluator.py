@@ -46,19 +46,19 @@ class Evaluator:
         metric.
 
         Args:
-            outputs (Sequence[BaseDataElement]): A batch of outputs from
-                the model.
+            outputs (Sequence[BaseDataElement]): predictions of the model, and
+                the ground truth of the validation set.
             data_batch (Any, optional): A batch of data from the dataloader.
         """
-        _predictions = []
-        for pred in outputs:
-            if isinstance(pred, BaseDataElement):
-                _predictions.append(pred.to_dict())
+        _outputs = []
+        for output in outputs:
+            if isinstance(output, BaseDataElement):
+                _outputs.append(output.to_dict())
             else:
-                _predictions.append(pred)
+                _outputs.append(output)
 
         for metric in self.metrics:
-            metric.process(_predictions, data_batch)
+            metric.process(_outputs, data_batch)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
@@ -97,8 +97,8 @@ class Evaluator:
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            outputs (Sequence): All predictions of the model on the
-                validation set.
+            outputs (Sequence): All predictions and ground truth of the model
+                and the validation set.
             data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
@@ -107,8 +107,8 @@ class Evaluator:
         # support chunking iterable objects
         if data is not None:
             assert len(outputs) == len(data), (
-                'predictions and data should have the same length, but got '
-                f'predictions length: {len(outputs)} '
+                'outputs and data should have the same length, but got '
+                f'outputs length: {len(outputs)} '
                 f'data length: {len(data)}')
 
         def get_chunks(seq: Iterator, chunk_size=1):
@@ -125,11 +125,11 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for pred_chunk in get_chunks(iter(outputs), chunk_size):
+        for output_chunk in get_chunks(iter(outputs), chunk_size):
             if data:
                 data_chunk = pseudo_collate(data[size:size + chunk_size])
             else:
                 data_chunk = None
-            size += len(pred_chunk)
-            self.process(pred_chunk, data_chunk)
+            size += len(output_chunk)
+            self.process(output_chunk, data_chunk)
         return self.evaluate(size)
