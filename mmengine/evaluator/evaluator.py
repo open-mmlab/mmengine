@@ -40,14 +40,16 @@ class Evaluator:
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Any, predictions: Sequence[BaseDataElement]):
+    def process(self,
+                predictions: Sequence[BaseDataElement],
+                data_batch: Optional[Any] = None):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Any): A batch of data from the dataloader.
             predictions (Sequence[BaseDataElement]): A batch of outputs from
                 the model.
+            data_batch (Any, optional): A batch of data from the dataloader.
         """
         _predictions = []
         for pred in predictions:
@@ -57,7 +59,7 @@ class Evaluator:
                 _predictions.append(pred)
 
         for metric in self.metrics:
-            metric.process(data_batch, _predictions)
+            metric.process(_predictions, data_batch)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
@@ -90,20 +92,26 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         data: Sequence,
                          predictions: Sequence,
+                         data: Optional[Sequence] = None,
                          chunk_size: int = 1):
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            data (Sequence): All data of the validation set.
             predictions (Sequence): All predictions of the model on the
                 validation set.
+            data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
         """
 
         # support chunking iterable objects
+        if data is not None:
+            assert len(predictions) == len(data), (
+                'predictions and data should have the same length, but got '
+                f'predictions length: {len(predictions)} '
+                f'data length: {len(data)}')
+
         def get_chunks(seq: Iterator, chunk_size=1):
             stop = False
             while not stop:
@@ -118,10 +126,11 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for data_chunk, pred_chunk in zip(
-                get_chunks(iter(data), chunk_size),
-                get_chunks(iter(predictions), chunk_size)):
-            size += len(data_chunk)
-            data_chunk = pseudo_collate(data_chunk)
-            self.process(data_chunk, pred_chunk)
+        for pred_chunk in get_chunks(iter(predictions), chunk_size):
+            if data:
+                data_chunk = pseudo_collate(data[size:size + chunk_size])
+            else:
+                data_chunk = None
+            size += len(pred_chunk)
+            self.process(pred_chunk, data_chunk)
         return self.evaluate(size)

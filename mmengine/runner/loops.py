@@ -356,7 +356,7 @@ class ValLoop(BaseLoop):
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
-        self.evaluator.process(data_batch, outputs)
+        self.evaluator.process(outputs, data_batch)
         self.runner.call_hook(
             'after_val_iter',
             batch_idx=idx,
@@ -424,7 +424,7 @@ class TestLoop(BaseLoop):
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             predictions = self.runner.model.test_step(data_batch)
-        self.evaluator.process(data_batch, predictions)
+        self.evaluator.process(predictions, data_batch)
         self.runner.call_hook(
             'after_test_iter',
             batch_idx=idx,

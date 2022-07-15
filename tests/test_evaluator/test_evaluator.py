@@ -37,7 +37,7 @@ class ToyMetric(BaseMetric):
         super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_batch, predictions):
+    def process(self, predictions, data_batch):
         results = [{
             'pred': prediction['label'],
             'label': prediction['label']
@@ -66,8 +66,9 @@ class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[dict]) -> None:
+    def process(self,
+                predictions: Sequence[dict],
+                data_batch: Optional[Sequence] = None) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
@@ -100,7 +101,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, predictions in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(predictions, data_samples)
 
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
@@ -125,7 +126,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, predictions in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(predictions, data_samples)
 
         metrics = evaluator.evaluate(size=size)
 
@@ -146,7 +147,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, predictions in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(predictions, data_samples)
 
         with self.assertRaisesRegex(
                 ValueError,
@@ -232,8 +233,19 @@ class TestEvaluator(TestCase):
 
         size = 10
 
-        all_data = dict()
+        all_data = [dict() for _ in range(10)]
         all_predictions = [
             BaseDataElement(pred=0, label=1) for _ in range(size)
         ]
-        evaluator.offline_evaluate(all_data, all_predictions)
+        evaluator.offline_evaluate(all_predictions, all_data)
+
+        # Test with None data
+        all_data = None
+        evaluator.offline_evaluate(all_predictions, all_data)
+
+        # Different length of data and predictions will raise an error.
+        all_data = [dict() for _ in range(9)]
+        with self.assertRaisesRegex(
+                AssertionError,
+                'predictions and data should have the same length'):
+            evaluator.offline_evaluate(all_predictions, all_data)

@@ -181,7 +181,7 @@ class ToyMetric1(BaseMetric):
         super().__init__(collect_device=collect_device)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_samples, predictions):
+    def process(self, predictions, data_samples=None):
         result = {'acc': 1}
         self.results.append(result)
 
@@ -196,7 +196,7 @@ class ToyMetric2(BaseMetric):
         super().__init__(collect_device=collect_device)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_samples, predictions):
+    def process(self, predictions, data_samples=None):
         result = {'acc': 1}
         self.results.append(result)
 
