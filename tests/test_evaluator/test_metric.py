@@ -19,8 +19,8 @@ class TestDumpResults(TestCase):
 
     def test_process(self):
         metric = DumpResults(out_file_path='./results.pkl')
-        predictions = [dict(data=(Tensor([1, 2, 3]), Tensor([4, 5, 6])))]
-        metric.process(None, predictions)
+        data_samples = [dict(data=(Tensor([1, 2, 3]), Tensor([4, 5, 6])))]
+        metric.process(None, data_samples)
         self.assertEqual(len(metric.results), 1)
         self.assertEqual(metric.results[0]['data'][0].device,
                          torch.device('cpu'))
@@ -29,8 +29,8 @@ class TestDumpResults(TestCase):
         temp_dir = tempfile.TemporaryDirectory()
         path = osp.join(temp_dir.name, 'results.pkl')
         metric = DumpResults(out_file_path=path)
-        predictions = [dict(data=(Tensor([1, 2, 3]), Tensor([4, 5, 6])))]
-        metric.process(None, predictions)
+        data_samples = [dict(data=(Tensor([1, 2, 3]), Tensor([4, 5, 6])))]
+        metric.process(None, data_samples)
         metric.compute_metrics(metric.results)
         self.assertTrue(osp.isfile(path))
 
