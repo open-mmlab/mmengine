@@ -91,14 +91,14 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         outputs: Sequence,
+                         data_samples: Sequence,
                          data: Optional[Sequence] = None,
                          chunk_size: int = 1):
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            outputs (Sequence): All predictions and ground truth of the model
-                and the validation set.
+            data_samples (Sequence): All predictions and ground truth of the
+                model and the validation set.
             data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
@@ -106,9 +106,9 @@ class Evaluator:
 
         # support chunking iterable objects
         if data is not None:
-            assert len(outputs) == len(data), (
+            assert len(data_samples) == len(data), (
                 'outputs and data should have the same length, but got '
-                f'outputs length: {len(outputs)} '
+                f'outputs length: {len(data_samples)} '
                 f'data length: {len(data)}')
 
         def get_chunks(seq: Iterator, chunk_size=1):
@@ -125,8 +125,8 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for output_chunk in get_chunks(iter(outputs), chunk_size):
-            if data:
+        for output_chunk in get_chunks(iter(data_samples), chunk_size):
+            if data is not None:
                 data_chunk = pseudo_collate(data[size:size + chunk_size])
             else:
                 data_chunk = None
