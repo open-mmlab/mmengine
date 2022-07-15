@@ -99,9 +99,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(predictions, data_samples)
+            evaluator.process(outputs=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
@@ -124,9 +124,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(predictions, data_samples)
+            evaluator.process(outputs=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
 
@@ -145,9 +145,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(predictions, data_samples)
+            evaluator.process(outputs=outputs, data_batch=data_samples)
 
         with self.assertRaisesRegex(
                 ValueError,
