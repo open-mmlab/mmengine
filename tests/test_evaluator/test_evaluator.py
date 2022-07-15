@@ -247,5 +247,5 @@ class TestEvaluator(TestCase):
         all_data = [dict() for _ in range(9)]
         with self.assertRaisesRegex(
                 AssertionError,
-                'predictions and data should have the same length'):
+                'outputs and data should have the same length'):
             evaluator.offline_evaluate(all_predictions, all_data)
