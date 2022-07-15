@@ -1097,6 +1097,12 @@ class Runner:
         Returns:
             list[_ParamScheduler]: List of parameter schedulers build from
             ``scheduler``.
+
+        Note:
+            If the train loop is built, when building parameter schedulers,
+            it supports setting the max epochs/iters as the default ``end``
+            of schedulers, and supports converting epoch-based schedulers
+            to iter-based according to the ``convert_to_iter_based`` key.
         """
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
