@@ -373,6 +373,11 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
 
+        # Test default `T_max`
+        scheduler = CosineAnnealingParamScheduler(
+            self.optimizer, param_name='lr', begin=5, end=100, eta_min=eta_min)
+        self.assertEqual(scheduler.T_max, 100 - 5)
+
     def test_poly_scheduler(self):
         epochs = 10
         power = 0.9
