@@ -58,17 +58,15 @@ class BaseMetric(metaclass=ABCMeta):
         self._dataset_meta = dataset_meta
 
     @abstractmethod
-    def process(self,
-                outputs: Sequence[dict],
-                data_batch: Optional[Any] = None) -> None:
+    def process(self, data_batch: Any, predictions: Sequence[dict]) -> None:
         """Process one batch of data samples and predictions. The processed
         results should be stored in ``self.results``, which will be used to
         compute the metrics when all batches have been processed.
 
         Args:
-            outputs (Sequence[dict]): A batch of outputs from
+            data_batch (Any): A batch of data from the dataloader.
+            predictions (Sequence[dict]): A batch of outputs from
                 the model.
-            data_batch (Any, optional): A batch of data from the dataloader.
         """
 
     @abstractmethod
@@ -145,11 +143,9 @@ class DumpResults(BaseMetric):
             raise ValueError('The output file must be a pkl file.')
         self.out_file_path = out_file_path
 
-    def process(self,
-                outputs: Sequence[dict],
-                data_batch: Optional[Sequence] = None) -> None:
+    def process(self, data_batch: Any, predictions: Sequence[dict]) -> None:
         """transfer tensors in predictions to CPU."""
-        self.results.extend(_to_cpu(outputs))
+        self.results.extend(_to_cpu(predictions))
 
     def compute_metrics(self, results: list) -> dict:
         """dump the prediction results to a pickle file."""

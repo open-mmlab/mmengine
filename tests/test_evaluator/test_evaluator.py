@@ -37,7 +37,7 @@ class ToyMetric(BaseMetric):
         super().__init__(collect_device=collect_device, prefix=prefix)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, predictions, data_batch):
+    def process(self, data_batch, predictions):
         results = [{
             'pred': prediction['label'],
             'label': prediction['label']
@@ -66,9 +66,7 @@ class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self,
-                predictions: Sequence[dict],
-                data_batch: Optional[Sequence] = None) -> None:
+    def process(self, data_batch, predictions: Sequence[dict]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
@@ -101,7 +99,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(outputs=outputs, data_batch=data_samples)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
@@ -126,7 +124,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(outputs=outputs, data_batch=data_samples)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
 
@@ -147,7 +145,7 @@ class TestEvaluator(TestCase):
 
         for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(outputs=outputs, data_batch=data_samples)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         with self.assertRaisesRegex(
                 ValueError,

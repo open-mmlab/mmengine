@@ -40,25 +40,25 @@ class Evaluator:
             metric.dataset_meta = dataset_meta
 
     def process(self,
-                outputs: Sequence[BaseDataElement],
+                data_samples: Sequence[BaseDataElement],
                 data_batch: Optional[Any] = None):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            outputs (Sequence[BaseDataElement]): predictions of the model, and
-                the ground truth of the validation set.
+            data_samples (Sequence[BaseDataElement]): predictions of the model,
+                and the ground truth of the validation set.
             data_batch (Any, optional): A batch of data from the dataloader.
         """
-        _outputs = []
-        for output in outputs:
-            if isinstance(output, BaseDataElement):
-                _outputs.append(output.to_dict())
+        _data_samples = []
+        for data_sample in data_samples:
+            if isinstance(data_sample, BaseDataElement):
+                _data_samples.append(data_sample.to_dict())
             else:
-                _outputs.append(output)
+                _data_samples.append(data_sample)
 
         for metric in self.metrics:
-            metric.process(_outputs, data_batch)
+            metric.process(data_batch, _data_samples)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
