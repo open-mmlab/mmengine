@@ -1,11 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+import torch.nn as nn
 import logging
 from typing import Any, Optional, Union
 
 from ..config import Config, ConfigDict
 from ..utils import ManagerMixin
 from .registry import Registry
+
+if TYPE_CHECKING:
+    from mmengine import Runner
+    from ..optim.scheduler import _ParamScheduler
 
 
 def build_from_cfg(
@@ -131,7 +138,7 @@ def build_from_cfg(
 
 
 def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
-                          registry: Registry) -> Any:
+                          registry: Registry) -> 'Runner':
     """Build a Runner object.
     Examples:
         >>> from mmengine.registry import Registry, build_runner_from_cfg
@@ -203,7 +210,11 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                 f'{cls_location}.py: {e}')
 
 
-def build_model_from_cfg(cfg, registry, default_args=None):
+def build_model_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: Registry,
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
+        nn.Module:
     """Build a PyTorch model from config dict(s). Different from
     ``build_from_cfg``, if cfg is a list, a ``nn.Sequential`` will be built.
 
@@ -226,3 +237,48 @@ def build_model_from_cfg(cfg, registry, default_args=None):
         return Sequential(*modules)
     else:
         return build_from_cfg(cfg, registry, default_args)
+
+
+def build_scheduler_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: Registry,
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
+        '_ParamScheduler':
+    """Builds a ``ParamScheduler`` instance from config.
+
+    ``ParamScheduler`` supports building instance by its constructor or
+    method ``build_iter_from_epoch``. Therefore, its registry needs a build
+    function to handle both cases.
+
+    Args:
+        cfg (dict or ConfigDict or Config): Config dictionary. If it contains
+            the key ``convert_to_iter_based``, instance will be built by method
+            ``convert_to_iter_based``, otherwise instance will be built by its
+            constructor.
+        registry (:obj:`Registry`): The ``PARAM_SCHEDULERS`` registry.
+        default_args (dict or ConfigDict or Config, optional): Default
+            initialization arguments. It must contain key ``optimizer``. If
+            ``convert_to_iter_based`` is defined in ``cfg``, it must
+            additionally contain key ``epoch_length``. Defaults to None.
+
+    Returns:
+        object: The constructed ``ParamScheduler``.
+    """
+    assert isinstance(
+        cfg,
+        (dict, ConfigDict, Config
+         )), f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}'
+    assert isinstance(
+        registry, Registry), ('registry should be a mmengine.Registry object',
+                              f'but got {type(registry)}')
+
+    args = cfg.copy()
+    scope = args.pop('_scope_', None)
+    with registry.switch_scope_and_registry(scope) as registry:
+        convert_to_iter = args.pop('convert_to_iter_based', False)
+        if convert_to_iter:
+            cls = registry.get(args.pop('type'))
+            return cls.build_iter_from_epoch(  # type: ignore
+                **args, **default_args)
+        else:
+            return build_from_cfg(cfg, registry, default_args)
