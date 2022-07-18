@@ -1140,7 +1140,10 @@ class Runner:
                         default_args=dict(
                             optimizer=optim_wrapper,
                             epoch_length=len(self.train_dataloader))))
-
+            else:
+                raise TypeError(
+                    'scheduler should be a _ParamScheduler object or dict, '
+                    f'but got {scheduler}')
         return param_schedulers
 
     def build_param_scheduler(
