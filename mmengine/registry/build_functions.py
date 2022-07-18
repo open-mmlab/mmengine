@@ -11,8 +11,8 @@ from ..utils import ManagerMixin
 from .registry import Registry
 
 if TYPE_CHECKING:
-    from mmengine import Runner
     from ..optim.scheduler import _ParamScheduler
+    from ..runner import Runner
 
 
 def build_from_cfg(
