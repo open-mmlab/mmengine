@@ -318,6 +318,13 @@ class TestBaseDataset:
         with pytest.raises(TypeError):
             Compose([1])
 
+        # when the input transform is None, do nothing
+        compose = Compose(None)
+        assert compose(dict(img=self.imgs)) == dict(img=self.imgs)
+
+        compose = Compose([])
+        assert compose(dict(img=self.imgs)) == dict(img=self.imgs)
+
     @pytest.mark.parametrize('lazy_init', [True, False])
     def test_getitem(self, lazy_init):
         dataset = BaseDataset(

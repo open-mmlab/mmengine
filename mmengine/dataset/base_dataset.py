@@ -26,6 +26,9 @@ class Compose:
     def __init__(self, transforms: Sequence[Union[dict, Callable]]):
         self.transforms: List[Callable] = []
 
+        if transforms is None:
+            transforms = []
+
         for transform in transforms:
             # `Compose` can be built with config dict with type and
             # corresponding arguments.
