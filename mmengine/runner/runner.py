@@ -868,8 +868,8 @@ class Runner:
                 model_wrapper_cfg, default_args=default_args)
         return model
 
-    def _init_model_weights(self):
-        """initialize the model weights if the model has
+    def _init_model_weights(self) -> None:
+        """Initialize the model weights if the model has
         :meth:`init_weights`"""
         model = self.model.module if is_model_wrapper(
             self.model) else self.model
