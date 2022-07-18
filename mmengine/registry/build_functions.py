@@ -273,12 +273,29 @@ def build_scheduler_from_cfg(
                               f'but got {type(registry)}')
 
     args = cfg.copy()
+    if default_args is not None:
+        for name, value in default_args.items():
+            args.setdefault(name, value)
     scope = args.pop('_scope_', None)
+    scheduler_type = args.pop('type')
     with registry.switch_scope_and_registry(scope) as registry:
         convert_to_iter = args.pop('convert_to_iter_based', False)
         if convert_to_iter:
-            cls = registry.get(args.pop('type'))
-            return cls.build_iter_from_epoch(  # type: ignore
-                **args, **default_args)
+            if isinstance(scheduler_type, str):
+                scheduler_cls = registry.get(scheduler_type)
+                if scheduler_cls is None:
+                    raise KeyError(
+                        f'{scheduler_type} is not in the {registry.name} '
+                        'registry. Please check whether the value of '
+                        f'`{scheduler_type}` is correct or it was registered '
+                        'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+                    )
+            elif inspect.isclass(scheduler_type):
+                scheduler_cls = scheduler_type
+            else:
+                raise TypeError('type must be a str or valid type, but got '
+                                f'{type(scheduler_type)}')
+            return scheduler_cls.build_iter_from_epoch(  # type: ignore
+                **args)
         else:
             return build_from_cfg(cfg, registry, default_args)
