@@ -1134,28 +1134,12 @@ class Runner:
                         f'The `end` of {_scheduler["type"]} is not set. '
                         'Use the max epochs/iters of train loop as default.')
 
-                convert_to_iter = _scheduler.get('convert_to_iter_based',
-                                                 False)
-                if convert_to_iter:
-                    assert _scheduler.get(
-                        'by_epoch',
-                        True), ('only epoch-based parameter scheduler can be '
-                                'converted to iter-based')
-                    param_schedulers.append(
-                        PARAM_SCHEDULERS.build(
-                            _scheduler,
-                            default_args=dict(
-                                optimizer=optim_wrapper,
-                                epoch_length=len(self.train_dataloader))))
-                else:
-                    param_schedulers.append(
-                        PARAM_SCHEDULERS.build(
-                            _scheduler,
-                            default_args=dict(optimizer=optim_wrapper)))
-            else:
-                raise TypeError(
-                    'scheduler should be a _ParamScheduler object or dict, '
-                    f'but got {scheduler}')
+                param_schedulers.append(
+                    PARAM_SCHEDULERS.build(
+                        _scheduler,
+                        default_args=dict(
+                            optimizer=optim_wrapper,
+                            epoch_length=len(self.train_dataloader))))
 
         return param_schedulers
 

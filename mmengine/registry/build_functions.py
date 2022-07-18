@@ -277,10 +277,13 @@ def build_scheduler_from_cfg(
         for name, value in default_args.items():
             args.setdefault(name, value)
     scope = args.pop('_scope_', None)
-    scheduler_type = args.pop('type')
     with registry.switch_scope_and_registry(scope) as registry:
         convert_to_iter = args.pop('convert_to_iter_based', False)
         if convert_to_iter:
+            scheduler_type = args.pop('type')
+            assert 'epoch_length' in args and args.get('by_epoch', True), (
+                'Only epoch-based parameter scheduler can be converted to '
+                'iter-based, and `epoch_length` should be set')
             if isinstance(scheduler_type, str):
                 scheduler_cls = registry.get(scheduler_type)
                 if scheduler_cls is None:
@@ -298,4 +301,5 @@ def build_scheduler_from_cfg(
             return scheduler_cls.build_iter_from_epoch(  # type: ignore
                 **args)
         else:
-            return build_from_cfg(cfg, registry, default_args)
+            args.pop('epoch_length', None)
+            return build_from_cfg(args, registry)
