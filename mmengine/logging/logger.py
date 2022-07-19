@@ -19,18 +19,24 @@ class MMFormatter(logging.Formatter):
     Args:
         color (bool): Whether to use colorful format. filehandler is not
             allowed to use color format, otherwise it will be garbled.
+        blink (bool): Whether to blink the ``INFO`` and ``DEBUG`` logging
+            level.
+        **kwargs: Keyword arguments passed to
+            :meth:`logging.Formatter.__init__`.
     """
     _color_mapping: dict = dict(
         ERROR='red', WARNING='yellow', INFO='white', DEBUG='green')
 
-    def __init__(self, color: bool = True, **kwargs):
-
+    def __init__(self, color: bool = True, blink: bool = False, **kwargs):
         super().__init__(**kwargs)
         # Get prefix format according to color.
         error_prefix = self._get_prefix('ERROR', color, blink=True)
         warn_prefix = self._get_prefix('WARNING', color, blink=True)
-        info_prefix = self._get_prefix('INFO', color)
-        debug_prefix = self._get_prefix('DEBUG', color)
+        info_prefix = self._get_prefix('INFO', color, blink)
+        debug_prefix = self._get_prefix('DEBUG', color, blink)
+
+        assert not (not color and blink), (
+            'blink should only be available when color is True')
         # Config output format.
         self.err_format = (f'%(asctime)s - %(name)s - {error_prefix} - '
                            '%(pathname)s - %(funcName)s - %(lineno)d - '
