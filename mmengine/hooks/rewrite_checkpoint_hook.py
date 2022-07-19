@@ -22,10 +22,10 @@ class RewriteCheckPointHook(Hook):
     - merge: Merges another state dictionary into the target dictionary.
 
     Note:
-        The workflow for ``RewriteCheckPointHook`` is first removing,
-        then mapping and finally merging. It means the ``merged_state_dicts``
-        has the highest priority, which could overwrite the removed and
-        remapped keys. The mapped name could fill the removed keys.
+        Merged keys has the highest priority, which could overwrite the
+        removed and remapped keys. Removed keys has the next highest
+        priority, once the original key has been removed, it cannot be mapped
+        to other keys anymore.
 
     Args:
         applied_key (str): Target state dictionary saved in checkpoints, which
@@ -161,6 +161,13 @@ class RewriteCheckPointHook(Hook):
             prefix_mapping,
             dict), ('prefix_mapping should be a list of dict a dict, but got '
                     f'{type(prefix_mapping)}: {prefix_mapping}')
+
+        for _removed_prefix in removed_prefix:
+            for _prefix_mapping in prefix_mapping:
+                assert not _prefix_mapping['src'].startswith(_removed_prefix),\
+                    ('mapped prefix should not be a substring of removed '
+                     'prefix, but got removed_key: {removed_prefix}, '
+                     f'mapped key: {_prefix_mapping["src"]}')
 
         self.applied_key = applied_key
         self.removed_prefix = removed_prefix

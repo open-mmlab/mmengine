@@ -100,7 +100,7 @@ class ToyDummyDataset(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-class TestModifyStateDictHook(TestCase):
+class TestRewriteCheckPointHook(TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -234,7 +234,52 @@ class TestModifyStateDictHook(TestCase):
         hook.after_load_checkpoint(Mock(), checkpoint)
         self.assertIn('module3.linear2.weight', checkpoint['state_dict'])
 
-        # 4 Test load state dict.
+        # 4.1 Test remove, remap and merge keys.
+        checkpoint = dict(state_dict=state_dict)
+        hook = RewriteCheckPointHook(
+            prefix_mapping=[
+                dict(src='module3.module2.module2', dst='module3')
+            ],
+            removed_prefix=['module2'],
+            merged_state_dicts=[osp.join(self.temp_dir.name, 'tmp_ckpt')])
+        self.assertNotIn('module3.linear2.weight', state_dict)
+        hook.after_load_checkpoint(Mock(), checkpoint)
+        self.assertIn('module3.linear2.weight', checkpoint['state_dict'])
+        self.assertEqual(checkpoint['state_dict']['a'], 1)
+        self.assertEqual(checkpoint['state_dict']['b'], 2)
+        self.assertEqual(checkpoint['state_dict']['module1.linear1.weight'], 3)
+
+        for key, value in state_dict.items():
+            if key.startswith('module2'):
+                self.assertNotIn(key, checkpoint['state_dict'])
+
+        # 4.2 Test and merged keys overwrite the removed keys, and removed keys
+        # cannot be remapped anymore.
+        checkpoint = dict(state_dict=state_dict)
+        hook = RewriteCheckPointHook(
+            prefix_mapping=[
+                dict(src='module3.module2.module2', dst='module3')
+            ],
+            removed_prefix=['module3.module2.module2.linear1', 'module1'],
+            merged_state_dicts=[osp.join(self.temp_dir.name, 'tmp_ckpt')])
+
+        hook.after_load_checkpoint(Mock(), checkpoint)
+        self.assertIn('module3.linear2.weight', checkpoint['state_dict'])
+        self.assertNotIn('module3.linear1.weight', checkpoint['state_dict'])
+        self.assertEqual(checkpoint['state_dict']['a'], 1)
+        self.assertEqual(checkpoint['state_dict']['b'], 2)
+        self.assertEqual(checkpoint['state_dict']['module1.linear1.weight'], 3)
+
+        # 4.3 Test removed_prefix should not be a substring of removed_prefix
+        with self.assertRaisesRegex(AssertionError, 'mapped prefix should'):
+            RewriteCheckPointHook(
+                prefix_mapping=[
+                    dict(src='module3.module2.module2', dst='module3')
+                ],
+                removed_prefix=['module3.module2', 'module1'],
+                merged_state_dicts=[osp.join(self.temp_dir.name, 'tmp_ckpt')])
+
+        # 5 Test load state dict.
         checkpoint = dict(state_dict=state_dict)
         old_model = ModelOld()
         hook = RewriteCheckPointHook(
