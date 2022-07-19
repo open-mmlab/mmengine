@@ -797,8 +797,6 @@ class Runner:
         elif isinstance(model, dict):
             model = MODELS.build(model)
             # init weights
-            if hasattr(model, 'init_weights'):  # type: ignore
-                model.init_weights()  # type: ignore
             return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
@@ -869,6 +867,17 @@ class Runner:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg, default_args=default_args)
         return model
+
+    def _init_model_weights(self) -> None:
+        """Initialize the model weights if the model has
+        :meth:`init_weights`"""
+        model = self.model.module if is_model_wrapper(
+            self.model) else self.model
+        if hasattr(model, 'init_weights'):
+            model.init_weights()
+            # sync params and buffers
+            for name, params in model.state_dict().items():
+                broadcast(params)
 
     def scale_lr(self,
                  optim_wrapper: OptimWrapper,
@@ -1606,10 +1615,11 @@ class Runner:
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
-
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
 
-        # TODO: add a contextmanager to avoid calling `before_run` many times
+        # initialize the model weights
+        self._init_model_weights()
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 

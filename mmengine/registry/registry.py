@@ -318,7 +318,7 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
         # Avoid circular import
-        from ..logging.logger import MMLogger
+        from ..logging import print_log
 
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
@@ -356,10 +356,11 @@ class Registry:
                     obj_cls = root.get(key)
 
         if obj_cls is not None:
-            logger: MMLogger = MMLogger.get_current_instance()
-            logger.info(
+            print_log(
                 f'Get class `{obj_cls.__name__}` from "{registry_name}"'
-                f' registry in "{scope_name}"')
+                f' registry in "{scope_name}"',
+                logger='current',
+                level=logging.DEBUG)
         return obj_cls
 
     def _search_child(self, scope: str) -> Optional['Registry']:
