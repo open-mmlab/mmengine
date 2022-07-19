@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import re
 from typing import List
 
 from ..registry import HOOKS
@@ -18,9 +17,15 @@ class RewriteCheckPointHook(Hook):
     ``RewriteCheckPointHook`` has three mode to rewrite original checkpoint:
 
     - remove: Removes specified keys in target dictionary saved in checkpoint.
+    - name_mapping: Maps the original key to the target one by the
+        given prefix, and overwrites the original one.
     - merge: Merges another state dictionary into the target dictionary.
-    - name_mapping: Maps the original key to the target one, and overwrites it.
 
+    Note:
+        The workflow for ``RewriteCheckPointHook`` is first removing,
+        then mapping and finally merging. It means the ``merged_state_dicts``
+        has the highest priority, which could overwrite the removed and
+        remapped keys. The mapped name could fill the removed keys.
 
     Args:
         applied_key (str): Target state dictionary saved in checkpoints, which
@@ -189,8 +194,8 @@ class RewriteCheckPointHook(Hook):
             bool: Whether to remove the key.
         """
         matched_removed_prefix = []
-        for removed_key in self.removed_prefix:
-            if re.match(rf'{removed_key}(.*)', key) is not None:
+        for removed_prefix in self.removed_prefix:
+            if key.startswith(removed_prefix):
                 matched_removed_prefix.append(key)
 
         # Each key in `state_dict` should only match one removed_prefix at
@@ -217,7 +222,7 @@ class RewriteCheckPointHook(Hook):
         matched_remapping_keys = []
         for name_mapping in self.prefix_mapping:
             src, dst = name_mapping['src'], name_mapping['dst']
-            if re.match(rf'{src}(.*)', key) is not None:
+            if key.startswith(src):
                 matched_remapping_keys.append((src, dst))
 
         # Finds no mapped key,
