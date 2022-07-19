@@ -32,6 +32,8 @@ class EMAHook(Hook):
             Defaults to 0.
         begin_epoch (int): The number of epoch to enable ``EMAHook``. Defaults
             to 0.
+        **kwargs: Keyword arguments passed to subclasses of
+            :obj:`BaseAveragedModel`
     """
 
     priority = 'NORMAL'
