@@ -19,12 +19,15 @@ class Compose:
     """Compose multiple transforms sequentially.
 
     Args:
-        transforms (Sequence[dict, callable]): Sequence of transform object or
-            config dict to be composed.
+        transforms (Sequence[dict, callable], optional): Sequence of transform
+            object or config dict to be composed.
     """
 
-    def __init__(self, transforms: Sequence[Union[dict, Callable]]):
+    def __init__(self, transforms: Optional[Sequence[Union[dict, Callable]]]):
         self.transforms: List[Callable] = []
+
+        if transforms is None:
+            transforms = []
 
         for transform in transforms:
             # `Compose` can be built with config dict with type and
