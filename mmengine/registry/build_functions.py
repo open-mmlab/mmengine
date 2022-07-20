@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import torch.nn as nn
-import logging
-from typing import Any, Optional, Union
 
 from ..config import Config, ConfigDict
 from ..utils import ManagerMixin
