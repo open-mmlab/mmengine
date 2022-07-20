@@ -214,10 +214,7 @@ class LoggerHook(Hook):
             # by iter. At the same time, scalars related to time should
             # still be logged by iter to avoid messy visualized result.
             # see details in PR #278.
-            time_tags = {k: v for k, v in tag.items() if 'time' in k}
             metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
-            runner.visualizer.add_scalars(
-                time_tags, step=runner.iter, file_path=self.json_log_path)
             runner.visualizer.add_scalars(
                 metric_tags, step=runner.epoch, file_path=self.json_log_path)
         else:
