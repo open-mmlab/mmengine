@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import functools
 import os
 import os.path as osp
@@ -291,6 +292,7 @@ class LocalVisBackend(BaseVisBackend):
                 Default to None.
         """
         assert isinstance(scalar_dict, dict)
+        scalar_dict = copy.deepcopy(scalar_dict)
         scalar_dict.setdefault('step', step)
 
         if file_path is not None:
@@ -542,7 +544,8 @@ class TensorboardVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        if isinstance(value, (int, float, torch.Tensor, np.ndarray)):
+        if isinstance(value,
+                      (int, float, torch.Tensor, np.ndarray, np.number)):
             self._tensorboard.add_scalar(name, value, step)
         else:
             warnings.warn(f'Got {type(value)}, but numpy array, torch tensor, '
