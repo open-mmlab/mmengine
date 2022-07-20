@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 import math
 import os.path as osp
 import tempfile
@@ -757,4 +756,4 @@ class TestParameterSchedulerOptimWrapper(TestParameterScheduler):
 
     def setUp(self):
         super().setUp()
-        self.optimizer = OptimWrapper(optimizer=copy.deepcopy(self.optimizer))
+        self.optimizer = OptimWrapper(optimizer=self.optimizer)
