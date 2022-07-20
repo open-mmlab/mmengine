@@ -64,7 +64,6 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.assertIs(optim_wrapper.optimizer, self.optimizer)
         self.assertIsNone(optim_wrapper.clip_grad_kwargs)
         self.assertEqual(optim_wrapper._accumulative_counts, 1)
-        self.assertIs(optim_wrapper.logger, self.logger)
         self.assertIs(optim_wrapper.message_hub, self.message_hub)
         self.assertEqual(optim_wrapper._inner_count, 0)
         self.assertEqual(optim_wrapper._max_counts, -1)

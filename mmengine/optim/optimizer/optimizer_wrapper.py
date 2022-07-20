@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 from contextlib import contextmanager
 from typing import Dict, List, Optional
 
@@ -7,7 +8,7 @@ import torch.nn as nn
 from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import MessageHub, print_log
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import has_batch_norm
 
@@ -106,7 +107,6 @@ class OptimWrapper:
                 'If `clip_grad` is not None, it should be a `dict` '
                 'which is the arguments of `torch.nn.utils.clip_grad`')
         self.clip_grad_kwargs = clip_grad
-        self.logger = MMLogger.get_current_instance()
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self._inner_count = 0
@@ -318,16 +318,20 @@ class OptimWrapper:
         self._inner_count = init_counts
         self._max_counts = max_counts
         if self._inner_count % self._accumulative_counts != 0:
-            self.logger.warning(
+            print_log(
                 'Resumed iteration number is not divisible by '
                 '`_accumulative_counts` in `GradientCumulativeOptimizerHook`, '
                 'which means the gradient of some iterations is lost and the '
-                'result may be influenced slightly.')
+                'result may be influenced slightly.',
+                logger='current',
+                level=logging.WARNING)
 
         if has_batch_norm(model) and self._accumulative_counts > 1:
-            self.logger.warning(
+            print_log(
                 'Gradient accumulative may slightly decrease '
-                'performance because the model has BatchNorm layers.')
+                'performance because the model has BatchNorm layers.',
+                logger='current',
+                level=logging.WARNING)
         # Remainder of `_max_counts` divided by `_accumulative_counts`
         self._remainder_counts = self._max_counts % self._accumulative_counts
 
