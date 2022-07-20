@@ -29,14 +29,14 @@ class MMFormatter(logging.Formatter):
 
     def __init__(self, color: bool = True, blink: bool = False, **kwargs):
         super().__init__(**kwargs)
+        assert not (not color and blink), (
+            'blink should only be available when color is True')
         # Get prefix format according to color.
         error_prefix = self._get_prefix('ERROR', color, blink=True)
         warn_prefix = self._get_prefix('WARNING', color, blink=True)
         info_prefix = self._get_prefix('INFO', color, blink)
         debug_prefix = self._get_prefix('DEBUG', color, blink)
 
-        assert not (not color and blink), (
-            'blink should only be available when color is True')
         # Config output format.
         self.err_format = (f'%(asctime)s - %(name)s - {error_prefix} - '
                            '%(pathname)s - %(funcName)s - %(lineno)d - '
