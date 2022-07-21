@@ -776,8 +776,7 @@ class Runner:
     def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
         """Build model.
 
-        If ``model`` is a dict, it will be used to build a nn.Module object
-        and initialize the weights if it has ``init_weights`` method.
+        If ``model`` is a dict, it will be used to build a nn.Module object.
         Else, if ``model`` is a nn.Module object it will be returned directly.
 
         An example of ``model``::
@@ -796,7 +795,6 @@ class Runner:
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
-            # init weights
             return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
