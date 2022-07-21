@@ -773,7 +773,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
+    def build_model(self, model: Union[BaseModel, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object
@@ -785,14 +785,14 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (nn.Module or dict): A nn.Module object or a dict to build
-                nn.Module object. If ``model`` is a nn.Module object, just
+            model (BaseModel or dict): A BaseModel object or a dict to build
+                nn.Module object. If ``model`` is a BaseModel object, just
                 returns itself.
 
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, nn.Module):
+        if isinstance(model, BaseModel):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
@@ -801,7 +801,7 @@ class Runner:
                 model.init_weights()  # type: ignore
             return model  # type: ignore
         else:
-            raise TypeError('model should be a nn.Module object or dict, '
+            raise TypeError('model should be a BaseModel object or dict, '
                             f'but got {model}')
 
     def wrap_model(
