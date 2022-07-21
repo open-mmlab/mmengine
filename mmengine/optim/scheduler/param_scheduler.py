@@ -585,7 +585,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
-        T_max (int): Maximum number of iterations.
+        T_max (int, optional): Maximum number of iterations. If not specified,
+            use ``end - begin``. Defaults to None.
         eta_min (float): Minimum parameter value. Defaults to 0.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
@@ -605,14 +606,14 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     def __init__(self,
                  optimizer: Union[Optimizer, OptimWrapper],
                  param_name: str,
-                 T_max: int,
+                 T_max: Optional[int] = None,
                  eta_min: float = 0.,
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
                  by_epoch: bool = True,
                  verbose: bool = False):
-        self.T_max = T_max
+        self.T_max = T_max or (end - begin)
         self.eta_min = eta_min
         super().__init__(
             optimizer,
@@ -1024,13 +1025,15 @@ class OneCycleParamScheduler(_ParamScheduler):
         else:
             return [param] * len(optimizer.param_groups)
 
-    def _annealing_cos(self, start, end, pct):
+    @staticmethod
+    def _annealing_cos(start, end, pct):
         """Cosine anneal from `start` to `end` as pct goes from 0.0 to 1.0."""
 
         cos_out = math.cos(math.pi * pct) + 1
         return end + (start - end) / 2.0 * cos_out
 
-    def _annealing_linear(self, start, end, pct):
+    @staticmethod
+    def _annealing_linear(start, end, pct):
         """Linearly anneal from `start` to `end` as pct goes from 0.0 to
         1.0."""
         return (end - start) * pct + start

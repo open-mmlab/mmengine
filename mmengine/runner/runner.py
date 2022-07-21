@@ -797,8 +797,6 @@ class Runner:
         elif isinstance(model, dict):
             model = MODELS.build(model)
             # init weights
-            if hasattr(model, 'init_weights'):  # type: ignore
-                model.init_weights()  # type: ignore
             return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
@@ -869,6 +867,17 @@ class Runner:
             model = MODEL_WRAPPERS.build(
                 model_wrapper_cfg, default_args=default_args)
         return model
+
+    def _init_model_weights(self) -> None:
+        """Initialize the model weights if the model has
+        :meth:`init_weights`"""
+        model = self.model.module if is_model_wrapper(
+            self.model) else self.model
+        if hasattr(model, 'init_weights'):
+            model.init_weights()
+            # sync params and buffers
+            for name, params in model.state_dict().items():
+                broadcast(params)
 
     def scale_lr(self,
                  optim_wrapper: OptimWrapper,
@@ -1097,6 +1106,12 @@ class Runner:
         Returns:
             list[_ParamScheduler]: List of parameter schedulers build from
             ``scheduler``.
+
+        Note:
+            If the train loop is built, when building parameter schedulers,
+            it supports setting the max epochs/iters as the default ``end``
+            of schedulers, and supports converting epoch-based schedulers
+            to iter-based according to the ``convert_to_iter_based`` key.
         """
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
@@ -1109,6 +1124,16 @@ class Runner:
                 param_schedulers.append(scheduler)
             elif isinstance(scheduler, dict):
                 _scheduler = copy.deepcopy(scheduler)
+
+                # Set default end
+                if isinstance(self._train_loop, BaseLoop):
+                    default_end = self.max_epochs if _scheduler.get(
+                        'by_epoch', True) else self.max_iters
+                    _scheduler.setdefault('end', default_end)
+                    self.logger.debug(
+                        f'The `end` of {_scheduler["type"]} is not set. '
+                        'Use the max epochs/iters of train loop as default.')
+
                 convert_to_iter = _scheduler.pop('convert_to_iter_based',
                                                  False)
                 if convert_to_iter:
@@ -1357,6 +1382,13 @@ class Runner:
         else:
             init_fn = None
 
+        # `persistent_workers` requires pytorch version >= 1.7
+        if ('persistent_workers' in dataloader_cfg
+                and digit_version(TORCH_VERSION) < digit_version('1.7.0')):
+            warnings.warn('`persistent_workers` is only available when '
+                          'pytorch version >= 1.7')
+            dataloader_cfg.pop('persistent_workers')
+
         # The default behavior of `collat_fn` in dataloader is to
         # merge a list of samples to form a mini-batch of Tensor(s).
         # However, to make this more flexible, collate_fn in MMengine does
@@ -1590,17 +1622,19 @@ class Runner:
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
-
+        # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
+
+        # initialize the model weights
+        self._init_model_weights()
+        # make sure checkpoint-related hooks are triggered after `before_run`
+        self.load_or_resume()
+
         # Initiate inner count of `optim_wrapper`.
         self.optim_wrapper.initialize_count_status(
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
-
-        # TODO: add a contextmanager to avoid calling `before_run` many times
-        # make sure checkpoint-related hooks are triggered after `before_run`
-        self.load_or_resume()
 
         self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -1880,7 +1914,7 @@ class Runner:
                 'check the correctness of the checkpoint or the training '
                 'dataset.')
 
-        self.message_hub = checkpoint['message_hub']
+        self.message_hub.load_state_dict(checkpoint['message_hub'])
 
         # resume optimizer
         if 'optimizer' in checkpoint and resume_optimizer:
@@ -2007,7 +2041,7 @@ class Runner:
         checkpoint = {
             'meta': meta,
             'state_dict': weights_to_cpu(get_state_dict(model)),
-            'message_hub': self.message_hub
+            'message_hub': self.message_hub.state_dict()
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:

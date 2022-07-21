@@ -701,25 +701,6 @@ class TestRunner(TestCase):
         model = runner.build_model(dict(type='ToyModel1'))
         self.assertIsInstance(model, ToyModel1)
 
-        # test init weights
-        @MODELS.register_module()
-        class ToyModel2(ToyModel):
-
-            def __init__(self):
-                super().__init__()
-                self.initiailzed = False
-
-            def init_weights(self):
-                self.initiailzed = True
-
-        model = runner.build_model(dict(type='ToyModel2'))
-        self.assertTrue(model.initiailzed)
-
-        # test init weights with model object
-        _model = ToyModel2()
-        model = runner.build_model(_model)
-        self.assertFalse(model.initiailzed)
-
     def test_wrap_model(self):
         # revert sync batchnorm
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -953,6 +934,25 @@ class TestRunner(TestCase):
         self.assertFalse(param_schedulers[0].by_epoch)
         self.assertEqual(param_schedulers[0].begin, 4)
         self.assertEqual(param_schedulers[0].end, 28)
+
+        # 6. test set default end of schedulers
+        cfg = dict(type='MultiStepLR', milestones=[1, 2], begin=1)
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertTrue(param_schedulers[0].by_epoch)
+        self.assertEqual(param_schedulers[0].begin, 1)
+        # runner.max_epochs = 3
+        self.assertEqual(param_schedulers[0].end, 3)
+
+        cfg = dict(
+            type='MultiStepLR',
+            milestones=[1, 2],
+            begin=1,
+            convert_to_iter_based=True)
+        param_schedulers = runner.build_param_scheduler(cfg)
+        self.assertFalse(param_schedulers[0].by_epoch)
+        self.assertEqual(param_schedulers[0].begin, 4)
+        # runner.max_iters = 3*4
+        self.assertEqual(param_schedulers[0].end, 12)
 
     def test_build_evaluator(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1371,6 +1371,25 @@ class TestRunner(TestCase):
         for result, target, in zip(val_interval_results, val_interval_targets):
             self.assertEqual(result, target)
 
+        # 7. test init weights
+        @MODELS.register_module()
+        class ToyModel2(ToyModel):
+
+            def __init__(self):
+                super().__init__()
+                self.initiailzed = False
+
+            def init_weights(self):
+                self.initiailzed = True
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train7'
+        runner = Runner.from_cfg(cfg)
+        model = ToyModel2()
+        runner.model = model
+        runner.train()
+        self.assertTrue(model.initiailzed)
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
@@ -1689,9 +1708,11 @@ class TestRunner(TestCase):
         self.assertEqual(ckpt['meta']['seed'], runner.seed)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
-        self.assertIsInstance(ckpt['message_hub'], MessageHub)
-        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 2)
-        self.assertEqual(ckpt['message_hub'].get_info('iter'), 11)
+        self.assertIsInstance(ckpt['message_hub'], dict)
+        message_hub = MessageHub.get_instance('test_ckpt')
+        message_hub.load_state_dict(ckpt['message_hub'])
+        self.assertEqual(message_hub.get_info('epoch'), 2)
+        self.assertEqual(message_hub.get_info('iter'), 11)
 
         # 1.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1728,6 +1749,10 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.message_hub, MessageHub)
         self.assertEqual(runner.message_hub.get_info('epoch'), 2)
         self.assertEqual(runner.message_hub.get_info('iter'), 11)
+        self.assertEqual(MessageHub.get_current_instance().get_info('epoch'),
+                         2)
+        self.assertEqual(MessageHub.get_current_instance().get_info('iter'),
+                         11)
 
         # 1.3.2 test resume with unmatched dataset_meta
         ckpt_modified = copy.deepcopy(ckpt)
@@ -1856,9 +1881,10 @@ class TestRunner(TestCase):
         self.assertEqual(ckpt['meta']['iter'], 12)
         assert isinstance(ckpt['optimizer'], dict)
         assert isinstance(ckpt['param_schedulers'], list)
-        self.assertIsInstance(ckpt['message_hub'], MessageHub)
-        self.assertEqual(ckpt['message_hub'].get_info('epoch'), 0)
-        self.assertEqual(ckpt['message_hub'].get_info('iter'), 11)
+        self.assertIsInstance(ckpt['message_hub'], dict)
+        message_hub.load_state_dict(ckpt['message_hub'])
+        self.assertEqual(message_hub.get_info('epoch'), 0)
+        self.assertEqual(message_hub.get_info('iter'), 11)
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)
@@ -1906,6 +1932,17 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
+
+        # 2.6 test resumed message_hub has the history value.
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_checkpoint13'
+        cfg.resume = True
+        cfg.load_from = osp.join(self.temp_dir, 'iter_3.pth')
+        runner = Runner.from_cfg(cfg)
+        runner.load_or_resume()
+        assert len(runner.message_hub.log_scalars['train/lr'].data[1]) == 3
+        assert len(MessageHub.get_current_instance().log_scalars['train/lr'].
+                   data[1]) == 3
 
     def test_build_runner(self):
         # No need to test other cases which have been tested in

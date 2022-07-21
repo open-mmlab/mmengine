@@ -1,11 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
+import os.path as osp
+import tempfile
 from unittest import TestCase
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+from mmengine.optim import OptimWrapper
 # yapf: disable
 from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       CosineAnnealingParamScheduler,
@@ -55,6 +58,7 @@ class TestParameterScheduler(TestCase):
             lr=lr,
             momentum=momentum,
             weight_decay=weight_decay)
+        self.temp_dir = tempfile.TemporaryDirectory()
 
     def test_base_scheduler_step(self):
         with self.assertRaises(NotImplementedError):
@@ -373,6 +377,11 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
 
+        # Test default `T_max`
+        scheduler = CosineAnnealingParamScheduler(
+            self.optimizer, param_name='lr', begin=5, end=100, eta_min=eta_min)
+        self.assertEqual(scheduler.T_max, 100 - 5)
+
     def test_poly_scheduler(self):
         epochs = 10
         power = 0.9
@@ -403,7 +412,10 @@ class TestParameterScheduler(TestCase):
             scheduler.optimizer.step()
             scheduler.step()
         scheduler_copy = construct2()
-        scheduler_copy.load_state_dict(scheduler.state_dict())
+        torch.save(scheduler.state_dict(),
+                   osp.join(self.temp_dir.name, 'tmp.pth'))
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'tmp.pth'))
+        scheduler_copy.load_state_dict(state_dict)
         for key in scheduler.__dict__.keys():
             if key != 'optimizer':
                 self.assertEqual(scheduler.__dict__[key],
@@ -738,3 +750,10 @@ class TestParameterScheduler(TestCase):
                 param_name='lr',
                 total_steps=10,
                 anneal_strategy='a')
+
+
+class TestParameterSchedulerOptimWrapper(TestParameterScheduler):
+
+    def setUp(self):
+        super().setUp()
+        self.optimizer = OptimWrapper(optimizer=self.optimizer)

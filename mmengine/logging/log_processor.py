@@ -369,7 +369,7 @@ class LogProcessor:
         Returns:
             int: The current global iter or inner iter.
         """
-        if self.by_epoch and batch_idx:
+        if self.by_epoch and batch_idx is not None:
             current_iter = batch_idx + 1
         else:
             current_iter = runner.iter + 1

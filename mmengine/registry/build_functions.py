@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import logging
 from typing import Any, Optional, Union
 
 from ..config import Config, ConfigDict
@@ -116,7 +117,8 @@ def build_from_cfg(
                 f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
                 'registry, its implementation can be found in '
                 f'{obj_cls.__module__}',  # type: ignore
-                logger='current')
+                logger='current',
+                level=logging.DEBUG)
             return obj
 
         except Exception as e:
@@ -188,7 +190,8 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                 f'An `{runner_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
                 'registry, its implementation can be found in'
                 f'{runner_cls.__module__}',  # type: ignore
-                logger='current')
+                logger='current',
+                level=logging.DEBUG)
             return runner
 
         except Exception as e:

@@ -365,6 +365,11 @@ class TestMomentumScheduler(TestCase):
         self._test_scheduler_value(self.optimizer_with_betas, scheduler,
                                    targets, epochs)
 
+        # Test default `T_max`
+        scheduler = CosineAnnealingMomentum(
+            self.optimizer, begin=5, end=100, eta_min=eta_min)
+        self.assertEqual(scheduler.T_max, 100 - 5)
+
     def test_poly_scheduler(self):
         epochs = 10
         power = 0.9
