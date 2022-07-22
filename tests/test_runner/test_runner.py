@@ -90,7 +90,7 @@ class ToySyncBNModel(BaseModel):
 
 
 @MODELS.register_module()
-class TopGANModel(BaseModel):
+class ToyGANModel(BaseModel):
 
     def __init__(self):
         super().__init__()
@@ -1390,6 +1390,57 @@ class TestRunner(TestCase):
         runner.train()
         self.assertTrue(model.initiailzed)
 
+        # 8.1 test train with multiple optimizer and single list of schedulers.
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train8'
+        cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+        cfg.optim_wrapper = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
+            constructor='ToyMultipleOptimizerConstructor')
+        cfg.model = dict(type='ToyGANModel')
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
+        # 8.1 Test train with multiple optimizer and single schedulers.
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train8.1.1'
+        cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+        cfg.optim_wrapper = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
+            constructor='ToyMultipleOptimizerConstructor')
+        cfg.model = dict(type='ToyGANModel')
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
+        # Test list like single scheduler.
+        cfg.experiment_name = 'test_train8.1.2'
+        cfg.param_scheduler = [dict(type='MultiStepLR', milestones=[1, 2])]
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
+        # 8.2 Test train with multiple optimizer and multiple schedulers.
+        cfg.experiment_name = 'test_train8.2.1'
+        cfg.param_scheduler = dict(
+            linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+            linear2=dict(type='MultiStepLR', milestones=[1, 2]),
+        )
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
+        cfg.experiment_name = 'test_train8.2.2'
+        cfg.param_scheduler = dict(
+            linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+            linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+        )
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
@@ -1818,7 +1869,7 @@ class TestRunner(TestCase):
             linear2=dict(
                 type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
             constructor='ToyMultipleOptimizerConstructor')
-        cfg.model = dict(type='TopGANModel')
+        cfg.model = dict(type='ToyGANModel')
         # disable OptimizerHook because it only works with one optimizer
         runner = Runner.from_cfg(cfg)
         runner.train()
@@ -1838,7 +1889,7 @@ class TestRunner(TestCase):
             linear2=dict(
                 type='OptimWrapper', optimizer=dict(type='Adam', lr=0.03)),
             constructor='ToyMultipleOptimizerConstructor')
-        cfg.model = dict(type='TopGANModel')
+        cfg.model = dict(type='ToyGANModel')
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         runner = Runner.from_cfg(cfg)
         runner.resume(path)

@@ -294,10 +294,35 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
-        if param_scheduler is None or isinstance(param_scheduler, Sequence):
-            self.param_schedulers = param_scheduler
+        if param_scheduler is None:
+            self.param_schedulers: Union[dict, list] = []
+        elif isinstance(param_scheduler, dict):
+            if 'type' in param_scheduler:
+                self.param_schedulers = [param_scheduler]
+            else:
+                for key, _param_scheduler in param_scheduler.items():
+                    assert isinstance(_param_scheduler, (dict, list)), (
+                        'each value of `param_scheduler` should be a'
+                        f'dict or a list, but got {_param_scheduler} with '
+                        f'type {type(_ParamScheduler)}')
+                    if isinstance(_param_scheduler, dict):
+                        assert 'type' in _param_scheduler, (
+                            '`type` should be defined in the value of '
+                            '`param_scheduler`')
+                        param_scheduler[key] = [_param_scheduler]
+                self.param_schedulers = param_scheduler
+        elif is_list_of(param_scheduler, (dict, _ParamScheduler)):
+            self.param_schedulers = param_scheduler  # type: ignore
         else:
-            self.param_schedulers = [param_scheduler]
+            raise TypeError(
+                '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
+                'or a `list` of `dict`, but got {type(param_scheduler)}. If '
+                '`param_scheduler` is a list of dict, it means a list of '
+                'scheduler configs of single optimizer. If it is a dict and '
+                'contains key `type`, it means a scheduler config of single '
+                'parameter scheduler of single optimizer. If it does not '
+                'contain key type`, it means multiple list of schedulers of '
+                ' multiple optimizers.')
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -1276,8 +1301,9 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                assert 'type' in evaluator, (
+                    'expected customized evaluator with key `type`, but got '
+                    f'{evaluator}')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
