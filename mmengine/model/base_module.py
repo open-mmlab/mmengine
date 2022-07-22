@@ -80,7 +80,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                                    f'after calling `init_weights` ' \
                                    f'of {self.__class__.__name__} '
                 self._params_init_info[param][
-                    'tmp_mean_value'] = param.data.mean()
+                    'tmp_mean_value'] = param.data.mean().cpu()
 
             # pass `params_init_info` to all submodules
             # All submodules share the same `params_init_info`,

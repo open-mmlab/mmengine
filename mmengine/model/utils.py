@@ -41,7 +41,7 @@ def update_init_info(module, init_info):
 
         # The parameter has been changed during executing the
         # `init_weights` of module
-        mean_value = param.data.mean()
+        mean_value = param.data.mean().cpu()
         if module._params_init_info[param]['tmp_mean_value'] != mean_value:
             module._params_init_info[param]['init_info'] = init_info
             module._params_init_info[param]['tmp_mean_value'] = mean_value
