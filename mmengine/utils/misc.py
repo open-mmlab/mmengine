@@ -9,7 +9,7 @@ from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
-from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -133,14 +133,14 @@ def tuple_cast(inputs, dst_type):
     return iter_cast(inputs, dst_type, return_type=tuple)
 
 
-def is_seq_of(seq: Sequence,
-              expected_type: Type,
+def is_seq_of(seq: Any,
+              expected_type: Union[Type, tuple],
               seq_type: Type = None) -> bool:
     """Check whether it is a sequence of some type.
 
     Args:
         seq (Sequence): The sequence to be checked.
-        expected_type (type): Expected type of sequence items.
+        expected_type (type or tuple): Expected type of sequence items.
         seq_type (type, optional): Expected sequence type. Defaults to None.
 
     Returns:

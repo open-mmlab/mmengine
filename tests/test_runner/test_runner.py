@@ -647,7 +647,7 @@ class TestRunner(TestCase):
         # 6.9 Test initializing with error type scheduler.
         cfg.param_scheduler = dict(linear1='error_type')
         cfg.experiment_name = 'test_init26'
-        with self.assertRaisesRegex(AssertionError, 'each value of'):
+        with self.assertRaisesRegex(AssertionError, 'Each value of'):
             Runner(**cfg)
 
         cfg.param_scheduler = 'error_type'

@@ -38,7 +38,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, is_tuple_of, revert_sync_batchnorm,
+                            is_list_of, is_seq_of, revert_sync_batchnorm,
                             set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
@@ -297,8 +297,7 @@ class Runner:
         self.param_schedulers: Union[dict, list]
         if param_scheduler is None:
             self.param_schedulers = []
-        elif (is_list_of(param_scheduler, (dict, _ParamScheduler))
-              or is_tuple_of(param_scheduler, (dict, _ParamScheduler))):
+        elif is_seq_of(param_scheduler, (dict, _ParamScheduler)):
             self.param_schedulers = param_scheduler  # type: ignore
         elif isinstance(param_scheduler, _ParamScheduler):
             self.param_schedulers = [param_scheduler]
