@@ -311,7 +311,7 @@ class Runner:
                     assert isinstance(
                         _param_scheduler,
                         (dict, tuple, list, _ParamScheduler)), (
-                            'each value of `param_scheduler` should be a'
+                            'Each value of `param_scheduler` should be a '
                             f'dict or a list, but got {_param_scheduler} with '
                             f'type {type(_ParamScheduler)}')
                     if isinstance(_param_scheduler, (dict, _ParamScheduler)):
@@ -321,13 +321,12 @@ class Runner:
         else:
             raise TypeError(
                 '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
-                f'or a `list` of `dict`, but got {type(param_scheduler)}. If '
+                f'list or a tuple, but got {type(param_scheduler)}. If '
                 '`param_scheduler` is a list of dict, it means a list of '
-                'scheduler configs of single optimizer. If it is a dict and '
-                'contains key `type`, it means a scheduler config of single '
-                'parameter scheduler of single optimizer. If it does not '
-                'contain key type`, it means multiple list of schedulers of '
-                ' multiple optimizers.')
+                'scheduler configs for single optimizer. If it is a dict and '
+                'contains key `type`, it means a scheduler config for single '
+                'single optimizer. If it does not contain key type`, it means '
+                'multiple lists of schedulers for multiple optimizers.')
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
