@@ -38,7 +38,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, revert_sync_batchnorm,
+                            is_list_of, is_tuple_of, revert_sync_batchnorm,
                             set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
@@ -294,29 +294,34 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
+        self.param_schedulers: Union[dict, list]
         if param_scheduler is None:
-            self.param_schedulers: Union[dict, list] = []
+            self.param_schedulers = []
+        elif (is_list_of(param_scheduler, (dict, _ParamScheduler))
+              or is_tuple_of(param_scheduler, (dict, _ParamScheduler))):
+            self.param_schedulers = param_scheduler  # type: ignore
+        elif isinstance(param_scheduler, _ParamScheduler):
+            self.param_schedulers = [param_scheduler]
         elif isinstance(param_scheduler, dict):
             if 'type' in param_scheduler:
                 self.param_schedulers = [param_scheduler]
             else:
+                self.param_schedulers = dict()
                 for key, _param_scheduler in param_scheduler.items():
-                    assert isinstance(_param_scheduler, (dict, list)), (
-                        'each value of `param_scheduler` should be a'
-                        f'dict or a list, but got {_param_scheduler} with '
-                        f'type {type(_ParamScheduler)}')
-                    if isinstance(_param_scheduler, dict):
-                        assert 'type' in _param_scheduler, (
-                            '`type` should be defined in the value of '
-                            '`param_scheduler`')
-                        param_scheduler[key] = [_param_scheduler]
-                self.param_schedulers = param_scheduler
-        elif is_list_of(param_scheduler, (dict, _ParamScheduler)):
-            self.param_schedulers = param_scheduler  # type: ignore
+                    assert isinstance(
+                        _param_scheduler,
+                        (dict, tuple, list, _ParamScheduler)), (
+                            'each value of `param_scheduler` should be a'
+                            f'dict or a list, but got {_param_scheduler} with '
+                            f'type {type(_ParamScheduler)}')
+                    if isinstance(_param_scheduler, (dict, _ParamScheduler)):
+                        self.param_schedulers[key] = [_param_scheduler]
+                    else:
+                        self.param_schedulers[key] = _param_scheduler
         else:
             raise TypeError(
                 '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
-                'or a `list` of `dict`, but got {type(param_scheduler)}. If '
+                f'or a `list` of `dict`, but got {type(param_scheduler)}. If '
                 '`param_scheduler` is a list of dict, it means a list of '
                 'scheduler configs of single optimizer. If it is a dict and '
                 'contains key `type`, it means a scheduler config of single '

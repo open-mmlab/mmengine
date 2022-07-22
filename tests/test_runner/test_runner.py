@@ -563,6 +563,108 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_init16'
             runner = Runner(**cfg)
 
+        # 6.1 Test initializing with empty scheduler.
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_init17'
+        cfg.param_scheduler = None
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, [])
+
+        # 6.2 Test initializing single scheduler.
+        cfg.experiment_name = 'test_init18'
+        cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, [cfg.param_scheduler])
+
+        # 6.3 Test initializing list of schedulers.
+        cfg.param_scheduler = [
+            dict(type='MultiStepLR', milestones=[1, 2]),
+            dict(type='MultiStepLR', milestones=[2, 3])
+        ]
+        cfg.experiment_name = 'test_init19'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
+
+        # 6.4 Test initializing 2 scheduler for 2 optimizer.
+        cfg.param_scheduler = dict(
+            linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+            linear2=dict(type='MultiStepLR', milestones=[1, 2]),
+        )
+        cfg.experiment_name = 'test_init20'
+        runner = Runner(**cfg)
+        self.assertEqual(
+            runner.param_schedulers,
+            dict(
+                linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+                linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+            ))
+
+        # 6.4 Test initializing 2 list of scheduler for 2 optimizer.
+        cfg.param_scheduler = dict(
+            linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+            linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+        )
+        cfg.experiment_name = 'test_init21'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
+
+        # 6.5 Test initializing 2 list of scheduler for 2 optimizer.
+        cfg.param_scheduler = dict(
+            linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+            linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+        )
+        cfg.experiment_name = 'test_init22'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
+
+        # 6.6 Test initializing with `_ParameterScheduler`.
+        optimizer = SGD(nn.Linear(1, 1).parameters(), lr=0.1)
+        cfg.param_scheduler = MultiStepLR(
+            milestones=[1, 2], optimizer=optimizer)
+        cfg.experiment_name = 'test_init23'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, [cfg.param_scheduler])
+
+        # 6.7 Test initializing with list of `_ParameterScheduler`.
+        cfg.param_scheduler = [
+            MultiStepLR(milestones=[1, 2], optimizer=optimizer)
+        ]
+        cfg.experiment_name = 'test_init24'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
+
+        # 6.8 Test initializing with 2 `_ParameterScheduler` for 2 optimizers.
+        cfg.param_scheduler = dict(
+            linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),
+            linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))
+        cfg.experiment_name = 'test_init25'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers['linear1'],
+                         [cfg.param_scheduler['linear1']])
+        self.assertEqual(runner.param_schedulers['linear2'],
+                         [cfg.param_scheduler['linear2']])
+
+        # 6.9 Test initializing with 2 list of `_ParameterScheduler` for 2
+        # optimizers.
+        cfg.param_scheduler = dict(
+            linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
+            linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
+        cfg.experiment_name = 'test_init26'
+        runner = Runner(**cfg)
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
+
+        # 6.10 Test initializing with error type scheduler.
+        cfg.param_scheduler = dict(linear1='error_type')
+        cfg.experiment_name = 'test_init27'
+        with self.assertRaisesRegex(AssertionError, 'each value of'):
+            Runner(**cfg)
+
+        cfg.param_scheduler = 'error_type'
+        cfg.experiment_name = 'test_init27'
+        with self.assertRaisesRegex(TypeError,
+                                    '`param_scheduler` should be a'):
+            Runner(**cfg)
+
     def test_dump_config(self):
         # dump config from dict.
         cfg = copy.deepcopy(self.epoch_based_cfg)
