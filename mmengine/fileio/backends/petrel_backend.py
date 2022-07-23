@@ -264,13 +264,16 @@ class PetrelBackend(BaseStorageBackend):
             >>> filepath = 'petrel://path/of/file'
             >>> backend.join_path(filepath, 'another/path')
             'petrel://path/of/file/another/path'
+            >>> backend.join_path(filepath, '/another/path')
+            'petrel://path/of/file/another/path'
         """
         filepath = self._format_path(self._map_path(filepath))
         if filepath.endswith('/'):
             filepath = filepath[:-1]
         formatted_paths = [filepath]
         for path in filepaths:
-            formatted_paths.append(self._format_path(self._map_path(path)))
+            formatted_path = self._format_path(self._map_path(path))
+            formatted_paths.append(formatted_path.lstrip('/'))
 
         return '/'.join(formatted_paths)
 
@@ -295,7 +298,8 @@ class PetrelBackend(BaseStorageBackend):
             >>> backend = PetrelBackend()
             >>> # After existing from the ``with`` clause,
             >>> # the path will be removed
-            >>> with backend.get_local_path('s3://path/of/your/file') as path:
+            >>> filepath = 'petrel://path/of/file'
+            >>> with backend.get_local_path(filepath) as path:
             ...     # do something here
         """
         assert self.isfile(filepath)

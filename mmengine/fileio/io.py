@@ -32,13 +32,11 @@ Examples:
 """
 import json
 from contextlib import contextmanager
-from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Generator, Iterator, Optional, Tuple, Union
 
-from mmengine.utils import is_filepath, is_str
+from mmengine.utils import is_filepath
 from .backends import backends, prefix_to_backends
-from .handlers import file_handlers
 
 backend_instances: dict = {}
 
@@ -50,7 +48,11 @@ def _parse_uri_prefix(uri: Union[str, Path]) -> str:
         uri (str or Path): Uri to be parsed that contains the file prefix.
 
     Examples:
+        >>> _parse_uri_prefix('/home/path/of/your/file')
+        ''
         >>> _parse_uri_prefix('s3://path/of/your/file')
+        's3'
+        >>> _parse_uri_prefix('clusterName:s3://path/of/your/file')
         's3'
 
     Returns:
@@ -103,7 +105,7 @@ def get_file_backend(
             corresponding backend. Defaults to None.
         enable_singleton (bool): Whether to enable the singleton pattern.
             If it is True, the backend created will be reused if the
-            signature is same with the previous one. Default: False.
+            signature is same with the previous one. Defaults to False.
 
     Returns:
         BaseStorageBackend: Instantiated Backend object.
@@ -124,7 +126,7 @@ def get_file_backend(
 
     if uri is None and 'backend' not in backend_args:
         raise ValueError(
-            'uri should not be None when "backend" deos not exist in '
+            'uri should not be None when "backend" does not exist in '
             'backend_args')
 
     if uri is not None:
@@ -134,7 +136,7 @@ def get_file_backend(
 
     if enable_singleton:
         # TODO: whether to pass sort_key to json.dumps
-        unique_key = f'{prefix}: + {json.dumps(backend_args)}'
+        unique_key = f'{prefix}:{json.dumps(backend_args)}'
         if unique_key in backend_instances:
             return backend_instances[unique_key]
 
@@ -759,107 +761,3 @@ def generate_presigned_url(
     backend = get_file_backend(
         url, backend_args=backend_args, enable_singleton=True)
     return backend.generate_presigned_url(url, client_method, expires_in)
-
-
-def load(file, file_format=None, backend_args=None, **kwargs):
-    """Load data from json/yaml/pickle files.
-
-    This method provides a unified api for loading data from serialized files.
-
-    ``load`` supports loading data from serialized files those can be storaged
-    in different backends.
-
-    Args:
-        file (str or :obj:`Path` or file-like object): Filename or a file-like
-            object.
-        file_format (str, optional): If not specified, the file format will be
-            inferred from the file extension, otherwise use the specified one.
-            Currently supported formats include "json", "yaml/yml" and
-            "pickle/pkl".
-        backend_args (dict, optional): Arguments to instantiate the
-            corresponding backend. Defaults to None.
-
-    Examples:
-        >>> load('/path/of/your/file')  # file is storaged in disk
-        >>> load('https://path/of/your/file')  # file is storaged in Internet
-        >>> load('s3://path/of/your/file')  # file is storaged in petrel
-
-    Returns:
-        The content from the file.
-    """
-    if isinstance(file, Path):
-        file = str(file)
-    if file_format is None and is_str(file):
-        file_format = file.split('.')[-1]
-    if file_format not in file_handlers:
-        raise TypeError(f'Unsupported format: {file_format}')
-
-    handler = file_handlers[file_format]
-    if is_str(file):
-        if handler.str_like:
-            content = get_text(file, backend_args=backend_args)
-            with StringIO(content) as f:
-                obj = handler.load_from_fileobj(f, **kwargs)
-        else:
-            content = get_bytes(file, backend_args=backend_args)
-            with BytesIO(content) as f:
-                obj = handler.load_from_fileobj(f, **kwargs)
-    elif hasattr(file, 'read'):
-        obj = handler.load_from_fileobj(file, **kwargs)
-    else:
-        raise TypeError('"file" must be a filepath str or a file-object')
-    return obj
-
-
-def dump(obj, file=None, file_format=None, backend_args=None, **kwargs):
-    """Dump data to json/yaml/pickle strings or files.
-
-    This method provides a unified api for dumping data as strings or to files,
-    and also supports custom arguments for each file format.
-
-    ``dump`` supports dumping data as strings or to files which is saved to
-    different backends.
-
-    Args:
-        obj (any): The python object to be dumped.
-        file (str or :obj:`Path` or file-like object, optional): If not
-            specified, then the object is dumped to a str, otherwise to a file
-            specified by the filename or file-like object.
-        file_format (str, optional): Same as :func:`load`.
-        backend_args (dict, optional): Arguments to instantiate the
-            corresponding backend. Defaults to None.
-
-    Examples:
-        >>> dump('hello world', '/path/of/your/file')  # disk
-        >>> dump('hello world', 's3://path/of/your/file')  # ceph or petrel
-
-    Returns:
-        bool: True for success, False otherwise.
-    """
-    if isinstance(file, Path):
-        file = str(file)
-    if file_format is None:
-        if is_str(file):
-            file_format = file.split('.')[-1]
-        elif file is None:
-            raise ValueError(
-                'file_format must be specified since file is None')
-    if file_format not in file_handlers:
-        raise TypeError(f'Unsupported format: {file_format}')
-
-    handler = file_handlers[file_format]
-    if file is None:
-        return handler.dump_to_str(obj, **kwargs)
-    elif is_str(file):
-        if handler.str_like:
-            with StringIO() as f:
-                handler.dump_to_fileobj(obj, f, **kwargs)
-                put_text(f.getvalue(), file, backend_args=backend_args)
-        else:
-            with BytesIO() as f:
-                handler.dump_to_fileobj(obj, f, **kwargs)
-                put_bytes(f.getvalue(), file, backend_args=backend_args)
-    elif hasattr(file, 'write'):
-        handler.dump_to_fileobj(obj, file, **kwargs)
-    else:
-        raise TypeError('"file" must be a filename str or a file-object')

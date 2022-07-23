@@ -521,9 +521,9 @@ else:
 
             text1_path = f'{self.petrel_dir}/text1.txt'
             text2_path = f'{self.petrel_dir}/text2.txt'
-            text3_path = f'{self.petrel_dir}/text3.txt'
-            text4_path = f'{self.petrel_dir}/text4.txt'
-            img_path = f'{self.petrel_dir}/img.jgp'
+            text3_path = f'{self.petrel_dir}/dir1/text3.txt'
+            text4_path = f'{self.petrel_dir}/dir2/text4.txt'
+            img_path = f'{self.petrel_dir}/dir2/img.jpg'
             self.assertTrue(backend.isfile(text1_path))
             self.assertTrue(backend.isfile(text2_path))
             self.assertTrue(backend.isfile(text3_path))
@@ -598,8 +598,8 @@ else:
             self.assertTrue(backend.isfile(dst))
 
             # dst is a directory
-            dst = f'{self.petrel_dir}/dir'
-            expected_dst = f'{self.petrel_dir}/dir/img.jpg'
+            dst = f'{self.petrel_dir}/dir1'
+            expected_dst = f'{self.petrel_dir}/dir/1img.jpg'
             self.assertEqual(backend.copyfile(src, dst), expected_dst)
             self.assertTrue(backend.isfile(expected_dst))
 
@@ -625,16 +625,16 @@ else:
             backend = PetrelBackend()
 
             # dst is a file
-            src = self.loal_img_path
+            src = self.local_img_path
             dst = f'{self.petrel_dir}/color.jpg'
             self.assertFalse(backend.exists(dst))
             self.assertEqual(backend.copyfile_from_local(src, dst), dst)
             self.assertTrue(backend.isfile(dst))
 
             # dst is a directory
-            src = self.img_path
-            dst = f'{self.petrel_dir}/dir'
-            expected_dst = f'{self.petrel_dir}/dir/color.jpg'
+            src = self.local_img_path
+            dst = f'{self.petrel_dir}/dir1'
+            expected_dst = f'{self.petrel_dir}/dir1/color.jpg'
             self.assertFalse(backend.exists(expected_dst))
             self.assertEqual(
                 backend.copyfile_from_local(src, dst), expected_dst)
@@ -645,8 +645,9 @@ else:
             backend.rmtree(self.petrel_dir)
             with build_temporary_directory() as tmp_dir:
                 backend.copytree_from_local(tmp_dir, self.petrel_dir)
-                self.assertEqual(
-                    len(list(backend.list_dir_or_file(self.petrel_dir))), 8)
+                files = backend.list_dir_or_file(
+                    self.petrel_dir, recursive=True)
+                self.assertEqual(len(list(files)), 8)
 
         def test_copyfile_to_local(self):
             backend = PetrelBackend()
@@ -668,8 +669,8 @@ else:
             backend = PetrelBackend()
             with tempfile.TemporaryDirectory() as tmp_dir:
                 backend.copytree_to_local(self.petrel_dir, tmp_dir)
-                self.assertTrue(osp.exists(tmp_dir / 'text1.txt'))
-                self.assertTrue(osp.exists(tmp_dir / 'dir2' / 'img.jpg'))
+                self.assertTrue(osp.exists(Path(tmp_dir) / 'text1.txt'))
+                self.assertTrue(osp.exists(Path(tmp_dir) / 'dir2' / 'img.jpg'))
 
         def test_rmfile(self):
             backend = PetrelBackend()
@@ -683,7 +684,7 @@ else:
             dir_path = f'{self.petrel_dir}/dir2'
             self.assertTrue(backend.isdir(dir_path))
             backend.rmtree(dir_path)
-            self.assertFalse(backend.exits(dir_path))
+            self.assertFalse(backend.exists(dir_path))
 
         def test_copy_if_symlink_fails(self):
             backend = PetrelBackend()
