@@ -86,7 +86,6 @@ class TestHardDiskBackend(TestCase):
         backend = HardDiskBackend()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # filepath is a Path object
             filepath = Path(tmp_dir) / 'test.jpg'
             backend.put_bytes(b'disk', path_type(filepath))
             self.assertEqual(backend.get_bytes(filepath), b'disk')
