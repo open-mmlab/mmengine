@@ -431,7 +431,7 @@ class HardDiskBackend(BaseStorageBackend):
     ) -> bool:
         """Create a symbolic link pointing to src named dst.
 
-        If failed to create a symbolic link pointing to src, directory copy src
+        If failed to create a symbolic link pointing to src, directly copy src
         to dst instead.
 
         Args:

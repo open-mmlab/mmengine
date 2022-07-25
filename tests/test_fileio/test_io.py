@@ -13,21 +13,13 @@ import pytest
 
 import mmengine.fileio as fileio
 
+sys.modules['petrel_client'] = MagicMock()
+sys.modules['petrel_client.client'] = MagicMock()
+
 test_data_dir = Path(__file__).parent.parent / 'data'
 text_path = test_data_dir / 'filelist.txt'
 img_path = test_data_dir / 'color.jpg'
 img_url = 'https://raw.githubusercontent.com/mmengine/tests/data/img.png'
-
-
-@contextmanager
-def mock_package(*package_name):
-    try:
-        for name in package_name:
-            sys.modules[name] = MagicMock()
-        yield
-    finally:
-        for name in package_name:
-            del sys.modules[name]
 
 
 @contextmanager
@@ -89,8 +81,10 @@ def test_parse_uri_prefix():
     assert fileio.io._parse_uri_prefix(uri) == 's3'
 
 
-@mock_package('petrel_client', 'petrel_client.client')
 def test_get_file_backend():
+    # other unit tests may have added instances so clear them here.
+    fileio.io.backend_instances = {}
+
     # uri should not be None when "backend" does not exist in backend_args
     with pytest.raises(ValueError, match='uri should not be None'):
         fileio.get_file_backend(None, backend_args=None)

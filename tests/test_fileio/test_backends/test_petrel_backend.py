@@ -50,6 +50,12 @@ def build_temporary_directory():
 
 
 try:
+    # Other unit tests may mock these modules so we need to pop them first.
+    sys.modules.pop('petrel_client', None)
+    sys.modules.pop('petrel_client.client', None)
+
+    # If petrel_client is imported successfully, we can test PetrelBackend
+    # without mock.
     import petrel_client  # noqa: F401
 except ImportError:
     sys.modules['petrel_client'] = MagicMock()
@@ -572,7 +578,7 @@ else:
             text1_path = f'{self.petrel_dir}/text1.txt'
             text2_path = f'{self.petrel_dir}/text2.txt'
             text3_path = f'{self.petrel_dir}/dir1/text3.txt'
-            text4_path = f'{self.petrel_dir}/dir2/text4.txt'
+            text4_path = f'{self.petrel_dir}/dir2/dir3/text4.txt'
             img_path = f'{self.petrel_dir}/dir2/img.jpg'
             self.assertTrue(backend.isfile(text1_path))
             self.assertTrue(backend.isfile(text2_path))
@@ -649,7 +655,7 @@ else:
 
             # dst is a directory
             dst = f'{self.petrel_dir}/dir1'
-            expected_dst = f'{self.petrel_dir}/dir/1img.jpg'
+            expected_dst = f'{self.petrel_dir}/dir1/img.jpg'
             self.assertEqual(backend.copyfile(src, dst), expected_dst)
             self.assertTrue(backend.isfile(expected_dst))
 
