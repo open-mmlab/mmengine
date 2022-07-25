@@ -301,6 +301,11 @@ class TestHardDiskBackend(TestCase):
             backend.rmfile(path_type(filepath))
             self.assertFalse(backend.exists(filepath))
 
+            # raise error if file does not exist
+            with self.assertRaises(FileNotFoundError):
+                filepath = Path(tmp_dir) / 'test1.txt'
+                backend.rmfile(path_type(filepath))
+
             # can not remove directory
             filepath = Path(tmp_dir) / 'dir'
             filepath.mkdir()

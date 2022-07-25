@@ -246,6 +246,8 @@ class HardDiskBackend(BaseStorageBackend):
 
         src and dst should have the same prefix and dst must not already exist.
 
+        TODO: Whether to support dirs_exist_ok parameter.
+
         Args:
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to dst.
@@ -399,6 +401,8 @@ class HardDiskBackend(BaseStorageBackend):
 
         Raises:
             IsADirectoryError: If filepath is a directory, an IsADirectoryError
+                will be raised.
+            FileNotFoundError: If filepath does not exist, an FileNotFoundError
                 will be raised.
 
         Examples:

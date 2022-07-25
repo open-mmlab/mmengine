@@ -181,16 +181,12 @@ def test_get_bytes():
     img_bytes = fileio.get_bytes(filepath)
     assert filepath.open('rb').read() == img_bytes
 
-    # test PetrelBackend
-
 
 def test_get_text():
     # test HardDiskBackend
     filepath = Path(text_path)
     text = fileio.get_text(filepath)
     assert filepath.open('r').read() == text
-
-    # test PetrelBackend
 
 
 def test_put_bytes():
@@ -205,8 +201,6 @@ def test_put_bytes():
         filepath = Path(tmp_dir) / 'not_existed_dir' / 'test.jpg'
         fileio.put_bytes(b'disk', filepath)
         assert fileio.get_bytes(filepath) == b'disk'
-
-    # test PetrelBackend
 
 
 def test_put_text():
@@ -383,6 +377,11 @@ def test_rmfile():
         assert fileio.exists(filepath)
         fileio.rmfile(filepath)
         assert not fileio.exists(filepath)
+
+        # raise error if file does not exist
+        with pytest.raises(FileNotFoundError):
+            filepath = Path(tmp_dir) / 'test1.txt'
+            fileio.rmfile(filepath)
 
         # can not remove directory
         filepath = Path(tmp_dir) / 'dir'

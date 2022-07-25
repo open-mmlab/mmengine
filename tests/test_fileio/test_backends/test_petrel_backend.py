@@ -142,6 +142,9 @@ except ImportError:
                 backend.join_path(f'{self.petrel_dir}/', 'file'),
                 f'{self.petrel_dir}/file')
             self.assertEqual(
+                backend.join_path(f'{self.petrel_dir}/', '/file'),
+                f'{self.petrel_dir}/file')
+            self.assertEqual(
                 backend.join_path(self.petrel_dir, 'dir', 'file'),
                 f'{self.petrel_dir}/dir/file')
 
@@ -277,18 +280,36 @@ except ImportError:
                     backend.copyfile(src, src)
 
         def test_copytree(self):
-            pass
-            # backend = PetrelBackend()
-            # with build_temporary_directory() as tmp_dir:
-            #     backend.copytree(tmp_dir)
+            backend = PetrelBackend()
+            put_bytes_inputs = []
+            get_bytes_inputs = []
 
-            # dst should not exist
+            def put_bytes(obj, filepath):
+                put_bytes_inputs.append((obj, filepath))
+
+            def get_bytes(filepath):
+                get_bytes_inputs.append(filepath)
+
+            with build_temporary_directory() as tmp_dir, \
+                 patch.object(backend, 'put_bytes', side_effect=put_bytes),\
+                 patch.object(backend, 'get_bytes', side_effect=get_bytes),\
+                 patch.object(backend, 'exists', return_value=False):
+                dst = f'{tmp_dir}/dir'
+                self.assertEqual(backend.copytree(tmp_dir, dst), dst)
+
+                self.assertEqual(len(put_bytes_inputs), 5)
+                self.assertEqual(len(get_bytes_inputs), 5)
+
+                # dst should not exist
+                with patch.object(backend, 'exists', return_value=True):
+                    with self.assertRaises(FileExistsError):
+                        backend.copytree(dst, tmp_dir)
 
         def test_copyfile_from_local(self):
             backend = PetrelBackend()
             with patch.object(backend._client, 'put') as patched_put, \
-                patch.object(backend._client, 'isdir', return_value=False) as \
-                    patched_isdir:
+                 patch.object(backend._client, 'isdir', return_value=False) \
+                 as patched_isdir:
                 src = self.img_path
                 dst = f'{self.petrel_dir}/color.bak.jpg'
                 expected_dst = f'{self.expected_dir}/color.bak.jpg'
@@ -312,7 +333,24 @@ except ImportError:
                     f'{self.expected_dir}/dir')
 
         def test_copytree_from_local(self):
-            pass
+            backend = PetrelBackend()
+            inputs = []
+
+            def copyfile_from_local(src, dst):
+                inputs.append((src, dst))
+
+            with build_temporary_directory() as tmp_dir, \
+                 patch.object(backend, 'copyfile_from_local',
+                              side_effect=copyfile_from_local),\
+                 patch.object(backend, 'exists', return_value=False):
+                backend.copytree_from_local(tmp_dir, self.petrel_dir)
+
+                self.assertEqual(len(inputs), 5)
+
+                # dst should not exist
+                with patch.object(backend, 'exists', return_value=True):
+                    with self.assertRaises(FileExistsError):
+                        backend.copytree_from_local(tmp_dir, self.petrel_dir)
 
         def test_copyfile_to_local(self):
             backend = PetrelBackend()
@@ -339,7 +377,19 @@ except ImportError:
                                  b'petrel')
 
         def test_copytree_to_local(self):
-            pass
+            backend = PetrelBackend()
+            inputs = []
+
+            def get_bytes(filepath):
+                inputs.append(filepath)
+                return b'petrel'
+
+            with build_temporary_directory() as tmp_dir, \
+                 patch.object(backend, 'get_bytes', side_effect=get_bytes):
+                dst = f'{tmp_dir}/dir'
+                backend.copytree_to_local(tmp_dir, dst)
+
+                self.assertEqual(len(inputs), 5)
 
         def test_rmfile(self):
             backend = PetrelBackend()
@@ -352,49 +402,49 @@ except ImportError:
 
             with patch.object(backend._client, 'delete') as patched_delete, \
                  patch.object(backend._client, 'isdir', return_value=False) \
-                 as patched_isdir:
+                 as patched_isdir, \
+                 patch.object(backend._client, 'contains', return_value=True) \
+                 as patched_contains:
                 backend.rmfile(self.petrel_path)
                 patched_delete.assert_called_once_with(self.expected_path)
                 patched_isdir.assert_called_once_with(self.expected_path)
+                patched_contains.assert_called_once_with(self.expected_path)
 
         def test_rmtree(self):
-            pass
+            backend = PetrelBackend()
+            inputs = []
+
+            def rmfile(filepath):
+                inputs.append(filepath)
+
+            with build_temporary_directory() as tmp_dir,\
+                 patch.object(backend, 'rmfile', side_effect=rmfile):
+                backend.rmtree(tmp_dir)
+
+                self.assertEqual(len(inputs), 5)
 
         def test_copy_if_symlink_fails(self):
             backend = PetrelBackend()
-            with patch.object(backend._client, 'Get',
-                              return_value=b'petrel') as patched_get, \
-                 patch.object(backend._client, 'put') as patched_put, \
-                 patch.object(backend._client, 'contains', return_value=True) \
-                 as patched_contains, \
-                 patch.object(backend._client, 'isdir', return_value=False) \
-                 as patched_isdir:
-                src = self.petrel_path
-                dst = f'{self.petrel_dir}/test.bak.jpg'
-                expected_dst = f'{self.expected_dir}/test.bak.jpg'
-                self.assertFalse(backend.copy_if_symlink_fails(src, dst))
-                patched_get.assert_called_once_with(self.expected_path)
-                patched_put.assert_called_once_with(expected_dst, b'petrel')
-                patched_contains.assert_called_once_with(self.expected_path)
-                patched_isdir.assert_called_once_with(expected_dst)
+            copyfile_inputs = []
+            copytree_inputs = []
 
-            # with patch.object(backend._client, 'Get',
-            #                   return_value=b'petrel') as patched_get, \
-            #     patch.object(backend._client, 'put') as patched_put, \
-            #     patch.object(backend._client, 'contains', return_value=False)
-            #         as patched_contains, \
-            #     patch.object(backend._client, 'isdir', return_value=False) as
-            #                  patched_isdir:
-            #     # dst is a directory
-            #     dst = f'{self.petrel_dir}/dir'
-            #     expected_dst = f'{self.expected_dir}/dir/test.jpg'
-            #     self.assertFalse(backend.copy_if_symlink_fails(src, dst))
-            #     patched_get.assert_called_once_with(self.expected_path)
-            #     patched_put.assert_called_once_with(expected_dst, b'petrel')
-            #     patched_contains.assert_called_once_with(
-            #         f'{self.expected_dir}/dir')
-            #     patched_isdir.assert_called_once_with(
-            #         f'{self.expected_dir}/dir')
+            def copyfile(src, dst):
+                copyfile_inputs.append((src, dst))
+
+            def copytree(src, dst):
+                copytree_inputs.append((src, dst))
+
+            with patch.object(backend, 'copyfile', side_effect=copyfile), \
+                 patch.object(backend, 'isfile', return_value=True):
+                backend.copy_if_symlink_fails(self.petrel_path, 'path')
+
+                self.assertEqual(len(copyfile_inputs), 1)
+
+            with patch.object(backend, 'copytree', side_effect=copytree), \
+                 patch.object(backend, 'isfile', return_value=False):
+                backend.copy_if_symlink_fails(self.petrel_dir, 'path')
+
+                self.assertEqual(len(copytree_inputs), 1)
 
         def test_list_dir_or_file(self):
             backend = PetrelBackend()

@@ -629,6 +629,8 @@ def rmfile(
             corresponding backend. Defaults to None.
 
     Raises:
+        FileNotFoundError: If filepath does not exist, an FileNotFoundError
+            will be raised.
         IsADirectoryError: If filepath is a directory, an IsADirectoryError
             will be raised.
 

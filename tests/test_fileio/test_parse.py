@@ -1,15 +1,25 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import sys
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 from mmengine.fileio import (HTTPBackend, PetrelBackend, dict_from_file,
                              list_from_file)
 
-sys.modules['petrel_client'] = MagicMock()
-sys.modules['petrel_client.client'] = MagicMock()
+
+@contextmanager
+def mock_package(*package_name):
+    try:
+        for name in package_name:
+            sys.modules[name] = MagicMock()
+        yield
+    finally:
+        for name in package_name:
+            del sys.modules[name]
 
 
+@mock_package('petrel_client', 'petrel_client.client')
 def test_list_from_file():
     # get list from disk
     filename = osp.join(
@@ -44,6 +54,7 @@ def test_list_from_file():
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
 
 
+@mock_package('petrel_client', 'petrel_client.client')
 def test_dict_from_file():
     # get dict from disk
     filename = osp.join(osp.dirname(osp.dirname(__file__)), 'data/mapping.txt')

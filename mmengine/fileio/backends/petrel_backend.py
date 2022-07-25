@@ -467,7 +467,7 @@ class PetrelBackend(BaseStorageBackend):
         """
         dst = self._format_path(self._map_path(dst))
         if self.exists(dst):
-            raise FileExistsError('dst should not a empty directory')
+            raise FileExistsError('dst should not exist')
 
         src = str(src)
 
@@ -563,6 +563,8 @@ class PetrelBackend(BaseStorageBackend):
             filepath (str or Path): Path to be removed.
 
         Raises:
+            FileNotFoundError: If filepath does not exist, an FileNotFoundError
+                will be raised.
             IsADirectoryError: If filepath is a directory, an IsADirectoryError
                 will be raised.
 
@@ -576,6 +578,9 @@ class PetrelBackend(BaseStorageBackend):
                 'Current version of Petrel Python SDK has not supported '
                 'the `delete` method, please use a higher version or dev '
                 'branch instead.')
+
+        if not self.exists(filepath):
+            raise FileNotFoundError(f'filepath {filepath} does not exist')
 
         if self.isdir(filepath):
             raise IsADirectoryError('filepath should be a file')
