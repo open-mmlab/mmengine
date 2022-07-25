@@ -4,7 +4,7 @@ import warnings
 from collections import OrderedDict
 from math import inf
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
@@ -45,7 +45,7 @@ class CheckpointHook(Hook):
             Defaults to -1, which means unlimited.
         save_last (bool): Whether to force the last checkpoint to be
             saved regardless of interval. Defaults to True.
-        save_best (str, optional | List[str]): If a metric is specified, it
+        save_best (str, List[str], optional): If a metric is specified, it
             would measure the best checkpoint during evaluation. If a list of
             metrics is passed, it would measure a group of best checkpoints
             corresponding to the passed metrics. The information about best
@@ -56,7 +56,7 @@ class CheckpointHook(Hook):
             detection and instance segmentation. ``AR@100`` for proposal
             recall. If ``save_best`` is ``auto``, the first key of the returned
             ``OrderedDict`` result will be used. Defaults to None.
-        rule (str, optional | List[str]): Comparison rule for best score. If
+        rule (str, List[str], optional): Comparison rule for best score. If
             set to None, it will infer a reasonable rule. Keys such as 'acc',
             'top' .etc will be inferred by 'greater' rule. Keys contain 'loss'
             will be inferred by 'less' rule. If ``save_best`` is a list of
@@ -112,8 +112,8 @@ class CheckpointHook(Hook):
                  out_dir: Optional[Union[str, Path]] = None,
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
-                 save_best: Optional[Tuple[str, List[str]]] = None,
-                 rule: Optional[Tuple[str, List[str]]] = None,
+                 save_best: Union[str, List[str], None] = None,
+                 rule: Union[str, List[str], None] = None,
                  greater_keys: Optional[Sequence[str]] = None,
                  less_keys: Optional[Sequence[str]] = None,
                  file_client_args: Optional[dict] = None,
@@ -131,8 +131,8 @@ class CheckpointHook(Hook):
         # save best logic
         assert (isinstance(save_best, str) or is_list_of(save_best, str)
                 or (save_best is None)), (
-                    '"save_best" should be a str or list of str or None '
-                    f'rather than {type(save_best)}')
+                    '"save_best" should be a str or list of str or None, '
+                    f'but got {type(save_best)}')
 
         if isinstance(save_best, list):
             if 'auto' in save_best:
@@ -149,14 +149,15 @@ class CheckpointHook(Hook):
         # rule logic
         assert (isinstance(rule, str) or is_list_of(rule, str)
                 or (rule is None)), (
-                    '"rule" should be a str or list of str or None '
-                    f'rather than {type(rule)}')
+                    '"rule" should be a str or list of str or None, '
+                    f'but got {type(rule)}')
         if isinstance(rule, list):
             # check the length of rule list
             assert len(rule) in [
-                1, len(self.save_best)
+                1,
+                len(self.save_best)  # type: ignore
             ], ('Number of "rule" must be 1 or the same as number of '
-                f'"save_best". But got {len(rule)}.')
+                f'"save_best", but got {len(rule)}.')
         else:
             # convert str/None to list
             rule = [rule]  # type: ignore # noqa: F401
@@ -425,7 +426,7 @@ class CheckpointHook(Hook):
         if len(rules) == 1:
             rules = rules * len(key_indicators)
 
-        rules_ = []
+        self.rules = []
         for rule, key_indicator in zip(rules, key_indicators):
 
             if rule not in self.rule_map and rule is not None:
@@ -436,8 +437,8 @@ class CheckpointHook(Hook):
                 # `_lc` here means we use the lower case of keys for
                 # case-insensitive matching
                 key_indicator_lc = key_indicator.lower()
-                greater_keys = [key.lower() for key in self.greater_keys]
-                less_keys = [key.lower() for key in self.less_keys]
+                greater_keys = {key.lower() for key in self.greater_keys}
+                less_keys = {key.lower() for key in self.less_keys}
 
                 if key_indicator_lc in greater_keys:
                     rule = 'greater'
@@ -453,9 +454,8 @@ class CheckpointHook(Hook):
                                      'must be specified.')
             if rule is not None:
                 self.is_better_than[key_indicator] = self.rule_map[rule]
-            rules_.append(rule)
+            self.rules.append(rule)
 
-        self.rules = rules_
         self.key_indicators = key_indicators
 
     def after_train_iter(self,
