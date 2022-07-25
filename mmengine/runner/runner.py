@@ -37,9 +37,9 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, is_seq_of, revert_sync_batchnorm,
-                            set_multi_processing)
+from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
+                            get_git_hash, is_list_of, is_seq_of,
+                            revert_sync_batchnorm, set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -362,6 +362,18 @@ class Runner:
         # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
 
+        # Collect and log environment information.
+        env = collect_env()
+        env.update(env_cfg)
+        env.update(randomness)
+        env['launcher'] = launcher
+        env['distributed_training'] = self._distributed
+        env_info = '\n'.join([(f'{k}: {v}') for k, v in env.items()])
+        dash_line = '-' * 60 + '\n'
+        self.logger.info('Environment info:\n' + dash_line + env_info + '\n' +
+                         dash_line)
+        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
         # collect information of all modules registered in the registries
         registries_info = count_registered_modules(
             self.work_dir if self.rank == 0 else None, verbose=False)
@@ -400,7 +412,6 @@ class Runner:
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1261,8 +1272,9 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                assert 'type' in evaluator, (
+                    'expected customized evaluator with key `type`, but got '
+                    f'{evaluator}')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
