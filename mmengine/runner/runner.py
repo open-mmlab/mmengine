@@ -294,38 +294,12 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
-        self.param_schedulers: Union[dict, list]
-        if param_scheduler is None:
-            self.param_schedulers = []
-        elif is_seq_of(param_scheduler, (dict, _ParamScheduler)):
-            self.param_schedulers = param_scheduler  # type: ignore
-        elif isinstance(param_scheduler, _ParamScheduler):
-            self.param_schedulers = [param_scheduler]
-        elif isinstance(param_scheduler, dict):
-            if 'type' in param_scheduler:
-                self.param_schedulers = [param_scheduler]
-            else:
-                self.param_schedulers = dict()
-                for key, _param_scheduler in param_scheduler.items():
-                    assert isinstance(
-                        _param_scheduler,
-                        (dict, tuple, list, _ParamScheduler)), (
-                            'Each value of `param_scheduler` should be a '
-                            f'dict or a list, but got {_param_scheduler} with '
-                            f'type {type(_ParamScheduler)}')
-                    if isinstance(_param_scheduler, (dict, _ParamScheduler)):
-                        self.param_schedulers[key] = [_param_scheduler]
-                    else:
-                        self.param_schedulers[key] = _param_scheduler
-        else:
-            raise TypeError(
-                '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
-                f'list or a tuple, but got {type(param_scheduler)}. If '
-                '`param_scheduler` is a list of dict, it means a list of '
-                'scheduler configs for single optimizer. If it is a dict and '
-                'contains key `type`, it means a scheduler config for single '
-                'single optimizer. If it does not contain key type`, it means '
-                'multiple lists of schedulers for multiple optimizers.')
+        # Parse `param_scheduler` to a list or a dict. If `optim_wrapper` is a
+        # `dict` with single optimizer, parsed param_scheduler will be a
+        # list of parameter schedulers. If `optim_wrapper` is
+        # a `dict` with multiple optimizers, parsed `param_scheduler` will be
+        # dict with multiple list of parameter schedulers.
+        self.param_schedulers = self._parse_scheduler_cfg(param_scheduler)
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -2139,3 +2113,56 @@ class Runner:
         else:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
+
+    def _parse_scheduler_cfg(
+        self, param_scheduler: Optional[Union[dict, list, _ParamScheduler]]
+    ) -> Union[dict, list]:
+        """Parse `param_scheduler` to a list of parameter schedulers, or a
+        `dict` of which each value is a list of parameter schedulers.
+
+        If only one optimizer is used, parsed parameter scheduler should be a
+        list of parameter scheduler configs or instances. If multiple
+        optimizers are used, parsed parameter scheduler should be `dict`.
+        Its key should be consistent with the optimizer `dict` and its value
+        should be a list of parameter scheduler configs or instances. See
+        :meth:`build_param_scheduler` for more details.
+
+        Args:
+            param_scheduler (dict or list): The original parameter scheduler.
+
+        Returns:
+            list or dict: Parsed parameter scheduler configs or instances.
+        """
+        param_schedulers: Union[dict, list]
+        if param_scheduler is None:
+            param_schedulers = []
+        elif is_seq_of(param_scheduler, (dict, _ParamScheduler)):
+            param_schedulers = param_scheduler  # type: ignore
+        elif isinstance(param_scheduler, _ParamScheduler):
+            param_schedulers = [param_scheduler]
+        elif isinstance(param_scheduler, dict):
+            if 'type' in param_scheduler:
+                param_schedulers = [param_scheduler]
+            else:
+                param_schedulers = dict()
+                for key, _param_scheduler in param_scheduler.items():
+                    assert isinstance(
+                        _param_scheduler,
+                        (dict, tuple, list, _ParamScheduler)), (
+                            'Each value of `param_scheduler` should be a '
+                            f'dict or a list, but got {_param_scheduler} with '
+                            f'type {type(_ParamScheduler)}')
+                    if isinstance(_param_scheduler, (dict, _ParamScheduler)):
+                        param_schedulers[key] = [_param_scheduler]
+                    else:
+                        param_schedulers[key] = _param_scheduler
+        else:
+            raise TypeError(
+                '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
+                f'list or a tuple, but got {type(param_scheduler)}. If '
+                '`param_scheduler` is a list of dict, it means a list of '
+                'scheduler configs for single optimizer. If it is a dict and '
+                'contains key `type`, it means a scheduler config for single '
+                'single optimizer. If it does not contain key type`, it means '
+                'multiple lists of schedulers for multiple optimizers.')
+        return param_schedulers
