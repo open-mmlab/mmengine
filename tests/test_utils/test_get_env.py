@@ -14,9 +14,9 @@ class TestCollectEnv(TestCase):
     def test_get_cuda_home(self):
         CUDA_HOME = _get_cuda_home()
         if torch.cuda.is_available():
-            assert CUDA_HOME
+            self.assertIsNotNone(CUDA_HOME)
         else:
-            assert CUDA_HOME is None
+            self.assertIsNone(CUDA_HOME)
 
     def test_collect_env(self):
         try:

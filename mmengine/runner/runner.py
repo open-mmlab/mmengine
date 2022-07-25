@@ -2046,6 +2046,7 @@ class Runner:
             cfg=self.cfg.pretty_text,
             dataset_meta=self.train_dataloader.dataset.metainfo,
             seed=self.seed,
+            world_size=self.world_size,
             experiment_name=self.experiment_name,
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine_version=mmengine.__version__ + get_git_hash())
@@ -2148,9 +2149,6 @@ class Runner:
             >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
             >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
 
-        Args:
-            param_scheduler (dict or list): The original parameter scheduler.
-
         Returns:
             list or dict: Parsed parameter scheduler configs or instances.
         """  # noqa: E501
@@ -2186,3 +2184,16 @@ class Runner:
                 'contains key `type`, it means a scheduler config for a '
                 'single optimizer. If it does not contain key `type`, it '
                 'means multiple lists of schedulers for multiple optimizers.')
+
+    def _log_env(self, env_cfg: dict, randomness: dict, launcher: str) -> None:
+        # Collect and log environment information.
+        env = collect_env()
+        env.update(env_cfg)
+        env.update(randomness)
+        env['launcher'] = launcher
+        env['distributed_training'] = self._distributed
+        env_info = '\n'.join(f'{k}: {v}' for k, v in env.items())
+        dash_line = '-' * 60 + '\n'
+        self.logger.info('Environment info:\n' + dash_line + env_info + '\n' +
+                         dash_line)
+        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
