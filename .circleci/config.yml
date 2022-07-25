@@ -66,12 +66,12 @@ jobs:
           name: Install dependency of torchvision when using pyenv
           command: sudo apt-get install -y liblzma-dev
       - run:
-          # python3.7 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
-          name: Select python3.7
+          # python3.6 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
+          name: Select python3.6
           command: |
-            pyenv uninstall -f 3.7.0
-            pyenv install 3.7.0
-            pyenv global 3.7.0
+            pyenv uninstall -f 3.6.0
+            pyenv install 3.6.0
+            pyenv global 3.6.0
       - run:
           name: Upgrade pip
           command: |
