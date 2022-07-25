@@ -3,16 +3,20 @@ import sys
 from unittest import TestCase
 
 import pytest
+import torch.cuda
 
 import mmengine
 from mmengine.utils.collect_env import _get_cuda_home, collect_env
 
 
-class TestGetEnv(TestCase):
+class TestCollectEnv(TestCase):
 
     def test_get_cuda_home(self):
         CUDA_HOME = _get_cuda_home()
-        assert CUDA_HOME
+        if torch.cuda.is_available():
+            assert CUDA_HOME
+        else:
+            assert CUDA_HOME is None
 
     def test_collect_env(self):
         try:
