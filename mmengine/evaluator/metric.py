@@ -3,6 +3,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
+import torch
 from torch import Tensor
 
 from mmengine.data import BaseDataElement
@@ -106,6 +107,10 @@ class BaseMetric(metaclass=ABCMeta):
         results = collect_results(self.results, size, self.collect_device)
 
         if is_main_process():
+            # avoid gpu tensors in the results list have different device ids
+            if torch.cuda.is_available():
+                device_id = torch.cuda.current_device()
+                _align_gpu_tensor_device(results, device_id=device_id)
             _metrics = self.compute_metrics(results)  # type: ignore
             # Add prefix to metric names
             if self.prefix:
@@ -168,5 +173,22 @@ def _to_cpu(data: Any) -> Any:
         return tuple(_to_cpu(d) for d in data)
     elif isinstance(data, dict):
         return {k: _to_cpu(v) for k, v in data.items()}
+    else:
+        return data
+
+
+def _align_gpu_tensor_device(data: Any, device_id: int) -> Any:
+    """transfer all gpu tensors on different devices to the target device."""
+    if isinstance(data, Tensor) and data.device.type == 'cuda':
+        return data.to(torch.device('cuda', device_id))
+    elif isinstance(data, list):
+        return [_align_gpu_tensor_device(d, device_id) for d in data]
+    elif isinstance(data, tuple):
+        return tuple(_align_gpu_tensor_device(d, device_id) for d in data)
+    elif isinstance(data, dict):
+        return {
+            k: _align_gpu_tensor_device(v, device_id)
+            for k, v in data.items()
+        }
     else:
         return data
