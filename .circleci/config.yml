@@ -43,8 +43,9 @@ jobs:
           name: Install PyTorch
           command: python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - run:
-          name: Install mmcv-full
-          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch1.8.0/index.html
+          command: |
+            python -m pip install -U openmim
+            mim install mmcv-full
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -55,7 +56,7 @@ jobs:
           name: Run unit tests
           command: python -m pytest tests/
 
-  build_cu102_pt16:
+  build_cu102_th1.6:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -80,12 +81,12 @@ jobs:
             python -m pip --version
       - run:
           name: Install PyTorch
-          command: python -m pip install torch==1.6.0+cu102 torchvision==0.7.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html
+          command: python -m pip install torch==1.6.0 torchvision==0.7.0 -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install mmcv-full
           command: |
             python -m pip install -U openmim
-            python -m mim install mmcv-full
+            mim install mmcv-full
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -99,7 +100,7 @@ jobs:
             python -m coverage xml
             python -m coverage report -m
 
-  build_cu102_pt18:
+  build_cu102_th1.8:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -129,7 +130,7 @@ jobs:
           name: Install mmcv-full
           command: |
             python -m pip install -U openmim
-            python -m mim install mmcv-full
+            mim install mmcv-full
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -143,7 +144,7 @@ jobs:
             python -m coverage xml
             python -m coverage report -m
 
-  build_cu102_pt112:
+  build_cu102_th1.12:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -173,7 +174,7 @@ jobs:
           name: Install mmcv-full
           command: |
             python -m pip install -U openmim
-            python -m mim install mmcv-full
+            mim install mmcv-full
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -192,21 +193,22 @@ workflows:
     jobs:
       - lint
       - build_cpu:
-          name: build_cpu_th1.8_py3.7
-          torch: 1.8.0
-          torchvision: 0.9.0
+          name: build_cpu_th1.12_py3.10
+          python: 3.10.5
+          torch: 1.12.0
+          torchvision: 0.13.0
           requires:
             - lint
       - hold:
           type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
-            - build_cpu_th1.8_py3.7
-      - build_cu102_pt16:
+            - build_cpu_th1.12_py3.10
+      - build_cu102_th1.6:
           requires:
             - hold
-      - build_cu102_pt18:
+      - build_cu102_th1.8:
           requires:
             - hold
-      - build_cu102_pt112:
+      - build_cu102_th1.12:
           requires:
             - hold
