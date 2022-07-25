@@ -2192,6 +2192,7 @@ class Runner:
         env.update(randomness)
         env['launcher'] = launcher
         env['distributed_training'] = self._distributed
+        env['gpu_num'] = self._world_size
         env_info = '\n'.join(f'{k}: {v}' for k, v in env.items())
         dash_line = '-' * 60 + '\n'
         self.logger.info('Environment info:\n' + dash_line + env_info + '\n' +
