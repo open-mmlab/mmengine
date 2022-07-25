@@ -55,7 +55,51 @@ jobs:
           name: Run unit tests
           command: python -m pytest tests/
 
-  build_cu102:
+  build_cu102_pt16:
+    machine:
+      image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - run:
+          # https://github.com/pytorch/vision/issues/2921
+          name: Install dependency of torchvision when using pyenv
+          command: sudo apt-get install -y liblzma-dev
+      - run:
+          # python3.7 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
+          name: Select python3.7
+          command: |
+            pyenv uninstall -f 3.7.0
+            pyenv install 3.7.0
+            pyenv global 3.7.0
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install PyTorch
+          command: python -m pip install torch==1.6.0+cu102 torchvision==0.7.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html
+      - run:
+          name: Install mmcv-full
+          command: |
+            python -m pip install -U openmim
+            python -m mim install mmcv-full
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: |
+            python -m coverage run --branch --source mmengine -m pytest tests/
+            python -m coverage xml
+            python -m coverage report -m
+
+  build_cu102_pt18:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -83,7 +127,53 @@ jobs:
           command: python -m pip install torch==1.8.1+cu102 torchvision==0.9.1+cu102 -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install mmcv-full
-          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+          command: |
+            python -m pip install -U openmim
+            python -m mim install mmcv-full
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: |
+            python -m coverage run --branch --source mmengine -m pytest tests/
+            python -m coverage xml
+            python -m coverage report -m
+
+  build_cu102_pt112:
+    machine:
+      image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - run:
+          # https://github.com/pytorch/vision/issues/2921
+          name: Install dependency of torchvision when using pyenv
+          command: sudo apt-get install -y liblzma-dev
+      - run:
+          # python3.7 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
+          name: Select python3.7
+          command: |
+            pyenv uninstall -f 3.7.0
+            pyenv install 3.7.0
+            pyenv global 3.7.0
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install PyTorch
+          command: python -m pip install torch==1.12.0+cu102 torchvision==0.13.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html
+      - run:
+          name: Install mmcv-full
+          command: |
+            python -m pip install -U openmim
+            python -m mim install mmcv-full
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -111,6 +201,12 @@ workflows:
           type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
             - build_cpu_th1.8_py3.7
-      - build_cu102:
+      - build_cu102_pt16:
+          requires:
+            - hold
+      - build_cu102_pt18:
+          requires:
+            - hold
+      - build_cu102_pt112:
           requires:
             - hold
