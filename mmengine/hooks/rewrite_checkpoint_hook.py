@@ -8,13 +8,13 @@ from .hook import Hook
 
 
 @HOOKS.register_module()
-class RewriteCheckPointHook(Hook):
+class MigrateCheckPointHook(Hook):
     """A hook to rewrite key in checkpoint.
 
     You can set ``applied_key`` to rewrite dictionary like instance saved in
     checkpoint.
 
-    ``RewriteCheckPointHook`` has three mode to rewrite original checkpoint:
+    ``MigrateCheckPointHook`` has three mode to rewrite original checkpoint:
 
     - remove: Removes specified keys in target dictionary saved in checkpoint.
     - name_mapping: Maps the original key to the target one by the
@@ -42,21 +42,21 @@ class RewriteCheckPointHook(Hook):
     Examples:
         >>> # Config example:
         >>> # remove key starts with `module`
-        >>> cfg = dict(type='RewriteCheckPointHook', removed_prefix='module')
+        >>> cfg = dict(type='MigrateCheckPointHook', removed_prefix='module')
         >>>
         >>> # remapping prefix `submodule` to `module`
-        >>> cfg = dict(type='RewriteCheckPointHook',
+        >>> cfg = dict(type='MigrateCheckPointHook',
                        prefix_mapping=dict(src='submodule', dst='module'))
         >>>
         >>> merge keys from checkpoint.
-        >>> cfg = dict(type='RewriteCheckPointHook',
+        >>> cfg = dict(type='MigrateCheckPointHook',
         >>>            prefix_mapping=dict(src='submodule', dst='module'))
         >>>
         >>> # Example of specific changes to the `state_dict`
         >>> import torch
         >>> import torch.nn as nn
         >>>
-        >>> from mmengine.hooks import RewriteCheckPointHook
+        >>> from mmengine.hooks import MigrateCheckPointHook
         >>>
         >>> class SubModule(nn.Module):
         >>>     def __init__(self) -> None:
@@ -80,7 +80,7 @@ class RewriteCheckPointHook(Hook):
         >>>
         >>> # remove `layer1` in `state_dict`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(removed_prefix='layer1')
+        >>> hook = MigrateCheckPointHook(removed_prefix='layer1')
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer2.weight', 'layer2.bias', 'submodule.layer1.weight',
@@ -89,14 +89,14 @@ class RewriteCheckPointHook(Hook):
         >>>
         >>> # remove key with prefix `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(removed_prefix='submodule')
+        >>> hook = MigrateCheckPointHook(removed_prefix='submodule')
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias']
         >>>
         >>> # remapping prefix `module` to `submodule`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(prefix_mapping=[dict(src='submodule', dst='module')])  # noqa: E501
+        >>> hook = MigrateCheckPointHook(prefix_mapping=[dict(src='submodule', dst='module')])  # noqa: E501
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
         >>> # ['layer1.weight', 'layer1.bias', 'layer2.weight', 'layer2.bias',
@@ -105,7 +105,7 @@ class RewriteCheckPointHook(Hook):
         >>>
         >>> # remapping prefix `module` to `submodule`, `layer1` to `linear1`.
         >>> checkpoint = dict(state_dict=model.state_dict())
-        >>> hook = RewriteCheckPointHook(
+        >>> hook = MigrateCheckPointHook(
         >>>     prefix_mapping=[dict(src='submodule', dst='module'),
         >>>                 dict(src='layer1', dst='linear1')])
         >>> hook.after_load_checkpoint(None, checkpoint)
@@ -118,7 +118,7 @@ class RewriteCheckPointHook(Hook):
         >>> checkpoint = dict(state_dict=model.state_dict())
         >>> merged_ckpt = dict(state_dict=nn.Conv2d(1, 1, 1).state_dict())
         >>> torch.save(merged_ckpt, 'docs_demo.pth')
-        >>> hook = RewriteCheckPointHook(
+        >>> hook = MigrateCheckPointHook(
         >>>     merged_state_dicts=['docs_demo.pth'])
         >>> hook.after_load_checkpoint(None, checkpoint)
         >>> checkpoint['state_dict'].keys()
