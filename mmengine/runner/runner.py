@@ -363,16 +363,7 @@ class Runner:
         self.logger = self.build_logger(log_level=log_level)
 
         # Collect and log environment information.
-        env = collect_env()
-        env.update(env_cfg)
-        env.update(randomness)
-        env['launcher'] = launcher
-        env['distributed_training'] = self._distributed
-        env_info = '\n'.join([(f'{k}: {v}') for k, v in env.items()])
-        dash_line = '-' * 60 + '\n'
-        self.logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                         dash_line)
-        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+        self._log_env(env_cfg, randomness, launcher)
 
         # collect information of all modules registered in the registries
         registries_info = count_registered_modules(
@@ -2188,13 +2179,20 @@ class Runner:
     def _log_env(self, env_cfg: dict, randomness: dict, launcher: str) -> None:
         # Collect and log environment information.
         env = collect_env()
-        env.update(env_cfg)
-        env.update(randomness)
-        env['launcher'] = launcher
-        env['distributed_training'] = self._distributed
-        env['gpu_num'] = self._world_size
-        env_info = '\n'.join(f'{k}: {v}' for k, v in env.items())
-        dash_line = '-' * 60 + '\n'
-        self.logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                         dash_line)
+        runtime_env = OrderedDict()
+        runtime_env.update(env_cfg)
+        runtime_env.update(randomness)
+        runtime_env['launcher'] = launcher
+        runtime_env['distributed_training'] = self._distributed
+        runtime_env['gpu_num'] = self._world_size
+
+        env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
+                                            for k, v in env.items())
+        runtime_env_info = '\n    ' + '\n\t'.join(
+            f'{k}: {v}' for k, v in runtime_env.items())
+        dash_line = '-' * 60
+        self.logger.info('\n' + dash_line + '\nSystem environment:' +
+                         env_info + '\n'
+                         '\nRuntime environment:' + runtime_env_info + '\n' +
+                         dash_line + '\n')
         self.logger.info(f'Config:\n{self.cfg.pretty_text}')
