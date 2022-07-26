@@ -40,6 +40,16 @@ class ToyModel(BaseModel):
             return out
 
 
+class NestedModel(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        self.toy_model = ToyModel()
+
+    def forward(self):
+        pass
+
+
 class TestBaseModel(TestCase):
 
     def test_init(self):
@@ -118,6 +128,15 @@ class TestBaseModel(TestCase):
         out = model.val_step([data])
         self.assertEqual(out.device.type, 'cuda')
 
+        model = NestedModel()
+        self.assertEqual(model.data_preprocessor._device, torch.device('cpu'))
+        self.assertEqual(model.toy_model.data_preprocessor._device,
+                         torch.device('cpu'))
+        model.cuda()
+        self.assertEqual(model.data_preprocessor._device, torch.device('cuda'))
+        self.assertEqual(model.toy_model.data_preprocessor._device,
+                         torch.device('cuda'))
+
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_to(self):
         inputs = torch.randn(3, 1, 1).to('cuda:0')
@@ -125,3 +144,17 @@ class TestBaseModel(TestCase):
         model = ToyModel().to(torch.cuda.current_device())
         out = model.val_step([data])
         self.assertEqual(out.device.type, 'cuda')
+
+        model = NestedModel()
+        self.assertEqual(model.data_preprocessor._device, torch.device('cpu'))
+        self.assertEqual(model.toy_model.data_preprocessor._device,
+                         torch.device('cpu'))
+        model.to('cuda')
+        self.assertEqual(model.data_preprocessor._device, torch.device('cuda'))
+        self.assertEqual(model.toy_model.data_preprocessor._device,
+                         torch.device('cuda'))
+
+        model.to()
+        self.assertEqual(model.data_preprocessor._device, torch.device('cuda'))
+        self.assertEqual(model.toy_model.data_preprocessor._device,
+                         torch.device('cuda'))
