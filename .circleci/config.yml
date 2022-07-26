@@ -43,9 +43,7 @@ jobs:
           name: Install PyTorch
           command: python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - run:
-          command: |
-            python -m pip install -U openmim
-            mim install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch<< parameters.torch >>/index.html
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -84,9 +82,7 @@ jobs:
           command: python -m pip install torch==1.6.0 torchvision==0.7.0 -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install mmcv-full
-          command: |
-            python -m pip install -U openmim
-            mim install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.6.0/index.html
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -128,9 +124,7 @@ jobs:
           command: python -m pip install torch==1.8.1+cu102 torchvision==0.9.1+cu102 -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install mmcv-full
-          command: |
-            python -m pip install -U openmim
-            mim install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
@@ -172,9 +166,7 @@ jobs:
           command: python -m pip install torch==1.12.0+cu102 torchvision==0.13.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install mmcv-full
-          command: |
-            python -m pip install -U openmim
-            mim install mmcv-full
+          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.12.0/index.html
       - run:
           name: Install mmengine dependencies
           command: python -m pip install -r requirements.txt
