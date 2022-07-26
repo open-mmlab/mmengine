@@ -56,7 +56,7 @@ jobs:
           name: Run unit tests
           command: python -m pytest tests/
 
-  build_cu102_th1.6:
+  build_cu102_th16:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -100,7 +100,7 @@ jobs:
             python -m coverage xml
             python -m coverage report -m
 
-  build_cu102_th1.8:
+  build_cu102_th18:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -144,7 +144,7 @@ jobs:
             python -m coverage xml
             python -m coverage report -m
 
-  build_cu102_th1.12:
+  build_cu102_th112:
     machine:
       image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
     resource_class: gpu.nvidia.small
@@ -203,12 +203,12 @@ workflows:
           type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
             - build_cpu_th1.12_py3.10
-      - build_cu102_th1.6:
+      - build_cu102_th16:
           requires:
             - hold
-      - build_cu102_th1.8:
+      - build_cu102_th18:
           requires:
             - hold
-      - build_cu102_th1.12:
+      - build_cu102_th112:
           requires:
             - hold
