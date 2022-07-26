@@ -2188,7 +2188,7 @@ class Runner:
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
                                             for k, v in env.items())
-        runtime_env_info = '\n    ' + '\n\t'.join(
+        runtime_env_info = '\n    ' + '\n    '.join(
             f'{k}: {v}' for k, v in runtime_env.items())
         dash_line = '-' * 60
         self.logger.info('\n' + dash_line + '\nSystem environment:' +
