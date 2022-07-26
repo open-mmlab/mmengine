@@ -68,9 +68,9 @@ jobs:
           # python3.6 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
           name: Select python3.6
           command: |
-            pyenv uninstall -f 3.6.0
-            pyenv install 3.6.0
-            pyenv global 3.6.0
+            pyenv uninstall -f 3.6.1
+            pyenv install 3.6.1
+            pyenv global 3.6.1
       - run:
           name: Upgrade pip
           command: |
