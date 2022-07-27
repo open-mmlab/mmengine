@@ -406,12 +406,20 @@ class Config:
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
-                cfg_dict: dict = dict()
                 with open(temp_config_file.name) as f:
                     codes = ast.parse(f.read())
                     codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
                 codeobj = compile(codes, '', mode='exec')
-                eval(codeobj, {'_base_': base_cfg_dict}, cfg_dict)
+                # Support load global variable in nested function of the
+                # config.
+                global_locals_var = {'_base_': base_cfg_dict}
+                ori_keys = set(global_locals_var.keys())
+                eval(codeobj, global_locals_var, global_locals_var)
+                cfg_dict = {
+                    key: value
+                    for key, value in global_locals_var.items()
+                    if (key not in ori_keys and not key.startswith('__'))
+                }
             elif filename.endswith(('.yml', '.yaml', '.json')):
                 cfg_dict = load(temp_config_file.name)
             # close temp file
