@@ -1,9 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
+import unittest
 from typing import Dict, List, Optional, Sequence
 from unittest import TestCase
 
 import numpy as np
+import torch
 
 from mmengine.data import BaseDataElement
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
@@ -238,3 +240,34 @@ class TestEvaluator(TestCase):
         ]
         all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
         evaluator.offline_evaluate(all_data, all_predictions)
+
+    @unittest.skipUnless(torch.cuda.is_available(), 'can only run with gpu')
+    def test_evaluate_cast_cpu(self):
+        cfg = dict(type='ToyMetric')
+        evaluator = Evaluator(cfg)
+
+        size = 10
+
+        all_data = [
+            dict(
+                inputs=torch.zeros((3, 10, 10), device='cuda'),
+                data_sample=BaseDataElement(
+                    label=torch.ones((1, ), device='cuda')))
+            for _ in range(size)
+        ]
+        all_predictions = [
+            BaseDataElement(pred=torch.zeros((1, ), device='cuda'))
+            for _ in range(size)
+        ]
+        for data, pred in zip(all_data, all_predictions):
+            evaluator.process([data], [pred])
+
+        def test_results_device(results: List):
+            for result in results:
+                self.assertEqual(result['pred'].device, torch.device('cpu'))
+                self.assertEqual(result['label'].device, torch.device('cpu'))
+            return {}
+
+        # replace the `compute_metrics` to the test function
+        evaluator.metrics[0].compute_metrics = test_results_device
+        evaluator.evaluate(size)

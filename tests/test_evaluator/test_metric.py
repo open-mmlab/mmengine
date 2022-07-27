@@ -1,14 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import tempfile
-import unittest
 from unittest import TestCase
 
 import torch
 from torch import Tensor
 
 from mmengine.evaluator import DumpResults
-from mmengine.evaluator.metric import _align_gpu_tensor_device
 from mmengine.fileio import load
 
 
@@ -41,19 +39,3 @@ class TestDumpResults(TestCase):
         self.assertEqual(results[0]['data'][0].device, torch.device('cpu'))
 
         temp_dir.cleanup()
-
-
-class TestAlignGpuTensorDevice(TestCase):
-
-    @unittest.skipUnless(torch.cuda.is_available(), 'must run with gpu')
-    def test_align_gpu_tensor_device(self):
-        data = [{
-            'input': (torch.zeros(
-                (1, 2), device='cuda'), torch.zeros((2, 1), device='cpu'))
-        } for _ in range(5)]
-        _align_gpu_tensor_device(data, device_id=0)
-        for d in data:
-            tenosr_gpu, tensor_cpu = d['input']
-            self.assertEqual(tenosr_gpu.device,
-                             torch.device(type='cuda', index=0))
-            self.assertEqual(tensor_cpu.device, torch.device('cpu'))
