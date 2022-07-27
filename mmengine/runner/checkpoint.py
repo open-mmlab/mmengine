@@ -709,12 +709,12 @@ def find_latest_checkpoint(path: str) -> Optional[str]:
         str or None: File path of the latest checkpoint.
     """
     save_file = osp.join(path, 'last_checkpoint')
-    try:
+    if os.path.exists(save_file):
         with open(save_file) as f:
             last_saved = f.read().strip()
-    except OSError:
+    else:
         warnings.warn(
             'last_checkpoint file does not exist, maybe because it has just'
             ' been deleted by a separate process')
-
+        last_saved = None
     return last_saved
