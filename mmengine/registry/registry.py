@@ -8,7 +8,7 @@ from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from ..config.utils import PKG2PROJECT
-from ..utils import is_installed, is_seq_of
+from ..utils import is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -242,10 +242,12 @@ class Registry:
             if default_scope is not None:
                 scope_name = default_scope.scope_name
                 if scope_name in PKG2PROJECT:
-                    is_installed(PKG2PROJECT[scope_name])
-                    # TODO replace with import from.
-                    module = import_module(f'{scope_name}.utils')
-                    module.register_all_modules()  # type: ignore
+                    try:
+                        module = import_module(
+                            f'{PKG2PROJECT[scope_name]}.utils')
+                        module.register_all_modules()  # type: ignore
+                    except ImportError as e:
+                        raise e
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
