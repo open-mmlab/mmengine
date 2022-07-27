@@ -8,7 +8,7 @@ import warnings
 from collections import OrderedDict
 from importlib import import_module
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import torch
 import torchvision
@@ -697,7 +697,7 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
             file_client.put(f.getvalue(), filename)
 
 
-def find_latest_checkpoint(path: str):
+def find_latest_checkpoint(path: str) -> Optional[str]:
     """Find the latest checkpoint from the given path.
 
     Refer to https://github.com/facebookresearch/fvcore/blob/main/fvcore/common/checkpoint.py  # noqa: E501
@@ -713,7 +713,7 @@ def find_latest_checkpoint(path: str):
         with open(save_file) as f:
             last_saved = f.read().strip()
     except OSError:
-        raise OSError(
+        warnings.warn(
             'last_checkpoint file does not exist, maybe because it has just'
             ' been deleted by a separate process')
 
