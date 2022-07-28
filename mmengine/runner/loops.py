@@ -81,7 +81,7 @@ class EpochBasedTrainLoop(BaseLoop):
         """int: Current iteration."""
         return self._iter
 
-    def run(self) -> None:
+    def run(self) -> torch.nn.Module:
         """Launch training."""
         self.runner.call_hook('before_train')
 
@@ -95,6 +95,7 @@ class EpochBasedTrainLoop(BaseLoop):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
+        return self.runner.model
 
     def run_epoch(self) -> None:
         """Iterate one epoch."""
@@ -266,6 +267,7 @@ class IterBasedTrainLoop(BaseLoop):
 
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
+        return self.runner.model
 
     def run_iter(self, data_batch: Sequence[dict]) -> None:
         """Iterate one mini-batch.
@@ -330,7 +332,7 @@ class ValLoop(BaseLoop):
                 'visualizer will be None.')
         self.fp16 = fp16
 
-    def run(self):
+    def run(self) -> dict:
         """Launch validation."""
         self.runner.call_hook('before_val')
         self.runner.call_hook('before_val_epoch')
@@ -342,6 +344,7 @@ class ValLoop(BaseLoop):
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
+        return metrics
 
     @torch.no_grad()
     def run_iter(self, idx, data_batch: Sequence[dict]):
@@ -399,7 +402,7 @@ class TestLoop(BaseLoop):
                 'visualizer will be None.')
         self.fp16 = fp16
 
-    def run(self) -> None:
+    def run(self) -> dict:
         """Launch test."""
         self.runner.call_hook('before_test')
         self.runner.call_hook('before_test_epoch')
@@ -411,6 +414,7 @@ class TestLoop(BaseLoop):
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
+        return metrics
 
     @torch.no_grad()
     def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
