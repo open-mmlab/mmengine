@@ -1595,8 +1595,12 @@ class Runner:
             self.load_checkpoint(self._load_from)
             self._has_loaded = True
 
-    def train(self) -> None:
-        """Launch training."""
+    def train(self) -> nn.Module:
+        """Launch training.
+
+        Returns:
+            nn.Module: The model after training.
+        """
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '
@@ -1634,11 +1638,16 @@ class Runner:
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
 
-        self.train_loop.run()  # type: ignore
+        model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
+        return model
 
-    def val(self) -> None:
-        """Launch validation."""
+    def val(self) -> dict:
+        """Launch validation.
+
+        Returns:
+            dict: A dict of metrics on validation set.
+        """
         if self._val_loop is None:
             raise RuntimeError(
                 '`self._val_loop` should not be None when calling val method.'
@@ -1652,11 +1661,16 @@ class Runner:
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
-        self.val_loop.run()  # type: ignore
+        metrics = self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
+        return metrics
 
-    def test(self) -> None:
-        """Launch test."""
+    def test(self) -> dict:
+        """Launch test.
+
+        Returns:
+            dict: A dict of metrics on testing set.
+        """
         if self._test_loop is None:
             raise RuntimeError(
                 '`self._test_loop` should not be None when calling test '
@@ -1670,8 +1684,9 @@ class Runner:
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
-        self.test_loop.run()  # type: ignore
+        metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
+        return metrics
 
     def call_hook(self, fn_name: str, **kwargs) -> None:
         """Call all hooks.
