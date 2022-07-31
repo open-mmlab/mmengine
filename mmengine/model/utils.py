@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
-from mmengine.logging.logger import MMLogger, print_log
+from mmengine.logging import MMLogger, print_log
 from mmengine.registry import WEIGHT_INITIALIZERS, build_from_cfg
 
 
