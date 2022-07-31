@@ -2,7 +2,6 @@
 import sys
 from unittest import TestCase
 
-import pytest
 import torch.cuda
 
 import mmengine
@@ -19,11 +18,6 @@ class TestCollectEnv(TestCase):
             self.assertIsNone(CUDA_HOME)
 
     def test_collect_env(self):
-        try:
-            import torch  # noqa: F401
-        except ModuleNotFoundError:
-            pytest.skip('skipping tests that require PyTorch')
-
         env_info = collect_env()
         expected_keys = [
             'sys.platform', 'Python', 'CUDA available', 'PyTorch',
