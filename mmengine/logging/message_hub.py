@@ -121,7 +121,8 @@ class MessageHub(ManagerMixin):
             keys cannot be modified repeatedly'
 
         Note:
-            resumed cannot be set repeatedly for the same key.
+            The ``resumed`` argument needs to be consistent for the same
+            ``key``.
 
         Args:
             key (str): Key of ``HistoryBuffer``.
@@ -148,6 +149,10 @@ class MessageHub(ManagerMixin):
         and calls ``update_scalar``. If type of value is dict, the value should
         be ``dict(value=xxx) or dict(value=xxx, count=xxx)``. Item in
         ``log_dict`` has the same resume option.
+
+        Note:
+            The ``resumed`` argument needs to be consistent for the same
+            ``log_dict``.
 
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
@@ -187,7 +192,8 @@ class MessageHub(ManagerMixin):
         time calling ``update_info``.
 
         Note:
-            resumed cannot be set repeatedly for the same key.
+            The ``resumed`` argument needs to be consistent for the same
+            ``key``.
 
         Examples:
             >>> message_hub = MessageHub()
@@ -203,14 +209,15 @@ class MessageHub(ManagerMixin):
         self._resumed_keys[key] = resumed
         self._runtime_info[key] = value
 
-    def update_infos(self, info_dict: dict, resumed: bool = True) -> None:
+    def update_info_dict(self, info_dict: dict, resumed: bool = True) -> None:
         """Update runtime information with dictionary.
 
         The key corresponding runtime information will be overwritten each
         time calling ``update_info``.
 
         Note:
-            resumed cannot be set repeatedly for the same key.
+            The ``resumed`` argument needs to be consistent for the same
+            ``info_dict``.
 
         Examples:
             >>> message_hub = MessageHub()
@@ -383,7 +390,8 @@ class MessageHub(ManagerMixin):
                 assert key in state_dict, (
                     'The loaded `state_dict` of `MessageHub` must contain '
                     f'key: `{key}`')
-
+            # The old `MessageHub` could save non-HistoryBuffer `log_scalars`,
+            # therefore the loaded `log_scalars` needs to be filtered.
             for key, value in state_dict['log_scalars'].items():
                 if not isinstance(value, HistoryBuffer):
                     print_log(

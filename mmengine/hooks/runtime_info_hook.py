@@ -26,7 +26,7 @@ class RuntimeInfoHook(Hook):
             seed=runner.seed,
             experiment_name=runner.experiment_name,
             mmengine_version=mmengine.__version__ + get_git_hash())
-        runner.message_hub.update_infos(metainfo)
+        runner.message_hub.update_info_dict(metainfo)
 
     def before_train(self, runner) -> None:
         """Update resumed training state."""

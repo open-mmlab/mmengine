@@ -54,7 +54,7 @@ class TestMessageHub:
     def test_update_infos(self):
         message_hub = MessageHub.get_instance('mmengine')
         # test runtime value can be overwritten.
-        message_hub.update_infos({'a': 2, 'b': 3})
+        message_hub.update_info_dict({'a': 2, 'b': 3})
         assert message_hub.runtime_info['a'] == 2
         assert message_hub.runtime_info['b'] == 3
         assert message_hub._resumed_keys['a']
