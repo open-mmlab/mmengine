@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.data import PixelData
+from mmengine.structure import PixelData
 
 
 class TestPixelData(TestCase):

@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Iterator, List, Optional, Sequence, Union
 
-from mmengine.data import BaseDataElement
-from ..registry.root import EVALUATOR, METRICS
+from mmengine.registry import EVALUATOR, METRICS
+from mmengine.structure import BaseDataElement
 from .metric import BaseMetric
 
 

@@ -4,7 +4,7 @@ from unittest import TestCase
 import pytest
 import torch
 
-from mmengine.data import LabelData
+from mmengine.structure import LabelData
 
 
 class TestLabelData(TestCase):

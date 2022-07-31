@@ -5,9 +5,9 @@ from typing import Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
-from mmengine.data import BaseDataElement
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
+from mmengine.structure import BaseDataElement
 from mmengine.utils.misc import tensor2imgs
 
 

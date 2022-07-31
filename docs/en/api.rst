@@ -23,13 +23,13 @@ Optimizer
 .. automodule:: mmengine.optim
     :members:
 
-Data
---------
-.. automodule:: mmengine.data
+Structure
+------------
+.. automodule:: mmengine.structure
     :members:
 
 Dataset
---------
+------------
 .. automodule:: mmengine.dataset
     :members:
 

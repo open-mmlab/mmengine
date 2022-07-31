@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.data import BaseDataElement, InstanceData
+from mmengine.structure import BaseDataElement, InstanceData
 
 
 class TmpObject:

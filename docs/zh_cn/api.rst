@@ -23,9 +23,14 @@ Optimizer
 .. automodule:: mmengine.optim
     :members:
 
-Data
---------
-.. automodule:: mmengine.data
+Structure
+------------
+.. automodule:: mmengine.structure
+    :members:
+
+Dataset
+------------
+.. automodule:: mmengine.dataset
     :members:
 
 Distributed
@@ -41,4 +46,14 @@ Logging
 Model
 --------
 .. automodule:: mmengine.model
+    :members:
+
+Visualization
+--------
+.. automodule:: mmengine.visualization
+    :members:
+
+Utils
+--------
+.. automodule:: mmengine.utils
     :members:

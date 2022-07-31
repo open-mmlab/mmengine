@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.dataset import pseudo_collate, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only, sync_random_seed)

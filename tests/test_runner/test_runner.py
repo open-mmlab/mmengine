@@ -14,7 +14,7 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.data import DefaultSampler
+from mmengine.dataset import DefaultSampler
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,

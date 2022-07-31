@@ -7,9 +7,9 @@ from unittest import TestCase
 import numpy as np
 import torch
 
-from mmengine.data import BaseDataElement
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
 from mmengine.registry import METRICS
+from mmengine.structure import BaseDataElement
 
 
 @METRICS.register_module()
