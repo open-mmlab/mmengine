@@ -8,7 +8,7 @@ from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from ..config.utils import PKG2PROJECT
-from ..utils import is_seq_of
+from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
 
 

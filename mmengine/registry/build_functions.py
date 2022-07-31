@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import torch.nn as nn
 
-from ..config import Config, ConfigDict
-from ..utils import ManagerMixin
+from mmengine.config import Config, ConfigDict
+from mmengine.utils import ManagerMixin
 from .registry import Registry
 
 if TYPE_CHECKING:
