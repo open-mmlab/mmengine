@@ -1164,8 +1164,8 @@ class Runner:
         return param_schedulers
 
     def build_param_scheduler(
-            self, scheduler: Union[_ParamScheduler, Dict,
-                                   List]) -> ParamSchedulerType:
+        self, scheduler: Optional[Union[_ParamScheduler, Dict, List]]
+    ) -> ParamSchedulerType:
         """Build parameter schedulers.
 
         ``build_param_scheduler`` should be called after
@@ -1225,6 +1225,7 @@ class Runner:
         """
         param_schedulers: ParamSchedulerType
         if not isinstance(self.optim_wrapper, OptimWrapperDict):
+            scheduler = scheduler if scheduler is not None else []
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
             # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
             # whether `self.optim_wrapper` is an `OptimizerWrapper` or
@@ -1240,12 +1241,13 @@ class Runner:
             return param_schedulers
         else:
             param_schedulers = dict()
+            scheduler = scheduler if scheduler is not None else dict()
             for name, optimizer in self.optim_wrapper.items():
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
                     # object or a config to build ParamScheduler objects
                     param_schedulers[name] = self._build_param_scheduler(
-                        scheduler[name], optimizer)
+                        scheduler.get(name, []), optimizer)
                 else:
                     param_schedulers[name] = self._build_param_scheduler(
                         scheduler, optimizer)
@@ -1619,9 +1621,8 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
-        if self.param_schedulers is not None:
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
+        self.param_schedulers = self.build_param_scheduler(  # type: ignore
+            self.param_schedulers)  # type: ignore
 
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
@@ -2116,7 +2117,7 @@ class Runner:
 
     def _parse_scheduler_cfg(
         self, param_scheduler: Optional[Union[dict, list, _ParamScheduler]]
-    ) -> Union[dict, list]:
+    ) -> Optional[Union[dict, list, _ParamScheduler]]:
         """Parse `param_scheduler` to a list of parameter schedulers, or a
         `dict` of which each value is a list of parameter schedulers.
 
@@ -2133,16 +2134,16 @@ class Runner:
         Returns:
             list or dict: Parsed parameter scheduler configs or instances.
         """
-        param_schedulers: Union[dict, list]
+        param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
-            param_schedulers = []
+            return None
         elif is_seq_of(param_scheduler, (dict, _ParamScheduler)):
             param_schedulers = param_scheduler  # type: ignore
         elif isinstance(param_scheduler, _ParamScheduler):
-            param_schedulers = [param_scheduler]
+            param_schedulers = param_scheduler
         elif isinstance(param_scheduler, dict):
             if 'type' in param_scheduler:
-                param_schedulers = [param_scheduler]
+                param_schedulers = param_scheduler
             else:
                 param_schedulers = dict()
                 for key, _param_scheduler in param_scheduler.items():
@@ -2152,17 +2153,15 @@ class Runner:
                             'Each value of `param_scheduler` should be a '
                             f'dict or a list, but got {_param_scheduler} with '
                             f'type {type(_ParamScheduler)}')
-                    if isinstance(_param_scheduler, (dict, _ParamScheduler)):
-                        param_schedulers[key] = [_param_scheduler]
-                    else:
-                        param_schedulers[key] = _param_scheduler
+                    param_schedulers[key] = _param_scheduler
+
         else:
             raise TypeError(
                 '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
                 f'list or a tuple, but got {type(param_scheduler)}. If '
                 '`param_scheduler` is a list of dict, it means a list of '
                 'scheduler configs for single optimizer. If it is a dict and '
-                'contains key `type`, it means a scheduler config for single '
+                'contains key `type`, it means a scheduler config for a '
                 'single optimizer. If it does not contain key type`, it means '
                 'multiple lists of schedulers for multiple optimizers.')
         return param_schedulers

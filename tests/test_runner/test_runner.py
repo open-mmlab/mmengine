@@ -495,7 +495,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner._val_dataloader, dict)
         self.assertIsInstance(runner._test_dataloader, dict)
         self.assertIsInstance(runner.optim_wrapper, dict)
-        self.assertIsInstance(runner.param_schedulers[0], dict)
+        self.assertIsInstance(runner.param_schedulers, dict)
 
         # After calling runner.train(),
         # train_dataloader and val_loader should be initialized but
@@ -568,13 +568,13 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_init17'
         cfg.param_scheduler = None
         runner = Runner(**cfg)
-        self.assertEqual(runner.param_schedulers, [])
+        self.assertEqual(runner.param_schedulers, None)
 
         # 6.2 Test initializing single scheduler.
         cfg.experiment_name = 'test_init18'
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
         runner = Runner(**cfg)
-        self.assertEqual(runner.param_schedulers, [cfg.param_scheduler])
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
 
         # 6.3 Test initializing list of scheduler.
         cfg.param_scheduler = [
@@ -595,14 +595,14 @@ class TestRunner(TestCase):
         self.assertEqual(
             runner.param_schedulers,
             dict(
-                linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
-                linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+                linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+                linear2=dict(type='MultiStepLR', milestones=[1, 2]),
             ))
 
         # 6.5 Test initializing 2 list of schedulers for 2 optimizers.
         cfg.param_scheduler = dict(
-            linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
-            linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
+            linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+            linear2=dict(type='MultiStepLR', milestones=[1, 2]),
         )
         cfg.experiment_name = 'test_init21'
         runner = Runner(**cfg)
@@ -614,7 +614,7 @@ class TestRunner(TestCase):
             milestones=[1, 2], optimizer=optimizer)
         cfg.experiment_name = 'test_init22'
         runner = Runner(**cfg)
-        self.assertEqual(runner.param_schedulers, [cfg.param_scheduler])
+        self.assertEqual(runner.param_schedulers, cfg.param_scheduler)
 
         # 6.7 Test initializing with list of `_ParameterScheduler`.
         cfg.param_scheduler = [
@@ -631,9 +631,9 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_init24'
         runner = Runner(**cfg)
         self.assertEqual(runner.param_schedulers['linear1'],
-                         [cfg.param_scheduler['linear1']])
+                         cfg.param_scheduler['linear1'])
         self.assertEqual(runner.param_schedulers['linear2'],
-                         [cfg.param_scheduler['linear2']])
+                         cfg.param_scheduler['linear2'])
 
         # 6.9 Test initializing with 2 list of `_ParameterScheduler` for 2
         # optimizers.
@@ -1871,8 +1871,7 @@ class TestRunner(TestCase):
         # load checkpoint will not initialize optimizer and param_schedulers
         # objects
         self.assertIsInstance(runner.optim_wrapper, dict)
-        self.assertIsInstance(runner.param_schedulers, list)
-        self.assertIsInstance(runner.param_schedulers[0], dict)
+        self.assertIsInstance(runner.param_schedulers, dict)
 
         # 1.3.1 test `resume`
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -2087,6 +2086,67 @@ class TestRunner(TestCase):
         assert len(runner.message_hub.log_scalars['train/lr'].data[1]) == 3
         assert len(MessageHub.get_current_instance().log_scalars['train/lr'].
                    data[1]) == 3
+
+        # 2.7.1 test `resume` 2 optimizers and 1 scheduler list.
+        path = osp.join(self.temp_dir, 'epoch_3.pth')
+        optim_cfg = dict(
+            linear1=dict(
+                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            linear2=dict(
+                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
+            constructor='ToyMultipleOptimizerConstructor')
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_checkpoint14'
+        cfg.optim_wrapper = optim_cfg
+        cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
+        cfg.model = dict(type='ToyGANModel')
+        resumed_cfg = copy.deepcopy(cfg)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        resumed_cfg.experiment_name = 'test_checkpoint15'
+        runner = Runner.from_cfg(resumed_cfg)
+        runner.resume(path)
+        self.assertEqual(len(runner.param_schedulers['linear1']), 1)
+        self.assertEqual(len(runner.param_schedulers['linear2']), 1)
+        self.assertIsInstance(runner.param_schedulers['linear1'][0],
+                              MultiStepLR)
+        self.assertIsInstance(runner.param_schedulers['linear2'][0],
+                              MultiStepLR)
+
+        # 2.7.2 test `resume` 2 optimizers and 2 scheduler list.
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_checkpoint16'
+        cfg.optim_wrapper = optim_cfg
+        cfg.param_scheduler = dict(
+            linear1=dict(type='MultiStepLR', milestones=[1, 2, 3]),
+            linear2=dict(type='StepLR', gamma=0.1, step_size=3))
+        cfg.model = dict(type='ToyGANModel')
+        resumed_cfg = copy.deepcopy(cfg)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        resumed_cfg.experiment_name = 'test_checkpoint17'
+        runner = Runner.from_cfg(resumed_cfg)
+        runner.resume(path)
+        self.assertEqual(len(runner.param_schedulers['linear1']), 1)
+        self.assertEqual(len(runner.param_schedulers['linear2']), 1)
+        self.assertIsInstance(runner.param_schedulers['linear1'][0],
+                              MultiStepLR)
+        self.assertIsInstance(runner.param_schedulers['linear2'][0], StepLR)
+
+        # 2.7.3 test `resume` 2 optimizers and 0 sheduler list.
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_checkpoint16'
+        cfg.optim_wrapper = optim_cfg
+        cfg.model = dict(type='ToyGANModel')
+        cfg.param_scheduler = None
+        resumed_cfg = copy.deepcopy(cfg)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        resumed_cfg.experiment_name = 'test_checkpoint18'
+        runner = Runner.from_cfg(resumed_cfg)
+        runner.resume(path)
+        self.assertEqual(runner.param_schedulers['linear1'], [])
+        self.assertEqual(runner.param_schedulers['linear2'], [])
 
     def test_build_runner(self):
         # No need to test other cases which have been tested in
