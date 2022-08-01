@@ -106,6 +106,8 @@ class BaseMetric(metaclass=ABCMeta):
         results = collect_results(self.results, size, self.collect_device)
 
         if is_main_process():
+            # cast all tensors in results list to cpu
+            results = _to_cpu(results)
             _metrics = self.compute_metrics(results)  # type: ignore
             # Add prefix to metric names
             if self.prefix:
