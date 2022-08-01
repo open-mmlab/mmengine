@@ -2135,14 +2135,14 @@ class TestRunner(TestCase):
 
         # 2.7.3 test `resume` 2 optimizers and 0 sheduler list.
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_checkpoint16'
+        cfg.experiment_name = 'test_checkpoint18'
         cfg.optim_wrapper = optim_cfg
         cfg.model = dict(type='ToyGANModel')
         cfg.param_scheduler = None
         resumed_cfg = copy.deepcopy(cfg)
         runner = Runner.from_cfg(cfg)
         runner.train()
-        resumed_cfg.experiment_name = 'test_checkpoint18'
+        resumed_cfg.experiment_name = 'test_checkpoint19'
         runner = Runner.from_cfg(resumed_cfg)
         runner.resume(path)
         self.assertEqual(runner.param_schedulers['linear1'], [])
