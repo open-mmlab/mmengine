@@ -17,6 +17,7 @@ import mmengine
 from mmengine.dist import get_dist_info
 from mmengine.fileio import FileClient
 from mmengine.fileio import load as load_file
+from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.utils import load_url, mkdir_or_exist
 
@@ -714,8 +715,6 @@ def find_latest_checkpoint(path: str) -> Optional[str]:
         with open(save_file) as f:
             last_saved = f.read().strip()
     else:
-        warnings.warn(
-            'last_checkpoint file does not exist, maybe because it has just'
-            ' been deleted by a separate process')
+        print_log('Did not find last_checkpoint to be resumed.')
         last_saved = None
     return last_saved
