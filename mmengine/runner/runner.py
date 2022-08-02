@@ -293,12 +293,10 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
-        if param_scheduler is None:
-            self.param_schedulers = []
+        if param_scheduler is None or isinstance(param_scheduler, Sequence):
+            self.param_schedulers = param_scheduler
         elif not isinstance(param_scheduler, Sequence):
             self.param_schedulers = [param_scheduler]
-        else:
-            self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -1617,7 +1615,7 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
-        if self.param_schedulers:
+        if self.param_schedulers is not None:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
 
@@ -1937,6 +1935,9 @@ class Runner:
 
         # resume param scheduler
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
+            assert self.param_schedulers is not None, (
+                'The parameter scheduler config should not None, since the '
+                'resumed checkpoint has key `param_schedulers`')
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)
             if isinstance(self.param_schedulers, dict):
@@ -2067,7 +2068,7 @@ class Runner:
                     f'{self.optim_wrapper}')
 
         # save param scheduler state dict
-        if save_param_scheduler:
+        if save_param_scheduler and self.param_schedulers is not None:
             if isinstance(self.param_schedulers, dict):
                 checkpoint['param_schedulers'] = dict()
                 for name, schedulers in self.param_schedulers.items():
