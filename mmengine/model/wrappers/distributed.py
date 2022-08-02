@@ -114,9 +114,14 @@ class MMDistributedDataParallel(DistributedDataParallel):
         """
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.module.data_preprocessor(
-                data, training=True)
-            losses = self(batch_inputs, data_samples, mode='loss')
+            data = self.module.data_preprocessor(data, training=True)
+            if isinstance(data, dict):
+                losses = self(**data, mode='loss')
+            elif isinstance(data, (list, tuple)):
+                losses = self(*data, mode='loss')
+            else:
+                raise TypeError('Output of `data_preprocessor` should be '
+                                f'list tuple or dict, but got {type(data)}')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)

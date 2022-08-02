@@ -28,15 +28,16 @@ class ToyModel(BaseModel):
         super().__init__(data_preprocessor=data_preprocessor, init_cfg=None)
         self.conv = nn.Conv2d(3, 1, 1)
 
-    def forward(self, batch_inputs, data_samples=None, mode='tensor'):
+    def forward(self, inputs, data_sample=None, mode='tensor'):
+        inputs = torch.stack(inputs)
         if mode == 'loss':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return dict(loss=out)
         elif mode == 'predict':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return out
         elif mode == 'tensor':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return out
 
 

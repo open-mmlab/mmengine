@@ -29,8 +29,9 @@ class ToyModel(BaseModel):
         self.conv1 = nn.Conv2d(3, 1, 1)
         self.conv2 = nn.Conv2d(1, 1, 1)
 
-    def forward(self, x, data_samples=None, mode='tensor'):
-        x = self.conv1(x)
+    def forward(self, inputs, data_sample=None, mode='tensor'):
+        inputs = torch.stack(inputs)
+        x = self.conv1(inputs)
         x = self.conv2(x)
         if mode == 'loss':
             return dict(loss=x)
@@ -48,10 +49,11 @@ class ComplexModel(BaseModel):
         self.conv2 = nn.Conv2d(3, 1, 1)
 
     def train_step(self, data, optim_wrapper):
-        batch_inputs, _ = self.data_preprocessor(data)
-        loss1 = self.conv1(batch_inputs)
+        inputs = self.data_preprocessor(data)['inputs']
+        inputs = torch.stack(inputs)
+        loss1 = self.conv1(inputs)
         optim_wrapper['optim_wrapper1'].update_params(loss1)
-        loss2 = self.conv2(batch_inputs)
+        loss2 = self.conv2(inputs)
         optim_wrapper['optim_wrapper2'].update_params(loss2)
         return dict(loss1=loss1, loss2=loss2)
 
