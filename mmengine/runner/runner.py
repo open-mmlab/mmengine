@@ -1937,8 +1937,8 @@ class Runner:
         # resume param scheduler
         if resume_param_scheduler and self.param_schedulers is None:
             print_log(
-                'Found `param_schedulers` is None, skip resume '
-                'parameter scheduler',
+                '`resume_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip resuming parameter schedulers',
                 logger='current',
                 level=logging.WARNING)
             resume_param_scheduler = False
@@ -2076,7 +2076,14 @@ class Runner:
                     f'{self.optim_wrapper}')
 
         # save param scheduler state dict
-        if save_param_scheduler and self.param_schedulers is not None:
+        if save_param_scheduler and self.param_schedulers is None:
+            print_log(
+                '`save_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip saving parameter schedulers',
+                logger='current',
+                level=logging.WARNING)
+            save_param_scheduler = False
+        if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
                 checkpoint['param_schedulers'] = dict()
                 for name, schedulers in self.param_schedulers.items():
@@ -2086,7 +2093,7 @@ class Runner:
                         checkpoint['param_schedulers'][name].append(state_dict)
             else:
                 checkpoint['param_schedulers'] = []
-                for scheduler in self.param_schedulers:
+                for scheduler in self.param_schedulers:  # type: ignore
                     state_dict = scheduler.state_dict()  # type: ignore
                     checkpoint['param_schedulers'].append(state_dict)
 
