@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import platform
@@ -26,7 +27,7 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
@@ -1934,6 +1935,13 @@ class Runner:
                 checkpoint['optimizer'])
 
         # resume param scheduler
+        if resume_param_scheduler and self.param_schedulers is None:
+            print_log(
+                'Found `param_schedulers` is None, skip resume '
+                'parameter scheduler',
+                logger='current',
+                level=logging.WARNING)
+            resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             assert self.param_schedulers is not None, (
                 'The parameter scheduler config should not None, since the '
