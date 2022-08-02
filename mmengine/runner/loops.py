@@ -282,7 +282,6 @@ class IterBasedTrainLoop(BaseLoop):
         # outputs should be a dict of loss.
         outputs = self.runner.model.train_step(
             data_batch, optim_wrapper=self.runner.optim_wrapper)
-        self.runner.message_hub.update_info('train_logs', outputs)
 
         self.runner.call_hook(
             'after_train_iter',
