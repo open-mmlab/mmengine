@@ -2,6 +2,7 @@
 from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
+                              CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, PolyParamScheduler,
                               StepParamScheduler)
@@ -243,3 +244,9 @@ class PolyMomentum(MomentumSchedulerMixin, PolyParamScheduler):
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """
+
+
+@PARAM_SCHEDULERS.register_module()
+class CosineRestartMomentum(MomentumSchedulerMixin,
+                            CosineRestartParamScheduler):
+    """Cosine annealing with restarts momentum scheme."""

@@ -2,6 +2,7 @@
 from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
+                              CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, OneCycleParamScheduler,
                               PolyParamScheduler, StepParamScheduler)
@@ -277,3 +278,8 @@ class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
     .. _Super-Convergence\: Very Fast Training of Neural Networks Using Large Learning Rates:
         https://arxiv.org/abs/1708.07120
     """# noqa E501
+
+
+@PARAM_SCHEDULERS.register_module()
+class CosineRestartLR(LRSchedulerMixin, CosineRestartParamScheduler):
+    """Cosine annealing with restarts learning rate scheme."""
