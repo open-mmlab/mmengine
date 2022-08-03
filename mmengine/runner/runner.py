@@ -1943,7 +1943,7 @@ class Runner:
                 level=logging.WARNING)
             resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
-            self.param_schedulers = self.build_param_scheduler(
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
             if isinstance(self.param_schedulers, dict):
                 for name, schedulers in self.param_schedulers.items():
