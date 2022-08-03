@@ -296,7 +296,7 @@ class Runner:
 
         if param_scheduler is None or isinstance(param_scheduler, Sequence):
             self.param_schedulers = param_scheduler
-        elif not isinstance(param_scheduler, Sequence):
+        else:
             self.param_schedulers = [param_scheduler]
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
@@ -1943,11 +1943,8 @@ class Runner:
                 level=logging.WARNING)
             resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
-            assert self.param_schedulers is not None, (
-                'The parameter scheduler config should not None, since the '
-                'resumed checkpoint has key `param_schedulers`')
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)
+            self.param_schedulers = self.build_param_scheduler(
+                self.param_schedulers)  # type: ignore
             if isinstance(self.param_schedulers, dict):
                 for name, schedulers in self.param_schedulers.items():
                     for scheduler, ckpt_scheduler in zip(
@@ -1955,8 +1952,9 @@ class Runner:
                         scheduler.load_state_dict(ckpt_scheduler)
             else:
                 for scheduler, ckpt_scheduler in zip(
-                        self.param_schedulers, checkpoint['param_schedulers']):
-                    scheduler.load_state_dict(ckpt_scheduler)  # type: ignore
+                        self.param_schedulers,  # type: ignore
+                        checkpoint['param_schedulers']):
+                    scheduler.load_state_dict(ckpt_scheduler)
 
         self._has_loaded = True
 
