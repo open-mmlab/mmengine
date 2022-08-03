@@ -10,7 +10,7 @@ from mmengine.dist import (broadcast_object_list, collect_results,
 from mmengine.fileio import dump
 from mmengine.logging import print_log
 from mmengine.registry import METRICS
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 
 
 class BaseMetric(metaclass=ABCMeta):

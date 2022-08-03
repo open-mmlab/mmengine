@@ -6,7 +6,7 @@ from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 from ..utils import detect_anomalous_params
 
 

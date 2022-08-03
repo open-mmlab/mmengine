@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.registry import MODELS
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 from ..utils import stack_batch
 
 

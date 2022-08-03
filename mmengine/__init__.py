@@ -8,7 +8,7 @@ from .hooks import *
 from .logging import *
 from .registry import *
 from .runner import *
-from .structure import *
+from .structures import *
 from .utils import *
 from .version import __version__, version_info
 from .visualization import *

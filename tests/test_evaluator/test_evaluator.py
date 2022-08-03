@@ -9,7 +9,7 @@ import torch
 
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
 from mmengine.registry import METRICS
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 
 
 @METRICS.register_module()

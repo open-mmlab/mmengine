@@ -7,7 +7,7 @@ import numpy as np
 
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 from mmengine.utils.misc import tensor2imgs
 
 

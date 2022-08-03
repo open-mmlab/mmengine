@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import torch
 
 from mmengine.hooks import NaiveVisualizationHook
-from mmengine.structure import BaseDataElement
+from mmengine.structures import BaseDataElement
 
 
 class TestNaiveVisualizationHook:

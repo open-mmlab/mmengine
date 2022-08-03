@@ -25,7 +25,7 @@ Optimizer
 
 Data Structures
 ----------------
-.. automodule:: mmengine.structure
+.. automodule:: mmengine.structures
     :members:
 
 Dataset
