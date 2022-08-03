@@ -23,8 +23,8 @@ Optimizer
 .. automodule:: mmengine.optim
     :members:
 
-Structure
-------------
+Data Structures
+----------------
 .. automodule:: mmengine.structure
     :members:
 
