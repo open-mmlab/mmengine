@@ -1164,8 +1164,8 @@ class Runner:
         return param_schedulers
 
     def build_param_scheduler(
-        self, scheduler: Optional[Union[_ParamScheduler, Dict, List]]
-    ) -> ParamSchedulerType:
+            self, scheduler: Union[_ParamScheduler, Dict,
+                                   List]) -> ParamSchedulerType:
         """Build parameter schedulers.
 
         ``build_param_scheduler`` should be called after
@@ -1225,7 +1225,6 @@ class Runner:
         """
         param_schedulers: ParamSchedulerType
         if not isinstance(self.optim_wrapper, OptimWrapperDict):
-            scheduler = scheduler if scheduler is not None else []
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
             # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
             # whether `self.optim_wrapper` is an `OptimizerWrapper` or
@@ -1241,13 +1240,12 @@ class Runner:
             return param_schedulers
         else:
             param_schedulers = dict()
-            scheduler = scheduler if scheduler is not None else dict()
             for name, optimizer in self.optim_wrapper.items():
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
                     # object or a config to build ParamScheduler objects
                     param_schedulers[name] = self._build_param_scheduler(
-                        scheduler.get(name, []), optimizer)
+                        scheduler[name], optimizer)
                 else:
                     param_schedulers[name] = self._build_param_scheduler(
                         scheduler, optimizer)
