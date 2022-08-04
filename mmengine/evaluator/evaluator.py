@@ -58,7 +58,7 @@ class Evaluator:
                 _data_samples.append(data_sample)
 
         for metric in self.metrics:
-            metric.process(data_batch=data_batch, predictions=_data_samples)
+            metric.process(data_batch, _data_samples)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics

@@ -457,12 +457,11 @@ class TestRunner(TestCase):
         # 1.2 val_dataloader, val_evaluator, val_cfg
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init6'
-        cfg.pop('val_cfg')
+        cfg.pop('val_dataloader')
         with self.assertRaisesRegex(ValueError, 'either all None or not None'):
             Runner(**cfg)
 
         cfg.experiment_name = 'test_init7'
-        cfg.pop('val_dataloader')
         cfg.pop('val_evaluator')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
@@ -475,12 +474,11 @@ class TestRunner(TestCase):
         # 1.3 test_dataloader, test_evaluator and test_cfg
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init9'
-        cfg.pop('test_cfg')
+        cfg.pop('test_dataloader')
         with self.assertRaisesRegex(ValueError, 'either all None or not None'):
             runner = Runner(**cfg)
 
         cfg.experiment_name = 'test_init10'
-        cfg.pop('test_dataloader')
         cfg.pop('test_evaluator')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
@@ -1610,7 +1608,7 @@ class TestRunner(TestCase):
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
         runner = Runner.from_cfg(cfg)
-        with self.assertRaisesRegex(RuntimeError, 'should not be None'):
+        with self.assertRaisesRegex(AssertionError, 'val_dataloader'):
             runner.val()
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1662,7 +1660,7 @@ class TestRunner(TestCase):
         cfg.pop('test_cfg')
         cfg.pop('test_evaluator')
         runner = Runner.from_cfg(cfg)
-        with self.assertRaisesRegex(RuntimeError, 'should not be None'):
+        with self.assertRaisesRegex(AssertionError, 'test_dataloader'):
             runner.test()
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1914,8 +1912,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        self.assertEqual(ckpt['meta']['dataset_meta'],
-                         runner.train_dataloader.dataset.metainfo)
         self.assertEqual(ckpt['meta']['experiment_name'],
                          runner.experiment_name)
         self.assertEqual(ckpt['meta']['seed'], runner.seed)

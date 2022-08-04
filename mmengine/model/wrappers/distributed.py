@@ -115,13 +115,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
             data = self.module.data_preprocessor(data, training=True)
-            if isinstance(data, dict):
-                losses = self(**data, mode='loss')
-            elif isinstance(data, (list, tuple)):
-                losses = self(*data, mode='loss')
-            else:
-                raise TypeError('Output of `data_preprocessor` should be '
-                                f'list tuple or dict, but got {type(data)}')
+            losses = self._run_forward(data, mode='loss')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
@@ -137,7 +131,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
         """
-        return self.module.val_step(data)
+        return self._run_forward(data, mode='predict')
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
@@ -148,4 +142,14 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
-        return self.module.test_step(data)
+        return self._run_forward(data, mode='predict')
+
+    def _run_forward(self, data, mode):
+        if isinstance(data, dict):
+            losses = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            losses = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list tuple or dict, but got {type(data)}')
+        return losses

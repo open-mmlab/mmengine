@@ -308,7 +308,7 @@ class Runner:
         self._check_scheduler_cfg(param_scheduler)
         self.param_schedulers = param_scheduler
 
-        val_related = [val_dataloader, val_cfg, val_evaluator]
+        val_related = [val_dataloader, val_evaluator]
         if not (all(item is None
                     for item in val_related) or all(item is not None
                                                     for item in val_related)):
@@ -318,10 +318,10 @@ class Runner:
                 f'val_dataloader={val_dataloader}, val_cfg={val_cfg}, '
                 f'val_evaluator={val_evaluator}')
         self._val_dataloader = val_dataloader
-        self._val_loop = val_cfg
+        self._val_loop = val_cfg if val_cfg is not None else dict()
         self._val_evaluator = val_evaluator
 
-        test_related = [test_dataloader, test_cfg, test_evaluator]
+        test_related = [test_dataloader, test_evaluator]
         if not (all(item is None for item in test_related)
                 or all(item is not None for item in test_related)):
             raise ValueError(
@@ -330,7 +330,7 @@ class Runner:
                 f'test_dataloader={test_dataloader}, test_cfg={test_cfg}, '
                 f'test_evaluator={test_evaluator}')
         self._test_dataloader = test_dataloader
-        self._test_loop = test_cfg
+        self._test_loop = test_cfg if test_cfg is not None else dict()
         self._test_evaluator = test_evaluator
 
         self._launcher = launcher
@@ -1469,27 +1469,29 @@ class Runner:
         Returns:
             :obj:`BaseLoop`: Validation loop object build from ``loop``.
         """
+        assert not (self._val_dataloader is None
+                    or self._val_evaluator is None), (
+                        'val_dataloader and val_evaluator should not be None')
         if isinstance(loop, BaseLoop):
             return loop
+        elif isinstance(loop, dict):
+            loop_cfg = copy.deepcopy(loop)  # type: ignore
+            if 'type' in loop_cfg:
+                loop = LOOPS.build(
+                    loop_cfg,
+                    default_args=dict(
+                        runner=self,
+                        dataloader=self._val_dataloader,
+                        evaluator=self._val_evaluator))
+            else:
+                loop = ValLoop(
+                    **loop_cfg,
+                    runner=self,
+                    dataloader=self._val_dataloader,
+                    evaluator=self._val_evaluator)  # type: ignore
         elif not isinstance(loop, dict):
             raise TypeError(
                 f'train_loop should be a Loop object or dict, but got {loop}')
-
-        loop_cfg = copy.deepcopy(loop)
-
-        if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self,
-                    dataloader=self._val_dataloader,
-                    evaluator=self._val_evaluator))
-        else:
-            loop = ValLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._val_dataloader,
-                evaluator=self._val_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1511,27 +1513,29 @@ class Runner:
         Returns:
             :obj:`BaseLoop`: Test loop object build from ``loop_cfg``.
         """
+        assert not (
+            self._test_dataloader is None or self._test_evaluator is None), (
+                'test_dataloader and test_evaluator should not be None')
         if isinstance(loop, BaseLoop):
             return loop
-        elif not isinstance(loop, dict):
-            raise TypeError(
-                f'train_loop should be a Loop object or dict, but got {loop}')
-
-        loop_cfg = copy.deepcopy(loop)  # type: ignore
-
-        if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
+        elif isinstance(loop, dict):
+            loop_cfg = copy.deepcopy(loop)  # type: ignore
+            if 'type' in loop_cfg:
+                loop = LOOPS.build(
+                    loop_cfg,
+                    default_args=dict(
+                        runner=self,
+                        dataloader=self._test_dataloader,
+                        evaluator=self._test_evaluator))
+            else:
+                loop = TestLoop(
+                    **loop_cfg,
                     runner=self,
                     dataloader=self._test_dataloader,
-                    evaluator=self._test_evaluator))
+                    evaluator=self._test_evaluator)  # type: ignore
         else:
-            loop = TestLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._test_dataloader,
-                evaluator=self._test_evaluator)  # type: ignore
+            raise TypeError(
+                f'train_loop should be a Loop object or dict, but got {loop}')
 
         return loop  # type: ignore
 
@@ -1648,12 +1652,6 @@ class Runner:
         Returns:
             dict: A dict of metrics on validation set.
         """
-        if self._val_loop is None:
-            raise RuntimeError(
-                '`self._val_loop` should not be None when calling val method.'
-                'Please provide `val_dataloader`, `val_cfg` and '
-                '`val_evaluator` arguments when initializing runner.')
-
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
         self.call_hook('before_run')
@@ -1671,12 +1669,6 @@ class Runner:
         Returns:
             dict: A dict of metrics on testing set.
         """
-        if self._test_loop is None:
-            raise RuntimeError(
-                '`self._test_loop` should not be None when calling test '
-                'method. Please provide `test_dataloader`, `test_cfg` and '
-                '`test_evaluator` arguments when initializing runner.')
-
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
         self.call_hook('before_run')
@@ -2052,6 +2044,8 @@ class Runner:
             experiment_name=self.experiment_name,
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine_version=mmengine.__version__ + get_git_hash())
+        if hasattr(self.train_dataloader.dataset, 'metainfo'):
+            meta.update(dataset_meta=self.train_dataloader.dataset)
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)

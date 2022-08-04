@@ -115,13 +115,7 @@ class BaseModel(BaseModule):
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
             data = self.data_preprocessor(data, True)
-            if isinstance(data, dict):
-                losses = self(**data, mode='loss')
-            elif isinstance(data, (list, tuple)):
-                losses = self(*data, mode='loss')
-            else:
-                raise TypeError('Output of `data_preprocessor` should be '
-                                f'list tuple or dict, but got {type(data)}')
+            losses = self._run_forward(data, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
         optim_wrapper.update_params(parsed_losses)
         return log_vars
@@ -140,7 +134,7 @@ class BaseModel(BaseModule):
             List[BaseDataElement]: The predictions of given data.
         """
         data = self.data_preprocessor(data, False)
-        return self(*data, mode='predict')
+        return self._run_forward(data, mode='predict')
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
         """``BaseModel`` implements ``test_step`` the same as ``val_step``.
@@ -152,7 +146,7 @@ class BaseModel(BaseModule):
             List[BaseDataElement]: The predictions of given data.
         """
         data = self.data_preprocessor(data, False)
-        return self(*data, mode='predict')
+        return self._run_forward(data, mode='predict')
 
     def parse_losses(
         self, losses: Dict[str, torch.Tensor]
@@ -295,3 +289,13 @@ class BaseModel(BaseModule):
                 - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
                   or ``dict of tensor for custom use.
         """
+
+    def _run_forward(self, data, mode):
+        if isinstance(data, dict):
+            losses = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            losses = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list tuple or dict, but got {type(data)}')
+        return losses
