@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import platform
@@ -26,7 +27,7 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
@@ -293,12 +294,10 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
-        if param_scheduler is None:
-            self.param_schedulers = []
-        elif not isinstance(param_scheduler, Sequence):
-            self.param_schedulers = [param_scheduler]
-        else:
+        if param_scheduler is None or isinstance(param_scheduler, Sequence):
             self.param_schedulers = param_scheduler
+        else:
+            self.param_schedulers = [param_scheduler]
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -1617,7 +1616,7 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
-        if self.param_schedulers:
+        if self.param_schedulers is not None:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
 
@@ -1936,9 +1935,16 @@ class Runner:
                 checkpoint['optimizer'])
 
         # resume param scheduler
+        if resume_param_scheduler and self.param_schedulers is None:
+            print_log(
+                '`resume_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip resuming parameter schedulers',
+                logger='current',
+                level=logging.WARNING)
+            resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)
+                self.param_schedulers)  # type: ignore
             if isinstance(self.param_schedulers, dict):
                 for name, schedulers in self.param_schedulers.items():
                     for scheduler, ckpt_scheduler in zip(
@@ -1946,8 +1952,9 @@ class Runner:
                         scheduler.load_state_dict(ckpt_scheduler)
             else:
                 for scheduler, ckpt_scheduler in zip(
-                        self.param_schedulers, checkpoint['param_schedulers']):
-                    scheduler.load_state_dict(ckpt_scheduler)  # type: ignore
+                        self.param_schedulers,  # type: ignore
+                        checkpoint['param_schedulers']):
+                    scheduler.load_state_dict(ckpt_scheduler)
 
         self._has_loaded = True
 
@@ -2067,6 +2074,13 @@ class Runner:
                     f'{self.optim_wrapper}')
 
         # save param scheduler state dict
+        if save_param_scheduler and self.param_schedulers is None:
+            print_log(
+                '`save_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip saving parameter schedulers',
+                logger='current',
+                level=logging.WARNING)
+            save_param_scheduler = False
         if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
                 checkpoint['param_schedulers'] = dict()
@@ -2077,7 +2091,7 @@ class Runner:
                         checkpoint['param_schedulers'][name].append(state_dict)
             else:
                 checkpoint['param_schedulers'] = []
-                for scheduler in self.param_schedulers:
+                for scheduler in self.param_schedulers:  # type: ignore
                     state_dict = scheduler.state_dict()  # type: ignore
                     checkpoint['param_schedulers'].append(state_dict)
 

@@ -413,7 +413,7 @@ class TestRunner(TestCase):
         cfg.pop('param_scheduler')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
-        self.assertEqual(runner.param_schedulers, [])
+        self.assertEqual(runner.param_schedulers, None)
 
         # param_scheduler should be None when optimizer is None
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1052,9 +1052,9 @@ class TestRunner(TestCase):
         # input is a Loop object
         self.assertEqual(id(runner.build_train_loop(loop)), id(loop))
 
-        # param_schedulers can be []
+        # param_schedulers can be None
         cfg = dict(type='EpochBasedTrainLoop', max_epochs=3)
-        runner.param_schedulers = []
+        runner.param_schedulers = None
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
