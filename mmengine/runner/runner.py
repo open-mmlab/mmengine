@@ -1278,9 +1278,8 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, (
-                    'expected customized evaluator with key `type`, but got '
-                    f'{evaluator}')
+                assert 'type' in evaluator, 'expected customized evaluator' \
+                                    f' with key `type`, but got {evaluator}'
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
@@ -1619,8 +1618,9 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
-        self.param_schedulers = self.build_param_scheduler(  # type: ignore
-            self.param_schedulers)  # type: ignore
+        if self.param_schedulers is not None:
+            self.param_schedulers = self.build_param_scheduler(  # type: ignore
+                self.param_schedulers)  # type: ignore
 
         if self._val_loop is not None:
             self._val_loop = self.build_val_loop(
