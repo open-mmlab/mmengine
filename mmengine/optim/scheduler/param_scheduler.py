@@ -227,6 +227,8 @@ class StepParamScheduler(_ParamScheduler):
 
     Args:
         optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         step_size (int): Period of parameter value decay.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -313,6 +315,8 @@ class MultiStepParamScheduler(_ParamScheduler):
 
     Args:
         optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         milestones (list): List of epoch indices. Must be increasing.
         gamma (float): Multiplicative factor of parameter value decay.
             Defaults to 0.1.
@@ -401,6 +405,8 @@ class ConstantParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         factor (float): The number we multiply parameter value until the
             milestone. Defaults to 1./3.
         begin (int): Step at which to start updating the parameters.
@@ -488,6 +494,8 @@ class ExponentialParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         gamma (float): Multiplicative factor of parameter value decay.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
@@ -585,6 +593,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         T_max (int, optional): Maximum number of iterations. If not specified,
             use ``end - begin``. Defaults to None.
         eta_min (float): Minimum parameter value. Defaults to 0.
@@ -684,6 +694,8 @@ class LinearParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         start_factor (float): The number we multiply parameter value in the
             first epoch. The multiplication factor changes towards end_factor
             in the following epochs. Defaults to 1./3.
@@ -780,6 +792,8 @@ class PolyParamScheduler(_ParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         eta_min (float): Minimum parameter value at the end of scheduling.
             Defaults to 0.
         power (float): The power of the polynomial. Defaults to 1.0.
@@ -882,6 +896,8 @@ class OneCycleParamScheduler(_ParamScheduler):
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
         eta_max (float or list): Upper parameter value boundaries in the cycle
             for each parameter group.
         total_steps (int): The total number of steps in the cycle. Note that
@@ -1098,6 +1114,32 @@ class OneCycleParamScheduler(_ParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class CosineRestartParamScheduler(_ParamScheduler):
+    """Cosine annealing with restarts learning rate scheme.
+
+    Args:
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
+        periods (list[int]): Periods for each cosine anneling cycle.
+        restart_weights (list[float]): Restart weights at each
+            restart iteration. Defaults to [1].
+        eta_min (float): Minimum parameter value at the end of scheduling.
+            Defaults to None.
+        eta_min_ratio (float, optional): The ratio of minimum parameter value
+            to the base parameter value. Either `min_lr` or `min_lr_ratio`
+            should be specified. Default: None.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
 
     def __init__(self,
                  optimizer: Union[Optimizer, OptimWrapper],
@@ -1164,6 +1206,7 @@ class CosineRestartParamScheduler(_ParamScheduler):
         """Compute value using chainable form of the scheduler."""
         idx = self.get_position_from_periods(self.last_step,
                                              self.cumulative_periods)
+        # if current step is not in the periods, return origin parameters
         if idx is None:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
@@ -1196,8 +1239,8 @@ class CosineRestartParamScheduler(_ParamScheduler):
         return values
 
     @staticmethod
-    def get_position_from_periods(iteration: int,
-                                  cumulative_periods: List[int]):
+    def get_position_from_periods(
+            iteration: int, cumulative_periods: List[int]) -> Optional[int]:
         """Get the position from a period list.
 
         It will return the index of the right-closest number in the period
@@ -1212,8 +1255,10 @@ class CosineRestartParamScheduler(_ParamScheduler):
             cumulative_periods (list[int]): Cumulative period list.
 
         Returns:
-            int: The position of the right-closest number in the period list.
+            Optional[int]: The position of the right-closest number in the
+            period list. If not in the period, return None.
         """
         for i, period in enumerate(cumulative_periods):
             if iteration < period:
                 return i
+        return None

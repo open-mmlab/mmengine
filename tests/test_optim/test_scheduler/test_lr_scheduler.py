@@ -7,8 +7,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
-                                      ExponentialLR, LinearLR, MultiStepLR,
-                                      OneCycleLR, PolyLR, StepLR,
+                                      CosineRestartLR, ExponentialLR, LinearLR,
+                                      MultiStepLR, OneCycleLR, PolyLR, StepLR,
                                       _ParamScheduler)
 from mmengine.testing import assert_allclose
 
@@ -333,6 +333,34 @@ class TestLRScheduler(TestCase):
             self.optimizer, power=power, eta_min=min_lr, end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
+    def test_cosine_restart_scheduler(self):
+        with self.assertRaises(AssertionError):
+            CosineRestartLR(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0,
+                eta_min_ratio=0.1)
+        with self.assertRaises(AssertionError):
+            CosineRestartLR(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5, 0.0],
+                eta_min=0)
+        single_targets = [
+            0.05, 0.0426776, 0.025, 0.00732233, 0.025, 0.022612712, 0.01636271,
+            0.0086372, 0.0023872, 0.0023872
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+        scheduler = CosineRestartLR(
+            self.optimizer,
+            periods=[4, 5],
+            restart_weights=[1, 0.5],
+            eta_min=0)
+        self._test_scheduler_value(scheduler, targets, epochs=10)
+
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
         scheduler = construct()
         for _ in range(epochs):
@@ -385,6 +413,20 @@ class TestLRScheduler(TestCase):
         self._check_scheduler_state_dict(
             lambda: PolyLR(self.optimizer, power=0.5, eta_min=0.001),
             lambda: PolyLR(self.optimizer, power=0.8, eta_min=0.002),
+            epochs=10)
+
+    def test_cosine_restart_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: CosineRestartLR(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0),
+            lambda: CosineRestartLR(
+                self.optimizer,
+                periods=[4, 6],
+                restart_weights=[1, 0.5],
+                eta_min=0),
             epochs=10)
 
     def test_step_scheduler_convert_iterbased(self):
