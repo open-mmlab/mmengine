@@ -2145,8 +2145,7 @@ class TestRunner(TestCase):
         resumed_cfg.experiment_name = 'test_checkpoint19'
         runner = Runner.from_cfg(resumed_cfg)
         runner.resume(path)
-        self.assertEqual(runner.param_schedulers['linear1'], [])
-        self.assertEqual(runner.param_schedulers['linear2'], [])
+        self.assertIsNone(runner.param_schedulers)
 
     def test_build_runner(self):
         # No need to test other cases which have been tested in
