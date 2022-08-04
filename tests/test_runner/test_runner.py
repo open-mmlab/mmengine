@@ -457,11 +457,12 @@ class TestRunner(TestCase):
         # 1.2 val_dataloader, val_evaluator, val_cfg
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init6'
-        cfg.pop('val_dataloader')
+        cfg.pop('val_cfg')
         with self.assertRaisesRegex(ValueError, 'either all None or not None'):
             Runner(**cfg)
 
         cfg.experiment_name = 'test_init7'
+        cfg.pop('val_dataloader')
         cfg.pop('val_evaluator')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
@@ -474,11 +475,12 @@ class TestRunner(TestCase):
         # 1.3 test_dataloader, test_evaluator and test_cfg
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_init9'
-        cfg.pop('test_dataloader')
+        cfg.pop('test_cfg')
         with self.assertRaisesRegex(ValueError, 'either all None or not None'):
             runner = Runner(**cfg)
 
         cfg.experiment_name = 'test_init10'
+        cfg.pop('test_dataloader')
         cfg.pop('test_evaluator')
         runner = Runner(**cfg)
         self.assertIsInstance(runner, Runner)
@@ -1608,7 +1610,7 @@ class TestRunner(TestCase):
         cfg.pop('val_cfg')
         cfg.pop('val_evaluator')
         runner = Runner.from_cfg(cfg)
-        with self.assertRaisesRegex(AssertionError, 'val_dataloader'):
+        with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.val()
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1660,7 +1662,7 @@ class TestRunner(TestCase):
         cfg.pop('test_cfg')
         cfg.pop('test_evaluator')
         runner = Runner.from_cfg(cfg)
-        with self.assertRaisesRegex(AssertionError, 'test_dataloader'):
+        with self.assertRaisesRegex(RuntimeError, 'should not be None'):
             runner.test()
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
