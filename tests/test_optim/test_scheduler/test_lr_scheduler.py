@@ -596,7 +596,7 @@ class TestLRScheduler(TestCase):
 
     def test_onecycle_lr(self):
         # test linear annealing
-        target = [1, 13, 25, 21.5, 18, 14.5, 11, 7.5, 4, 0.5]
+        target = [1., 13., 25., 21.5, 18., 14.5, 11., 7.5, 4., 0.5]
         scheduler = OneCycleLR(
             self.optimizer,
             eta_max=25,
@@ -605,7 +605,7 @@ class TestLRScheduler(TestCase):
             anneal_strategy='linear')
         self._test_scheduler_value(scheduler, [target], 10)
         # test linear annealing three phase
-        target = [1, 9, 17, 25, 17, 9, 1, 0.75, 0.5, 0.25]
+        target = [1., 9., 17., 25., 17., 9., 1., 0.75, 0.5, 0.25]
         scheduler = OneCycleLR(
             self.optimizer,
             eta_max=25,
@@ -623,7 +623,7 @@ class TestLRScheduler(TestCase):
             return end + (start - end) / 2.0 * cos_out
 
         target = [
-            1, 13, 25,
+            1., 13., 25.,
             annealing_cos(25, 0.5, 1 / 7.0),
             annealing_cos(25, 0.5, 2 / 7.0),
             annealing_cos(25, 0.5, 3 / 7.0),

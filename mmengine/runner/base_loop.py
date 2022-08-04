@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 from torch.utils.data import DataLoader
 
@@ -33,5 +33,5 @@ class BaseLoop(metaclass=ABCMeta):
         return self._runner
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self) -> Any:
         """Execute loop."""

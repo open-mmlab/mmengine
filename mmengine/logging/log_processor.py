@@ -143,6 +143,7 @@ class LogProcessor:
         if self.by_epoch:
             if mode in ['train', 'val']:
                 cur_epoch = self._get_epoch(runner, mode)
+                tag['epoch'] = cur_epoch
                 log_str = (f'Epoch({mode}) [{cur_epoch}]'
                            f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
             else:

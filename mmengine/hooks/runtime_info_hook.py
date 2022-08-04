@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence
 
-from mmengine.registry import HOOKS
+from ..registry import HOOKS
+from ..utils import get_git_hash
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]
@@ -18,12 +19,23 @@ class RuntimeInfoHook(Hook):
 
     priority = 'VERY_HIGH'
 
+    def before_run(self, runner) -> None:
+        import mmengine
+        metainfo = dict(
+            cfg=runner.cfg.pretty_text,
+            seed=runner.seed,
+            experiment_name=runner.experiment_name,
+            mmengine_version=mmengine.__version__ + get_git_hash())
+        runner.message_hub.update_info_dict(metainfo)
+
     def before_train(self, runner) -> None:
         """Update resumed training state."""
         runner.message_hub.update_info('epoch', runner.epoch)
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_info('max_epochs', runner.max_epochs)
         runner.message_hub.update_info('max_iters', runner.max_iters)
+        runner.message_hub.update_info(
+            'dataset_meta', runner.train_dataloader.dataset.metainfo)
 
     def before_train_epoch(self, runner) -> None:
         """Update current epoch information before every epoch."""

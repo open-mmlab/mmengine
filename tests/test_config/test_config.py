@@ -688,6 +688,13 @@ class TestConfig:
             }]],
             e=[1, 2])
 
+        # Test use global variable in config function
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_py_function_global_var.py')
+        cfg = Config._file2dict(cfg_file)[0]
+        assert cfg['item1'] == 1
+        assert cfg['item2'] == 2
+
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_recursive_bases.py')
