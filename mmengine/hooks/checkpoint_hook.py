@@ -329,13 +329,13 @@ class CheckpointHook(Hook):
             return
 
         if self.by_epoch:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
-            cur_type, cur_time = 'epoch', runner.epoch + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'epoch_{}.pth').format(runner.epoch)
+            cur_type, cur_time = 'epoch', runner.epoch
         else:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-            cur_type, cur_time = 'iter', runner.iter + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'iter_{}.pth').format(runner.iter)
+            cur_type, cur_time = 'iter', runner.iter
 
         # handle auto in self.key_indicators and self.rules before the loop
         if 'auto' in self.key_indicators:
