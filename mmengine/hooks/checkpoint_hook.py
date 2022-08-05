@@ -317,6 +317,12 @@ class CheckpointHook(Hook):
                 else:
                     break
 
+        save_file = osp.join(runner.work_dir, 'last_checkpoint')
+        file_client = FileClient.infer_client(uri=self.out_dir)
+        filepath = file_client.join_path(self.out_dir, ckpt_filename)
+        with open(save_file, 'w') as f:
+            f.write(filepath)
+
     @master_only
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.

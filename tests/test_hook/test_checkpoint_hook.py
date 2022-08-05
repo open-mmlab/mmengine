@@ -280,6 +280,9 @@ class TestCheckpointHook:
         assert 'best_ckpt_mIoU' in runner.message_hub.runtime_info and \
             runner.message_hub.get_info('best_ckpt_mIoU') == best_mIoU_path
 
+        # after_val_epoch should not save last_checkpoint.
+        assert not osp.isfile(osp.join(runner.work_dir, 'last_checkpoint'))
+
     def test_after_train_epoch(self, tmp_path):
         runner = Mock()
         work_dir = str(tmp_path)
@@ -296,6 +299,11 @@ class TestCheckpointHook:
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
             runner.message_hub.get_info('last_ckpt') == (
                 f'{work_dir}/epoch_10.pth')
+        last_ckpt_path = osp.join(work_dir, 'last_checkpoint')
+        assert osp.isfile(last_ckpt_path)
+        with open(last_ckpt_path) as f:
+            filepath = f.read()
+            assert filepath == f'{work_dir}/epoch_10.pth'
 
         # epoch can not be evenly divided by 2
         runner.epoch = 10

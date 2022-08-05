@@ -2033,7 +2033,7 @@ class Runner:
 
         if by_epoch:
             # self.epoch increments 1 after
-            # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
+            # `self.call_hook('after_train_ep了och)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self.epoch + 1`
             meta.update(epoch=self.epoch + 1, iter=self.iter)
@@ -2095,10 +2095,6 @@ class Runner:
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
-
-        save_file = osp.join(self.work_dir, 'last_checkpoint')
-        with open(save_file, 'w') as f:
-            f.write(filepath)
 
     @master_only
     def dump_config(self) -> None:
