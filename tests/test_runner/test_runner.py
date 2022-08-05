@@ -1064,11 +1064,16 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, CustomTrainLoop)
 
-        # test use pytorch default init work function
+        # test use pytorch default worker_init_fn
         runner._train_dataloader.worker_init_fn = 'pytorch-default'
         runner._train_dataloader.num_workers = 0
         loop = runner.build_train_loop(cfg)
         self.assertIsNone(loop.dataloader.worker_init_fn)
+
+        # test use mmengine default worker_init_fn
+        runner._train_dataloader.pop('worker_init_fn')
+        loop = runner.build_train_loop(cfg)
+        self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
 
         for worker_init_fn_cfg in ['default', None]:
             runner._train_dataloader.worker_init_fn = worker_init_fn_cfg
