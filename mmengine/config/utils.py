@@ -50,6 +50,10 @@ def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
                 warnings.warn(f'There is not `Config` define in {model_cfg}')
                 continue
             cfg_name = model_cfg['Config'].partition('/')[-1]
+            # Some config could have multiple weights, we only pick the
+            # first one.
+            if cfg_name in cfg_dict:
+                continue
             cfg_dict[cfg_name] = model_cfg
     if cfg_path not in cfg_dict:
         raise ValueError(f'Expected configs: {cfg_dict.keys()}, but got '
