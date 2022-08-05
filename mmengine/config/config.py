@@ -171,7 +171,8 @@ class Config:
                 import_modules_from_strings(**cfg_dict['custom_imports'])
             except ImportError as e:
                 raise ImportError('Failed to custom import!') from e
-        return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
+        cfg = Config(cfg_dict, cfg_text=cfg_text, filename=filename)
+        return cfg.replace_cfg_vals()
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -207,7 +208,7 @@ class Config:
 
         cfg = Config.fromfile(temp_file.name)
         os.remove(temp_file.name)  # manually delete the temporary file
-        return cfg
+        return cfg.replace_cfg_vals()
 
     @staticmethod
     def _validate_py_syntax(filename: str):
@@ -801,6 +802,71 @@ class Config:
             '_cfg_dict',
             Config._merge_a_into_b(
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+
+    def replace_cfg_vals(self) -> 'Config':
+        """Replace the string "${key}" with the corresponding value.
+
+        Replace the "${key}" with the value of ori_cfg.key in the config. And
+        support replacing the chained ${key}. Such as, replace "${key0.key1}"
+        with the value of cfg.key0.key1. Code is modified from `vars.py
+        < https://github.com/microsoft/SoftTeacher/blob/main/ssod/utils/vars.py>`_  # noqa: E501
+
+        Returns:
+            Config: The config with "${key}" replaced by the corresponding value.
+        """
+
+        def get_value(cfg, key):
+            """Get the value."""
+            for k in key.split('.'):
+                cfg = cfg[k]
+            return cfg
+
+        def replace_value(cfg):
+            """Replace the value."""
+            if isinstance(cfg, dict):
+                return {
+                    key: replace_value(value)
+                    for key, value in cfg.items()
+                }
+            elif isinstance(cfg, list):
+                return [replace_value(item) for item in cfg]
+            elif isinstance(cfg, tuple):
+                return tuple(replace_value(item) for item in cfg)
+            elif isinstance(cfg, str):
+                # the format of string cfg may be:
+                # 1) "${key}", which will be replaced with cfg.key directly
+                # 2) "xxx${key}xxx" or "xxx${key1}xxx${key2}xxx",
+                # which will be replaced with the string of the cfg.key
+                keys = pattern_key.findall(cfg)
+                values = [get_value(self, key[2:-1]) for key in keys]
+                if len(keys) == 1 and keys[0] == cfg:
+                    # the format of string cfg is "${key}"
+                    cfg = values[0]
+                else:
+                    for key, value in zip(keys, values):
+                        # the format of string cfg is
+                        # "xxx${key}xxx" or "xxx${key1}xxx${key2}xxx"
+                        assert not isinstance(value, (dict, list, tuple)), \
+                            f'for the format of string cfg is ' \
+                            f"'xxxx${key}xxxx' or 'xxx${key}xxx${key}xxx', " \
+                            f"the type of the value of '${key}' " \
+                            f'can not be dict, list, or tuple' \
+                            f'but you input {type(value)} in {cfg}'
+                        cfg = cfg.replace(key, str(value))
+                return cfg
+            else:
+                return cfg
+
+        # the pattern of string "${key}"
+        pattern_key = re.compile(r'\$\{[a-zA-Z\d_.]*\}')
+        # the type of ori_cfg._cfg_dict is mmcv.utils.config.ConfigDict
+        updated_cfg = Config(
+            replace_value(self._cfg_dict), filename=self.filename)
+        # replace the model with model_wrapper
+        if updated_cfg.get('model_wrapper', None) is not None:
+            updated_cfg.model = updated_cfg.model_wrapper
+            updated_cfg.pop('model_wrapper')
+        return updated_cfg
 
 
 class DictAction(Action):
