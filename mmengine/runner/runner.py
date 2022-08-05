@@ -299,7 +299,8 @@ class Runner:
         # list of parameter schedulers. If `optim_wrapper` is
         # a `dict` with multiple optimizers, parsed `param_scheduler` will be
         # dict with multiple list of parameter schedulers.
-        self.param_schedulers = self._parse_scheduler_cfg(param_scheduler)
+        self._check_scheduler_cfg(param_scheduler)
+        self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -2113,18 +2114,45 @@ class Runner:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
 
-    def _parse_scheduler_cfg(
-        self, param_scheduler: Optional[Union[dict, list, _ParamScheduler]]
-    ) -> Optional[Union[dict, list, _ParamScheduler]]:
+    def _check_scheduler_cfg(
+            self, param_scheduler: Optional[Union[dict, list,
+                                                  _ParamScheduler]]) -> None:
         """Parse `param_scheduler` to a list of parameter schedulers, or a
         `dict` of which each value is a list of parameter schedulers.
 
-        If only one optimizer is used, parsed parameter scheduler should be a
+        If only one optimizer is used, the parsed config should be a
         list of parameter scheduler configs or instances. If multiple
-        optimizers are used, parsed parameter scheduler should be `dict`.
+        optimizers are used, the parsed config should be `dict`.
         Its key should be consistent with the optimizer `dict` and its value
         should be a list of parameter scheduler configs or instances. See
         :meth:`build_param_scheduler` for more details.
+
+        Examples:
+            >>> # valid scheduler:
+            >>> # empty scheduler
+            >>> scheduler = None
+            >>> # Single scheduler
+            >>> scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+            >>> # Single list schedulers
+            >>> scheduler = [dict(type='MultiStepLR', milestones=[1, 2]),
+            >>>              dict(type='MultiStepLR', milestones=[2, 3])]
+            >>> # `dict` of schedulers
+            >>> scheduler = dict(linear1=dict(type='MultiStepLR', milestones=[1, 2]),  # noqa: E501
+            >>>                  linear2=dict(type='MultiStepLR', milestones=[1, 2]))  # noqa: E501
+            >>> # `dict` of `list` of schedulers
+            >>> scheduler = dict(linear1=[dict(type='MultiStepLR', milestones=[1, 2])],  # noqa: E501
+            >>>                  linear2=[dict(type='MultiStepLR', milestones=[1, 2])])  # noqa: E501
+            >>> # Single built scheduler
+            >>> from mmengine.optim import MultiStepLR
+            >>> scheduler = MultiStepLR(milestones=[1, 2], optimizer=optimizer)
+            >>> # Single built list schedulers
+            >>> scheduler = [MultiStepLR(milestones=[1, 2], optimizer=optimizer)]  # noqa: E501
+            >>> # dict of built scheduler
+            >>> scheduler = dict(linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),  # noqa: E501
+            >>>                  linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))  # noqa: E501
+            >>> # dict of built list schedulers
+            >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],  # noqa: E501
+            >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])  # noqa: E501
 
         Args:
             param_scheduler (dict or list): The original parameter scheduler.
@@ -2134,16 +2162,19 @@ class Runner:
         """
         param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
-            return None
-        elif is_seq_of(param_scheduler, (dict, _ParamScheduler)):
-            param_schedulers = param_scheduler  # type: ignore
-        elif isinstance(param_scheduler, _ParamScheduler):
-            param_schedulers = param_scheduler
+            return
+        if isinstance(param_scheduler, _ParamScheduler):
+            return
+        if is_seq_of(param_scheduler, _ParamScheduler):
+            return
+
+        if is_seq_of(param_scheduler, dict):
+            for _param_scheduler in param_scheduler:
+                assert 'type' in _param_scheduler, (
+                    'Each parameter sheduler should contain the key type, '
+                    f'but got {_param_scheduler}')
         elif isinstance(param_scheduler, dict):
-            if 'type' in param_scheduler:
-                param_schedulers = param_scheduler
-            else:
-                param_schedulers = dict()
+            if 'type' not in param_scheduler:
                 for key, _param_scheduler in param_scheduler.items():
                     assert isinstance(
                         _param_scheduler,
@@ -2151,7 +2182,6 @@ class Runner:
                             'Each value of `param_scheduler` should be a '
                             f'dict or a list, but got {_param_scheduler} with '
                             f'type {type(_ParamScheduler)}')
-                    param_schedulers[key] = _param_scheduler
 
         else:
             raise TypeError(
@@ -2160,6 +2190,5 @@ class Runner:
                 '`param_scheduler` is a list of dict, it means a list of '
                 'scheduler configs for single optimizer. If it is a dict and '
                 'contains key `type`, it means a scheduler config for a '
-                'single optimizer. If it does not contain key type`, it means '
-                'multiple lists of schedulers for multiple optimizers.')
-        return param_schedulers
+                'single optimizer. If it does not contain key `type`, it '
+                'means multiple lists of schedulers for multiple optimizers.')
