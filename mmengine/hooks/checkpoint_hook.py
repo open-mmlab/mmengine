@@ -214,12 +214,11 @@ class CheckpointHook(Hook):
 
         if self.save_best is not None:
             if len(self.key_indicators) == 1:
-                if self.save_best is not None:
-                    if 'best_ckpt' not in runner.message_hub.runtime_info:
-                        self.best_ckpt_path = None
-                    else:
-                        self.best_ckpt_path = runner.message_hub.get_info(
-                            'best_ckpt')
+                if 'best_ckpt' not in runner.message_hub.runtime_info:
+                    self.best_ckpt_path = None
+                else:
+                    self.best_ckpt_path = runner.message_hub.get_info(
+                        'best_ckpt')
             else:
                 for key_indicator in self.key_indicators:
                     best_ckpt_name = f'best_ckpt_{key_indicator}'
@@ -324,7 +323,7 @@ class CheckpointHook(Hook):
 
         Args:
             runner (Runner): The runner of the training process.
-            metrics (dict): Metrics.
+            metrics (dict): Evaluation results of all metrics.
         """
         if not self.save_best:
             return
@@ -344,8 +343,6 @@ class CheckpointHook(Hook):
 
         # save best logic
         # get score from messagehub
-        # notice `_get_metirc_score` helps to infer
-        # self.rule when self.save_best is `auto`
         for key_indicator, rule in zip(self.key_indicators, self.rules):
             key_score = self._get_metric_score(metrics, key_indicator)
 
@@ -363,7 +360,7 @@ class CheckpointHook(Hook):
             else:
                 best_score = runner.message_hub.get_info(best_score_key)
 
-            if not key_score or not self.is_better_than[key_indicator](
+            if key_score is None or not self.is_better_than[key_indicator](
                     key_score, best_score):
                 continue
 

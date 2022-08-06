@@ -106,6 +106,17 @@ class TestCheckpointHook:
         else:
             assert False
 
+        # test error when number of rules and metrics are not same
+        with pytest.raises(AssertionError) as assert_error:
+            CheckpointHook(
+                interval=1,
+                save_best=['mIoU', 'acc'],
+                rule=['greater', 'greater', 'less'],
+                by_epoch=True)
+        error_message = ('Number of "rule" must be 1 or the same as number of '
+                         '"save_best", but got 3.')
+        assert error_message in str(assert_error.value)
+
         # if save_best is None,no best_ckpt meta should be stored
         eval_hook = CheckpointHook(interval=2, by_epoch=True, save_best=None)
         eval_hook.before_train(runner)
@@ -171,6 +182,12 @@ class TestCheckpointHook:
             interval=2, save_best=['acc', 'mIoU'], rule='greater')
         assert eval_hook.key_indicators == ['acc', 'mIoU']
         assert eval_hook.rules == ['greater', 'greater']
+
+        # test multi `save_best` with multi rules
+        eval_hook = CheckpointHook(
+            interval=2, save_best=['FID', 'IS'], rule=['less', 'greater'])
+        assert eval_hook.key_indicators == ['FID', 'IS']
+        assert eval_hook.rules == ['less', 'greater']
 
         # test multi `save_best` with default rule
         eval_hook = CheckpointHook(interval=2, save_best=['acc', 'mIoU'])
