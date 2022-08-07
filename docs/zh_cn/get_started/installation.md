@@ -46,10 +46,10 @@ pip install mmengine
 1. 构建镜像
 
    ```bash
-   docker build -t mmengine https://github.com/open-mmlab/mmengine.git#master:docker/release
+   docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
    ```
 
-   更多构建方式请参考 [mmengine/docker](https://github.com/open-mmlab/mmcv/tree/master/docker)。
+   更多构建方式请参考 [mmengine/docker](https://github.com/open-mmlab/mmengine/tree/main/docker)。
 
 2. 运行镜像
 
