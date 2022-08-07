@@ -26,6 +26,12 @@
    api.rst
 
 .. toctree::
+   :maxdepth: 1
+   :caption: 下游组件
+
+   component.md
+
+.. toctree::
    :caption: 语言切换
 
    switch_language.md
