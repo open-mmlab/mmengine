@@ -2,6 +2,13 @@
 =========================================
 您可以在页面左下角切换中英文文档。
 
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 示例
+
+   examples/resume.md
+
 .. toctree::
    :maxdepth: 1
    :caption: 教程
