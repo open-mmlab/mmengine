@@ -77,7 +77,7 @@ runner = Runner(
 runner.train()
 ```
 
-下表是 3 个经典模型在 NVIDIA GPU V100 (32GB) 上的训练速度和精度对比
+下表是 3 个经典模型在 NVIDIA GPU V100 (32GB) 上分别使用 AMP 和 FP32 的训练速度和精度对比
 
 - 速度对比
 
