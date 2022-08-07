@@ -128,7 +128,7 @@ for optim_wrapper in optim_wrappers:
         optim_wapper.update_params(loss)
 ```
 
-显而易见的，使用优化器封装后，我们可以使用统一的代码实现不同的训练策略。其中`OptimWrapper` 为标准的单精度优化器封装，实现了梯度累加、梯度截断的功能，用户可以在构造实例时配置 `accumulative_counts` 和 `clip_grad` 参数来开启相应功能、 用于训练普通的单精度模型，`AmpOptimWrapper` 在 `OptimWrapper` 的基础上实现了混合精度相关的功能，在 `optim_context` 的上下文中进行网络的前向推理，即可实现混合精度训练。
+显而易见的，使用优化器封装后，我们可以使用统一的代码实现不同的训练策略。其中 `OptimWrapper` 为标准的单精度优化器封装，实现了梯度累加、梯度截断的功能，用户可以在构造实例时配置 `accumulative_counts` 和 `clip_grad` 参数来开启相应功能；`AmpOptimWrapper` 在 `OptimWrapper` 的基础上实现了混合精度相关的功能，在 `optim_context` 的上下文中进行网络的前向推理，即可实现混合精度训练。
 
 优化器封装还提供了 `update_params` 接口，实现了标准的参数更新流程，即：梯度反传、参数更新和梯度清零。因此上例中用户可以直接调用 `update_params`，而无需依次调用 `backward`、`step` 和 `zero_grad`。
 
