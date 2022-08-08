@@ -1,11 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
 import logging
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+import torch.nn as nn
 
 from ..config import Config, ConfigDict
 from ..utils import ManagerMixin
 from .registry import Registry
+
+if TYPE_CHECKING:
+    from ..optim.scheduler import _ParamScheduler
+    from ..runner import Runner
 
 
 def build_from_cfg(
@@ -131,7 +137,7 @@ def build_from_cfg(
 
 
 def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
-                          registry: Registry) -> Any:
+                          registry: Registry) -> 'Runner':
     """Build a Runner object.
     Examples:
         >>> from mmengine.registry import Registry, build_runner_from_cfg
@@ -203,7 +209,11 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                 f'{cls_location}.py: {e}')
 
 
-def build_model_from_cfg(cfg, registry, default_args=None):
+def build_model_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: Registry,
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
+        nn.Module:
     """Build a PyTorch model from config dict(s). Different from
     ``build_from_cfg``, if cfg is a list, a ``nn.Sequential`` will be built.
 
@@ -226,3 +236,69 @@ def build_model_from_cfg(cfg, registry, default_args=None):
         return Sequential(*modules)
     else:
         return build_from_cfg(cfg, registry, default_args)
+
+
+def build_scheduler_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: Registry,
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
+        '_ParamScheduler':
+    """Builds a ``ParamScheduler`` instance from config.
+
+    ``ParamScheduler`` supports building instance by its constructor or
+    method ``build_iter_from_epoch``. Therefore, its registry needs a build
+    function to handle both cases.
+
+    Args:
+        cfg (dict or ConfigDict or Config): Config dictionary. If it contains
+            the key ``convert_to_iter_based``, instance will be built by method
+            ``convert_to_iter_based``, otherwise instance will be built by its
+            constructor.
+        registry (:obj:`Registry`): The ``PARAM_SCHEDULERS`` registry.
+        default_args (dict or ConfigDict or Config, optional): Default
+            initialization arguments. It must contain key ``optimizer``. If
+            ``convert_to_iter_based`` is defined in ``cfg``, it must
+            additionally contain key ``epoch_length``. Defaults to None.
+
+    Returns:
+        object: The constructed ``ParamScheduler``.
+    """
+    assert isinstance(
+        cfg,
+        (dict, ConfigDict, Config
+         )), f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}'
+    assert isinstance(
+        registry, Registry), ('registry should be a mmengine.Registry object',
+                              f'but got {type(registry)}')
+
+    args = cfg.copy()
+    if default_args is not None:
+        for name, value in default_args.items():
+            args.setdefault(name, value)
+    scope = args.pop('_scope_', None)
+    with registry.switch_scope_and_registry(scope) as registry:
+        convert_to_iter = args.pop('convert_to_iter_based', False)
+        if convert_to_iter:
+            scheduler_type = args.pop('type')
+            assert 'epoch_length' in args and args.get('by_epoch', True), (
+                'Only epoch-based parameter scheduler can be converted to '
+                'iter-based, and `epoch_length` should be set')
+            if isinstance(scheduler_type, str):
+                scheduler_cls = registry.get(scheduler_type)
+                if scheduler_cls is None:
+                    raise KeyError(
+                        f'{scheduler_type} is not in the {registry.name} '
+                        'registry. Please check whether the value of '
+                        f'`{scheduler_type}` is correct or it was registered '
+                        'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+                    )
+            elif inspect.isclass(scheduler_type):
+                scheduler_cls = scheduler_type
+            else:
+                raise TypeError('type must be a str or valid type, but got '
+                                f'{type(scheduler_type)}')
+            return scheduler_cls.build_iter_from_epoch(  # type: ignore
+                **args)
+        else:
+            args.pop('epoch_length', None)
+            return build_from_cfg(args, registry)

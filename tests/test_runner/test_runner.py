@@ -993,11 +993,6 @@ class TestRunner(TestCase):
         # 5.1 train loop should be built before converting scheduler
         cfg = dict(
             type='MultiStepLR', milestones=[1, 2], convert_to_iter_based=True)
-        with self.assertRaisesRegex(
-                AssertionError,
-                'Scheduler can only be converted to iter-based when '
-                'train loop is built.'):
-            runner.build_param_scheduler(cfg)
 
         # 5.2 convert epoch-based to iter-based scheduler
         cfg = dict(
