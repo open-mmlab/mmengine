@@ -12,14 +12,16 @@ import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import check_file_exist, import_modules_from_strings
-from .utils import RemoveAssignFromAST
+from mmengine.utils import (check_file_exist, check_install_package,
+                            get_installed_path, import_modules_from_strings)
+from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
+                    _get_external_cfg_path, _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -393,16 +395,26 @@ class Config:
             # Handle base files
             base_cfg_dict = ConfigDict()
             cfg_text_list = list()
-            for base_cfg_path in Config._parse_base_files(
-                    temp_config_file.name):
-                cfg_dir = osp.dirname(filename)
-                _cfg_dict, _cfg_text = Config._file2dict(
-                    osp.join(cfg_dir, base_cfg_path))
+            for base_cfg_path in Config._get_base_files(temp_config_file.name):
+                base_cfg_path, scope = Config._get_cfg_path(
+                    base_cfg_path, filename)
+                _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
                 cfg_text_list.append(_cfg_text)
                 duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
+
+                # _dict_to_config_dict will do the following things:
+                # 1. Recursively converts ``dict`` to :obj:`ConfigDict`.
+                # 2. Set `_scope_` for the outer dict variable for the base
+                # config.
+                # 3. Set `scope` attribute for each base variable. Different
+                # from `_scope_`， `scope` is not a key of base dict,
+                # `scope` attribute will be parsed to key `_scope_` by
+                # function `_parse_scope` only if the base variable is
+                # accessed by the current config.
+                _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
@@ -427,6 +439,11 @@ class Config:
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
             temp_config_file.close()
+
+            # If the current config accesses a base variable of base
+            # configs, The ``scope`` attribute of corresponding variable
+            # will be converted to the `_scope_`.
+            Config._parse_scope(cfg_dict)
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
@@ -464,19 +481,76 @@ class Config:
         return cfg_dict, cfg_text
 
     @staticmethod
-    def _parse_base_files(file_path: str) -> List[str]:
-        """Get paths of all base config files.
+    def _dict_to_config_dict(cfg: dict,
+                             scope: Optional[str] = None,
+                             has_scope=True):
+        """Recursively converts ``dict`` to :obj:`ConfigDict`.
 
         Args:
-            file_path (str): Path of config.
+            cfg (dict): Config dict.
+            scope (str, optional): Scope of instance.
+            has_scope (bool): Whether to add `_scope_` key to config dict.
 
         Returns:
-            List[str]: paths of all base files .
+            ConfigDict: Converted dict.
         """
-        file_format = file_path.partition('.')[-1]
+        # Only the outer dict with key `type` should have the key `_scope_`.
+        if isinstance(cfg, dict):
+            if has_scope and 'type' in cfg:
+                has_scope = False
+                if scope is not None and cfg.get('_scope_', None) is None:
+                    cfg._scope_ = scope  # type: ignore
+            cfg = ConfigDict(cfg)
+            dict.__setattr__(cfg, 'scope', scope)
+            for key, value in cfg.items():
+                cfg[key] = Config._dict_to_config_dict(
+                    value, scope=scope, has_scope=has_scope)
+        elif isinstance(cfg, tuple):
+            cfg = tuple(
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg)
+        elif isinstance(cfg, list):
+            cfg = [
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg
+            ]
+        return cfg
+
+    @staticmethod
+    def _parse_scope(cfg: dict) -> None:
+        """Adds ``_scope_`` to :obj:`ConfigDict` instance, which means a base
+        variable.
+
+        If the config dict already has the scope, scope will not be
+        overwritten.
+
+        Args:
+            cfg (dict): Config needs to be parsed with scope.
+        """
+        if isinstance(cfg, ConfigDict):
+            cfg._scope_ = cfg.scope
+        elif isinstance(cfg, (tuple, list)):
+            [Config._parse_scope(value) for value in cfg]
+        else:
+            return
+
+    @staticmethod
+    def _get_base_files(filename: str) -> list:
+        """Get the base config file.
+
+        Args:
+            filename (str): The config file.
+
+        Raises:
+            TypeError: Name of config file.
+
+        Returns:
+            list: A list of base config
+        """
+        file_format = filename.partition('.')[-1]
         if file_format == 'py':
-            Config._validate_py_syntax(file_path)
-            with open(file_path) as f:
+            Config._validate_py_syntax(filename)
+            with open(filename) as f:
                 codes = ast.parse(f.read()).body
 
                 def is_base_line(c):
@@ -492,7 +566,8 @@ class Config:
                 else:
                     base_files = []
         elif file_format in ('yml', 'yaml', 'json'):
-            cfg_dict = load(file_path)
+            import mmengine
+            cfg_dict = mmengine.load(filename)
             base_files = cfg_dict.get(BASE_KEY, [])
         else:
             raise TypeError('The config type should be py, json, yaml or '
@@ -500,6 +575,43 @@ class Config:
         base_files = base_files if isinstance(base_files,
                                               list) else [base_files]
         return base_files
+
+    @staticmethod
+    def _get_cfg_path(cfg_path: str,
+                      filename: str) -> Tuple[str, Optional[str]]:
+        """Get the config path from the current or external package.
+
+        Args:
+            cfg_path (str): Relative path of config.
+            filename (str): The config file being parsed.
+
+        Returns:
+            Tuple[str, str or None]: Path and scope of config. If the config
+            is not an external config, the scope will be `None`.
+        """
+        if '::' in cfg_path:
+            # `cfg_path` startswith '::' means an external config path.
+            # Get package name and relative config path.
+            scope = cfg_path.partition('::')[0]
+            package, cfg_path = _get_package_and_cfg_path(cfg_path)
+            # Get installed package path.
+            check_install_package(package)
+            package_path = get_installed_path(package)
+            try:
+                # Get config path from meta file.
+                cfg_path = _get_external_cfg_path(package_path, cfg_path)
+            except ValueError:
+                # Since base config does not have a metafile, it should be
+                # concatenated with package path and relative config path.
+                cfg_path = _get_external_cfg_base_path(package_path, cfg_path)
+            except FileNotFoundError as e:
+                raise e
+            return cfg_path, scope
+        else:
+            # Get local config path.
+            cfg_dir = osp.dirname(filename)
+            cfg_path = osp.join(cfg_dir, cfg_path)
+            return cfg_path, None
 
     @staticmethod
     def _merge_a_into_b(a: dict,

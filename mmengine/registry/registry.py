@@ -4,8 +4,10 @@ import logging
 import sys
 from collections.abc import Callable
 from contextlib import contextmanager
+from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from ..config.utils import PKG2PROJECT
 from ..utils import is_seq_of
 from .default_scope import DefaultScope
 
@@ -239,6 +241,13 @@ class Registry:
             # Get registry by scope
             if default_scope is not None:
                 scope_name = default_scope.scope_name
+                if scope_name in PKG2PROJECT:
+                    try:
+                        module = import_module(
+                            f'{PKG2PROJECT[scope_name]}.utils')
+                        module.register_all_modules()  # type: ignore
+                    except ImportError as e:
+                        raise e
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:

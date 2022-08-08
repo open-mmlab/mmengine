@@ -8,6 +8,8 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    requires_executable, requires_package, slice_list,
                    to_1tuple, to_2tuple, to_3tuple, to_4tuple, to_ntuple,
                    tuple_cast)
+from .package_utils import (call_command, check_install_package,
+                            get_installed_path, is_installed)
 from .parrots_wrapper import TORCH_VERSION
 from .path import (check_file_exist, fopen, is_abs, is_filepath,
                    mkdir_or_exist, scandir, symlink)
@@ -28,5 +30,6 @@ __all__ = [
     'is_method_overridden', 'has_method', 'mmcv_full_available',
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'ManagerMeta', 'ManagerMixin', 'set_multi_processing', 'has_batch_norm',
-    'is_abs', 'revert_sync_batchnorm'
+    'is_abs', 'is_installed', 'call_command', 'get_installed_path',
+    'check_install_package', 'is_abs', 'revert_sync_batchnorm'
 ]

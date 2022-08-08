@@ -193,7 +193,7 @@ class TestRegistry:
 
         return registries
 
-    def test_get_root_registry(self):
+    def test__get_root_registry(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
@@ -304,7 +304,7 @@ class TestRegistry:
         assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
 
-    def test_search_child(self):
+    def test__search_child(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
