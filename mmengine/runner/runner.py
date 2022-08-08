@@ -2037,7 +2037,6 @@ class Runner:
             cfg=self.cfg.pretty_text,
             dataset_meta=self.train_dataloader.dataset.metainfo,
             seed=self.seed,
-            world_size=self.world_size,
             experiment_name=self.experiment_name,
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine_version=mmengine.__version__ + get_git_hash())

@@ -1822,7 +1822,6 @@ class TestRunner(TestCase):
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_4.pth')))
 
         ckpt = torch.load(path)
-        self.assertEqual(ckpt['meta']['world_size'], runner.world_size)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
         self.assertEqual(ckpt['meta']['dataset_meta'],
