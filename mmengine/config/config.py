@@ -404,16 +404,16 @@ class Config:
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
                                    f'Duplicate keys: {duplicate_keys}')
-                # _dict_to_config_dict will do 3 things:
-                # 1. Recursively convert `dict` in base config to `ConfigDict`
-                # instance.
-                # 2. Add key `_scope_` to the outer `dict` variable, which
-                # has key `type`.
-                # 3. Add `scope` attribute to each dict variable. Different
 
-                # If the config accesses a base variable of base configs,
-                # The ``scope`` attribute of corresponding variable will be
-                # converted to the `_scope_`
+                # _dict_to_config_dict will do the following things:
+                # 1. Recursively converts ``dict`` to :obj:`ConfigDict`.
+                # 2. Set `_scope_` for the outer dict variable for the base
+                # config.
+                # 3. Set `scope` attribute for each base variable. Different
+                # from `_scope_`， `scope` is not a key of base dict,
+                # `scope` attribute will be parsed to key `_scope_` by
+                # function `_parse_scope` only if the base variable is
+                # accessed by the current config.
                 _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
                 base_cfg_dict.update(_cfg_dict)
 
@@ -439,7 +439,10 @@ class Config:
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
             temp_config_file.close()
-            # Add `_scope_` to accessed base keys.
+
+            # If the current config accesses a base variable of base
+            # configs, The ``scope`` attribute of corresponding variable
+            # will be converted to the `_scope_`.
             Config._parse_scope(cfg_dict)
 
         # check deprecation information
