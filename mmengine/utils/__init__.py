@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from .collect_env import collect_env
 from .hub import load_url
 from .manager import ManagerMeta, ManagerMixin
 from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
@@ -31,5 +32,5 @@ __all__ = [
     'digit_version', 'get_git_hash', 'TORCH_VERSION', 'load_url',
     'ManagerMeta', 'ManagerMixin', 'set_multi_processing', 'has_batch_norm',
     'is_abs', 'is_installed', 'call_command', 'get_installed_path',
-    'check_install_package', 'is_abs', 'revert_sync_batchnorm'
+    'check_install_package', 'is_abs', 'revert_sync_batchnorm', 'collect_env'
 ]

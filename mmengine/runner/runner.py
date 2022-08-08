@@ -37,9 +37,9 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                RUNNERS, VISUALIZERS, DefaultScope,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, is_seq_of, revert_sync_batchnorm,
-                            set_multi_processing)
+from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
+                            get_git_hash, is_list_of, is_seq_of,
+                            revert_sync_batchnorm, set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -361,6 +361,9 @@ class Runner:
         # Since `get_instance` could return any subclass of ManagerMixin. The
         # corresponding attribute needs a type hint.
         self.logger = self.build_logger(log_level=log_level)
+
+        # Collect and log environment information.
+        self._log_env(env_cfg)
 
         # collect information of all modules registered in the registries
         registries_info = count_registered_modules(
@@ -2138,9 +2141,6 @@ class Runner:
 
         Args:
             param_scheduler (dict or list): The original parameter scheduler.
-
-        Returns:
-            list or dict: Parsed parameter scheduler configs or instances.
         """  # noqa: E501
         param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
@@ -2174,3 +2174,29 @@ class Runner:
                 'contains key `type`, it means a scheduler config for a '
                 'single optimizer. If it does not contain key `type`, it '
                 'means multiple lists of schedulers for multiple optimizers.')
+
+    def _log_env(self, env_cfg: dict) -> None:
+        """Logging environment information of the current task.
+
+        Args:
+            env_cfg (dict): The environment config of the runner.
+        """
+        # Collect and log environment information.
+        env = collect_env()
+        runtime_env = OrderedDict()
+        runtime_env.update(env_cfg)
+        runtime_env.update(self._randomness_cfg)
+        runtime_env['Distributed launcher'] = self._launcher
+        runtime_env['Distributed training'] = self._distributed
+        runtime_env['GPU number'] = self._world_size
+
+        env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
+                                            for k, v in env.items())
+        runtime_env_info = '\n    ' + '\n    '.join(
+            f'{k}: {v}' for k, v in runtime_env.items())
+        dash_line = '-' * 60
+        self.logger.info('\n' + dash_line + '\nSystem environment:' +
+                         env_info + '\n'
+                         '\nRuntime environment:' + runtime_env_info + '\n' +
+                         dash_line + '\n')
+        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
