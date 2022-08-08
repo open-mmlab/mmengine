@@ -38,6 +38,9 @@ class ParamSchedulerHook(Hook):
                 if not scheduler.by_epoch:
                     scheduler.step()
 
+        if runner.param_schedulers is None:
+            return
+
         if isinstance(runner.param_schedulers, list):
             step(runner.param_schedulers)
         elif isinstance(runner.param_schedulers, dict):
@@ -61,6 +64,9 @@ class ParamSchedulerHook(Hook):
             for scheduler in param_schedulers:
                 if scheduler.by_epoch:
                     scheduler.step()
+
+        if runner.param_schedulers is None:
+            return
 
         if isinstance(runner.param_schedulers, list):
             step(runner.param_schedulers)

@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import platform
@@ -26,7 +27,7 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
@@ -37,7 +38,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, digit_version, get_git_hash,
-                            is_list_of, revert_sync_batchnorm,
+                            is_list_of, is_seq_of, revert_sync_batchnorm,
                             set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
@@ -293,12 +294,13 @@ class Runner:
                 'param_scheduler should be None when optimizer is None, '
                 f'but got {param_scheduler}')
 
-        if param_scheduler is None:
-            self.param_schedulers = []
-        elif not isinstance(param_scheduler, Sequence):
-            self.param_schedulers = [param_scheduler]
-        else:
-            self.param_schedulers = param_scheduler
+        # Parse `param_scheduler` to a list or a dict. If `optim_wrapper` is a
+        # `dict` with single optimizer, parsed param_scheduler will be a
+        # list of parameter schedulers. If `optim_wrapper` is
+        # a `dict` with multiple optimizers, parsed `param_scheduler` will be
+        # dict with multiple list of parameter schedulers.
+        self._check_scheduler_cfg(param_scheduler)
+        self.param_schedulers = param_scheduler
 
         val_related = [val_dataloader, val_cfg, val_evaluator]
         if not (all(item is None
@@ -1617,7 +1619,7 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
-        if self.param_schedulers:
+        if self.param_schedulers is not None:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
 
@@ -1936,9 +1938,16 @@ class Runner:
                 checkpoint['optimizer'])
 
         # resume param scheduler
+        if resume_param_scheduler and self.param_schedulers is None:
+            print_log(
+                '`resume_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip resuming parameter schedulers',
+                logger='current',
+                level=logging.WARNING)
+            resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)
+                self.param_schedulers)  # type: ignore
             if isinstance(self.param_schedulers, dict):
                 for name, schedulers in self.param_schedulers.items():
                     for scheduler, ckpt_scheduler in zip(
@@ -1946,8 +1955,9 @@ class Runner:
                         scheduler.load_state_dict(ckpt_scheduler)
             else:
                 for scheduler, ckpt_scheduler in zip(
-                        self.param_schedulers, checkpoint['param_schedulers']):
-                    scheduler.load_state_dict(ckpt_scheduler)  # type: ignore
+                        self.param_schedulers,  # type: ignore
+                        checkpoint['param_schedulers']):
+                    scheduler.load_state_dict(ckpt_scheduler)
 
         self._has_loaded = True
 
@@ -2067,6 +2077,13 @@ class Runner:
                     f'{self.optim_wrapper}')
 
         # save param scheduler state dict
+        if save_param_scheduler and self.param_schedulers is None:
+            print_log(
+                '`save_param_scheduler` is True but `self.param_schedulers` '
+                'is None, so skip saving parameter schedulers',
+                logger='current',
+                level=logging.WARNING)
+            save_param_scheduler = False
         if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
                 checkpoint['param_schedulers'] = dict()
@@ -2077,7 +2094,7 @@ class Runner:
                         checkpoint['param_schedulers'][name].append(state_dict)
             else:
                 checkpoint['param_schedulers'] = []
-                for scheduler in self.param_schedulers:
+                for scheduler in self.param_schedulers:  # type: ignore
                     state_dict = scheduler.state_dict()  # type: ignore
                     checkpoint['param_schedulers'].append(state_dict)
 
@@ -2096,3 +2113,82 @@ class Runner:
         else:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
+
+    def _check_scheduler_cfg(
+            self, param_scheduler: Optional[Union[dict, list,
+                                                  _ParamScheduler]]) -> None:
+        """Parse `param_scheduler` to a list of parameter schedulers, or a
+        `dict` of which each value is a list of parameter schedulers.
+
+        If only one optimizer is used, the parsed config should be a
+        list of parameter scheduler configs or instances. If multiple
+        optimizers are used, the parsed config should be `dict`.
+        Its key should be consistent with the optimizer `dict` and its value
+        should be a list of parameter scheduler configs or instances. See
+        :meth:`build_param_scheduler` for more details.
+
+        Examples:
+            >>> # valid scheduler:
+            >>> # empty scheduler
+            >>> scheduler = None
+            >>> # Single scheduler
+            >>> scheduler = dict(type='MultiStepLR', milestones=[1, 2])
+            >>> # Single list schedulers
+            >>> scheduler = [dict(type='MultiStepLR', milestones=[1, 2]),
+            >>>              dict(type='MultiStepLR', milestones=[2, 3])]
+            >>> # `dict` of schedulers
+            >>> scheduler = dict(linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+            >>>                  linear2=dict(type='MultiStepLR', milestones=[1, 2]))
+            >>> # `dict` of `list` of schedulers
+            >>> scheduler = dict(linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+            >>>                  linear2=[dict(type='MultiStepLR', milestones=[1, 2])])
+            >>> # Single built scheduler
+            >>> from mmengine.optim import MultiStepLR
+            >>> scheduler = MultiStepLR(milestones=[1, 2], optimizer=optimizer)
+            >>> # Single built list schedulers
+            >>> scheduler = [MultiStepLR(milestones=[1, 2], optimizer=optimizer)]
+            >>> # dict of built scheduler
+            >>> scheduler = dict(linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),
+            >>>                  linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))
+            >>> # dict of built list schedulers
+            >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
+            >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
+
+        Args:
+            param_scheduler (dict or list): The original parameter scheduler.
+
+        Returns:
+            list or dict: Parsed parameter scheduler configs or instances.
+        """  # noqa: E501
+        param_schedulers: Union[dict, list, _ParamScheduler]
+        if param_scheduler is None:
+            return
+        if isinstance(param_scheduler, _ParamScheduler):
+            return
+        if is_seq_of(param_scheduler, _ParamScheduler):
+            return
+
+        if is_seq_of(param_scheduler, dict):
+            for _param_scheduler in param_scheduler:
+                assert 'type' in _param_scheduler, (
+                    'Each parameter sheduler should contain the key type, '
+                    f'but got {_param_scheduler}')
+        elif isinstance(param_scheduler, dict):
+            if 'type' not in param_scheduler:
+                for key, _param_scheduler in param_scheduler.items():
+                    assert isinstance(
+                        _param_scheduler,
+                        (dict, tuple, list, _ParamScheduler)), (
+                            'Each value of `param_scheduler` should be a '
+                            f'dict or a list, but got {_param_scheduler} with '
+                            f'type {type(_ParamScheduler)}')
+
+        else:
+            raise TypeError(
+                '`param_scheduler` should be a `_ParamScheduler`, `dict`, '
+                f'list or a tuple, but got {type(param_scheduler)}. If '
+                '`param_scheduler` is a list of dict, it means a list of '
+                'scheduler configs for single optimizer. If it is a dict and '
+                'contains key `type`, it means a scheduler config for a '
+                'single optimizer. If it does not contain key `type`, it '
+                'means multiple lists of schedulers for multiple optimizers.')

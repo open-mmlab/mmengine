@@ -695,6 +695,13 @@ class TestConfig:
         assert cfg['item1'] == 1
         assert cfg['item2'] == 2
 
+        # Test support modifying the value of dict without defining base
+        # config.
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_py_modify_key.py')
+        cfg = Config._file2dict(cfg_file)[0]
+        assert cfg == dict(item1=dict(a=1))
+
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_recursive_bases.py')
