@@ -363,7 +363,7 @@ class Runner:
         self.logger = self.build_logger(log_level=log_level)
 
         # Collect and log environment information.
-        self._log_env(env_cfg, randomness, launcher)
+        self._log_env(env_cfg)
 
         # collect information of all modules registered in the registries
         registries_info = count_registered_modules(
@@ -2100,6 +2100,12 @@ class Runner:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
 
+    def _log_env(self, env_cfg: dict) -> None:
+        """Logging environment information of the current task.
+
+        Args:
+            env_cfg (dict): The environment config of the runner.
+        """
     def _check_scheduler_cfg(
             self, param_scheduler: Optional[Union[dict, list,
                                                   _ParamScheduler]]) -> None:
@@ -2139,9 +2145,6 @@ class Runner:
             >>> # dict of built list schedulers
             >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
             >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
-
-        Returns:
-            list or dict: Parsed parameter scheduler configs or instances.
         """  # noqa: E501
         param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
@@ -2181,10 +2184,10 @@ class Runner:
         env = collect_env()
         runtime_env = OrderedDict()
         runtime_env.update(env_cfg)
-        runtime_env.update(randomness)
-        runtime_env['launcher'] = launcher
-        runtime_env['distributed_training'] = self._distributed
-        runtime_env['gpu_num'] = self._world_size
+        runtime_env.update(self._randomness_cfg)
+        runtime_env['Distributed launcher'] = self._launcher
+        runtime_env['Distributed training'] = self._distributed
+        runtime_env['GPU number'] = self._world_size
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
                                             for k, v in env.items())
