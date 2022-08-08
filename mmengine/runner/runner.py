@@ -2100,12 +2100,6 @@ class Runner:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
 
-    def _log_env(self, env_cfg: dict) -> None:
-        """Logging environment information of the current task.
-
-        Args:
-            env_cfg (dict): The environment config of the runner.
-        """
     def _check_scheduler_cfg(
             self, param_scheduler: Optional[Union[dict, list,
                                                   _ParamScheduler]]) -> None:
@@ -2179,7 +2173,12 @@ class Runner:
                 'single optimizer. If it does not contain key `type`, it '
                 'means multiple lists of schedulers for multiple optimizers.')
 
-    def _log_env(self, env_cfg: dict, randomness: dict, launcher: str) -> None:
+    def _log_env(self, env_cfg: dict) -> None:
+        """Logging environment information of the current task.
+
+        Args:
+            env_cfg (dict): The environment config of the runner.
+        """
         # Collect and log environment information.
         env = collect_env()
         runtime_env = OrderedDict()
