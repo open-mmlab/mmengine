@@ -2137,29 +2137,29 @@ class Runner:
             >>> scheduler = [dict(type='MultiStepLR', milestones=[1, 2]),
             >>>              dict(type='MultiStepLR', milestones=[2, 3])]
             >>> # `dict` of schedulers
-            >>> scheduler = dict(linear1=dict(type='MultiStepLR', milestones=[1, 2]),  # noqa: E501
-            >>>                  linear2=dict(type='MultiStepLR', milestones=[1, 2]))  # noqa: E501
+            >>> scheduler = dict(linear1=dict(type='MultiStepLR', milestones=[1, 2]),
+            >>>                  linear2=dict(type='MultiStepLR', milestones=[1, 2]))
             >>> # `dict` of `list` of schedulers
-            >>> scheduler = dict(linear1=[dict(type='MultiStepLR', milestones=[1, 2])],  # noqa: E501
-            >>>                  linear2=[dict(type='MultiStepLR', milestones=[1, 2])])  # noqa: E501
+            >>> scheduler = dict(linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
+            >>>                  linear2=[dict(type='MultiStepLR', milestones=[1, 2])])
             >>> # Single built scheduler
             >>> from mmengine.optim import MultiStepLR
             >>> scheduler = MultiStepLR(milestones=[1, 2], optimizer=optimizer)
             >>> # Single built list schedulers
-            >>> scheduler = [MultiStepLR(milestones=[1, 2], optimizer=optimizer)]  # noqa: E501
+            >>> scheduler = [MultiStepLR(milestones=[1, 2], optimizer=optimizer)]
             >>> # dict of built scheduler
-            >>> scheduler = dict(linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),  # noqa: E501
-            >>>                  linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))  # noqa: E501
+            >>> scheduler = dict(linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),
+            >>>                  linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))
             >>> # dict of built list schedulers
-            >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],  # noqa: E501
-            >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])  # noqa: E501
+            >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
+            >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
 
         Args:
             param_scheduler (dict or list): The original parameter scheduler.
 
         Returns:
             list or dict: Parsed parameter scheduler configs or instances.
-        """
+        """  # noqa: E501
         param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
             return
