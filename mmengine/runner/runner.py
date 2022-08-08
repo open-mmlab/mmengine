@@ -403,6 +403,7 @@ class Runner:
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
+
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1263,9 +1264,8 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, (
-                    'expected customized evaluator with key `type`, but got '
-                    f'{evaluator}')
+                assert 'type' in evaluator, 'expected customized evaluator' \
+                                    f' with key `type`, but got {evaluator}'
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
@@ -2139,6 +2139,9 @@ class Runner:
             >>> # dict of built list schedulers
             >>> scheduler = dict(linear1=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)],
             >>>                  linear2=[MultiStepLR(milestones=[1, 2], optimizer=optimizer)])
+
+        Args:
+            param_scheduler (dict or list): The original parameter scheduler.
         """  # noqa: E501
         param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
