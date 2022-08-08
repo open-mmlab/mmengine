@@ -481,6 +481,7 @@ class Config:
 
                 def is_base_line(c):
                     return (isinstance(c, ast.Assign)
+                            and isinstance(c.targets[0], ast.Name)
                             and c.targets[0].id == BASE_KEY)
 
                 base_code = next((c for c in codes if is_base_line(c)), None)
