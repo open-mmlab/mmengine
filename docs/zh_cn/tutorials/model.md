@@ -15,4 +15,19 @@
 ## 基本模块（`BaseModule`）
 
 MMEngine 抽象出基本模块来配置模型初始化相关的参数。基本模块继承自 `nn.Module`，不仅具备 `nn.Module`
-的基本功能，还能根据构造参数实现相应的参数初始化逻辑。我们可以让自己的模型继承 `BaseModule`，通过配置 `init_cfg` 参数制定
+的基本功能，还能根据传参实现相应的参数初始化逻辑。我们可以让模型继承 `BaseModule`，通过配置 `init_cfg`
+实现自定义的参数初始化逻辑。
+
+### 加载预训练权重
+
+```python
+from mmengine.model import BaseModule
+
+class ResNet(BaseModule):
+  def __init__(self, depth, init_cfg, *args, **kwargs):
+    super().__init__(init_cfg)
+    ...
+
+pretrained = 'https://download.openmmlab.com/mmclassification/v0/resnet/resnet50_3rdparty-mill_in21k_20220331-faac000b.pth'
+model = ResNet(..., init_cfg=dict(Pretrained=pretrained))
+```

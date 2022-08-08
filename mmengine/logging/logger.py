@@ -162,7 +162,7 @@ class MMLogger(Logger, ManagerMixin):
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
         # Only rank0 `StreamHandler` will log messages below error level.
-        stream_handler.setLevel(log_level) if rank == 0 else \
+        stream_handler.setLevel(logging.NOTSET) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
 
