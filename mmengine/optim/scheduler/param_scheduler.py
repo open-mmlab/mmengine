@@ -1114,7 +1114,11 @@ class OneCycleParamScheduler(_ParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class CosineRestartParamScheduler(_ParamScheduler):
-    """Cosine annealing with restarts learning rate scheme.
+    """Sets the parameters of each parameter group according to the cosine
+    annealing with restarts scheme. The cosine restart policy anneals the
+    parameter from the initial value to `eta_min` with a cosine annealing
+    schedule and then restarts another period from the maximum value multiplied
+    with `restart_weight`.
 
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
