@@ -198,10 +198,10 @@ class TestCheckpointHook:
         eval_hook.before_train(runner)
         metrics = dict(acc=0.5, mIoU=0.6)
         eval_hook.after_val_epoch(runner, metrics)
-        best_acc_name = 'best_acc_epoch_10.pth'
+        best_acc_name = 'best_acc_epoch_9.pth'
         best_acc_path = eval_hook.file_client.join_path(
             eval_hook.out_dir, best_acc_name)
-        best_mIoU_name = 'best_mIoU_epoch_10.pth'
+        best_mIoU_name = 'best_mIoU_epoch_9.pth'
         best_mIoU_path = eval_hook.file_client.join_path(
             eval_hook.out_dir, best_mIoU_name)
         assert 'best_score_acc' in runner.message_hub.runtime_info and \
@@ -265,10 +265,10 @@ class TestCheckpointHook:
         eval_hook.before_train(runner)
         metrics = dict(acc=0.5, mIoU=0.6)
         eval_hook.after_val_epoch(runner, metrics)
-        best_acc_name = 'best_acc_iter_10.pth'
+        best_acc_name = 'best_acc_iter_9.pth'
         best_acc_path = eval_hook.file_client.join_path(
             eval_hook.out_dir, best_acc_name)
-        best_mIoU_name = 'best_mIoU_iter_10.pth'
+        best_mIoU_name = 'best_mIoU_iter_9.pth'
         best_mIoU_path = eval_hook.file_client.join_path(
             eval_hook.out_dir, best_mIoU_name)
         assert 'best_score_acc' in runner.message_hub.runtime_info and \
