@@ -243,8 +243,7 @@ class Registry:
                 scope_name = default_scope.scope_name
                 if scope_name in PKG2PROJECT:
                     try:
-                        module = import_module(
-                            f'{PKG2PROJECT[scope_name]}.utils')
+                        module = import_module(f'{scope_name}.utils')
                         module.register_all_modules()  # type: ignore
                     except ImportError as e:
                         raise e
