@@ -213,11 +213,120 @@ init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定�
 
 ### 定义基础模型
 
+基础模型实现了 `train_step`、`val_step` 和 `test_step` 接口，并要求子类必须实现 `forward`
+方法。要想理解为什么基础模型有这些接口约定，我们不妨先来看看 [Pytorch 官方提供的训练 FashionMNIST 的流程](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html)。
+
 #### Pytorch 标准训练流程
 
 ```python
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision.transforms import ToTensor, Lambda
 
+# 准备数据集
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+
+train_dataloader = DataLoader(training_data, batch_size=64)
+test_dataloader = DataLoader(test_data, batch_size=64)
+
+
+# 定义模型
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+
+model = NeuralNetwork()
+
+learning_rate = 1e-3
+batch_size = 64
+epochs = 5
+
+# Initialize the loss function
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+
+# 定义训练流程
+def train_loop(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    for batch, (X, y) in enumerate(dataloader):
+        # Compute prediction and loss
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), batch * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+# 定义测试流程
+def test_loop(dataloader, model, loss_fn):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    test_loss, correct = 0, 0
+
+    with torch.no_grad():
+        for X, y in dataloader:
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+
+for t in range(epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    train_loop(train_dataloader, model, loss_fn, optimizer)
+    test_loop(test_dataloader, model, loss_fn)
+print("Done!")
 ```
+
+我们不难发现，Pytorch 官方 demo 中，模型（`NeuralNetwork`）只负责前向推理，而损失计算、参数更新、结果预测的逻辑分别在
+`train_loop` 和 `test_loop`
+里实现。这样的结构非常适合训练优化逻辑比较简单的任务，即前向推理一次，计算一次梯度，更新一次参数。
+
+MMEngine
+作为通用的深度学习训练框架，需要应对不同任务、不同需求的参数更新逻辑，如果套用上例的训练流程，就会出现核心代码分散在不同模块的情况，这是不符合直觉的。以训练生成对抗网络为例，我们需要分别优化生成器和判别器，我们就需要在 `train_loop` 和 `test_step` 中增加和算法相关的训练、预测逻辑，这样的设计是明显不合理的：
+
+1. 模型的参数更新逻辑属于算法的一部分，不应该分散在各个模块内，既不利于阅读，也不利于维护。
+2. `test_loop` 和 `train_loop` 这一层的抽象容易和算法绑定，一个新的训练流程的算法会需要同时派生出新的 `loop` 和新的
+   `model`
+
+因此 MMEngine 重新划分了模型功能的边界，model 不仅需要负责前向推理，还需要负责参数更新、结果预测等功能，进而抽象出
+`train_step`、`val_step` 和 `test_step` 接口。
 
 [kaiming]: https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf
 [xavier]: http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
