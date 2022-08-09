@@ -326,7 +326,87 @@ MMEngine
    `model`
 
 因此 MMEngine 重新划分了模型功能的边界，model 不仅需要负责前向推理，还需要负责参数更新、结果预测等功能，进而抽象出
-`train_step`、`val_step` 和 `test_step` 接口。
+`train_step`、`val_step` 和 `test_step` 接口。此外基础模型的 `forward`
+接口也需要承担更多功能，需要在训练阶段返回损失，验证、测试阶段返回预测结果。
+
+- `forward(*args, mode=True, **kargs)`: 基础模型基类的代码实现约定 `forward` 要接受
+  `batch_inputs`, `data_samples`, `mode` 三个参数， 这实际上是 OpenMMLab
+  系列算法库的一个较为严格的约定，事实上基础模型的子类的 `forward` 接口对输入并没有那么严格的限制。如果 \[DataLoader\]
+  (https://pytorch.org/tutorials/beginner/basics/data_tutorial.html)
+  返回数据 `data`，train_step 会根据 `data` 类型调用 `model(*data)` 或 `model(**data)`，只要
+
+```python
+from torch.utils.data import DataLoader
+from torch import nn
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+from mmengine.model import BaseModel
+from mmengine.evaluator import BaseMetric
+from mmengine import Runner
+
+
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+
+train_dataloader = DataLoader(dataset=training_data, batch_size=64)
+test_dataloader = DataLoader(dataset=test_data, batch_size=64)
+
+
+class NeuralNetwork(BaseModel):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+        self.loss = nn.CrossEntropyLoss()
+
+    def forward(self, img, label, mode='tensor'):
+        x = self.flatten(img)
+        pred = self.linear_relu_stack(x)
+        loss = self.loss(pred, label)
+        if mode == 'loss':
+            return dict(loss=loss)
+        else:
+            return pred.argmax(1), loss.item()
+
+
+class FashionMnistMetric(BaseMetric):
+    def process(self, data, preds) -> None:
+        self.results.append(((data[1] == preds[0].cpu()).sum() / len(preds[0]), preds[1]))
+
+    def compute_metrics(self, results):
+        correct, loss = zip(*results)
+        test_loss, correct = sum(loss) / len(self.results), sum(correct) / len(self.results)
+        return dict(Accuracy=correct, Avg_loss=test_loss)
+
+
+runner = Runner(
+    model=NeuralNetwork(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type='SGD', lr=1e-3)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_cfg=dict(),
+    val_dataloader=test_dataloader,
+    val_evaluator=dict(type=FashionMnistMetric))
+runner.train()
+```
 
 [kaiming]: https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf
 [xavier]: http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
