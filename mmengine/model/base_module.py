@@ -82,7 +82,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 self._params_init_info[param][
                     'tmp_mean_value'] = param.data.mean().cpu()
 
-            # pass `params_init_info` to all submodules
+            # pass `params_init_info` to all submodule
             # All submodules share the same `params_init_info`,
             # so it will be updated when parameters are
             # modified at any level of the model.
