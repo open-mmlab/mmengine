@@ -21,13 +21,34 @@ MMEngine 抽象出基本模块来配置模型初始化相关的参数。基本�
 ### 加载预训练权重
 
 ```python
+import torch
+import torch.nn as nn
+
 from mmengine.model import BaseModule
 
-class ResNet(BaseModule):
-  def __init__(self, depth, init_cfg, *args, **kwargs):
-    super().__init__(init_cfg)
-    ...
 
-pretrained = 'https://download.openmmlab.com/mmclassification/v0/resnet/resnet50_3rdparty-mill_in21k_20220331-faac000b.pth'
-model = ResNet(..., init_cfg=dict(Pretrained=pretrained))
+class ToyNet(BaseModule):
+    def __init__(self, init_cfg=None):
+        super().__init__()
+        self.conv1 = nn.Linear(1, 1)
+
+# 保存预训练权重
+toy_net = ToyNet()
+torch.save(toy_net.state_dict(), './pretrained.pth')
+pretrained = './pretrained.pth'
+
+# 配置加载预训练权重的初始化方式
+toy_net = ToyNet(init_cfg=dict(
+    type='Pretrained', checkpoint=pretrained, prefix='backbone'))
+# 加载权重
+toy_net.init_weights()
+```
+
+如上例所示，我们通过配置 `init_cfg` 让 `toy_net` 在调用 `init_weights`
+时加载预训练权重。`pretrained` 的值不仅可以是本地磁盘路径，也可以是 url，如：
+
+```python
+pretrained = 'https://download.openmmlab.com/mmclassification/v0/resnet/resnet50_3rdparty-mill_in21k_20220331-faac000b.pth'  # noqa
+toy_net = ToyNet(init_cfg=dict(
+    type='Pretrained', checkpoint=pretrained, prefix='backbone'))
 ```
