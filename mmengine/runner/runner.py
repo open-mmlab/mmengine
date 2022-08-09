@@ -141,9 +141,9 @@ class Runner:
             custom actions like visualizing images processed by pipeline.
             Defaults to None.
         data_preprocessor (dict, optional): The pre-process config of
-            :class:`BaseDataPreprocessor`. If the ``model`` argument
-            if a dict and has no ``data_preprocessor`` key, set the
-            argument as the ``data_preprocessor`` of the ``model`` dict.
+            :class:`BaseDataPreprocessor`. If the ``model`` argument is a dict
+            and doesn't contain the key ``data_preprocessor``, set the argument
+            as the ``data_preprocessor`` of the ``model`` dict.
             Defaults to None.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
