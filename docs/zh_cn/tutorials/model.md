@@ -8,11 +8,11 @@
   实现分布式训练。
 - `nn.Mdoule` 能够将参数导出后，对接参数初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，轻松实现指定策略的参数初始化。
 
-等一系列功能。正如上面提到的，`nn.Module` 对接参数初始化模块、优化器实现参数初始化、自动化的参数更新已经成为了使用 `nn.Module`
-的标准流程，因此 MMEngine 在 `nn.Module` 的基础上做了进一步的抽象出了 基础模块（`BaseModule`） 和基础模型
-（`BaseModel`），前者用于配置模型初始化策略，后者定义了管理模型训练、验证、测试、推理的基本流程。
+等一系列功能。正如上面提到的，`nn.Module` 对接参数初始化模块、优化器，实现参数初始化、参数更新已经成为了使用 `nn.Module`
+的标准流程，因此 MMEngine 在 `nn.Module` 的基础上进一步的抽象出了基础模块（`BaseModule`） 和基础模型
+（`BaseModel`），前者用于配置模型初始化策略，后者定义了模型训练、验证、测试、推理的基本流程。
 
-## 基础模块（`BaseModule`）
+## 基础模块（BaseModule）
 
 MMEngine 抽象出基础模块来配置模型初始化相关的参数。基础模块继承自 `nn.Module`，不仅具备 `nn.Module`
 的基本功能，还能根据传参实现相应的参数初始化逻辑。我们可以让模型继承基础模块，通过配置 `init_cfg`
