@@ -286,9 +286,6 @@ class TestRegistry:
         class LittlePedigreeSamoyed:
             pass
 
-        assert LITTLE_HOUNDS.get('little_samoyed.LittlePedigreeSamoyed') is \
-               GoldenRetriever
-
         # get key from its cousin
         assert LITTLE_HOUNDS.get('samoyed.little_samoyed.LittlePedigreeSamoyed'
                                  ) is LittlePedigreeSamoyed
