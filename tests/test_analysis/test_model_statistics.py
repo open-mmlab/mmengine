@@ -9,12 +9,18 @@ import torch
 import torch.nn as nn
 
 from mmengine.analysis import ActivationCountAnalysis, FlopCountAnalysis
-from mmengine.analysis.statistics_helper import (
-    _fill_missing_statistics, _group_by_module, _indicate_uncalled_modules,
-    _model_stats_str, _model_stats_table, _pretty_statistics,
-    _remove_zero_statistics)
+# yapf: disable
+from mmengine.analysis.statistics_helper import (_fill_missing_statistics,
+                                                 _group_by_module,
+                                                 _indicate_uncalled_modules,
+                                                 _model_stats_str,
+                                                 _model_stats_table,
+                                                 _pretty_statistics,
+                                                 _remove_zero_statistics)
 from mmengine.analysis.statistics_print import (specific_stats_str,
                                                 specific_stats_table)
+
+# yapf: enable
 
 test_statistics = {
     '': {

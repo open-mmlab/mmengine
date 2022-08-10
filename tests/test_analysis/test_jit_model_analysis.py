@@ -41,16 +41,16 @@ class NestedNetInnerModule(nn.Module):
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
         fc_flops = fc_in * fc_out
-        fc_flops = Counter({lin_op: fc_flops})
+        fc_flops = Counter({lin_op: fc_flops})  # type: ignore
         spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (
             kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
-        conv_flops = Counter({'conv': conv_flops})
+        conv_flops = Counter({'conv': conv_flops})  # type: ignore
         model_flops = conv_flops + fc_flops
         self.flops: 'Dict[str, typing.Counter[str]]' = {
-            '': model_flops,
-            'fc': fc_flops,
-            'conv': conv_flops,
+            '': model_flops,  # type: ignore
+            'fc': fc_flops,  # type: ignore
+            'conv': conv_flops,  # type: ignore
         }
 
         self.name_to_module: 'Dict[str, nn.Module]' = {
@@ -92,17 +92,18 @@ class NestedNet(nn.Module):
         )
 
         fc_flops = fc_in * fc_out
-        fc_flops = Counter({lin_op: fc_flops})
+        fc_flops = Counter({lin_op: fc_flops})  # type: ignore
         spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (
             kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
-        conv_flops = Counter({'conv': conv_flops})
+        conv_flops = Counter({'conv': conv_flops})  # type: ignore
 
-        model_flops = conv_flops + fc_flops + self.submod.flops['']
-        self.flops: 'Dict[str, Counter[str]]' = {
-            '': model_flops,
-            'fc': fc_flops,
-            'conv': conv_flops,
+        model_flops = conv_flops + fc_flops + self.submod.flops[
+            '']  # type: ignore
+        self.flops: 'Dict[str, typing.Counter[str]]' = {
+            '': model_flops,  # type: ignore
+            'fc': fc_flops,  # type: ignore
+            'conv': conv_flops,  # type: ignore
             'submod': self.submod.flops[''],
             'submod.fc': self.submod.flops['fc'],
             'submod.conv': self.submod.flops['conv'],
@@ -385,8 +386,8 @@ class TestJitModelAnalysis(TestCase):
         inputs = (torch.randn((1, *model.input_size)), )
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
-        unused_count = 0
-        unused_per_operator = Counter()
+        unused_count = 0  # type: int
+        unused_per_operator = Counter()  # type: Counter
         model_count = model.fc1_flops + model.fc2_flops
 
         self.assertEqual(analyzer.total('unused'), unused_count)
@@ -570,13 +571,13 @@ class TestJitModelAnalysis(TestCase):
         analyzer.total()
 
         skipped_inner_conv = Counter({'aten::_convolution': 1})
-        skipped_inner_fc = Counter()
+        skipped_inner_fc = Counter()  # type: Counter
         skipped_inner = Counter({'aten::add': 1, 'aten::mul': 1})
         skipped_inner += skipped_inner_fc
         skipped_inner += skipped_inner_conv
 
         skipped_outer_conv = Counter({'aten::_convolution': 1})
-        skipped_outer_fc = Counter()
+        skipped_outer_fc = Counter()  # type: Counter
         skipped_outer = Counter({'aten::pow': 1})
         skipped_outer += skipped_outer_conv
         skipped_outer += skipped_outer_fc
@@ -646,7 +647,7 @@ class TestJitModelAnalysis(TestCase):
         # Clear ops handles
         analyzer.clear_op_handles()
 
-        empty_flops = {name: Counter() for name in model.flops}
+        empty_flops = {name: Counter() for name in model.flops}  # type: Dict
 
         self.assertEqual(analyzer.by_module_and_operator(), empty_flops)
 

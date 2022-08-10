@@ -203,7 +203,7 @@ class TestFlopCountAnalysis(TestCase):
             Note the handle here does not compute actual flop count. This is
             used for test only.
             """
-            flop_dict = Counter()
+            flop_dict = Counter()  # type: Counter
             flop_dict['sigmoid'] = 10000
             return flop_dict
 
@@ -233,7 +233,7 @@ class TestFlopCountAnalysis(TestCase):
             This overwrites the default handle. Note the handle here does not
             compute actual flop count. This is used for test only.
             """
-            flop_dict = Counter()
+            flop_dict = Counter()  # type: Counter
             flop_dict[self.lin_op] = 400000
             return flop_dict
 
@@ -270,7 +270,7 @@ class TestFlopCountAnalysis(TestCase):
         customNet = CustomNet(input_dim, output_dim)
         x = torch.rand(batch_size, input_dim)
         _, skip_dict = flop_count(customNet, (x, ))
-        gt_dict = Counter()
+        gt_dict = Counter()  # type: Counter
         gt_dict['aten::sigmoid'] = 1
         self.assertDictEqual(
             skip_dict, gt_dict,

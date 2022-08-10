@@ -216,9 +216,9 @@ def _model_stats_str(model: nn.Module,
             return s_
         first = s.pop(0)
         s = [(numSpaces * ' ') + line for line in s]
-        s = '\n'.join(s)
-        s = first + '\n' + s
-        return s
+        s = '\n'.join(s)  # type: ignore
+        s = first + '\n' + s  # type: ignore
+        return s  # type: ignore
 
     def print_statistics(name: str) -> str:
         if name not in statistics:
@@ -262,7 +262,7 @@ def _model_stats_str(model: nn.Module,
     return repr_with_statistics(model, '')
 
 
-def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # pyre-ignore[2,3]
+def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # type: ignore
     """Gets the sizes of all torch tensors in an iterable.
 
     If an element of the iterable is a non-torch tensor iterable, it recurses
@@ -277,11 +277,11 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # pyre-ignore[2,3]
         elif isinstance(i, Iterable):
             sublist_sizes = _get_input_sizes(i)
             if all(j is None for j in sublist_sizes):
-                out_list.append(None)
+                out_list.append(None)  # type: ignore
             else:
                 out_list.append(sublist_sizes)
         else:
-            out_list.append(None)
+            out_list.append(None)  # type: ignore
     return out_list
 
 
@@ -362,10 +362,10 @@ def _model_stats_table(
         str : The formatted table.
     """
     if stat_columns is None:
-        stat_columns = set()
+        stat_columns = set()  # type: ignore
         for stats in statistics.values():
-            stat_columns.update(stats.keys())
-        stat_columns = list(stat_columns)
+            stat_columns.update(stats.keys())  # type: ignore
+        stat_columns = list(stat_columns)  # type: ignore
 
     headers = ['module'] + stat_columns
     table: List[List[str]] = []
@@ -374,7 +374,7 @@ def _model_stats_table(
                   indent_lvl: int) -> List[str]:
         indent = ' ' * indent_lvl
         row = [indent + name]
-        for stat_name in stat_columns:  # Is not None at this point
+        for stat_name in stat_columns:  # type: ignore
             row_str = (indent + stats[stat_name]) if stat_name in stats else ''
             row.append(row_str)
         return row

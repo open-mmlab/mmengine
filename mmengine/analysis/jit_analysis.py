@@ -92,8 +92,8 @@ class Statistics:
     """For keeping track of the various model statistics recorded during
     analysis."""
 
-    counts: 'Dict[str, Counter[str]]'
-    unsupported_ops: 'Dict[str, Counter[str]]'
+    counts: 'Dict[str, typing.Counter[str]]'
+    unsupported_ops: 'Dict[str, typing.Counter[str]]'
     uncalled_mods: 'Set[str]'
 
 
@@ -298,7 +298,7 @@ class JitModelAnalysis:
             Counter(str): statistics counter grouped by submodule names
         """
         stats = self._analyze()
-        summed_counts = Counter()
+        summed_counts = Counter()  # type: Counter
         for mod, results in stats.counts.items():
             summed_counts[mod] = sum(results.values())
         return summed_counts
@@ -551,8 +551,8 @@ class JitModelAnalysis:
 
         # Assures even modules not in the trace graph are initialized to
         # zero count
-        counts = {}
-        unsupported_ops = {}
+        counts = {}  # type: Dict
+        unsupported_ops = {}  # type: Dict
         # We don't need the duplication here, but self._model.named_modules()
         # gives slightly different results for some wrapped models.
         for _, mod in _named_modules_with_dup(self._model):
@@ -585,7 +585,7 @@ class JitModelAnalysis:
                 if isinstance(op_counts, Number):
                     op_counts = Counter(
                         {self._simplify_op_name(kind): op_counts})
-                for v in op_counts.values():
+                for v in op_counts.values():  # type: ignore
                     if not isinstance(v, (int, float, np.float64, np.int64)):
                         raise ValueError(
                             f'Invalid type {type(v)} for the flop count! '

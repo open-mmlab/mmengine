@@ -102,12 +102,16 @@ def specific_stats_str(
     stats = _fill_missing_statistics(model, stats)
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(stats, force_keep=all_uncalled)
-    stats = _pretty_statistics(stats, sig_figs=2)
-    stats = _indicate_uncalled_modules(stats, '#flops',
-                                       flops.uncalled_modules())
+    stats = _pretty_statistics(stats, sig_figs=2)  # type: ignore
+    stats = _indicate_uncalled_modules(
+        stats,  # type: ignore
+        '#flops',  # type: ignore
+        flops.uncalled_modules())  # type: ignore
     if activations is not None:
-        stats = _indicate_uncalled_modules(stats, '#acts',
-                                           activations.uncalled_modules())
+        stats = _indicate_uncalled_modules(
+            stats,  # type: ignore
+            '#acts',  # type: ignore
+            activations.uncalled_modules())  # type: ignore
 
     model_string = ''
     if all_uncalled:
@@ -115,7 +119,7 @@ def specific_stats_str(
             'N/A indicates a possibly missing statistic due to how '
             'the module was called. Missing values are still included '
             "in the parent's total.\n")
-    model_string += _model_stats_str(model, stats)
+    model_string += _model_stats_str(model, stats)  # type: ignore
     return model_string
 
 
@@ -201,20 +205,22 @@ def specific_stats_table(
         stat_columns += [acts_header]
 
     stats = _group_by_module(stats)
-    stats = _remove_zero_statistics(stats, require_trivial_children=True)
-    stats = _pretty_statistics(stats, hide_zero=False)
+    stats = _remove_zero_statistics(
+        stats,  # type: ignore
+        require_trivial_children=True)  # type: ignore
+    stats = _pretty_statistics(stats, hide_zero=False)  # type: ignore
     stats = _indicate_uncalled_modules(
-        stats,
-        flops_header,
-        flops.uncalled_modules() & stats.keys(),
-        uncalled_indicator='',
+        stats,  # type: ignore
+        flops_header,  # type: ignore
+        flops.uncalled_modules() & stats.keys(),  # type: ignore
+        uncalled_indicator='',  # type: ignore
     )
     if activations:
         stats = _indicate_uncalled_modules(
-            stats,
-            acts_header,
-            activations.uncalled_modules() & stats.keys(),
-            uncalled_indicator='',
+            stats,  # type: ignore
+            acts_header,  # type: ignore
+            activations.uncalled_modules() & stats.keys(),  # type: ignore
+            uncalled_indicator='',  # type: ignore
         )
 
     # Swap in shapes for parameters or delete shapes from dict
@@ -226,14 +232,15 @@ def specific_stats_table(
     for mod in stats:
         if mod in param_shapes:
             if show_param_shapes:
-                stats[mod][params_header] = str(param_shapes[mod])
+                stats[mod][params_header] = str(
+                    param_shapes[mod])  # type: ignore
             else:
                 to_delete.append(mod)
     for mod in to_delete:
         del stats[mod]
 
     return _model_stats_table(
-        statistics=stats,
+        statistics=stats,  # type: ignore
         max_depth=max_depth,
         stat_columns=stat_columns,
     )

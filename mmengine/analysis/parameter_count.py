@@ -20,7 +20,7 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
         parameters of the module. The key "" corresponds to the total
         number of parameters of the model.
     """
-    r = defaultdict(int)
+    r = defaultdict(int)  # type: typing.DefaultDict[str, int]
     for name, prm in model.named_parameters():
         size = prm.numel()
         name = name.split('.')
