@@ -426,10 +426,6 @@ class TestRegistry:
             f'scope_{time.time()}', scope_name='chihuahua')
         assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
 
-        with SAMOYEDS.switch_scope_and_registry(None) as registry:
-            assert DefaultScope.get_current_instance().scope_name == 'hound'
-            assert id(registry) == id(HOUNDS)
-
         # Test switch scope and get target registry.
         with CHIHUAHUA.switch_scope_and_registry(scope='hound') as \
                 registry:
