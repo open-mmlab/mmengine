@@ -317,6 +317,12 @@ class CheckpointHook(Hook):
                 else:
                     break
 
+        save_file = osp.join(runner.work_dir, 'last_checkpoint')
+        file_client = FileClient.infer_client(uri=self.out_dir)
+        filepath = file_client.join_path(self.out_dir, ckpt_filename)
+        with open(save_file, 'w') as f:
+            f.write(filepath)
+
     @master_only
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -329,13 +335,13 @@ class CheckpointHook(Hook):
             return
 
         if self.by_epoch:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
-            cur_type, cur_time = 'epoch', runner.epoch + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'epoch_{}.pth').format(runner.epoch)
+            cur_type, cur_time = 'epoch', runner.epoch
         else:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-            cur_type, cur_time = 'iter', runner.iter + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'iter_{}.pth').format(runner.iter)
+            cur_type, cur_time = 'iter', runner.iter
 
         # handle auto in self.key_indicators and self.rules before the loop
         if 'auto' in self.key_indicators:

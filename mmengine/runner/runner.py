@@ -2098,10 +2098,6 @@ class Runner:
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
         save_checkpoint(checkpoint, filepath)
 
-        save_file = osp.join(self.work_dir, 'last_checkpoint')
-        with open(save_file, 'w') as f:
-            f.write(filepath)
-
     @master_only
     def dump_config(self) -> None:
         """Dump config to `work_dir`."""
