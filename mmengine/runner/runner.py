@@ -1915,9 +1915,9 @@ class Runner:
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
-        dataset_meta = checkpoint['meta'].get('dataset_meta', None)
-        if (dataset_meta is not None
-                and dataset_meta != self.train_dataloader.dataset.metainfo):
+        resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
+        dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
+        if resumed_dataset_meta != dataset_meta:
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
@@ -2045,11 +2045,13 @@ class Runner:
 
         meta.update(
             cfg=self.cfg.pretty_text,
-            dataset_meta=self.train_dataloader.dataset.metainfo,
             seed=self.seed,
             experiment_name=self.experiment_name,
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine_version=mmengine.__version__ + get_git_hash())
+
+        if hasattr(self.train_dataloader.dataset, 'metainfo'):
+            meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
 
         if is_model_wrapper(self.model):
             model = self.model.module
