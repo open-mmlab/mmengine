@@ -1083,14 +1083,13 @@ class Runner:
             if optimizer is not None or 'constructor' in optim_wrapper:
                 return build_optim_wrapper(self.model, optim_wrapper)
             else:
-                # if `optimizer` and 'constructor' are not defined in
-                # it should be the case of training with multiple optimizers
-                # If constructor is not defined in `optim_wrapper`, each value
-                # of `optim_wrapper` must be an `OptimWrapper` instance since
-                # `DefaultOptimizerConstructor` will not handle the case of
-                # training with multiple optimizers. `build_optim_wrapper` will
-                # directly build the `OptimWrapperDict` instance from
-                # `optim_wrapper.`
+                # if `optimizer` is not defined, it should be the case of
+                # training with multiple optimizers. If `constructor` is not
+                # defined either, Each value of `optim_wrapper` must be an
+                # `OptimWrapper` instance since `DefaultOptimizerConstructor`
+                # will not handle the case of training with multiple
+                # optimizers. `build_optim_wrapper` will directly build the
+                # `OptimWrapperDict` instance from `optim_wrapper.`
                 optim_wrappers = OrderedDict()
                 for name, optim in optim_wrapper.items():
                     if not isinstance(optim, OptimWrapper):
