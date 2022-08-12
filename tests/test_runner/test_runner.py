@@ -1071,6 +1071,10 @@ class TestRunner(TestCase):
         evaluator = [dict(type='ToyMetric1'), dict(type='ToyMetric2')]
         self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
 
+        # input is a list of built metric.
+        metric = ToyMetric1()
+        _evaluator = runner.build_evaluator([metric])
+
         # test collect device
         evaluator = [
             dict(type='ToyMetric1', collect_device='cpu'),
