@@ -1539,6 +1539,7 @@ class TestRunner(TestCase):
         runner.train()
 
         # 9 Test training with a dataset without metainfo
+        cfg.experiment_name = 'test_train9'
         cfg = copy.deepcopy(cfg)
         cfg.train_dataloader.dataset = dict(type='ToyDatasetNoMeta')
         runner = runner.from_cfg(cfg)
