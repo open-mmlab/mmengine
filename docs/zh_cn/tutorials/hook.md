@@ -251,3 +251,5 @@ custom_hooks = dict(
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
 )
 ```
+
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/hooks.html)。
