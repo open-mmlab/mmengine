@@ -1,15 +1,6 @@
 # 模型
 
-基于 Pytorch 构建模型时，我们会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，让模型能够轻松实现：
-
-- 导出/加载/遍历模型参数，将模型参数转移至指定设备，设置模型的训练、测试状态等功能。
-- `nn.Module` 能够将参数导出后传给接优化器[optimizer](https://pytorch.org/docs/stable/optim.html?highlight=optimizer#torch.optim.Optimizer)实现自动化的参数更新。
-- 对接 [DistributedDataParallel](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html?highlight=distributeddataparallel#torch.nn.parallel.DistributedDataParallel)
-  实现分布式训练。
-- `nn.Mdoule` 能够将参数导出后，对接参数初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，轻松实现指定策略的参数初始化。
-
-等一系列功能。正如上面提到的，`nn.Module` 对接参数初始化模块、优化器，实现参数初始化、参数更新已经成为了使用 `nn.Module`
-的标准流程，因此 MMEngine 在 `nn.Module` 的基础上进一步的抽象出了基础模块（`BaseModule`） 和基础模型
+MMEngine 在 `nn.Module` 的基础上进一步的抽象出了基础模块（`BaseModule`） 和基础模型
 （`BaseModel`），前者用于配置模型初始化策略，后者定义了模型训练、验证、测试、推理的基本流程。
 
 ## 基础模块（BaseModule）
@@ -205,142 +196,23 @@ init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定�
 
 ## 基础模型（BaseModel）
 
-基于标准化的模型初始化流程，MMEngine 抽象出
-`BaseModule`，让我们能够更加灵活的选择模型的初始化方式，同样的，基于标准化的模型训练流程，MMEngine
-抽象出基础模型（`BaseModel`），让模型的核心代码更加集中，方便阅读和理解。尽管 Pytorch 对 `nn.Module`
-的接口没有任何要求，但是我们认为一套标准的模型接口能够让我们更好的理解代码，因此 MMEngine 要求，只有符合基础模型接口约定的模型才能在[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)中训练起来。
+[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)要求模型需要实现 `train_step`，`val_step` 和 `test_step` 方法。因此 MMEngine 定义了基础模型 `BaseModel`，并在上述接口中实现了基本的训练流程，我们可以通过继承基础模型，实现符合执行器接口标准的模型。
 
-### 定义基础模型
+### 接口定义
 
-基础模型实现了 `train_step`、`val_step` 和 `test_step` 接口，并要求子类必须实现 `forward`
-方法。要想理解为什么基础模型有这些接口约定，我们不妨先来看看 [Pytorch 官方提供的训练 FashionMNIST 的流程](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html)。
+[forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回 元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的入参；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 的入参。 `mode` 参数用于控制 forward 的返回结果：
 
-#### Pytorch 标准训练流程
+- `mode='loss'`：`forawrd` **必须**返回一个字典， key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数，多次迭代统计后输出到终端。该模式会被 `train_step` 调用。
+- `mode='predict'`： `forward` 必须返回列表/元组型式的预测结果，预测结果需要和\[评测指标\]的(https://mmengine.readthedocs.io/zh_CN/latest/tutorials/metric_and_evaluator.html) `process` 接口的第一个参数相符合。该模式会被 `val_step`, `test_step` 接口调用。OpenMMLab 系列算法则有更加严格的约定，需要输出列表型式的[数据元素](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)
+- `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 返回数据元素列表，而 `tensor` 则返回 `torch.Tensor` 类型的结果。
 
-```python
-import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor, Lambda
+[train_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.train_step): 调用 `forward` 接口，得到损失字典，进行参数更新并返回整理后的损失字典。基础模型基于[优化器封装](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html) 实现了标准的梯度计算、参数更新、梯度清零流程。如果模型需要自定义的参数更新逻辑，可以重载 `train_step` 接口，具体例子见：[使用 MMEngine 训练生成对抗网络](TODO)
 
-# 准备数据集
-training_data = datasets.FashionMNIST(
-    root="data",
-    train=True,
-    download=True,
-    transform=ToTensor()
-)
+[val_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.val_step): 返回预测结果或损失，预测结果会被进一步传给[钩子（Hook）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)的 `after_train_iter`、`after_val_iter` 和 `after_test_iter` 接口。
 
-test_data = datasets.FashionMNIST(
-    root="data",
-    train=False,
-    download=True,
-    transform=ToTensor()
-)
+[test_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.test_step): 同 `val_step`，但是只返回预测结果。
 
-train_dataloader = DataLoader(training_data, batch_size=64)
-test_dataloader = DataLoader(test_data, batch_size=64)
-
-
-# 定义模型
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(28*28, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 10),
-        )
-
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
-model = NeuralNetwork()
-
-learning_rate = 1e-3
-batch_size = 64
-epochs = 5
-
-# Initialize the loss function
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-
-# 定义训练流程
-def train_loop(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset)
-    for batch, (X, y) in enumerate(dataloader):
-        # Compute prediction and loss
-        pred = model(X)
-        loss = loss_fn(pred, y)
-
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        if batch % 100 == 0:
-            loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-# 定义测试流程
-def test_loop(dataloader, model, loss_fn):
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    test_loss, correct = 0, 0
-
-    with torch.no_grad():
-        for X, y in dataloader:
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-
-    test_loss /= num_batches
-    correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-
-
-for t in range(epochs):
-    print(f"Epoch {t+1}\n-------------------------------")
-    train_loop(train_dataloader, model, loss_fn, optimizer)
-    test_loop(test_dataloader, model, loss_fn)
-print("Done!")
-```
-
-我们不难发现，Pytorch 官方 demo 中，模型（`NeuralNetwork`）只负责前向推理，而损失计算、参数更新、结果预测的逻辑分别在
-`train_loop` 和 `test_loop`
-里实现。这样的结构非常适合训练优化逻辑比较简单的任务，即前向推理一次，计算一次梯度，更新一次参数。
-
-#### MMEngine 训练流程
-
-MMEngine 作为通用的深度学习训练框架，需要应对不同任务、不同需求的参数更新逻辑，如果套用上例的训练流程，就会出现核心代码分散在不同模块的情况，这是不合理的。以训练生成对抗网络为例，我们需要分别优化生成器和判别器，我们就需要在 `train_loop` 和 `test_step` 中实现和算法相关的训练、预测逻辑。这样设计存在明显的缺点：
-
-1. 模型的参数更新逻辑属于算法的一部分，不应该分散在各个模块内，既不利于阅读，也不利于维护。
-2. `test_loop` 和 `train_loop` 这一层的抽象容易和算法绑定，一个新的训练流程的算法会需要同时派生出新的 `loop` 和新的 `model`
-
-因此 MMEngine 重新划分了模型功能的边界，模型不仅需要负责前向推理，还需要负责参数更新、和结果预测，因此为基础模型抽象出
-`train_step`、`val_step` 和 `test_step` 接口。此外基础模型的 `forward`
-接口也需要承担更多功能，在训练阶段返回损失，验证、测试阶段返回预测结果。
-
-- [forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致，如果 `DataLoader` 返回 元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的入参；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 的入参。 `mode` 参数用于控制 forward 的返回结果：
-
-  - `mode='loss'`：`forawrd` **必须**返回一个字典， key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数，多次迭代统计后输出到终端。该模式会被 `train_step` 调用。
-  - `mode='predict'`： `forward` 必须返回列表/元组型式的预测结果，预测结果需要和\[评测指标\]的(https://mmengine.readthedocs.io/zh_CN/latest/tutorials/metric_and_evaluator.html) `process` 接口的第一个参数相符合。该模式会被 `val_step`, `test_step` 接口调用。OpenMMLab 系列算法则有更加严格的约定，需要输出列表型式的[数据元素](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)
-  - `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 返回数据元素列表，而 `tensor` 则返回 `torch.Tensor` 类型的结果。
-
-- [train_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.train_step): 调用 `forward` 接口，得到损失字典，进行参数更新并返回整理后的损失字典。基础模型基于[优化器封装](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html) 实现了标准的梯度计算、参数更新、梯度清零流程。如果模型需要自定义的参数更新逻辑，可以重载 `train_step` 接口，具体例子见：[使用 MMEngine 训练生成对抗网络](TODO)
-
-- [val_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.val_step): 返回预测结果或损失（待开发），预测结果会被进一步传给[钩子（Hook）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)的 `after_train_iter`、`after_val_iter` 和 `after_test_iter` 接口。
-
-- [test_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.test_step): 同 `val_step`，但是只返回预测结果。
-
-基于上述接口约定，我们重新实现 `NeuralNetwork`，基于 MMEngine 来实现训练流程：
+基于上述接口约定，我们定义了继承自基础模型的 `NeuralNetwork`，配合执行器来训练 FashionMNIST
 
 ```python
 from torch.utils.data import DataLoader
@@ -395,7 +267,8 @@ class NeuralNetwork(BaseModel):
 
 class FashionMnistMetric(BaseMetric):
     def process(self, data, preds) -> None:
-        self.results.append(((data[1] == preds[0].cpu()).sum() / len(preds[0]), preds[1]))
+        self.results.append(((data[1] == preds[0].cpu()).sum() \
+             / len(preds[0]), preds[1]))
 
     def compute_metrics(self, results):
         correct, loss = zip(*results)
@@ -415,8 +288,7 @@ runner = Runner(
 runner.train()
 ```
 
-相比于 Pytorch 的官方示例，基于 MMEngine 的样例代码更加简洁、日志更加清晰、且支持了混合精度训练。
-这里再次强调 MMEngine 实现的 `NeuralNetwork.forward` 存在跨模块的接口约定：
+`NeuralNetwork.forward` 存在跨模块的接口约定：
 
 - `train_dataloader` 返回一个 `(img, label)` 型式的元组，因此 `forward` 接口的前两个参数分别为 `img` 和 `label`。
 - `forward` 在 `predict` 模式下返回 `(pred, loss)` 型式的元组，因此 `process` 的 preds 参数同样为相同型式的元组。
@@ -425,38 +297,52 @@ runner.train()
 
 如果你的电脑配有 Nvidia 的 GPU，并且运行了上节的代码样例，不难发现 Pytorch 的样例是基于 CPU 运行的，而 MMEngine 的样例是基于 GPU 运行的。细心的你可能会奇怪，数据和模型从 CPU 搬运到 GPU 的过程在何时发生？
 
-执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。
+执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器是基础模型的属性，在基础模型的构造过程中被实例化。
 
-![data_preprocessor](https://user-images.githubusercontent.com/57566630/183727857-b77f1568-60e2-435f-bd97-700fd93733db.png)
-
-MMEngine 还实现了 [图像数据处理器 （`ImgDataPreprocessor`）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)除了数据搬运，还可以完成 BGR 和 RGB 格式互转，归一化等操作（图像数据处理器要求 DataLoader 返回一个字典）。
-
-MMEngine 抽象出数据处理器的概念，并在其中实现数据搬运、归一化等操作主要有以下两个原因：
-
-- 有些深度学习任务需要实现基于 batch 的数据增强策略，例如 [Mixup](https://arxiv.org/pdf/1710.09412.pdf)，这部分代码不应该和具体算法相绑定。抽象出图像处理器这个概念可以很好的解决这个问题，模型和图像处理器可以灵活地搭配使用。
-- 如果图像在进入模型之前就做了归一化，就意味着需要将 `float` 型的数据从 CPU 搬运到 GPU。如果在进入模型之后再做归一化，我们可以先将 `uchar` 的数据搬运到到 GPU，再做归一化，IO 负载可以减少 4 倍。
-
-我们来看一个数据处理器的简单示例，假设 DataLoader 返回 `（img，label）`型式的元组，`img` 和 `label` 类型均为 `torch.Tensor`，且 img 的形状为 `(n,c,h,w)`。我们希望数据处理器能够对 `img` 做均值标准差均为 127.5 的归一化，模型的 forward 接口直接接受归一化后的结果：
+为了体现数据处理器起到的作用，我们仍然以[上一节](#基础模型basemodel)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
 
 ```python
 from mmengine.model import BaseDataPreprocessor, BaseModel
 
+
+class NeuralNetwork(BaseModel):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__(
+            data_preprocessor=NormalizeDataPreprocessor())
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+        self.loss = nn.CrossEntropyLoss()
+
+    def forward(self, img, label, mode='tensor'):
+        x = self.flatten(img)
+        pred = self.linear_relu_stack(x)
+        loss = self.loss(pred, label)
+        if mode == 'loss':
+            return dict(loss=loss)
+        else:
+            return pred.argmax(1), loss.item()
 
 class NormalizeDataPreprocessor(BaseDataPreprocessor):
     def forward(self, data, training=False):
         img, label = [item.cuda() for item in data]
         img = (img - 127.5) / 127.5
         return img, label
-
-class CustomModel(BaseModel):
-    def forward(self, img, label, mode):
-        ...
 ```
 
-此时 `CustomModel.forward` 接受的 `img` 和 `label` 分别对应 `NormalizeDataPreprocessor` 的返回值。
+此时 `NeuralNetwork.forward` 接受的 `img` 和 `label` 分别对应 `NormalizeDataPreprocessor.forward` 的返回值。
 
 ```{node}
 上例中数据处理器的 training 参数用于区分训练、测试阶段不同的批增强策略，`train_step` 会传入 `training=True`，`test_step` 和 `val_step` 则会传入 `trainig=Fasle`。
+```
+
+```{node}
+通常情况下，我们要求 DataLoader 的 `data` 数据解包后（字典类型的被 **data 解包，元组列表类型被 *data 解包）能够直接传给模型的 `forward`。但是如果数据处理器修改了 data 的数据类型，则要求数据处理器的 `forward` 的返回值与模型 `forward` 的入参相匹配。
 ```
 
 [kaiming]: https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf
