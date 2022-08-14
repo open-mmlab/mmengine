@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mmengine import MMLogger, print_log
+from mmengine.logging import MMLogger, print_log
 
 
 class TestLogger:

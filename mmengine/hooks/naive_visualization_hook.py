@@ -8,7 +8,7 @@ import numpy as np
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.structures import BaseDataElement
-from mmengine.utils.misc import tensor2imgs
+from mmengine.utils import tensor2imgs
 
 
 # TODO: Due to interface changes, the current class

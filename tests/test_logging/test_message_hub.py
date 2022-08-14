@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine import HistoryBuffer, MessageHub
+from mmengine.logging import HistoryBuffer, MessageHub
 
 
 class NoDeepCopy:

@@ -190,8 +190,7 @@ class Registry:
             scope (str): The target scope.
 
         Examples:
-        >>> from mmengine import Registry, DefaultScope
-        >>> from mmengine.registry import MODELS
+        >>> from mmengine.registry import Registry, DefaultScope, MODELS
         >>> import time
         >>> # External Registry
         >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',

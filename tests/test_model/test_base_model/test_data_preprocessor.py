@@ -4,8 +4,8 @@ from unittest import TestCase
 import torch
 import torch.nn.functional as F
 
-from mmengine import InstanceData
 from mmengine.model import BaseDataPreprocessor, ImgDataPreprocessor
+from mmengine.structures import InstanceData
 from mmengine.testing import assert_allclose
 
 

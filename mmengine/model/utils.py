@@ -746,7 +746,7 @@ def detect_anomalous_params(loss: torch.Tensor, model) -> None:
                     traverse(grad_fn)
 
     traverse(loss.grad_fn)
-    from mmengine import MMLogger
+    from mmengine.logging import MMLogger
     logger = MMLogger.get_current_instance()
     for n, p in model.named_parameters():
         if p not in parameters_in_graph and p.requires_grad:

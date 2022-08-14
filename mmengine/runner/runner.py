@@ -181,7 +181,7 @@ class Runner:
             Defaults to None.
 
     Examples:
-        >>> from mmengine import Runner
+        >>> from mmengine.runner import Runner
         >>> cfg = dict(
         >>>     model=dict(type='ToyModel'),
         >>>     work_dir='path/of/work_dir',

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine import HistoryBuffer
+from mmengine.logging import HistoryBuffer
 
 
 class TestLoggerBuffer:

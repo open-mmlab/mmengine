@@ -17,6 +17,38 @@ jobs:
             pip install interrogate
             interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 80 mmengine
 
+  build_without_torch:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+      torch:
+        type: string
+      torchvision:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: python -m pytest tests/test_config tests/test_registry tests/test_utils
+
   build_cpu:
     parameters:
       # The python version must match available image tags in
@@ -101,12 +133,16 @@ workflows:
   unit_tests:
     jobs:
       - lint
+      - build_without_torch:
+        requires:
+          - lint
       - build_cpu:
           name: build_cpu_th1.8_py3.7
           torch: 1.8.0
           torchvision: 0.9.0
           requires:
             - lint
+            - build_without_torch
       - hold:
           type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
           requires:
