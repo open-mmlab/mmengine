@@ -8,7 +8,8 @@ from copy import deepcopy
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import mmcv
+import cv2
+import numpy as np
 import pytest
 
 from mmengine import BaseStorageBackend, FileClient
@@ -18,6 +19,12 @@ sys.modules['ceph'] = MagicMock()
 sys.modules['petrel_client'] = MagicMock()
 sys.modules['petrel_client.client'] = MagicMock()
 sys.modules['mc'] = MagicMock()
+
+
+def imfrombytes(content):
+    img_np = np.frombuffer(content, np.uint8)
+    img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
+    return img
 
 
 @contextmanager
@@ -140,12 +147,12 @@ class TestFileClient:
         # test `get`
         # input path is Path object
         img_bytes = disk_backend.get(self.img_path)
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert self.img_path.open('rb').read() == img_bytes
         assert img.shape == self.img_shape
         # input path is str
         img_bytes = disk_backend.get(str(self.img_path))
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert self.img_path.open('rb').read() == img_bytes
         assert img.shape == self.img_shape
 
@@ -289,11 +296,11 @@ class TestFileClient:
 
         # input path is Path object
         img_bytes = petrel_backend.get(self.img_path)
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
         # input path is str
         img_bytes = petrel_backend.get(str(self.img_path))
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
 
         # `path_mapping` is either None or dict
@@ -521,11 +528,11 @@ class TestFileClient:
 
         # input path is Path object
         img_bytes = mc_backend.get(self.img_path)
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
         # input path is str
         img_bytes = mc_backend.get(str(self.img_path))
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
 
     def test_lmdb_backend(self):
@@ -541,7 +548,7 @@ class TestFileClient:
             lmdb_backend.get_text(self.text_path)
 
         img_bytes = lmdb_backend.get('baboon')
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == (120, 125, 3)
 
         # db_path is str
@@ -549,7 +556,7 @@ class TestFileClient:
         with pytest.raises(NotImplementedError):
             lmdb_backend.get_text(str(self.text_path))
         img_bytes = lmdb_backend.get('baboon')
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == (120, 125, 3)
 
     @pytest.mark.parametrize('backend,prefix', [('http', None),
@@ -576,7 +583,7 @@ class TestFileClient:
 
         # input url is http image
         img_bytes = http_backend.get(img_url)
-        img = mmcv.imfrombytes(img_bytes)
+        img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
 
         # input url is http text
@@ -586,7 +593,9 @@ class TestFileClient:
         # test `_get_local_path`
         # exist the with block and path will be released
         with http_backend.get_local_path(img_url) as path:
-            assert mmcv.imread(path).shape == self.img_shape
+            img_bytes = Path(path).open('rb').read()
+            img = imfrombytes(img_bytes)
+            assert img.shape == self.img_shape
         assert not osp.isfile(path)
 
     def test_new_magic_method(self):
