@@ -1,10 +1,10 @@
 # 优化器封装（OptimWrapper）
 
-MMEngine 实现了优化器封装，为用户提供了统一的优化器访问接口。优化器封装能够支持不同的训练策略，包括混合精度训练、梯度累加和梯度截断，用户可以根据需求选择合适的训练策略。优化器封装为梯度反传、参数更新、梯度清零、导出状态字典、获取参数学习率/动量提供了统一的接口。除此之外，优化器封装还定义了一套标准的参数更新流程，用户可以基于这一套流程，实现同一套代码，不同训练策略的切换。
+MMEngine 实现了优化器封装，为用户提供了统一的优化器访问接口。优化器封装支持不同的训练策略，包括混合精度训练、梯度累加和梯度截断。用户可以根据需求选择合适的训练策略。优化器封装还定义了一套标准的参数更新流程，用户可以基于这一套流程，实现同一套代码，不同训练策略的切换。
 
 ## 优化器封装 vs 优化器
 
-这里我们分别基于 Pytorch 内置的优化器和 MMEngine 的优化器封装进行普通的单精度训练、混合精度训练和梯度累加，对比二者实现上的区别。
+这里我们分别基于 Pytorch 内置的优化器和 MMEngine 的优化器封装进行单精度训练、混合精度训练和梯度累加，对比二者实现上的区别。
 
 ### 训练模型
 
@@ -308,8 +308,7 @@ SGD([
 
 #### 为不同类型的参数设置不同的超参系数
 
-MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。
-例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，
+MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，
 来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
 示例：
@@ -323,7 +322,7 @@ optimizer = dict(
     paramwise_cfg=dict(norm_decay_mult=0))
 ```
 
-除了可以对偏置的权重衰减进行配置外，MMEngine 的默认优化器构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
+除了可以对偏置的权重衰减进行配置外，MMEngine 的默认优化器封装构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
 
 `bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
 
@@ -361,10 +360,9 @@ optimizer = dict(
 
 ### 高级配置
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由 [注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html) 来管理。
-用户可以实现自己的优化器构造策略来实现自定义的超参设置策略，并添加进 `OPTIM_WRAPPER_CONSTRUCTORS` 注册表中。
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)来管理。用户可以实现自己的优化器封装构造策略来实现自定义的超参设置策略，并添加进 `OPTIM_WRAPPER_CONSTRUCTORS` 注册表中。
 
-例如，我们想实现一个叫做`LayerDecayOptimWrapperConstructor`的优化器封装构造器，来实现对模型的不同深度的层自动设置递减的学习率。
+例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，来实现对模型的不同深度的层自动设置递减的学习率。
 我们可以通过继承 `DefaultOptimizerConstructor` 来实现这一策略，并将其添加进注册表中：
 
 ```python
@@ -374,7 +372,7 @@ class LayerDecayOptimizerConstructor(DefaultOptimizerConstructor):
         ...
 ```
 
-然后将优化器配置文件中的 `constructor` 字段设置为类名来指定使用这个自定义的优化器构造器：
+然后将优化器封装配置文件中的 `constructor` 字段设置为类名来指定使用这个自定义的优化器封装构造器：
 
 ```python
 optimizer = dict(
@@ -395,5 +393,4 @@ class MultipleOptimizerConstructor:
 
 ### 在训练过程中调整超参
 
-优化器中的超参数在构造时只能设置为一个定值，仅仅使用优化器封装，并不能在训练过程中调整学习率等参数。
-在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
+优化器中的超参数在构造时只能设置为一个定值，仅仅使用优化器封装，并不能在训练过程中调整学习率等参数。在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
