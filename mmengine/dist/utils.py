@@ -12,12 +12,7 @@ from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
 from mmengine.device import is_mlu_available
 
-try:
-    # for python < 3.10
-    from collections import Iterable, Mapping
-except ImportError:
-    # for python >= 3.10
-    from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping
 
 _LOCAL_PROCESS_GROUP = None
 
