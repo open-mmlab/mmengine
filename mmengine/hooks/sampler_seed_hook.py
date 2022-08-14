@@ -19,6 +19,7 @@ class DistSamplerSeedHook(Hook):
 
         Args:
             runner (Runner): The runner of the training process.
+            mode (str): Current mode of runner. Defaults to 'train'.
         """
         if hasattr(runner.train_loop.dataloader, 'sampler') and hasattr(
                 runner.train_loop.dataloader.sampler, 'set_epoch'):
