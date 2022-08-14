@@ -134,8 +134,8 @@ workflows:
     jobs:
       - lint
       - build_without_torch:
-        requires:
-          - lint
+          requires:
+            - lint
       - build_cpu:
           name: build_cpu_th1.8_py3.7
           torch: 1.8.0
