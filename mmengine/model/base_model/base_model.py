@@ -292,10 +292,10 @@ class BaseModel(BaseModule):
 
     def _run_forward(self, data, mode):
         if isinstance(data, dict):
-            losses = self(**data, mode=mode)
+            results = self(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
-            losses = self(*data, mode=mode)
+            results = self(*data, mode=mode)
         else:
             raise TypeError('Output of `data_preprocessor` should be '
-                            f'list tuple or dict, but got {type(data)}')
-        return losses
+                            f'list, tuple or dict, but got {type(data)}')
+        return results

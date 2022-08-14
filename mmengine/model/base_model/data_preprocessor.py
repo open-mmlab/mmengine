@@ -11,7 +11,7 @@ from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-CollatedResult = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
+CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
 
 
 @MODELS.register_module()
@@ -31,7 +31,7 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self._device = torch.device('cpu')
 
-    def cast_data(self, data: dict) -> CollatedResult:
+    def cast_data(self, data: CastData) -> CastData:
         """Copying data to the target device.
 
         Args:
@@ -258,5 +258,5 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                             'or a tuple with inputs and data_samples, but got'
                             f'{type(data)}： {data}')
         data['inputs'] = batch_inputs
-        data.setdefault('data_sample', None)
+        data.setdefault('data_samples', None)
         return data
