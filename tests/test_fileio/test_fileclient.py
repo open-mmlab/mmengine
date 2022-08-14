@@ -121,7 +121,7 @@ class TestFileClient:
 
     @classmethod
     def setup_class(cls):
-        cls.test_data_dir = Path(__file__).parent / 'data'
+        cls.test_data_dir = Path(__file__).parent.parent / 'data'
         cls.img_path = cls.test_data_dir / 'color.jpg'
         cls.img_shape = (300, 400, 3)
         cls.text_path = cls.test_data_dir / 'filelist.txt'
@@ -277,44 +277,6 @@ class TestFileClient:
                         osp.join('dir2', 'dir3', 'text4.txt'),
                         osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
                     }
-
-    @patch('ceph.S3Client', MockS3Client)
-    def test_ceph_backend(self):
-        ceph_backend = FileClient('ceph')
-
-        # test `allow_symlink` attribute
-        assert not ceph_backend.allow_symlink
-
-        # input path is Path object
-        with pytest.raises(NotImplementedError):
-            ceph_backend.get_text(self.text_path)
-        # input path is str
-        with pytest.raises(NotImplementedError):
-            ceph_backend.get_text(str(self.text_path))
-
-        # input path is Path object
-        img_bytes = ceph_backend.get(self.img_path)
-        img = mmcv.imfrombytes(img_bytes)
-        assert img.shape == self.img_shape
-        # input path is str
-        img_bytes = ceph_backend.get(str(self.img_path))
-        img = mmcv.imfrombytes(img_bytes)
-        assert img.shape == self.img_shape
-
-        # `path_mapping` is either None or dict
-        with pytest.raises(AssertionError):
-            FileClient('ceph', path_mapping=1)
-        # test `path_mapping`
-        ceph_path = 's3://user/data'
-        ceph_backend = FileClient(
-            'ceph', path_mapping={str(self.test_data_dir): ceph_path})
-        ceph_backend.client._client.Get = MagicMock(
-            return_value=ceph_backend.client._client.Get(self.img_path))
-        img_bytes = ceph_backend.get(self.img_path)
-        img = mmcv.imfrombytes(img_bytes)
-        assert img.shape == self.img_shape
-        ceph_backend.client._client.Get.assert_called_with(
-            str(self.img_path).replace(str(self.test_data_dir), ceph_path))
 
     @patch('petrel_client.client.Client', MockPetrelClient)
     @pytest.mark.parametrize('backend,prefix', [('petrel', None),
