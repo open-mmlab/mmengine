@@ -66,44 +66,34 @@ runner.train()
 
 下面逐一介绍 MMEngine 中内置钩子的用法。
 
-### CheckpointHook
+### 默认钩子
 
-`CheckpointHook` 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
+#### CheckpointHook
+
+[CheckpointHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook) 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
-- 保存最后一个权重
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
 
-如需了解其他功能，请阅读[CheckpointHook API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook)。
+如需了解其他功能，请阅读[CheckpointHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook)。
 
-下面介绍上面提到的 5 个功能。
+下面介绍上面提到的 4 个功能。
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 
 假设我们一共训练 21 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
 ```python
-from mmengine.registry import HOOKS
-
 # by_epoch 的默认值为 True
-checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True)
-HOOKS.build(checkpoint_config)
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=True))
 ```
 
-如果想以迭代次数作为保存间隔，则可以将 `by_epoch` 设为 False，`internal=5` 则表示每迭代 5 次保存一次权重。
+如果想以迭代次数作为保存间隔，则可以将 `by_epoch` 设为 False，`interval=5` 则表示每迭代 5 次保存一次权重。
 
 ```python
-checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=False)
-```
-
-- 保存最后一个权重
-
-上面的配置会保存第 5, 10, 15, 20 个 epoch 的权重。但是不会保存最后一个 epoch（第 21 个 epoch）的权重，因为 `interval=5` 表示每隔 5 个 epoch 才保存一次权重，而第 21 个 epoch 还没有间隔 5 个 epoch，不过可以通过设置 `save_last=True` 保存最后一个 epoch 的权重。
-
-```python
-checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True, save_last=True)
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=False))
 ```
 
 - 保存最新的多个权重
@@ -111,7 +101,7 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, by_epoch=True, save_
 如果只想保存一定数量的权重，可以通过设置 `max_keep_ckpts` 参数实现最多保存 `max_keep_ckpts` 个权重，当保存的权重数超过 `max_keep_ckpts` 时，前面的权重会被删除。
 
 ```python
-checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
+checkpoint_config = dict(type='CheckpointHook', interval=5, max_keep_ckpts=2)
 ```
 
 上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
@@ -133,89 +123,78 @@ checkpoint_config = dict(type='CheckpointHook', save_best='auto')
 权重默认保存在工作目录（work_dir），但可以通过设置 `out_dir` 改变保存路径。
 
 ```python
-checkpoint_config = dict(type='CheckpointHook', internal=5, out_dir='/path/of/directory')
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
 ```
 
-### LoggerHook
+#### LoggerHook
 
-`LoggerHook` 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
+[LoggerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.LoggerHook.html#mmengine.hooks.LoggerHook) 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
 
-如果我们希望每迭代 20 次就输出（或保存）一次日志，我们可以设置 interval 参数，配置如下：
+如果我们希望每迭代 20 次就输出（或保存）一次日志，我们可以设置 `interval` 参数，配置如下：
 
 ```python
-config = dict(type='LoggerHook', interval=20)
+default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果我们希望训练结束后把指定后缀的文件转存到其他路径，例如 Ceph。我们可以设置 out_dir、out_suffix 和 keep_loal 三个参数。第一个参数表示将文件转存到指定的路径；第二个参数表示需要转存以哪些后缀结尾的文件，默认是 .json、.log、.py 和 yaml；第三个参数表示当我们把文件转存到其他路径后是否删除被转存的文件。
+#### ParamSchedulerHook
 
-```python
-config = dict(type='LoggerHook', out_dir='s3://save_log/', out_suffix=('.json', '.py'), keep_local=True)
-```
+[ParamSchedulerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.ParamSchedulerHook.html#mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
-### ParamSchedulerHook
+#### IterTimerHook
 
-`ParamSchedulerHook` 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。
+[IterTimerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.IterTimerHook.html#mmengine.hooks.IterTimerHook) 用于记录加载数据的时间以及迭代一次耗费的时间。`IterTimerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
-```python
-from mmengine.runner import Runner
+#### DistSamplerSeedHook
 
-scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
-
-default_hooks = dict(scheduler_hook=dict(type='ParamSchedulerHook'))
-runner = Runner(scheduler=scheduler, default_hooks=default_hooks, ...)
-runner.train()
-```
-
-### IterTimerHook
-
-`IterTimerHook` 用于记录加载数据的时间以及迭代一次耗费的时间。
-
-```python
-config = dict(type='IterTimerHook')
-```
-
-### DistSamplerSeedHook
-
-`DistSamplerSeedHook` 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。
-
-```python
-config = dict(type='DistSamplerSeedHook')
-```
-
-### EMAHook
-
-`EMAHook` 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
-
-```python
-config = dict(type='EMAHook')
-```
-
-### EmptyCacheHook
-
-`EmptyCacheHook` 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
-
-```python
-config = dict(type='EmptyCacheHook', before_epoch=False, after_epoch=True, after_iter=False)
-```
-
-### SyncBuffersHook
-
-`SyncBuffersHook` 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
-
-```python
-config = dict(type='SyncBuffersHook')
-```
+[DistSamplerSeedHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.DistSamplerSeedHook.html#mmengine.hooks.DistSamplerSeedHook) 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。`DistSamplerSeedHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### RuntimeInfoHook
 
-`RuntimeInfoHook` 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
-以便其他无法访问执行器的模块能够获取到这些信息。
+[RuntimeInfoHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.RuntimeInfoHook.html#mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
+以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+
+### 自定义钩子
+
+#### EMAHook
+
+[EMAHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook) 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
 
 ```python
-config = dict(type='RuntimeInfoHook')
+custom_hooks = [dict(type='EMAHook')]
+runner = Runner(custom_hooks=custom_hooks, ...)
+runner.train()
 ```
 
-## 添加自定义钩子
+`EMAHook` 默认使用 `ExponentialMovingAverage`，可选值还有 `StochasticWeightAverage` 和 `MomentumAnnealingEMA`。可以通过设置 `ema_type` 使用其他的平均策略。
+
+```python
+custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
+```
+
+更多用法请阅读[CheckpointHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook)。
+
+#### EmptyCacheHook
+
+[EmptyCacheHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EmptyCacheHook.html#mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
+
+```python
+# 每一个 epoch 结束都会执行释放操作
+custom_hooks = [dict(type='EmptyCacheHook', after_epoch=True)]
+runner = Runner(custom_hooks=custom_hooks, ...)
+runner.train()
+```
+
+#### SyncBuffersHook
+
+[SyncBuffersHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.SyncBuffersHook.html#mmengine.hooks.SyncBuffersHook) 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
+
+```python
+custom_hooks = [dict(type='SyncBuffersHook')]
+runner = Runner(custom_hooks=custom_hooks, ...)
+runner.train()
+```
+
+## 自定义钩子
 
 如果 MMEngine 提供的默认钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
 
@@ -256,11 +235,11 @@ class CheckInvalidLossHook(Hook):
                 Defaults to None.
         """
         if self.every_n_train_iters(runner, self.interval):
-            assert torch.isfinite(runner.outputs['loss']),\
+            assert torch.isfinite(outputs['loss']),\
                 runner.logger.info('loss become infinite or NaN!')
 ```
 
-我们只需将钩子的配置传给执行器的 custom_hooks 的参数，执行器初始化的时候会注册钩子，
+我们只需将钩子的配置传给执行器的 `custom_hooks` 的参数，执行器初始化的时候会注册钩子，
 
 ```python
 from mmengine.runner import Runner
@@ -282,4 +261,13 @@ custom_hooks = dict(
 )
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/hooks.html)。
+也可以在定义类是给定优先级
+
+```python
+@HOOKS.register_module()
+class CheckInvalidLossHook(Hook):
+
+    priority = 'ABOVE_NORMAL'
+```
+
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/hooks.html)。
