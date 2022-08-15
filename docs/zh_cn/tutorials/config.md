@@ -386,5 +386,55 @@ optimizer = dict(type='SuperOptim')
 
 ### 指定注册器域名
 
-在[导入自定义模块](#导入自定义-python-模块) 一节提到，当配置与注册器结合使用时，注册器的 `build` 函数是可以根据配置文件构建出对应实例的。在注册器的教程中我们了解到，注册器是有域名（scope）概念的。如果我们想在配置文件中指定注册器的域名，需要在 `type` 字段之前加上 `{target_scope}.` 前缀。例如我们想在
-`MMDetection` 里使用 `MMClassification` 里实现的 `ResNet`，那我们就需要在 `MMDetection` 的
+#### **通过前缀指定域名**
+
+[导入自定义模块](#导入自定义-python-模块) 一节提到，配置与注册器结合使用时，注册器的 `build` 函数可以构建配置文件对应字段的实例，而在注册器的教程中我们了解到，注册器是有域名（scope）概念的。如果我们想在配置文件中指定用于构建实例的注册器域名，则需要在 `type` 字段之前加上 `{target_scope}.` 前缀。例如我们想在 `MMDetection` 里使用 `MMClassification` 里实现的 `ResNet`，那我们就需要在 `MMDetection` 的配置文件里给 `type` 加上前缀：
+
+```python
+model = dict(type='RetinaNet',
+             backbone=dict(type='mmcls.ResNet', ...)
+             ...)
+```
+
+这样就能在 model 的构造函数里，构造出 `MMClassification` 里定义的 `ResNet`。
+
+#### **通过 \_scope\_ 指定域名**
+
+我们可以通过前缀指定相应构建相应模块注册器的域名，但是如果该模块内部还会通过注册器构建其他模块，假设 `ResNet` 中有 `submodule1` 和 `submodule2` 两个模块，那配置文件就需要写成这样：
+
+```python
+model = dict(type='RetinaNet',
+             backbone=dict(
+                type='mmcls.ResNet',
+                submodule1=dict(type='mmcls.submodule1'),
+                submodule2=dict(type='mmcls.submodule2')
+             ...)
+```
+
+然而如果子模块非常多，为每个子模块都加上 `mmcls` 前缀不免显得冗余，因此 MMEngine 支持在配置文件中配置 `_scope_` 字段来控制构建当前模块时，注册器默认域名。
+
+```python
+model = dict(type='RetinaNet',
+             backbone=dict(
+                _scope_='mmcls',
+                type='ResNet',
+                submodule1=dict(type='submodule1'),
+                submodule2=dict(type='submodule2')
+             ...)
+```
+
+这样我们就不需要为每个子模块加上 `mmcls` 前缀了。
+
+我们同样可以搭配使用域名前缀和配置 \_scope\_ 两种方式来更加灵活的跨库构建实例：
+
+```python
+model = dict(type='RetinaNet',
+             backbone=dict(
+                _scope_='mmcls',
+                type='ResNet',
+                submodule1=dict(type='mmdet.submodule1'),
+                submodule2=dict(type='submodule2')
+             ...)
+```
+
+这样我们就能在 `ResNet` 的构建过程中，使用 `MMDetection` 里定义的 `submodule1`。
