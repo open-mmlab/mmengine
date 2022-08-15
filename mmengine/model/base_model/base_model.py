@@ -11,6 +11,7 @@ from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..base_module import BaseModule
+from .data_preprocessor import BaseDataPreprocessor
 
 ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
                        Tuple[torch.Tensor], torch.Tensor]
@@ -177,30 +178,38 @@ class BaseModel(BaseModule):
 
         return loss, log_vars
 
-    def to(self, device: Optional[Union[int, torch.device]], *args,
+    def to(self,
+           device: Optional[Union[int, str, torch.device]] = None,
+           *args,
            **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.to`
         additionally.
 
         Args:
-            device (int or torch.device, optional): the desired device of the
-                parameters and buffers in this module.
+            device (int, str or torch.device, optional): the desired device
+                of the parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.to(device)
+        if device is not None:
+            self._set_device(torch.device(device))
         return super().to(device)
 
-    def cuda(self, *args, **kwargs) -> nn.Module:
+    def cuda(
+        self,
+        device: Optional[Union[int, str, torch.device]] = None,
+    ) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.cuda`
         additionally.
 
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.cuda()
-        return super().cuda()
+        if device is None or isinstance(device, int):
+            device = torch.device('cuda', index=device)
+        self._set_device(torch.device(device))
+        return super().cuda(device)
 
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.cpu`
@@ -209,8 +218,24 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.cpu()
+        self._set_device(torch.device('cpu'))
         return super().cpu()
+
+    def _set_device(self, device: torch.device) -> None:
+        """Recursively set device for `BaseDataPreprocessor` instance.
+
+        Args:
+            device (torch.device): the desired device of the parameters and
+                    buffers in this module.
+        """
+
+        def apply_fn(module):
+            if not isinstance(module, BaseDataPreprocessor):
+                return
+            if device is not None:
+                module._device = device
+
+        self.apply(apply_fn)
 
     @abstractmethod
     def forward(self,
