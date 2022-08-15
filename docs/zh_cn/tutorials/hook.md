@@ -71,6 +71,16 @@ runner.train()
 `CheckpointHook` 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
+- 保存最后一个权重
+- 保存最新的多个权重
+- 保存最优权重
+- 指定保存权重的路径
+
+如需了解其他功能，请阅读[CheckpointHook API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook)。
+
+下面介绍上面提到的 5 个功能。
+
+- 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 
 假设我们一共训练 21 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
@@ -108,9 +118,15 @@ checkpoint_config = dict(type='CheckpointHook', internal=5, max_keep_ckpts=2)
 
 - 保存最优权重
 
+如果想要保存训练过程验证集的最优权重，可以设置 `save_best` 参数，如果设置为 `'auto'`，则会根据验证集的第一个评价指标（验证集返回的评价指标是一个有序字典）判断当前权重是否最优。
+
 ```python
 checkpoint_config = dict(type='CheckpointHook', save_best='auto')
 ```
+
+也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
+
+除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_bes` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
 
 - 指定保存权重的路径
 
@@ -119,8 +135,6 @@ checkpoint_config = dict(type='CheckpointHook', save_best='auto')
 ```python
 checkpoint_config = dict(type='CheckpointHook', internal=5, out_dir='/path/of/directory')
 ```
-
-更多用法请阅读 [CheckpointHook API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook)。
 
 ### LoggerHook
 
