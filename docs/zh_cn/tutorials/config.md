@@ -290,7 +290,7 @@ cfg.work_dir  # "./work_dir/config_setting1"
 
 ### 跨项目继承配置文件
 
-为了避免基于已有算法库开发的新项目时复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
+为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
 开发新的算法库，需要使用以下 MMDetection 的配置文件：
 
 ```text
