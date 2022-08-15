@@ -32,6 +32,9 @@ class DefaultScope(ManagerMixin):
 
     def __init__(self, name: str, scope_name: str):
         super().__init__(name)
+        assert isinstance(
+            scope_name,
+            str), (f'scope_name should be a string, but got {scope_name}')
         self._scope_name = scope_name
 
     @property
