@@ -190,7 +190,6 @@ class MMLogger(Logger, ManagerMixin):
                 # without color to avoid garbled code saved in files.
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
-                file_handler.setLevel(log_level)
                 self.handlers.append(file_handler)
 
     @classmethod
