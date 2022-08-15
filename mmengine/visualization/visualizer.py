@@ -1059,7 +1059,7 @@ class Visualizer(ManagerMixin):
     def add_datasample(self,
                        name,
                        image: np.ndarray,
-                       pred_sample: Optional['BaseDataElement'] = None,
+                       data_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
                        show: bool = False,
