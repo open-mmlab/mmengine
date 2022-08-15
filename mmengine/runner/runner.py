@@ -1254,13 +1254,22 @@ class Runner:
 
         Examples of ``evaluator``::
 
-            evaluator = dict(type='ToyMetric')
+            # evaluator could be a built Evaluator instance
+            evaluator = Evaluator(metrics=[ToyMetric()])
 
             # evaluator can also be a list of dict
             evaluator = [
                 dict(type='ToyMetric1'),
                 dict(type='ToyEvaluator2')
             ]
+
+            # evaluator can also be a list of built metric
+            evaluator = [ToyMetric1(), ToyMetric2()]
+
+            # evaluator can also be a dict with key metrics
+            evaluator = dict(metrics=ToyMetric())
+            # metric is a list
+            evaluator = dict(metrics=[ToyMetric()])
 
         Args:
             evaluator (Evaluator or dict or list): An Evaluator object or a
@@ -1274,8 +1283,7 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                evaluator.setdefault('type', 'Evaluator')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
