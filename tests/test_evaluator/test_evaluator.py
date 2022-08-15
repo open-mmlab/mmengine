@@ -265,11 +265,12 @@ class TestEvaluator(TestCase):
             for _ in range(size)
         ]
         all_predictions = [
-            BaseDataElement(pred=torch.zeros((1, ), device='cuda'))
-            for _ in range(size)
+            BaseDataElement(
+                pred=torch.zeros((1, ), device='cuda'),
+                label=torch.ones((1, ), device='cuda')) for _ in range(size)
         ]
         for data, pred in zip(all_data, all_predictions):
-            evaluator.process([data], [pred])
+            evaluator.process([pred], [data])
 
         def test_results_device(results: List):
             for result in results:
