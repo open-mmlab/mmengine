@@ -21,17 +21,24 @@ lr_scheduler = MultiStepLR(milestones=[80, 90], by_epoch=True)
 train_dataset = ImageNetDataset()
 train_dataloader = Dataloader(dataset=train_dataset, batch_size=32, num_workers=4)
 
-# 训练相关参数设置
+# 训练相关参数设置，按轮次训练，训练100轮
 train_cfg = dict(by_epoch=True, max_epoch=100)
 
 # 初始化执行器
-runner = Runner(model=model, optimizer=optimzier, param_scheduler=lr_scheduler,
-                train_dataloader=train_dataloader, train_cfg=train_cfg)
+runner = Runner(model=model, optim_wrapper=dict(optimizer=optimzier), param_scheduler=lr_scheduler,
+                train_dataloader=train_dataloader, train_cfg=train_cfg, work_dir='./train_resnet')
 # 执行训练
 runner.train()
 ```
 
-上面的例子中，我们手动构建了 ResNet 分类模型和 ImageNet 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，最后通过调用执行器的 `train` 函数进行模型训练。
+上面的例子中，我们手动构建了 ResNet 分类模型和 ImageNet 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，并且设置了训练配置`train_cfg`，让执行器将模型训练100轮次，最后通过调用执行器的 `train` 方法进行模型训练。
+
+用户也可以修改`train_cfg`使执行器按迭代次数控制训练：
+
+```python
+# 训练相关参数设置，按迭代次数训练，训练90000次迭代
+train_cfg = dict(by_epoch=False, max_epoch=90000)
+```
 
 ### 手动构建模块进行测试
 
@@ -46,7 +53,7 @@ test_evaluator = Evaluator(metric)
 
 # 初始化执行器
 runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=test_evaluator,
-                load_from='./faster_rcnn.pth')
+                load_from='./faster_rcnn.pth', work_dir='./test_faster_rcnn')
 
 # 执行测试
 runner.test()
@@ -55,6 +62,37 @@ runner.test()
 这个例子中我们手动构建了一个 Faster R-CNN 检测模型，以及测试用的 COCO 数据集和使用 COCO 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
 
 ### 手动构建模块在训练过程中进行验证
+
+在模型训练过程中，通常会按一定的间隔在验证集上对模型的进行进行验证。在使用 MMEngine 时，只需要构建训练和验证的模块，并在训练配置中设置验证间隔即可
+
+```python
+# 准备训练任务所需要的模块
+model = ResNet()
+optimzier = SGD(model.parameters(), lr=0.01, momentum=0.9)
+lr_scheduler = MultiStepLR(milestones=[80, 90], by_epoch=True)
+train_dataset = ImageNetDataset()
+train_dataloader = Dataloader(dataset=train_dataset, batch_size=32, num_workers=4)
+
+# 准备验证需要的模块
+val_dataset = ImageNetDataset()
+val_dataloader = Dataloader(dataset=val_dataset, batch_size=2, num_workers=2)
+metric = Accuracy()
+val_evaluator = Evaluator(metric)
+
+
+# 训练相关参数设置
+train_cfg = dict(by_epoch=True,  # 按轮次训练
+                 max_epoch=100,  # 训练100轮
+                 val_begin=20,  # 从第 20 个 epoch 开始验证
+                 val_interval=10)  # 每隔10轮进行1次验证
+
+# 初始化执行器
+runner = Runner(model=model, optim_wrapper=dict(optimizer=optimzier), param_scheduler=lr_scheduler,
+                train_dataloader=train_dataloader, val_dataloader=val_dataloader, val_evaluator=val_evaluator,
+                train_cfg=train_cfg, work_dir='./train_resnet')
+# 执行训练
+runner.train()
+```
 
 ## 通过配置文件使用执行器
 
@@ -65,7 +103,7 @@ OpenMMLab 的开源项目普遍使用注册器 + 配置文件的方式来管理�
 from mmengine import Config, Runner
 
 # 加载配置文件
-config = Config.fromfile('configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py/')
+config = Config.fromfile('configs/resnet/resnet50_8xb32_in1k.py')
 
 # 通过配置文件初始化执行器
 runner = Runner.build_from_cfg(config)
@@ -79,9 +117,13 @@ runner.test()
 
 与手动构建模块来使用执行器不同的是，通过调用 Runner 类的 `build_from_cfg` 方法，执行器能够自动读取配置文件中的模块配置，从相应的注册器中构建所需要的模块，用户不再需要考虑训练和测试分别依赖哪些模块，也不需要为了切换训练的模型和数据而大量改动代码。
 
-下面是一个典型的配置简单例子：
+下面是一个典型的使用配置文件调用 MMClassification 中的模块训练分类器的简单例子：
 
 ```python
+# 工作目录，保存权重和日志
+work_dir = './train_resnet'
+# 默认注册器域
+default_scope = 'mmcls'  # 默认使用 `mmcls` (MMClassification) 注册器中的模块
 # 模型配置
 model = dict(type='ImageClassifier',
              backbone=dict(type='ResNet', depth=50),
@@ -96,9 +138,11 @@ val_dataloader = ...
 test_dataloader = ...
 
 # 优化器配置
-optimizer = dict(type='SGD', lr=0.01)
+optim_wrapper = dict(
+    optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
 # 参数调度器配置
-param_scheduler = dict(type='MultiStepLR', milestones=[80, 90])
+param_scheduler = dict(
+    type='MultiStepLR', by_epoch=True, milestones=[30, 60, 90], gamma=0.1)
 #验证和测试的评测器配置
 val_evaluator = dict(type='Accuracy')
 test_evaluator = dict(type='Accuracy')
@@ -113,35 +157,40 @@ train_cfg = dict(
 val_cfg = dict()
 test_cfg = dict()
 
-# 自定义钩子
+# 自定义钩子 (可选)
 custom_hooks = [...]
 
-# 默认钩子
+# 默认钩子 (可选，未在配置文件中写明时将使用默认配置)
 default_hooks = dict(
+    runtime_info=dict(type='RuntimeInfoHook'),  # 运行时信息钩子
     timer=dict(type='IterTimerHook'),  # 计时器钩子
-    checkpoint=dict(type='CheckpointHook', interval=1),  # 模型保存钩子
+    sampler_seed=dict(type='DistSamplerSeedHook'),  # 为每轮次的数据采样设置随机种子的钩子
     logger=dict(type='TextLoggerHook'),  # 训练日志钩子
-    optimizer=dict(type='OptimzierHook', grad_clip=False),  # 优化器钩子
     param_scheduler=dict(type='ParamSchedulerHook'),  # 参数调度器执行钩子
-    sampler_seed=dict(type='DistSamplerSeedHook'))  # 为每轮次的数据采样设置随机种子的钩子
-
-# 环境配置
-env_cfg = dict(
-    cudnn_benchmark=False,
-    dist_cfg=dict(backend='nccl'),
-    mp_cfg=dict(mp_start_method='fork')
+    checkpoint=dict(type='CheckpointHook', interval=1),  # 模型保存钩子
 )
+
+# 环境配置 (可选，未在配置文件中写明时将使用默认配置)
+env_cfg = dict(
+    cudnn_benchmark=False,  # 是否使用 cudnn_benchmark
+    dist_cfg=dict(backend='nccl'),  # 分布式通信后端
+    mp_cfg=dict(mp_start_method='fork')  # 多进程设置
+)
+# 日志处理器 (可选，未在配置文件中写明时将使用默认配置)
+log_processor = dict(type='LogProcessor', window_size=50, by_epoch=True)
 # 日志等级配置
 log_level = 'INFO'
 
-# 加载权重
+# 加载权重的路径 (None 表示不加载)
 load_from = None
-# 恢复训练
+# 从加载的权重文件中恢复训练
 resume = False
 ```
 
 一个完整的配置文件主要由模型、数据、优化器、参数调度器、评测器等模块的配置，训练、验证、测试等流程的配置，还有执行流程过程中的各种钩子模块的配置，以及环境和日志等其他配置的字段组成。
 通过配置文件构建的执行器采用了懒初始化 (lazy initialization)，只有当调用到训练或测试等执行函数时，才会根据配置文件去完整初始化所需要的模块。
+
+关于配置文件的更详细的使用方式，请参考[配置文件教程](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.md)
 
 ## 加载权重或恢复训练
 
@@ -149,9 +198,13 @@ resume = False
 
 ```python
 runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=test_evaluator,
-                load_from='./faster_rcnn.pth')
+                load_from='./resnet50.pth')
 ```
 
 如果是通过配置文件使用执行器，只需修改配置文件中的 `load_from` 字段即可。
 
-用户也可通过设置 `resume=True` 来，加载检查点中的训练状态信息来恢复训练。当 `load_from` 和 `resume=True` 同时被设置时，执行器将加载 `load_from` 路径对应的检查点文件中的训练状态。如果仅设置 `resume=True`，执行器将会尝试从 `work_dir` 文件夹中寻找并读取最新的检查点文件。
+用户也可通过设置 `resume=True` 来，加载检查点中的训练状态信息来恢复训练。当 `load_from` 和 `resume=True` 同时被设置时，执行器将加载 `load_from` 路径对应的检查点文件中的训练状态。
+
+如果仅设置 `resume=True`，执行器将会尝试从 `work_dir` 文件夹中寻找并读取最新的检查点文件。
+
+你可能还想阅读[执行器的设计](../design/runner.md)或者[执行器的 API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/runner.html)。
