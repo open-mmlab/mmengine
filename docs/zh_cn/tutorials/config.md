@@ -290,8 +290,8 @@ cfg.work_dir  # "./work_dir/config_setting1"
 
 ### 跨项目继承配置文件
 
-为了避免基于已有算法库开发的新项目复制大量的配置文件，MMEngine 中的 config 支持配置文件的跨项目继承。
-假定 MMDetection 项目中存在如下配置文件
+为了避免基于已有算法库开发的新项目时复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
+开发新的算法库，需要使用以下 MMDetection 的配置文件：
 
 ```text
 configs/_base_/schedules/schedule_1x.py
@@ -300,7 +300,8 @@ configs/_base_/default_runtime.py
 configs/_base_/models/faster_rcnn_r50_fpn.py
 ```
 
-在 MMDetection 被安装进环境（如使用 `pip install mmdet`）以后，新的项目可以直接在自己的配置文件中继承 MMDetection 的配置文件而无需拷贝，使用方式如下所示
+如果没有配置文件跨项目继承的功能，我们就需要把 MMDetection 的配置文件拷贝到当前项目，而我们现在只需要安装 MMDetection
+（如使用 `mim install mmdet`），在新项目的配置文件中按照以下方式继承 MMDetection 的配置文件，使用方式如下所示
 
 ```python
 _base_ = [
@@ -314,7 +315,7 @@ _base_ = [
 通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
 实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
 
-### 跨项目使用配置文件
+### 跨项目获取配置文件
 
 MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口可以获得构建好的模型。通过 `get_config` 接口可以获得配置文件。
 
@@ -382,3 +383,8 @@ optimizer = dict(type='SuperOptim')
 ```
 
 这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。
+
+### 指定注册器域名
+
+在[导入自定义模块](#导入自定义-python-模块) 一节提到，当配置与注册器结合使用时，注册器的 `build` 函数是可以根据配置文件构建出对应实例的。在注册器的教程中我们了解到，注册器是有域名（scope）概念的。如果我们想在配置文件中指定注册器的域名，需要在 `type` 字段之前加上 `{target_scope}.` 前缀。例如我们想在
+`MMDetection` 里使用 `MMClassification` 里实现的 `ResNet`，那我们就需要在 `MMDetection` 的
