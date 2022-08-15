@@ -2,10 +2,11 @@
 from typing import Iterator, List, Optional, Sequence, Union
 
 from mmengine.data import BaseDataElement
-from ..registry.root import METRICS
+from ..registry.root import EVALUATOR, METRICS
 from .metric import BaseMetric
 
 
+@EVALUATOR.register_module()
 class Evaluator:
     """Wrapper class to compose multiple :class:`BaseMetric` instances.
 
@@ -19,13 +20,10 @@ class Evaluator:
             metrics = [metrics]
         self.metrics: List[BaseMetric] = []
         for metric in metrics:
-            if isinstance(metric, BaseMetric):
-                self.metrics.append(metric)
-            elif isinstance(metric, dict):
+            if isinstance(metric, dict):
                 self.metrics.append(METRICS.build(metric))
             else:
-                raise TypeError('metric should be a dict or a BaseMetric, '
-                                f'but got {metric}.')
+                self.metrics.append(metric)
 
     @property
     def dataset_meta(self) -> Optional[dict]:
