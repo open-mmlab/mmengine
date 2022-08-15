@@ -7,6 +7,89 @@ MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为算法模型
 - 清晰：封装的层次与逻辑清晰简单，抽象的定义与接口更加清晰，模块的拆分与边界更加清晰
 - 灵活：在统一的基础框架内，模块可以灵活拓展和插拔，支持各类型算法和学习范式，包括少样本和零样本学习，自监督、半监督、和弱监督学习，和模型的蒸馏、剪枝、与量化。
 
+## 样例
+
+以在 ImageNet-1k 数据集上训练一个 ResNet-50 模型为例，PyTorch 官方提供的 [imagenet-example](https://github.com/pytorch/examples/blob/main/imagenet/main.py) 需要 456 行代码，而使用 mmengine 仅需要不到 80 行。
+
+```python
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+from mmengine.evaluator import BaseMetric
+from mmengine.model import BaseModel
+from mmengine.runner import Runner
+from torch.utils.data import DataLoader
+
+
+class MMResNet50(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        self.resnet = torchvision.models.resnet50()
+
+    def forward(self, imgs, labels, mode):
+        x = self.resnet(imgs)
+        if mode == 'loss':
+            return {'loss': F.cross_entropy(x, labels)}
+        elif mode == 'predict':
+            return x, labels
+
+
+class ImageNetMetric(BaseMetric):
+
+    def process(self, data_batch, data_samples):
+        score, gt = data_samples
+        self.results.append(
+            dict(
+                bs=len(gt),
+                top1=(score.topk(1)[1] == gt.unsqueeze(1)).sum().cpu(),
+                top5=(score.topk(5)[1] == gt.unsqueeze(1)).sum().cpu(),
+            ))
+
+    def compute_metrics(self, results):
+        total_size = sum(item['bs'] for item in results)
+        return dict(
+            top1_acc=100 * sum(item['top1'] for item in results) / total_size,
+            top5_acc=100 * sum(item['top5'] for item in results) / total_size)
+
+
+train_dataloader = DataLoader(
+    dataset=torchvision.datasets.ImageFolder(
+        'data/images/train',
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])),
+    batch_size=32)
+
+val_dataloader = DataLoader(
+    dataset=torchvision.datasets.ImageFolder(
+        'data/images/val',
+        transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])),
+    batch_size=32)
+
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=ImageNetMetric(),
+)
+runner.train()
+```
+
 ## 组件
 
 MMEngine 将算法模型训练、推理、测试和可视化过程中的各个组件进行了抽象，定义了如下几个组件和他们的相关接口，这些组件的关系如下图所示：
