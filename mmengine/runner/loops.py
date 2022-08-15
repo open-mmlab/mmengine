@@ -319,6 +319,9 @@ class ValLoop(BaseLoop):
         if isinstance(evaluator, dict) or isinstance(evaluator, list):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
+            assert isinstance(evaluator, Evaluator), (
+                'evaluator must be one of dict, list or Evaluator instance, '
+                f'but got {type(evaluator)}.')
             self.evaluator = evaluator  # type: ignore
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.evaluator.dataset_meta = self.dataloader.dataset.metainfo
