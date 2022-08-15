@@ -291,8 +291,8 @@ def get_dist_info(group: Optional[ProcessGroup] = None) -> Tuple[int, int]:
             the default process group will be used. Defaults to None.
 
     Returns:
-        tuple[int, int]: Return a tuple containing the ``world_size`` and
-        ``rank``.
+        tuple[int, int]: Return a tuple containing the ``rank`` and
+        ``world_size``.
     """
     world_size = get_world_size(group)
     rank = get_rank(group)
