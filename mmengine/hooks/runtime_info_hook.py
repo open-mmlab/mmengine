@@ -34,7 +34,7 @@ class RuntimeInfoHook(Hook):
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_info('max_epochs', runner.max_epochs)
         runner.message_hub.update_info('max_iters', runner.max_iters)
-        if hasattr(runner.train_dataloader.dataset, 'dataset_meta'):
+        if hasattr(runner.train_dataloader.dataset, 'metainfo'):
             runner.message_hub.update_info(
                 'dataset_meta', runner.train_dataloader.dataset.metainfo)
 
