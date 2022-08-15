@@ -888,8 +888,6 @@ class FileClient:
                     cls._prefix_to_backends[prefix] = backend
                 elif (prefix in cls._prefix_to_backends) and force:
                     overridden_backend = cls._prefix_to_backends[prefix]
-                    if isinstance(overridden_backend, list):
-                        overridden_backend = tuple(overridden_backend)
                     for arg_key, instance in list(cls._instances.items()):
                         if isinstance(instance.client, overridden_backend):
                             cls._instances.pop(arg_key)
