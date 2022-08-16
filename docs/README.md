@@ -10,7 +10,7 @@
 2. Install the building dependencies of documentation
 
    ```bash
-   pip install requirements/docs.txt
+   pip install -r requirements/docs.txt
    ```
 
 3. Change directory to `docs/en` or `docs/zh_cn`
