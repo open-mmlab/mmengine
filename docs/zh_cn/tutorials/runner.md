@@ -207,4 +207,4 @@ runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=tes
 
 如果仅设置 `resume=True`，执行器将会尝试从 `work_dir` 文件夹中寻找并读取最新的检查点文件。
 
-你可能还想阅读[执行器的设计](../design/runner.md)或者[执行器的 API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/runner.html)。
+你可能还想阅读[执行器的设计](../design/runner.md)或者[执行器的 API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/runner.html)。
