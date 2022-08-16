@@ -165,7 +165,7 @@ class Runner:
             dict build Visualizer object. Defaults to None. If not
             specified, default config will be used.
         default_scope (str): Used to reset registries location.
-            Defaults to None.
+            Defaults to "mmengine".
         randomness (dict): Some settings to make the experiment as reproducible
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
