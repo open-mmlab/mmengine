@@ -1,18 +1,28 @@
 # 模型
 
 MMEngine 在 `nn.Module` 的基础上进一步的抽象出了基础模块（`BaseModule`） 和基础模型
-（`BaseModel`），前者用于配置模型初始化策略，后者定义了模型训练、验证、测试、推理的基本流程。
+（`BaseModel`），前者用于配置模型初始化方式，后者定义了模型训练、验证、测试、推理的基本流程。
 
 ## 基础模块（BaseModule）
 
-MMEngine 抽象出基础模块来配置模型初始化相关的参数。基础模块继承自 `nn.Module`，不仅具备 `nn.Module`
-的基本功能，还能根据传参实现相应的参数初始化逻辑。我们可以让模型继承基础模块，通过配置 `init_cfg`
-实现自定义的参数初始化逻辑。
+神经网络模型有很多初始化方式，例如 [Xavier] 初始化，[Kaiming] 初始化。`MMEngine` 将不同的初始化方式抽象成初始化器，目前实现了以下初始化器：
 
-### 加载预训练权重
+| 初始化器           |    注册名    | 功能                                                                                    |
+| :----------------- | :----------: | :-------------------------------------------------------------------------------------- |
+| `ConstantInit`     |   Constant   | 将 weight 和 bias 初始化为指定常量                                                      |
+| `XavierInit`       |    Xavier    | 将 weight 和 bias 以 [Xavier] 方式初始化                                                |
+| `NormalInit`       |    Normal    | 将 weight 和 bias 以正太分布的方式初始化                                                |
+| `TruncNormalInit`  | TruncNormal  | 将 weight 和 bias 以被截断的正太分布的方式初始化，参数 a 和 b 为正太分布的有效区域      |
+| `UniformInit`      |   Uniform    | 将 weight 和 bias 以均匀分布的型式初始化，参数 a 和 b 为均匀分布的范围                  |
+| `KaimingInit`      |   Kaiming    | 将 weight 和 bias 以 [Kaiming] 的方式初始化。                                           |
+| `Caffe2XavierInit` | Caffe2Xavier | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 Kaiming 初始化 |
+| `PretrainedInit`   |  Pretrained  | 加载预训练权重                                                                          |
 
-继承自基础模块的模型可以通过初始化阶段配置 `init_cfg`， 让后续模型在调用 `init_weights`
-时加载预训练权重:
+基础模块接受 `init_cfg` 参数，继承自基础模块的模型可以在 `init_cfg` 里指定初始化器，选择相应的初始化方式。
+
+### 权重初始化
+
+假设我们定义了继承自基础模块的模型 `ToyNet`，并在 `__init__` 里调用了 `BaseModule` 的 `__init__` 方法。此时我们可以在模型初始化阶段另 `init_cfg=dict(type='Pretrained', checkpoint='path/to/checkpoint')`，初始化后再调用 `init_weights` 方法，完成预训练权重的加载。
 
 ```python
 import torch
@@ -36,19 +46,20 @@ toy_net = ToyNet(init_cfg=dict(
     type='Pretrained', checkpoint=pretrained))
 # 加载权重
 toy_net.init_weights()
+
+# 08/16 20:51:24 - mmengine - INFO - load model from: ./pretrained.pth
+# 08/16 20:51:24 - mmengine - INFO - local loads checkpoint from path: ./pretrained.pth
 ```
 
-当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化策略，上例中的 `Pretrained` 就表示
-`PretrainedInit` 类，并且被注册到 `WEIGHT_INITIALIZERS` [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
-`checkpoint` 是 `PretrainedInit` 的参数，用于指定模型加载的路径，可以是可以是本地磁盘路径，也可以是
-url。
+当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化方式，上例中的 `Pretrained` 为
+`PretrainedInit` 类的缩写。`PretrainedInit` 被注册到 `WEIGHT_INITIALIZERS` [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+`checkpoint` 是 `PretrainedInit` 的参数，用于指定模型加载的路径，它可以是本地磁盘路径，也可以是
+URL。
 
-### 初始化策略
+同理，如果我们想对卷积做 Kaiming 初始化，则另 `init_cfg=dict(type='Kaiming', layer='Conv2d')`，此时模型中所有类型为 `Conv2d` 的模块的初始化方式均为 `Kaiming` 初始化。
 
-**1.按类型初始化**
-
-有时候我们可能需要用不同的初始化策略去初始化不同模块，例如对卷积使用 `Kaiming` 初始化，对线性层使用 `Xavier`
-初始化。此时我们可以让 `init_cfg` 是一个列表，其中的每一个元素都表示对某些层使用特定的初始化策略。
+有时候我们可能需要用不同的初始化方式去初始化不同模块，例如对卷积使用 `Kaiming` 初始化，对线性层使用 `Xavier`
+初始化。此时我们可以让 `init_cfg` 是一个列表，其中的每一个元素都表示对某些层使用特定的初始化方式。
 
 ```python
 import torch.nn as nn
@@ -69,9 +80,25 @@ toy_net = ToyNet(
     ],
 )
 toy_net.init_weights()
+
+# 08/16 20:50:36 - mmengine - INFO -
+# linear.weight - torch.Size([1, 1]):
+# XavierInit: gain=1, distribution=normal, bias=0
+#
+# 08/16 20:50:36 - mmengine - INFO -
+# linear.bias - torch.Size([1]):
+# XavierInit: gain=1, distribution=normal, bias=0
+#
+# 08/16 20:50:36 - mmengine - INFO -
+# conv.weight - torch.Size([1, 1, 1, 1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+#
+# 08/16 20:50:36 - mmengine - INFO -
+# conv.bias - torch.Size([1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-类似的，`layer` 参数也可以是一个列表，表示该初始化策略会作用于多个 `layer`
+类似的，`layer` 参数也可以是一个列表，表示该初始化方式会作用于多个 `layer`
 
 ```python
 toy_net = ToyNet(
@@ -80,12 +107,18 @@ toy_net = ToyNet(
     ],
 )
 toy_net.init_weights()
+
+# 08/16 20:51:58 - mmengine - INFO -
+# conv1.weight - torch.Size([1, 1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+#
+# 08/16 20:51:58 - mmengine - INFO -
+# conv1.bias - torch.Size([1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-**2.细粒度的初始化**
-
-有时我们需要对同一类型的不同模块做不同初始化策略，例如我们有 `conv1` 和 `conv2` 两个类型同样为 `Conv2d`
-的模块，需要二者的初始化方式分别为 `Kaiming` 初始化和 `Xavier` 初始化，这时候我们就需要配置 override 参数：
+有时我们需要对同一类型的不同模块做不同初始化方式，例如我们有 `conv1` 和 `conv2` 两个类型同样为 `Conv2d`
+的模块，需要对 conv1 进行 `Kaiming` 初始化，conv2 进行 `Xavier` 初始化，我们可以通过配置 `override` 参数来满足这样的需求：
 
 ```python
 import torch.nn as nn
@@ -106,40 +139,51 @@ toy_net = ToyNet(
     ],
 )
 toy_net.init_weights()
+
+# 08/16 20:52:41 - mmengine - INFO -
+# conv1.weight - torch.Size([1, 1, 1, 1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+#
+# 08/16 20:52:41 - mmengine - INFO -
+# conv1.bias - torch.Size([1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+#
+# 08/16 20:52:41 - mmengine - INFO -
+# conv2.weight - torch.Size([1, 1, 1, 1]):
+# XavierInit: gain=1, distribution=normal, bias=0
+#
+# 08/16 20:52:41 - mmengine - INFO -
+# conv2.bias - torch.Size([1]):
+# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-`override` 可以理解成一个二级的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也可以通过 `type`
-字段指定初始化策略。不同的是 `override` 必须制定 `name`，`name` 相当于 `override`
-参数的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`， 我们
-我们会以 `Xavier` 初始化策略初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
+`override` 可以理解成一个嵌套的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也需要通过 `type`
+字段指定初始化方式。不同的是 `override` 必须制定 `name`，`name` 相当于 `override`
+的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`， 我们
+我们会以 `Xavier` 初始化方式初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
 
-目前 MMEngine 支持以下初始化策略：
-
-| Initializer        |    注册名    | 功能                                                                                    |
-| :----------------- | :----------: | :-------------------------------------------------------------------------------------- |
-| `constant_init`    |   Constant   | 将 weight 和 bias 初始化为指定常量                                                      |
-| `XavierInit`       |    Xavier    | 将 weight 和 bias 以 [Xavier] 方式初始化                                                |
-| `NormalInit`       |    Normal    | 将 weight 和 bias 以正太分布的方式初始化                                                |
-| `TruncNormalInit`  | TruncNormal  | 将 weight 和 bias 以被截断的正太分布的方式初始化，参数 a 和 b 为正太分布的有效区域      |
-| `UniformInit`      |   Uniform    | 将 weight 和 bias 以均匀分布的型式初始化，参数 a 和 b 为均匀分布的范围                  |
-| `KaimingInit`      |   Kaiming    | 将 weight 和 bias 以 [Kaiming] 的方式初始化。                                           |
-| `Caffe2XavierInit` | Caffe2Xavier | Caffe2 中 Xavier 初始化策略，在 Pytorch 中对应 `fan_in`, `normal` 模式的 Kaiming 初始化 |
-| `PretrainedInit`   |  Pretrained  | 加载预训练权重                                                                          |
-
-### 自定义的初始化策略
+### 自定义的初始化方式
 
 尽管 `init_cfg` 能够控制各个模块的初始化方式，但是在不扩展 `WEIGHT_INITIALIZERS`
-的情况下，是无法初始化一些自定义模块的。对于这种情况，我们需要让自定义子模块实现 `init_weights` 方法。模型调用 `init_weights`
+的情况下，我们是无法初始化一些自定义模块的，例如表格中提到的大多数初始化器，都需要对应的模块有 `weight` 和 `bias` 属性 。对于这种情况，我们建议让自定义模块实现 `init_weights` 方法。模型调用 `init_weights`
 时，会链式的调用所有子模块的 `init_weights`。
 
+假设我们定义了以下模块：
+
+- 继承自 `nn.Module` 的 `ToyConv`，实现了 `init_weights` 方法，让 `custom_weight` 初始化为 1，`custom_bias` 初始化为 0
+- 继承自基础模块的模型 `ToyNet`，且含有 `ToyConv` 子模块。
+
+我们在调用 `ToyConv` 的 `init_weights` 方法时，会链式的调用的子模块 `ToyConv` 的 `init_weights` 方法，实现自定义模块的初始化。
+
 ```python
-import torch.nn as nn
 import torch
+import torch.nn as nn
 
 from mmengine.model import BaseModule
 
 
-class ToyConv:
+class ToyConv(nn.Module):
+
     def __init__(self):
         super().__init__()
         self.custom_weight = nn.Parameter(torch.empty(1, 1, 1, 1))
@@ -152,6 +196,7 @@ class ToyConv:
 
 
 class ToyNet(BaseModule):
+
     def __init__(self, init_cfg=None):
         super().__init__(init_cfg)
         self.conv1 = nn.Conv2d(1, 1, 1)
@@ -161,30 +206,34 @@ class ToyNet(BaseModule):
 
 toy_net = ToyNet(
     init_cfg=[
-        dict(type='Kaiming', layer=['Conv2d'],
-             override=dict(name='conv2', type='Xavier')),
-    ],
-)
+        dict(
+            type='Kaiming',
+            layer=['Conv2d'],
+            override=dict(name='conv2', type='Xavier')),
+    ], )
 toy_net.init_weights()
+
+# 只显示了自定义初始化的日志
+...
+# 08/16 21:17:35 - mmengine - INFO -
+# custom_conv.custom_weight - torch.Size([1, 1, 1, 1]):
+# Initialized by user-defined `init_weights` in ToyConv
+#
+# 08/16 21:17:35 - mmengine - INFO -
+# custom_conv.custom_bias - torch.Size([1]):
+# The value is the same before and after calling `init_weights` of ToyNet
 ```
 
-上例中，toy_net 会递归调用 `ToyConv` 的 `init_weights`，分别将参数 `custom_weight` 和
-`custom_bias` 初始化为 1 和 0。
+这里我们对 `init_cfg` 和 `init_weights` 两种初始化方式做一些总结：
 
-看到这里可能会疑惑，现在既可以通过配置 `init_cfg` 来选择初始化策略，也可以通过实现 `init_weights`
-指定自定义的初始化方式，我们到底应该选择哪种方式呢？这里我们对二者的功能做了进一步的区分：
+**1. 配置 `init_cfg` 控制初始化**
 
-1. 配置 `init_cfg` 控制初始化
+- 通常用于初始化一些比较底层的模块，例如卷积、线性层等。如果想通过 `init_cfg` 配置自定义模块的初始化方式，需要将相应的初始化器注册到 `WEIGHT_INITIALIZERS` 里。
+- 动态初始化特性，初始化方式随 `init_cfg` 的值改变。
 
-- 通常用于初始化一些比较底层的模块，例如卷积、线性层等。如果想通过 `init_cfg` 配置自定义模块的初始化方式，则需要将相应的初始化策略注册到
-  `WEIGHT_INITIALIZERS` 里。
-- 动态初始化，我们可以通过配置 `init_cfg` 动态的选择模型初始化方式。
+**2. 实现 `init_weights` 方法**
 
-2. 实现 `init_weights` 初始化
-
-- 通常用于初始化一些自定义模块。相比于 `init_cfg` 粒度更粗。
-- 有些模块可能不需要动态初始化特性，这时可以直接实现 `init_weights` 方法，而无需通过 `init_cfg` 配置。
-- `init_weights` 的优先级更高，会**覆盖** `init_cfg` 中已经初始化后的结果。
+- 通常用于初始化自定义模块。相比于 `init_cfg` 的自定义初始化，实现 `init_weights` 方法更加简单，无需注册，但是没有 `init_cfg` 那么灵活，可以动态的指定任意模块的初始化方式。
 
 ```{note}
 init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定了某个模块的初始化方式
@@ -196,15 +245,15 @@ init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定�
 
 ## 基础模型（BaseModel）
 
-[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)要求模型需要实现 `train_step`，`val_step` 和 `test_step` 方法。因此 MMEngine 定义了基础模型 `BaseModel`，并在上述接口中实现了基本的训练流程，我们可以通过继承基础模型，实现符合执行器接口标准的模型。
+[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)要求模型需要实现 `train_step`，`val_step` 和 `test_step` 方法。对于检测、识别、分割一类的深度学习任务，上述方法通常为标准的流程，例如在 `train_step` 里更新参数，返回损失；`val_step` 和 `test_step` 返回预测结果。因此 MMEngine 抽象出基础模型 `BaseModel`，实现了上述接口的标准流程。我们只需要让模型继承自基础模型，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
 
 ### 接口定义
 
-[forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回 元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的入参；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 的入参。 `mode` 参数用于控制 forward 的返回结果：
+[forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的入参；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 的入参。 `mode` 参数用于控制 forward 的返回结果：
 
 - `mode='loss'`：`forawrd` **必须**返回一个字典， key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数，多次迭代统计后输出到终端。该模式会被 `train_step` 调用。
-- `mode='predict'`： `forward` 必须返回列表/元组型式的预测结果，预测结果需要和\[评测指标\]的(https://mmengine.readthedocs.io/zh_CN/latest/tutorials/metric_and_evaluator.html) `process` 接口的第一个参数相符合。该模式会被 `val_step`, `test_step` 接口调用。OpenMMLab 系列算法则有更加严格的约定，需要输出列表型式的[数据元素](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)
-- `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 返回数据元素列表，而 `tensor` 则返回 `torch.Tensor` 类型的结果。
+- `mode='predict'`： `forward` 必须返回列表/元组型式的预测结果，预测结果需要和[评测指标](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/metric_and_evaluator.html) `process` 接口的第一个参数相符合。该模式会被 `val_step`, `test_step` 接口调用。OpenMMLab 系列算法则有更加严格的约定，输出列表型式的[数据元素](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)
+- `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 模式返回数据元素列表，而 `tensor` 模式则返回 `torch.Tensor` 类型的结果。
 
 [train_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.train_step): 调用 `forward` 接口，得到损失字典，进行参数更新并返回整理后的损失字典。基础模型基于[优化器封装](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html) 实现了标准的梯度计算、参数更新、梯度清零流程。如果模型需要自定义的参数更新逻辑，可以重载 `train_step` 接口，具体例子见：[使用 MMEngine 训练生成对抗网络](TODO)
 
@@ -212,7 +261,7 @@ init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定�
 
 [test_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.test_step): 同 `val_step`，但是只返回预测结果。
 
-基于上述接口约定，我们定义了继承自基础模型的 `NeuralNetwork`，配合执行器来训练 FashionMNIST
+基于上述接口约定，我们定义了继承自基础模型的 `NeuralNetwork`，配合执行器来训练 `FashionMNIST`：
 
 ```python
 from torch.utils.data import DataLoader
@@ -284,7 +333,7 @@ runner = Runner(
     train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
     val_cfg=dict(fp16=True),
     val_dataloader=test_dataloader,
-    val_evaluator=dict(type=FashionMnistMetric))
+    val_evaluator=dict(metrics=FashionMnistMetric()))
 runner.train()
 ```
 
