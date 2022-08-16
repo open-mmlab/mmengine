@@ -247,6 +247,8 @@ init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定�
 
 [执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)要求模型需要实现 `train_step`，`val_step` 和 `test_step` 方法。对于检测、识别、分割一类的深度学习任务，上述方法通常为标准的流程，例如在 `train_step` 里更新参数，返回损失；`val_step` 和 `test_step` 返回预测结果。因此 MMEngine 抽象出基础模型 `BaseModel`，实现了上述接口的标准流程。我们只需要让模型继承自基础模型，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
 
+基础模型继承自基础模块，能够通过配置 `init_cfg` 灵活的选择初始化方式。
+
 ### 接口定义
 
 [forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的入参；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 的入参。 `mode` 参数用于控制 forward 的返回结果：
@@ -316,12 +318,11 @@ class NeuralNetwork(BaseModel):
 
 class FashionMnistMetric(BaseMetric):
     def process(self, data, preds) -> None:
-        self.results.append(((data[1] == preds[0].cpu()).sum() \
-             / len(preds[0]), preds[1]))
+        self.results.append(((data[1] == preds[0].cpu()).sum(), preds[1], len(preds[0])))
 
     def compute_metrics(self, results):
-        correct, loss = zip(*results)
-        test_loss, correct = sum(loss) / len(self.results), sum(correct) / len(self.results)
+        correct, loss, batch_size = zip(*results)
+        test_loss, correct = sum(loss) / len(self.results), sum(correct) / sum(batch_size)
         return dict(Accuracy=correct, Avg_loss=test_loss)
 
 
@@ -337,6 +338,8 @@ runner = Runner(
 runner.train()
 ```
 
+相比于 [Pytorch 官方示例](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#)，MMEngine 的代码更短，记录的日志也更加丰富。
+
 `NeuralNetwork.forward` 存在跨模块的接口约定：
 
 - `train_dataloader` 返回一个 `(img, label)` 型式的元组，因此 `forward` 接口的前两个参数分别为 `img` 和 `label`。
@@ -344,9 +347,9 @@ runner.train()
 
 ### 数据处理器（DataPreprocessor）
 
-如果你的电脑配有 Nvidia 的 GPU，并且运行了上节的代码样例，不难发现 Pytorch 的样例是基于 CPU 运行的，而 MMEngine 的样例是基于 GPU 运行的。细心的你可能会奇怪，数据和模型从 CPU 搬运到 GPU 的过程在何时发生？
+如果你的电脑配有 GPU（或其他能够加速训练的硬件，mps、ipu 等），并运行了上节的代码示例。你会发现 Pytorch 的示例是在 CPU 上运行的，而 MMEngine 的示例是在 GPU 上运行的。`MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
 
-执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器是基础模型的属性，在基础模型的构造过程中被实例化。
+事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器作为基础模型的属性，在基础模型的构造过程中被实例化。
 
 为了体现数据处理器起到的作用，我们仍然以[上一节](#基础模型basemodel)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
 
