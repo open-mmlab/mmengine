@@ -235,7 +235,7 @@ class MMLogger(Logger, ManagerMixin):
 
         level must be an int or a str.
         """
-        # Compatible with python3.6. Since `logging.Logger` does not have
+        # Compatible with python3.6. `logging.Logger` does not have
         # `_cache` attribute in python3.6.
         if hasattr(self, '_cache'):
             self.level = logging._checkLevel(level)
