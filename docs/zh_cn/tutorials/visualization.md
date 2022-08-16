@@ -1,18 +1,25 @@
-## 可视化
+# 可视化
 
-可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 算法库中提供了如下功能：
+可视化可以给深度学习的模型训练和测试过程提供直观解释。
 
-- 丰富的开箱即用可视化功能，能够满足大部分计算机视觉可视化任务
-- 高扩展性，用户可以通过简单扩展实现定制需求
-- 能够在训练和测试流程的任意点位进行可视化
-- OpenMMLab 各个算法库具有统一可视化接口，利于用户理解和维护
+MMEngine 提供了 `Visualizer` 可视化器用以可视化和存储模型训练和测试过程中的状态以及中间结果。简单来说其具备如下功能：
+
+- 提供了基础绘图接口以及特征图可视化
+- 提供了本地， TensorBoard 以及 WandB 等多种后端，可以将训练状态例如 loss 、lr 或者性能评估指标以及可视化的结果写入指定的单一或多个后端
+- 允许在代码库任意位置调用，对任意位置的特征，图像，状态等进行可视化或存储。
 
 下面具体说明
 
-### 1 绘制并本地窗口显示
+## 基础绘制接口
 
-**(1) 绘制检测框、掩码和文本等**
-可视化器 Visualizer 提供了需要常用对象的绘制接口，例如绘制**检测框、点、文本、线、圆、多边形和二值掩码**。常见用法如下：
+可视化器提供了常用对象的绘制接口，例如绘制**检测框、点、文本、线、圆、多边形和二值掩码**。这些基础 API 支持以下特性：
+
+- 可以多次调用，实现叠加绘制需求
+- 均支持多输入，除了要求文本输入的绘制接口外，其余接口同时支持 Tensor 以及 Numpy 的输入
+
+常见用法如下：
+
+(1) 绘制检测框、掩码和文本等
 
 ```python
 import torch
@@ -30,14 +37,14 @@ visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
 visualizer.show()
 ```
 
-上述绘制接口中除了绘制文本接收字符串数据外都可以接受 tensor 或者 np.array 格式的数据。
-
 ```python
 # image 为 rgb 格式数据
 visualizer = Visualizer(image=image)
 visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
 visualizer.show()
 ```
+
+(2) 叠加显示
 
 上述绘制接口可以多次调用，从而实现叠加显示需求
 
@@ -54,7 +61,8 @@ visualizer.show()
 
 用户可以通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等。
 
-**(2) 绘制特征图**
+## 特征图绘制
+
 特征图可视化功能较多，目前不支持 batch 输入，为了方便理解，将其对外接口梳理如下：
 
 ```python
@@ -83,7 +91,9 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 
 - 考虑到输入的特征图通常非常小，函数支持输入 `resize_shape` 参数，方便将特征图进行上采样后进行可视化。
 
-**常见功能 1**：将多通道特征图采用 `select_max` 参数压缩为单通道并显示
+常见用法如下：
+
+(1) 将多通道特征图采用 `select_max` 参数压缩为单通道并显示
 
 ```python
 visualizer = Visualizer()
@@ -92,7 +102,7 @@ drawn_img = visualizer.draw_featmap(feat, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
 
-**常见功能 2**： 将多通道特征图采用 `select_max` 参数压缩为单通道，将其指定尺寸输出。如果输入的特征图比较小，可以使用 `resize_shape` 对特征图上采样可视化
+(2) 将多通道特征图采用 `select_max` 参数压缩为单通道，将其指定尺寸输出。如果输入的特征图比较小，可以使用 `resize_shape` 对特征图上采样可视化
 
 ```python
 visualizer = Visualizer()
@@ -101,7 +111,7 @@ drawn_img = visualizer.draw_featmap(feat, channel_reduction='select_max'，resiz
 visualizer.show(drawn_img)
 ```
 
-**常见功能 3**： 将多通道特征图采用 `select_max` 参数压缩为单通道并叠加原图显示
+(3) 将多通道特征图采用 `select_max` 参数压缩为单通道并叠加原图显示
 
 ```python
 visualizer = Visualizer()
@@ -110,7 +120,7 @@ drawn_img = visualizer.draw_featmap(feat, image, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
 
-**常见功能 4**： 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
+(4) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
 
 ```python
 visualizer = Visualizer()
@@ -130,12 +140,13 @@ assert drawn_img.shape == (4 * 50, 2 * 50, 3)
 visualizer.show(drawn_img)
 ```
 
-### 2 绘制并选择不同存储后端
+## 基础存储接口
 
-在绘制完成后，可以选择本地窗口显示，也可以存储到不同后端中，目前 MMEngine 内置了本地存储、Tensorboard 存储和 WandB 存储 3 个后端。
+在绘制完成后，可以选择本地窗口显示，也可以存储到不同后端中，目前 MMEngine 内置了本地存储、Tensorboard 存储和 WandB 存储 3 个后端，且支持存储绘制后的图片、loss 等标量数据和配置文件。
 
-**(1) 单存储后端**
-如果选择本地存储后端，如下所示：
+**(1) 存储绘制后的图片**
+
+假设存储后端为本地存储
 
 ```python
 # image 为 rgb 格式数据
@@ -147,11 +158,6 @@ visualizer.draw_circles(torch.tensor([20, 50]), torch.tensor([5]))
 
 # 会生成 temp_dir/vis_data/vis_image/demo_0.png
 visualizer.add_image('demo', visualizer.get_image())
-
-# 保存特征图
-drawn_img = visualizer.draw_featmap(feat, channel_reduction=None, topk=5, arrangement=(4, 2))
-# 会生成 temp_dir/vis_data/vis_image/feat_0.png
-visualizer.add_image('demo', drawn_img)
 ```
 
 其中生成的后缀 0 是用来区分不同 step 场景
@@ -163,23 +169,56 @@ visualizer.add_image('demo', visualizer.get_image(), step=1)
 visualizer.add_image('demo', visualizer.get_image(), step=3)
 ```
 
-选择其他后端也是完全相同的用法
+如果想使用其他后端，则只需要修改配置文件即可
+
+```python
+# TensorboardVisBackend
+visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
+# 或者 WandbVisBackend
+visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')], save_dir='temp_dir')
+```
+
+**(2) 存储特征图**
 
 ```python
 # image 为 rgb 格式数据
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
-# visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')], save_dir='temp_dir')
-
-visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
-visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
-visualizer.draw_circles(torch.tensor([20, 50]), torch.tensor([5]))
-
-# 会生成 temp_dir/vis_data/events.out.tfevents.xx 文件
-visualizer.add_image('demo', visualizer.get_image())
+visualizer = Visualizer(image=image, vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+drawn_img = visualizer.draw_featmap(feat, channel_reduction=None, topk=5, arrangement=(4, 2))
+# 会生成 temp_dir/vis_data/vis_image/feat_0.png
+visualizer.add_image('demo', drawn_img)
 ```
 
-**(2) 多存储后端**
-用户也可以配置多个存储后端，将绘制后结果保存到不同的位置
+**(3) 存储 loss 等标量数据**
+
+```python
+# 保存标量，例如评估指标
+visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+# 保存 loss
+visualizer.add_scalar('loss', 0.2, step=0)
+visualizer.add_scalar('loss', 0.1, step=1)
+# 保存acc
+visualizer.add_scalar('acc', 0.7, step=0)
+visualizer.add_scalar('acc', 0.8, step=1)
+```
+
+也可以一次性保存多个标量数据
+
+```python
+visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+visualizer.add_scalars({'loss': 0.3, 'acc': 0.8}, step=3)
+```
+
+**(4) 保存配置文件**
+
+```python
+# 保存配置
+visualizer = Visualizer(vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
+visualizer.add_config(config)
+```
+
+## 多后端存储
+
+实际上，任何一个可视化器都可以配置任意多个存储后端，可视化器会循环调用配置好的多个存储后端，从而将结果保存到多后端中。
 
 ```python
 # image 为 rgb 格式数据
@@ -204,33 +243,7 @@ visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBack
                         save_dir='temp_dir')
 ```
 
-### 3 保存配置和标量到不同存储后端
-
-存储后端除了可以保存图片相关信息，还可以保存 OpenMMLab 训练过程中的配置信息和标量数据。
-
-```python
-# 保存配置
-visualizer = Visualizer(vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
-visualizer.add_config(config)
-```
-
-```python
-# 保存标量，例如评估指标
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-visualizer.add_scalar('map', 0.7, step=0)
-visualizer.add_scalar('map', 0.8, step=1)
-```
-
-也可以一次性保存多个标量数据
-
-```python
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-visualizer.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
-```
-
-同样的，用户也可以配置多个存储后端。
-
-### 4 任意点位进行可视化
+## 任意点位进行可视化
 
 在深度学习过程中，会存在在某些代码位置插入可视化函数，并将其保存到不同后端的需求，这类需求主要用于可视化分析和调试阶段。MMEngine 设计的可视化器支持在任意点位获取同一个可视化器然后进行可视化的功能。
 用户只需要在初始化时候通过 `get_instance` 接口实例化可视化对象，此时该可视化对象即为全局可获取唯一对象，后续通过  `Visualizer.get_current_instance()` 即可在代码任意位置获取。
@@ -256,7 +269,7 @@ visualizer_cfg=dict(
 VISUALIZERS.build(visualizer_cfg)
 ```
 
-### 5 扩展存储后端和可视化器
+## 扩展存储后端和可视化器
 
 **(1) 调用特定存储后端功能**
 目前存储后端仅仅提供了保存配置、保存标量等功能，但是由于 WandB 和 Tensorboard 这类存储后端功能非常强大，用户可能会希望利用到这类存储后端的扩展类功能。为此存储后端提供了  `experiment` 属性来获取后端对象，从而满足各类定制化功能。
