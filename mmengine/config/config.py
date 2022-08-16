@@ -892,7 +892,7 @@ class Config:
             >>> # Merge list element
             >>> cfg = Config(
             >>>     dict(pipeline=[dict(type='LoadImage'),
-            >>>                 dict(type='LoadAnnotations')]))
+            >>>                    dict(type='LoadAnnotations')]))
             >>> options = dict(pipeline={'0': dict(type='SelfLoadImage')})
             >>> cfg.merge_from_dict(options, allow_list_keys=True)
             >>> cfg._cfg_dict
