@@ -1,6 +1,6 @@
-## 可视化
+# 可视化
 
-### 1 总体设计
+## 1 总体设计
 
 可视化可以给深度学习的模型训练和测试过程提供直观解释。在 OpenMMLab 算法库中，我们期望可视化功能的设计能满足以下需求：
 
@@ -20,7 +20,7 @@
  <img src="https://user-images.githubusercontent.com/17425982/163327736-f7cb3b16-ef07-46bc-982a-3cc7495e6c82.png" >
 </div>
 
-### 2 可视化器 Visualizer
+## 2 可视化器 Visualizer
 
 可视化对象 Visualizer 对外提供了所有接口。可以将其接口分成 3 大类，如下所示
 
@@ -59,7 +59,7 @@
 
 关于其用法，可以参考 [可视化器用户教程](../tutorials/visualization.md)。
 
-### 3 可视化存储后端 VisBackend
+## 3 可视化存储后端 VisBackend
 
 在绘制后可以将绘制后的数据存储到多个可视化存储后端中。为了统一接口调用，MMEngine 提供了统一的抽象类 `BaseVisBackend`，和一些常用的 VisBackend 如 `LocalVisBackend`、`WandbVisBackend` 和 `TensorboardVisBackend`。
 BaseVisBackend 定义了对外调用的接口规范，主要接口和属性如下：
