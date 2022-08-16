@@ -164,8 +164,8 @@ class Runner:
         visualizer (Visualizer or dict, optional): A Visualizer object or a
             dict build Visualizer object. Defaults to None. If not
             specified, default config will be used.
-        default_scope (str, optional): Used to reset registries location.
-            Defaults to None.
+        default_scope (str): Used to reset registries location.
+            Defaults to "mmengine".
         randomness (dict): Some settings to make the experiment as reproducible
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
@@ -257,7 +257,7 @@ class Runner:
         log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
         visualizer: Optional[Union[Visualizer, Dict]] = None,
-        default_scope: Optional[str] = None,
+        default_scope: str = 'mmengine',
         randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
@@ -452,7 +452,7 @@ class Runner:
             log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
             visualizer=cfg.get('visualizer'),
-            default_scope=cfg.get('default_scope'),
+            default_scope=cfg.get('default_scope', 'mmengine'),
             randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
             cfg=cfg,
