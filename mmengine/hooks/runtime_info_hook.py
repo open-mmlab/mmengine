@@ -34,8 +34,9 @@ class RuntimeInfoHook(Hook):
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_info('max_epochs', runner.max_epochs)
         runner.message_hub.update_info('max_iters', runner.max_iters)
-        runner.message_hub.update_info(
-            'dataset_meta', runner.train_dataloader.dataset.metainfo)
+        if hasattr(runner.train_dataloader.dataset, 'dataset_meta'):
+            runner.message_hub.update_info(
+                'dataset_meta', runner.train_dataloader.dataset.metainfo)
 
     def before_train_epoch(self, runner) -> None:
         """Update current epoch information before every epoch."""

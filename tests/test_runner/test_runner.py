@@ -173,6 +173,18 @@ class ToyDataset(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
+@DATASETS.register_module()
+class ToyDatasetNoMeta(Dataset):
+    data = torch.randn(12, 2)
+    label = torch.ones(12)
+
+    def __len__(self):
+        return self.data.size(0)
+
+    def __getitem__(self, index):
+        return dict(inputs=self.data[index], data_sample=self.label[index])
+
+
 @METRICS.register_module()
 class ToyMetric1(BaseMetric):
 
@@ -1523,6 +1535,13 @@ class TestRunner(TestCase):
             linear1=[dict(type='MultiStepLR', milestones=[1, 2])],
             linear2=[dict(type='MultiStepLR', milestones=[1, 2])],
         )
+        runner = runner.from_cfg(cfg)
+        runner.train()
+
+        # 9 Test training with a dataset without metainfo
+        cfg.experiment_name = 'test_train9'
+        cfg = copy.deepcopy(cfg)
+        cfg.train_dataloader.dataset = dict(type='ToyDatasetNoMeta')
         runner = runner.from_cfg(cfg)
         runner.train()
 
