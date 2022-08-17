@@ -22,7 +22,11 @@ MMEngine 在 `nn.Module` 的基础上进一步的抽象出了基础模块（`Bas
 
 ### 权重初始化
 
-假设我们定义了继承自基础模块的模型 `ToyNet`，并在 `__init__` 里调用了 `BaseModule` 的 `__init__` 方法。此时我们可以在模型初始化阶段另 `init_cfg=dict(type='Pretrained', checkpoint='path/to/checkpoint')`，初始化后再调用 `init_weights` 方法，完成预训练权重的加载。
+假设我们定义了模型 `ToyNet`，它继承自基础模块（`BaseModule`），并在 `__init__` 里调用了 `BaseModule` 的 `__init__`。此时我们可以在模型初始化阶段指定 `init_cfg` 来选择模型的初始化方式，然后在 `ToyNet` 实例化后调用 `init_weights` 方法，完成权重的初始化。
+
+#### 加载预训练权重
+
+我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpp)`，来加载预训练权重：
 
 ```python
 import torch
@@ -98,7 +102,7 @@ toy_net.init_weights()
 # KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-类似的，`layer` 参数也可以是一个列表，表示该初始化方式会作用于多个 `layer`
+类似地，`layer` 参数也可以是一个列表，表示列表中的多种不同的 `layer` 均使用 `type` 指定的初始化方式
 
 ```python
 toy_net = ToyNet(
@@ -117,8 +121,8 @@ toy_net.init_weights()
 # KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-有时我们需要对同一类型的不同模块做不同初始化方式，例如我们有 `conv1` 和 `conv2` 两个类型同样为 `Conv2d`
-的模块，需要对 conv1 进行 `Kaiming` 初始化，conv2 进行 `Xavier` 初始化，我们可以通过配置 `override` 参数来满足这样的需求：
+有时同一类型的不同模块有不同初始化方式，例如 `conv1` 和 `conv2` 两个模块的类型均为 `Conv2d`
+的模块，我们需要对 conv1 进行 `Kaiming` 初始化，conv2 进行 `Xavier` 初始化，我们可以通过配置 `override` 参数来满足这样的需求：
 
 ```python
 import torch.nn as nn
