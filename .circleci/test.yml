@@ -63,8 +63,8 @@ jobs:
             python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install MMEngine dependencies
+          # python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${MMCV_TORCH}/index.html
           command: |
-            python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${MMCV_TORCH}/index.html
             python -m pip install -r requirements.txt
       - run:
           name: Build and install
@@ -105,8 +105,8 @@ jobs:
             docker run --gpus all -t -d -v /home/circleci/project:/mmengine -w /mmengine --name mmengine mmengine:gpu
       - run:
           name: Install mmengine dependencies
+          # docker exec mmengine pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/${MMCV_CUDA}/torch${MMCV_TORCH}/index.html
           command: |
-            docker exec mmengine pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/${MMCV_CUDA}/torch${MMCV_TORCH}/index.html
             docker exec mmengine pip install -r requirements.txt
       - run:
           name: Build and install
