@@ -288,6 +288,116 @@ cfg.work_dir  # "./work_dir/config_setting1"
 - `{{ fileBasenameNoExtension }}` - 当前文件不包含扩展名的文件名，例如 file
 - `{{ fileExtname }}` - 当前文件的扩展名，例如 `.py`
 
+### 命令行修改配置文件
+
+有时候我们只希望修部分配置文件，而不想修改配置文件本身，常用的做法是在命令行里传入参数来覆盖相关配置。以修改 `optimizer` 的学习率为例，我们需要在训练的启动脚本里做以下三件事：
+
+1. 使用 `argparser` 解析脚本运行的参数
+2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
+3. 使用配置类的 `merge_from_dict` 方法来更新配置
+
+启动脚本示例如下：
+
+`train.py`
+
+```python
+import argparse
+
+from mmengine.config import Config, DictAction
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train a model')
+    parser.add_argument('config', help='train config file path')
+    parser.add_argument(
+        '--cfg-options',
+        nargs='+',
+        action=DictAction,
+        help='override some settings in the used config, the key-value pair '
+        'in xxx=yyy format will be merged into config file. If the value to '
+        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
+        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
+        'Note that the quotation marks are necessary and that no white space '
+        'is allowed.')
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parse_args()
+    cfg = Config.fromfile(args.config)
+    if args.cfg_options is not None:
+        cfg.merge_from_dict(args.cfg_options)
+    print(cfg)
+
+
+if __name__ == '__main__':
+    main()
+
+```
+
+示例配置文件如下：
+
+```python
+optimizer = dict(type='SGD', lr=0.01)
+```
+
+在命令行里运行以下命令（通过 `.` 的方式来修改嵌套字典的配置）：
+
+```bash
+python train.py ./optimizer.py --cfg-options optimizer.lr=0.1
+```
+
+此时终端上会显示：`Config (path: ./optimizer.py): {'optimizer': {'type': 'SGD', 'lr': 0.1}}`，我们成功地把学习率从 0.01 修改成 0.1。
+
+```{note}
+上述代码只支持在命令行里修改字符串、整型、浮点型、布尔型、None 类型的配置项。
+```
+
+### 导入自定义 Python 模块
+
+将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
+
+例如我们新实现了一种优化器 `SuperOptim`，相应代码在 my_package/my_module.py 中。
+
+```python
+from mmengine.registry import OPTIMIZERS
+
+@OPTIMIZERS.register_module()
+class SuperOptim:
+    pass
+```
+
+我们为这个优化器的使用写了一个新的配置文件 `optimizer_cfg.py`：
+
+```python
+optimizer = dict(type='SuperOptim')
+```
+
+那么就需要在读取配置文件和构造优化器之前，增加一行 `from my_package import my_module` 来保证将自定义的类 `SuperOptim` 注册到 OPTIMIZERS 注册器中：
+
+```python
+from mmengine import Config
+from mmengine.Registry import OPTIMIZERS
+
+from my_package import my_module
+
+cfg = Config.fromfile('config_super_optim.py')
+optimizer = OPTIMIZERS.build(cfg.optimizer)
+```
+
+这样就会导致除了修改配置文件之外，还需要根据配置文件的内容，来对应修改训练源代码（即增加一些 import 语句），违背了我们希望仅通过修改配置文件就能控制模块构造和使用的初衷。
+
+为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
+
+```python
+custom_imports = dict(imports=['my_package.my_module'], allow_failed_imports=False)
+optimizer = dict(type='SuperOptim')
+```
+
+这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。
+
 ### 跨项目继承配置文件
 
 为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
@@ -341,49 +451,6 @@ model = build_model(cfg.model)
 load_checkpoint(model, model_path)
 ```
 
-### 导入自定义 Python 模块
-
-将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
-
-例如我们新实现了一种优化器 `SuperOptim`，相应代码在 my_package/my_module.py 中。
-
-```python
-from mmengine.registry import OPTIMIZERS
-
-@OPTIMIZERS.register_module()
-class SuperOptim:
-    pass
-```
-
-我们为这个优化器的使用写了一个新的配置文件 `optimizer_cfg.py`：
-
-```python
-optimizer = dict(type='SuperOptim')
-```
-
-那么就需要在读取配置文件和构造优化器之前，增加一行 `from my_package import my_module` 来保证将自定义的类 `SuperOptim` 注册到 OPTIMIZERS 注册器中：
-
-```python
-from mmengine import Config
-from mmengine.Registry import OPTIMIZERS
-
-from my_package import my_module
-
-cfg = Config.fromfile('config_super_optim.py')
-optimizer = OPTIMIZERS.build(cfg.optimizer)
-```
-
-这样就会导致除了修改配置文件之外，还需要根据配置文件的内容，来对应修改训练源代码（即增加一些 import 语句），违背了我们希望仅通过修改配置文件就能控制模块构造和使用的初衷。
-
-为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
-
-```python
-custom_imports = dict(imports=['my_package.my_module'], allow_failed_imports=False)
-optimizer = dict(type='SuperOptim')
-```
-
-这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。
-
 ### 指定注册器作用域
 
 #### 通过前缀指定作用域
@@ -409,6 +476,7 @@ model = dict(type='RetinaNet',
                 submodule1=dict(type='mmcls.submodule1'),
                 submodule2=dict(type='mmcls.submodule2')
              ...)
+)
 ```
 
 然而如果子模块非常多，为每个子模块都加上 `mmcls` 前缀不免显得冗余，因此 MMEngine 支持在配置文件中配置 `_scope_` 字段来控制构建当前模块时，注册器默认作用域。
@@ -421,6 +489,7 @@ model = dict(type='RetinaNet',
                 submodule1=dict(type='submodule1'),
                 submodule2=dict(type='submodule2')
              ...)
+)
 ```
 
 这样我们就不需要为每个子模块加上 `mmcls` 前缀了。
@@ -435,6 +504,7 @@ model = dict(type='RetinaNet',
                 submodule1=dict(type='mmdet.submodule1'),
                 submodule2=dict(type='submodule2')
              ...)
+ )
 ```
 
 这样我们就能在 `ResNet` 的模型中，使用 `MMDetection` 里定义的 `submodule1`。
