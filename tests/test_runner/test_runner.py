@@ -21,8 +21,9 @@ from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             RuntimeInfoHook)
 from mmengine.logging import LogProcessor, MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
-from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
-                            OptimWrapper, OptimWrapperDict, StepLR)
+from mmengine.optim import (AmpOptimWrapper, DefaultOptimWrapperConstructor,
+                            MultiStepLR, OptimWrapper, OptimWrapperDict,
+                            StepLR)
 from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
                                LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
@@ -925,6 +926,23 @@ class TestRunner(TestCase):
         self.assertIsInstance(optim_wrapper, OptimWrapperDict)
         self.assertIsInstance(optim_wrapper['linear1'].optimizer, SGD)
         self.assertIsInstance(optim_wrapper['linear2'].optimizer, Adam)
+
+        # 2.4 input is a dict which contains optimizer instance.
+        model = nn.Linear(1, 1)
+        optimizer = SGD(model.parameters(), lr=0.1)
+        optim_wrapper_cfg = dict(optimizer=optimizer)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
+        self.assertIs(optim_wrapper.optimizer, optimizer)
+
+        model = nn.Linear(1, 1)
+        optimizer = SGD(model.parameters(), lr=0.1)
+        optim_wrapper_cfg = dict(
+            optimizer=optimizer, type='AmpOptimWrapper', accumulative_counts=2)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, AmpOptimWrapper)
+        self.assertIs(optim_wrapper.optimizer, optimizer)
+        self.assertEqual(optim_wrapper._accumulative_counts, 2)
 
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
