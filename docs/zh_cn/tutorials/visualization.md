@@ -23,24 +23,30 @@ MMEngine 提供了 `Visualizer` 可视化器用以可视化和存储模型训练
 
 ```python
 import torch
+import mmcv
 from mmengine.visualization import Visualizer
 
-# image 为 rgb 格式数据
+image = mmcv.imread('both.png', channel_order='rgb')
 visualizer = Visualizer(image=image)
 # 绘制单个检测框, xyxy 格式
-visualizer.draw_bboxes(torch.tensor([10, 5, 20, 40]))
-visualizer.show()
-
-# 或者绘制多个检测框
-visualizer.set_image(image)
-visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
+visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]))
+# 绘制多个检测框
+visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.show()
 ```
 
 ```python
-# image 为 rgb 格式数据
 visualizer = Visualizer(image=image)
-visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
+visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
+visualizer.show()
+```
+
+你也可以通过通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
+
+```python
+visualizer = Visualizer(image=image)
+visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]), edge_colors='r', line_widths=3)
+visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220]]),line_styles='--')
 visualizer.show()
 ```
 
@@ -49,17 +55,12 @@ visualizer.show()
 上述绘制接口可以多次调用，从而实现叠加显示需求
 
 ```python
-# image 为 rgb 格式数据
 visualizer = Visualizer(image=image)
-
-visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
-visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
-visualizer.draw_circles(torch.tensor([20, 50]), torch.tensor([5]))
-
+visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
+visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
+visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
 visualizer.show()
 ```
-
-用户可以通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等。
 
 ## 特征图绘制
 
@@ -92,51 +93,66 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 - 考虑到输入的特征图通常非常小，函数支持输入 `resize_shape` 参数，方便将特征图进行上采样后进行可视化。
 
 常见用法如下：
+以预训练好的 ResNet18 模型为例，通过提取 layer4 层输出进行特征图可视化
 
 (1) 将多通道特征图采用 `select_max` 参数压缩为单通道并显示
 
 ```python
-visualizer = Visualizer()
-# feat 为 CHW 格式的 tensor
+import numpy as np
+from torchvision.models import resnet18
+from torchvision.transforms import Compose, Normalize, ToTensor
+
+def preprocess_image(img, mean, std):
+    preprocessing = Compose([
+        ToTensor(),
+        Normalize(mean=mean, std=std)
+    ])
+    return preprocessing(img.copy()).unsqueeze(0)
+
+model = resnet18(pretrained=True)
+
+def _forward(x):
+    x = model.conv1(x)
+    x = model.bn1(x)
+    x = model.relu(x)
+    x = model.maxpool(x)
+
+    x1 = model.layer1(x)
+    x2 = model.layer2(x1)
+    x3 = model.layer3(x2)
+    x4 = model.layer4(x3)
+    return x4
+
+model.forward = _forward
+
+image_norm = np.float32(image) / 255
+input_tensor = preprocess_image(image_norm,
+                                mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225])
+feat = model(input_tensor)[0]
+
 drawn_img = visualizer.draw_featmap(feat, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
 
-(2) 将多通道特征图采用 `select_max` 参数压缩为单通道，将其指定尺寸输出。如果输入的特征图比较小，可以使用 `resize_shape` 对特征图上采样可视化
+由于输出的feat 特征图尺寸为 7x7，直接可视化效果不佳，用户可以通过叠加输入图片或者 `resize_shape` 参数来缩放特征图。如果传入图片尺寸和特征图大小不一致，会强制将特征图采样到和输入图片相同空间尺寸
 
 ```python
-visualizer = Visualizer()
-# feat 为 CHW 格式的 tensor
-drawn_img = visualizer.draw_featmap(feat, channel_reduction='select_max'，resize_shape=(200, 100))
-visualizer.show(drawn_img)
-```
-
-(3) 将多通道特征图采用 `select_max` 参数压缩为单通道并叠加原图显示
-
-```python
-visualizer = Visualizer()
-# feat 为 CHW 格式的 tensor
 drawn_img = visualizer.draw_featmap(feat, image, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
 
-(4) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
+(2) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
 
 ```python
-visualizer = Visualizer()
-# feat 为 CHW 格式且 shape 为 (10, 50, 50) tensor
-drawn_img = visualizer.draw_featmap(feat, channel_reduction=None, topk=5, arrangement=(2, 3))
-assert drawn_img.shape == (2 * 50, 3 * 50, 3)
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
 visualizer.show(drawn_img)
 ```
 
 用户可以通过 `arrangement` 参数选择自己想要的布局
 
 ```python
-visualizer = Visualizer()
-# feat 为 CHW 格式且 shape 为 (10, 50, 50) tensor
-drawn_img = visualizer.draw_featmap(feat, channel_reduction=None, topk=5, arrangement=(4, 2))
-assert drawn_img.shape == (4 * 50, 2 * 50, 3)
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(4, 2))
 visualizer.show(drawn_img)
 ```
 
@@ -149,12 +165,11 @@ visualizer.show(drawn_img)
 假设存储后端为本地存储
 
 ```python
-# image 为 rgb 格式数据
 visualizer = Visualizer(image=image, vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
 
-visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
-visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
-visualizer.draw_circles(torch.tensor([20, 50]), torch.tensor([5]))
+visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
+visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
+visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
 
 # 会生成 temp_dir/vis_data/vis_image/demo_0.png
 visualizer.add_image('demo', visualizer.get_image())
@@ -181,22 +196,20 @@ visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')]
 **(2) 存储特征图**
 
 ```python
-# image 为 rgb 格式数据
-visualizer = Visualizer(image=image, vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-drawn_img = visualizer.draw_featmap(feat, channel_reduction=None, topk=5, arrangement=(4, 2))
+visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
 # 会生成 temp_dir/vis_data/vis_image/feat_0.png
-visualizer.add_image('demo', drawn_img)
+visualizer.add_image('feat', drawn_img)
 ```
 
 **(3) 存储 loss 等标量数据**
 
 ```python
-# 保存标量，例如评估指标
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+# 会生成 temp_dir/vis_data/scalars.json
 # 保存 loss
 visualizer.add_scalar('loss', 0.2, step=0)
 visualizer.add_scalar('loss', 0.1, step=1)
-# 保存acc
+# 保存 acc
 visualizer.add_scalar('acc', 0.7, step=0)
 visualizer.add_scalar('acc', 0.8, step=1)
 ```
@@ -204,16 +217,17 @@ visualizer.add_scalar('acc', 0.8, step=1)
 也可以一次性保存多个标量数据
 
 ```python
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+# 会将内容追加到 temp_dir/vis_data/scalars.json
 visualizer.add_scalars({'loss': 0.3, 'acc': 0.8}, step=3)
 ```
 
 **(4) 保存配置文件**
 
 ```python
-# 保存配置
-visualizer = Visualizer(vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
-visualizer.add_config(config)
+from mmengine import Config
+cfg=Config.fromfile('tests/data/config/py_config/config.py')
+# 会生成 temp_dir/vis_data/config.py
+visualizer.add_config(cfg)
 ```
 
 ## 多后端存储
@@ -221,14 +235,13 @@ visualizer.add_config(config)
 实际上，任何一个可视化器都可以配置任意多个存储后端，可视化器会循环调用配置好的多个存储后端，从而将结果保存到多后端中。
 
 ```python
-# image 为 rgb 格式数据
 visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend'),
                                                    dict(type='LocalVisBackend')],
                         save_dir='temp_dir')
-
-visualizer.draw_bboxes(torch.tensor([[10, 5, 20, 40], [50, 20, 80, 40]]))
-visualizer.draw_texts("hello world!", torch.tensor([50, 50]))
-visualizer.draw_circles(torch.tensor([20, 50]), torch.tensor([5]))
+# 会生成 temp_dir/vis_data/events.out.tfevents.xxx 文件
+visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
+visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
+visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
 
 visualizer.add_image('demo', visualizer.get_image())
 ```
@@ -236,7 +249,6 @@ visualizer.add_image('demo', visualizer.get_image())
 注意：如果多个存储后端中存在同一个类的多个后端，那么必须指定 name 字段，否则无法区分是哪个存储后端
 
 ```python
-# image 为 rgb 格式数据
 visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend', name='tb_1', save_dir='temp_dir_1'),
                                                    dict(type='TensorboardVisBackend', name='tb_2', save_dir='temp_dir_2'),
                                                    dict(type='LocalVisBackend', name='local')],
@@ -250,7 +262,7 @@ visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBack
 
 ```python
 # 在程序初始化时候调用
-visualizer1 = Visualizer.get_instance(name='vis', vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
+visualizer1 = Visualizer.get_instance(name='vis', vis_backends=[dict(type='LocalVisBackend')])
 
 # 在任何代码位置都可调用
 visualizer2 = Visualizer.get_current_instance()
@@ -262,25 +274,26 @@ assert id(visualizer1) == id(visualizer2)
 也可以通过字段配置方式全局初始化
 
 ```python
+from mmengine.registry import VISUALIZERS
+
 visualizer_cfg=dict(
-                name='vis',
-                vis_backends=[dict(type='LocalVisBackend')],
-                save_dir='temp_dir')
+                type='Visualizer',
+                name='vis_new',
+                vis_backends=[dict(type='LocalVisBackend')])
 VISUALIZERS.build(visualizer_cfg)
 ```
 
 ## 扩展存储后端和可视化器
 
 **(1) 调用特定存储后端功能**
+
 目前存储后端仅仅提供了保存配置、保存标量等功能，但是由于 WandB 和 Tensorboard 这类存储后端功能非常强大，用户可能会希望利用到这类存储后端的扩展类功能。为此存储后端提供了  `experiment` 属性来获取后端对象，从而满足各类定制化功能。
 例如用户想将自定义数据保存为表格显示，而 WandB 提供了该类 API 接口，此时用户可以通过 `experiment`属性获取 WandB 对象，然后调用特定的 API
 
 ```python
-# 全局初始化
-Visualizer.get_instance(name='vis', vis_backends=[dict(type='WandbVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')],
+                        save_dir='temp_dir')
 
-# 任意代码位置
-visualizer = Visualizer.get_current_instance()
 # 获取 wandb 对象
 wandb = visualizer.get_backend('WandbVisBackend').experiment
 # 追加表格数据
@@ -293,6 +306,7 @@ wandb.log({"table": table})
 ```
 
 **(2) 扩展存储后端**
+
 用户可以方便快捷的扩展存储后端。只需要继承自 `BaseVisBackend` 并实现各类 `add_xx` 方法即可
 
 ```python
@@ -309,6 +323,7 @@ visualizer.add_image('demo',image)
 ```
 
 **(3) 扩展可视化器**
+
 同样的，用户可以方便快捷的扩展可视化器。只需要继承自 Visualizer 并实现想覆写的函数即可。大部分情况下用户扩展可视化器，只需要覆写  `add_datasample`即可，该接口为各个下游库绘制 datasample 数据的抽象接口，以 MMDetection 为例，datasample 数据中通常包括 标注 bbox、标注 mask 、预测 bbox 或者预测 mask 等数据，MMDetection 会继承 Visualizer 并实现 `add_datasample` 接口，在该接口内部会针对检测任务相关数据进行可视化绘制，从而简化检测任务可视化需求。
 
 ```python
