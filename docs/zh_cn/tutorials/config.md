@@ -288,9 +288,9 @@ cfg.work_dir  # "./work_dir/config_setting1"
 - `{{ fileBasenameNoExtension }}` - 当前文件不包含扩展名的文件名，例如 file
 - `{{ fileExtname }}` - 当前文件的扩展名，例如 `.py`
 
-### 命令行修改配置文件
+### 命令行修改配置
 
-有时候我们只希望修部分配置文件，而不想修改配置文件本身，常用的做法是在命令行里传入参数来覆盖相关配置。以修改 `optimizer` 的学习率为例，我们需要在训练的启动脚本里做以下三件事：
+有时候我们只希望修部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
 
 1. 使用 `argparser` 解析脚本运行的参数
 2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
@@ -339,20 +339,40 @@ if __name__ == '__main__':
 
 示例配置文件如下：
 
+`example.py`
+
 ```python
 optimizer = dict(type='SGD', lr=0.01)
 ```
 
-在命令行里运行以下命令（通过 `.` 的方式来修改嵌套字典的配置）：
+我们在命令行里通过 `.` 的方式来访问配置文件中的深层配置，例如我们想修改学习率，只需要在命令行执行：
 
 ```bash
 python train.py ./optimizer.py --cfg-options optimizer.lr=0.1
 ```
 
-此时终端上会显示：`Config (path: ./optimizer.py): {'optimizer': {'type': 'SGD', 'lr': 0.1}}`，我们成功地把学习率从 0.01 修改成 0.1。
+此时终端上会显示：
+
+```python
+Config (path: ./optimizer.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
+```
+
+我们成功地把学习率从 0.01 修改成 0.1。如果想改变列表、元组类型的配置，如上例中的 `in_channels`，则需要在命令行赋值时给 `()`，`[]` 外加上双引号：
+
+```bash
+python train.py ./optimizer.py --cfg-options model.in_channels=“[0, 0, 0]”
+```
+
+此时终端上会显示：
+
+```python
+Config (path: ./optimizer.py): {'model': {'type': 'CustomModel', 'in_channels': [0, 0, 0]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
+```
+
+`model.in_channels` 已经从 \[1, 2, 3\] 修改成 \[0, 0, 0\]。
 
 ```{note}
-上述代码只支持在命令行里修改字符串、整型、浮点型、布尔型、None 类型的配置项。
+上述流程只支持在命令行里修改字符串、整型、浮点型、布尔型、None、列表、元组类型的配置项。对于列表、元组类型的配置，里面每个元素的类型也必须为上述七种类型之一。
 ```
 
 ### 导入自定义 Python 模块
