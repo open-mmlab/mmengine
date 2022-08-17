@@ -26,7 +26,7 @@ import torch
 import mmcv
 from mmengine.visualization import Visualizer
 
-image = mmcv.imread('both.png', channel_order='rgb')
+image = mmcv.imread('docs/en/_static/image/both.png', channel_order='rgb')
 visualizer = Visualizer(image=image)
 # 绘制单个检测框, xyxy 格式
 visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]))
