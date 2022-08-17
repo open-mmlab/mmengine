@@ -342,6 +342,7 @@ if __name__ == '__main__':
 `example.py`
 
 ```python
+model = dict(type='CustomModel', in_channels=[1, 2, 3])
 optimizer = dict(type='SGD', lr=0.01)
 ```
 
@@ -366,10 +367,10 @@ python train.py ./optimizer.py --cfg-options model.in_channels=“[0, 0, 0]”
 此时终端上会显示：
 
 ```python
-Config (path: ./optimizer.py): {'model': {'type': 'CustomModel', 'in_channels': [0, 0, 0]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
+Config (path: ./optimizer.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
 ```
 
-`model.in_channels` 已经从 \[1, 2, 3\] 修改成 \[0, 0, 0\]。
+`model.in_channels` 已经从 \[1, 2, 3\] 修改成 \[1, 1, 1\]。
 
 ```{note}
 上述流程只支持在命令行里修改字符串、整型、浮点型、布尔型、None、列表、元组类型的配置项。对于列表、元组类型的配置，里面每个元素的类型也必须为上述七种类型之一。
