@@ -11,33 +11,73 @@
 
 如上文所说，使用执行器的某一项功能时需要准备好对应功能所依赖的模块。以使用执行器的训练功能为例，用户需要准备[模型](TODO) 、[优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optimizer.html) 、
 [参数调度器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html) 还有训练[数据集](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/basedataset.html) 。
-在创建完符合上述文档规范的模块的对象后，就可以使用这些模块初始化执行器：
 
 ```python
 # 准备训练任务所需要的模块
-model = ResNet()
-optimzier = SGD(model.parameters(), lr=0.01, momentum=0.9)
-lr_scheduler = MultiStepLR(milestones=[80, 90], by_epoch=True)
-train_dataset = ImageNetDataset()
-train_dataloader = Dataloader(dataset=train_dataset, batch_size=32, num_workers=4)
+import torch
+from torch import nn
+from torchvision import transforms
+from torchvision import datasets
+from torch.utils.data import DataLoader
+from mmengine.model import BaseModel
+from mmengine.optim.scheduler import MultiStepLR
 
-# 训练相关参数设置，按轮次训练，训练100轮
-train_cfg = dict(by_epoch=True, max_epoch=100)
+# 定义一个多层感知机网络
+class Network(BaseModel):
+    def __init__(self):
+        super().__init__()
+        self.mlp = nn.Sequential(nn.Linear(28 * 28, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU(), nn.Linear(128, 10))
+        self.loss = nn.CrossEntropyLoss()
+
+    def forward(self, batch_inputs: torch.Tensor, data_samples = None, mode: str = 'tensor'):
+        x = batch_inputs.flatten(1)
+        x = self.mlp(x)
+        if mode == 'loss':
+            return {'loss': self.loss(x, data_samples)}
+        elif mode == 'predict':
+            return x.argmax(1)
+        else:
+            return x
+
+model = Network()
+
+# 构建优化器
+optimzier = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+# 构建参数调度器用于调整学习率
+lr_scheduler = MultiStepLR(milestones=[2], by_epoch=True)
+# 构建手写数字识别 (MNIST) 数据集
+train_dataset = datasets.MNIST(root="MNIST", download=True, train=True, transform=transforms.ToTensor())
+# 构建数据加载器
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=10, num_workers=2)
+```
+
+在创建完符合上述文档规范的模块的对象后，就可以使用这些模块初始化执行器：
+
+```python
+from mmengine.runner import Runner
+
+
+# 训练相关参数设置，按轮次训练，训练3轮
+train_cfg = dict(by_epoch=True, max_epoch=3)
 
 # 初始化执行器
-runner = Runner(model=model, optim_wrapper=dict(optimizer=optimzier), param_scheduler=lr_scheduler,
-                train_dataloader=train_dataloader, train_cfg=train_cfg, work_dir='./train_resnet')
+runner = Runner(model,
+                work_dir='./train_mnist',  # 工作目录，用于保存模型和日志
+                train_cfg=train_cfg,
+                train_dataloader=train_dataloader,
+                optim_wrapper=dict(optimizer=optimizer),
+                param_scheduler=lr_scheduler)
 # 执行训练
 runner.train()
 ```
 
-上面的例子中，我们手动构建了 ResNet 分类模型和 ImageNet 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，并且设置了训练配置`train_cfg`，让执行器将模型训练100轮次，最后通过调用执行器的 `train` 方法进行模型训练。
+上面的例子中，我们手动构建了一个多层感知机网络和手写数字识别 (MNIST) 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，并且设置了训练配置`train_cfg`，让执行器将模型训练3个轮次，最后通过调用执行器的 `train` 方法进行模型训练。
 
 用户也可以修改`train_cfg`使执行器按迭代次数控制训练：
 
 ```python
-# 训练相关参数设置，按迭代次数训练，训练90000次迭代
-train_cfg = dict(by_epoch=False, max_epoch=90000)
+# 训练相关参数设置，按迭代次数训练，训练9000次迭代
+train_cfg = dict(by_epoch=False, max_epoch=9000)
 ```
 
 ### 手动构建模块进行测试
@@ -45,21 +85,32 @@ train_cfg = dict(by_epoch=False, max_epoch=90000)
 再举一个模型测试的例子，模型的测试需要用户准备模型和训练好的权重路径、测试数据集以及[评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluator.html) ：
 
 ```python
-model = FasterRCNN()
-test_dataset = CocoDataset()
-test_dataloader = Dataloader(dataset=test_dataset, batch_size=2, num_workers=2)
-metric = CocoMetric()
+from mmengine.evaluator import BaseMetric
+
+
+class MnistAccuracy(BaseMetric):
+    def process(self, data, preds) -> None:
+        self.results.append(((data[1] == preds.cpu()).sum(), len(preds)))
+    def compute_metrics(self, results):
+        correct, batch_size = zip(*results)
+        acc = sum(correct) / sum(batch_size)
+        return dict(accuracy=acc)
+
+model = Network()
+test_dataset = datasets.MNIST(root="MNIST", download=True, train=False, transform=transforms.ToTensor())
+test_dataloader = DataLoader(dataset=test_dataset)
+metric = MnistAccuracy()
 test_evaluator = Evaluator(metric)
 
 # 初始化执行器
 runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=test_evaluator,
-                load_from='./faster_rcnn.pth', work_dir='./test_faster_rcnn')
+                load_from='./train_mnist/epoch_3.pth', work_dir='./test_mnist')
 
 # 执行测试
 runner.test()
 ```
 
-这个例子中我们手动构建了一个 Faster R-CNN 检测模型，以及测试用的 COCO 数据集和使用 COCO 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
+这个例子中我们重新手动构建了一个多层感知机网络，以及测试用的手写数字识别数据集和使用 (Accuracy) 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
 
 ### 手动构建模块在训练过程中进行验证
 
@@ -67,29 +118,28 @@ runner.test()
 
 ```python
 # 准备训练任务所需要的模块
-model = ResNet()
-optimzier = SGD(model.parameters(), lr=0.01, momentum=0.9)
-lr_scheduler = MultiStepLR(milestones=[80, 90], by_epoch=True)
-train_dataset = ImageNetDataset()
-train_dataloader = Dataloader(dataset=train_dataset, batch_size=32, num_workers=4)
+optimzier = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+lr_scheduler = MultiStepLR(milestones=[2], by_epoch=True)
+train_dataset = datasets.MNIST(root="MNIST", download=True, train=True, transform=transforms.ToTensor())
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=10, num_workers=2)
 
 # 准备验证需要的模块
-val_dataset = ImageNetDataset()
-val_dataloader = Dataloader(dataset=val_dataset, batch_size=2, num_workers=2)
-metric = Accuracy()
+val_dataset = datasets.MNIST(root="MNIST", download=True, train=False, transform=transforms.ToTensor())
+val_dataloader = Dataloader(dataset=val_dataset)
+metric = MnistAccuracy()
 val_evaluator = Evaluator(metric)
 
 
 # 训练相关参数设置
 train_cfg = dict(by_epoch=True,  # 按轮次训练
-                 max_epoch=100,  # 训练100轮
-                 val_begin=20,  # 从第 20 个 epoch 开始验证
-                 val_interval=10)  # 每隔10轮进行1次验证
+                 max_epochs=5,  # 训练5轮
+                 val_begin=2,  # 从第 2 个 epoch 开始验证
+                 val_interval=1)  # 每隔1轮进行1次验证
 
 # 初始化执行器
 runner = Runner(model=model, optim_wrapper=dict(optimizer=optimzier), param_scheduler=lr_scheduler,
                 train_dataloader=train_dataloader, val_dataloader=val_dataloader, val_evaluator=val_evaluator,
-                train_cfg=train_cfg, work_dir='./train_resnet')
+                train_cfg=train_cfg, work_dir='./train_val_mnist')
 # 执行训练
 runner.train()
 ```
