@@ -53,6 +53,8 @@ toy_net = ToyNet(init_cfg=dict(type='Pretrained', checkpoint=pretrained))
 toy_net.init_weights()
 ```
 
+日志中 `INFO` 前后的乱码是颜色信息，在终端里运行上述代码 `INFO` 会呈现灰色。
+
 ```
 08/19 01:22:12 - mmengine - [4m[37mINFO[0m - load model from: ./pretrained.pth
 08/19 01:22:12 - mmengine - [4m[37mINFO[0m - local loads checkpoint from path: ./pretrained.pth
