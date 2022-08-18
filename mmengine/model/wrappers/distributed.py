@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel
@@ -144,12 +144,18 @@ class MMDistributedDataParallel(DistributedDataParallel):
         """
         return self._run_forward(data, mode='predict')
 
-    def _run_forward(self, data, mode):
+    def _run_forward(self, data, mode) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict): Data sampled by dataloader.
+            mode (str): Mode of forward.
+        """
         if isinstance(data, dict):
-            losses = self(**data, mode=mode)
+            result = self(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
-            losses = self(*data, mode=mode)
+            result = self(*data, mode=mode)
         else:
             raise TypeError('Output of `data_preprocessor` should be '
                             f'list tuple or dict, but got {type(data)}')
-        return losses
+        return result

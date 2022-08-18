@@ -42,9 +42,9 @@ class BaseDataPreprocessor(nn.Module):
         """
         if isinstance(data, Mapping):
             return {key: self.cast_data(data[key]) for key in data}
-        elif isinstance(data, tuple) and hasattr(data,
-                                                 '_fields'):  # namedtuple
-            return type(data)(*(self.cast_data(sample) for sample in data))
+        elif isinstance(data, tuple) and hasattr(data, '_fields'):
+            # namedtuple
+            return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
             return [self.cast_data(sample) for sample in data]
         elif isinstance(data, torch.Tensor):
@@ -198,7 +198,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                 list of dict. If collate function is :obj:`default_collate`,
                 data will be a tuple with batch input tensor and list of data
                 samples.
-            Training (bool): Whether to enable training time augmentation. If
+            training (bool): Whether to enable training time augmentation. If
                 subclasses override this method, they can perform different
                 preprocessing strategies for training and testing based on the
                 value of ``training``.

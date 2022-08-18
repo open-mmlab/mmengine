@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -290,7 +290,13 @@ class BaseModel(BaseModule):
                   or ``dict of tensor for custom use.
         """
 
-    def _run_forward(self, data, mode):
+    def _run_forward(self, data, mode) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict): Data sampled by dataloader.
+            mode (str): Mode of forward.
+        """
         if isinstance(data, dict):
             results = self(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
