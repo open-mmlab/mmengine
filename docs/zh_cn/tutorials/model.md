@@ -36,9 +36,11 @@ from mmengine.model import BaseModule
 
 
 class ToyNet(BaseModule):
+
     def __init__(self, init_cfg=None):
         super().__init__(init_cfg)
         self.conv1 = nn.Linear(1, 1)
+
 
 # 保存预训练权重
 toy_net = ToyNet()
@@ -46,13 +48,14 @@ torch.save(toy_net.state_dict(), './pretrained.pth')
 pretrained = './pretrained.pth'
 
 # 配置加载预训练权重的初始化方式
-toy_net = ToyNet(init_cfg=dict(
-    type='Pretrained', checkpoint=pretrained))
+toy_net = ToyNet(init_cfg=dict(type='Pretrained', checkpoint=pretrained))
 # 加载权重
 toy_net.init_weights()
+```
 
-# 08/16 20:51:24 - mmengine - INFO - load model from: ./pretrained.pth
-# 08/16 20:51:24 - mmengine - INFO - local loads checkpoint from path: ./pretrained.pth
+```
+08/19 01:22:12 - mmengine - [4m[37mINFO[0m - load model from: ./pretrained.pth
+08/19 01:22:12 - mmengine - [4m[37mINFO[0m - local loads checkpoint from path: ./pretrained.pth
 ```
 
 #### 常用的初始化方式
@@ -69,53 +72,62 @@ from mmengine.model import BaseModule
 
 
 class ToyNet(BaseModule):
+
     def __init__(self, init_cfg=None):
         super().__init__(init_cfg)
         self.linear = nn.Linear(1, 1)
         self.conv = nn.Conv2d(1, 1, 1)
 
+
 toy_net = ToyNet(
     init_cfg=[
         dict(type='Kaiming', layer='Conv2d'),
         dict(type='Xavier', layer='Linear')
-    ],
-)
+    ], )
 toy_net.init_weights()
+```
 
-# 08/16 20:50:36 - mmengine - INFO -
-# linear.weight - torch.Size([1, 1]):
-# XavierInit: gain=1, distribution=normal, bias=0
-#
-# 08/16 20:50:36 - mmengine - INFO -
-# linear.bias - torch.Size([1]):
-# XavierInit: gain=1, distribution=normal, bias=0
-#
-# 08/16 20:50:36 - mmengine - INFO -
-# conv.weight - torch.Size([1, 1, 1, 1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
-#
-# 08/16 20:50:36 - mmengine - INFO -
-# conv.bias - torch.Size([1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+```
+08/19 00:56:18 - mmengine - [4m[37mINFO[0m -
+linear.weight - torch.Size([1, 1]):
+XavierInit: gain=1, distribution=normal, bias=0
+
+08/19 00:56:18 - mmengine - [4m[37mINFO[0m -
+linear.bias - torch.Size([1]):
+XavierInit: gain=1, distribution=normal, bias=0
+
+08/19 00:56:18 - mmengine - [4m[37mINFO[0m -
+conv.weight - torch.Size([1, 1, 1, 1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:56:18 - mmengine - [4m[37mINFO[0m -
+conv.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
 类似地，`layer` 参数也可以是一个列表，表示列表中的多种不同的 `layer` 均使用 `type` 指定的初始化方式
 
 ```python
-toy_net = ToyNet(
-    init_cfg=[
-        dict(type='Kaiming', layer=['Conv2d', 'Linear'])
-    ],
-)
+toy_net = ToyNet(init_cfg=[dict(type='Kaiming', layer=['Conv2d', 'Linear'])], )
 toy_net.init_weights()
+```
 
-# 08/16 20:51:58 - mmengine - INFO -
-# conv1.weight - torch.Size([1, 1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
-#
-# 08/16 20:51:58 - mmengine - INFO -
-# conv1.bias - torch.Size([1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+```
+08/19 00:57:16 - mmengine - [4m[37mINFO[0m -
+linear.weight - torch.Size([1, 1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:57:16 - mmengine - [4m[37mINFO[0m -
+linear.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:57:16 - mmengine - [4m[37mINFO[0m -
+conv.weight - torch.Size([1, 1, 1, 1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:57:16 - mmengine - [4m[37mINFO[0m -
+conv.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
 #### 更细粒度的初始化
@@ -130,34 +142,39 @@ from mmengine.model import BaseModule
 
 
 class ToyNet(BaseModule):
+
     def __init__(self, init_cfg=None):
         super().__init__(init_cfg)
         self.conv1 = nn.Conv2d(1, 1, 1)
         self.conv2 = nn.Conv2d(1, 1, 1)
 
+
 toy_net = ToyNet(
     init_cfg=[
-        dict(type='Kaiming', layer=['Conv2d'],
-             override=dict(name='conv2', type='Xavier')),
-    ],
-)
+        dict(
+            type='Kaiming',
+            layer=['Conv2d'],
+            override=dict(name='conv2', type='Xavier')),
+    ], )
 toy_net.init_weights()
+```
 
-# 08/16 20:52:41 - mmengine - INFO -
-# conv1.weight - torch.Size([1, 1, 1, 1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
-#
-# 08/16 20:52:41 - mmengine - INFO -
-# conv1.bias - torch.Size([1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
-#
-# 08/16 20:52:41 - mmengine - INFO -
-# conv2.weight - torch.Size([1, 1, 1, 1]):
-# XavierInit: gain=1, distribution=normal, bias=0
-#
-# 08/16 20:52:41 - mmengine - INFO -
-# conv2.bias - torch.Size([1]):
-# KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+```
+08/19 00:58:14 - mmengine - [4m[37mINFO[0m -
+conv1.weight - torch.Size([1, 1, 1, 1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:58:14 - mmengine - [4m[37mINFO[0m -
+conv1.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:58:14 - mmengine - [4m[37mINFO[0m -
+conv2.weight - torch.Size([1, 1, 1, 1]):
+XavierInit: gain=1, distribution=normal, bias=0
+
+08/19 00:58:14 - mmengine - [4m[37mINFO[0m -
+conv2.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
 `override` 可以理解成一个嵌套的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也需要通过 `type`
@@ -215,16 +232,32 @@ toy_net = ToyNet(
             override=dict(name='conv2', type='Xavier')),
     ], )
 toy_net.init_weights()
+```
 
-# 只显示了自定义初始化的日志
-...
-# 08/16 21:17:35 - mmengine - INFO -
-# custom_conv.custom_weight - torch.Size([1, 1, 1, 1]):
-# Initialized by user-defined `init_weights` in ToyConv
-#
-# 08/16 21:17:35 - mmengine - INFO -
-# custom_conv.custom_bias - torch.Size([1]):
-# The value is the same before and after calling `init_weights` of ToyNet
+```
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+conv1.weight - torch.Size([1, 1, 1, 1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+conv1.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+conv2.weight - torch.Size([1, 1, 1, 1]):
+XavierInit: gain=1, distribution=normal, bias=0
+
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+conv2.bias - torch.Size([1]):
+KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
+
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+custom_conv.custom_weight - torch.Size([1, 1, 1, 1]):
+Initialized by user-defined `init_weights` in ToyConv
+
+08/19 00:58:08 - mmengine - [4m[37mINFO[0m -
+custom_conv.custom_bias - torch.Size([1]):
+Initialized by user-defined `init_weights` in ToyConv
 ```
 
 这里我们对 `init_cfg` 和 `init_weights` 两种初始化方式做一些总结：
@@ -297,8 +330,8 @@ test_dataloader = DataLoader(dataset=test_data, batch_size=64)
 
 
 class NeuralNetwork(BaseModel):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
+    def __init__(self, data_preprocessor=None):
+        super(NeuralNetwork, self).__init__(data_preprocessor)
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(28*28, 512),
@@ -357,40 +390,55 @@ runner.train()
 为了体现数据处理器起到的作用，我们仍然以[上一节](#模型基类basemodel)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
 
 ```python
+from torch.optim import SGD
 from mmengine.model import BaseDataPreprocessor, BaseModel
 
 
-class NeuralNetwork(BaseModel):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__(
-            data_preprocessor=NormalizeDataPreprocessor())
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(28*28, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 10),
-        )
-        self.loss = nn.CrossEntropyLoss()
+class NeuralNetwork1(NeuralNetwork):
 
-    def forward(self, img, label, mode='tensor'):
-        x = self.flatten(img)
-        pred = self.linear_relu_stack(x)
-        loss = self.loss(pred, label)
-        if mode == 'loss':
-            return dict(loss=loss)
-        else:
-            return pred.argmax(1), loss.item()
+    def __init__(self, data_preprocessor):
+        super().__init__(data_preprocessor=data_preprocessor)
+        self.data_preprocessor = data_preprocessor
+
+    def train_step(self, data, optimizer):
+        img, label = self.data_preprocessor(data)
+        loss = self(img, label, mode='loss')['loss'].sum()
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        return dict(loss=loss)
+
+    def test_step(self, data):
+        img, label = self.data_preprocessor(data)
+        return self(img, label, mode='predict')
+
+    def val_step(self, data):
+        img, label = self.data_preprocessor(data)
+        return self(img, label, mode='predict')
+
 
 class NormalizeDataPreprocessor(BaseDataPreprocessor):
+
     def forward(self, data, training=False):
-        img, label = [item.cuda() for item in data]
+        img, label = [item for item in data]
         img = (img - 127.5) / 127.5
         return img, label
+
+
+model = NeuralNetwork1(data_preprocessor=NormalizeDataPreprocessor())
+optimizer = SGD(model.parameters(), lr=0.01)
+data = (torch.full((3, 28, 28), fill_value=127.5), torch.ones(3, 10))
+
+model.train_step(data, optimizer)
+model.val_step(data)
+model.test_step(data)
 ```
 
-此时 `NeuralNetwork.forward` 接受的 `img` 和 `label` 分别对应 `NormalizeDataPreprocessor.forward` 的返回值。
+```
+(tensor([6, 6, 6]), 23.031166076660156)
+```
+
+上例中，我们实现了 `BaseModel.train_step`、`BaseModel.val_step` 和 `BaseModel.test_step` 的简化版。数据经 `NormalizeDataPreprocessor.forward` 归一化处理，解包后传给 `NeuralNetwork.forward`，进一步返回损失或者预测结果。
 
 ```{note}
 上例中数据处理器的 training 参数用于区分训练、测试阶段不同的批增强策略，`train_step` 会传入 `training=True`，`test_step` 和 `val_step` 则会传入 `trainig=Fasle`。
