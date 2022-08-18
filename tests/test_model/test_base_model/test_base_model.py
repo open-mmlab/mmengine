@@ -28,15 +28,15 @@ class ToyModel(BaseModel):
         super().__init__(data_preprocessor=data_preprocessor, init_cfg=None)
         self.conv = nn.Conv2d(3, 1, 1)
 
-    def forward(self, batch_inputs, data_samples=None, mode='tensor'):
+    def forward(self, inputs, data_sample=None, mode='tensor'):
         if mode == 'loss':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return dict(loss=out)
         elif mode == 'predict':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return out
         elif mode == 'tensor':
-            out = self.conv(batch_inputs)
+            out = self.conv(inputs)
             return out
 
 
@@ -98,8 +98,8 @@ class TestBaseModel(TestCase):
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optimizer)
-        inputs = torch.randn(3, 1, 1)
-        data = dict(inputs=[inputs], data_sample=None)
+        inputs = torch.randn(1, 3, 1, 1)
+        data = dict(inputs=inputs, data_sample=None)
         # initiate grad.
         # model.conv.weight.grad = torch.randn(1, 3, 1, 1)
         log_vars = model.train_step(data, optim_wrapper)
@@ -107,23 +107,23 @@ class TestBaseModel(TestCase):
         self.assertIsInstance(log_vars['loss'], torch.Tensor)
 
     def test_val_step(self):
-        inputs = torch.randn(3, 1, 1)
-        data = dict(inputs=[inputs], data_sample=None)
+        inputs = torch.randn(1, 3, 1, 1)
+        data = dict(inputs=inputs, data_sample=None)
         model = ToyModel()
         out = model.val_step(data)
         self.assertIsInstance(out, torch.Tensor)
 
     def test_test_step(self):
-        inputs = torch.randn(3, 1, 1)
-        data = dict(inputs=[inputs], data_sample=None)
+        inputs = torch.randn(1, 3, 1, 1)
+        data = dict(inputs=inputs, data_sample=None)
         model = ToyModel()
         out = model.val_step(data)
         self.assertIsInstance(out, torch.Tensor)
 
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_cuda(self):
-        inputs = torch.randn(3, 1, 1).cuda()
-        data = dict(inputs=[inputs], data_sample=None)
+        inputs = torch.randn(1, 3, 1, 1).cuda()
+        data = dict(inputs=inputs, data_sample=None)
         model = ToyModel().cuda()
         out = model.val_step(data)
         self.assertEqual(out.device.type, 'cuda')
@@ -139,8 +139,8 @@ class TestBaseModel(TestCase):
 
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_to(self):
-        inputs = torch.randn(3, 1, 1).to('cuda:0')
-        data = dict(inputs=[inputs], data_sample=None)
+        inputs = torch.randn(1, 3, 1, 1).to('cuda:0')
+        data = dict(inputs=inputs, data_sample=None)
         model = ToyModel().to(torch.cuda.current_device())
         out = model.val_step(data)
         self.assertEqual(out.device.type, 'cuda')

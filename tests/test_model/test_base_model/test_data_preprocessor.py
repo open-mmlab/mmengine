@@ -25,9 +25,10 @@ class TestBaseDataPreprocessor(TestCase):
 
         data = dict(inputs=[input1, input2], data_sample=[label1, label2])
 
-        batch_inputs, batch_labels = base_data_preprocessor(data)
-        self.assertTrue(torch.is_floating_point(batch_inputs))
-        self.assertEqual(batch_inputs.shape, (2, 1, 3, 5))
+        output = base_data_preprocessor(data)
+        batch_inputs, batch_labels = output['inputs'], output['data_sample']
+        self.assertTrue(torch.is_floating_point(batch_inputs[0]))
+        self.assertEqual(batch_inputs[0].shape, (1, 3, 5))
 
         assert_allclose(input1, batch_inputs[0])
         assert_allclose(input2, batch_inputs[1])
@@ -37,31 +38,30 @@ class TestBaseDataPreprocessor(TestCase):
         # Test with tuple of batch inputs and batch data samples
         data = dict(
             inputs=torch.stack([input1, input2]), data_sample=[label1, label2])
-        batch_inputs, batch_labels = base_data_preprocessor(data)
-        self.assertTrue(torch.is_floating_point(batch_inputs))
-
-        # Test with invalid input type
-        with self.assertRaisesRegex(AssertionError, 'Data must have key'):
-            base_data_preprocessor(dict())
-
-        with self.assertRaisesRegex(TypeError, 'Inputs should be'):
-            base_data_preprocessor(dict(inputs=[dict()], data_sample=[]))
+        output = base_data_preprocessor(data)['inputs']
+        self.assertTrue(torch.is_floating_point(batch_inputs[0]))
 
         # Test cuda forward
         if torch.cuda.is_available():
             # Test with list of data samples.
             base_data_preprocessor = base_data_preprocessor.cuda()
-            batch_inputs, batch_labels = base_data_preprocessor(data)
+            output = base_data_preprocessor(data)
+            batch_inputs, batch_labels = output['inputs'], output[
+                'data_sample']
             self.assertTrue(torch.is_floating_point(batch_inputs))
             self.assertEqual(batch_inputs.device.type, 'cuda')
 
             base_data_preprocessor = base_data_preprocessor.cpu()
-            batch_inputs, batch_labels = base_data_preprocessor(data)
+            output = base_data_preprocessor(data)
+            batch_inputs, batch_labels = output['inputs'], output[
+                'data_sample']
             self.assertTrue(torch.is_floating_point(batch_inputs))
             self.assertEqual(batch_inputs.device.type, 'cpu')
 
             base_data_preprocessor = base_data_preprocessor.to('cuda:0')
-            batch_inputs, batch_labels = base_data_preprocessor(data)
+            output = base_data_preprocessor(data)
+            batch_inputs, batch_labels = output['inputs'], output[
+                'data_sample']
             self.assertTrue(torch.is_floating_point(batch_inputs))
             self.assertEqual(batch_inputs.device.type, 'cuda')
 
@@ -146,7 +146,8 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         target_inputs2 = F.pad(target_inputs2, (0, 1, 0, 1), value=10)
 
         target_inputs = [target_inputs1, target_inputs2]
-        inputs, data_samples = data_preprocessor(data, True)
+        output = data_preprocessor(data, True)
+        inputs, data_samples = output['inputs'], output['data_sample']
         self.assertTrue(torch.is_floating_point(inputs))
 
         target_data_samples = [data_sample1, data_sample2]
@@ -167,7 +168,8 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         target_inputs2 = F.pad(target_inputs2, (0, 1, 0, 1), value=10)
 
         target_inputs = [target_inputs1, target_inputs2]
-        inputs, data_samples = data_preprocessor(data, True)
+        output = data_preprocessor(data, True)
+        inputs, data_samples = output['inputs'], output['data_sample']
         self.assertTrue(torch.is_floating_point(inputs))
 
         target_data_samples = [data_sample1, data_sample2]
@@ -200,13 +202,14 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         _batch_inputs = torch.randn(2, 3, 10, 10)
         _batch_labels = [torch.randn(1), torch.randn(1)]
         data = dict(inputs=_batch_inputs, data_sample=_batch_labels)
-        batch_inputs, batch_labels = data_preprocessor(data)
+        output = data_preprocessor(data)
+        inputs, data_samples = output['inputs'], output['data_sample']
         target_batch_inputs = _batch_inputs[:, [2, 1, 0], ...]
         target_batch_inputs = (target_batch_inputs - 127.5) / 127.5
         target_batch_inputs = F.pad(target_batch_inputs, (0, 6, 0, 6), value=0)
-        self.assertEqual(batch_inputs.shape, torch.Size([2, 3, 16, 16]))
-        self.assertTrue(torch.is_floating_point(batch_inputs))
-        assert_allclose(target_batch_inputs, batch_inputs)
+        self.assertEqual(inputs.shape, torch.Size([2, 3, 16, 16]))
+        self.assertTrue(torch.is_floating_point(inputs))
+        assert_allclose(target_batch_inputs, inputs)
 
         # Test batch inputs without convert channel order and pad
         data_preprocessor = ImgDataPreprocessor(
@@ -214,15 +217,17 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         _batch_inputs = torch.randn(2, 3, 10, 10)
         _batch_labels = [torch.randn(1), torch.randn(1)]
         data = dict(inputs=_batch_inputs, data_sample=_batch_labels)
-        batch_inputs, batch_labels = data_preprocessor(data)
+        output = data_preprocessor(data)
+        inputs, data_samples = output['inputs'], output['data_sample']
         target_batch_inputs = (_batch_inputs - 127.5) / 127.5
-        self.assertEqual(batch_inputs.shape, torch.Size([2, 3, 10, 10]))
-        self.assertTrue(torch.is_floating_point(batch_inputs))
-        assert_allclose(target_batch_inputs, batch_inputs)
+        self.assertEqual(inputs.shape, torch.Size([2, 3, 10, 10]))
+        self.assertTrue(torch.is_floating_point(inputs))
+        assert_allclose(target_batch_inputs, inputs)
 
         # Test empty `data_sample`
         data = dict(
             inputs=[inputs1.clone(), inputs2.clone()], data_sample=None)
-        batch_inputs, batch_labels = data_preprocessor(data, True)
-        self.assertIsNone(batch_labels)
-        self.assertTrue(torch.is_floating_point(batch_inputs))
+        output = data_preprocessor(data, True)
+        inputs, data_samples = output['inputs'], output['data_sample']
+        self.assertIsNone(data_samples)
+        self.assertTrue(torch.is_floating_point(inputs))

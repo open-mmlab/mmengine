@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -114,8 +114,8 @@ class BaseModel(BaseModule):
         """
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.data_preprocessor(data, True)
-            losses = self(batch_inputs, data_samples, mode='loss')
+            data = self.data_preprocessor(data, True)
+            losses = self._run_forward(data, mode='loss')
         parsed_losses, log_vars = self.parse_losses(losses)
         optim_wrapper.update_params(parsed_losses)
         return log_vars
@@ -133,8 +133,8 @@ class BaseModel(BaseModule):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
-        inputs, data_sample = self.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
         """``BaseModel`` implements ``test_step`` the same as ``val_step``.
@@ -145,8 +145,8 @@ class BaseModel(BaseModule):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
-        inputs, data_sample = self.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')
 
     def parse_losses(
         self, losses: Dict[str, torch.Tensor]
@@ -239,8 +239,8 @@ class BaseModel(BaseModule):
 
     @abstractmethod
     def forward(self,
-                batch_inputs: torch.Tensor,
-                data_samples: Optional[List[BaseDataElement]] = None,
+                inputs: torch.Tensor,
+                data_sample: Optional[List[BaseDataElement]] = None,
                 mode: str = 'tensor') -> ForwardResults:
         """Returns losses or predictions of training, validation, testing, and
         simple inference process.
@@ -248,7 +248,7 @@ class BaseModel(BaseModule):
         ``forward`` method of BaseModel is an abstract method, its subclasses
         must implement this method.
 
-        Accepts ``batch_inputs`` and ``data_samples`` processed by
+        Accepts ``batch_inputs`` and ``data_sample`` processed by
         :attr:`data_preprocessor`, and returns results according to mode
         arguments.
 
@@ -263,9 +263,9 @@ class BaseModel(BaseModule):
         loss.
 
         Args:
-            batch_inputs (torch.Tensor): batch input tensor collated by
+            inputs (torch.Tensor): batch input tensor collated by
                 :attr:`data_preprocessor`.
-            data_samples (List[BaseDataElement], optional):
+            data_sample (List[BaseDataElement], optional):
                 data samples collated by :attr:`data_preprocessor`.
             mode (str): mode should be one of ``loss``, ``predict`` and
                 ``tensor``
@@ -289,3 +289,19 @@ class BaseModel(BaseModule):
                 - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
                   or ``dict of tensor for custom use.
         """
+
+    def _run_forward(self, data, mode) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict): Data sampled by dataloader.
+            mode (str): Mode of forward.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results
