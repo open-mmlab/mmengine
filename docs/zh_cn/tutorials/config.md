@@ -4,26 +4,22 @@ MMEngine 实现了抽象的配置类，为用户提供统一的配置访问接�
 
 在开始教程之前，我们先将教程中需要用到的配置文件下载到本地：
 
-```note
-本教程所有 bash 命令在非 Jupyter Notebook 环境运行时，需要去掉 ! 前缀
-```
-
 ```python
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/config_sgd.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/cross_repo.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/custom_imports.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/demo_train.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/example.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/learn_read_config.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/my_module.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/optimizer_cfg.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/predefined_var.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/refer_base_var.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/resnet50_delete_key.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/resnet50_lr0.01.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/resnet50_runtime.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/resnet50.py
-!wget https://github.com/open-mmlab/mmengine/tree/main/docs/resources/runtime_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/config_sgd.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/cross_repo.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/custom_imports.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/demo_train.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/example.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/learn_read_config.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/my_module.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/optimizer_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/refer_base_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_delete_key.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_lr0.01.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_runtime.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/runtime_cfg.py
 ```
 
 ## 配置文件读取
@@ -60,7 +56,7 @@ test_dict:
   key2: 0.1
 ```
 
-对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，则我们调用 `Config.fromfile('config.xxx')` 时都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例，我们先将示例配置文件下载到本地：
+对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，则我们调用 `Config.fromfile('config.xxx')` 接口都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例，我们先将示例配置文件下载到本地：
 
 然后通过配置类的 `fromfile` 接口读取配置文件：
 
@@ -72,6 +68,10 @@ print(cfg)
 ```
 
 ```
+/home/PJLAB/yehaochen/miniconda3/envs/python38pytorch112/lib/python3.8/site-packages/tqdm/auto.py:22: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+
+
 Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1': 'value1', 'key2': 0.1}}
 ```
 
@@ -94,11 +94,11 @@ print(cfg['test_list'])
 ```
 
 ```
-2
-[1, 3, 3]
+1
+[1, 2, 3]
 {'key1': 'value1', 'key2': 0.1}
 2
-[1, 3, 3]
+[1, 2, 3]
 {'key1': 'value1', 'key2': 0.1}
 [1, 3, 3]
 ```
@@ -133,6 +133,7 @@ print(optimizer)
 SGD (
 Parameter Group 0
     dampening: 0
+    foreach: None
     lr: 0.1
     maximize: False
     momentum: 0.9
@@ -510,7 +511,7 @@ print(super_optim)
 ```
 
 ```
-<my_module.SuperOptim object at 0x7f5f4b0f00d0>
+<my_module.SuperOptim object at 0x7f462ebbcee0>
 ```
 
 ### 跨项目继承配置文件
@@ -543,11 +544,11 @@ _base_ = [
 
 ```python
 cfg = Config.fromfile('cross_repo.py')
-print(cfg.optimizer)
+print(cfg.train_cfg)
 ```
 
 ```
-{'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001, '_scope_': 'mmdet'}
+{'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
 ```
 
 通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
@@ -565,6 +566,12 @@ from mmengine import get_model
 
 model = get_model(
     'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+print(type(model))
+```
+
+```
+http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+<class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
 ```
 
 `get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。
@@ -588,56 +595,124 @@ https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_
 
 #### 通过前缀指定作用域
 
-[导入自定义模块](#导入自定义-python-模块) 一节提到，配置与注册器结合使用时，注册器的 `build` 函数可以构建配置文件对应字段的实例，而在注册器的教程中我们了解到，注册器是有作用域（scope）概念的。如果我们想在配置文件中指定用于构建实例的注册器作用域，则需要在 `type` 字段之前加上 `{target_scope}.` 前缀。例如我们想在 `MMDetection` 里使用 `MMClassification` 里实现的 `ResNet`，那我们就需要在 `MMDetection` 的配置文件里给 `type` 加上前缀：
+在注册器的教程中我们了解到，我们可以通过给 `build` 支持构建兄弟节点的模块，因此我们也可以在配置文件中指定 `scope` 前缀，实现跨注册器节点的实例构建。
+我们通过一个例子，来更好的理解跨注册器节点构建实例的过程：
 
 ```python
-model = dict(type='RetinaNet',
-             backbone=dict(type='mmcls.ResNet', ...)
-             ...)
+import torch.nn as nn
+
+from mmengine.config import Config
+from mmengine.registry import MODELS, Registry, DefaultScope
+
+import mmdet.models  # 注册 mmdet 的模块
+
+import time
+
+# 作用域时间戳保证这段代码能够在 Jupyter NoteBook 里重复运行.
+current_scope = f'custom_{time.time()}'
+DefaultScope.get_instance(name=current_scope, scope_name=current_scope)
+CUSTOM_MODELS = Registry('custom_models', parent=MODELS, scope=current_scope)
+
+
+# 自定义 ResNet
+@CUSTOM_MODELS.register_module()
+class ResNet(nn.Module):
+    arch_settings = dict()
+
+
+class CustomModel(nn.Module):
+    def __init__(self, model_cfg1, model_cfg2):
+        super().__init__()
+        self.backbone1 = CUSTOM_MODELS.build(model_cfg1)
+        self.backbone2 = CUSTOM_MODELS.build(model_cfg2)
+
+
+if __name__ == '__main__':
+    model1 = dict(type='ResNet')
+    model2 = dict(type='mmdet.ResNet', depth=50)
+    custom_model = CustomModel(model1, model2)
+    print(f'custom_model has an empty setting: {custom_model.backbone1.arch_settings}')
+    print(f'mmdet resnet setting:{custom_model.backbone2.arch_settings}')
 ```
 
-这样就能在 model 的构造函数里，构造出 `MMClassification` 里定义的 `ResNet`。
+```
+custom_model has an empty setting: {}
+mmdet resnet setting:{18: (<class 'mmdet.models.backbones.resnet.BasicBlock'>, (2, 2, 2, 2)), 34: (<class 'mmdet.models.backbones.resnet.BasicBlock'>, (3, 4, 6, 3)), 50: (<class 'mmdet.models.backbones.resnet.Bottleneck'>, (3, 4, 6, 3)), 101: (<class 'mmdet.models.backbones.resnet.Bottleneck'>, (3, 4, 23, 3)), 152: (<class 'mmdet.models.backbones.resnet.Bottleneck'>, (3, 8, 36, 3))}
+```
+
+在上例中，我们定义了 `CUSTOM_MODELS` 注册器，他继承自 `MMEngine` 的 `MODELS` 根注册器，是 `mmdet` `MODELS` 注册器的兄弟节点。
+
+- 由于 `cfg.model1` 中没有指定作用域，因此直接使用 `CUSTOM_MODELS` 注册器节点构建实例，`custom_model.backbone1` 的类型为自定义的 `ResNet`。
+- 由于 `cfg.model2` 中指定了 `mmdet` 作用域，实际上会切换到 `mmdet` 兄弟节点构建实例。因此 `custom_model.backbone2` 的类型为 `mmdet` 中定义的 `ResNet`。
 
 #### 通过 `_scope_` 指定作用域
 
-我们可以通过前缀指定相应构建相应模块注册器的作用域，但是如果该模块内部还会通过注册器构建其他模块，假设 `ResNet` 中有 `submodule1` 和 `submodule2` 两个模块，那配置文件就需要写成这样：
+上一节我们通过指定 `mmdet` 作用域前缀，成功使用自定义的注册器节点 `CUSTOM_MODELS` 实例化了 `mmdet` 里定义的 `ResNet`。但是有时候光指定作用域前缀，是无法构建出相应实例的，我们来看下面这个例子：
 
 ```python
-model = dict(type='RetinaNet',
-             backbone=dict(
-                type='mmcls.ResNet',
-                submodule1=dict(type='mmcls.submodule1'),
-                submodule2=dict(type='mmcls.submodule2')
-             ...)
-)
+from mmengine import get_config
+import mmdet.models
+
+cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
+cfg.model.type = f'mmdet.{cfg.model.type}'
+try:
+    CUSTOM_MODELS.build(cfg.model)
+except Exception as e:
+    print(e)
 ```
 
-然而如果子模块非常多，为每个子模块都加上 `mmcls` 前缀不免显得冗余，因此 MMEngine 支持在配置文件中配置 `_scope_` 字段来控制构建当前模块时，注册器默认作用域。
+```
+"class `FasterRCNN` in mmdet/models/detectors/faster_rcnn.py: 'DetDataPreprocessor is not in the custom_models registry. Please check whether the value of `DetDataPreprocessor` is correct or it was registered as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'"
+```
+
+运行后提示报错：`DetDataPreprocessor is not in the model registry`。尽管你指定了 `model` 的作用域，但是它内部组件的默认作用域仍然为 `custom`，因此会优先从 `custom` 注册器节点去构建实例，进而抛出了无法在注册器找到 `DetDataPreprocessor` 的错误。
+你或许会觉得既然都已经指定了 `model.type` 的作用域，再指定一下 `data_preprocessor` 的作用域也无妨，就行这样：
 
 ```python
-model = dict(type='RetinaNet',
-             backbone=dict(
-                _scope_='mmcls',
-                type='ResNet',
-                submodule1=dict(type='submodule1'),
-                submodule2=dict(type='submodule2')
-             ...)
-)
+cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
+cfg.model.type = f'mmdet.{cfg.model.type}'
+cfg.model.data_preprocessor.type = f'mmdet.{cfg.model.data_preprocessor.type}'
+try:
+    CUSTOM_MODELS.build(cfg.model)
+except Exception as e:
+    print(e)
 ```
 
-这样我们就不需要为每个子模块加上 `mmcls` 前缀了。
+```
+class `FasterRCNN` in mmdet/models/detectors/faster_rcnn.py: class `ResNet` in __main__.py: __init__() got an unexpected keyword argument 'depth'
+```
 
-我们同样可以搭配使用作用域前缀和配置 `_scope_` 两种方式来更加灵活的跨库构建实例：
+然而我们依然无法成功实例化模型。`FasterRCNN` 有非常多的组件需要由 `mmdet` 注册器节点实例化，尽管我们指定了 `data_preprocessor` 的作用域，`backbone` 的作用域仍然为 `custom`，因此依然会报错。如果想用作用域前缀的方式来解决这个问题，我们就需要指定非常多模块的作用域，这显然并不是一个优雅的方案。因此 MMEngine 的配置类提供了另一种切换作用域的方案，我们可以在字典内配置 `_scope_='mmdet'`，**该字典内**的其他配置在构建时候，默认作用域会切换到 `mmdet`。**该字典外**的其余配置默认作用域仍然为 `mmdet`。
 
 ```python
-model = dict(type='RetinaNet',
-             backbone=dict(
-                _scope_='mmcls',
-                type='ResNet',
-                submodule1=dict(type='mmdet.submodule1'),
-                submodule2=dict(type='submodule2')
-             ...)
- )
+cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
+cfg.model._scope_ = 'mmdet'
+faster_rcnn = CUSTOM_MODELS.build(cfg.model)
+print(faster_rcnn.data_preprocessor)
 ```
 
-这样我们就能在 `ResNet` 的模型中，使用 `MMDetection` 里定义的 `submodule1`。
+```
+DetDataPreprocessor()
+```
+
+这样构建 `model` 时，默认作用域为 `mmdet`，会优先从 `mmdet` 的注册器节点构建实例。我们再来看一个例子，来理解定义 `_scope_` 字典的外出配置，默认作用域不变的概念：
+
+```python
+@CUSTOM_MODELS.register_module()
+class Tractor:
+    def __init__(self, detector):
+        self.detector = CUSTOM_MODELS.build(detector)
+
+
+detector_cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
+detector_cfg.model._scope_ = 'mmdet'
+cfg = dict(type='Tractor', detector=detector_cfg.model)
+model = CUSTOM_MODELS.build(cfg)
+print(type(model))
+```
+
+```
+<class '__main__.Tractor'>
+```
+
+不难发现，在构建 `Tractor` 时，我们优先从 `CUSTOM_MODELS` 里构建实例；构建 `detector` 时，则优先从 `mmdet` 的注册器节点构建实例，因此 `_scope_` 的作用域为 `model` 内部，外部的作用域仍然和自定义的默认作用域相同。
