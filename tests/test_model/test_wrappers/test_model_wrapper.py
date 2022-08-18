@@ -82,7 +82,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         optimizer = SGD(ddp_model.parameters(), lr=0)
         optim_wrapper = AmpOptimWrapper(
             optimizer=optimizer, accumulative_counts=3)
-        inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         res = ddp_model.train_step(data, optim_wrapper=optim_wrapper)['loss']
         self.assertIs(res.dtype, torch.float16)
@@ -105,7 +105,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
         ddp_model = MMDistributedDataParallel(module=model)
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         # Test get predictions.
         predictions = ddp_model.val_step(data)
@@ -115,7 +115,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
         ddp_model = MMDistributedDataParallel(module=model)
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         predictions = ddp_model.test_step(data)
         self.assertIsInstance(predictions, torch.Tensor)
@@ -157,7 +157,7 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         optim_wrapper2 = OptimWrapper(optimizer2, 1)
         optim_wrapper_dict = OptimWrapperDict(
             optim_wrapper1=optim_wrapper1, optim_wrapper2=optim_wrapper2)
-        inputs = torch.randn(3, 1, 1).cuda() * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         # Automatically sync grads of `optim_wrapper1` since
         # `cumulative_iters` = 1
@@ -169,7 +169,7 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         self._init_dist_env(self.rank, self.world_size)
         model = ComplexModel()
         ddp_model = MMSeparateDistributedDataParallel(model)
-        data = torch.randn(3, 1, 1)
+        data = torch.randn(1, 3, 1, 1)
         # Test get predictions.
         ddp_model.eval()
         self.assertFalse(ddp_model.training)
@@ -180,7 +180,7 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         self._init_dist_env(self.rank, self.world_size)
         model = ComplexModel()
         ddp_model = MMSeparateDistributedDataParallel(model)
-        data = torch.randn(3, 1, 1)
+        data = torch.randn(1, 3, 1, 1)
         # Test get predictions.
         ddp_model.eval()
         self.assertFalse(ddp_model.training)
@@ -225,7 +225,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         optimizer = SGD(fsdp_model.parameters(), lr=0)
         optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=[inputs], data_sample=MagicMock())
         fsdp_model.train()
         self.assertTrue(fsdp_model.training)
@@ -235,7 +235,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=[inputs], data_sample=MagicMock())
         # Test get predictions.
         predictions = fsdp_model.val_step(data)
@@ -245,7 +245,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
-        inputs = torch.randn(3, 1, 1) * self.rank * 255
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())
         predictions = fsdp_model.test_step(data)
         self.assertIsInstance(predictions, torch.Tensor)

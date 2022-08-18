@@ -98,7 +98,7 @@ class TestBaseModel(TestCase):
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optimizer)
-        inputs = torch.randn(3, 1, 1)
+        inputs = torch.randn(1, 3, 1, 1)
         data = dict(inputs=inputs, data_sample=None)
         # initiate grad.
         # model.conv.weight.grad = torch.randn(1, 3, 1, 1)
@@ -107,14 +107,14 @@ class TestBaseModel(TestCase):
         self.assertIsInstance(log_vars['loss'], torch.Tensor)
 
     def test_val_step(self):
-        inputs = torch.randn(3, 1, 1)
+        inputs = torch.randn(1, 3, 1, 1)
         data = dict(inputs=inputs, data_sample=None)
         model = ToyModel()
         out = model.val_step(data)
         self.assertIsInstance(out, torch.Tensor)
 
     def test_test_step(self):
-        inputs = torch.randn(3, 1, 1)
+        inputs = torch.randn(1, 3, 1, 1)
         data = dict(inputs=inputs, data_sample=None)
         model = ToyModel()
         out = model.val_step(data)
@@ -122,7 +122,7 @@ class TestBaseModel(TestCase):
 
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_cuda(self):
-        inputs = torch.randn(3, 1, 1).cuda()
+        inputs = torch.randn(1, 3, 1, 1).cuda()
         data = dict(inputs=inputs, data_sample=None)
         model = ToyModel().cuda()
         out = model.val_step(data)
@@ -139,7 +139,7 @@ class TestBaseModel(TestCase):
 
     @unittest.skipIf(not torch.cuda.is_available(), 'cuda should be available')
     def test_to(self):
-        inputs = torch.randn(3, 1, 1).to('cuda:0')
+        inputs = torch.randn(1, 3, 1, 1).to('cuda:0')
         data = dict(inputs=inputs, data_sample=None)
         model = ToyModel().to(torch.cuda.current_device())
         out = model.val_step(data)
