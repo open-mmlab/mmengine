@@ -1,16 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import Mapping, Optional, Sequence, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-CollatedResult = Tuple[Union[torch.Tensor, List[torch.Tensor]], Optional[list]]
+CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
 
 
 @MODELS.register_module()
@@ -30,7 +31,7 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self._device = torch.device('cpu')
 
-    def cast_data(self, data: dict) -> CollatedResult:
+    def cast_data(self, data: CastData) -> CastData:
         """Copying data to the target device.
 
         Args:
@@ -39,30 +40,24 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             CollatedResult: Inputs and data sample at target device.
         """
-        batch_inputs = data['inputs']
-        batch_data_samples = data['data_sample']
-        if batch_data_samples is not None:
-            batch_data_samples = [
-                data_sample.to(self.device)
-                for data_sample in data['data_sample']
-            ]
-        if isinstance(batch_inputs, torch.Tensor):
-            batch_inputs = batch_inputs.to(self.device)
-        elif is_list_of(batch_inputs, torch.Tensor):
-            batch_inputs = [
-                data_sample.to(self.device) for data_sample in data['inputs']
-            ]
+        if isinstance(data, Mapping):
+            return {key: self.cast_data(data[key]) for key in data}
+        elif isinstance(data, tuple) and hasattr(data, '_fields'):
+            # namedtuple
+            return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
+        elif isinstance(data, Sequence):
+            return [self.cast_data(sample) for sample in data]
+        elif isinstance(data, torch.Tensor):
+            return data.to(self.device)
+        elif isinstance(data, BaseDataElement):
+            return data.to(self.device)
         else:
-            raise TypeError('Inputs should be a tensor or a list of tensor, '
-                            f'but got {type(batch_inputs)}')
-        return batch_inputs, batch_data_samples
+            return data
 
-    def forward(self,
-                data: dict,
-                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
+    def forward(self, data: dict, training: bool = False) -> dict:
         """Preprocesses the data into the model input format.
 
-        After the data pre-processing of :meth:`collate_data`, ``forward``
+        After the data pre-processing of :meth:`cast_data`, ``forward``
         will stack the input tensor list to a batch tensor at the first
         dimension.
 
@@ -74,15 +69,7 @@ class BaseDataPreprocessor(nn.Module):
             Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
             model input.
         """
-        assert 'inputs' in data, (
-            f'Data must have key `inputs`, but got key: {data.keys()}')
-        assert 'data_sample' in data, (
-            f'Data must have key `data_sample`, but got key: {data.keys()}')
-        batch_inputs, batch_data_samples = self.cast_data(data)
-        if is_list_of(batch_inputs, torch.Tensor):
-            batch_inputs = torch.stack(batch_inputs)
-        batch_inputs = batch_inputs.float()  # type: ignore
-        return batch_inputs, batch_data_samples
+        return self.cast_data(data)  # type: ignore
 
     @property
     def device(self):
@@ -201,9 +188,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         self.pad_size_divisor = pad_size_divisor
         self.pad_value = pad_value
 
-    def forward(self,
-                data: dict,
-                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
+    def forward(self, data: dict, training: bool = False) -> dict:
         """Performs normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
@@ -219,10 +204,10 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                 value of ``training``.
 
         Returns:
-            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
-            model input.
+            dict: Data in the same format as the model input.
         """
-        _batch_inputs, batch_data_samples = self.cast_data(data)
+        data = self.cast_data(data)  # type: ignore
+        _batch_inputs = data['inputs']
         # Process data with `pseudo_collate`.
         if is_list_of(_batch_inputs, torch.Tensor):
             batch_inputs = []
@@ -272,4 +257,6 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             raise TypeError('Output of `cast_data` should be a list of dict '
                             'or a tuple with inputs and data_samples, but got'
                             f'{type(data)}： {data}')
-        return batch_inputs, batch_data_samples
+        data['inputs'] = batch_inputs
+        data.setdefault('data_samples', None)
+        return data

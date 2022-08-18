@@ -44,15 +44,18 @@ class ToyModel(BaseModel):
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.linear1(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        if isinstance(inputs, list):
+            inputs = torch.stack(inputs)
+        if isinstance(data_sample, list):
+            data_sample = torch.stack(data_sample)
+        outputs = self.linear1(inputs)
         outputs = self.linear2(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (labels - outputs).sum()
+            loss = (data_sample - outputs).sum()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
@@ -74,15 +77,16 @@ class ToySyncBNModel(BaseModel):
         self.conv = nn.Conv2d(3, 8, 2)
         self.bn = nn.SyncBatchNorm(8)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.conv(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        data_sample = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        outputs = self.conv(inputs)
         outputs = self.bn(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (labels - outputs).sum()
+            loss = (data_sample - outputs).sum()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
@@ -98,24 +102,25 @@ class ToyGANModel(BaseModel):
         self.linear1 = nn.Linear(2, 1)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        output1 = self.linear1(batch_inputs)
-        output2 = self.linear2(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        data_sample = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        output1 = self.linear1(inputs)
+        output2 = self.linear2(inputs)
 
         if mode == 'tensor':
             return output1, output2
         elif mode == 'loss':
-            loss1 = (labels - output1).sum()
-            loss2 = (labels - output2).sum()
+            loss1 = (data_sample - output1).sum()
+            loss2 = (data_sample - output2).sum()
             outputs = dict(linear1=loss1, linear2=loss2)
             return outputs
         elif mode == 'predict':
             return output1, output2
 
     def train_step(self, data, optim_wrapper):
-        batch_inputs, batch_labels = self.data_preprocessor(data)
-        loss = self(batch_inputs, batch_labels, mode='loss')
+        data = self.data_preprocessor(data)
+        loss = self(**data, mode='loss')
         optim_wrapper['linear1'].update_params(loss['linear1'])
         optim_wrapper['linear2'].update_params(loss['linear2'])
         return loss
@@ -1919,8 +1924,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        self.assertEqual(ckpt['meta']['dataset_meta'],
-                         runner.train_dataloader.dataset.metainfo)
         self.assertEqual(ckpt['meta']['experiment_name'],
                          runner.experiment_name)
         self.assertEqual(ckpt['meta']['seed'], runner.seed)
