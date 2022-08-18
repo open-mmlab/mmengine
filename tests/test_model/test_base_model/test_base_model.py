@@ -29,7 +29,6 @@ class ToyModel(BaseModel):
         self.conv = nn.Conv2d(3, 1, 1)
 
     def forward(self, inputs, data_sample=None, mode='tensor'):
-        inputs = torch.stack(inputs)
         if mode == 'loss':
             out = self.conv(inputs)
             return dict(loss=out)
