@@ -99,8 +99,8 @@ toy_net.init_weights()
 ```
 
 ```
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m - load model from: ./pretrained.pth
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m - local loads checkpoint from path: ./pretrained.pth
+08/19 16:50:24 - mmengine - INFO - load model from: ./pretrained.pth
+08/19 16:50:24 - mmengine - INFO - local loads checkpoint from path: ./pretrained.pth
 ```
 
 ### 常用的初始化方式
@@ -133,19 +133,19 @@ toy_net.init_weights()
 ```
 
 ```
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 linear.weight - torch.Size([1, 1]):
 XavierInit: gain=1, distribution=normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 linear.bias - torch.Size([1]):
 XavierInit: gain=1, distribution=normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv.weight - torch.Size([1, 1, 1, 1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
@@ -158,19 +158,19 @@ toy_net.init_weights()
 ```
 
 ```
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 linear.weight - torch.Size([1, 1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 linear.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv.weight - torch.Size([1, 1, 1, 1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
@@ -205,19 +205,19 @@ toy_net.init_weights()
 ```
 
 ```
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv1.weight - torch.Size([1, 1, 1, 1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv1.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv2.weight - torch.Size([1, 1, 1, 1]):
 XavierInit: gain=1, distribution=normal, bias=0
 
-08/19 13:51:39 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv2.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
@@ -280,27 +280,27 @@ toy_net.init_weights()
 ```
 
 ```
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv1.weight - torch.Size([1, 1, 1, 1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv1.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv2.weight - torch.Size([1, 1, 1, 1]):
 XavierInit: gain=1, distribution=normal, bias=0
 
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 conv2.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 custom_conv.custom_weight - torch.Size([1, 1, 1, 1]):
 Initialized by user-defined `init_weights` in ToyConv
 
-08/19 13:51:40 - mmengine - [4m[37mINFO[0m -
+08/19 16:50:24 - mmengine - INFO -
 custom_conv.custom_bias - torch.Size([1]):
 Initialized by user-defined `init_weights` in ToyConv
 ```
