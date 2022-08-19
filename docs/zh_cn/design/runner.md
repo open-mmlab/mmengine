@@ -58,7 +58,9 @@ MMEngine 的执行器内包含训练、测试、验证所需的各个模块，�
 
 ![runner_flow](https://user-images.githubusercontent.com/12907710/184577118-b8f30521-0dba-4b94-a78f-8682459650a5.png)
 
-### 循环控制器
+执行器具有延迟初始化（Lazy Initialization）的特性，在初始化执行器时，并不需要依赖训练、验证和测试的全量模块，只有当运行某个循环控制器时，才会检查所需模块是否构建。因此，若用户只需要执行训练、验证或测试中的某一项功能，只需提供对应的模块或模块的配置即可。
+
+## 循环控制器
 
 在 MMEngine 中，我们将任务的执行流程抽象成循环控制器（Loop），因为大部分的深度学习任务执行流程都可以归纳为模型在一组或多组数据上进行循环迭代。
 MMEngine 内提供了四种默认的循环控制器：
@@ -76,11 +78,11 @@ MMEngine 中的默认执行器和循环控制器能够完成大部分的深度�
 用户如果有自定义的需求，也可以增加更多的输入参数。MMEngine 中同样提供了 LOOPS 注册器对循环类进行管理，用户可以向注册器内注册自定义的循环模块，
 然后在配置文件的 `train_cfg`、`val_cfg`、`test_cfg` 中增加 `type` 字段来指定使用何种循环。
 用户可以在自定义的循环中实现任意的执行逻辑，也可以增加或删减钩子（hook）点位，但需要注意的是一旦钩子点位被修改，默认的钩子函数可能不会被执行，导致一些训练过程中默认发生的行为发生变化。
-因此，我们强烈建议用户按照本文档中定义的循环执行流程图以及[钩子设计](https://mmengine.readthedocs.io/zh_CN/latest/designs/hook.html) 去重载循环基类。
+因此，我们强烈建议用户按照本文档中定义的循环执行流程图以及[钩子设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html) 去重载循环基类。
 
 ```python
 from mmengine.registry import LOOPS, HOOKS
-from mmengine.runner.loop import BaseLoop
+from mmengine.runner import BaseLoop
 from mmengine.hooks import Hook
 
 
@@ -138,7 +140,7 @@ val_cfg = dict(type='CustomValLoop', dataloader2=dict(dataset=dict(type='ValData
 custom_hooks = [dict(type='CustomValHook')]
 ```
 
-### 自定义执行器
+## 自定义执行器
 
 更进一步，如果默认执行器中依然有其他无法满足需求的部分，用户可以像自定义其他模块一样，通过继承重写的方式，实现自定义的执行器。执行器同样也可以通过注册器进行管理。具体实现流程与其他模块无异：继承 MMEngine 中的 Runner，重写需要修改的函数，添加进 RUNNERS 注册器中，最后在配置文件中指定 `runner_type` 即可。
 
