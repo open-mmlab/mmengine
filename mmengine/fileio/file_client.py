@@ -436,17 +436,16 @@ class LmdbBackend(BaseStorageBackend):
                  readahead=False,
                  **kwargs):
         try:
-            import lmdb
+            import lmdb  # NOQA
         except ImportError:
             raise ImportError('Please install lmdb to enable LmdbBackend.')
 
         self.db_path = str(db_path)
-        self._client = lmdb.open(
-            self.db_path,
-            readonly=readonly,
-            lock=lock,
-            readahead=readahead,
-            **kwargs)
+        self.readonly = readonly
+        self.lock = lock
+        self.readahead = readahead
+        self.kwargs = kwargs
+        self._client = None
 
     def get(self, filepath):
         """Get values according to the filepath.
@@ -454,13 +453,28 @@ class LmdbBackend(BaseStorageBackend):
         Args:
             filepath (str | obj:`Path`): Here, filepath is the lmdb key.
         """
-        filepath = str(filepath)
+        if self._client is None:
+            self._client = self._get_client()
+
         with self._client.begin(write=False) as txn:
-            value_buf = txn.get(filepath.encode('ascii'))
+            value_buf = txn.get(str(filepath).encode('utf-8'))
         return value_buf
 
     def get_text(self, filepath, encoding=None):
         raise NotImplementedError
+
+    def _get_client(self):
+        import lmdb
+
+        return lmdb.open(
+            self.db_path,
+            readonly=self.readonly,
+            lock=self.lock,
+            readahead=self.readahead,
+            **self.kwargs)
+
+    def __del__(self):
+        self._client.close()
 
 
 class HardDiskBackend(BaseStorageBackend):
@@ -735,17 +749,12 @@ class FileClient:
         'petrel': PetrelBackend,
         'http': HTTPBackend,
     }
-    # This collection is used to record the overridden backends, and when a
-    # backend appears in the collection, the singleton pattern is disabled for
-    # that backend, because if the singleton pattern is used, then the object
-    # returned will be the backend before overwriting
-    _overridden_backends: set = set()
+
     _prefix_to_backends: dict = {
         's3': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
     }
-    _overridden_prefixes: set = set()
 
     _instances: dict = {}
 
@@ -770,9 +779,7 @@ class FileClient:
             arg_key += f':{key}:{value}'
 
         # if a backend was overridden, it will create a new object
-        if (arg_key in cls._instances
-                and backend not in cls._overridden_backends
-                and prefix not in cls._overridden_prefixes):
+        if arg_key in cls._instances:
             _instance = cls._instances[arg_key]
         else:
             # create a new object and put it to _instance
@@ -866,7 +873,9 @@ class FileClient:
                 'add "force=True" if you want to override it')
 
         if name in cls._backends and force:
-            cls._overridden_backends.add(name)
+            for arg_key, instance in list(cls._instances.items()):
+                if isinstance(instance.client, cls._backends[name]):
+                    cls._instances.pop(arg_key)
         cls._backends[name] = backend
 
         if prefixes is not None:
@@ -878,8 +887,10 @@ class FileClient:
                 if prefix not in cls._prefix_to_backends:
                     cls._prefix_to_backends[prefix] = backend
                 elif (prefix in cls._prefix_to_backends) and force:
-                    cls._overridden_prefixes.add(prefix)
-                    cls._prefix_to_backends[prefix] = backend
+                    overridden_backend = cls._prefix_to_backends[prefix]
+                    for arg_key, instance in list(cls._instances.items()):
+                        if isinstance(instance.client, overridden_backend):
+                            cls._instances.pop(arg_key)
                 else:
                     raise KeyError(
                         f'{prefix} is already registered as a storage backend,'
