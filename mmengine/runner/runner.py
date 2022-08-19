@@ -38,8 +38,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                DefaultScope, count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_list_of, is_seq_of,
-                            revert_sync_batchnorm, set_multi_processing)
+                            get_git_hash, is_seq_of, revert_sync_batchnorm,
+                            set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -1246,19 +1246,28 @@ class Runner:
 
             return param_schedulers
 
-    def build_evaluator(
-            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
+    def build_evaluator(self, evaluator: Union[Dict, List,
+                                               Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
 
-            evaluator = dict(type='ToyMetric')
+            # evaluator could be a built Evaluator instance
+            evaluator = Evaluator(metrics=[ToyMetric()])
 
             # evaluator can also be a list of dict
             evaluator = [
                 dict(type='ToyMetric1'),
                 dict(type='ToyEvaluator2')
             ]
+
+            # evaluator can also be a list of built metric
+            evaluator = [ToyMetric1(), ToyMetric2()]
+
+            # evaluator can also be a dict with key metrics
+            evaluator = dict(metrics=ToyMetric())
+            # metric is a list
+            evaluator = dict(metrics=[ToyMetric()])
 
         Args:
             evaluator (Evaluator or dict or list): An Evaluator object or a
@@ -1272,13 +1281,12 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                evaluator.setdefault('type', 'Evaluator')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
                 return Evaluator(evaluator)  # type: ignore
-        elif is_list_of(evaluator, dict):
+        elif isinstance(evaluator, list):
             # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
         else:

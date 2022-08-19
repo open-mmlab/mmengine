@@ -1094,6 +1094,12 @@ class TestRunner(TestCase):
         evaluator = [dict(type='ToyMetric1'), dict(type='ToyMetric2')]
         self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
 
+        # input is a list of built metric.
+        metric = [ToyMetric1(), ToyMetric2()]
+        _evaluator = runner.build_evaluator(metric)
+        self.assertIs(_evaluator.metrics[0], metric[0])
+        self.assertIs(_evaluator.metrics[1], metric[1])
+
         # test collect device
         evaluator = [
             dict(type='ToyMetric1', collect_device='cpu'),
@@ -1114,6 +1120,10 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator)
         self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
         self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
+
+        # test evaluator must be a Evaluator instance
+        with self.assertRaisesRegex(TypeError, 'evaluator should be'):
+            _evaluator = runner.build_evaluator(ToyMetric1())
 
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
