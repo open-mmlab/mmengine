@@ -4,7 +4,7 @@
 
 ## 函数式初始化
 
-Pytorch 的初始化模块通常接受 `Parameter` 对象作为参数，例如我们想用正态分布初始化一个卷积层的权重（weight）层，常数初始化卷积的偏置（`bias`）层，我们就需要分别去初始化卷积的权重和偏置。
+Pytorch 的初始化模块提供了一系列**参数**初始化的功能，例如我们想用正态分布初始化一个卷积层的权重（weight）层，常数初始化卷积的偏置（`bias`）层，我们就需要分别去初始化卷积的权重和偏置。
 
 ```python
 from torch.nn.init import normal_, constant_
@@ -20,7 +20,7 @@ Parameter containing:
 tensor([0.], requires_grad=True)
 ```
 
-上述流程实际上是卷积正态分布初始化的标准流程，MMEngine 在次基础上做了进一步的简化，实现了一系列常用的模块初始化函数。相比于 Pytorch 初始化模块的用法，MMEngine 提供的初始化函数直接接受卷积模块：
+上述流程实际上是卷积正态分布初始化的标准流程，MMEngine 在此基础上做了进一步的简化，实现了一系列常用的**模块**初始化函数。相比于上述 Pytorch 初始化模块的用法，MMEngine 提供的初始化函数直接接受卷积模块：
 
 ```python
 from mmengine.model import normal_init
@@ -37,7 +37,7 @@ kaiming_init(model)
 normal_init(model)
 ```
 
-MMEngine 提供了以下初始化函数：
+目前 MMEngine 提供了以下初始化函数：
 
 | 初始化器              | 功能                                                                                                 |
 | :-------------------- | :--------------------------------------------------------------------------------------------------- |
@@ -67,11 +67,11 @@ MMEngine 提供了以下初始化函数：
 
 模块基类接受 `init_cfg` 参数，继承自模块基类的模型可以在 `init_cfg` 里指定初始化器，选择相应的初始化方式。
 
-假设我们定义了模型 `ToyNet`，它继承自模块基类（`BaseModule`），并在 `__init__` 里调用了 `BaseModule` 的 `__init__`。此时我们可以在模型初始化阶段指定 `init_cfg` 来选择模型的初始化方式，然后在 `ToyNet` 实例化后调用 `init_weights` 方法，完成权重的初始化。
+假设我们定义了模型 `ToyNet`，它继承自模块基类（`BaseModule`），并在 `__init__` 里调用了 `BaseModule` 的 `__init__`。此时我们可以在 `ToyNet` 初始化时传入 `init_cfg` 参数来选择模型的初始化方式，`ToyNet` 实例化后再调用 `init_weights` 方法，完成权重的初始化。
 
 ### 使用预训练权重初始化
 
-`init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
+当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
 
 ```python
 import torch
@@ -102,8 +102,6 @@ toy_net.init_weights()
 08/19 13:51:39 - mmengine - [4m[37mINFO[0m - load model from: ./pretrained.pth
 08/19 13:51:39 - mmengine - [4m[37mINFO[0m - local loads checkpoint from path: ./pretrained.pth
 ```
-
-日志中 `INFO` 前后的乱码是颜色信息，在终端里运行上述代码 `INFO` 会呈现灰色。
 
 ### 常用的初始化方式
 
