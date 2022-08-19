@@ -26,7 +26,7 @@ import torch
 import mmcv
 from mmengine.visualization import Visualizer
 
-image = mmcv.imread('docs/en/_static/image/both.png', channel_order='rgb')
+image = mmcv.imread('docs/en/_static/image/cat_dog.png', channel_order='rgb')
 visualizer = Visualizer(image=image)
 # 绘制单个检测框, xyxy 格式
 visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]))
@@ -35,32 +35,48 @@ visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.show()
 ```
 
+<div align=center>
+<img src="../../en/_static/image/vis_demo_1.png" width="400"/>
+</div>
+
 ```python
-visualizer = Visualizer(image=image)
+visualizer.set_image(image=image)
 visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
 visualizer.show()
 ```
 
+<div align=center>
+<img src="../../en/_static/image/vis_demo_2.png" width="400"/>
+</div>
+
 你也可以通过通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
 
 ```python
-visualizer = Visualizer(image=image)
+visualizer.set_image(image=image)
 visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]), edge_colors='r', line_widths=3)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220]]),line_styles='--')
 visualizer.show()
 ```
+
+<div align=center>
+<img src="../../en/_static/image/vis_demo_3.png" width="400"/>
+</div>
 
 (2) 叠加显示
 
 上述绘制接口可以多次调用，从而实现叠加显示需求
 
 ```python
-visualizer = Visualizer(image=image)
+visualizer.set_image(image=image)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
-visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
-visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
+visualizer.draw_texts("cat and dog",
+                      torch.tensor([10, 20])).draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
 visualizer.show()
 ```
+
+<div align=center>
+<img src="../../en/_static/image/vis_demo_4.png" width="400"/>
+</div>
 
 ## 特征图绘制
 
@@ -131,16 +147,25 @@ input_tensor = preprocess_image(image_norm,
                                 std=[0.229, 0.224, 0.225])
 feat = model(input_tensor)[0]
 
+visualizer = Visualizer()
 drawn_img = visualizer.draw_featmap(feat, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
 
-由于输出的feat 特征图尺寸为 7x7，直接可视化效果不佳，用户可以通过叠加输入图片或者 `resize_shape` 参数来缩放特征图。如果传入图片尺寸和特征图大小不一致，会强制将特征图采样到和输入图片相同空间尺寸
+<div align=center>
+<img src="../../en/_static/image/vis_demo_5.png" width="400"/>
+</div>
+
+由于输出的 feat 特征图尺寸为 7x7，直接可视化效果不佳，用户可以通过叠加输入图片或者 `resize_shape` 参数来缩放特征图。如果传入图片尺寸和特征图大小不一致，会强制将特征图采样到和输入图片相同空间尺寸
 
 ```python
 drawn_img = visualizer.draw_featmap(feat, image, channel_reduction='select_max')
 visualizer.show(drawn_img)
 ```
+
+<div align=center>
+<img src="../../en/_static/image/vis_demo_6.png" width="400"/>
+</div>
 
 (2) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
 
@@ -149,12 +174,20 @@ drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5,
 visualizer.show(drawn_img)
 ```
 
+<div align=center>
+<img src="../../en/_static/image/vis_demo_7.png" width="400"/>
+</div>
+
 用户可以通过 `arrangement` 参数选择自己想要的布局
 
 ```python
 drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(4, 2))
 visualizer.show(drawn_img)
 ```
+
+<div align=center>
+<img src="../../en/_static/image/vis_demo_8.png" width="400"/>
+</div>
 
 ## 基础存储接口
 
@@ -334,8 +367,7 @@ class DetLocalVisualizer(Visualizer):
     def add_datasample(self,
                        name,
                        image: np.ndarray,
-                       gt_sample: Optional['BaseDataElement'] = None,
-                       pred_sample: Optional['BaseDataElement'] = None,
+                       data_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
                        show: bool = False,
@@ -351,5 +383,5 @@ VISUALIZERS.build(visualizer_cfg)
 
 # 任意代码位置
 det_local_visualizer = Visualizer.get_current_instance()
-det_local_visualizer.add_datasample('det', image, gt_sample, pred_sample)
+det_local_visualizer.add_datasample('det', image, data_sample)
 ```
