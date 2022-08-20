@@ -1,8 +1,8 @@
 ## 恢复训练
 
-恢复训练是指从上次训练被中断的状态接着训练，这里的状态包括模型的权重、优化器和优化器参数调整策略的状态。
+恢复训练是指从之前某次训练保存下来的状态开始继续训练，这里的状态包括模型的权重、优化器和优化器参数调整策略的状态。
 
-下面是实例化一个 Runner 的示例
+接下来的例子会基于如下初始化的一个 Runner 实例
 
 ```python
 runner = Runner(
@@ -15,10 +15,9 @@ runner = Runner(
 runner.train()
 ```
 
-假设训练在第 3 个 epoch 被中断，可以设置 `Runner` 的 `resume` 参数开启恢复训练功能。
-
 ### 自动恢复训练
 
+假设训练在第 3 个 epoch 被中断，可以设置 `Runner` 的 `resume` 参数开启恢复训练功能。
 设置 `Runner` 的 `resume` 等于 `True`，`Runner` 会从 `work_dir` 加载最新的 checkpoint。
 
 ```python
