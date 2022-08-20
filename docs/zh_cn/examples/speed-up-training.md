@@ -1,8 +1,8 @@
-## 加速训练
+# 加速训练
 
-### 分布式训练
+## 分布式训练
 
-MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环境中有多张显卡时，我们可以使用以下命令开启单机单卡或者多机多卡的方式从而缩短模型的训练时间。
+MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环境中有多张显卡时，我们可以使用以下命令开启单机多卡或者多机多卡的方式从而缩短模型的训练时间。
 
 - 单机多卡
 
@@ -12,11 +12,10 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
 python -m torch.distributed.launch --nproc_per_node=8 examples/train.py --launcher pytorch
 ```
 
-如果需要指定显卡的编号，可以设置 `CUDA_VISIBLE_DEVICES` 环境变量，例如使用第 0 和 第 3 张卡
+如果需要指定显卡的编号，可以设置 `CUDA_VISIBLE_DEVICES` 环境变量，例如使用第 0 和第 3 张卡
 
 ```bash
-export CUDA_VISIBLE_DEVICES=0,3
-python -m torch.distributed.launch --nproc_per_node=2 examples/train.py --launcher pytorch
+CUDA_VISIBLE_DEVICES=0,3 python -m torch.distributed.launch --nproc_per_node=2 examples/train.py --launcher pytorch
 ```
 
 - 多机多卡
@@ -60,7 +59,7 @@ srun -p mm_dev \
     python examples/train.py --launcher="slurm"
 ```
 
-### 混合精度训练
+## 混合精度训练
 
 Nvidia 在 Volta 和 Turing 架构中引入 Tensor Core 单元，来支持 FP32 和 FP16 混合精度计算。Nvidia 在 2018 年开发出一个 PyTorch 拓展 apex，来支持自动混合精度（Automatic Mixed Precision, AMP）训练。开启自动混合精度训练后，部分算子的操作精度是 FP16，其余算子的操作精度是 FP32。这样在不改变模型、不降低模型训练精度的前提下，可以缩短训练时间，降低存储需求，因而能支持更大的 batch size、更大模型和尺寸更大的输入的训练。[PyTorch 从 1.6 开始官方支持 amp](https://pytorch.org/blog/accelerating-training-on-nvidia-gpus-with-pytorch-automatic-mixed-precision/)。如果你对自动混合精度的实现感兴趣，可以阅读 [torch.cuda.amp: 自动混合精度详解](https://zhuanlan.zhihu.com/p/348554267)。
 
@@ -76,21 +75,3 @@ runner = Runner(
 )
 runner.train()
 ```
-
-下表是 3 个经典模型在 NVIDIA GPU V100 (32GB) 上分别使用 AMP 和 FP32 的训练速度和精度对比
-
-- 速度对比
-
-| Model     | AMP (img/s) | FP32 (img/s) | Config |
-| --------- | ----------- | ------------ | ------ |
-| ResNet    | xxx         | xxx          | xxx    |
-| RetinaNet | xxx         | xxx          | xxx    |
-| UNet      | xxx         | xxx          | xxx    |
-
-- 精度对比
-
-| Model     | AMP  | FP32 | Config |
-| --------- | ---- | ---- | ------ |
-| ResNet    | xxx  | xxx  | xxx    |
-| RetinaNet | =xxx | xxx  | xxx    |
-| UNet      | xxx  | xxx  | xxx    |
