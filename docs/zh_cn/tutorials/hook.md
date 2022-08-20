@@ -134,6 +134,8 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir=
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
+如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+
 ### ParamSchedulerHook
 
 [ParamSchedulerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.ParamSchedulerHook.html#mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
@@ -167,11 +169,12 @@ runner.train()
 custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
 ```
 
-更多用法请阅读[CheckpointHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook)。
+更多用法请阅读[EMAHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.EMAHook)。
 
 ### EmptyCacheHook
 
-[EmptyCacheHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EmptyCacheHook.html#mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
+[EmptyCacheHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EmptyCacheHook.html#mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。
+可以通过设置 `before_epoch`, `after_iter` 以及 `after_epoch` 参数控制释显存的时机，第一个参数表示再每个 epoch 开始之前，第二参数表示在每次迭代之后，第三个参数表示在每个 epoch 之后。
 
 ```python
 # 每一个 epoch 结束都会执行释放操作
