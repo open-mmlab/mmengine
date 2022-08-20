@@ -33,13 +33,13 @@ from mmengine.model import (BaseModel, MMDistributedDataParallel,
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOOPS, MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               RUNNERS, VISUALIZERS, DefaultScope,
-                               count_registered_modules)
+                               LOOPS, MODEL_WRAPPERS, MODELS, OPTIM_WRAPPERS,
+                               PARAM_SCHEDULERS, RUNNERS, VISUALIZERS,
+                               DefaultScope, count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_list_of, is_seq_of,
-                            revert_sync_batchnorm, set_multi_processing)
+                            get_git_hash, is_seq_of, revert_sync_batchnorm,
+                            set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -164,8 +164,8 @@ class Runner:
         visualizer (Visualizer or dict, optional): A Visualizer object or a
             dict build Visualizer object. Defaults to None. If not
             specified, default config will be used.
-        default_scope (str, optional): Used to reset registries location.
-            Defaults to None.
+        default_scope (str): Used to reset registries location.
+            Defaults to "mmengine".
         randomness (dict): Some settings to make the experiment as reproducible
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
@@ -257,7 +257,7 @@ class Runner:
         log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
         visualizer: Optional[Union[Visualizer, Dict]] = None,
-        default_scope: Optional[str] = None,
+        default_scope: str = 'mmengine',
         randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
@@ -452,7 +452,7 @@ class Runner:
             log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
             visualizer=cfg.get('visualizer'),
-            default_scope=cfg.get('default_scope'),
+            default_scope=cfg.get('default_scope', 'mmengine'),
             randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
             cfg=cfg,
@@ -1067,26 +1067,29 @@ class Runner:
         """
         if isinstance(optim_wrapper, OptimWrapper):
             return optim_wrapper
-        elif isinstance(optim_wrapper, (dict, ConfigDict, Config)):
-            # If `optim_wrapper` is a config dict with only one optimizer,
-            # the config dict must contain `optimizer`:
-            # optim_wrapper = dict(optimizer=dict(type='SGD', lr=0.1))
-            # `type` is optional, defaults to `OptimWrapper`.
-            # `optim_wrapper` could also be defined as:
-            # optim_wrapper = dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.1))  # noqa: E501
-            # to build specific optimizer wrapper.
-            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper:
-                optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
-                return optim_wrapper
-            elif 'constructor' not in optim_wrapper:
-                # if `type` and `optimizer` are not defined in `optim_wrapper`,
-                # it should be the case of training with multiple optimizers.
-                # If constructor is not defined in `optim_wrapper`, each value
-                # of `optim_wrapper` must be an `OptimWrapper` instance since
-                # `DefaultOptimizerConstructor` will not handle the case of
-                # training with multiple optimizers. `build_optim_wrapper` will
-                # directly build the `OptimWrapperDict` instance from
-                # `optim_wrapper.`
+        if isinstance(optim_wrapper, (dict, ConfigDict, Config)):
+            # optimizer must be defined for single optimizer training.
+            optimizer = optim_wrapper.get('optimizer', None)
+
+            # If optimizer is a built `Optimizer` instance, the optimizer
+            # wrapper should be built by `OPTIM_WRAPPERS` registry.
+            if isinstance(optimizer, Optimizer):
+                optim_wrapper.setdefault('type', 'OptimWrapper')
+                return OPTIM_WRAPPERS.build(optim_wrapper)  # type: ignore
+
+            # If `optimizer` is not None or `constructor` is defined, it means,
+            # optimizer wrapper will be built by optimizer wrapper
+            # constructor. Therefore, `build_optim_wrapper` should be called.
+            if optimizer is not None or 'constructor' in optim_wrapper:
+                return build_optim_wrapper(self.model, optim_wrapper)
+            else:
+                # if `optimizer` is not defined, it should be the case of
+                # training with multiple optimizers. If `constructor` is not
+                # defined either, Each value of `optim_wrapper` must be an
+                # `OptimWrapper` instance since `DefaultOptimizerConstructor`
+                # will not handle the case of training with multiple
+                # optimizers. `build_optim_wrapper` will directly build the
+                # `OptimWrapperDict` instance from `optim_wrapper.`
                 optim_wrappers = OrderedDict()
                 for name, optim in optim_wrapper.items():
                     if not isinstance(optim, OptimWrapper):
@@ -1096,11 +1099,6 @@ class Runner:
                             f'optimizer, but got {name}={optim}')
                     optim_wrappers[name] = optim
                 return OptimWrapperDict(**optim_wrappers)
-                # If constructor is defined, directly build the optimizer
-                # wrapper instance from the config dict.
-            else:
-                optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
-                return optim_wrapper
         else:
             raise TypeError('optimizer wrapper should be an OptimWrapper '
                             f'object or dict, but got {optim_wrapper}')
@@ -1248,19 +1246,28 @@ class Runner:
 
             return param_schedulers
 
-    def build_evaluator(
-            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
+    def build_evaluator(self, evaluator: Union[Dict, List,
+                                               Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
 
-            evaluator = dict(type='ToyMetric')
+            # evaluator could be a built Evaluator instance
+            evaluator = Evaluator(metrics=[ToyMetric()])
 
             # evaluator can also be a list of dict
             evaluator = [
                 dict(type='ToyMetric1'),
                 dict(type='ToyEvaluator2')
             ]
+
+            # evaluator can also be a list of built metric
+            evaluator = [ToyMetric1(), ToyMetric2()]
+
+            # evaluator can also be a dict with key metrics
+            evaluator = dict(metrics=ToyMetric())
+            # metric is a list
+            evaluator = dict(metrics=[ToyMetric()])
 
         Args:
             evaluator (Evaluator or dict or list): An Evaluator object or a
@@ -1274,13 +1281,12 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                evaluator.setdefault('type', 'Evaluator')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
                 return Evaluator(evaluator)  # type: ignore
-        elif is_list_of(evaluator, dict):
+        elif isinstance(evaluator, list):
             # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
         else:

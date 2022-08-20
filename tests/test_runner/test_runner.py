@@ -25,8 +25,8 @@ from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
 from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
                                LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPER_CONSTRUCTORS, PARAM_SCHEDULERS,
-                               RUNNERS, Registry)
+                               OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
+                               PARAM_SCHEDULERS, RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
@@ -213,6 +213,11 @@ class ToyMetric2(BaseMetric):
 
     def compute_metrics(self, results):
         return dict(acc=1)
+
+
+@OPTIM_WRAPPERS.register_module()
+class ToyOptimWrapper(OptimWrapper):
+    ...
 
 
 @HOOKS.register_module()
@@ -926,6 +931,24 @@ class TestRunner(TestCase):
         self.assertIsInstance(optim_wrapper['linear1'].optimizer, SGD)
         self.assertIsInstance(optim_wrapper['linear2'].optimizer, Adam)
 
+        # 2.4 input is a dict which contains optimizer instance.
+        model = nn.Linear(1, 1)
+        optimizer = SGD(model.parameters(), lr=0.1)
+        optim_wrapper_cfg = dict(optimizer=optimizer)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, OptimWrapper)
+        self.assertIs(optim_wrapper.optimizer, optimizer)
+
+        # Specify the type of optimizer wrapper
+        model = nn.Linear(1, 1)
+        optimizer = SGD(model.parameters(), lr=0.1)
+        optim_wrapper_cfg = dict(
+            optimizer=optimizer, type='ToyOptimWrapper', accumulative_counts=2)
+        optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper, ToyOptimWrapper)
+        self.assertIs(optim_wrapper.optimizer, optimizer)
+        self.assertEqual(optim_wrapper._accumulative_counts, 2)
+
     def test_build_param_scheduler(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_param_scheduler'
@@ -1071,6 +1094,12 @@ class TestRunner(TestCase):
         evaluator = [dict(type='ToyMetric1'), dict(type='ToyMetric2')]
         self.assertIsInstance(runner.build_evaluator(evaluator), Evaluator)
 
+        # input is a list of built metric.
+        metric = [ToyMetric1(), ToyMetric2()]
+        _evaluator = runner.build_evaluator(metric)
+        self.assertIs(_evaluator.metrics[0], metric[0])
+        self.assertIs(_evaluator.metrics[1], metric[1])
+
         # test collect device
         evaluator = [
             dict(type='ToyMetric1', collect_device='cpu'),
@@ -1091,6 +1120,10 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator)
         self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
         self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
+
+        # test evaluator must be a Evaluator instance
+        with self.assertRaisesRegex(TypeError, 'evaluator should be'):
+            _evaluator = runner.build_evaluator(ToyMetric1())
 
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

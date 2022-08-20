@@ -12,12 +12,7 @@ from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
 from mmengine.device import is_mlu_available
 
-try:
-    # for python < 3.10
-    from collections import Iterable, Mapping
-except ImportError:
-    # for python >= 3.10
-    from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping
 
 _LOCAL_PROCESS_GROUP = None
 
@@ -296,8 +291,8 @@ def get_dist_info(group: Optional[ProcessGroup] = None) -> Tuple[int, int]:
             the default process group will be used. Defaults to None.
 
     Returns:
-        tuple[int, int]: Return a tuple containing the ``world_size`` and
-        ``rank``.
+        tuple[int, int]: Return a tuple containing the ``rank`` and
+        ``world_size``.
     """
     world_size = get_world_size(group)
     rank = get_rank(group)
