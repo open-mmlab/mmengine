@@ -43,6 +43,16 @@ class ToyModel1(BaseModel, ToyModel):
         return super(BaseModel, self).forward(*args, **kwargs)
 
 
+class ToyModel2(BaseModel, ToyModel):
+
+    def __init__(self):
+        super().__init__()
+        self.linear1 = nn.Linear(2, 1)
+
+    def forward(self, *args, **kwargs):
+        return super(BaseModel, self).forward(*args, **kwargs)
+
+
 @DATASETS.register_module()
 class DummyDataset(Dataset):
     METAINFO = dict()  # type: ignore
@@ -171,3 +181,79 @@ class TestEMAHook(TestCase):
             custom_hooks=[dict(type='EMAHook')],
             experiment_name='test4')
         runner.test()
+
+        # Test does not load ckpt strict_loadly.
+        # Test load checkpoint without ema_state_dict
+        runner = Runner(
+            model=ToyModel2(),
+            test_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            test_evaluator=evaluator,
+            test_cfg=dict(),
+            work_dir=self.temp_dir.name,
+            load_from=osp.join(self.temp_dir.name, 'epoch_2.pth'),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook', strict_load=False)],
+            experiment_name='test5')
+        runner.test()
+
+        # Test enable ema at 5 epochs.
+        runner = Runner(
+            model=model,
+            train_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            val_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=False),
+                batch_size=3,
+                num_workers=0),
+            val_evaluator=evaluator,
+            work_dir=self.temp_dir.name,
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
+            train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
+            val_cfg=dict(),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook', begin_epoch=5)],
+            experiment_name='test6')
+        runner.train()
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_4.pth'))
+        self.assertNotIn('ema_state_dict', state_dict)
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_5.pth'))
+        self.assertIn('ema_state_dict', state_dict)
+
+        # Test enable ema at 5 iterations.
+        runner = Runner(
+            model=model,
+            train_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            val_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=False),
+                batch_size=3,
+                num_workers=0),
+            val_evaluator=evaluator,
+            work_dir=self.temp_dir.name,
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
+            train_cfg=dict(by_epoch=False, max_iters=10, val_interval=1),
+            val_cfg=dict(),
+            default_hooks=dict(
+                checkpoint=dict(
+                    type='CheckpointHook', interval=1, by_epoch=False)),
+            custom_hooks=[dict(type='EMAHook', begin_iter=5)],
+            experiment_name='test7')
+        runner.train()
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_4.pth'))
+        self.assertNotIn('ema_state_dict', state_dict)
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_5.pth'))
+        self.assertIn('ema_state_dict', state_dict)

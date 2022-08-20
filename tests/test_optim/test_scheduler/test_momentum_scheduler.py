@@ -8,6 +8,7 @@ import torch.optim as optim
 
 from mmengine.optim.scheduler import (ConstantMomentum,
                                       CosineAnnealingMomentum,
+                                      CosineRestartMomentum,
                                       ExponentialMomentum, LinearMomentum,
                                       MultiStepMomentum, PolyMomentum,
                                       StepMomentum, _ParamScheduler)
@@ -399,6 +400,43 @@ class TestMomentumScheduler(TestCase):
         self._test_scheduler_value(
             self.optimizer_with_betas, scheduler, targets, epochs=10)
 
+    def test_cosine_restart_scheduler(self):
+        with self.assertRaises(AssertionError):
+            CosineRestartMomentum(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0,
+                eta_min_ratio=0.1)
+        with self.assertRaises(AssertionError):
+            CosineRestartMomentum(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5, 0.0],
+                eta_min=0)
+        single_targets = [
+            0.05, 0.0426776, 0.025, 0.00732233, 0.025, 0.022612712, 0.01636271,
+            0.0086372, 0.0023872, 0.0023872
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+        scheduler = CosineRestartMomentum(
+            self.optimizer,
+            periods=[4, 5],
+            restart_weights=[1, 0.5],
+            eta_min=0)
+        self._test_scheduler_value(
+            self.optimizer, scheduler, targets, epochs=10)
+
+        scheduler = CosineRestartMomentum(
+            self.optimizer_with_betas,
+            periods=[4, 5],
+            restart_weights=[1, 0.5],
+            eta_min=0)
+        self._test_scheduler_value(
+            self.optimizer_with_betas, scheduler, targets, epochs=10)
+
     def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
         scheduler = construct()
         for _ in range(epochs):
@@ -452,6 +490,20 @@ class TestMomentumScheduler(TestCase):
         self._check_scheduler_state_dict(
             lambda: PolyMomentum(self.optimizer, power=0.5, eta_min=0.001),
             lambda: PolyMomentum(self.optimizer, power=0.8, eta_min=0.002),
+            epochs=10)
+
+    def test_cosine_restart_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: CosineRestartMomentum(
+                self.optimizer,
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0),
+            lambda: CosineRestartMomentum(
+                self.optimizer,
+                periods=[4, 6],
+                restart_weights=[1, 0.5],
+                eta_min=0),
             epochs=10)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):

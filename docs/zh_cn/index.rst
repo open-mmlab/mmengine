@@ -11,6 +11,12 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 开始你的第一步
+
+   get_started/installation.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 教程
 
    tutorials/registry.md
