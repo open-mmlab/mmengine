@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import time
 from typing import Any
 from unittest import TestCase
 
@@ -117,12 +118,13 @@ class TestVisualizer(TestCase):
                 save_dir='temp_dir')
 
         # test global init
+        instance_name = 'visualizer' + str(time.time())
         visualizer = Visualizer.get_instance(
-            'visualizer',
+            instance_name,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         assert len(visualizer._vis_backends) == 2
-        visualizer_any = Visualizer.get_instance('visualizer')
+        visualizer_any = Visualizer.get_instance(instance_name)
         assert visualizer_any == visualizer
 
     def test_set_image(self):
