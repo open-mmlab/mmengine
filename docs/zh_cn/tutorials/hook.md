@@ -66,9 +66,7 @@ runner.train()
 
 下面逐一介绍 MMEngine 中内置钩子的用法。
 
-### 默认钩子
-
-#### CheckpointHook
+### CheckpointHook
 
 [CheckpointHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook) 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
 
@@ -126,7 +124,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
 default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
 ```
 
-#### LoggerHook
+### LoggerHook
 
 [LoggerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.LoggerHook.html#mmengine.hooks.LoggerHook) 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
 
@@ -136,15 +134,15 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir=
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-#### ParamSchedulerHook
+### ParamSchedulerHook
 
 [ParamSchedulerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.ParamSchedulerHook.html#mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
-#### IterTimerHook
+### IterTimerHook
 
 [IterTimerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.IterTimerHook.html#mmengine.hooks.IterTimerHook) 用于记录加载数据的时间以及迭代一次耗费的时间。`IterTimerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
-#### DistSamplerSeedHook
+### DistSamplerSeedHook
 
 [DistSamplerSeedHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.DistSamplerSeedHook.html#mmengine.hooks.DistSamplerSeedHook) 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。`DistSamplerSeedHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
@@ -153,9 +151,7 @@ default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 [RuntimeInfoHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.RuntimeInfoHook.html#mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
 以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
-### 自定义钩子
-
-#### EMAHook
+### EMAHook
 
 [EMAHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook) 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
 
@@ -173,7 +169,7 @@ custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
 
 更多用法请阅读[CheckpointHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook)。
 
-#### EmptyCacheHook
+### EmptyCacheHook
 
 [EmptyCacheHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EmptyCacheHook.html#mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。`EmptyCacheHook` 会在 3 个位点调用 `torch.cuda.empty_cache()`，分别是 `before_epoch`, `after_iter` 以及 `after_epoch`，用户可以通过参数控制是否调用。
 
@@ -184,7 +180,7 @@ runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()
 ```
 
-#### SyncBuffersHook
+### SyncBuffersHook
 
 [SyncBuffersHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.SyncBuffersHook.html#mmengine.hooks.SyncBuffersHook) 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
 
