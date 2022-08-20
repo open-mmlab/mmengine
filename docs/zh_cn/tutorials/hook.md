@@ -83,7 +83,7 @@ runner.train()
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 
-假设我们一共训练 21 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
+假设我们一共训练 20 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
 ```python
 # by_epoch 的默认值为 True
@@ -101,7 +101,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch
 如果只想保存一定数量的权重，可以通过设置 `max_keep_ckpts` 参数实现最多保存 `max_keep_ckpts` 个权重，当保存的权重数超过 `max_keep_ckpts` 时，前面的权重会被删除。
 
 ```python
-checkpoint_config = dict(type='CheckpointHook', interval=5, max_keep_ckpts=2)
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, max_keep_ckpts=2))
 ```
 
 上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
@@ -111,7 +111,7 @@ checkpoint_config = dict(type='CheckpointHook', interval=5, max_keep_ckpts=2)
 如果想要保存训练过程验证集的最优权重，可以设置 `save_best` 参数，如果设置为 `'auto'`，则会根据验证集的第一个评价指标（验证集返回的评价指标是一个有序字典）判断当前权重是否最优。
 
 ```python
-checkpoint_config = dict(type='CheckpointHook', save_best='auto')
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
 ```
 
 也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
