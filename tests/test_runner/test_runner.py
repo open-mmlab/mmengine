@@ -558,10 +558,10 @@ class TestRunner(TestCase):
             param_scheduler=MultiStepLR(optim_wrapper, milestones=[1, 2]),
             val_cfg=dict(),
             val_dataloader=val_dataloader,
-            val_evaluator=ToyMetric1(),
+            val_evaluator=[ToyMetric1()],
             test_cfg=dict(),
             test_dataloader=test_dataloader,
-            test_evaluator=ToyMetric1(),
+            test_evaluator=[ToyMetric1()],
             default_hooks=dict(param_scheduler=toy_hook),
             custom_hooks=[toy_hook2],
             experiment_name='test_init14')
