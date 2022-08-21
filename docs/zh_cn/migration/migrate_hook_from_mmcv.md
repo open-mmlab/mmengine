@@ -6,7 +6,7 @@
 
 ## 接口差异
 
-<style type="text/css">
+<!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
   overflow:hidden;padding:10px 5px;word-break:normal;}
@@ -14,9 +14,9 @@
   font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
 .tg .tg-9wq8{border-color:inherit;text-align:center;vertical-align:middle}
 .tg .tg-uzvj{border-color:inherit;font-weight:bold;text-align:center;vertical-align:middle}
-</style>
+</style> -->
 
-<table class="tg" style="undefined;table-layout: fixed; width: 688px">
+<table class="docutils" style="undefined;table-layout: fixed; width: 688px">
 <colgroup>
 <col style="width: 116px">
 <col style="width: 131px">
@@ -25,126 +25,126 @@
 </colgroup>
 <thead>
   <tr>
-    <th class="tg-9wq8" colspan="2"></th>
+    <th colspan="2"></th>
     <th class="tg-uzvj">MMCV Hook</th>
     <th class="tg-uzvj">MMEngine Hook</th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td class="tg-9wq8" rowspan="2">全局位点</td>
-    <td class="tg-9wq8">执行前</td>
-    <td class="tg-9wq8">before_run</td>
-    <td class="tg-9wq8">before_run</td>
+    <td rowspan="2">全局位点</td>
+    <td>执行前</td>
+    <td>before_run</td>
+    <td>before_run</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">执行后</td>
-    <td class="tg-9wq8">after_run</td>
-    <td class="tg-9wq8">after_run</td>
+    <td>执行后</td>
+    <td>after_run</td>
+    <td>after_run</td>
   </tr>
   <tr>
-    <td class="tg-9wq8" rowspan="2">Checkpoint 相关</td>
-    <td class="tg-9wq8">加载 checkpoint 后</td>
-    <td class="tg-9wq8">after_load_checkpoint</td>
-    <td class="tg-9wq8">after_load_checkpoint</td>
+    <td rowspan="2">Checkpoint 相关</td>
+    <td>加载 checkpoint 后</td>
+    <td>after_load_checkpoint</td>
+    <td>after_load_checkpoint</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">保存 checkpoint 前</td>
-    <td class="tg-9wq8">before_save_checkpoint</td>
-    <td class="tg-9wq8">before_save_checkpoint</td>
+    <td>保存 checkpoint 前</td>
+    <td>before_save_checkpoint</td>
+    <td>before_save_checkpoint</td>
   </tr>
   <tr>
-    <td class="tg-9wq8" rowspan="6">训练相关</td>
-    <td class="tg-9wq8">训练前触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">before_train</td>
+    <td rowspan="6">训练相关</td>
+    <td>训练前触发</td>
+    <td>无</td>
+    <td>before_train</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">训练后触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">after_train</td>
+    <td>训练后触发</td>
+    <td>无</td>
+    <td>after_train</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 前</td>
-    <td class="tg-9wq8">before_train_epoch</td>
-    <td class="tg-9wq8">before_train_epoch</td>
+    <td>每个 epoch 前</td>
+    <td>before_train_epoch</td>
+    <td>before_train_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 后</td>
-    <td class="tg-9wq8">after_train_epoch</td>
-    <td class="tg-9wq8">after_train_epoch</td>
+    <td>每个 epoch 后</td>
+    <td>after_train_epoch</td>
+    <td>after_train_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代前</td>
-    <td class="tg-9wq8">before_train_iter</td>
-    <td class="tg-9wq8">before_train_iter，新增 batch_idx 和 data_batch 参数</td>
+    <td>每次迭代前</td>
+    <td>before_train_iter</td>
+    <td>before_train_iter，新增 batch_idx 和 data_batch 参数</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代后</td>
-    <td class="tg-9wq8">after_train_iter</td>
-    <td class="tg-9wq8">after_train_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
+    <td>每次迭代后</td>
+    <td>after_train_iter</td>
+    <td>after_train_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
   </tr>
   <tr>
-    <td class="tg-9wq8" rowspan="6">验证相关</td>
-    <td class="tg-9wq8">验证前触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">before_val</td>
+    <td rowspan="6">验证相关</td>
+    <td>验证前触发</td>
+    <td>无</td>
+    <td>before_val</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">验证后触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">after_val</td>
+    <td>验证后触发</td>
+    <td>无</td>
+    <td>after_val</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 前</td>
-    <td class="tg-9wq8">before_val_epoch</td>
-    <td class="tg-9wq8">before_val_epoch</td>
+    <td>每个 epoch 前</td>
+    <td>before_val_epoch</td>
+    <td>before_val_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 后</td>
-    <td class="tg-9wq8">after_val_epoch</td>
-    <td class="tg-9wq8">after_val_epoch</td>
+    <td>每个 epoch 后</td>
+    <td>after_val_epoch</td>
+    <td>after_val_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代前</td>
-    <td class="tg-9wq8">before_val_iter</td>
-    <td class="tg-9wq8">before_val_iter，新增 batch_idx 和 data_batch 参数</td>
+    <td>每次迭代前</td>
+    <td>before_val_iter</td>
+    <td>before_val_iter，新增 batch_idx 和 data_batch 参数</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代后</td>
-    <td class="tg-9wq8">after_val_iter</td>
-    <td class="tg-9wq8">after_val_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
+    <td>每次迭代后</td>
+    <td>after_val_iter</td>
+    <td>after_val_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
   </tr>
   <tr>
-    <td class="tg-9wq8" rowspan="6">测试相关</td>
-    <td class="tg-9wq8">测试前触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">before_test</td>
+    <td rowspan="6">测试相关</td>
+    <td>测试前触发</td>
+    <td>无</td>
+    <td>before_test</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">测试后触发</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">after_test</td>
+    <td>测试后触发</td>
+    <td>无</td>
+    <td>after_test</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 前</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">before_test_epoch</td>
+    <td>每个 epoch 前</td>
+    <td>无</td>
+    <td>before_test_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每个 epoch 后</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">after_test_epoch</td>
+    <td>每个 epoch 后</td>
+    <td>无</td>
+    <td>after_test_epoch</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代前</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">before_test_iter，新增 batch_idx 和 data_batch 参数</td>
+    <td>每次迭代前</td>
+    <td>无</td>
+    <td>before_test_iter，新增 batch_idx 和 data_batch 参数</td>
   </tr>
   <tr>
-    <td class="tg-9wq8">每次迭代后</td>
-    <td class="tg-9wq8">无</td>
-    <td class="tg-9wq8">after_test_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
+    <td>每次迭代后</td>
+    <td>无</td>
+    <td>after_test_iter，新增 batch_idx、data_batch 和 outputs 参数</td>
   </tr>
 </tbody>
 </table>
