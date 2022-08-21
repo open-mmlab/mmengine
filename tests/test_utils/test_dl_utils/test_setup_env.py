@@ -5,7 +5,7 @@ import platform
 
 import cv2
 
-from mmengine.utils import set_multi_processing
+from mmengine.utils.dl_utils import set_multi_processing
 
 
 def test_setup_multi_processes():

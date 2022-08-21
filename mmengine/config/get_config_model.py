@@ -2,8 +2,6 @@
 import importlib
 import os.path as osp
 
-import torch.nn as nn
-
 from mmengine.registry import MODELS, DefaultScope
 from mmengine.utils import check_install_package, get_installed_path
 from .config import Config
@@ -56,7 +54,7 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     return cfg
 
 
-def get_model(cfg_path: str, pretrained: bool = False, **kwargs) -> nn.Module:
+def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
     """Get built model from external package.
 
     Args:

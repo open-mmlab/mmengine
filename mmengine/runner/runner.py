@@ -37,8 +37,9 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                PARAM_SCHEDULERS, RUNNERS, VISUALIZERS,
                                DefaultScope, count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_seq_of, set_multi_processing)
+from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,

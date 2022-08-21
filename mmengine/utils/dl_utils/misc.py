@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .misc import is_tuple_of
+from ..misc import is_tuple_of
 from .parrots_wrapper import _BatchNorm, _InstanceNorm
 
 

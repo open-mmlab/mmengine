@@ -15,7 +15,7 @@ from mmengine.model.averaged_model import ExponentialMovingAverage
 from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
-from mmengine.utils.parrots_wrapper import TORCH_VERSION
+from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
 if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):

@@ -31,7 +31,8 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
-from mmengine.utils import TORCH_VERSION, digit_version, is_list_of
+from mmengine.utils import digit_version, is_list_of
+from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
 

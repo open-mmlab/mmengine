@@ -43,7 +43,7 @@ jobs:
           command: python -m pip install -e .
       - run:
           name: Run unit tests
-          command: python -m pytest tests/test_config tests/test_registry tests/test_utils
+          command: python -m pytest tests/test_config tests/test_registry tests/test_utils tests/test_fileio --ignore=tests/test_utils/test_dl_utils
 
   build_cpu:
     parameters:

@@ -19,7 +19,8 @@ from mmengine.fileio import FileClient
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
-from mmengine.utils import load_url, mkdir_or_exist
+from mmengine.utils import mkdir_or_exist
+from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
 # downloaded from Internet. If it is not set, as a workaround, using

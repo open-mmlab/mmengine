@@ -2,7 +2,7 @@
 import time
 import unittest
 
-from mmengine.utils.time_counter import TimeCounter
+from mmengine.utils.dl_utils.time_counter import TimeCounter
 
 
 class TestTimeCounter(unittest.TestCase):
