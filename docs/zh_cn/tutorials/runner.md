@@ -150,7 +150,8 @@ OpenMMLab 的开源项目普遍使用注册器 + 配置文件的方式来管理�
 下面是一个通过配置文件使用执行器的例子：
 
 ```python
-from mmengine import Config, Runner
+from mmengine import Config
+from mmengine.runner import Runner
 
 # 加载配置文件
 config = Config.fromfile('configs/resnet/resnet50_8xb32_in1k.py')
