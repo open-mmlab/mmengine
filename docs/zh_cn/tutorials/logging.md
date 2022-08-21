@@ -1,10 +1,10 @@
 # 记录日志
 
-[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)在运行过程中会产生很多日志，例如损失、迭代时间、学习率等。MMEngine 提供了一套灵活的日志系统让我们能够在配置执行器时，选择不同类型日志的统计方式；在代码的任意位置，新增需要被统计的日志。
+[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)在运行过程中会产生很多日志，例如损失、迭代时间、学习率等。MMEngine 实现了一套灵活的日志系统让我们能够在配置执行器时，选择不同类型日志的统计方式；在代码的任意位置，新增需要被统计的日志。
 
 ## 灵活的日志统计方式
 
-我们在执行器中配置[日志处理器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)，来更加灵活的统计日志。执行器在不配置日志处理器时，默认输出如下：
+执行器在不配置日志处理器时，默认输出如下：
 
 ```python
 from turtle import forward
@@ -45,7 +45,7 @@ runner.train()
 08/21 02:58:41 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0029  data_time: 0.0010  loss1: 0.1978  loss2: 0.4312  loss: 0.6290
 ```
 
-日志处理器会统计最近 10 次迭代损失的均值。通过配置日志处理器，我们可以统计损失的全局均值。在上例中，日志处理器每 10 次迭代就会重新统计 `loss1` 和 `loss2` 的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，则可以这样配置：
+[日志处理器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)默认会统计最近 10 次迭代损失的均值。我们可以通过配置日志处理器，来统计损失的全局均值。在上例中，日志处理器每 10 次迭代就会重新统计 `loss1` 和 `loss2` 的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，可以这样配置：
 
 ```python
 runner = Runner(
@@ -131,7 +131,7 @@ runner.train()
 
 ## 自定义的统计内容
 
-除了 MMEngine 默认的日志统计类型，如损失、迭代时间、学习率，用户也可以自行添加日志的统计内容。例如我们想统计损失的中间结果，可以这样做：
+除了 MMEngine 默认的日志统计内容，如损失、迭代时间、学习率，用户也可以自行添加日志的统计内容。例如我们想统计损失的中间结果，可以这样做：
 
 ```python
 from mmengine.logging import MessageHub
@@ -167,14 +167,14 @@ runner.train()
 08/21 03:40:31 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0028  data_time: 0.0013  loss_tmp: 0.0065  loss: 0.0000
 ```
 
-我们可以通过消息枢纽实现自定义日志的统计，具体步骤如下：
+通过调用[消息枢纽](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
 2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
 
 ## 输出调试日志
 
-初始化执行器（Runner）时，将 `log_level` 设置成 `debug`。这样终端上就会额外输出日志等级为 `debug` 的日志
+初始化执行器（Runner）时，将 `log_level` 设置成 `DEBUG`。这样终端上就会额外输出日志等级为 `debug` 的日志
 
 ```python
 runner = Runner(
