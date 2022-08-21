@@ -6,16 +6,6 @@
 
 ## 接口差异
 
-<!-- <style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-9wq8{border-color:inherit;text-align:center;vertical-align:middle}
-.tg .tg-uzvj{border-color:inherit;font-weight:bold;text-align:center;vertical-align:middle}
-</style> -->
-
 <table class="docutils" style="undefined;table-layout: fixed; width: 688px">
 <colgroup>
 <col style="width: 116px">
