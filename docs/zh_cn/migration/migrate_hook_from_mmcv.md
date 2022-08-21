@@ -6,12 +6,7 @@
 
 ## 功能差异
 
-<table class="docutils" style="undefined;table-layout: fixed; width: 609px">
-<colgroup>
-<col style="width: 117px">
-<col style="width: 332px">
-<col style="width: 160px">
-</colgroup>
+<table class="docutils">
 <thead>
   <tr>
     <th></th>
@@ -99,13 +94,7 @@
 
 ## 点位差异
 
-<table class="docutils" style="undefined;table-layout: fixed; width: 688px">
-<colgroup>
-<col style="width: 116px">
-<col style="width: 131px">
-<col style="width: 168px">
-<col style="width: 273px">
-</colgroup>
+<table class="docutils">
 <thead>
   <tr>
     <th colspan="2"></th>
