@@ -33,10 +33,10 @@ from mmengine.model import (BaseModel, MMDistributedDataParallel,
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOOPS, MODEL_WRAPPERS, MODELS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, VISUALIZERS,
-                               DefaultScope, count_registered_modules)
-from mmengine.registry.root import LOG_PROCESSORS
+                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               VISUALIZERS, DefaultScope,
+                               count_registered_modules)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)

@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence
 
-from ..registry import HOOKS
-from ..utils import get_git_hash
+from mmengine.registry import HOOKS
+from mmengine.utils import get_git_hash
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]

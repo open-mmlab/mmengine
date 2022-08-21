@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
 
-from mmengine.device.utils import get_device
+from mmengine.device import get_device
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
 from mmengine.structures import BaseDataElement
