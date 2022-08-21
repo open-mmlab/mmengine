@@ -39,12 +39,10 @@ else:
     from .hub import load_url
     from .parrots_wrapper import TORCH_VERSION
     from .setup_env import set_multi_processing
-    from .sync_bn import revert_sync_batchnorm
     from .torch_misc import (has_batch_norm, is_norm, mmcv_full_available,
                              tensor2imgs)
 
     __all__.extend([
-        'load_url', 'TORCH_VERSION', 'set_multi_processing',
-        'revert_sync_batchnorm', 'has_batch_norm', 'is_norm', 'tensor2imgs',
-        'mmcv_full_available', 'collect_env'
+        'load_url', 'TORCH_VERSION', 'set_multi_processing', 'has_batch_norm',
+        'is_norm', 'tensor2imgs', 'mmcv_full_available', 'collect_env'
     ])

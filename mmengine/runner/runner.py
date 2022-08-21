@@ -29,7 +29,7 @@ from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper)
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -38,8 +38,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                DefaultScope, count_registered_modules)
 from mmengine.registry.root import LOG_PROCESSORS
 from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_seq_of, revert_sync_batchnorm,
-                            set_multi_processing)
+                            get_git_hash, is_seq_of, set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,

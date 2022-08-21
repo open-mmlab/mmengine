@@ -3,7 +3,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from mmengine.utils import revert_sync_batchnorm
+from mmengine.model import revert_sync_batchnorm
 
 
 @pytest.mark.skipif(
