@@ -1,14 +1,16 @@
 # 训练生成对抗网络
+
 生成对抗网络(GAN)可以用来生成图像视频等数据。这篇教程将带你一步步用 MMEngine 训练 GAN ！
 
 首先，我们导入需要的 python 模块，设置数据路径，数据加载器参数。
+
 ## 设置
 
 ```python
 import os
 
 import numpy as np
-import torch        
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
@@ -27,6 +29,7 @@ NUM_WORKERS = int(os.cpu_count() / 2)
 ## 准备数据
 
 ### 数据集
+
 接下来，我们为 MNIST 数据集构建一个数据集类。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](docs/zh_cn/tutorials/basedataset.md)。
 
 ```python
@@ -52,6 +55,7 @@ class MNISTDataset(BaseDataset):
 ```
 
 ### 抽象数据接口
+
 MMEngine 中使用抽象数据接口统一并简化了算法库中各个模块的接口，这里我们可以直接使用 mmgen 中的 PackGenInputs 对数据集输出进行打包。
 有关抽象数据接口的信息，可以参考[抽象数据接口教程](docs/zh_cn/tutorials/data_element.md)。
 
@@ -62,6 +66,7 @@ dataset = MNISTDataset("./data", [PackGenInputs(keys='inputs', meta_keys=[])])
 ```
 
 使用 Runner 中的函数 build_dataloader 来构建数据加载器。
+
 ```python
 train_dataloader = dict(
     batch_size=BATCH_SIZE,
@@ -106,7 +111,6 @@ class Generator(nn.Module):
         return img
 ```
 
-
 ```python
 class Discriminator(nn.Module):
     def __init__(self, img_shape):
@@ -128,7 +132,6 @@ class Discriminator(nn.Module):
         return validity
 ```
 
-
 ```python
 generator = Generator(100, (1, 28, 28))
 discriminator = Discriminator((1, 28, 28))
@@ -137,6 +140,7 @@ discriminator = Discriminator((1, 28, 28))
 ## 模型
 
 在使用 MMEngine 时，我们用 ImgDataPreprocessor 来对数据进行归一化和颜色通道的转换。
+
 ```python
 from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor()
@@ -144,11 +148,12 @@ data_preprocessor = ImgDataPreprocessor()
 
 下面的代码实现了基础 GAN 的算法，训练过程在 train_step 中实现。使用 MMEngine 实现的算法类，需要继承 BaseModel 基类，
 关于 BaseModel 的更多信息，请参考(TODO).
+
 ```python
 class GAN(BaseModel):
     def __init__(self,
                  generator,
-                 discriminator, 
+                 discriminator,
                  noise_size,
                  data_preprocessor):
         super().__init__(data_preprocessor=data_preprocessor)
@@ -156,7 +161,7 @@ class GAN(BaseModel):
         self.generator = generator
         self.discriminator = discriminator
         self.noise_size = noise_size
-    
+
     def train_step(self, data, optim_wrapper):
         # 获取数据和数据预处理
         inputs_dict, data_sample = data
@@ -179,10 +184,10 @@ class GAN(BaseModel):
         log_vars.update(log_vars_gen)
 
         return log_vars
-        
+
     def forward(self, batch_inputs, data_samples, mode= None):
         return batch_inputs
-    
+
     def disc_loss(self, disc_pred_fake, disc_pred_real):
         losses_dict = dict()
         losses_dict['loss_disc_fake'] = F.binary_cross_entropy_with_logits(
@@ -229,6 +234,7 @@ class GAN(BaseModel):
 ```
 
 其中一个函数 set_requires_grad 用来锁定训练生成器时判别器的权重。
+
 ```python
 def set_requires_grad(nets, requires_grad=False):
     """Set requires_grad for all the networks.
@@ -246,7 +252,6 @@ def set_requires_grad(nets, requires_grad=False):
                 param.requires_grad = requires_grad
 ```
 
-
 ```python
 
 model = GAN(generator, discriminator, 100, data_preprocessor)
@@ -257,6 +262,7 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 
 MMEngine 使用 OptimWrapper 来封装优化器，对于多个优化器的情况，使用 OptimWrapperDict 对 OptimWrapper 再进行一次封装。
 关于优化器的更多信息，请参考[优化器教程](docs/zh_cn/tutorials/optimizer.md).
+
 ```python
 from mmengine.optim import OptimWrapperDict, OptimWrapper
 opt_g = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
@@ -270,6 +276,7 @@ opt_wrapper_dict = OptimWrapperDict(generator=opt_g_wrapper, discriminator=opt_d
 ```
 
 ## 训练
+
 下面的代码演示了如何使用 Runner 进行模型训练。关于 Runner 的更多信息，请参考[执行器教程](docs/zh_cn/tutorials/runner.md)。
 
 ```python
