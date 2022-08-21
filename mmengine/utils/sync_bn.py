@@ -34,6 +34,15 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
     """
     module_output = module
     module_checklist = [torch.nn.modules.batchnorm.SyncBatchNorm]
+
+    try:
+        import mmcv
+    except ImportError:
+        pass
+    else:
+        if hasattr(mmcv, 'ops'):
+            module_checklist.append(mmcv.ops.SyncBatchNorm)
+
     if isinstance(module, tuple(module_checklist)):
         module_output = _BatchNormXd(module.num_features, module.eps,
                                      module.momentum, module.affine,
