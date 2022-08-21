@@ -4,7 +4,7 @@
 
 ## 灵活的日志统计方式
 
-为了能够更加灵活的统计日志，MMEngine 允许用户在执行器中配置[日志处理器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)。以配置训练日志为例，如果在构造执行器时不配置日志处理器，输出的日志如下：
+我们在执行器中配置[日志处理器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)，来更加灵活的统计日志。执行器在不配置日志处理器时，默认输出如下：
 
 ```python
 from turtle import forward
@@ -45,7 +45,7 @@ runner.train()
 08/21 02:58:41 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0029  data_time: 0.0010  loss1: 0.1978  loss2: 0.4312  loss: 0.6290
 ```
 
-默认情况下，日志处理器会统计最近 10 次迭代损失的均值，我们也可以通过配置 `custom_cfg` 以自定义的方式来统计日志。在上例中，我们每 10 次迭代就会重新统计 `loss1` 和 `loss2` 的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，则可以这样配置：
+日志处理器会统计最近 10 次迭代损失的均值。通过配置日志处理器，我们可以统计损失的全局均值。在上例中，日志处理器每 10 次迭代就会重新统计 `loss1` 和 `loss2` 的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，则可以这样配置：
 
 ```python
 runner = Runner(
@@ -68,7 +68,24 @@ runner.train()
 08/21 02:58:49 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0030  data_time: 0.0012  loss1: 0.4521  loss2: 0.3939  loss: 0.5600
 ```
 
-这样的话，日志中统计的 `loss1` 就是全局均值。如果我们想在日志中同时保留窗口为 10 的局部均值和全局均值，则需要额外指定 `log_name`：
+其中 `data_src` 为原日志名，`mean` 为统计方法，`global` 为统计方法的参数。这样的话，日志中统计的 `loss1` 就是全局均值。我们可以在日志处理器中配置以下统计方法：
+
+| 统计方法 | 参数        | 功能                   |
+| :------- | :---------- | :--------------------- |
+| mean     | window_size | 统计窗口内日志的均值   |
+| min      | window_size | 统计窗口内日志的最小值 |
+| max      | window_size | 统计窗口内日志的最大值 |
+| current  | /           | 返回最近一次更新的日志 |
+
+其中 `window_size` 的值可以是：
+
+- 数字：表示统计窗口的大小
+- `global`：统计全局的最大、最小和均值
+- `epoch`：统计一个 epoch 内的最大、最小和均值
+
+当然我们也可以选择自定义的统计方法，详细步骤见[日志设计](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)。
+
+如果我们既想统计窗口为 10 的 `loss1` 的局部均值，又想统计 `loss1` 的全局均值，则需要额外指定 `log_name`：
 
 ```python
 runner = Runner(
@@ -85,8 +102,8 @@ runner.train()
 ```
 
 ```
-08/21 03:50:02 - mmengine - INFO - Epoch(train) [1][10/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0019  data_time: 0.0006  loss_tmp: 0.7519  loss: 0.1433
-08/21 03:50:02 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0009  loss_tmp: 0.4999  loss: 0.0633
+08/21 18:39:32 - mmengine - INFO - Epoch(train) [1][10/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0016  data_time: 0.0004  loss1: 0.1512  loss2: 0.3751  loss: 0.5264  loss1_global: 0.1512
+08/21 18:39:32 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0051  data_time: 0.0036  loss1: 0.0113  loss2: 0.0856  loss: 0.0970  loss1_global: 0.0813
 ```
 
 类似地，我们也可以统计 `loss1` 的局部最大值和全局最大值：
@@ -110,7 +127,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-更多配置规则详见[日志处理器文档](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)
+更多配置规则见[日志处理器文档](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)
 
 ## 自定义的统计内容
 
