@@ -6,13 +6,11 @@ OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，�
 
 ## 什么是注册器
 
-MMEngine 实现的[注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `'ResNet'` 找到 `ResNet` 类；
-而模块构建方法则定义了如何根据字符串查找到对应的类或函数，并定义了如何实例化这个类或调用这个函数，例如根据规则通过字符串 `'bn'` 找到 `nn.BatchNorm2d`，并且实例化 `BatchNorm2d` 模块。又或者根据规则通过字符串 `'bn'` 找到 `build_batchnorm2d`，并且调用函数获得 `BatchNorm2d` 模块。
+MMEngine 实现的[注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；
+而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。
 MMEngine 中的注册器默认使用 [build_from_cfg](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
 
 一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `MODELS` 可以被视作所有模型的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
-
-使用注册器管理功能相似的模块可以显著提高代码的扩展性和灵活性。
 
 ## 入门用法
 
@@ -44,7 +42,8 @@ class Sigmoid(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call Sigmoid.forward')
+        return x
 
 @ACTIVATION.register_module()
 class ReLU(nn.Module):
@@ -52,7 +51,8 @@ class ReLU(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call ReLU.forward')
+        return x
 
 @ACTIVATION.register_module()
 class Softmax(nn.Module):
@@ -60,7 +60,8 @@ class Softmax(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call Softmax.forward')
+        return x
 ```
 
 使用注册器管理模块的关键步骤是，将实现的模块注册到注册表 `ACTIVATION` 中。通过 `@ACTIVATION.register_module()` 装饰所实现的模块，字符串和类或函数之间的映射就可以由 `ACTIVATION` 构建和维护，我们也可以通过 `ACTIVATION.register_module(module=ReLU)` 实现同样的功能。
@@ -89,7 +90,9 @@ input = torch.randn(2)
 act_cfg = dict(type='Sigmoid')
 activation = ACTIVATION.build(act_cfg)
 output = activation(input)
-print(output)  # tensor([0.0159, 0.0815])
+# call Sigmoid.forward
+print(output)
+# tensor([0.0159, 0.0815])
 ```
 
 如果我们想使用 `ReLU`，仅需修改配置。
@@ -98,7 +101,9 @@ print(output)  # tensor([0.0159, 0.0815])
 act_cfg = dict(type='ReLU', inplace=True)
 activation = ACTIVATION.build(act_cfg)
 output = activation(input)
-print(output)  # tensor([0.0159, 0.0815])
+# call Sigmoid.forward
+print(output)
+# tensor([0.0159, 0.0815])
 ```
 
 如果我们希望在创建实例前检查输入参数的类型（或者任何其他操作），我们可以实现一个构建方法并将其传递给注册器从而实现自定义构建流程。
@@ -127,13 +132,15 @@ class Tanh(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call Tanh.forward')
+        return x
 
 act_cfg = dict(type='Tanh')
 activation = ACTIVATION.build(act_cfg)
 output = activation(input)
-print(output)
 # build activation: Tanh
+# call Tanh.forward
+print(output)
 # tensor([0.0159, 0.0815])
 ```
 
@@ -196,7 +203,8 @@ class RReLU(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call RReLU.forward')
+        return x
 ```
 
 假设有个项目叫 `MMAlpha`，它也定义了 `MODELS`，并设置其父节点为 `MMEngine` 的 `MODELS`，这样就建立了层级结构。
@@ -208,7 +216,9 @@ MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
 
 下图是 `MMEngine` 和 `MMAlpha` 的注册器层级结构。
 
-![registry](https://user-images.githubusercontent.com/58739961/185307159-26dc5771-df77-4d03-9203-9c4c3197befa.png)
+<div align="center">
+  <img src="https://user-images.githubusercontent.com/58739961/185307159-26dc5771-df77-4d03-9203-9c4c3197befa.png"/>
+</div>
 
 在 `MMAlpha` 中定义模块 `LogSoftmax`，并往 `MMAlpha` 的 `MODELS` 注册。
 
@@ -219,7 +229,8 @@ class LogSoftmax(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print('call LogSoftmax.forward')
+        return x
 ```
 
 在 `MMAlpha` 中使用配置调用 `LogSoftmax`
@@ -242,7 +253,9 @@ model = MODELS.build(cfg=dict(type='mmengine.RReLU'))
 import torch
 input = torch.randn(2)
 output = model(input)
-print(output)  # tensor([-1.5774, -0.5850])
+# call RReLU.forward
+print(output)
+# tensor([-1.5774, -0.5850])
 ```
 
 ### 调用兄弟节点的模块
@@ -258,14 +271,30 @@ MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmbeta')
 
 下图是 MMEngine，MMAlpha 和 MMBeta 的注册器层级结构。
 
-![registry](https://user-images.githubusercontent.com/58739961/185307738-9ddbce2d-f8b5-40c4-bf8f-603830ccc0dc.png)
+<div align="center">
+  <img src="https://user-images.githubusercontent.com/58739961/185307738-9ddbce2d-f8b5-40c4-bf8f-603830ccc0dc.png"/>
+</div>
 
 在 `MMBeta` 中调用兄弟节点 `MMAlpha` 的模块，
 
 ```python
 model = MODELS.build(cfg=dict(type='mmalpha.LogSoftmax'))
 output = model(input)
-print(output)  # tensor([-1.5774, -0.5850])
+# call LogSoftmax.forward
+print(output)
+# tensor([-1.5774, -0.5850])
 ```
 
-调用非本节点或父节点的模块需要在 `type` 中指定 `scope` 前缀，所以上面调用兄弟节点的模块需要加前缀 `mmalpha`。
+调用兄弟节点的模块需要在 `type` 中指定 `scope` 前缀，所以上面的配置需要加前缀 `mmalpha`。
+
+如果需要调用兄弟节点的数个模块，每个模块都加前缀，这需要做大量的修改。于是 `MMEngine` 引入了 [DefaultScope](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.DefaultScope)，`Registry` 借助它可以很方便地支持临时切换当前节点为指定的节点。
+
+如果需要临时切换当前节点为指定的节点，只需在 `cfg` 设置 `_scope_` 为指定节点的作用域。
+
+```python
+model = MODELS.build(cfg=dict(type='LogSoftmax', _scope_='mmalpha'))
+output = model(input)
+# call LogSoftmax.forward
+print(output)
+# tensor([-1.5774, -0.5850])
+```
