@@ -29,7 +29,7 @@
    :maxdepth: 1
    :caption: 示例
 
-   examples/resume.md
+   examples/resume_training.md
 
 .. toctree::
    :maxdepth: 2
