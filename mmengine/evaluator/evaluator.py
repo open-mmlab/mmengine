@@ -2,7 +2,6 @@
 from typing import Iterator, List, Optional, Sequence, Union
 
 from mmengine.registry import EVALUATOR, METRICS
-from mmengine.registry import METRICS
 from mmengine.structures import BaseDataElement
 from .metric import BaseMetric
 

@@ -4,7 +4,9 @@ import time
 import pytest
 
 from mmengine.config import Config, ConfigDict  # type: ignore
-from mmengine.registry import DefaultScope, Registry, build_from_cfg, build_model_from_cfg
+from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
+                               build_model_from_cfg)
+from mmengine.utils import ManagerMixin
 
 
 class TestRegistry:
