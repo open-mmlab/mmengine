@@ -36,6 +36,7 @@
    :caption: 架构设计
 
    design/hook.md
+   design/logging.md
 
 .. toctree::
    :maxdepth: 2
