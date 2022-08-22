@@ -28,16 +28,39 @@ optim_wrapper_cfg = dict(
     accumulative_counts=4)
 ```
 
-配合 Runner 使用示例如下：
+配合 Runner 使用的完整例子如下：
 
 ```python
-runner = Runner(
-    model=ResNet18(),
-    work_dir='./work_dir',
-    train_dataloader=train_dataloader_cfg,
-    optim_wrapper=optim_wrapper_cfg,
-    train_cfg=dict(by_epoch=True, max_epochs=3))
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from mmengine.runner import Runner
+from mmengine.model import BaseModel
 
+train_dataset = [(torch.ones(1, 1), torch.ones(1, 1))] * 50
+train_dataloader = DataLoader(train_dataset, batch_size=2)
+
+
+class ToyModel(BaseModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = nn.Linear(1, 1)
+
+    def forward(self, img, label, mode):
+        feat = self.linear(img)
+        loss1 = (feat - label).pow(2)
+        loss2 = (feat - label).abs()
+        return dict(loss1=loss1, loss2=loss2)
+
+
+runner = Runner(
+    model=ToyModel(),
+    work_dir='tmp_dir',
+    train_dataloader=train_dataloader,
+    train_cfg=dict(by_epoch=True, max_epochs=1),
+    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01),
+                       accumulative_counts=4)
+)
 runner.train()
 ```
 
@@ -50,16 +73,40 @@ PyTorch 1.11 中已经原生支持了 FSDP 技术。配置写法如下所示：
 model_wrapper_cfg=dict(type='MMFullyShardedDataParallel', cpu_offload=True)
 ```
 
-配合 Runner 使用示例如下：
+配合 Runner 使用的完整例子如下：
 
 ```python
-runner = Runner(
-    model=ResNet18(),
-    work_dir='./work_dir',
-    train_dataloader=train_dataloader_cfg,
-    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
-    train_cfg=dict(by_epoch=True, max_epochs=3),
-    cfg=cfg) # cfg 中包括了 model_wrapper_cfg 参数
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from mmengine.runner import Runner
+from mmengine.model import BaseModel
 
+train_dataset = [(torch.ones(1, 1), torch.ones(1, 1))] * 50
+train_dataloader = DataLoader(train_dataset, batch_size=2)
+
+
+class ToyModel(BaseModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = nn.Linear(1, 1)
+
+    def forward(self, img, label, mode):
+        feat = self.linear(img)
+        loss1 = (feat - label).pow(2)
+        loss2 = (feat - label).abs()
+        return dict(loss1=loss1, loss2=loss2)
+
+
+runner = Runner(
+    model=ToyModel(),
+    work_dir='tmp_dir',
+    train_dataloader=train_dataloader,
+    train_cfg=dict(by_epoch=True, max_epochs=1),
+    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
+    cfg=dict(model_wrapper_cfg=dict(type='MMFullyShardedDataParallel', cpu_offload=True))
+)
 runner.train()
 ```
+
+注意必须在分布式训练环境中 FSDP 才能生效。
