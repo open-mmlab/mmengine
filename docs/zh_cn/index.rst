@@ -23,6 +23,7 @@
    tutorials/evaluation.md
    tutorials/data_element.md
    tutorials/basedataset.md
+   tutorials/data_transform.md
    tutorials/distributed.md
    tutorials/logging.md
    tutorials/visualization.md
