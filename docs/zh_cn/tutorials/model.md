@@ -1,24 +1,24 @@
 # 模型
 
-在训练深度学习任务时，我们通常需要定义一个模型来实现算法的主体。在基于 MMEngine 开发时，模型由[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)管理，需要实现 `train_step`，`val_step` 和 `test_step` 方法。
+在训练深度学习任务时，我们通常需要定义一个模型来实现算法的主体。在基于 MMEngine 开发时，模型由[执行器](./runner.md)管理，需要实现 `train_step`，`val_step` 和 `test_step` 方法。
 
-对于检测、识别、分割一类的深度学习任务，上述方法通常为标准的流程，例如在 `train_step` 里更新参数，返回损失；`val_step` 和 `test_step` 返回预测结果。因此 MMEngine 抽象出模型基类 [BaseModel](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel)，实现了上述接口的标准流程。我们只需要让模型继承自模型基类，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
+对于检测、识别、分割一类的深度学习任务，上述方法通常为标准的流程，例如在 `train_step` 里更新参数，返回损失；`val_step` 和 `test_step` 返回预测结果。因此 MMEngine 抽象出模型基类 [BaseModel](mmengine.model.BaseModel)，实现了上述接口的标准流程。我们只需要让模型继承自模型基类，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
 
-模型基类继承自[模块基类](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/initialize.html)，能够通过配置 `init_cfg` 灵活的选择初始化方式。
+模型基类继承自[模块基类](./initialize.md)，能够通过配置 `init_cfg` 灵活的选择初始化方式。
 
 ## 接口约定
 
-[forward](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：
+[forward](mmengine.model.BaseModel.forward): `forward` 的入参需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据处理器](#数据处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：
 
 - `mode='loss'`：`loss` 模式通常在训练阶段启用，并返回一个损失字典。损失字典的 key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数和记录日志。模型基类会在 `train_step` 方法中调用该模式的 `forward`。
-- `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.evaluator.Evaluator.process) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
+- `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator.process) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](./data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
 - `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 模式返回数据元素列表，而 `tensor` 模式则返回 `torch.Tensor` 类型的结果。`tensor` 模式为 `forward` 的默认模式，如果我们想获取一张或一个批次（batch）图片的推理结果，可以直接调用 `model(inputs)` 来获取预测结果。
 
-[train_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html) 实现了标准的梯度计算、参数更新、梯度清零流程。
+[train_step](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](.optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。
 
-[val_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[钩子（Hook）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)的 `after_train_iter` 和 `after_val_iter` 接口。
+[val_step](mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[钩子（Hook）](./hook.md)的 `after_train_iter` 和 `after_val_iter` 接口。
 
-[test_step](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被进一步传给 `after_test_iter` 接口。
+[test_step](mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被进一步传给 `after_test_iter` 接口。
 
 基于上述接口约定，我们定义了继承自模型基类的 `NeuralNetwork`，配合执行器来训练 `FashionMNIST`：
 
@@ -106,7 +106,7 @@ runner.train()
 
 如果你的电脑配有 GPU（或其他能够加速训练的硬件，如 mps、ipu 等），并运行了上节的代码示例。你会发现 Pytorch 的示例是在 CPU 上运行的，而 MMEngine 的示例是在 GPU 上运行的。`MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
 
-事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器作为模型基类的一个属性，会在模型基类的构造过程中被实例化。
+事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器作为模型基类的一个属性，会在模型基类的构造过程中被实例化。
 
 为了体现数据处理器起到的作用，我们仍然以[上一节](#模型基类basemodel)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
 
@@ -155,7 +155,7 @@ model.val_step(data)
 model.test_step(data)
 ```
 
-上例中，我们实现了 `BaseModel.train_step`、`BaseModel.val_step` 和 `BaseModel.test_step` 的简化版。数据经 `NormalizeDataPreprocessor.forward` 归一化处理，解包后传给 `NeuralNetwork.forward`，进一步返回损失或者预测结果。如果想实现自定义的参数优化或预测逻辑，可以自行实现 `train_step`、`val_step` 和 `test_step`，具体例子可以参考：[使用 MMEngine 训练生成对抗网络](TODO)
+上例中，我们实现了 `BaseModel.train_step`、`BaseModel.val_step` 和 `BaseModel.test_step` 的简化版。数据经 `NormalizeDataPreprocessor.forward` 归一化处理，解包后传给 `NeuralNetwork.forward`，进一步返回损失或者预测结果。如果想实现自定义的参数优化或预测逻辑，可以自行实现 `train_step`、`val_step` 和 `test_step`，具体例子可以参考：[使用 MMEngine 训练生成对抗网络](../examples/train_a_gan.md)
 
 ```{note}
 上例中数据处理器的 training 参数用于区分训练、测试阶段不同的批增强策略，`train_step` 会传入 `training=True`，`test_step` 和 `val_step` 则会传入 `trainig=Fasle`。

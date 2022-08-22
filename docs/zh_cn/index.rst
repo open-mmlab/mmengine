@@ -18,6 +18,8 @@
    tutorials/distributed.md
    tutorials/logging.md
    tutorials/visualizer.md
+   tutorials/model.md
+   tutorials/initialize.md
 
 .. toctree::
    :maxdepth: 2
