@@ -106,3 +106,14 @@ DataLoader, PoolDataLoader = _get_dataloader()
 BuildExtension, CppExtension, CUDAExtension = _get_extension()
 _BatchNorm, _InstanceNorm, SyncBatchNorm_ = _get_norm()
 _AdaptiveAvgPoolNd, _AdaptiveMaxPoolNd, _AvgPoolNd, _MaxPoolNd = _get_pool()
+
+
+class SyncBatchNorm(SyncBatchNorm_):  # type: ignore
+
+    def _check_input_dim(self, input):
+        if TORCH_VERSION == 'parrots':
+            if input.dim() < 2:
+                raise ValueError(
+                    f'expected at least 2D input (got {input.dim()}D input)')
+        else:
+            super()._check_input_dim(input)
