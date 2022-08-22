@@ -204,6 +204,7 @@ class XavierInit(BaseInit):
     described in `Understanding the difficulty of training deep feedforward
     neural networks - Glorot, X. & Bengio, Y. (2010).
     <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_
+
     Args:
         gain (int | float): an optional scaling factor. Defaults to 1.
         bias (int | float): the value to fill the bias. Defaults to 0.
@@ -245,6 +246,7 @@ class XavierInit(BaseInit):
 class NormalInit(BaseInit):
     r"""Initialize module parameters with the values drawn from the normal
     distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
+
     Args:
         mean (int | float):the mean of the normal distribution. Defaults to 0.
         std (int | float): the standard deviation of the normal distribution.
@@ -287,6 +289,7 @@ class TruncNormalInit(BaseInit):
     r"""Initialize module parameters with the values drawn from the normal
     distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)` with values
     outside :math:`[a, b]`.
+
     Args:
         mean (float): the mean of the normal distribution. Defaults to 0.
         std (float):  the standard deviation of the normal distribution.
@@ -339,6 +342,7 @@ class TruncNormalInit(BaseInit):
 class UniformInit(BaseInit):
     r"""Initialize module parameters with values drawn from the uniform
     distribution :math:`\mathcal{U}(a, b)`.
+
     Args:
         a (int | float): the lower bound of the uniform distribution.
             Defaults to 0.
@@ -384,6 +388,7 @@ class KaimingInit(BaseInit):
     performance on ImageNet classification - He, K. et al. (2015).
     <https://www.cv-foundation.org/openaccess/content_iccv_2015/
     papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_
+
     Args:
         a (int | float): the negative slope of the rectifier used after this
             layer (only used with ``'leaky_relu'``). Defaults to 0.
@@ -441,6 +446,8 @@ class KaimingInit(BaseInit):
 
 @WEIGHT_INITIALIZERS.register_module(name='Caffe2Xavier')
 class Caffe2XavierInit(KaimingInit):
+    """Xavier init in caffe2."""
+
     # `XavierFill` in Caffe2 corresponds to `kaiming_uniform_` in PyTorch
     # Acknowledgment to FAIR's internal code
     def __init__(self, **kwargs):
@@ -545,6 +552,7 @@ def _initialize_override(module, override, cfg):
 
 def initialize(module, init_cfg):
     r"""Initialize a module.
+
     Args:
         module (``torch.nn.Module``): the module will be initialized.
         init_cfg (dict | list[dict]): initialization configuration dict to
@@ -663,6 +671,7 @@ def trunc_normal_(tensor: Tensor,
     best when :math:`a \leq \text{mean} \leq b`.
     Modified from
     https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
+
     Args:
         tensor (``torch.Tensor``): an n-dimensional `torch.Tensor`.
         mean (float): the mean of the normal distribution.

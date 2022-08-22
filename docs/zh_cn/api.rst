@@ -42,3 +42,8 @@ Model
 --------
 .. automodule:: mmengine.model
     :members:
+
+Evaluator
+--------
+.. automodule:: mmengine.evaluator
+    :members:
