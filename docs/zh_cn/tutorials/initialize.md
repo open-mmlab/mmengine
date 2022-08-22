@@ -1,10 +1,10 @@
 # 初始化
 
-基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule） 和模块初始化函数，让我们能够更加方便灵活的初始化模型参数。
+基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule） 和模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
 
 ## 函数式初始化
 
-Pytorch 的初始化模块提供了一系列**参数**初始化的功能，例如我们想用正态分布初始化一个卷积层的权重（weight）层，常数初始化卷积的偏置（`bias`）层，我们就需要分别去初始化卷积的权重和偏置。
+Pytorch 的初始化模块提供了一系列**参数**初始化功能，例如我们想用正态分布初始化一个卷积层的权重（weight）层，常数初始化卷积的偏置（`bias`）层，我们就需要分别去初始化卷积的权重和偏置。
 
 ```python
 from torch.nn.init import normal_, constant_
@@ -20,7 +20,7 @@ Parameter containing:
 tensor([0.], requires_grad=True)
 ```
 
-上述流程实际上是卷积正态分布初始化的标准流程，MMEngine 在此基础上做了进一步的简化，实现了一系列常用的**模块**初始化函数。相比于上述 Pytorch 初始化模块的用法，MMEngine 提供的初始化函数直接接受卷积模块：
+上述流程实际上是卷积正态分布初始化的标准流程，MMEngine 在此基础上做了进一步的简化，实现了一系列常用**模块**的初始化函数。相比于上述 Pytorch 初始化模块的用法，MMEngine 提供的初始化函数可以直接初始化卷积模块，一行代码就能将权重按照正态分布初始化，偏置初始化为 0：
 
 ```python
 from mmengine.model import normal_init
@@ -39,31 +39,31 @@ normal_init(model)
 
 目前 MMEngine 提供了以下初始化函数：
 
-| 初始化器                                                              | 功能                                                                                                 |
-| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------- |
-| [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量                                                                   |
-| [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 和 bias 以 `Xavier` 方式初始化                                                             |
-| [normal_init](../api.html#mmengine.model.normal_init)                 | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量                                           |
-| [trunc_normal_init](../api.html#mmengine.model.trunc_normal_init)     | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量 |
-| [uniform_init](../api.html#mmengine.model.uniform_init)               | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量             |
-| [kaiming_init](../api.html#mmengine.model.kaiming_init)               | 将 weight 和 bias 以 `Kaiming` 的方式初始化。                                                        |
-| [caffe2_xavier_init](../api.html#mmengine.model.caffe2_xavier_init)   | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化            |
-| [bias_init_with_prob](../api.html#mmengine.model.bias_init_with_prob) | 以概率值的形式初始化 bias                                                                            |
+| 初始化器                                                              | 功能                                                                                                                               |
+| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
+| [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 以 `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
+| [normal_init](../api.html#mmengine.model.normal_init)                 | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
+| [trunc_normal_init](../api.html#mmengine.model.trunc_normal_init)     | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
+| [uniform_init](../api.html#mmengine.model.uniform_init)               | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
+| [kaiming_init](../api.html#mmengine.model.kaiming_init)               | 将 weight 以 `Kaiming` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                    |
+| [caffe2_xavier_init](../api.html#mmengine.model.caffe2_xavier_init)   | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，通常用于初始化卷积                      |
+| [bias_init_with_prob](../api.html#mmengine.model.bias_init_with_prob) | 以概率值的形式初始化 bias                                                                                                          |
 
 ## 配置式初始化
 
-`MMEngine` 为了让模型能够更加灵活的初始化权重，抽象出了模块基类 `BaseModule`。模块基类继承自 `nn.Module`，不仅具备 `nn.Module` 的基础功能时，还能够进行参数初始化。我们只需要让模型继承 `BaseModule`，并在实例化阶段配置构造参数 `init_cfg`，就能够控制模型中任意组件的初始化方式。`MMEngine` 将[函数式初始化](#函数式初始化)中提到的函数进一步抽象成初始化器，作为 `init_cfg` 的配置项，目前实现了以下初始化器：
+`MMEngine` 为了让模型能够更加灵活的初始化权重，抽象出了模块基类 `BaseModule`。模块基类继承自 `nn.Module`，不仅具备 `nn.Module` 的基础功能时，还能够进行参数初始化。我们只需要让模型继承 `BaseModule`，并在实例化阶段配置构造参数 `init_cfg`，就能够控制模型中任意组件的初始化方式。`MMEngine` 将[函数式初始化](函数式初始化)中提到的函数进一步抽象成初始化器，作为 `init_cfg` 的配置项，目前实现了以下初始化器：
 
-| 初始化器                                                        |    注册名    | 功能                                                                                                 |
-| :-------------------------------------------------------------- | :----------: | :--------------------------------------------------------------------------------------------------- |
-| [ConstantInit](../api.html#mmengine.model.ConstantInit)         |   Constant   | 将 weight 和 bias 初始化为指定常量量                                                                 |
-| [XavierInit](../api.html#mmengine.model.XavierInit)             |    Xavier    | 将 weight 和 bias 以 `Xavier` 方式初始化化                                                           |
-| [NormalInit](../api.html#mmengine.model.NormalInit)             |    Normal    | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常化                                           |
-| [TruncNormalInit](../api.html#mmengine.model.TruncNormalInit)   | TruncNormal  | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常域 |
-| [UniformInit](../api.html#mmengine.model.UniformInit)           |   Uniform    | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常围             |
-| [KaimingInit](../api.html#mmengine.model.KaimingInit)           |   Kaiming    | 将 weight 和 bias 以 `Kaiming` 的方式初始化。                                                        |
-| [Caffe2XavierInit](../api.html#mmengine.model.Caffe2XavierInit) | Caffe2Xavier | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化            |
-| [PretrainedInit](../api.html#mmengine.model.PretrainedInit)     |  Pretrained  | 加载预训练权重                                                                                       |
+| 初始化器                                                        |    注册名    | 功能                                                                                                                               |
+| :-------------------------------------------------------------- | :----------: | :--------------------------------------------------------------------------------------------------------------------------------- |
+| [ConstantInit](../api.html#mmengine.model.ConstantInit)         |   Constant   | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
+| [XavierInit](../api.html#mmengine.model.XavierInit)             |    Xavier    | 将 weight `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                        |
+| [NormalInit](../api.html#mmengine.model.NormalInit)             |    Normal    | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
+| [TruncNormalInit](../api.html#mmengine.model.TruncNormalInit)   | TruncNormal  | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
+| [UniformInit](../api.html#mmengine.model.UniformInit)           |   Uniform    | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
+| [KaimingInit](../api.html#mmengine.model.KaimingInit)           |   Kaiming    | 将 weight 以 `Kaiming` 的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                  |
+| [Caffe2XavierInit](../api.html#mmengine.model.Caffe2XavierInit) | Caffe2Xavier | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，，通常用于初始化卷                      |
+| [PretrainedInit](../api.html#mmengine.model.PretrainedInit)     |  Pretrained  | 加载预训练权重                                                                                                                     |
 
 模块基类接受 `init_cfg` 参数，继承自模块基类的模型可以在 `init_cfg` 里指定初始化器，选择相应的初始化方式。
 
@@ -124,6 +124,7 @@ class ToyNet(BaseModule):
         self.conv = nn.Conv2d(1, 1, 1)
 
 
+# 对卷积做 Kaiming 初始化，现性层做 Xavier 初始化
 toy_net = ToyNet(
     init_cfg=[
         dict(type='Kaiming', layer='Conv2d'),
@@ -153,6 +154,7 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 类似地，`layer` 参数也可以是一个列表，表示列表中的多种不同的 `layer` 均使用 `type` 指定的初始化方式
 
 ```python
+# 对卷积和线性层做 Kaiming 初始化
 toy_net = ToyNet(init_cfg=[dict(type='Kaiming', layer=['Conv2d', 'Linear'])], )
 toy_net.init_weights()
 ```
@@ -194,6 +196,7 @@ class ToyNet(BaseModule):
         self.conv2 = nn.Conv2d(1, 1, 1)
 
 
+# 对 conv1 做卷积初始化，对 从 conv2 做 Xavier 初始化
 toy_net = ToyNet(
     init_cfg=[
         dict(
@@ -274,8 +277,9 @@ toy_net = ToyNet(
         dict(
             type='Kaiming',
             layer=['Conv2d'],
-            override=dict(name='conv2', type='Xavier')),
-    ], )
+            override=dict(name='conv2', type='Xavier'))
+    ])
+# 链式调用 `ToyConv.init_weights()`，以自定义的方式初始化
 toy_net.init_weights()
 ```
 
