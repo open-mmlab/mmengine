@@ -242,16 +242,7 @@ class Visualizer(ManagerMixin):
         """
         is_inline = 'inline' in plt.get_backend()
         img = self.get_image() if drawn_img is None else drawn_img
-        if getattr(self, 'manager', None) is None:
-            self.manager = new_figure_manager(
-                num=1, FigureClass=Figure, **self.fig_show_cfg)
-
-        try:
-            self.manager.set_window_title(win_name)
-        except Exception:
-            self.manager = new_figure_manager(
-                num=1, FigureClass=Figure, **self.fig_show_cfg)
-            self.manager.set_window_title(win_name)
+        self._init_manager(win_name)
         fig = self.manager.canvas.figure
         # remove white edges by set subplot margin
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
@@ -264,7 +255,6 @@ class Visualizer(ManagerMixin):
         # Find a better way for inline to show the image
         if is_inline:
             return fig
-        # self.manager.show()
         wait_continue(fig, timeout=wait_time, continue_key=continue_key)
 
     @master_only
@@ -321,6 +311,23 @@ class Visualizer(ManagerMixin):
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
         canvas = FigureCanvasAgg(fig)
         return canvas, fig, ax
+
+    def _init_manager(self, win_name: str) -> None:
+        """Initialize the matplot manager.
+
+        Args:
+            win_name (str): The window name.
+        """
+        if getattr(self, 'manager', None) is None:
+            self.manager = new_figure_manager(
+                num=1, FigureClass=Figure, **self.fig_show_cfg)
+
+        try:
+            self.manager.set_window_title(win_name)
+        except Exception:
+            self.manager = new_figure_manager(
+                num=1, FigureClass=Figure, **self.fig_show_cfg)
+            self.manager.set_window_title(win_name)
 
     @master_only
     def get_backend(self, name) -> 'BaseVisBackend':
