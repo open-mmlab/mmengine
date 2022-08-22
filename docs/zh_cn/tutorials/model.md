@@ -12,7 +12,7 @@
 
 - `mode='loss'`：`loss` 模式通常在训练阶段启用，并返回一个损失字典。损失字典的 key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数和记录日志。模型基类会在 `train_step` 方法中调用该模式的 `forward`。
 - `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator.process) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](./data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
-- `mode='tensor'`：`tensor` 和 `predict` 均返回模型的前向推理结果，区别在于 `tensor` 模式下，`forward` 会返回未经后处理的张量，例如返回未经非极大值抑制（nms）处理的检测结果，返回未经 `argmax` 处理的分类结果。我们可以基于 `tensor` 模式的结果进行自定义的后处理。
+- `mode='tensor'`：`tensor` 和 `predict` 模式均返回模型的前向推理结果，区别在于 `tensor` 模式下，`forward` 会返回未经后处理的张量，例如返回未经非极大值抑制（nms）处理的检测结果，返回未经 `argmax` 处理的分类结果。我们可以基于 `tensor` 模式的结果进行自定义的后处理。
 
 [train_step](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。
 
