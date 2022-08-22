@@ -7,7 +7,6 @@
 执行器在不配置日志处理器时，默认输出如下：
 
 ```python
-from turtle import forward
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -54,11 +53,11 @@ runner = Runner(
     train_dataloader=train_dataloader,
     train_cfg=dict(by_epoch=True, max_epochs=1),
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
-    log_processor=dict(
+    log_processor=dict(  # 配置日志处理器
         custom_cfg=[
-            dict(data_src='loss1',
-                 method_name='mean',
-                 window_size='global')])
+            dict(data_src='loss1',  # 原日志名：loss1
+                 method_name='mean',  # 统计方法：均值统计
+                 window_size='global')])  # 统计窗口：全局
 )
 runner.train()
 ```
@@ -83,7 +82,7 @@ runner.train()
 - `global`：统计全局的最大、最小和均值
 - `epoch`：统计一个 epoch 内的最大、最小和均值
 
-当然我们也可以选择自定义的统计方法，详细步骤见[日志设计](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)。
+当然我们也可以选择自定义的统计方法，详细步骤见[日志设计](../design/logging.md)。
 
 如果我们既想统计窗口为 10 的 `loss1` 的局部均值，又想统计 `loss1` 的全局均值，则需要额外指定 `log_name`：
 
@@ -96,6 +95,7 @@ runner = Runner(
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
     log_processor=dict(
         custom_cfg=[
+            # log_name 表示 loss1 重新统计后的日志名
             dict(data_src='loss1', log_name='loss1_global', method_name='mean', window_size='global')])
 )
 runner.train()
@@ -116,8 +116,17 @@ runner = Runner(
     train_cfg=dict(by_epoch=True, max_epochs=1),
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
     log_processor=dict(custom_cfg=[
-        dict(data_src='loss1', log_name='loss1_local_max', method_name='max'),
-        dict(data_src='loss1', log_name='loss1_global_max', method_name='max', window_size='global')
+        # 统计 loss1 的局部最大值，统计窗口为 10，并在日志中重命名为 loss1_local_max
+        dict(data_src='loss1',
+             log_name='loss1_local_max',
+             window_size=10,
+             method_name='max'),
+        # 统计 loss1 的全局最大值，并在日志中重命名为 loss1_local_max
+        dict(
+            data_src='loss1',
+            log_name='loss1_global_max',
+            method_name='max',
+            window_size='global')
     ]))
 runner.train()
 ```
@@ -129,9 +138,9 @@ runner.train()
 
 更多配置规则见[日志处理器文档](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)
 
-## 自定义的统计内容
+## 自定义统计内容
 
-除了 MMEngine 默认的日志统计内容，如损失、迭代时间、学习率，用户也可以自行添加日志的统计内容。例如我们想统计损失的中间结果，可以这样做：
+除了 MMEngine 默认的日志统计类型，如损失、迭代时间、学习率，用户也可以自行添加日志的统计内容。例如我们想统计损失的中间结果，可以这样做：
 
 ```python
 from mmengine.logging import MessageHub
@@ -149,6 +158,7 @@ class ToyModel(BaseModel):
         loss = loss_tmp.pow(2)
 
         message_hub = MessageHub.get_current_instance()
+        # 在日志中额外统计 `loss_tmp`
         message_hub.update_scalar('train/loss_tmp', loss_tmp.sum())
         return dict(loss=loss)
 
@@ -158,7 +168,17 @@ runner = Runner(
     work_dir='tmp_dir',
     train_dataloader=train_dataloader,
     train_cfg=dict(by_epoch=True, max_epochs=1),
-    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)))
+    optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
+    log_processor=dict(
+        custom_cfg=[
+        # 统计 loss1 的局部最大值，统计窗口为 10，并在日志中重命名为 loss1_local_max
+            dict(
+                data_src='loss_tmp',
+                window_size=10,
+                method_name='mean')
+        ]
+    )
+)
 runner.train()
 ```
 
@@ -171,10 +191,11 @@ runner.train()
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
 2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
+3. 配置日志处理器，以均值的方式统计 `loss_tmp`。如果不配置，日志里显示 `loss_tmp` 最近一次更新的值。
 
 ## 输出调试日志
 
-初始化执行器（Runner）时，将 `log_level` 设置成 `DEBUG`。这样终端上就会额外输出日志等级为 `debug` 的日志
+初始化执行器（Runner）时，将 `log_level` 设置成 `debug`。这样终端上就会额外输出日志等级为 `debug` 的日志
 
 ```python
 runner = Runner(
