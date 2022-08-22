@@ -4,7 +4,6 @@ import time
 from typing import Any
 from unittest import TestCase
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import torch
@@ -171,12 +170,10 @@ class TestVisualizer(TestCase):
             image=self.image,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
-        fig_num = visualizer.fig_save_num
-        assert fig_num in plt.get_fignums()
+
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is False
         visualizer.close()
-        assert fig_num not in plt.get_fignums()
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is True
 
