@@ -68,14 +68,14 @@ runner.train()
 
 ### CheckpointHook
 
-[CheckpointHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook) 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
+[CheckpointHook](mmengine.hooks.CheckpointHook) 按照给定间隔保存模型的权重，如果是分布式多卡训练，则只有主（master）进程会保存权重。`CheckpointHook` 的主要功能如下：
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
 
-如需了解其他功能，请阅读[CheckpointHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.CheckpointHook)。
+如需了解其他功能，请阅读[CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
 下面介绍上面提到的 4 个功能。
 
@@ -126,7 +126,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir=
 
 ### LoggerHook
 
-[LoggerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.LoggerHook.html#mmengine.hooks.LoggerHook) 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
+[LoggerHook](mmengine.hooks.LoggerHook) 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
 
 如果我们希望每迭代 20 次就输出（或保存）一次日志，我们可以设置 `interval` 参数，配置如下：
 
@@ -138,24 +138,24 @@ default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 
 ### ParamSchedulerHook
 
-[ParamSchedulerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.ParamSchedulerHook.html#mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](../tutorials/param_scheduler.md)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### IterTimerHook
 
-[IterTimerHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.IterTimerHook.html#mmengine.hooks.IterTimerHook) 用于记录加载数据的时间以及迭代一次耗费的时间。`IterTimerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[IterTimerHook](mmengine.hooks.IterTimerHook) 用于记录加载数据的时间以及迭代一次耗费的时间。`IterTimerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### DistSamplerSeedHook
 
-[DistSamplerSeedHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.DistSamplerSeedHook.html#mmengine.hooks.DistSamplerSeedHook) 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。`DistSamplerSeedHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[DistSamplerSeedHook](mmengine.hooks.DistSamplerSeedHook) 在分布式训练时调用 Sampler 的 step 方法以确保 shuffle 参数生效。`DistSamplerSeedHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### RuntimeInfoHook
 
-[RuntimeInfoHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.RuntimeInfoHook.html#mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
+[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
 以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### EMAHook
 
-[EMAHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EMAHook.html#mmengine.hooks.EMAHook) 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
+[EMAHook](mmengine.hooks.EMAHook) 在训练过程中对模型执行指数滑动平均操作，目的是提高模型的鲁棒性。注意：指数滑动平均生成的模型只用于验证和测试，不影响训练。
 
 ```python
 custom_hooks = [dict(type='EMAHook')]
@@ -169,11 +169,11 @@ runner.train()
 custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
 ```
 
-更多用法请阅读[EMAHook API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.CheckpointHook.html#mmengine.hooks.EMAHook)。
+更多用法请阅读[EMAHook API 文档](mmengine.hooks.EMAHook)。
 
 ### EmptyCacheHook
 
-[EmptyCacheHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.EmptyCacheHook.html#mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。
+[EmptyCacheHook](mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。
 可以通过设置 `before_epoch`, `after_iter` 以及 `after_epoch` 参数控制释显存的时机，第一个参数表示再每个 epoch 开始之前，第二参数表示在每次迭代之后，第三个参数表示在每个 epoch 之后。
 
 ```python
@@ -185,7 +185,7 @@ runner.train()
 
 ### SyncBuffersHook
 
-[SyncBuffersHook](https://mmengine.readthedocs.io/zh_CN/latest/api/generated/mmengine.hooks.SyncBuffersHook.html#mmengine.hooks.SyncBuffersHook) 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
+[SyncBuffersHook](mmengine.hooks.SyncBuffersHook) 在分布式训练每一轮（epoch）结束时同步模型的 buffer，例如 BN 层的 `running_mean` 以及 `running_var`。
 
 ```python
 custom_hooks = [dict(type='SyncBuffersHook')]
@@ -269,4 +269,4 @@ class CheckInvalidLossHook(Hook):
     priority = 'ABOVE_NORMAL'
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/hooks.html)。
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](mmengine.hooks)。

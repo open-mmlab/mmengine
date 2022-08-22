@@ -172,9 +172,9 @@ def main():
     call_hooks('after_run', hooks)  # 任务结束后执行的逻辑
 ```
 
-在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[执行器文档](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)。
+在 MMEngine 中，我们将训练过程抽象成执行器（Runner），执行器除了完成环境的初始化，另一个功能是在特定的位点调用钩子完成定制化逻辑。更多关于执行器的介绍请阅读[执行器文档](../tutorials/runner.md)。
 
-为了方便管理，MMEngine 将位点定义为方法并集成到[钩子基类（Hook）](https://mmengine.readthedocs.io/zh/latest/api.html#hook)中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
+为了方便管理，MMEngine 将位点定义为方法并集成到[钩子基类（Hook）](mmengine.hooks.Hook)中，我们只需继承钩子基类并根据需求在特定位点实现定制化逻辑，再将钩子注册到执行器中，便可自动调用钩子中相应位点的方法。
 
 钩子中一共有 22 个位点：
 
@@ -201,4 +201,4 @@ def main():
 - before_save_checkpoint
 - after_load_checkpoint
 
-你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](https://mmcv.readthedocs.io/zh_CN/latest/api/hooks.html)。
+你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
