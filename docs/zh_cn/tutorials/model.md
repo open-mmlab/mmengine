@@ -12,9 +12,9 @@
 
 - `mode='loss'`：`loss` 模式通常在训练阶段启用，并返回一个损失字典。损失字典的 key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数和记录日志。模型基类会在 `train_step` 方法中调用该模式的 `forward`。
 - `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator.process) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](./data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
-- `mode='tensor'`：`tensor` 和 `predict` 均用于返回模型的预测结果，区别在于 OpenMMLab 系列的算法库要求 `predict` 模式返回数据元素列表，而 `tensor` 模式则返回 `torch.Tensor` 类型的结果。`tensor` 模式为 `forward` 的默认模式，如果我们想获取一张或一个批次（batch）图片的推理结果，可以直接调用 `model(inputs)` 来获取预测结果。
+- `mode='tensor'`：`tensor` 和 `predict` 均返回模型的前向推理结果，区别在于 `tensor` 模式下，`forward` 会返回未经后处理的张量，例如返回未经非极大值抑制（nms）处理的检测结果，返回未经 `argmax` 处理的分类结果。我们可以基于 `tensor` 模式的结果进行自定义的后处理。
 
-[train_step](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](.optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。
+[train_step](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。
 
 [val_step](mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[钩子（Hook）](./hook.md)的 `after_train_iter` 和 `after_val_iter` 接口。
 
@@ -69,8 +69,10 @@ class NeuralNetwork(BaseModel):
         loss = self.loss(pred, label)
         if mode == 'loss':
             return dict(loss=loss)
-        else:
+        elif mode=='predict':
             return pred.argmax(1), loss.item()
+        else:
+            return pred
 
 
 class FashionMnistMetric(BaseMetric):

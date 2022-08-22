@@ -1,6 +1,6 @@
 # 初始化
 
-基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule） 和模块初始化函数，让我们能够更加方便灵活的初始化模型参数
+基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule） 和模块初始化函数，让我们能够更加方便灵活的初始化模型参数。
 
 ## 函数式初始化
 
@@ -108,7 +108,7 @@ toy_net.init_weights()
 和使用 `PretrainedInit` 初始化器类似，如果我们想对卷积做 `Kaiming` 初始化，需要令 `init_cfg=dict(type='Kaiming', layer='Conv2d')`。这样模型初始化时，就会以 `Kaiming` 初始化的方式来初始化类型为 `Conv2d` 的模块。
 
 有时候我们可能需要用不同的初始化方式去初始化不同类型的模块，例如对卷积使用 `Kaiming` 初始化，对线性层使用 `Xavier`
-初始化。此时我们可以让 `init_cfg` 是一个列表，其中的每一个元素都表示对某些层使用特定的初始化方式。
+初始化。此时我们可以使 `init_cfg` 成为一个列表，，其中的每一个元素都表示对某些层使用特定的初始化方式。
 
 ```python
 import torch.nn as nn
@@ -224,21 +224,21 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
 `override` 可以理解成一个嵌套的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也需要通过 `type`
 字段指定初始化方式。不同的是 `override` 必须制定 `name`，`name` 相当于 `override`
-的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`， 我们
+的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`，
 我们会以 `Xavier` 初始化方式初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
 
 ### 自定义的初始化方式
 
 尽管 `init_cfg` 能够控制各个模块的初始化方式，但是在不扩展 `WEIGHT_INITIALIZERS`
 的情况下，我们是无法初始化一些自定义模块的，例如表格中提到的大多数初始化器，都需要对应的模块有 `weight` 和 `bias` 属性 。对于这种情况，我们建议让自定义模块实现 `init_weights` 方法。模型调用 `init_weights`
-时，会链式的调用所有子模块的 `init_weights`。
+时，会链式地调用所有子模块的 `init_weights`。
 
 假设我们定义了以下模块：
 
 - 继承自 `nn.Module` 的 `ToyConv`，实现了 `init_weights` 方法，让 `custom_weight` 初始化为 1，`custom_bias` 初始化为 0
 - 继承自模块基类的模型 `ToyNet`，且含有 `ToyConv` 子模块。
 
-我们在调用 `ToyConv` 的 `init_weights` 方法时，会链式的调用的子模块 `ToyConv` 的 `init_weights` 方法，实现自定义模块的初始化。
+我们在调用 `ToyNet` 的 `init_weights` 方法时，会链式的调用的子模块 `ToyConv` 的 `init_weights` 方法，实现自定义模块的初始化。
 
 ```python
 import torch
@@ -305,6 +305,8 @@ custom_conv.custom_bias - torch.Size([1]):
 Initialized by user-defined `init_weights` in ToyConv
 ```
 
+### 小结
+
 最后我们对 `init_cfg` 和 `init_weights` 两种初始化方式做一些总结：
 
 **1. 配置 `init_cfg` 控制初始化**
@@ -314,7 +316,7 @@ Initialized by user-defined `init_weights` in ToyConv
 
 **2. 实现 `init_weights` 方法**
 
-- 通常用于初始化自定义模块。相比于 `init_cfg` 的自定义初始化，实现 `init_weights` 方法更加简单，无需注册，但是没有 `init_cfg` 那么灵活，可以动态的指定任意模块的初始化方式。
+- 通常用于初始化自定义模块。相比于 `init_cfg` 的自定义初始化，实现 `init_weights` 方法更加简单，无需注册。然而，它的灵活性不及 `init_cfg`，无法动态地指定任意模块的初始化方式。
 
 ```{note}
 init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定了某个模块的初始化方式
