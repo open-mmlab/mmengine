@@ -2,7 +2,9 @@
 
 ## 简介
 
-由于架构设计的更新和用户需求的不断增加，MMCV 的钩子（Hook）点位已经满足不了需求，因此在 MMEngine 中对钩子点位进行了重新设计。在开始迁移前，阅读[钩子的设计](../design/hook.md)会很有帮助。
+由于架构设计的更新和用户需求的不断增加，MMCV 的钩子（Hook）点位已经满足不了需求，因此在 MMEngine 中对钩子点位进行了重新设计以及对钩子的功能做了调整。在开始迁移前，阅读[钩子的设计](../design/hook.md)会很有帮助。
+
+本文对比 [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) 和 [MMEngine v0.5.0](https://github.com/open-mmlab/mmengine/tree/v0.5.0) 的钩子在功能、点位、用法和实现上的差异。
 
 ## 功能差异
 
@@ -10,15 +12,15 @@
 <thead>
   <tr>
     <th></th>
-    <th>MMCV (v1.6.0)</th>
-    <th>MMEngine (v0.5.0)</th>
+    <th>MMCV</th>
+    <th>MMEngine</th>
   </tr>
 </thead>
 <tbody>
   <tr>
     <td rowspan="2">反向传播以及梯度更新</td>
     <td>OptimizerHook</td>
-    <td rowspan="2">将反向传播以及梯度更新的操作抽象成 OptimWrapper 而不是钩子</td>
+    <td rowspan="2">将反向传播以及梯度更新的操作抽象成 <a href="../tutorials/optim_wrapper.html">OptimWrapper</a> 而不是钩子</td>
   </tr>
   <tr>
     <td>GradientCumulativeOptimizerHook</td>
@@ -26,7 +28,7 @@
   <tr>
     <td>学习率调整</td>
     <td>LrUpdaterHook</td>
-    <td rowspan="2">ParamSchdulerHook 以及 _ParamScheduler 的子类完成优化器超参的调整</td>
+    <td rowspan="2">ParamSchdulerHook 以及 <a href="../tutorials/param_scheduler.html">_ParamScheduler</a> 的子类完成优化器超参的调整</td>
   </tr>
   <tr>
     <td>动量调整</td>
@@ -98,8 +100,8 @@
 <thead>
   <tr>
     <th colspan="2"></th>
-    <th class="tg-uzvj">MMCV Hook</th>
-    <th class="tg-uzvj">MMEngine Hook</th>
+    <th class="tg-uzvj">MMCV</th>
+    <th class="tg-uzvj">MMEngine</th>
   </tr>
 </thead>
 <tbody>
@@ -117,12 +119,12 @@
   <tr>
     <td rowspan="2">Checkpoint 相关</td>
     <td>加载 checkpoint 后</td>
-    <td>after_load_checkpoint</td>
+    <td>无</td>
     <td>after_load_checkpoint</td>
   </tr>
   <tr>
     <td>保存 checkpoint 前</td>
-    <td>before_save_checkpoint</td>
+    <td>无</td>
     <td>before_save_checkpoint</td>
   </tr>
   <tr>
@@ -223,16 +225,21 @@
 
 ## 用法差异
 
+在 MMCV 中，将钩子注册到执行器（Runner），需调用执行器的 `register_training_hooks` 方法往执行器注册钩子，而在 MMEngine 中，可以通过参数传递给执行器的初始化方法进行注册。
+
 - MMCV
 
 ```python
+model = ResNet18()
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 lr_config = dict(policy='step', step=[2, 3])
 optimizer_config = dict(grad_clip=None)
 checkpoint_config = dict(interval=5)
 log_config = dict(interval=100, hooks=[dict(type='TextLoggerHook')])
 custom_hooks = [dict(type='NumClassCheckHook')]
 runner = EpochBasedRunner(
-    model=ResNet18(),,
+    model=model,
+    optimizer=optimizer,
     work_dir='./work_dir',
     max_epochs=3,
     xxx,
@@ -242,24 +249,33 @@ runner.register_training_hooks(
     optimizer_config=optimizer_config,
     checkpoint_config=checkpoint_config,
     log_config=log_config,
+    custom_hooks_config=custom_hooks,
 )
-runner.register_custom_hooks(custom_config=custom_hooks)
 runner.run([trainloader], [('train', 1)])
 ```
 
 - MMEngine
 
 ```python
+model=ResNet18()
+optim_wrapper=dict(
+    type='OptimizerWrapper',
+    optimizer=dict(type='SGD', lr=0.001, momentum=0.9))
+param_scheduler = dict(type='MultiStepLR', milestones=[2, 3]),
 default_hooks = dict(
     logger=dict(type='LoggerHook'),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(type='CheckpointHook', interval=5),
 )
+custom_hooks = [dict(type='NumClassCheckHook')]
 runner = Runner(
-    model=ResNet18(),
+    model=model,
     work_dir='./work_dir',
+    optim_wrapper=optim_wrapper,
+    param_scheduler=param_scheduler,
     train_cfg=dict(by_epoch=True, max_epochs=3),
     default_hooks=default_hooks,
+    custom_hooks=custom_hooks,
     xxx,
 )
 runner.train()
@@ -269,7 +285,7 @@ MMEngine 钩子的更多用法请参考[钩子的用法](../tutorials/hook.md)�
 
 ## 实现差异
 
-以 `CheckpointHook` 为例，MMEngine 的 [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) 相比 MMCV 的 [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py)（新增保存最优权重的功能（在 MMCV 中，保存最优权重的功能由 EvalHook 提供），因此，它需要实现 `after_val_epoch` 点位。
+以 `CheckpointHook` 为例，MMEngine 的 [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) 相比 MMCV 的 [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py)（新增保存最优权重的功能，在 MMCV 中，保存最优权重的功能由 EvalHook 提供），因此，它需要实现 `after_val_epoch` 点位。
 
 - MMCV
 
