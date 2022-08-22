@@ -4,7 +4,7 @@
 
 随着支持的深度学习任务越来越多，用户的需求不断增加，MMCV 的执行器（Runner）逐渐难以满足需求。MMEngine 在此基础上，扩大了执行器的作用域，让执行器承担更多的功能；抽象出[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)以满足更加复杂的训练流程。在开始迁移前，建议先阅读[执行器教程](../tutorials/runner.md)
 
-## 执行器（Runner）
+## 迁移执行器（Runner）
 
 正如[执行器教程](../tutorials/runner.md#手动构建模块来使用执行器)一节所述，使用执行器的某一项功能之前需要准备好对应功能所依赖的模块。本节主要介绍 MMCV 执行器和 MMEngine 执行器在准备训练、验证、测试时，流程上的区别。
 
@@ -440,7 +440,7 @@ runner = Runner(
 runner.test()
 ```
 
-## 自定义执行流程
+## 迁移自定义执行流程
 
 在使用 MMCV 执行器时，我们可能会重载 `runner.train()/runner.val()` 或者 `runner.run_iter` 实现自定义的训练、测试流程。以重载 `runner.train` 为例，假设我们想对每张图片训练两遍：
 
