@@ -643,20 +643,20 @@ runner = Runner(
 <table class="docutils">
 <thead>
   <tr>
+    <th></th>
     <th>MMCV 加载检查点配置</th>
     <th>MMEngine 加载检查点配置</th>
-    <th></th>
 <tbody>
 <tr>
   <td> 加载检查点 </td>
-  <td valign="top">
+  <td>
 
 ```python
 load_from = 'path/to/ckpt'
 ```
 
 </td>
-  <td valign="top">
+  <td>
 
 ```python
 load_from = 'path/to/ckpt'
@@ -667,14 +667,14 @@ resume = False
 </tr>
 <tr>
   <td> 恢复检查点 </td>
-  <td valign="top">
+  <td>
 
 ```python
 resume_from = 'path/to/ckpt'
 ```
 
 </td>
-  <td valign="top">
+  <td>
 
 ```python
 load_from = 'path/to/ckpt'
