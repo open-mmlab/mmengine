@@ -33,6 +33,8 @@ NUM_WORKERS = int(os.cpu_count() / 2)
 接下来，我们为 MNIST 数据集构建一个数据集类。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](docs/zh_cn/tutorials/basedataset.md)。
 
 ```python
+from mmcv.transforms import to_tensor
+
 class MNISTDataset(BaseDataset):
     def __init__(self,
                  data_root,
@@ -44,6 +46,13 @@ class MNISTDataset(BaseDataset):
         MNIST(self.data_root, train=False, download=True)
         super().__init__(
             data_root=data_root, pipeline=pipeline, test_mode=test_mode)
+    
+    @staticmethod
+    def totensor(img):
+        if len(img.shape) < 3:
+            img = np.expand_dims(img, -1)
+        img = np.ascontiguousarray(img.transpose(2, 0, 1))
+        return to_tensor(img)
 
     def load_data_list(self):
         if self.test_mode:
@@ -51,17 +60,9 @@ class MNISTDataset(BaseDataset):
             mnist_dataset, _ = random_split(mnist_full, [55000, 5000])
         else:
             mnist_dataset = MNIST(self.data_root, train=False)
-        return [dict(inputs=np.array(x[0])) for x in mnist_dataset]
-```
+        return [dict(inputs=self.totensor(np.array(x[0]))) for x in mnist_dataset]
 
-### 抽象数据接口
-
-MMEngine 中使用抽象数据接口统一并简化了算法库中各个模块的接口，这里我们可以直接使用 mmgen 中的 PackGenInputs 对数据集输出进行打包。
-有关抽象数据接口的信息，可以参考[抽象数据接口教程](docs/zh_cn/tutorials/data_element.md)。
-
-```python
-from mmgen.datasets import PackGenInputs
-dataset = MNISTDataset("./data", [PackGenInputs(keys='inputs', meta_keys=[])])
+dataset = MNISTDataset("./data", [])
 
 ```
 
