@@ -2,20 +2,18 @@
 
 可视化可以给深度学习的模型训练和测试过程提供直观解释。
 
-MMEngine 提供了 `Visualizer` 可视化器用以可视化和存储模型训练和测试过程中的状态以及中间结果。简单来说其具备如下功能：
+MMEngine 提供了 `Visualizer` 可视化器用以可视化和存储模型训练和测试过程中的状态以及中间结果，具备如下功能：
 
-- 提供了基础绘图接口以及特征图可视化
-- 提供了本地， TensorBoard 以及 WandB 等多种后端，可以将训练状态例如 loss 、lr 或者性能评估指标以及可视化的结果写入指定的单一或多个后端
-- 允许在代码库任意位置调用，对任意位置的特征，图像，状态等进行可视化或存储。
-
-下面具体说明
+- 支持基础绘图接口以及特征图可视化
+- 支持本地， TensorBoard 以及 WandB 等多种后端，可以将训练状态例如 loss 、lr 或者性能评估指标以及可视化的结果写入指定的单一或多个后端
+- 允许在代码库任意位置调用，对任意位置的特征，图像，状态等进行可视化和存储。
 
 ## 基础绘制接口
 
 可视化器提供了常用对象的绘制接口，例如绘制**检测框、点、文本、线、圆、多边形和二值掩码**。这些基础 API 支持以下特性：
 
 - 可以多次调用，实现叠加绘制需求
-- 均支持多输入，除了要求文本输入的绘制接口外，其余接口同时支持 Tensor 以及 Numpy 的输入
+- 均支持多输入，除了要求文本输入的绘制接口外，其余接口同时支持 Tensor 以及 Numpy array 的输入
 
 常见用法如下：
 
@@ -318,10 +316,10 @@ VISUALIZERS.build(visualizer_cfg)
 
 ## 扩展存储后端和可视化器
 
-**(1) 调用特定存储后端功能**
+**(1) 调用特定存储后端**
 
-目前存储后端仅仅提供了保存配置、保存标量等功能，但是由于 WandB 和 Tensorboard 这类存储后端功能非常强大，用户可能会希望利用到这类存储后端的扩展类功能。为此存储后端提供了  `experiment` 属性来获取后端对象，从而满足各类定制化功能。
-例如用户想将自定义数据保存为表格显示，而 WandB 提供了该类 API 接口，此时用户可以通过 `experiment`属性获取 WandB 对象，然后调用特定的 API
+目前存储后端仅仅提供了保存配置、保存标量等基本功能，但是由于 WandB 和 Tensorboard 这类存储后端功能非常强大， 用户可能会希望利用到这类存储后端的其他功能。因此，存储后端提供了 `experiment` 属性来方便用户获取后端对象，满足各类定制化功能。
+例如 WandB 提供了表格显示的 API 接口，用户可以通过 `experiment`属性获取 WandB 对象，然后调用特定的 API 来将自定义数据保存为表格显示
 
 ```python
 visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')],
@@ -357,7 +355,7 @@ visualizer.add_image('demo',image)
 
 **(3) 扩展可视化器**
 
-同样的，用户可以方便快捷的扩展可视化器。只需要继承自 Visualizer 并实现想覆写的函数即可。大部分情况下用户扩展可视化器，只需要覆写  `add_datasample`即可，该接口为各个下游库绘制 datasample 数据的抽象接口，以 MMDetection 为例，datasample 数据中通常包括 标注 bbox、标注 mask 、预测 bbox 或者预测 mask 等数据，MMDetection 会继承 Visualizer 并实现 `add_datasample` 接口，在该接口内部会针对检测任务相关数据进行可视化绘制，从而简化检测任务可视化需求。
+同样的，用户可以通过继承 Visualizer 并实现想覆写的函数来方便快捷的扩展可视化器。大部分情况下，用户需要覆写 `add_datasample`来进行拓展。数据中通常包括标注或模型预测的检测框和实例掩码，该接口为各个下游库绘制 datasample 数据的抽象接口。以 MMDetection 为例，datasample 数据中通常包括标注 bbox、标注 mask 、预测 bbox 或者预测 mask 等数据，MMDetection 会继承 Visualizer 并实现 `add_datasample` 接口，在该接口内部会针对检测任务相关数据进行可视化绘制，从而简化检测任务可视化需求。
 
 ```python
 from mmengine.registry import VISUALIZERS
