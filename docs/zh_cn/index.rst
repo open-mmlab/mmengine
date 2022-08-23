@@ -60,6 +60,12 @@
    design/logging.md
 
 .. toctree::
+   :maxdepth: 1
+   :caption: 迁移指南
+
+   migration/migrate_runner_from_mmcv.md
+
+.. toctree::
    :maxdepth: 2
    :caption: API 文档
 

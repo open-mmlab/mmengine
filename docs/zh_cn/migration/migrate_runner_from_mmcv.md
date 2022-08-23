@@ -343,7 +343,7 @@ optimizer_config = dict(grad_clip=None)
 ```
 
 </td>
-  <td>
+  <td valign="top">
 
 ```python
 optim_wrapper = dict(
