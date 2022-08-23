@@ -18,7 +18,7 @@ from .progressbar import (ProgressBar, track_iter_progress,
                           track_parallel_progress, track_progress)
 from .setup_env import set_multi_processing
 from .sync_bn import revert_sync_batchnorm
-from .timer import Timer, check_time
+from .timer import Timer, TimerError, check_time
 from .torch_ops import torch_meshgrid
 from .trace import is_jit_tracing
 from .version_utils import digit_version, get_git_hash
@@ -38,7 +38,7 @@ __all__ = [
     'ManagerMeta', 'ManagerMixin', 'set_multi_processing', 'has_batch_norm',
     'is_abs', 'is_installed', 'call_command', 'get_installed_path',
     'check_install_package', 'is_abs', 'revert_sync_batchnorm', 'collect_env',
-    'Timer', 'check_time', 'ProgressBar', 'track_iter_progress',
+    'Timer', 'check_time', 'TimerError', 'ProgressBar', 'track_iter_progress',
     'track_parallel_progress', 'track_progress', 'torch_meshgrid',
     'is_jit_tracing'
 ]
