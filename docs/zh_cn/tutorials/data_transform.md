@@ -70,17 +70,17 @@ test_dataloader = dict(
 
 数据预处理和增强通常是对图像本身进行变换，如裁剪、填充、缩放等。
 
-|                                    数据变换类                                    |                功能                |
-| :------------------------------------------------------------------------------: | :--------------------------------: |
-|          [`Pad`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)           |            填充图像边缘            |
-|       [`CenterCrop`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)       |              居中裁剪              |
-|       [`Normalize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)        |          对图像进行归一化          |
-|         [`Resize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)         |     按照指定尺寸或比例缩放图像     |
-|      [`RandomResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)      |    缩放图像至指定范围的随机尺寸    |
-| [`RandomMultiscaleResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) | 缩放图像至多个尺寸中的随机一个尺寸 |
-|    [`RandomGrayscale`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |             随机灰度化             |
-|       [`RandomFlip`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)       |            图像随机翻转            |
-|   [`MultiScaleFlipAug`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)    |   支持缩放和翻转的测试时数据增强   |
+|                                  数据变换类                                  |                功能                |
+| :--------------------------------------------------------------------------: | :--------------------------------: |
+|        [`Pad`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)         |            填充图像边缘            |
+|     [`CenterCrop`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |              居中裁剪              |
+|     [`Normalize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)      |          对图像进行归一化          |
+|       [`Resize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)       |     按照指定尺寸或比例缩放图像     |
+|    [`RandomResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)    |    缩放图像至指定范围的随机尺寸    |
+| [`RandomChoiceResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) | 缩放图像至多个尺寸中的随机一个尺寸 |
+|  [`RandomGrayscale`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)   |             随机灰度化             |
+|     [`RandomFlip`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |            图像随机翻转            |
+| [`MultiScaleFlipAug`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)  |   支持缩放和翻转的测试时数据增强   |
 
 ### 数据格式化
 
