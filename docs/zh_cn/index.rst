@@ -26,6 +26,12 @@
    tutorials/visualizer.md
 
 .. toctree::
+   :maxdepth: 1
+   :caption: 示例
+
+   examples/speed_up_training.md
+
+.. toctree::
    :maxdepth: 2
    :caption: API 文档
 
