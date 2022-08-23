@@ -131,6 +131,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
         """
+        data = self.module.data_preprocessor(data, training=False)
         return self._run_forward(data, mode='predict')
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
@@ -142,6 +143,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
+        data = self.module.data_preprocessor(data, training=False)
         return self._run_forward(data, mode='predict')
 
     def _run_forward(self, data, mode) -> Any:
