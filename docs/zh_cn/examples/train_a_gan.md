@@ -1,52 +1,40 @@
 # 训练生成对抗网络
 
-生成对抗网络(GAN)可以用来生成图像视频等数据。这篇教程将带你一步步用 MMEngine 训练 GAN ！
+生成对抗网络(Generative Adversarial Network, GAN)可以用来生成图像视频等数据。这篇教程将带你一步步用 MMEngine 训练 GAN ！
 
-首先，我们导入需要的 python 模块，设置数据路径，数据加载器参数。
+我们可以通过以下步骤来训练一个生成对抗网络。
 
-## 设置
+1. 构建数据加载器
+2. 构建生成器网络和判别器网络
+3. 构建一个生成对抗网络模型
+4. 构建优化器
+5. 使用运行器进行训练
+
+## 构建数据加载器
+
+### 构建数据集
+
+接下来，我们为 MNIST 数据集构建一个数据集类。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
 
 ```python
-import os
-
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
-from mmengine import BaseDataset, Runner
-from mmengine.model import BaseModel
-
-
-from torch.utils.data import DataLoader, random_split
+from mmcv.transforms import to_tensor
+from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 
-PATH_DATASETS = os.environ.get("PATH_DATASETS", ".")
-BATCH_SIZE = 256 if torch.cuda.is_available() else 64
-NUM_WORKERS = int(os.cpu_count() / 2)
-```
+from mmengine import BaseDataset
 
-## 准备数据
-
-### 数据集
-
-接下来，我们为 MNIST 数据集构建一个数据集类。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](docs/zh_cn/tutorials/basedataset.md)。
-
-```python
-from mmcv.transforms import to_tensor
 
 class MNISTDataset(BaseDataset):
-    def __init__(self,
-                 data_root,
-                 pipeline,
-                 test_mode=False):
+
+    def __init__(self, data_root, pipeline, test_mode=False):
         self.data_root = data_root
         # 下载全部 MNIST 数据集
         MNIST(self.data_root, train=True, download=True)
         MNIST(self.data_root, train=False, download=True)
         super().__init__(
             data_root=data_root, pipeline=pipeline, test_mode=test_mode)
-    
+
     @staticmethod
     def totensor(img):
         if len(img.shape) < 3:
@@ -60,7 +48,10 @@ class MNISTDataset(BaseDataset):
             mnist_dataset, _ = random_split(mnist_full, [55000, 5000])
         else:
             mnist_dataset = MNIST(self.data_root, train=False)
-        return [dict(inputs=self.totensor(np.array(x[0]))) for x in mnist_dataset]
+        return [
+            dict(inputs=self.totensor(np.array(x[0]))) for x in mnist_dataset
+        ]
+
 
 dataset = MNISTDataset("./data", [])
 
@@ -69,21 +60,29 @@ dataset = MNISTDataset("./data", [])
 使用 Runner 中的函数 build_dataloader 来构建数据加载器。
 
 ```python
+import os
+import torch
+from mmengine import Runner
+
+NUM_WORKERS = int(os.cpu_count() / 2)
+BATCH_SIZE = 256 if torch.cuda.is_available() else 64
+
 train_dataloader = dict(
     batch_size=BATCH_SIZE,
     num_workers=NUM_WORKERS,
     persistent_workers=True,
-    collate_fn =dict(type='pseudo_collate'),
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dataset)
 train_dataloader = Runner.build_dataloader(train_dataloader)
 ```
 
-## 模块
+## 构建生成器网络和判别器网络
 
-下面的代码构建了生成器和判别器类并实例化了一个生成器和一个判别器。
+下面的代码构建并实例化了一个生成器(Generator)和一个判别器(Discriminator)。
 
 ```python
+import torch.nn as nn
+
 class Generator(nn.Module):
     def __init__(self, noise_size, img_shape):
         super().__init__()
@@ -138,7 +137,7 @@ generator = Generator(100, (1, 28, 28))
 discriminator = Discriminator((1, 28, 28))
 ```
 
-## 模型
+## 构建一个生成对抗网络模型
 
 在使用 MMEngine 时，我们用 ImgDataPreprocessor 来对数据进行归一化和颜色通道的转换。
 
@@ -151,6 +150,9 @@ data_preprocessor = ImgDataPreprocessor()
 关于 BaseModel 的更多信息，请参考(TODO).
 
 ```python
+import torch.nn.functional as F
+from mmengine.model import BaseModel
+
 class GAN(BaseModel):
     def __init__(self,
                  generator,
@@ -259,29 +261,37 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 
 ```
 
-## 优化器
+## 构建优化器
 
 MMEngine 使用 OptimWrapper 来封装优化器，对于多个优化器的情况，使用 OptimWrapperDict 对 OptimWrapper 再进行一次封装。
-关于优化器的更多信息，请参考[优化器教程](docs/zh_cn/tutorials/optimizer.md).
+关于优化器的更多信息，请参考[优化器教程](../tutorials/optimizer.md).
 
 ```python
-from mmengine.optim import OptimWrapperDict, OptimWrapper
+from mmengine.optim import OptimWrapper, OptimWrapperDict
+
 opt_g = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
 opt_g_wrapper = OptimWrapper(opt_g)
 
-opt_d = torch.optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
+opt_d = torch.optim.Adam(
+    discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
 opt_d_wrapper = OptimWrapper(opt_d)
 
-opt_wrapper_dict = OptimWrapperDict(generator=opt_g_wrapper, discriminator=opt_d_wrapper)
+opt_wrapper_dict = OptimWrapperDict(
+    generator=opt_g_wrapper, discriminator=opt_d_wrapper)
 
 ```
 
-## 训练
+## 使用运行器进行训练
 
-下面的代码演示了如何使用 Runner 进行模型训练。关于 Runner 的更多信息，请参考[执行器教程](docs/zh_cn/tutorials/runner.md)。
+下面的代码演示了如何使用 Runner 进行模型训练。关于 Runner 的更多信息，请参考[执行器教程](../tutorials/runner.md)。
 
 ```python
 train_cfg = dict(by_epoch=False, max_iters=5000)
-runner = Runner(model, work_dir='runs/gan/', train_dataloader=train_dataloader, train_cfg=train_cfg, optim_wrapper=opt_wrapper_dict)
+runner = Runner(
+    model,
+    work_dir='runs/gan/',
+    train_dataloader=train_dataloader,
+    train_cfg=train_cfg,
+    optim_wrapper=opt_wrapper_dict)
 runner.train()
 ```
