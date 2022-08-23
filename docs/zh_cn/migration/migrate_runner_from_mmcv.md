@@ -42,7 +42,7 @@ log_level = 'INFO'
 
 ### 设置随机种子
 
-**MMCV 设计随机种子**
+**MMCV 设置随机种子**
 
 在训练脚本中手动设置随机种子：
 
@@ -60,13 +60,96 @@ set_random_seed(seed, deterministic=args.deterministic)
 
 配置执行器的 `randomness` 参数，配置规则详见[执行器 api 文档](mmengine.runner.Runner.set_randomness)
 
+**OpenMMLab 系列算法库配置变更**
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 配置</th>
+    <th>MMEngine 配置</th>
+<tbody>
+  <tr>
+  <td>
+
+```python
+seed = 1
+deterministic=False
+diff_seed=False
+```
+
+</td>
+  <td>
+
+```python
+randomness=dict(seed=1,
+                deterministic=True,
+                diff_rank_seed=False)
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
+在本教程中，我们将 `randomness` 配置为：
+
 ```python
 randomness = dict(seed=5)
 ```
 
-### 配置训练环境
+### 初始化训练环境
 
-MMCV 需要在训练脚本中配置多进程启动方式、多进程通信后端等环境变量。而 MMEngine 只需要为执行器配置 `env_cfg`, 其默认值为 `dict(dist_cfg=dict(backend='nccl'))`，配置方式详见[执行器 api 文档](mmengine.runner.Runner.setup_env)，其默认值为：
+**MMCV 初始化训练环境**
+
+MMCV 需要在训练脚本中配置多进程启动方式、多进程通信后端等环境变量，并在执行器构建之前初始化分布式环境，对模型进行分布式封装：
+
+```python
+...
+setup_multi_processes(cfg)
+init_dist(cfg.launcher, **cfg.dist_params)
+model = MMDistributedDataParallel(
+    model,
+    device_ids=[int(os.environ['LOCAL_RANK'])],
+    broadcast_buffers=False,
+    find_unused_parameters=find_unused_parameters)
+```
+
+**MMEngine 初始化训练环境**
+
+MMEngine 通过配置 `env_cfg` 来选择多进程启动方式和多进程通信后端, 其默认值为 `dict(dist_cfg=dict(backend='nccl'))`，配置方式详见[执行器 api 文档](mmengine.runner.Runner.setup_env)。
+
+执行器构建时接受 `launcher` 参数，如果其值不为 `'none'`，执行器构建时会自动执行分布式初始化，模型分布式封装。换句话说，使用 `MMEngine` 的执行器时，我们无需在执行器外做分布式相关的操作，只需配置 `launcher` 参数，选择训练的启动方式即可。
+
+**OpenMMLab 系列算法库配置变更**
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 配置</th>
+    <th>MMEngine 配置</th>
+<tbody>
+  <tr>
+  <td>
+
+```python
+launcher = 'pytorch'  # 开启分布式训练
+dist_params = dict(backend='nccl')  # 选择多进程通信后端
+```
+
+</td>
+  <td>
+
+```python
+launcher = 'pytorch'
+env_cfg = dict(dist_cfg=dict(backend='nccl'))
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
+在本教程中，我们将 `env_cfg` 配置为：
 
 ```python
 env_cfg = dict(dist_cfg=dict(backend='nccl'))
@@ -74,7 +157,7 @@ env_cfg = dict(dist_cfg=dict(backend='nccl'))
 
 ### 准备数据
 
-MMCV 和 MMEngine 的执行器均可接受 DataLoader 类型的数据。因此准备数据的流程没有差异
+MMCV 和 MMEngine 的执行器均可接受构建好的 `DataLoader` 实例。因此准备数据的流程没有差异：
 
 ```python
 import torchvision.transforms as transforms
@@ -96,6 +179,51 @@ val_dataset = CIFAR10(
 val_dataloader = DataLoader(
     val_dataset, batch_size=128, shuffle=False, num_workers=2)
 ```
+
+**OpenMMLab 系列算法库配置变更**
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 配置</th>
+    <th>MMEngine 配置</th>
+<tbody>
+  <tr>
+  <td valign="top">
+
+```python
+data = dict(
+    samples_per_gpu=2,
+    workers_per_gpu=2,
+    train=dict(
+        type=dataset_type,
+        ann_file=data_root + 'annotations/instances_train2017.json',
+        img_prefix=data_root + 'train2017/',
+        pipeline=train_pipeline),
+    ...)  # 验证、测试配置
+```
+
+</td>
+  <td>
+
+```python
+train_dataloader = dict(  # 训练测试 dataloader 分开配置
+    batch_size=2,  # sampler_per_gpu -> batch_size
+    num_workers=2,  # workers_per_gpu -> num_workers
+    sampler=dict(type='DefaultSampler', shuffle=True),  # 需要额外指定 sampler
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        ann_file='annotations/instances_train2017.json',
+        data_prefix=dict(img='train2017/'),
+        filter_cfg=dict(filter_empty_gt=True, min_size=32),
+        pipeline=train_pipeline))
+```
+
+</td>
+</tr>
+</thead>
+</table>
 
 ### 准备模型
 
@@ -137,40 +265,14 @@ model = Model()
 
 需要注意的是，分布式训练时，MMCV 的执行器需要接受分布式封装后的模型，而 `MMEngine` 接受分布式封装前的模型，在执行器实例化阶对其段进行分布式封装。
 
-### 分布式初始化
-
-**MMCV 分布式初始化**
-
-MMCV 需要在执行器构建之前初始化分布式环境，并对模型进行分布式封装：
-
-```python
-...
-init_dist(cfg.launcher, **cfg.dist_params)
-model = MMDistributedDataParallel(
-    model,
-    device_ids=[int(os.environ['LOCAL_RANK'])],
-    broadcast_buffers=False,
-    find_unused_parameters=find_unused_parameters)
-```
-
-**MMEngine 分布式初始化**
-
-执行器构建时接受 `launcher` 参数，如果其值不为 `'none'`，执行器构建时会自动执行分布式初始化，模型分布式封装。换句话说，使用 `MMEngine` 的执行器时，我们无需在执行器外做分布式相关的操作，只需配置 `launcher` 参数，选择训练的启动方式即可。
-
 ### 准备优化器
 
-对于简单配置的优化，MMCV 和 MMEngine 的准备流程相同
+**MMCV 准备优化器**
+
+MMCV 执行器构造时，可以直接接受 Pytorch 优化器，如
 
 ```python
-from torch.optim import SGD
-
 optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
-```
-
-在构建 MMEngine 执行器时，需要指定 `optim_wrapper` 参数，optim_wrapper 的具体配置方式详见[执行器 api 文档](mmengine.runner.Runner.build_optim_wrapper)。
-
-```python
-optim_wrapper = dict(optimizer=optimizer)
 ```
 
 对于复杂配置的优化器，MMCV 需要基于优化器构造器来构建优化器：
@@ -208,18 +310,77 @@ def build_optimizer(model, cfg):
 optimizer = build_optimizer(model, optimizer_cfg)
 ```
 
-MMEngine 将上述流程封装在执行器中，因此无需定义 `build_optimizer`，在执行器实例化时传入 `optim_wrapper` 参数即可:
+**MMEngine 准备优化器**
+
+构建 MMEngine 执行器时，需要接受 `optim_wrapper` 参数，即[优化器封装](mmengine.optim.OptimWrapper)实例或者优化器封装配置，对于复杂配置的优化器封装，`MMEngine` 同样只需要配置 ``` optim_wrapper。``optim_wrapper ``` 的详细介绍见[执行器 api 文档](mmengine.runner.Runner.build_optim_wrapper)。
+
+**OpenMMLab 系列算法库配置变更**
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 配置</th>
+    <th>MMEngine 配置</th>
+<tbody>
+  <tr>
+  <td valign="top">
 
 ```python
-optim_wrapper = build_optimizer(model, optimizer_cfg)
-runner = Runner(
-    ...
-    optim_wrapper=optim_wrapper,
-    ...
-)
-
-optim_wrapper 的配置详见[优化器封装教程](../tutorials/optim_wrapper.md)
+optimizer = dict(
+    constructor='CustomConstructor',
+    type='AdamW',  # 优化器配置为一级字段
+    lr=0.0001,  # 优化器配置为一级字段
+    betas=(0.9, 0.999),  # 优化器配置为一级字段
+    weight_decay=0.05,  # 优化器配置为一级字段
+    paramwise_cfg={  # constructor 的参数
+        'decay_rate': 0.95,
+        'decay_type': 'layer_wise',
+        'num_layers': 6
+    })
+# MMEngine 还需要配置 `optim_config`
+# 来构建优化器钩子，而 MMEngine 不需要
+optimizer_config = dict(grad_clip=None)
 ```
+
+</td>
+  <td>
+
+```python
+optim_wrapper = dict(
+    constructor='CustomConstructor',
+    type='OptimWrapper',  # 指定优化器封装类型
+    optimizer=dict(  # 将优化器配置集中在 optimizer 内
+        type='AdamW',
+        lr=0.0001,
+        betas=(0.9, 0.999),
+        weight_decay=0.05)
+    paramwise_cfg={
+        'decay_rate': 0.95,
+        'decay_type': 'layer_wise',
+        'num_layers': 6
+    })
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
+```{note}:
+对于检测、分类一类的上层任务（High level）MMCV 需要配置 `optim_config` 来构建优化器钩子，而 MMEngine 不需要。
+```
+
+````
+
+本教程使用的 `optim_wrapper` 如下：
+
+
+```python
+from torch.optim import SGD
+
+optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
+optim_wrapper = dict(optimizer=optimizer)
+````
 
 ### 准备训练钩子
 
@@ -255,7 +416,7 @@ runner.register_training_hooks(
 
 **MMEngine 准备训练钩子**
 
-MMEngine 执行器配有一些默认钩子：
+MMEngine 执行器将 MMCV 常用的训练钩子配置成默认钩子：
 
 - [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook)
 - [IterTimerHook](mmengine.hooks.IterTimerHook)
@@ -266,21 +427,90 @@ MMEngine 执行器配有一些默认钩子：
 
 对比上例中 MMCV 配置的训练钩子：
 
-- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`
+- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./migrate_param_scheduler_from_mmcv.md)
 - MMEngine 在模型的 [train_step](mmengine.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
 - MMEngine 自带 `CheckPointHook`，可以使用默认配置
 - MMEngine 自带 `LoggerHook`，可以使用默认配置
 
-因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和配置 `lr_config` 一样的效果。MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](../tutorials/runner.md#通过配置文件使用执行器)
+因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和配置 `lr_config` 一样的效果。
+MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](../tutorials/runner.md#通过配置文件使用执行器) 和[迁移 `hook` 文档](./migrate_hook_from_mmcv.md)。
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 常用训练钩子</th>
+    <th>MMEngine 默认钩子</th>
+<tbody>
+  <tr>
+  <td valign="top">
+
+```python
+# MMCV 零散的配置训练钩子
+# 配置 LrUpdaterHook，相当于 MMEngine 的参数调度器
+lr_config = dict(
+    policy='step',
+    warmup='linear',
+    warmup_iters=500,
+    warmup_ratio=0.001,
+    step=[8, 11])
+
+# 配置 OptimizerHook，MMEngine 不需要
+optimizer_config = dict(grad_clip=None)
+
+# 配置 LoggerHook
+log_config = dict(  # LoggerHook
+    interval=50,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        # dict(type='TensorboardLoggerHook')
+    ])
+
+# 配置 CheckPointHook
+checkpoint_config = dict(interval=1)  # CheckPointHook
+```
+
+</td>
+  <td valign="top">
+
+```python
+# 配置参数调度器
+param_scheduler = [
+    dict(
+        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
+    dict(
+        type='MultiStepLR',
+        begin=0,
+        end=12,
+        by_epoch=True,
+        milestones=[8, 11],
+        gamma=0.1)
+]
+
+# MMEngine 集中配置默认钩子
+default_hooks = dict(
+    timer=dict(type='IterTimerHook'),
+    logger=dict(type='LoggerHook', interval=50),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', interval=1),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    visualization=dict(type='DetVisualizationHook'))
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
+```{note}
+MMEngine 移除了 `OptimizerHook`，优化步骤在 model 中执行。
+```
+
+本教程使用的 param_scheduler 如下：
 
 ```python
 from math import gamma
 
 param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
-```
-
-```{note}
-MMEngine 移除了 `OptimizerHook`，优化步骤在 model 中执行。
 ```
 
 ### 准备验证模块
@@ -307,15 +537,43 @@ class ToyAccuracyMetric(BaseMetric):
         return dict(Accuracy=acc / num_sample)
 ```
 
+实现自定义 `Metric` 后，我们还需在执行器的构造参数中配置评测器和[验证循环控制器](../tutorials/runner.md#自定义执行流程)，本教程中示例配置如下：
+
 ```python
 val_evaluator = dict(type='ToyAccuracyMetric')
-```
-
-此外，还需要配置验证循环控制器(../tutorials/runner.md#自定义执行流程) 和
-
-```python
 val_cfg = dict(type='ValLoop')
 ```
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 配置验证流程</th>
+    <th>MMEngine 配置验证流程</th>
+<tbody>
+  <tr>
+  <td valign="top">
+
+```python
+eval_cfg = cfg.get('evaluation', {})
+eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
+eval_hook = DistEvalHook if distributed else EvalHook  # 配置 EvalHook
+runner.register_hook(
+    eval_hook(val_dataloader, **eval_cfg), priority='LOW')  # 注册 EvalHook
+```
+
+</td>
+  <td valign="top">
+
+```python
+val_dataloader = val_dataloader  # 配置验证数据
+val_evaluator = dict(type='ToyAccuracyMetric')  # 配置评测器
+val_cfg = dict(type='ValLoop')  # 配置验证循环控制器
+```
+
+</td>
+</tr>
+</thead>
+</table>
 
 ### 构建执行器
 
@@ -359,6 +617,75 @@ runner = Runner(
     val_cfg=val_cfg)  # 配置验证循环控制器
 ```
 
+### 执行器加载检查点
+
+**MMCV 加载检查点**：
+
+在训练之前执行加载权重、恢复训练的流程。
+
+```python
+if cfg.resume_from:
+    runner.resume(cfg.resume_from)
+elif cfg.load_from:
+    runner.load_checkpoint(cfg.load_from)
+```
+
+**MMEngine 加载检查点**
+
+```python
+runner = Runner(
+    ...
+    load_from='/path/to/checkpoint',
+    resume=True
+)
+```
+
+<table class="docutils">
+<thead>
+  <tr>
+    <th>MMCV 加载检查点配置</th>
+    <th>MMEngine 加载检查点配置</th>
+    <th></th>
+<tbody>
+<tr>
+  <td> 加载检查点 </td>
+  <td valign="top">
+
+```python
+load_from = 'path/to/ckpt'
+```
+
+</td>
+  <td valign="top">
+
+```python
+load_from = 'path/to/ckpt'
+resume = False
+```
+
+</td>
+</tr>
+<tr>
+  <td> 恢复检查点 </td>
+  <td valign="top">
+
+```python
+resume_from = 'path/to/ckpt'
+```
+
+</td>
+  <td valign="top">
+
+```python
+load_from = 'path/to/ckpt'
+resume = True
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
 ### 执行器训练流程
 
 **MMCV 执行器训练流程**：
@@ -376,14 +703,6 @@ runner.run(data_loaders, cfg.workflow)
 **MMEngine** 执行器训练流程
 
 在执行器构建时配置加载权重、恢复训练参数
-
-```python
-runner = Runner(
-    ...
-    load_from='/path/to/checkpoint',
-    resume=True
-)
-```
 
 由于 MMEngine 的执行器在构造阶段就传入了训练数据，因此在调用 runner.train() 无需传入参数。
 
@@ -470,7 +789,6 @@ class CustomRunner(EpochBasedRunner):
 在 MMEngine 中，要实现上述功能，我们需要重载一个新的循环控制器
 
 ```python
-import imp
 from mmengine.registry import LOOPS
 from mmengine.runner import EpochBasedTrainLoop
 
