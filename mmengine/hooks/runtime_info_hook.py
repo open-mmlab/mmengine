@@ -1,8 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence
 
-from ..registry import HOOKS
-from ..utils import get_git_hash
+from mmengine.registry import HOOKS
+from mmengine.utils import get_git_hash
+from mmengine.version import __version__
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]
@@ -20,12 +21,11 @@ class RuntimeInfoHook(Hook):
     priority = 'VERY_HIGH'
 
     def before_run(self, runner) -> None:
-        import mmengine
         metainfo = dict(
             cfg=runner.cfg.pretty_text,
             seed=runner.seed,
             experiment_name=runner.experiment_name,
-            mmengine_version=mmengine.__version__ + get_git_hash())
+            mmengine_version=__version__ + get_git_hash())
         runner.message_hub.update_info_dict(metainfo)
 
     def before_train(self, runner) -> None:

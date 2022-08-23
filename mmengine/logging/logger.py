@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 from termcolor import colored
 
-from mmengine import dist
+from mmengine.dist import get_rank
 from mmengine.utils import ManagerMixin
 from mmengine.utils.manager import _accquire_lock, _release_lock
 
@@ -152,7 +152,7 @@ class MMLogger(Logger, ManagerMixin):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-        rank = dist.get_rank()
+        rank = get_rank()
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.

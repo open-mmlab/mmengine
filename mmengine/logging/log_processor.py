@@ -4,9 +4,7 @@ import datetime
 from collections import OrderedDict
 from typing import List, Optional, Tuple
 
-import torch
-
-from mmengine.device import get_max_cuda_memory
+from mmengine.device import get_max_cuda_memory, is_cuda_available
 from mmengine.registry import LOG_PROCESSORS
 
 
@@ -173,7 +171,7 @@ class LogProcessor:
             log_tag.pop('data_time')
 
         # If cuda is available, the max memory occupied should be calculated.
-        if torch.cuda.is_available():
+        if is_cuda_available():
             log_str += f'memory: {self._get_max_memory(runner)}  '
         # Loop left keys to fill `log_str`.
         if mode in ('train', 'val'):
