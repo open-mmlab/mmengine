@@ -35,13 +35,12 @@ for input, target in zip(inputs, targets):
 ```python
 from mmengine.optim import OptimWrapper
 
-
-optim_wapper = OptimWrapper(optimizer=optimizer)
+optim_wrapper = OptimWrapper(optimizer=optimizer)
 
 for input, target in zip(inputs, targets):
     output = model(input)
     loss = F.l1_loss(output, target)
-    optim_wapper.update_params(loss)
+    optim_wrapper.update_params(loss)
 ```
 
 ![image](https://user-images.githubusercontent.com/57566630/185605436-17f08083-b219-4b38-b714-eb891f7a8e56.png)
@@ -71,13 +70,13 @@ for input, target in zip(inputs, targets):
 ```python
 from mmengine.optim import AmpOptimWrapper
 
-optim_wapper = AmpOptimWrapper(optimizer=optimizer)
+optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
 
 for input, target in zip(inputs, targets):
-    with optim_wapper.optim_context(model):
+    with optim_wrapper.optim_context(model):
         output = model(input.cuda())
     loss = F.l1_loss(output, target.cuda())
-    optim_wapper.update_params(loss)
+    optim_wrapper.update_params(loss)
 ```
 
 ![image](https://user-images.githubusercontent.com/57566630/185606060-2fdebd90-c17a-4a8c-aaf1-540d47975c59.png)
@@ -100,13 +99,13 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
 **3.2 基于 MMEngine 的优化器封装实现混合精度训练和梯度累加**
 
 ```python
-optim_wapper = AmpOptimWrapper(optimizer=optimizer, accumulative_counts=2)
+optim_wrapper = AmpOptimWrapper(optimizer=optimizer, accumulative_counts=2)
 
 for input, target in zip(inputs, targets):
-    with optim_wapper.optim_context(model):
+    with optim_wrapper.optim_context(model):
         output = model(input.cuda())
     loss = F.l1_loss(output, target.cuda())
-    optim_wapper.update_params(loss)
+    optim_wrapper.update_params(loss)
 ```
 
 ![image](https://user-images.githubusercontent.com/57566630/185608932-91a082d4-1bf4-4329-b283-98fbbc20b5f7.png)
@@ -127,10 +126,10 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
     with optim_wrapper.optim_context(model):
         output = model(input.cuda())
     loss = F.l1_loss(output, target.cuda())
-    optim_wapper.backward(loss)
+    optim_wrapper.backward(loss)
     if idx % 2 == 0:
-        optim_wapper.step()
-        optim_wapper.zero_grad()
+        optim_wrapper.step()
+        optim_wrapper.zero_grad()
 ```
 
 ### 获取学习率/动量：
@@ -269,27 +268,6 @@ optimizer = SGD([{'params': model.backbone.parameters()},
      {'params': model.head.parameters(), 'lr': 1e-3}],
     lr=0.01,
     momentum=0.9)
-print(optimizer)
-```
-
-```
-SGD (
-Parameter Group 0
-    dampening: 0
-    lr: 0.01
-    maximize: False
-    momentum: 0.9
-    nesterov: False
-    weight_decay: 0
-
-Parameter Group 1
-    dampening: 0
-    lr: 0.001
-    maximize: False
-    momentum: 0.9
-    nesterov: False
-    weight_decay: 0
-)
 ```
 
 上面的例子中，模型的骨干部分使用了 0.01 学习率，而模型的头部则使用了 1e-3 学习率。
@@ -303,23 +281,45 @@ MMEngine 提供的默认优化器封装构造器支持对模型中不同类型�
 例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，
 来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
-示例：
+具体示例如下，我们将 `ToyModel` 中所有正则化层（`head.bn`）的的权重衰减系数设置为 0：
 
 ```python
 from mmengine.optim import build_optim_wrapper
+from collections import OrderedDict
 
-model = nn.Conv2d(1, 1, 1)
-optimizer = dict(
+class ToyModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.backbone = nn.ModuleDict(
+            dict(layer0=nn.Linear(1, 1), layer1=nn.Linear(1, 1)))
+        self.head = nn.Sequential(
+            OrderedDict(
+                linear=nn.Linear(1, 1),
+                bn=nn.BatchNorm1d(1)))
+
+
+optim_wrapper = dict(
     optimizer=dict(type='SGD', lr=0.01, weight_decay=0.0001),
     paramwise_cfg=dict(norm_decay_mult=0))
-print(optimizer)
+optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 ```
 
 ```
-{'optimizer': {'type': 'SGD', 'lr': 0.01, 'weight_decay': 0.0001}, 'paramwise_cfg': {'norm_decay_mult': 0}}
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr=0.01
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr=0.01
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr=0.01
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:weight_decay=0.0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:weight_decay=0.0
 ```
 
-除了可以对偏置的权重衰减进行配置外，MMEngine 的默认优化器构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
+除了可以对正则化层的权重衰减进行配置外，MMEngine 的默认优化器封装构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
+
+`lr_mult`：所有参数的学习率系数
+
+`decay_mult`：所有参数的衰减系数
 
 `bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
 
@@ -335,10 +335,12 @@ print(optimizer)
 
 #### 为模型不同部分的参数设置不同的超参系数
 
-此外，与上文 PyTorch 的示例一样，在 MMEngine 中我们也同样可以对模型中的任意模块设置不同的超参，只需要在 `paramwise_cfg` 中设置 `custom_keys` 即可：
+此外，与上文 PyTorch 的示例一样，在 MMEngine 中我们也同样可以对模型中的任意模块设置不同的超参，只需要在 `paramwise_cfg` 中设置 `custom_keys` 即可。
+
+例如我们想将 `backbone.layer0` 所有参数的学习率设置为 0，衰减系数设置为 0，`backbone` 其余子模块的学习率设置为 1；`head` 所欲参数的学习率设置为 0.01，可以这样配置：
 
 ```python
-optimizer = dict(
+optim_wrapper = dict(
     optimizer=dict(type='SGD', lr=0.01, weight_decay=0.0001),
     paramwise_cfg=dict(
         custom_keys={
@@ -346,75 +348,109 @@ optimizer = dict(
             'backbone': dict(lr_mult=1),
             'head': dict(lr_mult=0.1)
         }))
-optimizer = build_optim_wrapper(model, optim_wrapper)
-print(optimizer)
+optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 ```
 
 ```
-08/21 00:56:59 - mmengine - INFO - paramwise_options -- weight:weight_decay=0.0001
-08/21 00:56:59 - mmengine - INFO - paramwise_options -- bias:lr=0.01
-08/21 00:56:59 - mmengine - INFO - paramwise_options -- bias:weight_decay=0.0001
-Type: OptimWrapper
-_accumulative_counts: 1
-optimizer:
-SGD (
-Parameter Group 0
-    dampening: 0
-    lr: 0.01
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-
-Parameter Group 1
-    dampening: 0
-    lr: 0.01
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-)
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:lr=0.0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:weight_decay=0.0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:lr_mult=0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:decay_mult=0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr=0.0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:weight_decay=0.0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr_mult=0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:decay_mult=0
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:lr=0.01
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:lr_mult=1
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr=0.01
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr_mult=1
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:lr=0.001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:lr_mult=0.1
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr=0.001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr_mult=0.1
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:lr=0.001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:lr_mult=0.1
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:lr=0.001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:lr_mult=0.1
 ```
 
-上面的配置文件实现了对模型的骨干第一层的学习率和权重衰减设置为 0，骨干的其余部分部分使用 0.01 学习率，而对模型的头部则使用 1e-3 学习率。
+上例中，模型的状态字典的 `key` 如下：
 
-### 高级配置
+```python
+for name, val in ToyModel().named_parameters():
+    print(name)
+```
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)来管理。
-用户可以实现自己的优化器构造策略来实现自定义的超参设置策略，并添加进 `OPTIM_WRAPPER_CONSTRUCTORS` 注册表中。
+```
+backbone.layer0.weight
+backbone.layer0.bias
+backbone.layer1.weight
+backbone.layer1.bias
+head.linear.weight
+head.linear.bias
+head.bn.weight
+head.bn.bias
+```
 
-例如，我们想实现一个叫做`LayerDecayOptimWrapperConstructor`的优化器封装构造器，来实现对模型的不同深度的层自动设置递减的学习率。
-我们可以通过继承 `DefaultOptimizerConstructor` 来实现这一策略，并将其添加进注册表中：
+custom_keys 中每一个字段的含义如下：
+
+1. `'backbone': dict(lr_mult=1)`：将名字前缀为 `backbone` 的参数的学习率设置为 1
+2. `'backbone.layer0': dict(lr_mult=0, decay_mult=0)`：将名字前缀为 `backbone.layer0` 的参数学习率设置为 0，衰减系数设置为 0，该配置优先级比第一条高
+3. `'head': dict(lr_mult=0.1)`：将名字前缀为 `head` 的参数的学习率设置为 0.1
+
+### 自定义优化器构造策略
+
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)管理。
+我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
+
+例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，能够对模型不同深度的层自动设置递减的学习率：
 
 ```python
 from mmengine.optim import DefaultOptimWrapperConstructor
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS
+from mmengine.logging import print_log
+
 
 @OPTIM_WRAPPER_CONSTRUCTORS.register_module(force=True)
 class LayerDecayOptimizerConstructor(DefaultOptimWrapperConstructor):
-    def __init__(self, optim_wrapper_cfg, paramwise_cfg = None):
-        super().__init__(optim_wrapper_cfg, paramwise_cfg = None)
+
+    def __init__(self, optim_wrapper_cfg, paramwise_cfg=None):
+        super().__init__(optim_wrapper_cfg, paramwise_cfg=None)
         self.decay_factor = paramwise_cfg.get('decay_factor', 0.5)
 
         super().__init__(optim_wrapper_cfg, paramwise_cfg)
 
-    def add_params(self, params, module, lr=None):
+    def add_params(self, params, module, prefix='' ,lr=None):
         if lr is None:
             lr = self.base_lr
-        param_group = dict()
-        param_group['params'] = module.parameters(recurse=False)
-        param_group['lr'] = lr
-        params.append(param_group)
 
-        for module in module.children():
-            self.add_params(params, module, lr=lr*self.decay_factor)
+        for name, param in module.named_parameters(recurse=False):
+            param_group = dict()
+            param_group['params'] = [param]
+            param_group['lr'] = lr
+            params.append(param_group)
+            full_name = f'{prefix}.{name}' if prefix else name
+            print_log(f'{full_name} : lr={lr}', logger='current')
+
+        for name, module in module.named_children():
+            chiled_prefix = f'{prefix}.{name}' if prefix else name
+            self.add_params(
+                params, module, chiled_prefix, lr=lr * self.decay_factor)
 
 
 class ToyModel(nn.Module):
+
     def __init__(self) -> None:
         super().__init__()
         self.layer = nn.ModuleDict(dict(linear=nn.Linear(1, 1)))
         self.linear = nn.Linear(1, 1)
+
 
 model = ToyModel()
 
@@ -424,49 +460,16 @@ optim_wrapper = dict(
     constructor='LayerDecayOptimizerConstructor')
 
 optimizer = build_optim_wrapper(model, optim_wrapper)
-print(optimizer)
 ```
 
 ```
-Type: OptimWrapper
-_accumulative_counts: 1
-optimizer:
-SGD (
-Parameter Group 0
-    dampening: 0
-    lr: 0.01
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-
-Parameter Group 1
-    dampening: 0
-    lr: 0.005
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-
-Parameter Group 2
-    dampening: 0
-    lr: 0.0025
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-
-Parameter Group 3
-    dampening: 0
-    lr: 0.005
-    maximize: False
-    momentum: 0
-    nesterov: False
-    weight_decay: 0.0001
-)
+08/23 22:20:26 - mmengine - [4m[37mINFO[0m - layer.linear.weight : lr=0.0025
+08/23 22:20:26 - mmengine - [4m[37mINFO[0m - layer.linear.bias : lr=0.0025
+08/23 22:20:26 - mmengine - [4m[37mINFO[0m - linear.weight : lr=0.005
+08/23 22:20:26 - mmengine - [4m[37mINFO[0m - linear.bias : lr=0.005
 ```
 
-重载 `DefaultOptimWrapperConstructor.add_params`，可以实现按照模型深度递减地设置学习率。`add_params` 被第一次调用时，`params` 参数空列表（`list`），`module` 为模型（`model`）详细的重载规则参[考优化器封装构造器文档](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.optim.DefaultOptimWrapperConstructor)。
+`add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参[考优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
 
 类似地，如果想构造多个优化器，也需要实现自定义的构造器：
 
@@ -479,4 +482,4 @@ class MultipleOptimiWrapperConstructor:
 ### 在训练过程中调整超参
 
 优化器中的超参数在构造时只能设置为一个定值，仅仅使用优化器封装，并不能在训练过程中调整学习率等参数。
-在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
+在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](./param_scheduler.md)
