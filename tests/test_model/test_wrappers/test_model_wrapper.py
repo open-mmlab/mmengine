@@ -9,9 +9,10 @@ import torch.nn as nn
 from torch.optim import SGD
 
 from mmengine.dist import all_gather
-from mmengine.model import (BaseModel, MMDistributedDataParallel,
+from mmengine.model import (BaseDataPreprocessor, BaseModel,
+                            ExponentialMovingAverage,
+                            MMDistributedDataParallel,
                             MMSeparateDistributedDataParallel)
-from mmengine.model.averaged_model import ExponentialMovingAverage
 from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
@@ -22,10 +23,17 @@ if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
     from mmengine.model import MMFullyShardedDataParallel  # noqa: F401
 
 
+class ToyDataPreprocessor(BaseDataPreprocessor):
+
+    def forward(self, data: dict, training: bool = False) -> dict:
+        self.called = True
+        return super().forward(data, training)
+
+
 class ToyModel(BaseModel):
 
     def __init__(self):
-        super().__init__()
+        super().__init__(data_preprocessor=ToyDataPreprocessor())
         self.conv1 = nn.Conv2d(3, 1, 1)
         self.conv2 = nn.Conv2d(1, 1, 1)
 
@@ -110,6 +118,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         # Test get predictions.
         predictions = ddp_model.val_step(data)
         self.assertIsInstance(predictions, torch.Tensor)
+        self.assertTrue(model.data_preprocessor.called)
 
     def test_test_step(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -119,6 +128,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         data = dict(inputs=inputs, data_sample=None)
         predictions = ddp_model.test_step(data)
         self.assertIsInstance(predictions, torch.Tensor)
+        self.assertTrue(model.data_preprocessor.called)
 
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
