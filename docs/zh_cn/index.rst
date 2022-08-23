@@ -32,6 +32,12 @@
    examples/speed_up_training.md
 
 .. toctree::
+   :maxdepth: 1
+   :caption: 架构设计
+
+   design/hook.md
+
+.. toctree::
    :maxdepth: 2
    :caption: API 文档
 

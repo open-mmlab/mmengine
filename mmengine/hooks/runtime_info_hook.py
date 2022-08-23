@@ -3,6 +3,7 @@ from typing import Dict, Optional, Sequence
 
 from ..registry import HOOKS
 from ..utils import get_git_hash
+from ..version import __version__
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]
@@ -20,16 +21,24 @@ class RuntimeInfoHook(Hook):
     priority = 'VERY_HIGH'
 
     def before_run(self, runner) -> None:
-        import mmengine
+        """Update metainfo.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         metainfo = dict(
             cfg=runner.cfg.pretty_text,
             seed=runner.seed,
             experiment_name=runner.experiment_name,
-            mmengine_version=mmengine.__version__ + get_git_hash())
+            mmengine_version=__version__ + get_git_hash())
         runner.message_hub.update_info_dict(metainfo)
 
     def before_train(self, runner) -> None:
-        """Update resumed training state."""
+        """Update resumed training state.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         runner.message_hub.update_info('epoch', runner.epoch)
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_info('max_epochs', runner.max_epochs)
@@ -39,7 +48,11 @@ class RuntimeInfoHook(Hook):
                 'dataset_meta', runner.train_dataloader.dataset.metainfo)
 
     def before_train_epoch(self, runner) -> None:
-        """Update current epoch information before every epoch."""
+        """Update current epoch information before every epoch.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         runner.message_hub.update_info('epoch', runner.epoch)
 
     def before_train_iter(self,
@@ -47,7 +60,14 @@ class RuntimeInfoHook(Hook):
                           batch_idx: int,
                           data_batch: DATA_BATCH = None) -> None:
         """Update current iter and learning rate information before every
-        iteration."""
+        iteration.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
+        """
         runner.message_hub.update_info('iter', runner.iter)
         lr_dict = runner.optim_wrapper.get_lr()
         assert isinstance(lr_dict, dict), (
@@ -65,7 +85,15 @@ class RuntimeInfoHook(Hook):
                          batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
-        """Update ``log_vars`` in model outputs every iteration."""
+        """Update ``log_vars`` in model outputs every iteration.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (Sequence[dict], optional): Data from dataloader.
+                Defaults to None.
+            outputs (dict, optional): Outputs from model. Defaults to None.
+        """
         if outputs is not None:
             for key, value in outputs.items():
                 runner.message_hub.update_scalar(f'train/{key}', value)

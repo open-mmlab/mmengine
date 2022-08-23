@@ -25,14 +25,14 @@ class CheckpointHook(Hook):
             indicates epochs, otherwise it indicates iterations.
             Defaults to -1, which means "never".
         by_epoch (bool): Saving checkpoints by epoch or by iteration.
-            Default: True.
+            Defaults to True.
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
             Defaults to True.
         save_param_scheduler (bool): Whether to save param_scheduler state_dict
             in the checkpoint. It is usually used for resuming experiments.
             Defaults to True.
-        out_dir (str, optional | Path): The root directory to save checkpoints.
+        out_dir (str, Path, Optional): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
             and the last level directory of ``runner.work_dir``. For example,
