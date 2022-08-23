@@ -171,7 +171,7 @@ class LogProcessor:
             log_tag.pop('data_time')
 
         # If cuda is available, the max memory occupied should be calculated.
-        if is_cuda_available:
+        if is_cuda_available():
             log_str += f'memory: {self._get_max_memory(runner)}  '
         # Loop left keys to fill `log_str`.
         if mode in ('train', 'val'):

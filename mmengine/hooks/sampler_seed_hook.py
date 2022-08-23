@@ -14,7 +14,7 @@ class DistSamplerSeedHook(Hook):
 
     priority = 'NORMAL'
 
-    def before_train_epoch(self, runner, mode: str = 'train') -> None:
+    def before_train_epoch(self, runner) -> None:
         """Set the seed for sampler and batch_sampler.
 
         Args:

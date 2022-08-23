@@ -39,10 +39,10 @@ class LoggerHook(Hook):
         out_dir (str or Path, optional): The root directory to save
             checkpoints. If not specified, ``runner.work_dir`` will be used
             by default. If specified, the ``out_dir`` will be the concatenation
-             of ``out_dir`` and the last level directory of
-            ``runner.work_dir``. For example, if the input ``our_dir`` is
-            ``./tmp`` and ``runner.work_dir`` is ``./work_dir/cur_exp``,
-            then the log will be saved in ``./tmp/cur_exp``. Defaults to None.
+            of ``out_dir`` and the last level directory of ``runner.work_dir``.
+            For example, if the input ``our_dir`` is ``./tmp`` and
+            ``runner.work_dir`` is ``./work_dir/cur_exp``, then the log will be
+            saved in ``./tmp/cur_exp``. Defaults to None.
         out_suffix (Tuple[str] or str): Those files in ``runner._log_dir``
             ending with ``out_suffix`` will be copied to ``out_dir``. Defaults
             to ('json', '.log', '.py').
