@@ -27,6 +27,12 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 示例
+
+   examples/speed_up_training.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 架构设计
 
    design/hook.md
