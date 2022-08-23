@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Dict, List
+from typing import Any, Dict, Union
 
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel
 
-from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
 from ..utils import detect_anomalous_params
@@ -90,7 +89,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         super().__init__(module=module, **kwargs)
         self.detect_anomalous_params = detect_anomalous_params
 
-    def train_step(self, data: dict,
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -105,7 +104,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         - Return log messages of losses.
 
         Args:
-            data (dict): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
@@ -122,40 +121,43 @@ class MMDistributedDataParallel(DistributedDataParallel):
         optim_wrapper.update_params(parsed_loss)
         return log_vars
 
-    def val_step(self, data: dict) -> List[BaseDataElement]:
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (dict): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement] or dict: The predictions of given data.
+            list: The predictions of given data.
         """
         return self._run_forward(data, mode='predict')
 
-    def test_step(self, data: dict) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
 
         Args:
-            data (dict): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
         return self._run_forward(data, mode='predict')
 
-    def _run_forward(self, data, mode) -> Any:
+    def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
         """Unpacks data for :meth:`forward`
 
         Args:
-            data (dict): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             mode (str): Mode of forward.
+
+        Returns:
+            dict or list: Results of training or testing mode.
         """
         if isinstance(data, dict):
-            result = self(**data, mode=mode)
+            results = self(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
-            result = self(*data, mode=mode)
+            results = self(*data, mode=mode)
         else:
             raise TypeError('Output of `data_preprocessor` should be '
-                            f'list tuple or dict, but got {type(data)}')
-        return result
+                            f'list, tuple or dict, but got {type(data)}')
+        return results
