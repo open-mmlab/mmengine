@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import List, Optional, Tuple
 
-from mmengine.utils.misc import is_list_of
+from mmengine.utils import is_list_of
 
 
 def calc_dynamic_intervals(

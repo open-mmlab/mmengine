@@ -5,9 +5,9 @@ from typing import Optional
 
 import torch
 
-from ..device import get_device
-from ..logging import print_log
-from ..utils import TORCH_VERSION, digit_version
+from mmengine.device import get_device
+from mmengine.logging import print_log
+from mmengine.utils import TORCH_VERSION, digit_version
 
 
 @contextmanager

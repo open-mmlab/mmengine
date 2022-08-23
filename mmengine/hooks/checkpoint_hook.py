@@ -9,8 +9,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
-from mmengine.utils import is_seq_of
-from mmengine.utils.misc import is_list_of
+from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Sequence[dict]]
