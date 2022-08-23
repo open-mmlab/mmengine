@@ -10,6 +10,7 @@ from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 from .runner import Runner
+from .utils import set_random_seed
 
 __all__ = [
     'BaseLoop', 'load_state_dict', 'get_torchvision_models',
@@ -17,5 +18,5 @@ __all__ = [
     'CheckpointLoader', 'load_checkpoint', 'weights_to_cpu', 'get_state_dict',
     'save_checkpoint', 'EpochBasedTrainLoop', 'IterBasedTrainLoop', 'ValLoop',
     'TestLoop', 'Runner', 'get_priority', 'Priority', 'find_latest_checkpoint',
-    'autocast', 'LogProcessor'
+    'autocast', 'LogProcessor', 'set_random_seed'
 ]
