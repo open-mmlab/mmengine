@@ -3,7 +3,8 @@ import os.path as osp
 
 import pytest
 
-from mmengine import Config, DefaultScope, get_config, get_model
+from mmengine import Config, DefaultScope
+from mmengine.hub import get_config, get_model
 from mmengine.utils import get_installed_path, is_installed
 
 data_path = osp.join(osp.dirname(osp.dirname(__file__)), 'data/')

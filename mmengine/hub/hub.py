@@ -2,11 +2,13 @@
 import importlib
 import os.path as osp
 
+from mmengine.config import Config
+from mmengine.config.utils import (_get_cfg_metainfo,
+                                   _get_external_cfg_base_path,
+                                   _get_package_and_cfg_path)
 from mmengine.registry import MODELS, DefaultScope
+from mmengine.runner import load_checkpoint
 from mmengine.utils import check_install_package, get_installed_path
-from .config import Config
-from .utils import (_get_cfg_metainfo, _get_external_cfg_base_path,
-                    _get_package_and_cfg_path)
 
 
 def get_config(cfg_path: str, pretrained: bool = False) -> Config:
@@ -66,7 +68,6 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
     Returns:
         nn.Module: Built model.
     """
-    import mmengine.runner
     package = cfg_path.split('::')[0]
     with DefaultScope.overwrite_default_scope(package):  # type: ignore
         cfg = get_config(cfg_path, pretrained)
@@ -74,5 +75,5 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         models_module.register_all_modules()  # type: ignore
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
-            mmengine.runner.load_checkpoint(model, cfg.model_path)
+            load_checkpoint(model, cfg.model_path)
         return model
