@@ -2,9 +2,9 @@
 
 MMEngine 实现了抽象的配置类，为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
 
-在开始教程之前，我们先将教程中需要用到的配置文件下载到本地：
+在开始教程之前，我们先将教程中需要用到的配置文件下载到本地（建议在临时目录下执行，方便后续删除示例配置文件）：
 
-```python
+```bash
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/config_sgd.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/cross_repo.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/custom_imports.py
@@ -21,8 +21,6 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/runtime_cfg.py
 ```
-
-运行完教程后记得清楚配置文件样例.
 
 ## 配置文件读取
 
@@ -58,22 +56,18 @@ test_dict:
   key2: 0.1
 ```
 
-对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，则我们调用 `Config.fromfile('config.xxx')` 接口都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例，我们先将示例配置文件下载到本地：
+对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，调用 `Config.fromfile('config.xxx')` 接口加载这三个文件都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例，我们先将示例配置文件下载到本地：
 
 然后通过配置类的 `fromfile` 接口读取配置文件：
 
 ```python
-from mmengine import Config
+from mmengine.config import Config
 
 cfg = Config.fromfile('learn_read_config.py')
 print(cfg)
 ```
 
 ```
-/home/PJLAB/yehaochen/miniconda3/envs/python38pytorch112/lib/python3.8/site-packages/tqdm/auto.py:22: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-
-
 Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1': 'value1', 'key2': 0.1}}
 ```
 
@@ -435,8 +429,8 @@ optimizer = dict(type='SGD', lr=0.01)
 
 我们在命令行里通过 `.` 的方式来访问配置文件中的深层配置，例如我们想修改学习率，只需要在命令行执行：
 
-```python
-!python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
 ```
 
 ```
@@ -451,8 +445,8 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 
 我们成功地把学习率从 0.01 修改成 0.1。如果想改变列表、元组类型的配置，如上例中的 `in_channels`，则需要在命令行赋值时给 `()`，`[]` 外加上双引号：
 
-```python
-!python demo_train.py ./example.py --cfg-options model.in_channels="[0, 0, 0]"
+```bash
+python demo_train.py ./example.py --cfg-options model.in_channels="[0, 0, 0]"
 ```
 
 ```
@@ -475,30 +469,30 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 
 将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
 
-例如我们新实现了一种优化器 `SuperOptim`，相应代码在 `my_module.py` 中。
+例如我们新实现了一种优化器 `CustomOptim`，相应代码在 `my_module.py` 中。
 
 ```python
 from mmengine.registry import OPTIMIZERS
 
 @OPTIMIZERS.register_module()
-class SuperOptim:
+class CustomOptim:
     pass
 ```
 
 我们为这个优化器的使用写了一个新的配置文件 `custom_imports.py`：
 
 ```python
-optimizer = dict(type='SuperOptim')
+optimizer = dict(type='CustomOptim')
 ```
 
-那么就需要在读取配置文件和构造优化器之前，增加一行 `import my_module` 来保证将自定义的类 `SuperOptim` 注册到 OPTIMIZERS 注册器中：
+那么就需要在读取配置文件和构造优化器之前，增加一行 `import my_module` 来保证将自定义的类 `CustomOptim` 注册到 OPTIMIZERS 注册器中：
 为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
 
 `custom_imports.py`
 
 ```python
 custom_imports = dict(imports=['my_module'], allow_failed_imports=False)
-optimizer = dict(type='SuperOptim')
+optimizer = dict(type='CustomOptim')
 ```
 
 这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。
@@ -513,7 +507,7 @@ print(super_optim)
 ```
 
 ```
-<my_module.SuperOptim object at 0x7f462ebbcee0>
+<my_module.CustomOptim object at 0x7f6983a87970>
 ```
 
 ### 跨项目继承配置文件
