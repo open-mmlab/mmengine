@@ -36,7 +36,7 @@ visualizer.show()
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_1.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186052649-8611ae43-1bb9-46e8-b6a1-dfc5063407c7.png" width="400"/>
 </div>
 
 ```python
@@ -46,7 +46,7 @@ visualizer.show()
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_2.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186052726-bd8f1571-b34b-471a-9876-9f0ae8c4e2be.png" width="400"/>
 </div>
 
 你也可以通过通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
@@ -59,7 +59,7 @@ visualizer.show()
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_3.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053154-ddd9d6ec-56e0-45cc-86a8-b349812ba2e7.png" width="400"/>
 </div>
 
 (2) 叠加显示
@@ -75,7 +75,7 @@ visualizer.show()
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_4.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053209-de5f57e5-4ccb-45af-9370-1788d257123b.png" width="400"/>
 </div>
 
 ## 特征图绘制
@@ -153,7 +153,7 @@ visualizer.show(drawn_img)
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_5.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053367-61202d57-2402-4056-a651-1a9e0953b9b8.png" width="400"/>
 </div>
 
 由于输出的 feat 特征图尺寸为 7x7，直接可视化效果不佳，用户可以通过叠加输入图片或者 `resize_shape` 参数来缩放特征图。如果传入图片尺寸和特征图大小不一致，会强制将特征图采样到和输入图片相同空间尺寸
@@ -164,7 +164,7 @@ visualizer.show(drawn_img)
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_6.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053413-4731e487-dd23-4ed4-b001-f958009280ad.png" width="400"/>
 </div>
 
 (2) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
@@ -175,7 +175,7 @@ visualizer.show(drawn_img)
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_7.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053463-6997f904-9d1e-4680-a2de-d4656e81e24d.png" width="400"/>
 </div>
 
 用户可以通过 `arrangement` 参数选择自己想要的布局
@@ -186,7 +186,7 @@ visualizer.show(drawn_img)
 ```
 
 <div align=center>
-<img src="../../en/_static/image/vis_demo_8.png" width="400"/>
+<img src="https://user-images.githubusercontent.com/17425982/186053653-d4d33e5d-f02e-4727-951c-880131d873dc.png" width="400"/>
 </div>
 
 ## 基础存储接口
