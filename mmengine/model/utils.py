@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from mmengine.utils.dl_utils import mmcv_full_available
+
 
 def stack_batch(tensor_list: List[torch.Tensor],
                 pad_size_divisor: int = 1,
@@ -167,6 +169,11 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
     """
     module_output = module
     module_checklist = [torch.nn.modules.batchnorm.SyncBatchNorm]
+
+    if mmcv_full_available():
+        from mmcv.ops import SyncBatchNorm
+        module_checklist.append(SyncBatchNorm)
+
     if isinstance(module, tuple(module_checklist)):
         module_output = _BatchNormXd(module.num_features, module.eps,
                                      module.momentum, module.affine,

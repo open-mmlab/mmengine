@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+from mmengine.evaluator import Evaluator
 from mmengine.hooks import EMAHook
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.optim import OptimWrapper
@@ -81,7 +82,7 @@ class TestEMAHook(TestCase):
     def test_ema_hook(self):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         model = ToyModel1().to(device)
-        evaluator = Mock()
+        evaluator = Evaluator([])
         evaluator.evaluate = Mock(return_value=dict(acc=0.5))
         runner = Runner(
             model=model,
