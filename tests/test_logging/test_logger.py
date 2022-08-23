@@ -17,7 +17,7 @@ class TestLogger:
 
     # Since `get_rank` has been imported in logger.py, it needs to mock
     # `logger.get_rank`
-    @patch('mmengine.logging.logger.get_rank', lambda: 0)
+    @patch('mmengine.logging.logger._get_rank', lambda: 0)
     def test_init_rank0(self, tmp_path):
         logger = MMLogger.get_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'mmengine'
@@ -47,7 +47,7 @@ class TestLogger:
         assert logger.instance_name == 'rank0.pkg3'
         logging.shutdown()
 
-    @patch('mmengine.logging.logger.get_rank', lambda: 1)
+    @patch('mmengine.logging.logger._get_rank', lambda: 1)
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'

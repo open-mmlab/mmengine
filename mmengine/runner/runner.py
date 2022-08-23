@@ -27,7 +27,7 @@ from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
+from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
                             is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
@@ -45,6 +45,7 @@ from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, get_state_dict,
                          save_checkpoint, weights_to_cpu)
+from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 

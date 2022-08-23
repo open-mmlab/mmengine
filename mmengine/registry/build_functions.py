@@ -3,22 +3,21 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from mmengine.config import Config, ConfigDict
 from mmengine.utils import ManagerMixin
 from .registry import Registry
 
 if TYPE_CHECKING:
     import torch.nn as nn
 
-    from mmengine.config import Config, ConfigDict
     from mmengine.optim.scheduler import _ParamScheduler
     from mmengine.runner import Runner
 
 
 def build_from_cfg(
-        cfg: Union[dict, 'ConfigDict', 'Config'],
+        cfg: Union[dict, ConfigDict, Config],
         registry: Registry,
-        default_args: Optional[Union[dict, 'ConfigDict',
-                                     'Config']] = None) -> Any:
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
     """Build a module from config dict when it is a class configuration, or
     call a function from config dict when it is a function configuration.
 
@@ -62,7 +61,6 @@ def build_from_cfg(
         object: The constructed object.
     """
     # Avoid circular import
-    from ..config import Config, ConfigDict
     from ..logging import print_log
 
     if not isinstance(cfg, (dict, ConfigDict, Config)):
@@ -138,7 +136,7 @@ def build_from_cfg(
                 f'{cls_location}.py: {e}')
 
 
-def build_runner_from_cfg(cfg: Union[dict, 'ConfigDict', 'Config'],
+def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                           registry: Registry) -> 'Runner':
     """Build a Runner object.
     Examples:
@@ -213,7 +211,7 @@ def build_runner_from_cfg(cfg: Union[dict, 'ConfigDict', 'Config'],
 
 
 def build_model_from_cfg(
-    cfg: Union[dict, 'ConfigDict', 'Config'],
+    cfg: Union[dict, ConfigDict, Config],
     registry: Registry,
     default_args: Optional[Union[dict, 'ConfigDict', 'Config']] = None
 ) -> 'nn.Module':
@@ -242,9 +240,9 @@ def build_model_from_cfg(
 
 
 def build_scheduler_from_cfg(
-    cfg: Union[dict, 'ConfigDict', 'Config'],
+    cfg: Union[dict, ConfigDict, Config],
     registry: Registry,
-    default_args: Optional[Union[dict, 'ConfigDict', 'Config']] = None
+    default_args: Optional[Union[dict, ConfigDict, Config]] = None
 ) -> '_ParamScheduler':
     """Builds a ``ParamScheduler`` instance from config.
 
@@ -266,7 +264,6 @@ def build_scheduler_from_cfg(
     Returns:
         object: The constructed ``ParamScheduler``.
     """
-    from ..config import Config, ConfigDict
     assert isinstance(
         cfg,
         (dict, ConfigDict, Config
