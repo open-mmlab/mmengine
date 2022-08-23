@@ -305,14 +305,14 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 ```
 
 ```
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr=0.01
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr=0.01
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr=0.01
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:weight_decay=0.0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:weight_decay=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr=0.01
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr=0.01
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr=0.01
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:weight_decay=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:weight_decay=0.0
 ```
 
 除了可以对正则化层的权重衰减进行配置外，MMEngine 的默认优化器封装构造器的 `paramwise_cfg` 还支持对更多不同类型的参数设置超参系数，支持的配置如下：
@@ -352,32 +352,32 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 ```
 
 ```
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:lr=0.0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:weight_decay=0.0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:lr_mult=0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.weight:decay_mult=0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr=0.0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:weight_decay=0.0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:lr_mult=0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer0.bias:decay_mult=0
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:lr=0.01
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.weight:lr_mult=1
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr=0.01
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- backbone.layer1.bias:lr_mult=1
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:lr=0.001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.weight:lr_mult=0.1
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr=0.001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.linear.bias:lr_mult=0.1
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:lr=0.001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.weight:lr_mult=0.1
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:lr=0.001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - [4m[37mINFO[0m - paramwise_options -- head.bn.bias:lr_mult=0.1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:lr=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:weight_decay=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:lr_mult=0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:decay_mult=0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:weight_decay=0.0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr_mult=0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:decay_mult=0
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:lr=0.01
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:lr_mult=1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr=0.01
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr_mult=1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:lr=0.001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:lr_mult=0.1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr=0.001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr_mult=0.1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:lr=0.001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:lr_mult=0.1
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:lr=0.001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:weight_decay=0.0001
+08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:lr_mult=0.1
 ```
 
 上例中，模型的状态字典的 `key` 如下：
@@ -463,10 +463,10 @@ optimizer = build_optim_wrapper(model, optim_wrapper)
 ```
 
 ```
-08/23 22:20:26 - mmengine - [4m[37mINFO[0m - layer.linear.weight : lr=0.0025
-08/23 22:20:26 - mmengine - [4m[37mINFO[0m - layer.linear.bias : lr=0.0025
-08/23 22:20:26 - mmengine - [4m[37mINFO[0m - linear.weight : lr=0.005
-08/23 22:20:26 - mmengine - [4m[37mINFO[0m - linear.bias : lr=0.005
+08/23 22:20:26 - mmengine - INFO - layer.linear.weight : lr=0.0025
+08/23 22:20:26 - mmengine - INFO - layer.linear.bias : lr=0.0025
+08/23 22:20:26 - mmengine - INFO - linear.weight : lr=0.005
+08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
 ```
 
 `add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参[考优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
