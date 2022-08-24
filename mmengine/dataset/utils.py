@@ -8,7 +8,7 @@ from torch.utils.data._utils.collate import \
     default_collate as torch_default_collate
 
 from mmengine.registry import Registry
-from ..data import BaseDataElement
+from mmengine.structures import BaseDataElement
 
 COLLATE_FUNCTIONS = Registry('Collate Functions')
 
