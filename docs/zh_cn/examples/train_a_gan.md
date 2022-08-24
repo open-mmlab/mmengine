@@ -154,10 +154,8 @@ import torch.nn.functional as F
 from mmengine.model import BaseModel
 
 class GAN(BaseModel):
-    def __init__(self,
-                 generator,
-                 discriminator,
-                 noise_size,
+
+    def __init__(self, generator, discriminator, noise_size,
                  data_preprocessor):
         super().__init__(data_preprocessor=data_preprocessor)
         assert generator.noise_size == noise_size
@@ -167,28 +165,26 @@ class GAN(BaseModel):
 
     def train_step(self, data, optim_wrapper):
         # 获取数据和数据预处理
-        inputs_dict, data_sample = data
-        inputs_dict = self.data_preprocessor(inputs_dict, True)
-
+        inputs_dict = self.data_preprocessor(data, True)
         # 训练判别器
         disc_optimizer_wrapper = optim_wrapper['discriminator']
         with disc_optimizer_wrapper.optim_context(self.discriminator):
-            log_vars = self.train_discriminator(inputs_dict, data_sample,
+            log_vars = self.train_discriminator(inputs_dict,
                                                 disc_optimizer_wrapper)
 
         # 训练生成器
         set_requires_grad(self.discriminator, False)
         gen_optimizer_wrapper = optim_wrapper['generator']
         with gen_optimizer_wrapper.optim_context(self.generator):
-            log_vars_gen = self.train_generator(
-                inputs_dict, data_sample, gen_optimizer_wrapper)
+            log_vars_gen = self.train_generator(inputs_dict,
+                                                gen_optimizer_wrapper)
 
         set_requires_grad(self.discriminator, True)
         log_vars.update(log_vars_gen)
 
         return log_vars
 
-    def forward(self, batch_inputs, data_samples, mode= None):
+    def forward(self, batch_inputs, data_samples, mode=None):
         return batch_inputs
 
     def disc_loss(self, disc_pred_fake, disc_pred_real):
@@ -208,11 +204,10 @@ class GAN(BaseModel):
         loss, log_var = self.parse_losses(losses_dict)
         return loss, log_var
 
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer_wrapper):
+    def train_discriminator(self, inputs, optimizer_wrapper):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -224,8 +219,9 @@ class GAN(BaseModel):
         optimizer_wrapper.update_params(parsed_losses)
         return log_vars
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(real_imgs.shape[0], self.noise_size).type_as(real_imgs)
 
         fake_imgs = self.generator(z)
 
