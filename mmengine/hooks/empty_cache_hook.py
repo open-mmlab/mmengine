@@ -4,10 +4,9 @@ from typing import Optional, Sequence, Union
 import torch
 
 from mmengine.registry import HOOKS
-from mmengine.structures import BaseDataElement
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 @HOOKS.register_module()
@@ -38,18 +37,15 @@ class EmptyCacheHook(Hook):
                     runner,
                     batch_idx: int,
                     data_batch: DATA_BATCH = None,
-                    outputs: Optional[Union[dict,
-                                            Sequence[BaseDataElement]]] = None,
+                    outputs: Optional[Union[dict, Sequence]] = None,
                     mode: str = 'train') -> None:
         """Empty cache after an iteration.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
             outputs (dict or sequence, optional): Outputs from model.
-                Defaults to None.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         if self._do_after_iter:

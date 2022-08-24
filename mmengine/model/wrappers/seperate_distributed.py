@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import ExitStack, contextmanager
-from typing import Dict, List
+from typing import Dict, Union
 
 import torch
 import torch.nn as nn
@@ -9,7 +9,6 @@ from torch.nn.parallel.distributed import DistributedDataParallel
 from mmengine.device import get_device
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.structures import BaseDataElement
 from .distributed import MMDistributedDataParallel
 
 
@@ -86,13 +85,13 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                     **kwargs)
             module._modules[name] = sub_module
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapperDict): A wrapper of optimizer to
                 update parameters.
 
@@ -101,25 +100,25 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         """
         return self.module.train_step(data, optim_wrapper)
 
-    def val_step(self, data) -> List[BaseDataElement]:
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.val_step(data)
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            ForwardResults: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.test_step(data)
 

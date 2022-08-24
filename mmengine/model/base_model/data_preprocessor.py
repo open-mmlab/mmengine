@@ -1,94 +1,74 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Optional, Sequence, Tuple, Union
+import math
+from typing import Mapping, Optional, Sequence, Union
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
+from mmengine.utils import is_list_of
 from ..utils import stack_batch
+
+CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
 
 
 @MODELS.register_module()
 class BaseDataPreprocessor(nn.Module):
-    """Base data pre-processor used for collating and copying data to the
-    target device.
-
-    ``BaseDataPreprocessor`` performs data pre-processing according to the
-    following steps:
-
-    - Collates the data sampled from dataloader.
-    - Copies data to the target device.
-    - Stacks the input tensor at the first dimension.
+    """Base data pre-processor used for copying data to the target device.
 
     Subclasses inherit from ``BaseDataPreprocessor`` could override the
     forward method to implement custom data pre-processing, such as
     batch-resize, MixUp, or CutMix.
 
-    Warnings:
-        Each item of data sampled from dataloader must be a dict and at least
-        contain the ``inputs`` key. Furthermore, the value of ``inputs``
-        must be a ``Tensor`` with the same shape.
+    Note:
+        Data dictionary returned by dataloader must be a dict and at least
+        contain the ``inputs`` key.
     """
 
     def __init__(self):
         super().__init__()
         self._device = torch.device('cpu')
 
-    def collate_data(
-            self,
-            data: Sequence[dict]) -> Tuple[List[torch.Tensor], Optional[list]]:
-        """Collating and copying data to the target device.
-
-        Collates the data sampled from dataloader into a list of tensor and
-        list of labels, and then copies tensor to the target device.
-
-        Subclasses could override it to be compatible with the custom format
-        data sampled from custom dataloader.
+    def cast_data(self, data: CastData) -> CastData:
+        """Copying data to the target device.
 
         Args:
-            data (Sequence[dict]): Data sampled from dataloader.
+            data (dict): Data returned by ``DataLoader``.
 
         Returns:
-            Tuple[List[torch.Tensor], Optional[list]]: Unstacked list of input
-            tensor and list of labels at target device.
+            CollatedResult: Inputs and data sample at target device.
         """
-        inputs = [_data['inputs'].to(self._device).float() for _data in data]
-        batch_data_samples: List[BaseDataElement] = []
-        # Model can get predictions without any data samples.
-        for _data in data:
-            if 'data_sample' in _data:
-                batch_data_samples.append(_data['data_sample'])
-        # Move data from CPU to corresponding device.
-        batch_data_samples = [
-            data_sample.to(self._device) for data_sample in batch_data_samples
-        ]
+        if isinstance(data, Mapping):
+            return {key: self.cast_data(data[key]) for key in data}
+        elif isinstance(data, tuple) and hasattr(data, '_fields'):
+            # namedtuple
+            return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
+        elif isinstance(data, Sequence):
+            return [self.cast_data(sample) for sample in data]
+        elif isinstance(data, torch.Tensor):
+            return data.to(self.device)
+        elif isinstance(data, BaseDataElement):
+            return data.to(self.device)
+        else:
+            return data
 
-        if not batch_data_samples:
-            batch_data_samples = None  # type: ignore
-
-        return inputs, batch_data_samples
-
-    def forward(self,
-                data: Sequence[dict],
-                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
+    def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
 
-        After the data pre-processing of :meth:`collate_data`, ``forward``
+        After the data pre-processing of :meth:`cast_data`, ``forward``
         will stack the input tensor list to a batch tensor at the first
         dimension.
 
         Args:
-            data (Sequence[dict]): data sampled from dataloader.
+            data (dict): Data returned by dataloader
             training (bool): Whether to enable training time augmentation.
 
         Returns:
-            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
-            model input.
+            dict or list: Data in the same format as the model input.
         """
-        inputs, batch_data_samples = self.collate_data(data)
-        batch_inputs = torch.stack(inputs, dim=0)
-        return batch_inputs, batch_data_samples
+        return self.cast_data(data)  # type: ignore
 
     @property
     def device(self):
@@ -203,42 +183,79 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                                  torch.tensor(std).view(-1, 1, 1), False)
         else:
             self._enable_normalize = False
-        self.channel_conversion = rgb_to_bgr or bgr_to_rgb
+        self._channel_conversion = rgb_to_bgr or bgr_to_rgb
         self.pad_size_divisor = pad_size_divisor
         self.pad_value = pad_value
 
-    def forward(self,
-                data: Sequence[dict],
-                training: bool = False) -> Tuple[torch.Tensor, Optional[list]]:
+    def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Performs normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
         Args:
-            data (Sequence[dict]): data sampled from dataloader.
+            data (dict): Data sampled from dataset. If the collate
+                function of DataLoader is :obj:`pseudo_collate`, data will be a
+                list of dict. If collate function is :obj:`default_collate`,
+                data will be a tuple with batch input tensor and list of data
+                samples.
             training (bool): Whether to enable training time augmentation. If
                 subclasses override this method, they can perform different
                 preprocessing strategies for training and testing based on the
                 value of ``training``.
 
         Returns:
-            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
-            model input.
+            dict or list: Data in the same format as the model input.
         """
-        inputs, batch_data_samples = self.collate_data(data)
-        for idx, _input in enumerate(inputs):
-            # channel transform
-            if self.channel_conversion:
-                _input = _input[[2, 1, 0], ...]
-            # Normalization.
+        data = self.cast_data(data)  # type: ignore
+        _batch_inputs = data['inputs']
+        # Process data with `pseudo_collate`.
+        if is_list_of(_batch_inputs, torch.Tensor):
+            batch_inputs = []
+            for _batch_input in _batch_inputs:
+                # channel transform
+                if self._channel_conversion:
+                    _batch_input = _batch_input[[2, 1, 0], ...]
+                # Convert to float after channel conversion to ensure
+                # efficiency
+                _batch_input = _batch_input.float()
+                # Normalization.
+                if self._enable_normalize:
+                    if self.mean.shape[0] == 3:
+                        assert _batch_input.dim(
+                        ) == 3 and _batch_input.shape[0] == 3, (
+                            'If the mean has 3 values, the input tensor '
+                            'should in shape of (3, H, W), but got the tensor '
+                            f'with shape {_batch_input.shape}')
+                    _batch_input = (_batch_input - self.mean) / self.std
+                batch_inputs.append(_batch_input)
+            # Pad and stack Tensor.
+            batch_inputs = stack_batch(batch_inputs, self.pad_size_divisor,
+                                       self.pad_value)
+        # Process data with `default_collate`.
+        elif isinstance(_batch_inputs, torch.Tensor):
+            assert _batch_inputs.dim() == 4, (
+                'The input of `ImgDataPreprocessor` should be a NCHW tensor '
+                'or a list of tensor, but got a tensor with shape: '
+                f'{_batch_inputs.shape}')
+            if self._channel_conversion:
+                _batch_inputs = _batch_inputs[:, [2, 1, 0], ...]
+            # Convert to float after channel conversion to ensure
+            # efficiency
+            _batch_inputs = _batch_inputs.float()
             if self._enable_normalize:
-                if self.mean.shape[0] == 3:
-                    assert _input.dim() == 3 and _input.shape[0] == 3, (
-                        'If the mean has 3 values, the input tensor should in '
-                        'shape of (3, H, W), but got the tensor with shape '
-                        f'{_input.shape}')
-                _input = (_input - self.mean) / self.std
-            inputs[idx] = _input
-        # Pad and stack Tensor.
-        batch_inputs = stack_batch(inputs, self.pad_size_divisor,
-                                   self.pad_value)
-        return batch_inputs, batch_data_samples
+                _batch_inputs = (_batch_inputs - self.mean) / self.std
+            h, w = _batch_inputs.shape[2:]
+            target_h = math.ceil(
+                h / self.pad_size_divisor) * self.pad_size_divisor
+            target_w = math.ceil(
+                w / self.pad_size_divisor) * self.pad_size_divisor
+            pad_h = target_h - h
+            pad_w = target_w - w
+            batch_inputs = F.pad(_batch_inputs, (0, pad_w, 0, pad_h),
+                                 'constant', self.pad_value)
+        else:
+            raise TypeError('Output of `cast_data` should be a list of dict '
+                            'or a tuple with inputs and data_samples, but got'
+                            f'{type(data)}： {data}')
+        data['inputs'] = batch_inputs
+        data.setdefault('data_samples', None)
+        return data

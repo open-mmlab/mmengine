@@ -1,12 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, List
+from typing import Any, Dict, Union
 
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.structures import BaseDataElement
 from ..utils import detect_anomalous_params
 
 
@@ -90,7 +89,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         super().__init__(module=module, **kwargs)
         self.detect_anomalous_params = detect_anomalous_params
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -105,7 +104,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         - Return log messages of losses.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
@@ -114,33 +113,53 @@ class MMDistributedDataParallel(DistributedDataParallel):
         """
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.module.data_preprocessor(
-                data, training=True)
-            losses = self(batch_inputs, data_samples, mode='loss')
+            data = self.module.data_preprocessor(data, training=True)
+            losses = self._run_forward(data, mode='loss')
         if self.detect_anomalous_params:
             detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement] or dict: The predictions of given data.
+            list: The predictions of given data.
         """
-        return self.module.val_step(data)
+        data = self.module.data_preprocessor(data, training=False)
+        return self._run_forward(data, mode='predict')
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
-        return self.module.test_step(data)
+        data = self.module.data_preprocessor(data, training=False)
+        return self._run_forward(data, mode='predict')
+
+    def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results
