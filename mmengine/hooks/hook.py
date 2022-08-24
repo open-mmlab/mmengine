@@ -244,7 +244,7 @@ class Hook:
                        runner,
                        batch_idx: int,
                        data_batch: DATA_BATCH = None,
-                       data_samples: Optional[Sequence] = None) -> None:
+                       outputs: Optional[Sequence] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 
@@ -252,20 +252,20 @@ class Hook:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
-            data_samples (Sequence, optional): Outputs from model.
+            outputs (Sequence, optional): Outputs from model.
         """
         self._after_iter(
             runner,
             batch_idx=batch_idx,
             data_batch=data_batch,
-            outputs=data_samples,
+            outputs=outputs,
             mode='val')
 
     def after_test_iter(self,
                         runner,
                         batch_idx: int,
                         data_batch: DATA_BATCH = None,
-                        data_samples: Optional[Sequence] = None) -> None:
+                        outputs: Optional[Sequence] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test iteration.
 
@@ -273,13 +273,13 @@ class Hook:
             runner (Runner): The runner of the training  process.
             batch_idx (int): The index of the current batch in the test loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
-            data_samples (Sequence, optional): Outputs from model.
+            outputs (Sequence, optional): Outputs from model.
         """
         self._after_iter(
             runner,
             batch_idx=batch_idx,
             data_batch=data_batch,
-            outputs=data_samples,
+            outputs=outputs,
             mode='test')
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:

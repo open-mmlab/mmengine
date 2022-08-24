@@ -154,7 +154,7 @@ class LoggerHook(Hook):
                        runner,
                        batch_idx: int,
                        data_batch: DATA_BATCH = None,
-                       data_samples: Optional[Sequence] = None) -> None:
+                       outputs: Optional[Sequence] = None) -> None:
         """Record logs after validation iteration.
 
         Args:
@@ -163,7 +163,7 @@ class LoggerHook(Hook):
                 loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
                 Defaults to None.
-            data_samples (sequence, optional): Outputs from model.
+            outputs (sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
             _, log_str = runner.log_processor.get_log_after_iter(
@@ -174,14 +174,14 @@ class LoggerHook(Hook):
                         runner,
                         batch_idx: int,
                         data_batch: DATA_BATCH = None,
-                        data_samples: Optional[Sequence] = None) -> None:
+                        outputs: Optional[Sequence] = None) -> None:
         """Record logs after testing iteration.
 
         Args:
             runner (Runner): The runner of the testing process.
             batch_idx (int): The index of the current batch in the test loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
-            data_samples (sequence, optional): Outputs from model.
+            outputs (sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self.interval):
             _, log_str = runner.log_processor.get_log_after_iter(

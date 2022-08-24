@@ -53,17 +53,17 @@ class NaiveVisualizationHook(Hook):
                         runner,
                         batch_idx: int,
                         data_batch: DATA_BATCH = None,
-                        data_samples: Optional[Sequence] = None) -> None:
+                        outputs: Optional[Sequence] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the test loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
-            data_samples (Sequence, optional): Outputs from model.
+            outputs (Sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self._interval):
-            for data, output in zip(data_batch, data_samples):  # type: ignore
+            for data, output in zip(data_batch, outputs):  # type: ignore
                 input = data['inputs']
                 data_sample = data['data_sample']
                 input = tensor2imgs(input,
