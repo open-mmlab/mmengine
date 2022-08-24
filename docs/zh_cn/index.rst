@@ -18,30 +18,48 @@
    tutorials/hook.md
    tutorials/optimizer.md
    tutorials/param_scheduler.md
+   tutorials/metric_and_evaluator.md
    tutorials/data_element.md
    tutorials/basedataset.md
-   tutorials/evaluator.md
    tutorials/distributed.md
    tutorials/logging.md
-   tutorials/visualizer.md
+   tutorials/visualization.md
+   tutorials/utils.md
 
 .. toctree::
    :maxdepth: 1
-   :caption: 示例
+   :caption: 高频示例
 
    examples/speed_up_training.md
+   examples/save_gpu_memory.md
 
 .. toctree::
    :maxdepth: 1
    :caption: 架构设计
 
    design/hook.md
+   design/runner.md
 
 .. toctree::
    :maxdepth: 2
    :caption: API 文档
 
-   api.rst
+   mmengine.registry <api/registry>
+   mmengine.config <api/config>
+   mmengine.runner <api/runner>
+   mmengine.hooks <api/hooks>
+   mmengine.model <api/model>
+   mmengine.optim <api/optim>
+   mmengine.evaluator <api/evaluator>
+   mmengine.structures <api/structures>
+   mmengine.dataset <api/dataset>
+   mmengine.device <api/device>
+   mmengine.hub <api/hub>
+   mmengine.logging <api/logging>
+   mmengine.visualization <api/visualization>
+   mmengine.fileio <api/fileio>
+   mmengine.dist <api/dist>
+   mmengine.utils <api/utils>
 
 .. toctree::
    :caption: 语言切换
