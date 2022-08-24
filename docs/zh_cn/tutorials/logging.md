@@ -4,7 +4,7 @@
 
 ## 灵活的日志统计方式
 
-我们通过可以在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
+我们可以通过在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
