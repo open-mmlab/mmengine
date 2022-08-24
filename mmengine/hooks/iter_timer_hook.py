@@ -3,7 +3,6 @@ import time
 from typing import Optional, Sequence, Union
 
 from mmengine.registry import HOOKS
-from mmengine.structures import BaseDataElement
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]

@@ -7,7 +7,6 @@ import numpy as np
 
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.structures import BaseDataElement
 from mmengine.utils.dl_utils import tensor2imgs
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]

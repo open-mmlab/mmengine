@@ -25,7 +25,7 @@ if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
 
 class ToyDataPreprocessor(BaseDataPreprocessor):
 
-    def forward(self, data: dict, training: bool = False) -> dict:
+    def forward(self, data: dict, training: bool = False):
         self.called = True
         return super().forward(data, training)
 
