@@ -33,13 +33,18 @@ for img, data_sample in dataloader:
 - 一个训练或测试样本(例如一张图像)的所有的标注信息和预测信息的集合，例如数据集的输出、模型以及可视化器的输入一般为单个训练或测试样本的所有信息。MMEngine将其定义为数据样本(DataSample)
 - 单一类型的预测或标注，一般是算法模型中某个子模块的输出, 例如二阶段检测中RPN的输出、语义分割模型的输出、关键点分支的输出， GAN中生成器的输出等。MMengine将其定义为数据元素(XXXData)
 
-下边首先介绍一下数据样本与数据元素的基类 `BaseDataElement`.
+下边首先介绍一下数据样本与数据元素的基类 [BaseDataElement](mmengine.structures.BaseDataElement)。
 
 ## 数据基类(BaseDataElement)
 
 `BaseDataElement` 中存在两种类型的数据，一种是 `data` 类型，如标注框、框的标签、和实例掩码等；另一种是 `metainfo` 类型，包含数据的元信息以确保数据的完整性，如 `img_shape`, `img_id` 等数据所在图片的一些基本信息，方便可视化等情况下对数据进行恢复和使用。用户在创建 `BaseDataElement` 的过程中需要对这两类属性的数据进行显式地区分和声明。
 
-为了使用的高效便捷性，`data` 和 `metainfo` 中的数据均为 `BaseDataElement`的属性，可以通过访问类属性的方式直接访问存储的数据。同时对于 `data` 内的数据提供了基本的增/删/改/查功能，同时支持不同设备之间的迁移，支持类字典和张量的操作，可以充分满足算法库对于这些数据的使用要求。
+为了能够更加方便地使用 `BaseDataElement`，`data` 和 `metainfo` 中的数据均为 `BaseDataElement` 的属性。我们可以通过访问类属性的方式直接访问 `data` 和 `metainfo` 中的数据。此外，`BaseDataElement` 还提供了很多方法，方便我们操作 `data` 内的数据：
+
+- 增/删/改/查 `data` 中不同字段的数据
+- 将 `data` 迁移至目标设备
+- 支持像访问字典/张量一样访问 data 内的数据
+  以充分满足算法库对于这些数据的使用要求。
 
 ### 1. 数据元素的创建
 
@@ -69,8 +74,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 metainfo 和 data，用与创建仅 data 或 metainfo
-具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 BaseDataElement 与被clone 的 `BaseDataElement` 包含相同状态和数据的 `data` 内容，但 `metainfo` 为新设置的内容。
+用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建仅 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 BaseDataElement 与被clone 的 `BaseDataElement` 包含相同状态和数据的 `data` 内容，但 `metainfo` 为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
@@ -105,7 +109,7 @@ label in data_element2 is True
 
 ### 3. 属性的增加与查询
 
-对增加属性而言，对 `data` 内的属性，用户可以像增加类属性那样增加，对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示的修改。
+对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示的修改。
 
 对查询而言，用户可以可以通过 `keys`，`values`，和 `items` 来访问只存在于 data 中的键值，也可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值。
 用户还能通过 `all_keys`，`all_values`， `all_items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
@@ -217,7 +221,7 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 ### 4. 属性的删改
 
-`BaseDataElement` 支持用户可以像使用一个类一样对它的`data`进行删改, 对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
+用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
 
 同时为了操作的便捷性，对 `data` 和 `metainfo` 中的数据可以通过 `del` 直接删除，也支持 `pop` 在在访问属性后删除属性。
 
@@ -370,16 +374,15 @@ print(instance_data)
 
 ## 数据元素(xxxData)
 
-MMEngine 将可能的数据元素情况划分为三个类别:
+MMEngine 将数据元素情况划分为三个类别:
 
-- 实例数据(InstanceData): 主要针对的是上层任务(high-level)中，对图像中所有实例相关的数据进行封装，比如检测框(bounding boxes), 物体类别(box labels),实例掩码(instance masks), 关键点(key points), 文字边界(polygons), 跟踪id(tracking ids) 等. 所有实例相关的数据的**数据长度一致**，均为实例的长度。
-- 像素数据(PixelData): 主要针对底层任务(low-level) 以及需要感知像素级别的部分 high-level中，对像素级相关的数据进行封装，比如语义分割中的分割图(segmentation map), 光流任务中的光流图(flow map), 全景分割中的全景分割图(panoptic seg map), 以及底层任务中的生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图等。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度(height)和宽度(width)，且具有相同的height和width.
+- 实例数据(InstanceData): 主要针对的是上层任务(high-level)中，对图像中所有实例相关的数据进行封装，比如检测框(bounding boxes), 物体类别(box labels),实例掩码(instance masks), 关键点(key points), 文字边界(polygons), 跟踪id(tracking ids) 等. 所有实例相关的数据的**长度一致**，均为图像中实例的个数。
+- 像素数据(PixelData): 主要针对底层任务(low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图（segmentation map）, 光流任务中的光流图（flow map）, 全景分割中的全景分割图（panoptic seg map）；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度(height)和宽度(width)，且具有相同的height和width
 - 标签数据(LabelData): 主要标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
 
 ### InstanceData
 
-`InstanceData` 在 `BaseDataElement` 的基础上，对 data 中存储的数据做了限制，即存储在 data 中的数据的长度均相同。比如在目标检测中, 假设一张图像中有 N 个目标(instance)，可以将图像的所有边界框(bbox)，类别(label)等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和label 的长度相同
-均为 N。
+[`InstanceData`](mmengine.structures.InstanceData) 在 `BaseDataElement` 的基础上，对 `data` 存储的数据做了限制，即要求存储在 `data` 中的数据的长度一致。比如在目标检测中, 假设一张图像中有 N 个目标(instance)，可以将图像的所有边界框(bbox)，类别(label)等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和 label 的长度相同。
 基于上述假定对 `InstanceData`进行了扩展，包括：
 
 - 对 `InstanceData` 中 data 所存储的数据进行了长度校验
@@ -576,7 +579,7 @@ print(empty_results)
 
 #### 拼接(cat)
 
-`InstanceData` 支持具有**相同的 `key`** 的 `InstanceData` 的拼接功能。对于长度分别为 N 和 M 的两个 `InstanceData`， 拼接后为长度 N + M 的新的 `InstanceData`
+用户可以将两个具有相同 key 的 `InstanceData` 拼接成一个 `InstanceData`。对于长度分别为 N 和 M 的两个 `InstanceData`， 拼接后为长度 N + M 的新的 `InstanceData`
 
 ```python
 img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
@@ -718,7 +721,7 @@ print(instance_data.cat([instance_data, instance_data]))
 
 ### PixelData
 
-`PixelData` 在 `BaseDataElement` 的基础上，同样对对 data 中存储的数据做了限制:
+[`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对对 data 中存储的数据做了限制:
 
 - 所有 data 内的数据均为 3 维，并且顺序为 (通道，高， 宽)
 - 所有在 data 内的数据要有相同的长和宽
@@ -816,7 +819,7 @@ The shape of slice_data is (10, 20)
 
 ### LabelData
 
-`LabelData` 主要用来封装标签数据，如场景分类标签，文字识别标签等。`LabelData` 没有对 data 做任何限制，只提供了两个额外功能：onehot 与 index 的转换。
+[`LabelData`](mmengine.structures.LabelData) 主要用来封装标签数据，如场景分类标签，文字识别标签等。`LabelData` 没有对 data 做任何限制，只提供了两个额外功能：onehot 与 index 的转换。
 
 ```python
 from mmengine import LabelData
