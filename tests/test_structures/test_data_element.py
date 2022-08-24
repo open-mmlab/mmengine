@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.data import BaseDataElement
+from mmengine.structures import BaseDataElement
 
 
 class TestBaseDataElement(TestCase):

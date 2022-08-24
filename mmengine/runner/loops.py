@@ -139,8 +139,8 @@ class _InfiniteDataloaderIterator:
     It resets the dataloader to continue iterating when the iterator has
     iterated over all the data. However, this approach is not efficient, as the
     workers need to be restarted every time the dataloader is reset. It is
-    recommended to use `mmengine.data.InfiniteSampler` to enable the dataloader
-    to iterate infinitely.
+    recommended to use `mmengine.dataset.InfiniteSampler` to enable the
+    dataloader to iterate infinitely.
     """
 
     def __init__(self, dataloader: DataLoader) -> None:
@@ -157,8 +157,9 @@ class _InfiniteDataloaderIterator:
         except StopIteration:
             warnings.warn('Reach the end of the dataloader, it will be '
                           'restarted and continue to iterate. It is '
-                          'recommended to use `mmengine.data.InfiniteSampler` '
-                          'to enable the dataloader to iterate infinitely.')
+                          'recommended to use '
+                          '`mmengine.dataset.InfiniteSampler` to enable the '
+                          'dataloader to iterate infinitely.')
             self._epoch += 1
             if hasattr(self._dataloader, 'sampler') and hasattr(
                     self._dataloader.sampler, 'set_epoch'):

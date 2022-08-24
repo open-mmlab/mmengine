@@ -4,9 +4,9 @@ from typing import Dict, List
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel
 
-from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
+from mmengine.structures import BaseDataElement
 from ..utils import detect_anomalous_params
 
 

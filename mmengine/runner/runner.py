@@ -20,16 +20,16 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.dataset import pseudo_collate, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only, sync_random_seed)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
+from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper)
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -37,14 +37,15 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
                                VISUALIZERS, DefaultScope,
                                count_registered_modules)
-from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_seq_of, revert_sync_batchnorm,
-                            set_multi_processing)
+from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, get_state_dict,
                          save_checkpoint, weights_to_cpu)
+from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 
@@ -181,7 +182,7 @@ class Runner:
             Defaults to None.
 
     Examples:
-        >>> from mmengine import Runner
+        >>> from mmengine.runner import Runner
         >>> cfg = dict(
         >>>     model=dict(type='ToyModel'),
         >>>     work_dir='path/of/work_dir',

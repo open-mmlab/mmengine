@@ -5,7 +5,8 @@ from unittest import TestCase
 import torch.cuda
 
 import mmengine
-from mmengine.utils.collect_env import _get_cuda_home, collect_env
+from mmengine.utils.dl_utils import collect_env
+from mmengine.utils.dl_utils.parrots_wrapper import _get_cuda_home
 
 
 class TestCollectEnv(TestCase):

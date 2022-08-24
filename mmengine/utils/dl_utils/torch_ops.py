@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 
+from ..version_utils import digit_version
 from .parrots_wrapper import TORCH_VERSION
-from .version_utils import digit_version
 
 _torch_version_meshgrid_indexing = (
     'parrots' not in TORCH_VERSION

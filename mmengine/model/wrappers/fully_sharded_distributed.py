@@ -7,9 +7,9 @@ from torch.distributed import ProcessGroup
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
 
-from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS, Registry
+from mmengine.structures import BaseDataElement
 
 # support customize fsdp policy
 FSDP_WRAP_POLICYS = Registry('fsdp wrap policy')

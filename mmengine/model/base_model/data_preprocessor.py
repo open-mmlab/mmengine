@@ -4,8 +4,8 @@ from typing import List, Optional, Sequence, Tuple, Union
 import torch
 import torch.nn as nn
 
-from mmengine.data import BaseDataElement
 from mmengine.registry import MODELS
+from mmengine.structures import BaseDataElement
 from ..utils import stack_batch
 
 

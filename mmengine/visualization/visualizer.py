@@ -16,9 +16,9 @@ from matplotlib.patches import Circle
 from matplotlib.pyplot import new_figure_manager
 
 from mmengine.config import Config
-from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.registry import VISBACKENDS, VISUALIZERS
+from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,

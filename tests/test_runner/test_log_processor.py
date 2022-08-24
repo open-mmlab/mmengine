@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.logging import HistoryBuffer, LogProcessor, MessageHub, MMLogger
+from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
+from mmengine.runner import LogProcessor
 
 
 class TestLogProcessor:

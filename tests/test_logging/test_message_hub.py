@@ -4,9 +4,9 @@ from collections import OrderedDict
 
 import numpy as np
 import pytest
-import torch
 
 from mmengine.logging import HistoryBuffer, MessageHub
+from mmengine.utils import is_installed
 
 
 class NoDeepCopy:
@@ -84,7 +84,9 @@ class TestMessageHub:
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
 
+    @pytest.mark.skipif(not is_installed('torch'), reason='requires torch')
     def test_get_scalars(self):
+        import torch
         message_hub = MessageHub.get_instance('mmengine')
         log_dict = dict(
             loss=1,

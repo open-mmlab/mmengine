@@ -3,7 +3,7 @@ import warnings
 
 import torch
 
-from .version_utils import digit_version
+from ..version_utils import digit_version
 
 
 def is_jit_tracing() -> bool:

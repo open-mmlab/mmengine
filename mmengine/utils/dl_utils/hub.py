@@ -4,9 +4,9 @@
 # torch >= 1.6.0 but loaded in torch < 1.7.0.
 # More details at https://github.com/open-mmlab/mmpose/issues/904
 
+from ..path import mkdir_or_exist
+from ..version_utils import digit_version
 from .parrots_wrapper import TORCH_VERSION
-from .path import mkdir_or_exist
-from .version_utils import digit_version
 
 if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
         '1.7.0'):

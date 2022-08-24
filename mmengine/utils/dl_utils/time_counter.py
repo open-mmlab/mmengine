@@ -24,7 +24,7 @@ class TimeCounter:
 
     Examples:
         >>> import time
-        >>> from mmengine.utils import TimeCounter
+        >>> from mmengine.utils.dl_utils import TimeCounter
         >>> @TimeCounter()
         ... def fun1():
         ...     time.sleep(0.1)

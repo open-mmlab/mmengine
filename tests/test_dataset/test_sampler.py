@@ -6,7 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from mmengine.data import DefaultSampler, InfiniteSampler
+from mmengine.dataset import DefaultSampler, InfiniteSampler
 
 
 class TestDefaultSampler(TestCase):
@@ -15,7 +15,7 @@ class TestDefaultSampler(TestCase):
         self.data_length = 100
         self.dataset = list(range(self.data_length))
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(0, 1))
     def test_non_dist(self, mock):
         sampler = DefaultSampler(self.dataset)
         self.assertEqual(sampler.world_size, 1)
@@ -33,7 +33,7 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(sampler.num_samples, self.data_length)
         self.assertEqual(list(sampler), list(range(self.data_length)))
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(2, 3))
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(2, 3))
     def test_dist(self, mock):
         sampler = DefaultSampler(self.dataset)
         self.assertEqual(sampler.world_size, 3)
@@ -56,8 +56,8 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(len(sampler), sampler.num_samples)
         self.assertEqual(list(sampler), list(range(self.data_length))[2::3])
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
-    @patch('mmengine.data.sampler.sync_random_seed', return_value=7)
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.dataset.sampler.sync_random_seed', return_value=7)
     def test_shuffle(self, mock1, mock2):
         # test seed=None
         sampler = DefaultSampler(self.dataset, seed=None)
@@ -87,7 +87,7 @@ class TestInfiniteSampler(TestCase):
         self.data_length = 100
         self.dataset = list(range(self.data_length))
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(0, 1))
     def test_non_dist(self, mock):
         sampler = InfiniteSampler(self.dataset)
         self.assertEqual(sampler.world_size, 1)
@@ -101,7 +101,7 @@ class TestInfiniteSampler(TestCase):
         items = [next(sampler_iter) for _ in range(self.data_length * 2)]
         self.assertEqual(items, list(range(self.data_length)) * 2)
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(2, 3))
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(2, 3))
     def test_dist(self, mock):
         sampler = InfiniteSampler(self.dataset)
         self.assertEqual(sampler.world_size, 3)
@@ -117,8 +117,8 @@ class TestInfiniteSampler(TestCase):
         print(samples)
         self.assertEqual(samples, targets)
 
-    @patch('mmengine.data.sampler.get_dist_info', return_value=(0, 1))
-    @patch('mmengine.data.sampler.sync_random_seed', return_value=7)
+    @patch('mmengine.dataset.sampler.get_dist_info', return_value=(0, 1))
+    @patch('mmengine.dataset.sampler.sync_random_seed', return_value=7)
     def test_shuffle(self, mock1, mock2):
         # test seed=None
         sampler = InfiniteSampler(self.dataset, seed=None)

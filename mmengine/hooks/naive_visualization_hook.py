@@ -5,10 +5,10 @@ from typing import Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
-from mmengine.data import BaseDataElement
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.utils.misc import tensor2imgs
+from mmengine.structures import BaseDataElement
+from mmengine.utils.dl_utils import tensor2imgs
 
 
 # TODO: Due to interface changes, the current class

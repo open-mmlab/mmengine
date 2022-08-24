@@ -2,7 +2,8 @@
 import pytest
 import torch
 
-from mmengine.utils import digit_version, is_jit_tracing
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import is_jit_tracing
 
 
 @pytest.mark.skipif(

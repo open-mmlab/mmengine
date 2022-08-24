@@ -2,7 +2,7 @@
 import pytest
 import torch
 
-from mmengine.utils import torch_meshgrid
+from mmengine.utils.dl_utils import torch_meshgrid
 
 
 def test_torch_meshgrid():

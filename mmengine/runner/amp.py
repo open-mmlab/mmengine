@@ -7,7 +7,8 @@ import torch
 
 from mmengine.device import get_device
 from mmengine.logging import print_log
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 @contextmanager

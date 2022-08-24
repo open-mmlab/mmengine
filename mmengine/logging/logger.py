@@ -7,7 +7,6 @@ from typing import Optional, Union
 
 from termcolor import colored
 
-from mmengine.dist import get_rank
 from mmengine.utils import ManagerMixin
 from mmengine.utils.manager import _accquire_lock, _release_lock
 
@@ -152,7 +151,8 @@ class MMLogger(Logger, ManagerMixin):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-        rank = get_rank()
+
+        rank = _get_rank()
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
@@ -289,3 +289,14 @@ def print_log(msg,
         raise TypeError(
             '`logger` should be either a logging.Logger object, str, '
             f'"silent", "current" or None, but got {type(logger)}')
+
+
+def _get_rank():
+    """Support using logging module without torch."""
+    try:
+        # requires torch
+        from mmengine.dist import get_rank
+    except ImportError:
+        return 0
+    else:
+        return get_rank()

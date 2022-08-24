@@ -4,10 +4,10 @@ import os.path as osp
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
 
-from mmengine.data import BaseDataElement
 from mmengine.fileio import FileClient, dump
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
+from mmengine.structures import BaseDataElement
 from mmengine.utils import is_tuple_of, scandir
 
 DATA_BATCH = Optional[Sequence[dict]]
