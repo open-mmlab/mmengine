@@ -67,6 +67,10 @@ runner.train()
 08/21 02:58:49 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0030  data_time: 0.0012  loss1: 0.4521  loss2: 0.3939  loss: 0.5600
 ```
 
+```{note}
+log_processor 默认输出 `by_epoch=True` 格式的日志。日志格式需要和 `train_cfg` 中的 `by_epoch` 参数保持一致，例如我们想按迭代次数输出日志，就需要另 `log_processor` 和 `train_cfg` 的 `by_epoch=False`。
+```
+
 其中 `data_src` 为原日志名，`mean` 为统计方法，`global` 为统计方法的参数。这样的话，日志中统计的 `loss1` 就是全局均值。我们可以在日志处理器中配置以下统计方法：
 
 | 统计方法 | 参数        | 功能                   |
