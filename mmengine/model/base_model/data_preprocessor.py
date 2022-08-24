@@ -54,7 +54,7 @@ class BaseDataPreprocessor(nn.Module):
         else:
             return data
 
-    def forward(self, data: dict, training: bool = False) -> dict:
+    def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
 
         After the data pre-processing of :meth:`cast_data`, ``forward``
@@ -66,8 +66,7 @@ class BaseDataPreprocessor(nn.Module):
             training (bool): Whether to enable training time augmentation.
 
         Returns:
-            Tuple[torch.Tensor, Optional[list]]: Data in the same format as the
-            model input.
+            dict or list: Data in the same format as the model input.
         """
         return self.cast_data(data)  # type: ignore
 
@@ -188,7 +187,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         self.pad_size_divisor = pad_size_divisor
         self.pad_value = pad_value
 
-    def forward(self, data: dict, training: bool = False) -> dict:
+    def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Performs normalization、padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
@@ -204,7 +203,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                 value of ``training``.
 
         Returns:
-            dict: Data in the same format as the model input.
+            dict or list: Data in the same format as the model input.
         """
         data = self.cast_data(data)  # type: ignore
         _batch_inputs = data['inputs']

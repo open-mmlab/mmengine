@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional, Union
 
 from mmengine.registry import HOOKS
 from mmengine.utils import get_git_hash
 from mmengine.version import __version__
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 @HOOKS.register_module()
