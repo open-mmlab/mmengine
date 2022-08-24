@@ -2,7 +2,7 @@
 
 ## 简介
 
-随着支持的深度学习任务越来越多，用户的需求不断增加，MMCV 的执行器（Runner）逐渐难以满足需求。MMEngine 在此基础上，扩大了执行器的作用域，让执行器承担更多的功能；抽象出[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)以满足更加复杂的训练流程。在开始迁移前，建议先阅读[执行器教程](../tutorials/runner.md)
+随着支持的深度学习任务越来越多，用户的需求不断增加，MMCV 的执行器（Runner）逐渐难以满足需求。MMEngine 在此基础上，扩大了执行器的作用域，让执行器承担更多的功能；抽象出[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)以满足更加复杂的执行流程。在开始迁移前，建议先阅读[执行器教程](../tutorials/runner.md)
 
 ## 迁移执行器（Runner）
 
@@ -600,7 +600,7 @@ runner = EpochBasedRunner(
 `train_cfg` 实际上是训练循环控制器的构造参数，当 `by_epoch=True` 时，使用 `EpochBasedTrainLoop`。
 
 ```python
-from mmengine import Runner
+from mmengine.runner import Runner
 
 runner = Runner(
     model=model,  # 待优化的模型
