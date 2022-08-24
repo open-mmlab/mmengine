@@ -4,7 +4,13 @@
 
 ## 灵活的日志统计方式
 
-执行器在不配置日志处理器时，默认输出如下：
+我们通过可以在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
+
+```python
+log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
+```
+
+其输出的日志格式如下：
 
 ```python
 import torch
@@ -44,7 +50,23 @@ runner.train()
 08/21 02:58:41 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0029  data_time: 0.0010  loss1: 0.1978  loss2: 0.4312  loss: 0.6290
 ```
 
-[日志处理器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)默认会统计最近 10 次迭代损失的均值。我们可以通过配置日志处理器，来统计损失的全局均值。在上例中，日志处理器每 10 次迭代就会重新统计 `loss1` 和 `loss2` 的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，可以这样配置：
+以训练阶段为例，日志处理器默认会按照以下方式统计执行器输出的日志：
+
+- 日志前缀：
+  - Epoch 模式（`by_epoch=True`）: `Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
+  - Iter 模式（`by_epoch=False`）： `Iter(train) [{当前迭代次数}/{总迭代次数}]`
+- 学习率（`lr`）：统计最近一次迭代，参数更新的学习率
+- 时间
+  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平局时间
+  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平局时间
+  - 剩余时间（`eta`）：根据总迭代次数和历次迭代时间计算出来的总剩余时间，剩余时间随着迭代次数增加逐渐趋于稳定
+- 损失：模型前向推理得到的各种字段的损失，默认统计最近 `window_size` 的平均损失。
+
+默认情况下，`window_size=10`，日志处理器会统计最近 10 次迭代，损失、迭代时间、数据时间的均值。
+默认情况下，所有日志的有效位数（`num_digits` 参数）为 4。
+默认情况下，输出所有自定义日志最近一次迭代的值。
+
+基于上述规则，代码示例中的日志处理器会输出 `loss1` 和 `loss2` 每 10 次迭代的均值。如果我们想统计 `loss1` 从第一次迭代开始至今的全局均值，可以这样配置：
 
 ```python
 runner = Runner(
@@ -175,7 +197,7 @@ runner = Runner(
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
     log_processor=dict(
         custom_cfg=[
-        # 统计 loss1 的局部最大值，统计窗口为 10，并在日志中重命名为 loss1_local_max
+        # 统计 loss_tmp 的局部均值
             dict(
                 data_src='loss_tmp',
                 window_size=10,
