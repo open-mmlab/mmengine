@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Sequence
+from typing import Optional, Union
 
 from mmengine.registry import HOOKS
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 @HOOKS.register_module()
@@ -24,12 +24,12 @@ class ParamSchedulerHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
                 In order to keep this interface consistent with other hooks,
-                we keep ``data_batch`` here. Defaults to None.
+                we keep ``data_batch`` here.
             outputs (dict, optional): Outputs from model.
                 In order to keep this interface consistent with other hooks, we
-                keep ``data_batch`` here. Defaults to None.
+                keep ``data_batch`` here.
         """
 
         def step(param_schedulers):
