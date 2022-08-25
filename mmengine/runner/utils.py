@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-import os
 import random
 from typing import List, Optional, Tuple
 
@@ -68,9 +67,9 @@ def set_random_seed(seed: Optional[int] = None,
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    # torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    # os.environ['PYTHONHASHSEED'] = str(seed)
     if deterministic:
         if torch.backends.cudnn.benchmark:
             print_log(
