@@ -1065,7 +1065,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(loop, CustomTrainLoop)
 
         # test use pytorch default worker_init_fn
-        runner._train_dataloader.worker_init_fn = 'pytorch-default'
+        runner._train_dataloader.worker_init_fn = 'pytorch'
         runner._train_dataloader.num_workers = 0
         loop = runner.build_train_loop(cfg)
         self.assertIsNone(loop.dataloader.worker_init_fn)
@@ -1075,10 +1075,9 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
 
-        for worker_init_fn_cfg in ['default', None]:
-            runner._train_dataloader.worker_init_fn = worker_init_fn_cfg
-            loop = runner.build_train_loop(cfg)
-            self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
+        runner._train_dataloader.worker_init_fn = 'mmengine'
+        loop = runner.build_train_loop(cfg)
+        self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
 
     def test_build_val_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
