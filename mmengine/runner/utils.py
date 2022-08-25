@@ -9,7 +9,8 @@ import torch
 
 from mmengine.dist import get_rank, sync_random_seed
 from mmengine.logging import print_log
-from mmengine.utils import TORCH_VERSION, digit_version, is_list_of
+from mmengine.utils import digit_version, is_list_of
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 def calc_dynamic_intervals(
