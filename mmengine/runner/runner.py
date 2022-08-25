@@ -1371,21 +1371,20 @@ class Runner:
 
         # build dataloader
         init_fn: Optional[partial]
-        init_fn_type = dataloader_cfg.pop('worker_init_fn', 'default')
-        if init_fn_type == 'default' or init_fn_type is None:
-            if seed is not None:
-                init_fn = partial(
-                    worker_init_fn,
-                    num_workers=dataloader_cfg.get('num_workers'),
-                    rank=get_rank(),
-                    seed=seed)
-            else:
-                init_fn = None
+        init_fn_type = dataloader_cfg.pop('worker_init_fn', 'mmengine')
+
+        assert init_fn_type in ('mmengine', 'pytorch'), (
+            '`worker_init_fn` should only be `pytorch-default`, '
+            f'`default` or None. but got {init_fn_type}')
+        if init_fn_type == 'mmengine' and seed is not None:
+            init_fn = partial(
+                worker_init_fn,
+                num_workers=dataloader_cfg.get('num_workers'),
+                rank=get_rank(),
+                seed=seed)
         else:
-            assert init_fn_type == 'pytorch-default', (
-                '`worker_init_fn` should only be `pytorch-default`, '
-                f'`default` or None. but got {init_fn_type}')
             init_fn = None
+
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
                 and digit_version(TORCH_VERSION) < digit_version('1.7.0')):
