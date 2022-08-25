@@ -1,6 +1,6 @@
 # 配置（Config）
 
-MMEngine 实现了抽象的配置类，为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
+MMEngine 实现了抽象的配置类（Config），为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
 
 在开始教程之前，我们先将教程中需要用到的配置文件下载到本地（建议在临时目录下执行，方便后续删除示例配置文件）：
 
@@ -20,6 +20,7 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_runtime.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/runtime_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/modify_base_var.py
 ```
 
 ## 配置文件读取
@@ -335,9 +336,6 @@ model = dict(type='ResNet', depth=50)
 `resnet50_dump.yaml`
 
 ```yaml
-gpu_ids:
-- 0
-- 1
 model:
   depth: 50
   type: ResNet
@@ -351,7 +349,7 @@ optimizer:
 `resnet50_dump.json`
 
 ```json
-{"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "gpu_ids": [0, 1], "model": {"type": "ResNet", "depth": 50}}
+{"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "model": {"type": "ResNet", "depth": 50}}
 ```
 
 此外，`dump` 不仅能导出加载自文件的 `cfg`，还能导出加载自字典的 `cfg`
@@ -374,9 +372,9 @@ b=2
 
 ### 预定义字段
 
-有时候我们希望配置文件中的一些字段和当前路径或者文件名等相关，这里举一个典型使用场景的例子。在训练模型时，我们会在配置文件中定义一个工作目录，存放这组实验配置的模型和日志，那么对于不同的配置文件，我们期望定义不同的工作目录。用户的一种常见选择是，直接使用配置文件名作为工作目录名的一部分，例如对于配置文件 `config_setting1.py`，工作目录就是 `./work_dir/config_setting1`。
+有时候我们希望配置文件中的一些字段和当前路径或者文件名等相关，这里举一个典型使用场景的例子。在训练模型时，我们会在配置文件中定义一个工作目录，存放这组实验配置的模型和日志，那么对于不同的配置文件，我们期望定义不同的工作目录。用户的一种常见选择是，直接使用配置文件名作为工作目录名的一部分，例如对于配置文件 `predefined_var.py`，工作目录就是 `./work_dir/predefined_var`。
 
-使用预定义字段可以方便地实现这种需求，在配置文件 `config_setting1.py` 中可以这样写：
+使用预定义字段可以方便地实现这种需求，在配置文件 `predefined_var.py` 中可以这样写：
 
 ```Python
 work_dir = './work_dir/{{ fileBasenameNoExtension }}'
@@ -402,7 +400,7 @@ print(cfg.work_dir)
 
 ### 命令行修改配置
 
-有时候我们只希望修部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
+有时候我们只希望修改部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
 
 1. 使用 `argparser` 解析脚本运行的参数
 2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
@@ -476,16 +474,10 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 我们成功地把学习率从 0.01 修改成 0.1。如果想改变列表、元组类型的配置，如上例中的 `in_channels`，则需要在命令行赋值时给 `()`，`[]` 外加上双引号：
 
 ```bash
-python demo_train.py ./example.py --cfg-options model.in_channels="[0, 0, 0]"
+python demo_train.py ./example.py --cfg-options model.in_channels="[1, 1, 1]"
 ```
 
 ```
-Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [0, 0, 0]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
-```
-
-此时终端上会显示：
-
-```python
 Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
 ```
 
@@ -532,8 +524,8 @@ cfg = Config.fromfile('custom_imports.py')
 
 from mmengine.registry import OPTIMIZERS
 
-super_optim = OPTIMIZERS.build(cfg.optimizer)
-print(super_optim)
+custom_optim = OPTIMIZERS.build(cfg.optimizer)
+print(custom_optim)
 ```
 
 ```
