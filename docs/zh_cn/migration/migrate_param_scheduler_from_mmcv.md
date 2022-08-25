@@ -13,122 +13,122 @@ MMCV 中的学习率配置与 MMEngine 中的参数调度器配置对应关系�
 
 由于 MMEngine 中的学习率调度器在实现时增加了 begin 和 end 参数，指定了调度器的生效区间，所以可以通过调度器组合的方式实现学习率预热。MMCV 中有 3 种学习率预热方式，分别是 'constant', 'linear', 'exp'，在 MMEngine 中对应的配置应修改为:
 
-- 'constant' 预热
+#### 常数预热('constant')
 
-  <table class="docutils">
-    <thead>
-    <tr>
-        <th>MMCV-1.x</th>
-        <th>MMEngine</th>
-    <tbody>
-    <tr>
-    <td>
+<table class="docutils">
+  <thead>
+  <tr>
+      <th>MMCV-1.x</th>
+      <th>MMEngine</th>
+  <tbody>
+  <tr>
+  <td>
 
-  ```python
-  lr_config = dict(
-      warmup='constant',
-      warmup_ratio=0.1,
-      warmup_iters=500,
-      warmup_by_epoch=False
-  )
-  ```
+```python
+lr_config = dict(
+    warmup='constant',
+    warmup_ratio=0.1,
+    warmup_iters=500,
+    warmup_by_epoch=False
+)
+```
 
-  </td>
-    <td>
+</td>
+  <td>
 
-  ```python
-  param_scheduler = [
-      dict(type='ConstantLR',
-           factor=0.1,
-           begin=0,
-           end=500,
-           by_epoch=False),
-      dict(...) # 主学习率调度器配置
-  ]
-  ```
+```python
+param_scheduler = [
+    dict(type='ConstantLR',
+         factor=0.1,
+         begin=0,
+         end=500,
+         by_epoch=False),
+    dict(...) # 主学习率调度器配置
+]
+```
 
-  </td>
-    </tr>
-    </thead>
-    </table>
+</td>
+  </tr>
+  </thead>
+  </table>
 
-- 'linear' 预热
+#### 线性预热('linear')
 
-  <table class="docutils">
-    <thead>
-    <tr>
-        <th>MMCV-1.x</th>
-        <th>MMEngine</th>
-    <tbody>
-    <tr>
-    <td>
+<table class="docutils">
+  <thead>
+  <tr>
+      <th>MMCV-1.x</th>
+      <th>MMEngine</th>
+  <tbody>
+  <tr>
+  <td>
 
-  ```python
-  lr_config = dict(
-      warmup='linear',
-      warmup_ratio=0.1,
-      warmup_iters=500,
-      warmup_by_epoch=False
-  )
-  ```
+```python
+lr_config = dict(
+    warmup='linear',
+    warmup_ratio=0.1,
+    warmup_iters=500,
+    warmup_by_epoch=False
+)
+```
 
-  </td>
-    <td>
+</td>
+  <td>
 
-  ```python
-  param_scheduler = [
-      dict(type='LinearLR',
-           start_factor=0.1,
-           begin=0,
-           end=500,
-           by_epoch=False),
-      dict(...) # 主学习率调度器配置
-  ]
-  ```
+```python
+param_scheduler = [
+    dict(type='LinearLR',
+         start_factor=0.1,
+         begin=0,
+         end=500,
+         by_epoch=False),
+    dict(...) # 主学习率调度器配置
+]
+```
 
-  </td>
-    </tr>
-    </thead>
-    </table>
+</td>
+  </tr>
+  </thead>
+  </table>
 
-- 'exp' 预热
+#### 指数预热('exp')
 
-  <table class="docutils">
-    <thead>
-    <tr>
-        <th>MMCV-1.x</th>
-        <th>MMEngine</th>
-    <tbody>
-    <tr>
-    <td>
+<table class="docutils">
+  <thead>
+  <tr>
+      <th>MMCV-1.x</th>
+      <th>MMEngine</th>
+  <tbody>
+  <tr>
+  <td>
 
-  ```python
-  lr_config = dict(
-      warmup='exp',
-      warmup_ratio=0.1,
-      warmup_iters=500,
-      warmup_by_epoch=False
-  )
-  ```
+```python
+lr_config = dict(
+    warmup='exp',
+    warmup_ratio=0.1,
+    warmup_iters=500,
+    warmup_by_epoch=False
+)
+```
 
-  </td>
-    <td>
+</td>
+  <td>
 
-  ```python
-  param_scheduler = [
-      dict(type='ExponentialLR',
-           gamma=0.1,
-           begin=0,
-           end=500,
-           by_epoch=False),
-      dict(...) # 主学习率调度器配置
-  ]
-  ```
+```python
+param_scheduler = [
+    dict(type='ExponentialLR',
+         gamma=0.1,
+         begin=0,
+         end=500,
+         by_epoch=False),
+    dict(...) # 主学习率调度器配置
+]
+```
 
-  </td>
-    </tr>
-    </thead>
-    </table>
+</td>
+  </tr>
+  </thead>
+  </table>
 
 ### 'fixed' 学习率（FixedLrUpdaterHook）迁移
 
