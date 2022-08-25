@@ -15,7 +15,7 @@ import torch
 from torch.optim import SGD
 import torch.nn as nn
 import torch.nn.functional as F
-
+****
 inputs = [torch.zeros(10, 1, 1)] * 10
 targets = [torch.ones(10, 1, 1)] * 10
 model = nn.Linear(1, 1)
@@ -418,7 +418,7 @@ from mmengine.logging import print_log
 
 
 @OPTIM_WRAPPER_CONSTRUCTORS.register_module(force=True)
-class LayerDecayOptimizerConstructor(DefaultOptimWrapperConstructor):
+class LayerDecayOptimWrapperConstructor(DefaultOptimWrapperConstructor):
 
     def __init__(self, optim_wrapper_cfg, paramwise_cfg=None):
         super().__init__(optim_wrapper_cfg, paramwise_cfg=None)
@@ -457,7 +457,7 @@ model = ToyModel()
 optim_wrapper = dict(
     optimizer=dict(type='SGD', lr=0.01, weight_decay=0.0001),
     paramwise_cfg=dict(decay_factor=0.5),
-    constructor='LayerDecayOptimizerConstructor')
+    constructor='LayerDecayOptimWrapperConstructor')
 
 optimizer = build_optim_wrapper(model, optim_wrapper)
 ```
