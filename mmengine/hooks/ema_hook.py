@@ -72,6 +72,11 @@ class EMAHook(Hook):
             self.ema_cfg, default_args=dict(model=self.src_model))
 
     def before_train(self, runner) -> None:
+        """Check the begin_epoch/iter is smaller than max_epochs/iters.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         if self.enabled_by_epoch:
             assert self.begin_epoch <= runner.max_epochs, (
                 'self.begin_epoch should be smaller than runner.max_epochs: '
