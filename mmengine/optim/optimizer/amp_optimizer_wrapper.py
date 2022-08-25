@@ -70,7 +70,7 @@ class AmpOptimWrapper(OptimWrapper):
             loss (torch.Tensor): The loss of current iteration.
             kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`
         """
-        self.loss_scaler.scale(loss).backward()
+        self.loss_scaler.scale(loss).backward(**kwargs)
         self._inner_count += 1
 
     def step(self, **kwargs):
