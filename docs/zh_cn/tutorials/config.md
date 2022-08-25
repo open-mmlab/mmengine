@@ -282,17 +282,17 @@ print(cfg.a)
 
 我们可以在 `json`、`yaml`、`python` 三种类型的配置文件中，使用这种方式来获取 `_base_` 中定义的变量。
 
-尽管这种获取 `_base_` 变量的方式非常通用，但是在语法上存在一些限制，比如我们想在 python 类型的配置文件中，修改 `_base_` 变量的值：
+尽管这种获取 `_base_` 中定义变量的方式非常通用，但是在语法上存在一些限制，无法充分利用 `python` 类配置文件的动态特性。比如我们想在 `python` 类配置文件中，修改 `_base_` 中定义的变量：
 
 ```python
 _base_ = ['resnet50.py']
 a = {{_base_.model}}
-a.type = 'MobileNet'
+a['type'] = 'MobileNet'
 ```
 
-这样的配置文件是无法被解析的。为了充分利用 python 类型配置文件的动态特性，配置类提供了一种更 `pythonic` 的方式让我们能够修改 `_base_` 中定义的变量（python 类配置文件专属特性，目前不支持在 `json`、`yaml` 配置文件中修改 `_base_` 变量）。
+配置类是无法解析这样的配置文件的。配置类提供了一种更 `pythonic` 的方式，让我们能够在 `python` 类配置文件中修改 `_base_` 中定义的变量（`python` 类配置文件专属特性，目前不支持在 `json`、`yaml` 配置文件中修改 `_base_` 中定义的变量）。
 
-modify_base_var.py：
+`modify_base_var.py`：
 
 ```python
 _base_ = ['resnet50.py']
