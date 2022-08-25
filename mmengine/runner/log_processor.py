@@ -145,7 +145,7 @@ class LogProcessor:
             # Epoch(train)  [9][100/270]
             max_dataloader_len = len(current_loop.dataloader)
             max_str_len = len(str(max_dataloader_len))
-            cur_iter_str = str(cur_iter).rjust(max_str_len, '0')
+            cur_iter_str = str(cur_iter).rjust(max_str_len)
 
             if mode in ['train', 'val']:
                 # Right Align the epoch log:
@@ -165,13 +165,13 @@ class LogProcessor:
         else:
             if mode == 'train':
                 max_str_len = len(str(runner.max_iters))
-                cur_iter_str = str(cur_iter).rjust(max_str_len, '0')
+                cur_iter_str = str(cur_iter).rjust(max_str_len)
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter_str}/{runner.max_iters}]  ')
             else:
                 max_dataloader_len = len(current_loop.dataloader)
                 max_str_len = len(str(max_dataloader_len))
-                cur_iter_str = str(batch_idx + 1).rjust(max_str_len, '0')
+                cur_iter_str = str(batch_idx + 1).rjust(max_str_len)
                 log_str = (f'Iter({mode}) [{cur_iter_str}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.

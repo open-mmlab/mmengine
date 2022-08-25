@@ -91,7 +91,7 @@ class TestLogProcessor:
         if by_epoch:
             if mode in ['train', 'val']:
                 cur_epoch = log_processor._get_epoch(self.runner, mode)
-                log_str = (f'Epoch({mode})  [{cur_epoch}][02/'
+                log_str = (f'Epoch({mode})  [{cur_epoch}][ 2/'
                            f'{len(cur_loop.dataloader)}]  ')
             else:
                 log_str = (f'Epoch({mode}) [2/{len(cur_loop.dataloader)}]  ')
@@ -116,7 +116,7 @@ class TestLogProcessor:
                 log_str = f'Iter({mode}) [11/{max_iters}]  '
             elif mode == 'val':
                 max_iters = len(cur_loop.dataloader)
-                log_str = f'Iter({mode}) [02/{max_iters}]  '
+                log_str = f'Iter({mode}) [ 2/{max_iters}]  '
             else:
                 max_iters = len(cur_loop.dataloader)
                 log_str = f'Iter({mode}) [2/{max_iters}]  '
