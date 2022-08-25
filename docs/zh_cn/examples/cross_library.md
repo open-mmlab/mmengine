@@ -11,7 +11,7 @@
   以在 MMDetection 中调用 MMClassification 的 ConvNeXt 为例，首先需要在配置中加入 `custom_imports` 字段将 MMClassification 的 Backbone 添加进注册器，然后只需要在 Backbone 的配置中的 `type` 加上 MMClassification 的软件包名 `mmcls` 作为前缀改，即 `mmcls.ConvNeXt` 即可：
 
   ```python
-  # 使用 custom_imports 将 mmcls 的 models 添加进注册表
+  # 使用 custom_imports 将 mmcls 的 models 添加进注册器
   custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
 
   model = dict(
@@ -38,7 +38,7 @@
   与上文的跨库调用 Backbone 一样，使用 custom_imports 和添加前缀即可实现跨库调用：
 
   ```python
-  # 使用 custom_imports 将 mmdet 的 transforms 添加进注册表
+  # 使用 custom_imports 将 mmdet 的 transforms 添加进注册器
   custom_imports = dict(imports=['mmdet.datasets.transforms'], allow_failed_imports=False)
 
   # 添加 mmdet 前缀完成跨库调用
@@ -57,7 +57,7 @@
   跨库调用算法是一个比较复杂的例子，一个算法会包含多个子模块，因此每个子模块也需要在`type`中增加前缀，以在 MMTracking 中调用 MMDetection 的 YOLOX 为例：
 
   ```python
-  # 使用 custom_imports 将 mmdet 的 models 添加进注册表
+  # 使用 custom_imports 将 mmdet 的 models 添加进注册器
   custom_imports = dict(imports=['mmdet.models'], allow_failed_imports=False)
   model = dict(
       type='mmdet.YOLOX',
@@ -75,7 +75,7 @@
   为了避免给每个子模块手动增加前缀，配置文件中引入了 `_scope_` 关键字，当某一模块的配置中添加了 `_scope_` 关键字后，该模块配置文件下面的所有子模块配置都会从该关键字所对应的软件包内去构建：
 
   ```python
-  # 使用 custom_imports 将 mmdet 的 models 添加进注册表
+  # 使用 custom_imports 将 mmdet 的 models 添加进注册器
   custom_imports = dict(imports=['mmdet.models'], allow_failed_imports=False)
   model = dict(
       _scope_='mmdet',  # 使用 _scope_ 关键字，避免给所有子模块添加前缀
