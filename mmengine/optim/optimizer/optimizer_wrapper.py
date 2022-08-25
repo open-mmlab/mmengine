@@ -149,7 +149,7 @@ class OptimWrapper:
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
-            kwargs: Arguments for :meth:`torch.Tensor.backward`.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`.
         """
         loss.backward(**kwargs)
         self._inner_count += 1
@@ -162,7 +162,8 @@ class OptimWrapper:
         required logic.
 
         Args:
-            kwargs: Arguments for :meth:`torch.optim.Optimizer.zero_grad`.
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.zero_grad`.
         """
         self.optimizer.zero_grad(**kwargs)
 
@@ -178,7 +179,8 @@ class OptimWrapper:
         parameters.
 
         Args:
-            kwargs: Arguments for :meth:`torch.optim.Optimizer.step`.
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
         """
         if self.clip_grad_kwargs:
             self._clip_grad()
