@@ -143,7 +143,8 @@ discriminator = Discriminator((1, 28, 28))
 
 ```python
 from mmengine.model import ImgDataPreprocessor
-data_preprocessor = ImgDataPreprocessor()
+
+data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
 下面的代码实现了基础 GAN 的算法，训练过程在 train_step 中实现。使用 MMEngine 实现的算法类，需要继承 BaseModel 基类，
@@ -185,7 +186,7 @@ class GAN(BaseModel):
         return log_vars
 
     def forward(self, batch_inputs, data_samples, mode=None):
-        return batch_inputs
+        return self.generator(batch_inputs)
 
     def disc_loss(self, disc_pred_fake, disc_pred_real):
         losses_dict = dict()
@@ -282,7 +283,7 @@ opt_wrapper_dict = OptimWrapperDict(
 下面的代码演示了如何使用 Runner 进行模型训练。关于 Runner 的更多信息，请参考[执行器教程](../tutorials/runner.md)。
 
 ```python
-train_cfg = dict(by_epoch=False, max_iters=5000)
+train_cfg = dict(by_epoch=True, max_epochs=220)
 runner = Runner(
     model,
     work_dir='runs/gan/',
@@ -291,3 +292,17 @@ runner = Runner(
     optim_wrapper=opt_wrapper_dict)
 runner.train()
 ```
+
+到这里，我们就完成了一个 GAN 的训练，通过下面的代码可以查看刚才训练的 GAN 生成的结果。
+
+```python
+z = torch.randn(64, 100).cuda()
+img = model(z)
+
+from torchvision.utils import save_image
+save_image(img, "result.png", normalize=True)
+```
+
+![GAN生成图像](https://user-images.githubusercontent.com/22982797/186811532-1517a0f7-5452-4a39-b6d0-6c685e4545e2.png)
+
+如果你想了解更多如何使用 MMEngine 实现 GAN 和生成模型，我们强烈建议你使用 [MMGen](https://github.com/open-mmlab/mmgeneration/tree/1.x) 生成框架, 该框架基于 MMEngine 实现并包含了各种主流GAN模型的实现。
