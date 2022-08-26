@@ -53,6 +53,7 @@ from torch.utils.data import DataLoader
 
 norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
 train_dataloader = DataLoader(batch_size=32,
+                              shuffle=True,
                               dataset=torchvision.datasets.CIFAR10(
                                   'data/cifar10',
                                   train=True,
@@ -65,6 +66,7 @@ train_dataloader = DataLoader(batch_size=32,
                                   ])))
 
 val_dataloader = DataLoader(batch_size=32,
+                            shuffle=False,
                             dataset=torchvision.datasets.CIFAR10(
                                 'data/cifar10',
                                 train=False,
@@ -179,6 +181,7 @@ class Accuracy(BaseMetric):
 
 norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
 train_dataloader = DataLoader(batch_size=32,
+                              shuffle=True,
                               dataset=torchvision.datasets.CIFAR10(
                                   'data/cifar10',
                                   train=True,
@@ -191,6 +194,7 @@ train_dataloader = DataLoader(batch_size=32,
                                   ])))
 
 val_dataloader = DataLoader(batch_size=32,
+                            shuffle=False,
                             dataset=torchvision.datasets.CIFAR10(
                                 'data/cifar10',
                                 train=False,
