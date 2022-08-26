@@ -305,4 +305,4 @@ save_image(img, "result.png", normalize=True)
 
 ![GAN生成图像](https://user-images.githubusercontent.com/22982797/186811532-1517a0f7-5452-4a39-b6d0-6c685e4545e2.png)
 
-如果你想了解更多如何使用 MMEngine 实现 GAN 和生成模型，我们强烈建议你使用 [MMGen](https://github.com/open-mmlab/mmgeneration/tree/1.x) 生成框架, 该框架基于 MMEngine 实现并包含了各种主流GAN模型的实现。
+如果你想了解更多如何使用 MMEngine 实现 GAN 和生成模型，我们强烈建议你使用同样基于 MMEngine 开发的生成框架 [MMGen](https://github.com/open-mmlab/mmgeneration/tree/1.x)。
