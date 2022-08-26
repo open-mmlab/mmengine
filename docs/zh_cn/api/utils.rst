@@ -108,25 +108,3 @@ Miscellaneous
    Timer
    TimerError
    check_time
-
-mmengine.utils.dl_utils
----------------------------
-
-.. contents:: mmengine.utils
-   :depth: 2
-   :local:
-   :backlinks: top
-
-.. currentmodule:: mmengine.utils.dl_utils
-
-   collect_env
-   load_url
-   has_batch_norm
-   is_norm
-   mmcv_full_available
-   tensor2imgs
-   TORCH_VERSION
-   set_multi_processing
-   TimeCounter
-   torch_meshgrid
-   is_jit_tracing

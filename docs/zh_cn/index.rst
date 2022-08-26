@@ -28,7 +28,7 @@
 
 .. toctree::
    :maxdepth: 1
-   :caption: 高频示例
+   :caption: 示例
 
    examples/speed_up_training.md
    examples/save_gpu_memory.md
@@ -60,6 +60,7 @@
    mmengine.fileio <api/fileio>
    mmengine.dist <api/dist>
    mmengine.utils <api/utils>
+   mmengine.utils.dl_utils <api/utils.dl_utils>
 
 .. toctree::
    :caption: 语言切换

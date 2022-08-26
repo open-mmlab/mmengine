@@ -28,6 +28,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.fileio <api/fileio>
    mmengine.dist <api/dist>
    mmengine.utils <api/utils>
+   mmengine.utils.dl_utils <api/utils.dl_utils>
 
 .. toctree::
    :caption: Switch Language
