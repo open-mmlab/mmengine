@@ -10,6 +10,7 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 from mmengine.model import (MMDistributedDataParallel,
                             MMSeparateDistributedDataParallel,
                             is_model_wrapper, revert_sync_batchnorm)
+from mmengine.registry import MODEL_WRAPPERS, Registry
 
 
 @pytest.mark.skipif(
@@ -27,6 +28,7 @@ def test_revert_syncbn():
 
 
 def test_is_model_wrapper():
+    # Test basic module wrapper.
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29510'
     os.environ['RANK'] = str(0)
@@ -39,4 +41,26 @@ def test_is_model_wrapper():
     ]:
         wrapper_model = wrapper(model)
         assert is_model_wrapper(wrapper_model)
+
+    CHILD_REGISTRY = Registry('test_is_model_wrapper', parent=MODEL_WRAPPERS)
+
+    class CustomModelWrapper(nn.Module):
+
+        def __init__(self, model):
+            super().__init__()
+            self.module = model
+
+        pass
+
+    CHILD_REGISTRY.register_module(module=CustomModelWrapper)
+
+    wrapper_model = CustomModelWrapper(model)
+    assert is_model_wrapper(wrapper_model)
+
+    for wrapper in [
+            DistributedDataParallel, MMDistributedDataParallel,
+            MMSeparateDistributedDataParallel, DataParallel
+    ]:
+        wrapper_model = wrapper(model)
+        assert not is_model_wrapper(wrapper_model, registry=CHILD_REGISTRY)
     destroy_process_group()
