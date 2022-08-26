@@ -58,7 +58,7 @@ class Converter2(object):
 from .builder import CONVERTERS
 from .converter_cls import Converter1
 @CONVERTERS.register_module()
-def converter3(a, b)
+def converter3(a, b):
     return Converter1(a, b)
 ```
 
