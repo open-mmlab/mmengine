@@ -4,6 +4,5 @@ from .config import *
 from .fileio import *
 from .logging import *
 from .registry import *
-from .testing import *
 from .utils import *
 from .version import __version__, version_info
