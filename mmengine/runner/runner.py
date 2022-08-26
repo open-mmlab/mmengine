@@ -4,14 +4,12 @@ import logging
 import os
 import os.path as osp
 import platform
-import random
 import time
 import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
@@ -23,7 +21,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only, sync_random_seed)
+                           is_distributed, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
@@ -48,6 +46,7 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
+from .utils import set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -683,28 +682,7 @@ class Runner:
                 more details.
         """
         self._deterministic = deterministic
-        self._seed = seed
-        if self._seed is None:
-            self._seed = sync_random_seed()
-
-        if diff_rank_seed:
-            # set different seeds for different ranks
-            self._seed = self._seed + get_rank()
-        random.seed(self._seed)
-        np.random.seed(self._seed)
-        torch.manual_seed(self._seed)
-        torch.cuda.manual_seed_all(self._seed)
-        if deterministic:
-            if torch.backends.cudnn.benchmark:
-                warnings.warn(
-                    'torch.backends.cudnn.benchmark is going to be set as '
-                    '`False` to cause cuDNN to deterministically select an '
-                    'algorithm')
-
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
-            if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
-                torch.use_deterministic_algorithms(True)
+        self._seed = set_random_seed(seed, diff_rank_seed, deterministic)
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
