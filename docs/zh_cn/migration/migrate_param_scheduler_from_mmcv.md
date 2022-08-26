@@ -1,7 +1,7 @@
 # 迁移 MMCV 参数调度器到 MMEngine
 
 MMCV 1.x 版本使用 [LrUpdaterHook](https://mmcv.readthedocs.io/zh_CN/v1.6.0/api.html#mmcv.runner.LrUpdaterHook) 和 [MomentumUpdaterHook](https://mmcv.readthedocs.io/zh_CN/v1.6.0/api.html#mmcv.runner.MomentumUpdaterHook) 来调整学习率和动量。
-但随着深度学习算法训练方式的不断发展，使用 Hook 修改学习率的方式已无法满足需求，因此 MMEngine 提供了参数调度器（ParamScheduler）。
+但随着深度学习算法训练方式的不断发展，使用 Hook 修改学习率已经难以满足更加丰富的自定义需求，因此 MMEngine 提供了参数调度器（ParamScheduler）。
 一方面，参数调度器的接口与 PyTroch 的学习率调度器（LRScheduler）对齐，另一方面，参数调度器提供了更丰富的功能，详细请参考[参数调度器使用指南](../tutorials/param_scheduler.md)。
 
 ## 学习率调度器（LrUpdater）迁移
@@ -310,43 +310,6 @@ param_scheduler = [
 </thead>
 </table>
 
-如果在使用 epoch-based 训练循环且配置文件中依旧按 epoch 设置周期时希望学习率按 iteration 更新，在 MMCV 中需要将 `by_epoch` 设置为 False, 而在 MMEngine 中需要注意， 配置中的 `by_epoch` 仍需设置为 True，通过在配置中添加 `convert_to_iter_based=True` 来构建按 iteration 更新的参数调度器：
-
-<table class="docutils">
-<thead>
-<tr>
-    <th>MMCV-1.x</th>
-    <th>MMEngine</th>
-<tbody>
-<tr>
-<td>
-
-```python
-lr_config = dict(
-    policy='CosineAnnealing',
-    min_lr=0.5,
-    by_epoch=False
-)
-```
-
-</td>
-<td>
-
-```python
-param_scheduler = [
-    dict(type='CosineAnnealingLR',
-         eta_min=0.5,
-         T_max=num_epochs,
-         by_epoch=True,
-         convert_to_iter_based=True)
-]
-```
-
-</td>
-</tr>
-</thead>
-</table>
-
 ### 'FlatCosineAnnealing' 学习率（FlatCosineAnnealingLrUpdaterHook）迁移
 
 像 FlatCosineAnnealing 这种由多个学习率策略拼接而成的学习率，原本需要重写 Hook 来实现，而在 MMEngine 中只需将两个参数调度器组合即可
@@ -547,6 +510,49 @@ param_scheduler = [
          begin=0,
          end=num_epochs,
          by_epoch=True)
+]
+```
+
+</td>
+</tr>
+</thead>
+</table>
+
+## 参数更新频率相关配置迁移
+
+如果在使用 epoch-based 训练循环且配置文件中按 epoch 设置生效区间（`begin`，`end`）或周期（`T_max`）等变量的同时希望参数率按 iteration 更新，在 MMCV 中需要将 `by_epoch` 设置为 False。而在 MMEngine 中需要注意，配置中的 `by_epoch` 仍需设置为 True，通过在配置中添加 `convert_to_iter_based=True` 来构建按 iteration 更新的参数调度器，
+关于此配置详见[参数调度器教程](../tutorials/param_scheduler.md)。
+以迁移CosineAnnealing为例：
+
+<table class="docutils">
+<thead>
+<tr>
+    <th>MMCV-1.x</th>
+    <th>MMEngine</th>
+<tbody>
+<tr>
+<td>
+
+```python
+lr_config = dict(
+    policy='CosineAnnealing',
+    min_lr=0.5,
+    by_epoch=False
+)
+```
+
+</td>
+<td>
+
+```python
+param_scheduler = [
+    dict(
+        type='CosineAnnealingLR',
+        eta_min=0.5,
+        T_max=num_epochs,
+        by_epoch=True,  # 注意，by_epoch 需要设置为 True
+        convert_to_iter_based=True  # 转换为按 iter 更新参数
+    )
 ]
 ```
 
