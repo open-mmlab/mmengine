@@ -6,7 +6,8 @@ import torch.nn as nn
 from torch.cuda.amp import GradScaler
 
 from mmengine.registry import OPTIM_WRAPPERS
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 from .optimizer_wrapper import OptimWrapper
 
 

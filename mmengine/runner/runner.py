@@ -4,14 +4,12 @@ import logging
 import os
 import os.path as osp
 import platform
-import random
 import time
 import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
@@ -20,33 +18,35 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only, sync_random_seed)
+                           is_distributed, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
+from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper)
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOOPS, MODEL_WRAPPERS, MODELS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, VISUALIZERS,
-                               DefaultScope, count_registered_modules)
-from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_seq_of, revert_sync_batchnorm,
-                            set_multi_processing)
+                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               VISUALIZERS, DefaultScope,
+                               count_registered_modules)
+from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, get_state_dict,
                          save_checkpoint, weights_to_cpu)
+from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
+from .utils import set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -181,7 +181,7 @@ class Runner:
             Defaults to None.
 
     Examples:
-        >>> from mmengine import Runner
+        >>> from mmengine.runner import Runner
         >>> cfg = dict(
         >>>     model=dict(type='ToyModel'),
         >>>     work_dir='path/of/work_dir',
@@ -682,28 +682,7 @@ class Runner:
                 more details.
         """
         self._deterministic = deterministic
-        self._seed = seed
-        if self._seed is None:
-            self._seed = sync_random_seed()
-
-        if diff_rank_seed:
-            # set different seeds for different ranks
-            self._seed = self._seed + get_rank()
-        random.seed(self._seed)
-        np.random.seed(self._seed)
-        torch.manual_seed(self._seed)
-        torch.cuda.manual_seed_all(self._seed)
-        if deterministic:
-            if torch.backends.cudnn.benchmark:
-                warnings.warn(
-                    'torch.backends.cudnn.benchmark is going to be set as '
-                    '`False` to cause cuDNN to deterministically select an '
-                    'algorithm')
-
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
-            if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
-                torch.use_deterministic_algorithms(True)
+        self._seed = set_random_seed(seed, diff_rank_seed, deterministic)
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
@@ -1392,14 +1371,19 @@ class Runner:
 
         # The default behavior of `collat_fn` in dataloader is to
         # merge a list of samples to form a mini-batch of Tensor(s).
-        # However, to make this more flexible, collate_fn in MMengine does
-        # nothing. The action to merge a list of samples will be handled
-        # in model.
+        # However, in mmengine, if `collate_fn` is not defined in
+        # dataloader_cfg, `pseudo_collate` will only convert the list of
+        # samples into a dict without stacking the batch tensor.
+        collate_fn_cfg = dataloader_cfg.pop('collate_fn',
+                                            dict(type='pseudo_collate'))
+        collate_fn_type = collate_fn_cfg.pop('type')
+        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
             batch_sampler=batch_sampler,
-            collate_fn=pseudo_collate,
+            collate_fn=collate_fn,
             worker_init_fn=init_fn,
             **dataloader_cfg)
         return data_loader
