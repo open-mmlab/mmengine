@@ -1,9 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
+
 import pytest
 import torch
 import torch.nn as nn
+from torch.distributed import destroy_process_group, init_process_group
+from torch.nn.parallel import DataParallel, DistributedDataParallel
 
-from mmengine.model import revert_sync_batchnorm
+from mmengine.model import (MMDistributedDataParallel,
+                            MMSeparateDistributedDataParallel,
+                            is_model_wrapper, revert_sync_batchnorm)
 
 
 @pytest.mark.skipif(
@@ -18,3 +24,19 @@ def test_revert_syncbn():
     conv = revert_sync_batchnorm(conv)
     y = conv(x)
     assert y.shape == (1, 8, 9, 9)
+
+
+def test_is_model_wrapper():
+    os.environ['MASTER_ADDR'] = '127.0.0.1'
+    os.environ['MASTER_PORT'] = '29510'
+    os.environ['RANK'] = str(0)
+    init_process_group(backend='gloo', rank=0, world_size=1)
+    model = nn.Linear(1, 1)
+
+    for wrapper in [
+            DistributedDataParallel, MMDistributedDataParallel,
+            MMSeparateDistributedDataParallel, DataParallel
+    ]:
+        wrapper_model = wrapper(model)
+        assert is_model_wrapper(wrapper_model)
+    destroy_process_group()
