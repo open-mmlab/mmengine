@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+from mmengine.evaluator import Evaluator
 from mmengine.hooks import EMAHook
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.optim import OptimWrapper
@@ -21,9 +22,10 @@ class ToyModel(nn.Module):
         super().__init__()
         self.linear = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.linear(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        labels = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        outputs = self.linear(inputs)
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
@@ -81,7 +83,7 @@ class TestEMAHook(TestCase):
     def test_ema_hook(self):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         model = ToyModel1().to(device)
-        evaluator = Mock()
+        evaluator = Evaluator([])
         evaluator.evaluate = Mock(return_value=dict(acc=0.5))
         runner = Runner(
             model=model,

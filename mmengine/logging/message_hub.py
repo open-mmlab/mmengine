@@ -2,14 +2,16 @@
 import copy
 import logging
 from collections import OrderedDict
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
-import torch
 
 from mmengine.utils import ManagerMixin
 from .history_buffer import HistoryBuffer
 from .logger import print_log
+
+if TYPE_CHECKING:
+    import torch
 
 
 class MessageHub(ManagerMixin):
@@ -99,7 +101,7 @@ class MessageHub(ManagerMixin):
 
     def update_scalar(self,
                       key: str,
-                      value: Union[int, float, np.ndarray, torch.Tensor],
+                      value: Union[int, float, np.ndarray, 'torch.Tensor'],
                       count: int = 1,
                       resumed: bool = True) -> None:
         """Update :attr:_log_scalars.
@@ -315,7 +317,7 @@ class MessageHub(ManagerMixin):
         return self._runtime_info[key]
 
     def _get_valid_value(
-            self, value: Union[torch.Tensor, np.ndarray, int, float]) \
+            self, value: Union['torch.Tensor', np.ndarray, int, float]) \
             -> Union[int, float]:
         """Convert value to python built-in type.
 
@@ -328,11 +330,13 @@ class MessageHub(ManagerMixin):
         if isinstance(value, np.ndarray):
             assert value.size == 1
             value = value.item()
-        elif isinstance(value, torch.Tensor):
-            assert value.numel() == 1
-            value = value.item()
+        elif isinstance(value, (int, float)):
+            value = value
         else:
-            assert isinstance(value, (int, float))
+            # check whether value is torch.Tensor but don't want
+            # to import torch in this file
+            assert hasattr(value, 'numel') and value.numel() == 1
+            value = value.item()
         return value  # type: ignore
 
     def state_dict(self) -> dict:
