@@ -42,6 +42,8 @@ def test_is_model_wrapper():
         wrapper_model = wrapper(model)
         assert is_model_wrapper(wrapper_model)
 
+    # Test `is_model_wrapper` can check model wrapper registered in custom
+    # registry.
     CHILD_REGISTRY = Registry('test_is_model_wrapper', parent=MODEL_WRAPPERS)
 
     class CustomModelWrapper(nn.Module):
@@ -54,13 +56,22 @@ def test_is_model_wrapper():
 
     CHILD_REGISTRY.register_module(module=CustomModelWrapper)
 
-    wrapper_model = CustomModelWrapper(model)
-    assert is_model_wrapper(wrapper_model)
+    for wrapper in [
+            DistributedDataParallel, MMDistributedDataParallel,
+            MMSeparateDistributedDataParallel, DataParallel, CustomModelWrapper
+    ]:
+        wrapper_model = wrapper(model)
+        assert is_model_wrapper(wrapper_model)
 
+    # Test `is_model_wrapper` will not check model wrapper in parent
+    # registry from a child registry.
     for wrapper in [
             DistributedDataParallel, MMDistributedDataParallel,
             MMSeparateDistributedDataParallel, DataParallel
     ]:
         wrapper_model = wrapper(model)
         assert not is_model_wrapper(wrapper_model, registry=CHILD_REGISTRY)
+
+    wrapper_model = CustomModelWrapper(model)
+    assert is_model_wrapper(wrapper_model, registry=CHILD_REGISTRY)
     destroy_process_group()

@@ -22,7 +22,9 @@ def is_model_wrapper(model: nn.Module, registry: Registry = MODEL_WRAPPERS):
     module_wrappers = tuple(registry.module_dict.values())
     if isinstance(model, module_wrappers):
         return True
+
+    if not registry.children:
+        return False
+
     for child in registry.children.values():
-        if is_model_wrapper(model, child):
-            return True
-    return False
+        return is_model_wrapper(model, child)
