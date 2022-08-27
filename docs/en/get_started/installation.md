@@ -18,7 +18,7 @@
 
 2. Install PyTorch
 
-   Before installing MMEngine, make sure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/). Using the following command to verify whether PyTorch is installed correctly
+   Before installing MMEngine, make sure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/). Use the following command to verify the installation of PyTorch.
 
    ```bash
    python -c 'import torch;print(torch.__version__)'
@@ -28,7 +28,7 @@
 
 ### Install with mim
 
-[mim](https://github.com/open-mmlab/mim) is a package management tool for the OpenMMLab project, which can be used to easily install the OpenMMLab project.
+[mim](https://github.com/open-mmlab/mim) is a package management tool for the OpenMMLab project, which simplifies the installation of the OpenMMLab project.
 
 ```bash
 pip install -U openmim
