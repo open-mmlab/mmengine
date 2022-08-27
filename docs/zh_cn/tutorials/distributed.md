@@ -40,8 +40,8 @@ PyTorch 提供了一套基础的通信原语用于多进程之间张量的通信
 - [gather](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.gather)：将进程的 tensor 收集到一个目标 rank
 - [broadcast](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.broadcast)：对某个进程的 tensor 进行广播
 - [sync_random_seed](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.sync_random_seed)：同步进程之间的随机种子
-- [broadcast_object_list](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.broadcast_object_list)：支持 object list 的广播，可以基于 broadcast 接口实现
+- [broadcast_object_list](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.broadcast_object_list)：支持对任意可被 Pickle 序列化的 Python 对象列表进行广播，基于 broadcast 接口实现
 - [all_reduce_dict](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.all_reduce_dict)：对 dict 中的内容进行 all_reduce 操作，基于 broadcast 和 all_reduce 接口实现
-- [all_gather_object](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.all_gather_object)：基于 all_gather 实现对任意可以 Python 序列化对象的 all_tather 操作
-- [gather_object](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.gather_object)：将 group 里每个 rank 的  data gather 到一个目标 rank，且支持多种方式
-- [collect_results](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.collect_results)：支持基于 CPU 或者 GPU 对不同进程间的列表数据进行收集
+- [all_gather_object](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.all_gather_object)：基于 all_gather 实现对任意可以被 Pickle 序列化的 Python 对象进行 all_tather 操作
+- [gather_object](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.gather_object)：将 group 里每个 rank 中任意可被 Pickle 序列化的 Python 对象 gather 到指定的目标 rank
+- [collect_results](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.dist.collect_results)：支持基于 CPU 通信或者 GPU 通信对不同进程间的列表数据进行收集

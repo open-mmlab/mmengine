@@ -57,7 +57,7 @@ class OptimWrapperDict(OptimWrapper):
         raise NotImplementedError('`update_params` should be called by each '
                                   'optimizer separately`')
 
-    def backward(self, loss: torch.Tensor) -> None:
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Since OptimWrapperDict doesn't know which optimizer wrapper's
         backward method should be called (``loss_scaler`` maybe different in
         different :obj:AmpOptimWrapper), this method is not implemented.
@@ -68,13 +68,13 @@ class OptimWrapperDict(OptimWrapper):
         raise NotImplementedError('`backward` should be called by each '
                                   'optimizer separately`')
 
-    def step(self) -> None:
+    def step(self, **kwargs) -> None:
         """Since the backward method is not implemented, the step should not be
         implemented either."""
         raise NotImplementedError('`step` should be called by each '
                                   'optimizer separately`')
 
-    def zero_grad(self) -> None:
+    def zero_grad(self, **kwargs) -> None:
         """Set the gradients of all optimizer wrappers to zero."""
         for optim_wrapper in self.optim_wrappers.values():
             optim_wrapper.zero_grad()

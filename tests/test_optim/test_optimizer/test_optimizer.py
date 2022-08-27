@@ -11,7 +11,7 @@ from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
-from mmengine.utils import mmcv_full_available
+from mmengine.utils.dl_utils import mmcv_full_available
 
 MMCV_FULL_AVAILABLE = mmcv_full_available()
 if not MMCV_FULL_AVAILABLE:

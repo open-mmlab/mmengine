@@ -19,7 +19,8 @@ from mmengine.fileio import FileClient
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
-from mmengine.utils import load_url, mkdir_or_exist
+from mmengine.utils import mkdir_or_exist
+from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
 # downloaded from Internet. If it is not set, as a workaround, using
@@ -251,9 +252,8 @@ class CheckpointLoader:
 
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
-        mmengine.print_log(
-            f'{class_name[10:]} loads checkpoint from path: {filename}',
-            logger)
+        print_log(f'{class_name[10:]} loads checkpoint from path: {filename}',
+                  logger)
         return checkpoint_loader(filename, map_location)
 
 

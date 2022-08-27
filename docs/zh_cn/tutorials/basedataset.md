@@ -67,7 +67,7 @@ data
 
 - 标注文件中包含的 `metainfo` 字典；改动频率最低，因为标注文件一般不做改动。
 
-  如果三种来源中有相同的字段，优先级最高的来源决定该字段的值；
+  如果三种来源中有相同的字段，优先级最高的来源决定该字段的值，这些字段的优先级比较是：用户传入的 `metainfo` 字典里的字段 > `BaseDataset.METAINFO` 字典里的字段 > 标注文件中 `metainfo` 字典里的字段。
 
 2. `join path`：处理数据与标注文件的路径；
 
@@ -138,10 +138,22 @@ class ToyDataset(BaseDataset):
 在定义了数据集类后，就可以通过如下配置实例化 `ToyDataset`：
 
 ```python
+
+class LoadImage:
+
+    def __call__(self, results):
+        results['img'] = cv2.imread(results['img_path'])
+        return results
+
+class ParseImage:
+
+    def __call__(self, results):
+        results['img_shape'] = results['img'].shape
+        return results
+
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset = ToyDataset(
@@ -154,7 +166,7 @@ toy_dataset = ToyDataset(
 同时可以使用数据集类提供的对外接口访问具体的样本信息：
 
 ```python
-toy_dataset.meta
+toy_dataset.metainfo
 # dict(classes=('cat', 'dog'))
 
 toy_dataset.get_data_info(0)
@@ -168,7 +180,13 @@ len(toy_dataset)
 # 2
 
 toy_dataset[0]
-# dict(img=xxx, label=0)
+# {
+#     'img_path': "data/train/xxx/xxx_0.jpg",
+#     'img_label': 0,
+#     'img': a ndarray with shape (H, W, 3), which denotes the value of the image,
+#     'img_shape': (H, W, 3) ,
+#     ...
+# }
 
 # `get_subset` 接口不对原数据集类做修改，即完全复制一份新的
 sub_toy_dataset = toy_dataset.get_subset(1)
@@ -231,9 +249,8 @@ class ToyVideoDataset(BaseDataset):
 
 ```python
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset = ToyDataset(
@@ -254,8 +271,16 @@ toy_dataset = ToyDataset(
 toy_dataset.full_init()
 
 # 初始化完毕，现在可以访问具体数据
-len(toy_dataset) # 2
-toy_dataset[0] # dict(img=xxx, label=0)
+len(toy_dataset)
+# 2
+toy_dataset[0]
+# {
+#     'img_path': "data/train/xxx/xxx_0.jpg",
+#     'img_label': 0,
+#     'img': a ndarray with shape (H, W, 3), which denotes the value the image,
+#     'img_shape': (H, W, 3) ,
+#     ...
+# }
 ```
 
 **注意：**
@@ -272,9 +297,8 @@ toy_dataset[0] # dict(img=xxx, label=0)
 
 ```python
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset = ToyDataset(
@@ -300,9 +324,8 @@ MMEngine 提供了 `ConcatDataset` 包装来拼接多个数据集，使用方法
 from mmengine.dataset import ConcatDataset
 
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset_1 = ToyDataset(
@@ -331,9 +354,8 @@ MMEngine 提供了 `RepeatDataset` 包装来重复采样某个数据集若干次
 from mmengine.dataset import RepeatDataset
 
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset = ToyDataset(
@@ -375,9 +397,8 @@ class ToyDataset(BaseDataset):
         return [int(data_info['img_label'])]
 
 pipeline = [
-    dict(type='xxx', ...),
-    dict(type='yyy', ...),
-    ...
+    LoadImage(),
+    ParseImage(),
 ]
 
 toy_dataset = ToyDataset(

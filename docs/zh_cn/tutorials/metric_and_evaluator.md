@@ -87,8 +87,7 @@ class Accuracy(BaseMetric):
 
     default_prefix = 'ACC'  # 设置 default_prefix
 
-    def process(self, data_batch: data_batch: Sequence[dict],
-                predictions: Sequence[dict]):
+    def process(self, data_batch: Sequence[dict], predictions: Sequence[dict]):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
         to computed the metrics when all batches have been processed.
@@ -129,5 +128,4 @@ class Accuracy(BaseMetric):
 
         # 返回评测指标结果
         return {'accuracy': acc}
-
 ```
