@@ -3,15 +3,15 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-import torch.nn as nn
-
-from ..config import Config, ConfigDict
-from ..utils import ManagerMixin
+from mmengine.config import Config, ConfigDict
+from mmengine.utils import ManagerMixin
 from .registry import Registry
 
 if TYPE_CHECKING:
-    from ..optim.scheduler import _ParamScheduler
-    from ..runner import Runner
+    import torch.nn as nn
+
+    from mmengine.optim.scheduler import _ParamScheduler
+    from mmengine.runner import Runner
 
 
 def build_from_cfg(
@@ -158,6 +158,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     Returns:
         object: The constructed runner object.
     """
+    from ..config import Config, ConfigDict
     from ..logging import print_log
 
     assert isinstance(
@@ -210,10 +211,10 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
 
 
 def build_model_from_cfg(
-        cfg: Union[dict, ConfigDict, Config],
-        registry: Registry,
-        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
-        nn.Module:
+    cfg: Union[dict, ConfigDict, Config],
+    registry: Registry,
+    default_args: Optional[Union[dict, 'ConfigDict', 'Config']] = None
+) -> 'nn.Module':
     """Build a PyTorch model from config dict(s). Different from
     ``build_from_cfg``, if cfg is a list, a ``nn.Sequential`` will be built.
 
@@ -239,10 +240,10 @@ def build_model_from_cfg(
 
 
 def build_scheduler_from_cfg(
-        cfg: Union[dict, ConfigDict, Config],
-        registry: Registry,
-        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> \
-        '_ParamScheduler':
+    cfg: Union[dict, ConfigDict, Config],
+    registry: Registry,
+    default_args: Optional[Union[dict, ConfigDict, Config]] = None
+) -> '_ParamScheduler':
     """Builds a ``ParamScheduler`` instance from config.
 
     ``ParamScheduler`` supports building instance by its constructor or

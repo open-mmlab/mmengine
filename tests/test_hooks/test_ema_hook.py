@@ -8,11 +8,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+from mmengine.evaluator import Evaluator
 from mmengine.hooks import EMAHook
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.optim import OptimWrapper
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
 from mmengine.runner import Runner
+from mmengine.testing import assert_allclose
 
 
 class ToyModel(nn.Module):
@@ -21,9 +23,10 @@ class ToyModel(nn.Module):
         super().__init__()
         self.linear = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.linear(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        labels = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        outputs = self.linear(inputs)
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
@@ -81,7 +84,7 @@ class TestEMAHook(TestCase):
     def test_ema_hook(self):
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         model = ToyModel1().to(device)
-        evaluator = Mock()
+        evaluator = Evaluator([])
         evaluator.evaluate = Mock(return_value=dict(acc=0.5))
         runner = Runner(
             model=model,
@@ -223,9 +226,13 @@ class TestEMAHook(TestCase):
             custom_hooks=[dict(type='EMAHook', begin_epoch=5)],
             experiment_name='test6')
         runner.train()
-        state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_4.pth'))
-        self.assertNotIn('ema_state_dict', state_dict)
-        state_dict = torch.load(osp.join(self.temp_dir.name, 'epoch_5.pth'))
+        state_dict = torch.load(
+            osp.join(self.temp_dir.name, 'epoch_4.pth'), map_location='cpu')
+        self.assertIn('ema_state_dict', state_dict)
+        for k, v in state_dict['state_dict'].items():
+            assert_allclose(v, state_dict['ema_state_dict']['module.' + k])
+        state_dict = torch.load(
+            osp.join(self.temp_dir.name, 'epoch_5.pth'), map_location='cpu')
         self.assertIn('ema_state_dict', state_dict)
 
         # Test enable ema at 5 iterations.
@@ -253,7 +260,11 @@ class TestEMAHook(TestCase):
             custom_hooks=[dict(type='EMAHook', begin_iter=5)],
             experiment_name='test7')
         runner.train()
-        state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_4.pth'))
-        self.assertNotIn('ema_state_dict', state_dict)
-        state_dict = torch.load(osp.join(self.temp_dir.name, 'iter_5.pth'))
+        state_dict = torch.load(
+            osp.join(self.temp_dir.name, 'iter_4.pth'), map_location='cpu')
+        self.assertIn('ema_state_dict', state_dict)
+        for k, v in state_dict['state_dict'].items():
+            assert_allclose(v, state_dict['ema_state_dict']['module.' + k])
+        state_dict = torch.load(
+            osp.join(self.temp_dir.name, 'iter_5.pth'), map_location='cpu')
         self.assertIn('ema_state_dict', state_dict)

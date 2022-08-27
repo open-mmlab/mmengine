@@ -1,9 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .history_buffer import HistoryBuffer
-from .log_processor import LogProcessor
 from .logger import MMLogger, print_log
 from .message_hub import MessageHub
 
-__all__ = [
-    'HistoryBuffer', 'MessageHub', 'MMLogger', 'print_log', 'LogProcessor'
-]
+__all__ = ['HistoryBuffer', 'MessageHub', 'MMLogger', 'print_log']

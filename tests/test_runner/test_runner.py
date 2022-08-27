@@ -14,12 +14,12 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.data import DefaultSampler
+from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
-from mmengine.logging import LogProcessor, MessageHub, MMLogger
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
@@ -28,10 +28,11 @@ from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
                                OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
                                PARAM_SCHEDULERS, RUNNERS, Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
-                             Runner, TestLoop, ValLoop)
+                             LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
-from mmengine.utils import TORCH_VERSION, digit_version, is_list_of
+from mmengine.utils import digit_version, is_list_of
+from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
 
@@ -43,15 +44,18 @@ class ToyModel(BaseModel):
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.linear1(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        if isinstance(inputs, list):
+            inputs = torch.stack(inputs)
+        if isinstance(data_sample, list):
+            data_sample = torch.stack(data_sample)
+        outputs = self.linear1(inputs)
         outputs = self.linear2(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (labels - outputs).sum()
+            loss = (data_sample - outputs).sum()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
@@ -73,15 +77,16 @@ class ToySyncBNModel(BaseModel):
         self.conv = nn.Conv2d(3, 8, 2)
         self.bn = nn.SyncBatchNorm(8)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        outputs = self.conv(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        data_sample = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        outputs = self.conv(inputs)
         outputs = self.bn(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (labels - outputs).sum()
+            loss = (data_sample - outputs).sum()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
@@ -97,24 +102,25 @@ class ToyGANModel(BaseModel):
         self.linear1 = nn.Linear(2, 1)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, batch_inputs, labels, mode='tensor'):
-        labels = torch.stack(labels)
-        output1 = self.linear1(batch_inputs)
-        output2 = self.linear2(batch_inputs)
+    def forward(self, inputs, data_sample, mode='tensor'):
+        data_sample = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        output1 = self.linear1(inputs)
+        output2 = self.linear2(inputs)
 
         if mode == 'tensor':
             return output1, output2
         elif mode == 'loss':
-            loss1 = (labels - output1).sum()
-            loss2 = (labels - output2).sum()
+            loss1 = (data_sample - output1).sum()
+            loss2 = (data_sample - output2).sum()
             outputs = dict(linear1=loss1, linear2=loss2)
             return outputs
         elif mode == 'predict':
             return output1, output2
 
     def train_step(self, data, optim_wrapper):
-        batch_inputs, batch_labels = self.data_preprocessor(data)
-        loss = self(batch_inputs, batch_labels, mode='loss')
+        data = self.data_preprocessor(data)
+        loss = self(**data, mode='loss')
         optim_wrapper['linear1'].update_params(loss['linear1'])
         optim_wrapper['linear2'].update_params(loss['linear2'])
         return loss
@@ -192,7 +198,7 @@ class ToyMetric1(BaseMetric):
         super().__init__(collect_device=collect_device)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_samples, predictions):
+    def process(self, data_batch, predictions):
         result = {'acc': 1}
         self.results.append(result)
 
@@ -207,7 +213,7 @@ class ToyMetric2(BaseMetric):
         super().__init__(collect_device=collect_device)
         self.dummy_metrics = dummy_metrics
 
-    def process(self, data_samples, predictions):
+    def process(self, data_batch, predictions):
         result = {'acc': 1}
         self.results.append(result)
 
@@ -334,7 +340,12 @@ class ToyEvaluator(Evaluator):
 
 
 def collate_fn(data_batch):
-    return data_batch
+    return pseudo_collate(data_batch)
+
+
+@COLLATE_FUNCTIONS.register_module()
+def custom_collate(data_batch, pad_value):
+    return pseudo_collate(data_batch)
 
 
 class TestRunner(TestCase):
@@ -558,10 +569,10 @@ class TestRunner(TestCase):
             param_scheduler=MultiStepLR(optim_wrapper, milestones=[1, 2]),
             val_cfg=dict(),
             val_dataloader=val_dataloader,
-            val_evaluator=ToyMetric1(),
+            val_evaluator=[ToyMetric1()],
             test_cfg=dict(),
             test_dataloader=test_dataloader,
-            test_evaluator=ToyMetric1(),
+            test_evaluator=[ToyMetric1()],
             default_hooks=dict(param_scheduler=toy_hook),
             custom_hooks=[toy_hook2],
             experiment_name='test_init14')
@@ -1427,7 +1438,7 @@ class TestRunner(TestCase):
                                    val_batch_idx_targets):
             self.assertEqual(result, target)
 
-        # 5. test dynamic interval in IterBasedTrainLoop
+        # 5.1 test dynamic interval in IterBasedTrainLoop
         max_iters = 12
         interval = 5
         dynamic_intervals = [(11, 2)]
@@ -1464,7 +1475,7 @@ class TestRunner(TestCase):
         for result, target, in zip(val_interval_results, val_interval_targets):
             self.assertEqual(result, target)
 
-        # 6. test dynamic interval in EpochBasedTrainLoop
+        # 5.2 test dynamic interval in EpochBasedTrainLoop
         max_epochs = 12
         interval = 5
         dynamic_intervals = [(11, 2)]
@@ -1577,6 +1588,30 @@ class TestRunner(TestCase):
         cfg.train_dataloader.dataset = dict(type='ToyDatasetNoMeta')
         runner = runner.from_cfg(cfg)
         runner.train()
+
+        # 10.1 Test build dataloader with default collate function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train10.1'
+        cfg.train_dataloader.update(collate_fn=dict(type='default_collate'))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 10.2 Test build dataloader with custom collate function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train10.2'
+        cfg.train_dataloader.update(
+            collate_fn=dict(type='custom_collate', pad_value=100))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 11 test build dataloader without default arguments of collate
+        # function.
+        with self.assertRaises(TypeError):
+            cfg = copy.deepcopy(self.iter_based_cfg)
+            cfg.experiment_name = 'test_train11'
+            cfg.train_dataloader.update(collate_fn=dict(type='custom_collate'))
+            runner = Runner.from_cfg(cfg)
+            runner.train()
 
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1889,8 +1924,6 @@ class TestRunner(TestCase):
         ckpt = torch.load(path)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
-        self.assertEqual(ckpt['meta']['dataset_meta'],
-                         runner.train_dataloader.dataset.metainfo)
         self.assertEqual(ckpt['meta']['experiment_name'],
                          runner.experiment_name)
         self.assertEqual(ckpt['meta']['seed'], runner.seed)
