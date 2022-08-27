@@ -45,7 +45,7 @@
 
    design/hook.md
    design/runner.md
-   design/visualizatoion.md
+   design/visualization.md
 
 .. toctree::
    :maxdepth: 2
