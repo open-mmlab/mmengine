@@ -23,9 +23,9 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 |                    名称                     |                用途                |      优先级       |
 | :-----------------------------------------: | :--------------------------------: | :---------------: |
 |     [RuntimeInfoHook](#runtimeinfohook)     |   往 message hub 更新运行时信息    |  VERY_HIGH (10)   |
-|       [IterTimerHook](#itertimerhook)       |            统计迭代耗时            |    NORMAL (50)    |
+|       [IterTimerHook](#itertimerhook)       |  统计迭代耗时并更新到 message hub  |    NORMAL (50)    |
 | [DistSamplerSeedHook](#distsamplerseedhook) | 确保分布式 Sampler 的 shuffle 生效 |    NORMAL (50)    |
-|          [LoggerHook](#loggerhook)          |              打印日志              | BELOW_NORMAL (60) |
+|          [LoggerHook](#loggerhook)          | 收集日志并输出到终端、可视化后端等 | BELOW_NORMAL (60) |
 |  [ParamSchedulerHook](#paramschedulerhook)  |  调用 ParamScheduler 的 step 方法  |     LOW (70)      |
 |      [CheckpointHook](#checkpointhook)      |         按指定间隔保存权重         |   VERY_LOW (90)   |
 
@@ -134,11 +134,11 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir=
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+如果你对 MMEngine 如何管理日志感兴趣，可以阅读[记录日志（logging）](logging.md)。
 
 ### ParamSchedulerHook
 
-[ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[文档](../tutorials/param_scheduler.md)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook) 遍历执行器的所有优化器参数调整策略（Parameter Scheduler）并逐个调用 step 方法更新优化器的参数。如需了解优化器参数调整策略的用法请阅读[优化器参数调整策略](param_scheduler.md)。`ParamSchedulerHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### IterTimerHook
 
@@ -163,7 +163,7 @@ runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()
 ```
 
-`EMAHook` 默认使用 `ExponentialMovingAverage`，可选值还有 `StochasticWeightAverage` 和 `MomentumAnnealingEMA`。可以通过设置 `ema_type` 使用其他的平均策略。
+`EMAHook` 默认使用 [ExponentialMovingAverage](mmengine.model.ExponentialMovingAverage)，可选值还有 [StochasticWeightAverage](mmengine.model.StochasticWeightAverage) 和 [MomentumAnnealingEMA](mmengine.model.MomentumAnnealingEMA)。可以通过设置 `ema_type` 使用其他的平均策略。
 
 ```python
 custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
@@ -195,7 +195,7 @@ runner.train()
 
 ## 自定义钩子
 
-如果 MMEngine 提供的默认钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
+如果 MMEngine 提供的内置钩子不能满足需求，用户可以自定义钩子，只需继承钩子基类并重写相应的位点方法。
 
 例如，如果希望在训练的过程中判断损失值是否有效，如果值为无穷大则无效，我们可以在每次迭代后判断损失值是否无穷大，因此只需重写 `after_train_iter` 位点。
 
