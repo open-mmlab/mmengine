@@ -15,7 +15,7 @@ from mmengine.config import Config
 from mmengine.fileio import dump
 from mmengine.logging import MMLogger
 from mmengine.registry import VISBACKENDS
-from mmengine.utils import TORCH_VERSION
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 def force_init_env(old_func: Callable) -> Any:

@@ -3,7 +3,8 @@ from typing import Any, Callable, Optional, Union
 
 from torch.testing import assert_allclose as _assert_allclose
 
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 def assert_allclose(

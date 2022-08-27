@@ -2,7 +2,7 @@
 from io import BytesIO, StringIO
 from pathlib import Path
 
-from ..utils import is_list_of, is_str
+from mmengine.utils import is_list_of, is_str
 from .file_client import FileClient
 from .handlers import BaseFileHandler, JsonHandler, PickleHandler, YamlHandler
 

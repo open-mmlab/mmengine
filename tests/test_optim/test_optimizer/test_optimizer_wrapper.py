@@ -11,12 +11,13 @@ from torch.cuda.amp import GradScaler
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import SGD, Adam, Optimizer
 
-from mmengine import MessageHub, MMLogger
 from mmengine.dist import all_gather
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.optim import AmpOptimWrapper, OptimWrapper
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 class ToyModel(nn.Module):
