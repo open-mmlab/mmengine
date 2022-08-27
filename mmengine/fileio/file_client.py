@@ -10,8 +10,7 @@ from pathlib import Path
 from typing import Any, Generator, Iterator, Optional, Tuple, Union
 from urllib.request import urlopen
 
-import mmengine
-from mmengine.utils import has_method, is_filepath
+from mmengine.utils import has_method, is_filepath, mkdir_or_exist
 
 
 class BaseStorageBackend(metaclass=ABCMeta):
@@ -523,7 +522,7 @@ class HardDiskBackend(BaseStorageBackend):
             obj (bytes): Data to be written.
             filepath (str or Path): Path to write data.
         """
-        mmengine.mkdir_or_exist(osp.dirname(filepath))
+        mkdir_or_exist(osp.dirname(filepath))
         with open(filepath, 'wb') as f:
             f.write(obj)
 
@@ -543,7 +542,7 @@ class HardDiskBackend(BaseStorageBackend):
             encoding (str): The encoding format used to open the ``filepath``.
                 Default: 'utf-8'.
         """
-        mmengine.mkdir_or_exist(osp.dirname(filepath))
+        mkdir_or_exist(osp.dirname(filepath))
         with open(filepath, 'w', encoding=encoding) as f:
             f.write(obj)
 

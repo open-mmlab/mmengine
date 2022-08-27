@@ -30,6 +30,13 @@
    :caption: 示例
 
    examples/resume_training.md
+   examples/speed_up_training.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 架构设计
+
+   design/hook.md
 
 .. toctree::
    :maxdepth: 2

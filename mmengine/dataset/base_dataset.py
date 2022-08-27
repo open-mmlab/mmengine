@@ -264,7 +264,7 @@ class BaseDataset(Dataset):
                 self.data_bytes[start_addr:end_addr])  # type: ignore
             data_info = pickle.loads(bytes)  # type: ignore
         else:
-            data_info = self.data_list[idx]
+            data_info = copy.deepcopy(self.data_list[idx])
         # Some codebase needs `sample_idx` of data information. Here we convert
         # the idx to a positive number and save it in data information.
         if idx >= 0:

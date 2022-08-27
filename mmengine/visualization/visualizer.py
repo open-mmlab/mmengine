@@ -16,9 +16,9 @@ from matplotlib.patches import Circle
 from matplotlib.pyplot import new_figure_manager
 
 from mmengine.config import Config
-from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.registry import VISBACKENDS, VISUALIZERS
+from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,
@@ -1080,8 +1080,7 @@ class Visualizer(ManagerMixin):
     def add_datasample(self,
                        name,
                        image: np.ndarray,
-                       gt_sample: Optional['BaseDataElement'] = None,
-                       pred_sample: Optional['BaseDataElement'] = None,
+                       data_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
                        show: bool = False,

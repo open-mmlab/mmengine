@@ -7,8 +7,8 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from ..config.utils import PKG2PROJECT
-from ..utils import is_seq_of
+from mmengine.config.utils import PKG2PROJECT
+from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -190,8 +190,7 @@ class Registry:
             scope (str): The target scope.
 
         Examples:
-        >>> from mmengine import Registry, DefaultScope
-        >>> from mmengine.registry import MODELS
+        >>> from mmengine.registry import Registry, DefaultScope, MODELS
         >>> import time
         >>> # External Registry
         >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
