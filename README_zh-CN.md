@@ -194,6 +194,41 @@ runner.train()
 
 </details>
 
+## 了解更多
+
+<details>
+<summary>教程</summary>
+
+- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
+- [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
+
+</details>
+
+<details>
+<summary>示例</summary>
+
+- [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
+- [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
+- [节省现存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
+
+</details>
+
+<details>
+<summary>架构设计</summary>
+
+- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
+- [执行器](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
+
+</details>
+
+<details>
+<summary>迁移指南</summary>
+
+- [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/migrate_param_scheduler_from_mmcv.html)
+- [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/migrate_hook_from_mmcv.html)
+
+</details>
+
 ## 贡献指南
 
 我们感谢所有的贡献者为改进和提升 MMEngine 所作出的努力。请参考[贡献指南](CONTRIBUTING_zh-CN.md)来了解参与项目贡献的相关指引。
