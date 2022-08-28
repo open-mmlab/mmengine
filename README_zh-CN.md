@@ -64,10 +64,7 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
 
 更多关于组件的介绍请阅读[介绍](https://mmengine.readthedocs.io/zh_CN/latest/get_started/introduction.html)。
 
-## 快速上手
-
-<details>
-<summary>安装</summary>
+## 安装
 
 在安装 MMengine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
 
@@ -86,7 +83,7 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 
 更多安装方式请阅读 [安装文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)
 
-</details>
+## 快速上手
 
 <details>
 <summary>构建模型</summary>
@@ -227,6 +224,15 @@ runner.train()
 
 - [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
 - [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
+- [执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)
+- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optimizer.html)
+- [优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
+- [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_element.html)
+- [数据集基类](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/basedataset.html)
+- [评测指标和评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/metric_and_evaluator.html)
+- [分布式通信原语](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/distributed.html)
+- [记录日志](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/logging.html)
+- [可视化](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/visualization.html)
 
 </details>
 
@@ -235,15 +241,16 @@ runner.train()
 
 - [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
 - [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
-- [节省现存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
+- [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
 
 </details>
 
 <details>
 <summary>架构设计</summary>
 
-- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
-- [执行器](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
+- [钩子的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
+- [执行器的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
+- [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
 
 </details>
 
