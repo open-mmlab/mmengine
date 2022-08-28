@@ -1,14 +1,14 @@
 # 注册器（Registry）
 
 OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。
-为了管理这些功能相似的模块，MMEngine 实现了 [注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)。
+为了管理这些功能相似的模块，MMEngine 实现了 [注册器](mmengine.registry.Registry)。
 OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification) 和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
 
 ## 什么是注册器
 
-MMEngine 实现的[注册器](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；
+MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；
 而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。
-MMEngine 中的注册器默认使用 [build_from_cfg](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
+MMEngine 中的注册器默认使用 [build_from_cfg](mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
 
 一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `MODELS` 可以被视作所有模型的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
 
@@ -78,7 +78,7 @@ print(ACTIVATION.module_dict)
 ```
 
 ```{note}
-只有模块所在的文件被导入时，注册机制才会被触发，所以我们需要在某处导入该文件或者使用 `custom_imports` 字段动态导入该模块进而触发注册机制，详情见 [导入自定义 Python 模块](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html#python)。
+只有模块所在的文件被导入时，注册机制才会被触发，所以我们需要在某处导入该文件或者使用 `custom_imports` 字段动态导入该模块进而触发注册机制，详情见[导入自定义 Python 模块](config.md)。
 ```
 
 模块成功注册后，我们可以通过配置文件使用这个激活模块。
@@ -220,6 +220,13 @@ MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
   <img src="https://user-images.githubusercontent.com/58739961/185307159-26dc5771-df77-4d03-9203-9c4c3197befa.png"/>
 </div>
 
+可以调用 [count_registered_modules](mmengine.registry.count_registered_modules) 函数打印已注册到 MMEngine 的模块以及层级结构。
+
+```python
+from mmengine.registry import count_registered_modules
+count_registered_modules()
+```
+
 在 `MMAlpha` 中定义模块 `LogSoftmax`，并往 `MMAlpha` 的 `MODELS` 注册。
 
 ```python
@@ -287,7 +294,7 @@ print(output)
 
 调用兄弟节点的模块需要在 `type` 中指定 `scope` 前缀，所以上面的配置需要加前缀 `mmalpha`。
 
-如果需要调用兄弟节点的数个模块，每个模块都加前缀，这需要做大量的修改。于是 `MMEngine` 引入了 [DefaultScope](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.registry.DefaultScope)，`Registry` 借助它可以很方便地支持临时切换当前节点为指定的节点。
+如果需要调用兄弟节点的数个模块，每个模块都加前缀，这需要做大量的修改。于是 `MMEngine` 引入了 [DefaultScope](mmengine.registry.DefaultScope)，`Registry` 借助它可以很方便地支持临时切换当前节点为指定的节点。
 
 如果需要临时切换当前节点为指定的节点，只需在 `cfg` 设置 `_scope_` 为指定节点的作用域。
 
