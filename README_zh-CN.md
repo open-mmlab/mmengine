@@ -58,11 +58,9 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
    - 逐参数的优化配置
    - 混合精度训练的灵活控制
 
-下图展示了 MMEngine 在 OpenMMLab 2.0 中的层次。MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为 OpenMMLab 中的 30 多个算法库提供了统一的执行基座。其核心组件包含训练引擎、评测引擎和模块管理等。
+下图展示了 MMEngine 在 OpenMMLab 2.0 中的层次。MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为 OpenMMLab 中的 30 多个算法库提供了统一的执行基座。其核心组件包含训练引擎、评测引擎和模块管理等。关于组件的介绍请阅读[组件介绍](https://mmengine.readthedocs.io/zh_CN/latest/get_started/introduction.html)。
 
 ![openmmlab-2 0-arch](https://user-images.githubusercontent.com/40779233/187065730-1e9af236-37dc-4dbd-b448-cce3b72b0109.png)
-
-更多关于组件的介绍请阅读[介绍](https://mmengine.readthedocs.io/zh_CN/latest/get_started/introduction.html)。
 
 ## 安装
 
