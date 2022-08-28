@@ -2,11 +2,14 @@
 from typing import Any, Dict, Union
 
 import torch
-from torch.nn.parallel.distributed import DistributedDataParallel
+from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
 from ..utils import detect_anomalous_params
+
+MODEL_WRAPPERS.register_module(module=DistributedDataParallel)
+MODEL_WRAPPERS.register_module(module=DataParallel)
 
 
 @MODEL_WRAPPERS.register_module()

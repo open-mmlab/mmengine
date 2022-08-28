@@ -1,8 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.registry import MODEL_WRAPPERS
+import torch.nn as nn
+
+from mmengine.registry import MODEL_WRAPPERS, Registry
 
 
-def is_model_wrapper(model):
+def is_model_wrapper(model: nn.Module, registry: Registry = MODEL_WRAPPERS):
     """Check if a module is a model wrapper.
 
     The following 4 model in MMEngine (and their subclasses) are regarded as
@@ -12,9 +14,17 @@ def is_model_wrapper(model):
 
     Args:
         model (nn.Module): The model to be checked.
+        registry (Registry): The parent registry to search for model wrappers.
 
     Returns:
         bool: True if the input model is a model wrapper.
     """
-    model_wrappers = tuple(MODEL_WRAPPERS.module_dict.values())
-    return isinstance(model, model_wrappers)
+    module_wrappers = tuple(registry.module_dict.values())
+    if isinstance(model, module_wrappers):
+        return True
+
+    if not registry.children:
+        return False
+
+    for child in registry.children.values():
+        return is_model_wrapper(model, child)
