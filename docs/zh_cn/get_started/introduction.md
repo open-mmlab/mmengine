@@ -4,7 +4,7 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
 
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
     - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行），同时仅需要 100 行代码训练 CLIP（OpenCLIP 需要上千行）
-    - 轻松兼容流行的算法库如 TIMM、TorchVision、和 Detectron2 中的模型
+    - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
 
 2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
     - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
@@ -13,7 +13,7 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
     - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
     - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) and Stochastic Weight Averaging (SWA)
     - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
-    - 对神经网络模型中的各个层的优化配置进行细粒度调整
+    - 对神经网络模型中各个层的优化配置进行细粒度调整
     - 混合精度训练的灵活控制
 
 ### 架构
