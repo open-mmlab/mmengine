@@ -147,7 +147,8 @@ from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
-下面的代码实现了基础 GAN 的算法，训练过程在 train_step 中实现。使用 MMEngine 实现的算法类，需要继承 BaseModel 基类，
+下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 BaseModel 基类，
+在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
 关于 BaseModel 的更多信息，请参考[模型教程](../tutorials/model.md).
 
 ```python
@@ -190,9 +191,9 @@ class GAN(BaseModel):
 
     def disc_loss(self, disc_pred_fake, disc_pred_real):
         losses_dict = dict()
-        losses_dict['loss_disc_fake'] = F.binary_cross_entropy_with_logits(
+        losses_dict['loss_disc_fake'] = F.binary_cross_entropy(
             disc_pred_fake, 0. * torch.ones_like(disc_pred_fake))
-        losses_dict['loss_disc_real'] = F.binary_cross_entropy_with_logits(
+        losses_dict['loss_disc_real'] = F.binary_cross_entropy(
             disc_pred_real, 1. * torch.ones_like(disc_pred_real))
 
         loss, log_var = self.parse_losses(losses_dict)
@@ -200,7 +201,7 @@ class GAN(BaseModel):
 
     def gen_loss(self, disc_pred_fake):
         losses_dict = dict()
-        losses_dict['loss_gen'] = F.binary_cross_entropy_with_logits(
+        losses_dict['loss_gen'] = F.binary_cross_entropy(
             disc_pred_fake, 1. * torch.ones_like(disc_pred_fake))
         loss, log_var = self.parse_losses(losses_dict)
         return loss, log_var
