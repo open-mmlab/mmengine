@@ -36,7 +36,7 @@ We use [pre-commit hook](https://pre-commit.com/) that checks and formats for `f
 fixes `end-of-files`, `double-quoted-strings`, `python-encoding-pragma`, `mixed-line-ending`, sorts `requirments.txt` automatically on every commit.
 The config for a pre-commit hook is stored in [.pre-commit-config](./.pre-commit-config.yaml).
 
-After you clone the repository, you will need to install initialize pre-commit hook.
+After you clone the repository, you will need to install and initialize pre-commit hook.
 
 ```shell
 pip install -U pre-commit

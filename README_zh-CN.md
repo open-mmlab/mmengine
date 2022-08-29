@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/mmengine-logo.png" width="600"/>
+  <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" width="600"/>
   <div>&nbsp;</div>
   <div align="center">
     <b><font size="5">OpenMMLab 官网</font></b>
@@ -43,19 +43,19 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
 
    - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行），同时仅需要 100 行代码训练 CLIP（OpenCLIP 需要上千行）
-   - 轻松兼容流行的算法库如 TIMM、TorchVision、和 Detectron2 中的模型
+   - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
 
 2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
 
    - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
-   - 上下游的对接更加统一便捷，例如芯片的对接可以通过 MMEngine 轻松适配多个算法库，目前 MMEngine 支持在 Nvidia GPU、AMD、Mac MPS、MLU 等芯片上进行模型训练。
+   - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
 
 3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了
 
-   - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停机制等
-   - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) and Stochastic Weight Averaging (SWA)
+   - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
+   - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) 和 Stochastic Weight Averaging (SWA)
    - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
-   - 逐参数的优化配置
+   - 对神经网络模型中各个层的优化配置进行细粒度调整
    - 混合精度训练的灵活控制
 
 下图展示了 MMEngine 在 OpenMMLab 2.0 中的层次。MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为 OpenMMLab 中的 30 多个算法库提供了统一的执行基座。其核心组件包含训练引擎、评测引擎和模块管理等。关于组件的介绍请阅读[组件介绍](https://mmengine.readthedocs.io/zh_CN/latest/get_started/introduction.html)。
@@ -271,7 +271,7 @@ runner.train()
 ## OpenMMLab 的其他项目
 
 - [MMCV](https://github.com/open-mmlab/mmcv/tree/dev-2.x): OpenMMLab 计算机视觉基础库
-- [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMlab 项目、算法、模型的统一入口
+- [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMLab 项目、算法、模型的统一入口
 - [MMClassification](https://github.com/open-mmlab/mmclassification/tree/dev-1.x): OpenMMLab 图像分类工具箱
 - [MMDetection](https://github.com/open-mmlab/mmdetection/tree/dev-3.x): OpenMMLab 目标检测工具箱
 - [MMDetection3D](https://github.com/open-mmlab/mmdetection3d/tree/dev-1.x): OpenMMLab 新一代通用 3D 目标检测平台
@@ -295,7 +295,7 @@ runner.train()
 扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 OpenMMLab 团队的 [官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=aCvMxdr3)，或通过添加微信“Open小喵Lab”加入官方交流微信群。
 
 <div align="center">
-<img src="resources/zhihu_qrcode.jpg" height="400" />  <img src="resources/qq_group_qrcode.jpg" height="400" />  <img src="resources/wechat_qrcode.jpg" height="400" />
+<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151554-1a0748f0-a1bb-4565-84a6-ab3040247ef1.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151778-d17c1368-125f-4fde-adbe-38cc6eb3be98.jpg" height="400" />
 </div>
 
 我们会在 OpenMMLab 社区为大家
