@@ -37,7 +37,7 @@ MMEngine 将训练过程中涉及的组件和它们的关系进行了抽象，�
 
 在训练间隙或者测试阶段，[评测指标与评测器（Metrics & Evaluator）](../tutorials/metric_and_evaluator.md)会负责对模型性能进行评测。其中评测器负责基于数据集对模型的预测进行评估。评测器内还有一层抽象是评测指标，负责计算具体的一个或多个评测指标（如召回率、正确率等）。
 
-为了统一接口，各个算法库的评测器，模型和数据之间交流的接口都使用了[数据元素（Data Element）](../tutorials/data_element.md)来进行封装。
+为了统一接口，OpenMMLab 2.0 中各个算法库的评测器，模型和数据之间交流的接口都使用了[数据元素（Data Element）](../tutorials/data_element.md)来进行封装。
 
 在训练、推理执行过程中，上述各个组件都可以调用日志管理模块和可视化器进行结构化和非结构化日志的存储与展示。[日志管理（Logging Modules）](../tutorials/logging.md)：负责管理执行器运行过程中产生的各种日志信息。其中消息枢纽 （MessageHub）负责实现组件与组件、执行器与执行器之间的数据共享，日志处理器（Log Processor）负责对日志信息进行处理，处理后的日志会分别发送给执行器的日志器（Logger）和可视化器（Visualizer）进行日志的管理与展示。[可视化器（Visualizer）](../tutorials/visualization.md)：可视化器负责对模型的特征图、预测结果和训练过程中产生的结构化日志进行可视化，支持 Tensorboard 和 WanDB 等多种可视化后端。
 
