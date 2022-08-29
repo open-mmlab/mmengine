@@ -1,15 +1,6 @@
 # 15 分钟上手 MMEngine
 
-MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为算法模型的训练、测试、推理和可视化定义了一套基类与接口。
-和 OpenMMLab 算法库的上一代训练架构相比，它具有如下三个特点：
-
-- 统一：为不同方向算法模型的训练、测试、推理、和可视化过程进行了抽象并定义了一套统一的接口
-- 清晰：封装的层次与逻辑清晰简单，抽象的定义与接口更加清晰，模块的拆分与边界更加清晰
-- 灵活：在统一的基础框架内，模块可以灵活拓展和插拔，支持各类型算法和学习范式，包括少样本和零样本学习，自监督、半监督、和弱监督学习，和模型的蒸馏、剪枝、与量化。
-
-## 样例
-
-以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 mmengine 构建一个完整的、
+以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 MMEngine 构建一个完整的、
 可配置的训练和验证流程，整个流程包含如下步骤：
 
 1. [构建模型](#构建模型)
@@ -17,7 +8,7 @@ MMEngine 实现了 OpenMMLab 算法库的新一代训练架构，为算法模型
 3. [构建评测指标](#构建评测指标)
 4. [构建执行器并执行任务](#构建执行器并执行任务)
 
-### 构建模型
+## 构建模型
 
 首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，
 还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
@@ -42,7 +33,7 @@ class MMResNet50(BaseModel):
             return x, labels
 ```
 
-### 构建数据集和数据加载器
+## 构建数据集和数据加载器
 
 其次，我们需要构建训练和验证所需要的**数据集 (Dataset)**和**数据加载器 (DataLoader)**。
 对于基础的训练和验证功能，我们可以直接使用符合 PyTorch 标准的数据加载器和数据集。
@@ -77,7 +68,7 @@ val_dataloader = DataLoader(batch_size=32,
                                 ])))
 ```
 
-### 构建评测指标
+## 构建评测指标
 
 为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，
 并实现 `process` 和 `compute_metrics` 方法。其中 `process` 方法接受数据集的输出和模型 `mode="predict"`
@@ -105,7 +96,7 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 ```
 
-### 构建执行器并执行任务
+## 构建执行器并执行任务
 
 最后，我们利用构建好的**模型**，**数据加载器**，**评测指标**构建一个**执行器 (Runner)**，同时在其中配置
 **优化器**、**工作路径**、**训练与验证配置**等选项，即可通过调用 `train()` 接口启动训练：
@@ -248,26 +239,4 @@ System environment:
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
 
-除了以上基础组件，你还可以利用**执行器**轻松地组合配置各种训练技巧，如开启混合精度训练和梯度累积（见 [优化器（Optimizer）](./optimizer.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](./metric_and_evaluator.md)）等。在下一节中，我们详细列举了执行器的各类可配置模块。
-
-## 组件
-
-MMEngine 将算法模型训练、推理、测试和可视化过程中的各个组件进行了抽象，定义了如下几个组件和他们的相关接口，这些组件的关系如下图所示：
-
-![runner_modules](https://user-images.githubusercontent.com/40779233/165018333-c54a3405-a566-4de6-a1d5-f2a3a836bd41.jpeg)
-
-以下根据上图简述这些模块的功能与联系，用户可以通过各个组件的用户文档了解他们。
-
-- [执行器（Runner）](./runner.md)：负责执行训练、测试和推理任务并管理这些过程中所需要的各个组件。
-- [钩子（Hook）](./hook.md)：负责在训练、测试、推理任务执行过程中的特定位置执行自定义逻辑。
-- [数据集（Dataset）](./basedataset.md)：负责在训练、测试、推理任务中构建数据集，并将数据送给模型。实际使用过程中会被数据加载器（DataLoader）封装一层，数据加载器会启动多个子进程来加载数据。
-- [模型（Model）](./model.md)：在训练过程中接受数据、输出 loss，在测试、推理任务中接受数据，并进行预测。分布式训练等情况下会被模型的封装器（Model Wrapper，如 .`nn.DistributedDataParallel`）封装一层。
-- [评测指标与评测器（Metrics & Evaluator）](./metric_and_evaluator.md)：评测器负责基于数据集对模型的预测进行评估。评测器内还有一层抽象是评测指标，负责计算具体的一个或多个评测指标（如召回率、正确率等）。
-- [数据元素（Data Element）](./data_element.md)：评测器，模型和数据之间交流的接口使用数据元素进行封装。
-- [参数调度器（Parameter Scheduler）](./param_scheduler.md)：训练过程中，对学习率、动量等参数进行动态调整。
-- [优化器（Optimizer）](./optimizer_wrapper.md)：优化器负责在训练过程中执行反向传播优化模型。实际使用过程中会被优化器封装（OptimWrapper）封装一层，实现梯度累加、混合精度训练等功能。
-- [日志管理（Logging Modules）](./logging.md)：负责管理 Runner 运行过程中产生的各种日志信息。其中消息枢纽 （MessageHub）负责实现组件与组件、执行器与执行器之间的数据共享，日志处理器（Log Processor）负责对日志信息进行处理，处理后的日志会分别发送给执行器的日志器（Logger）和可视化器（Visualizer）进行日志的管理与展示。
-- [配置类（Config）](./config.md)：在 OpenMMLab 算法库中，用户可以通过编写 config 来配置训练、测试过程以及相关的组件。
-- [注册器（Registry）](./registry.md)：负责管理算法库中具有相同功能的模块。MMEngine 根据对算法库模块的抽象，定义了一套根注册器，算法库中的注册器可以继承自这套根注册器，实现模块的跨算法库调用。
-- [分布式通信原语（Distributed Communication Primitives）](./distributed.md)：负责在程序分布式运行过程中不同进程间的通信。这套接口屏蔽了分布式和非分布式环境的区别，同时也自动处理了数据的设备和通信后端。
-- [其他工具（Utils）](./utils.md)：还有一些工具性的模块，如管理器混入（ManagerMixin），它实现了一种全局变量的创建和获取方式，Runner 内很多全局可见对象的基类就是 ManagerMixin。
+除了以上基础组件，你还可以利用**执行器**轻松地组合配置各种训练技巧，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/metric_and_evaluator.md)）等。
