@@ -201,7 +201,6 @@ runner = Runner(
     # 用于验证的评测器，这里使用默认评测器，并评测指标
     val_evaluator=dict(type=Accuracy),
 )
-runner.train()
 ```
 
 </details>
