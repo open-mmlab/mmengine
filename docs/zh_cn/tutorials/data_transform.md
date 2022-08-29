@@ -32,7 +32,7 @@ MMEngine 中仅约定了数据变换类的规范，常用的数据变换类实�
 以分类任务为例，我们在下图展示了一个典型的数据流水线。对每个样本，数据集中保存的基本信息是一个如图中最左侧所示的字典，之后每经过一个由蓝色块代表的数据变换操作，数据字典中都会加入新的字段（标记为绿色）或更新现有的字段（标记为橙色）。
 
 <div align=center>
-<img src="https://user-images.githubusercontent.com/26739999/154197953-bf0b1a16-3f41-4bc7-9e67-b2b9b323d895.png" width="90%"/>
+<img src="https://user-images.githubusercontent.com/26739999/187157681-ac4dcac8-3543-4bfe-ab30-9aa9e56d4900.jpg" width="90%"/>
 </div>
 
 如果我们希望在测试中使用上述数据流水线，则配置文件如下所示：
@@ -80,7 +80,6 @@ test_dataloader = dict(
 | [`RandomChoiceResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) | 缩放图像至多个尺寸中的随机一个尺寸 |
 |  [`RandomGrayscale`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)   |             随机灰度化             |
 |     [`RandomFlip`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |            图像随机翻转            |
-| [`MultiScaleFlipAug`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)  |   支持缩放和翻转的测试时数据增强   |
 
 ### 数据格式化
 
