@@ -1,14 +1,14 @@
-# 迁移数据变换类到 MMEngine 标准
+# 数据变换类的迁移
 
 ## 简介
 
-根据 PyTorch 标准，数据变换类需要实现 `__call__` 方法，而在 OpenMMLab 之前的标准中，我们在此之上进一步要求
-`__call__` 方法的输出应当是一个字典，在方法中对这个字典进行增删查改。而在新的 MMEngine 标准中，为了提升后续的
+在 TorchVision 的数据变换类接口约定中，数据变换类需要实现 `__call__` 方法，而在 OpenMMLab 1.0 的接口约定中，进一步要求
+`__call__` 方法的输出应当是一个字典，在各种数据变换中对这个字典进行增删查改。在 OpenMMLab 2.0 中，为了提升后续的
 可扩展性，我们将原先的 `__call__` 方法迁移为 `transform` 方法，并要求数据变换类应当继承
 [`mmcv.transforms.BaseTransfrom`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)。具体如何实现一个数据
 变换类，可以参见[文档](../tutorials/data_transform.md)。
 
-由于在此次更新中，我们将部分共用的数据变换类统一迁移至 MMCV 中，因此本文的将会对比这部分数据变换在 [MMClassification v0.23.2](https://github.com/open-mmlab/mmclassification/tree/v0.23.2)、[MMDetection v2.25.1](https://github.com/open-mmlab/mmdetection/tree/v2.25.1) 与统合后 [MMCV v2.0.0rc0](https://github.com/open-mmlab/mmcv/tree/dev-2.x) 中在功能、用法和实现上的差异。
+由于在此次更新中，我们将部分共用的数据变换类统一迁移至 MMCV 中，因此本文的将会以 [MMClassification v0.23.2](https://github.com/open-mmlab/mmclassification/tree/v0.23.2)、[MMDetection v2.25.1](https://github.com/open-mmlab/mmdetection/tree/v2.25.1) 和 [MMCV v2.0.0rc0](https://github.com/open-mmlab/mmcv/tree/dev-2.x) 为例，对比这些数据变换类在新旧版本中功能、用法和实现上的差异。
 
 ## 功能差异
 
@@ -61,14 +61,28 @@
   <tr>
     <td><code>RandomResize</code></td>
     <td>无</td>
-    <td>功能由 <code>Resize</code> 实现。需要 <code>ratio_range</code> 为 None，<code>img_scale</code>指定两个尺寸，且 <code>multiscale_mode</code> 为 "range"，或 <code>ratio_range</code> 不为 None。</td>
-    <td>缩放功能同 <code>Resize</code>，支持从指定尺寸范围或指定比例范围随机采样缩放尺寸。</td>
+    <td>功能由 <code>Resize</code> 实现。需要 <code>ratio_range</code> 为 None，<code>img_scale</code>指定两个尺寸，且 <code>multiscale_mode</code> 为 "range"，或 <code>ratio_range</code> 不为 None。
+    <pre>Resize(
+    img_sacle=[(640, 480), (960, 720)],
+    mode="range",
+)</pre>
+    </td>
+    <td>缩放功能同 <code>Resize</code>，支持从指定尺寸范围或指定比例范围随机采样缩放尺寸。
+    <pre>RandomResize(scale=[(640, 480), (960, 720)])</pre>
+    </td>
   </tr>
   <tr>
     <td><code>RandomChoiceResize</code></td>
     <td>无</td>
-    <td>功能由 <code>Resize</code> 实现。需要 <code>ratio_range</code> 为 None，<code>img_scale</code> 指定多个尺寸，且 <code>multiscale_mode</code> 为 "value"。</td>
-    <td>缩放功能同 <code>Resize</code>，支持从若干指定尺寸中随机选择缩放尺寸。</td>
+    <td>功能由 <code>Resize</code> 实现。需要 <code>ratio_range</code> 为 None，<code>img_scale</code> 指定多个尺寸，且 <code>multiscale_mode</code> 为 "value"。
+    <pre>Resize(
+    img_sacle=[(640, 480), (960, 720)],
+    mode="value",
+)</pre>
+    </td>
+    <td>缩放功能同 <code>Resize</code>，支持从若干指定尺寸中随机选择缩放尺寸。
+    <pre>RandomChoiceResize(scales=[(640, 480), (960, 720)])</pre>
+    </td>
   </tr>
   <tr>
     <td><code>RandomGrayscale</code></td>
@@ -105,7 +119,7 @@
 
 ## 实现差异
 
-以 `RandomFlip` 为例，MMCV 的 [RandomFlip](https://github.com/open-mmlab/mmcv/blob/5947178e855c23eea6103b1d70e1f8027f7b2ca8/mmcv/transforms/processing.py#L985) 相比旧版 MMDetection 的 [RandomFlip](https://github.com/open-mmlab/mmdetection/blob/3b72b12fe9b14de906d1363982b9fba05e7d47c1/mmdet/datasets/pipelines/transforms.py#L333)，需要继承 `BaseTransfrom`，将功能实现放在 `transforms` 方法，并将生成随机结果的部分放在单独的方法中，用 `cache_randomness` 包装。
+以 `RandomFlip` 为例，MMCV 的 [RandomFlip](https://github.com/open-mmlab/mmcv/blob/5947178e855c23eea6103b1d70e1f8027f7b2ca8/mmcv/transforms/processing.py#L985) 相比旧版 MMDetection 的 [RandomFlip](https://github.com/open-mmlab/mmdetection/blob/3b72b12fe9b14de906d1363982b9fba05e7d47c1/mmdet/datasets/pipelines/transforms.py#L333)，需要继承 `BaseTransfrom`，将功能实现放在 `transforms` 方法，并将生成随机结果的部分放在单独的方法中，用 `cache_randomness` 包装。有关随机方法的包装相关功能，参见[相关文档](TODO)。
 
 - MMDetection (旧）
 
