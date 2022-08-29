@@ -1,10 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 from tempfile import TemporaryDirectory
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from mmengine.registry import (Registry, count_registered_modules, root,
                                traverse_registry_tree)
+from mmengine.utils import is_installed
 
 
 class TestUtils(TestCase):
@@ -42,6 +43,7 @@ class TestUtils(TestCase):
         # result from any node should be the same
         self.assertEqual(result, result_leaf)
 
+    @skipIf(not is_installed('torch'), 'tests requires torch')
     def test_count_all_registered_modules(self):
         temp_dir = TemporaryDirectory()
         results = count_registered_modules(temp_dir.name, verbose=True)
