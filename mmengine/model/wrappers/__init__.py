@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.utils.parrots_wrapper import TORCH_VERSION
+from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 from .distributed import MMDistributedDataParallel
 from .seperate_distributed import MMSeparateDistributedDataParallel

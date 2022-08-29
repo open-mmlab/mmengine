@@ -54,10 +54,20 @@ def count_registered_modules(save_path: Optional[str] = None,
 
     Args:
         save_path (str, optional): Path to save the json file.
-        verbose (bool): Whether to print log. Default: True
+        verbose (bool): Whether to print log. Defaults to True.
+
     Returns:
         dict: Statistic results of all registered modules.
     """
+    # import modules to trigger registering
+    import mmengine.dataset
+    import mmengine.evaluator
+    import mmengine.hooks
+    import mmengine.model
+    import mmengine.optim
+    import mmengine.runner
+    import mmengine.visualization  # noqa: F401
+
     registries_info = {}
     # traverse all registries in MMEngine
     for item in dir(root):

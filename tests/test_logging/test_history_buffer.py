@@ -1,9 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import pytest
-import torch
 
-from mmengine import HistoryBuffer
+from mmengine.logging import HistoryBuffer
+
+array_method = [np.array, lambda x: x]
+try:
+    import torch
+except ImportError:
+    pass
+else:
+    array_method.append(torch.tensor)
 
 
 class TestLoggerBuffer:
@@ -30,8 +37,7 @@ class TestLoggerBuffer:
         with pytest.raises(AssertionError):
             HistoryBuffer([1, 2], [1])
 
-    @pytest.mark.parametrize('array_method',
-                             [torch.tensor, np.array, lambda x: x])
+    @pytest.mark.parametrize('array_method', array_method)
     def test_update(self, array_method):
         # test `update` method
         log_buffer = HistoryBuffer()

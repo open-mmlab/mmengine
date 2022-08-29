@@ -9,11 +9,10 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 from mmengine.dist import master_only
 from mmengine.fileio import FileClient
 from mmengine.registry import HOOKS
-from mmengine.utils import is_seq_of
-from mmengine.utils.misc import is_list_of
+from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 @HOOKS.register_module()
@@ -25,14 +24,14 @@ class CheckpointHook(Hook):
             indicates epochs, otherwise it indicates iterations.
             Defaults to -1, which means "never".
         by_epoch (bool): Saving checkpoints by epoch or by iteration.
-            Default: True.
+            Defaults to True.
         save_optimizer (bool): Whether to save optimizer state_dict in the
             checkpoint. It is usually used for resuming experiments.
             Defaults to True.
         save_param_scheduler (bool): Whether to save param_scheduler state_dict
             in the checkpoint. It is usually used for resuming experiments.
             Defaults to True.
-        out_dir (str, optional | Path): The root directory to save checkpoints.
+        out_dir (str, Path, Optional): The root directory to save checkpoints.
             If not specified, ``runner.work_dir`` will be used by default. If
             specified, the ``out_dir`` will be the concatenation of ``out_dir``
             and the last level directory of ``runner.work_dir``. For example,
@@ -317,6 +316,12 @@ class CheckpointHook(Hook):
                 else:
                     break
 
+        save_file = osp.join(runner.work_dir, 'last_checkpoint')
+        file_client = FileClient.infer_client(uri=self.out_dir)
+        filepath = file_client.join_path(self.out_dir, ckpt_filename)
+        with open(save_file, 'w') as f:
+            f.write(filepath)
+
     @master_only
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -329,13 +334,13 @@ class CheckpointHook(Hook):
             return
 
         if self.by_epoch:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
-            cur_type, cur_time = 'epoch', runner.epoch + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'epoch_{}.pth').format(runner.epoch)
+            cur_type, cur_time = 'epoch', runner.epoch
         else:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
-            cur_type, cur_time = 'iter', runner.iter + 1
+            ckpt_filename = self.args.get('filename_tmpl',
+                                          'iter_{}.pth').format(runner.iter)
+            cur_type, cur_time = 'iter', runner.iter
 
         # handle auto in self.key_indicators and self.rules before the loop
         if 'auto' in self.key_indicators:
@@ -465,9 +470,8 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
-            outputs (dict, optional): Outputs from model. Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (dict, optional): Outputs from model.
         """
         if self.by_epoch:
             return

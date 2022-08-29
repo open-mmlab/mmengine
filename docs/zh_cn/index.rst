@@ -4,6 +4,12 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 开始你的第一步
+
+   get_started/installation.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 教程
 
    tutorials/registry.md
@@ -20,6 +26,19 @@
    tutorials/visualizer.md
    tutorials/model.md
    tutorials/initialize.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 示例
+
+   examples/resume_training.md
+   examples/speed_up_training.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 架构设计
+
+   design/hook.md
 
 .. toctree::
    :maxdepth: 2
