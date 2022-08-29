@@ -15,11 +15,11 @@ from torch._utils import (_flatten_dense_tensors, _take_tensors,
 from torch.distributed import ProcessGroup
 
 import mmengine
-from mmengine.utils.parrots_wrapper import TORCH_VERSION
-from mmengine.utils.version_utils import digit_version
-from .utils import (barrier, cast_data_device, get_backend, get_comm_device,
-                    get_data_device, get_default_group, get_dist_info,
-                    get_rank, get_world_size)
+from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
+                    get_default_group, barrier, get_data_device,
+                    get_comm_device, cast_data_device)
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 def _get_reduce_op(name: str) -> torch_dist.ReduceOp:
@@ -96,10 +96,9 @@ def all_reduce(data: Tensor,
         if op.lower() == 'mean':
             torch_dist.all_reduce(data_on_device, _get_reduce_op('sum'), group)
 
-            # When the type of `data_on_device` is int64,
-            # `data_on_device.div_(world_size)` will  appear RuntimeError:
-            # result type Float can't be cast to  the desired output type Long.
-            data_on_device = torch.div(data_on_device, world_size)
+            # use true_div to handle torch1.6.0 throws an RuntimeError when
+            #  the type of `data_on_device` is int64
+            data_on_device = torch.true_div(data_on_device, world_size)
         else:
             torch_dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 

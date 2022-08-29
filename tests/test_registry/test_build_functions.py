@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
-import torch.nn as nn
-from torch.optim import SGD
 
 from mmengine import (PARAM_SCHEDULERS, Config, ConfigDict, ManagerMixin,
                       Registry, build_from_cfg, build_model_from_cfg)
+from mmengine.utils import is_installed
 
 
 @pytest.mark.parametrize('cfg_type', [dict, ConfigDict, Config])
@@ -128,7 +127,10 @@ def test_build_from_cfg(cfg_type):
     Visualizer.get_current_instance()
 
 
+@pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 def test_build_model_from_cfg():
+    import torch.nn as nn
+
     BACKBONES = Registry('backbone', build_func=build_model_from_cfg)
 
     @BACKBONES.register_module()
@@ -186,7 +188,10 @@ def test_build_model_from_cfg():
     assert NEW_MODELS.build_func is pseudo_build
 
 
+@pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 def test_build_sheduler_from_cfg():
+    import torch.nn as nn
+    from torch.optim import SGD
     model = nn.Conv2d(1, 1, 1)
     optimizer = SGD(model.parameters(), lr=0.1)
     cfg = dict(

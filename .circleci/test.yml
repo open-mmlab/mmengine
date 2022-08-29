@@ -26,6 +26,35 @@ jobs:
           command: |
             pip install interrogate
             interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 80 mmengine
+
+  build_without_torch:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Upgrade pip
+          command: |
+            python -V
+            python -m pip install pip --upgrade
+            python -m pip --version
+      - run:
+          name: Install mmengine dependencies
+          command: python -m pip install -r requirements.txt
+      - run:
+          name: Build and install
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: python -m pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
+
   build_cpu:
     parameters:
       # The python version must match available image tags in
@@ -138,6 +167,10 @@ workflows:
             branches:
               ignore:
                 - main
+      - build_without_torch:
+          name: build without torch
+          requires:
+            - lint
       - build_cpu:
           name: minimum_version_cpu
           torch: 1.6.0

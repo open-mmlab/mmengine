@@ -4,14 +4,12 @@ import logging
 import os
 import os.path as osp
 import platform
-import random
 import time
 import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parallel.distributed import DistributedDataParallel
@@ -20,33 +18,35 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.data import pseudo_collate, worker_init_fn
+from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only, sync_random_seed)
+                           is_distributed, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
-from mmengine.logging import LogProcessor, MessageHub, MMLogger, print_log
+from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper)
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOOPS, MODEL_WRAPPERS, MODELS, PARAM_SCHEDULERS,
-                               RUNNERS, VISUALIZERS, DefaultScope,
+                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               VISUALIZERS, DefaultScope,
                                count_registered_modules)
-from mmengine.registry.root import LOG_PROCESSORS
-from mmengine.utils import (TORCH_VERSION, collect_env, digit_version,
-                            get_git_hash, is_list_of, is_seq_of,
-                            revert_sync_batchnorm, set_multi_processing)
+from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, get_state_dict,
                          save_checkpoint, weights_to_cpu)
+from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
+from .utils import set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -181,7 +181,7 @@ class Runner:
             Defaults to None.
 
     Examples:
-        >>> from mmengine import Runner
+        >>> from mmengine.runner import Runner
         >>> cfg = dict(
         >>>     model=dict(type='ToyModel'),
         >>>     work_dir='path/of/work_dir',
@@ -682,28 +682,10 @@ class Runner:
                 more details.
         """
         self._deterministic = deterministic
-        self._seed = seed
-        if self._seed is None:
-            self._seed = sync_random_seed()
-
-        if diff_rank_seed:
-            # set different seeds for different ranks
-            self._seed = self._seed + get_rank()
-        random.seed(self._seed)
-        np.random.seed(self._seed)
-        torch.manual_seed(self._seed)
-        torch.cuda.manual_seed_all(self._seed)
-        if deterministic:
-            if torch.backends.cudnn.benchmark:
-                warnings.warn(
-                    'torch.backends.cudnn.benchmark is going to be set as '
-                    '`False` to cause cuDNN to deterministically select an '
-                    'algorithm')
-
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
-            if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
-                torch.use_deterministic_algorithms(True)
+        self._seed = set_random_seed(
+            seed=seed,
+            deterministic=deterministic,
+            diff_rank_seed=diff_rank_seed)
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
@@ -1067,26 +1049,29 @@ class Runner:
         """
         if isinstance(optim_wrapper, OptimWrapper):
             return optim_wrapper
-        elif isinstance(optim_wrapper, (dict, ConfigDict, Config)):
-            # If `optim_wrapper` is a config dict with only one optimizer,
-            # the config dict must contain `optimizer`:
-            # optim_wrapper = dict(optimizer=dict(type='SGD', lr=0.1))
-            # `type` is optional, defaults to `OptimWrapper`.
-            # `optim_wrapper` could also be defined as:
-            # optim_wrapper = dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.1))  # noqa: E501
-            # to build specific optimizer wrapper.
-            if 'type' in optim_wrapper or 'optimizer' in optim_wrapper:
-                optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
-                return optim_wrapper
-            elif 'constructor' not in optim_wrapper:
-                # if `type` and `optimizer` are not defined in `optim_wrapper`,
-                # it should be the case of training with multiple optimizers.
-                # If constructor is not defined in `optim_wrapper`, each value
-                # of `optim_wrapper` must be an `OptimWrapper` instance since
-                # `DefaultOptimizerConstructor` will not handle the case of
-                # training with multiple optimizers. `build_optim_wrapper` will
-                # directly build the `OptimWrapperDict` instance from
-                # `optim_wrapper.`
+        if isinstance(optim_wrapper, (dict, ConfigDict, Config)):
+            # optimizer must be defined for single optimizer training.
+            optimizer = optim_wrapper.get('optimizer', None)
+
+            # If optimizer is a built `Optimizer` instance, the optimizer
+            # wrapper should be built by `OPTIM_WRAPPERS` registry.
+            if isinstance(optimizer, Optimizer):
+                optim_wrapper.setdefault('type', 'OptimWrapper')
+                return OPTIM_WRAPPERS.build(optim_wrapper)  # type: ignore
+
+            # If `optimizer` is not None or `constructor` is defined, it means,
+            # optimizer wrapper will be built by optimizer wrapper
+            # constructor. Therefore, `build_optim_wrapper` should be called.
+            if optimizer is not None or 'constructor' in optim_wrapper:
+                return build_optim_wrapper(self.model, optim_wrapper)
+            else:
+                # if `optimizer` is not defined, it should be the case of
+                # training with multiple optimizers. If `constructor` is not
+                # defined either, Each value of `optim_wrapper` must be an
+                # `OptimWrapper` instance since `DefaultOptimizerConstructor`
+                # will not handle the case of training with multiple
+                # optimizers. `build_optim_wrapper` will directly build the
+                # `OptimWrapperDict` instance from `optim_wrapper.`
                 optim_wrappers = OrderedDict()
                 for name, optim in optim_wrapper.items():
                     if not isinstance(optim, OptimWrapper):
@@ -1096,11 +1081,6 @@ class Runner:
                             f'optimizer, but got {name}={optim}')
                     optim_wrappers[name] = optim
                 return OptimWrapperDict(**optim_wrappers)
-                # If constructor is defined, directly build the optimizer
-                # wrapper instance from the config dict.
-            else:
-                optim_wrapper = build_optim_wrapper(self.model, optim_wrapper)
-                return optim_wrapper
         else:
             raise TypeError('optimizer wrapper should be an OptimWrapper '
                             f'object or dict, but got {optim_wrapper}')
@@ -1248,19 +1228,28 @@ class Runner:
 
             return param_schedulers
 
-    def build_evaluator(
-            self, evaluator: Union[Dict, List[Dict], Evaluator]) -> Evaluator:
+    def build_evaluator(self, evaluator: Union[Dict, List,
+                                               Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
 
-            evaluator = dict(type='ToyMetric')
+            # evaluator could be a built Evaluator instance
+            evaluator = Evaluator(metrics=[ToyMetric()])
 
             # evaluator can also be a list of dict
             evaluator = [
                 dict(type='ToyMetric1'),
                 dict(type='ToyEvaluator2')
             ]
+
+            # evaluator can also be a list of built metric
+            evaluator = [ToyMetric1(), ToyMetric2()]
+
+            # evaluator can also be a dict with key metrics
+            evaluator = dict(metrics=ToyMetric())
+            # metric is a list
+            evaluator = dict(metrics=[ToyMetric()])
 
         Args:
             evaluator (Evaluator or dict or list): An Evaluator object or a
@@ -1274,13 +1263,12 @@ class Runner:
         elif isinstance(evaluator, dict):
             # if `metrics` in dict keys, it means to build customized evalutor
             if 'metrics' in evaluator:
-                assert 'type' in evaluator, 'expected customized evaluator' \
-                                    f' with key `type`, but got {evaluator}'
+                evaluator.setdefault('type', 'Evaluator')
                 return EVALUATOR.build(evaluator)
             # otherwise, default evalutor will be built
             else:
                 return Evaluator(evaluator)  # type: ignore
-        elif is_list_of(evaluator, dict):
+        elif isinstance(evaluator, list):
             # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
         else:
@@ -1386,14 +1374,19 @@ class Runner:
 
         # The default behavior of `collat_fn` in dataloader is to
         # merge a list of samples to form a mini-batch of Tensor(s).
-        # However, to make this more flexible, collate_fn in MMengine does
-        # nothing. The action to merge a list of samples will be handled
-        # in model.
+        # However, in mmengine, if `collate_fn` is not defined in
+        # dataloader_cfg, `pseudo_collate` will only convert the list of
+        # samples into a dict without stacking the batch tensor.
+        collate_fn_cfg = dataloader_cfg.pop('collate_fn',
+                                            dict(type='pseudo_collate'))
+        collate_fn_type = collate_fn_cfg.pop('type')
+        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
             batch_sampler=batch_sampler,
-            collate_fn=pseudo_collate,
+            collate_fn=collate_fn,
             worker_init_fn=init_fn,
             **dataloader_cfg)
         return data_loader
