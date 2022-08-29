@@ -8,7 +8,7 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
 
 2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
     - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
-    - 上下游的对接更加统一便捷，例如芯片的对接可以通过 MMEngine 轻松适配多个算法库，目前 MMEngine 支持基于 GPU、Mac MPS、AMD、MLU 等芯片进行模型训练。
+    - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
 3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了
     - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
     - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) and Stochastic Weight Averaging (SWA)
