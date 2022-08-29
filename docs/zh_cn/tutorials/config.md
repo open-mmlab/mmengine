@@ -78,15 +78,15 @@ Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'te
 我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
 
 ```python
-print(cfg.test_int)  # 1
-print(cfg.test_list)  # [1, 2, 3]
-print(cfg.test_dict)  # ConfigDict(key1='value1', key2=0.1)
-cfg.test_int = 2  # 这里发生了配置字段修改，test_int 字段的值变成了 2
+print(cfg.test_int)
+print(cfg.test_list)
+print(cfg.test_dict)
+cfg.test_int = 2
 
-print(cfg['test_int'])  # 2
-print(cfg['test_list'])  # [1, 2, 3]
-print(cfg['test_dict'])  # ConfigDict(key1='value1', key2=0.1)
-cfg['test_list'][1] = 3  # 这里发生了字段修改，test_list 字段的值变成了 [1, 3, 3]
+print(cfg['test_int'])
+print(cfg['test_list'])
+print(cfg['test_dict'])
+cfg['test_list'][1] = 3
 print(cfg['test_list'])
 ```
 
@@ -166,7 +166,6 @@ model = dict(type='ResNet', depth=50)
 
 ```python
 cfg = Config.fromfile('resnet50.py')
-cfg.optimizer
 print(cfg.optimizer)
 ```
 
@@ -193,7 +192,7 @@ model = dict(type='ResNet', depth=50)
 
 ```python
 cfg = Config.fromfile('resnet50_runtime.py')
-cfg.optimizer
+print(cfg.optimizer)
 ```
 
 ```
@@ -244,7 +243,7 @@ gpu_ids = [0]
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
 model = dict(type='ResNet', depth=50)
-optimizer = dict(_delete_=True, type='SGD', lr=0.01, xx = dict(xxx=yyy))
+optimizer = dict(_delete_=True, type='SGD', lr=0.01)
 ```
 
 这时候，`optimizer` 这个字典中就只有 `type` 和 `lr` 这两个 key，`momentum` 和 `weight_decay` 将不再被继承。
@@ -290,7 +289,7 @@ a = {{_base_.model}}
 a['type'] = 'MobileNet'
 ```
 
-配置类是无法解析这样的配置文件的。配置类提供了一种更 `pythonic` 的方式，让我们能够在 `python` 类配置文件中修改 `_base_` 中定义的变量（`python` 类配置文件专属特性，目前不支持在 `json`、`yaml` 配置文件中修改 `_base_` 中定义的变量）。
+配置类是无法解析这样的配置文件的（解析时报错）。配置类提供了一种更 `pythonic` 的方式，让我们能够在 `python` 类配置文件中修改 `_base_` 中定义的变量（`python` 类配置文件专属特性，目前不支持在 `json`、`yaml` 配置文件中修改 `_base_` 中定义的变量）。
 
 `modify_base_var.py`：
 
@@ -462,12 +461,6 @@ python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
 ```
 
 ```
-Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
-```
-
-此时终端上会显示：
-
-```python
 Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
 ```
 
