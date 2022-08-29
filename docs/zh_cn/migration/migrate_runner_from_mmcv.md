@@ -33,10 +33,10 @@ MMCV 需要在训练脚本里调用 `get_logger` 接口获得 logger，并用它
 ```python
 logger = get_logger(name='custom', log_file=log_file, log_level=cfg.log_level)
 env_info_dict = collect_env()
-    env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
-    dash_line = '-' * 60 + '\n'
-    logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                dash_line)
+env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
+dash_line = '-' * 60 + '\n'
+logger.info('Environment info:\n' + dash_line + env_info + '\n' +
+            dash_line)
 ```
 
 执行器构造时，也需要传入 logger。
@@ -279,7 +279,7 @@ class Model(BaseModel):
 model = Model()
 ```
 
-需要注意的是，分布式训练时，MMCV 的执行器需要接受分布式封装后的模型，而 `MMEngine` 接受分布式封装前的模型，在执行器实例化阶对其段进行分布式封装。
+需要注意的是，分布式训练时，MMCV 的执行器需要接受分布式封装后的模型，而 `MMEngine` 接受分布式封装前的模型，在执行器实例化阶段对其段进行分布式封装。
 
 ### 准备优化器
 
