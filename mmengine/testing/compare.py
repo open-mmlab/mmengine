@@ -6,10 +6,12 @@ from shlex import split
 from typing import Any, Callable, Dict, List, Optional, Union
 from unittest.mock import patch
 
+from torch.nn import GroupNorm, LayerNorm
 from torch.testing import assert_allclose as _assert_allclose
 
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 
 
 def assert_allclose(
@@ -94,6 +96,7 @@ def assert_dict_contains_subset(dict_obj: Dict[Any, Any],
         dict_obj (Dict[Any, Any]): Dict object to be checked.
         expected_subset (Dict[Any, Any]): Subset expected to be contained in
             dict_obj.
+
     Returns:
         bool: Whether the dict_obj contains the expected_subset.
     """
@@ -110,6 +113,7 @@ def assert_attrs_equal(obj: Any, expected_attrs: Dict[str, Any]) -> bool:
     Args:
         obj (object): Class object to be checked.
         expected_attrs (Dict[str, Any]): Dict of the expected attrs.
+
     Returns:
         bool: Whether the attribute of class object is correct.
     """
@@ -127,6 +131,7 @@ def assert_dict_has_keys(obj: Dict[str, Any],
         obj (Dict[str, Any]): Object to be checked.
         expected_keys (List[str]): Keys expected to contained in the keys of
             the obj.
+
     Returns:
         bool: Whether the obj has the expected keys.
     """
@@ -139,6 +144,7 @@ def assert_keys_equal(result_keys: List[str], target_keys: List[str]) -> bool:
     Args:
         result_keys (List[str]): Result keys to be checked.
         target_keys (List[str]): Target keys to be checked.
+
     Returns:
         bool: Whether target_keys is equal to result_keys.
     """
@@ -150,12 +156,11 @@ def assert_is_norm_layer(module) -> bool:
 
     Args:
         module (nn.Module): The module to be checked.
+
     Returns:
         bool: Whether the module is a norm layer.
     """
-    from torch.nn import GroupNorm, LayerNorm
 
-    from ..utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
     norm_layer_candidates = (_BatchNorm, _InstanceNorm, GroupNorm, LayerNorm)
     return isinstance(module, norm_layer_candidates)
 
@@ -165,6 +170,7 @@ def assert_params_all_zeros(module) -> bool:
 
     Args:
         module (nn.Module): The module to be checked.
+
     Returns:
         bool: Whether the parameters of the module is all zeros.
     """
