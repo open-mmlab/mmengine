@@ -34,12 +34,12 @@ normal_init(model, mean=0, std=0.01, bias=0)
 from mmengine.model import kaiming_init, xavier_init
 
 kaiming_init(model)
-normal_init(model)
+xavier_init(model)
 ```
 
 目前 MMEngine 提供了以下初始化函数：
 
-| 初始化器                                                              | 功能                                                                                                                               |
+| 初始化函数                                                            | 功能                                                                                                                               |
 | :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
 | [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
 | [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 以 `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
@@ -124,7 +124,7 @@ class ToyNet(BaseModule):
         self.conv = nn.Conv2d(1, 1, 1)
 
 
-# 对卷积做 Kaiming 初始化，现性层做 Xavier 初始化
+# 对卷积做 Kaiming 初始化，线性层做 Xavier 初始化
 toy_net = ToyNet(
     init_cfg=[
         dict(type='Kaiming', layer='Conv2d'),
@@ -226,7 +226,7 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
 `override` 可以理解成一个嵌套的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也需要通过 `type`
-字段指定初始化方式。不同的是 `override` 必须制定 `name`，`name` 相当于 `override`
+字段指定初始化方式。不同的是 `override` 必须指定 `name`，`name` 相当于 `override`
 的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`，
 我们会以 `Xavier` 初始化方式初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
 
@@ -323,9 +323,6 @@ Initialized by user-defined `init_weights` in ToyConv
 - 通常用于初始化自定义模块。相比于 `init_cfg` 的自定义初始化，实现 `init_weights` 方法更加简单，无需注册。然而，它的灵活性不及 `init_cfg`，无法动态地指定任意模块的初始化方式。
 
 ```{note}
-init_weights 的优先级比 `init_cfg` 高，如果 `init_cfg` 中已经指定了某个模块的初始化方式
-```
-
-```{note}
-执行器会在 train() 函数中调用 init_weights。
+- init_weights 的优先级比 `init_cfg` 高
+- 执行器会在 train() 函数中调用 init_weights。
 ```

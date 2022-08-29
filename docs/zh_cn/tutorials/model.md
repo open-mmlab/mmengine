@@ -16,7 +16,7 @@
 
 [train_step](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。
 
-[val_step](mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[钩子（Hook）](./hook.md)的 `after_train_iter` 和 `after_val_iter` 接口。
+[val_step](mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[评测器](./metric_and_evaluator.md)的 [process](mmengine.evaluator.Evaluator.process) 接口和[钩子（Hook）](./hook.md)的 `after_val_iter` 接口。
 
 [test_step](mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被进一步传给 `after_test_iter` 接口。
 
@@ -77,6 +77,8 @@ class NeuralNetwork(BaseModel):
 
 class FashionMnistMetric(BaseMetric):
     def process(self, data, preds) -> None:
+        # data 参数为 Dataloader 返回的元组，即 (img, label)
+        # predict 为模型 `predict` 模式下，返回的元组，分别为 `pred.argmax(1) 和 `loss``
         self.results.append(((data[1] == preds[0].cpu()).sum(), preds[1], len(preds[0])))
 
     def compute_metrics(self, results):
@@ -97,12 +99,12 @@ runner = Runner(
 runner.train()
 ```
 
-相比于 [Pytorch 官方示例](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#)，MMEngine 的代码更加简洁，记录的日志也更加丰富。
-
 在这个例子中，`NeuralNetwork.forward` 存在着以下跨模块的接口约定：
 
 - 由于 `train_dataloader` 会返回一个 `(img, label)` 形式的元组，因此 `forward` 接口的前两个参数分别需要为 `img` 和 `label`。
-- 由于 `forward` 在 `predict` 模式下会返回 `(pred, loss)` 形式的元组，因此 `process` 的 preds 参数应当同样为相同形式的元组。
+- 由于 `forward` 在 `predict` 模式下会返回 `(pred, loss)` 形式的元组，因此 `process` 的 `preds` 参数应当同样为相同形式的元组。
+
+相比于 [Pytorch 官方示例](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#)，MMEngine 的代码更加简洁，记录的日志也更加丰富。
 
 ## 数据处理器（DataPreprocessor）
 
