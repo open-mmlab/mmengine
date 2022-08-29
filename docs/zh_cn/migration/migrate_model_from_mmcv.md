@@ -2,25 +2,25 @@
 
 ## 简介
 
-MMCV 早期主要适配上层（High level）深度学习任务，例如目标检测、物体识别。考虑到这类任务模型参数优化流程基本一致：
+MMCV 早期主要适配一些常见的计算机视觉任务，例如目标检测、物体识别。这类任务的模型参数优化流程可以被归纳为以下四个步骤：
 
 1. 计算损失
 2. 计算梯度
 3. 更新参数
 4. 梯度清零
 
-上述流程的一大特点就是调用位置统一（在训练迭代后调用）、执行步骤统一（依次执行 1->2->3->4），非常契合[钩子（Hook）](../design/hook.md)的设计原则。因此
-MMCV 通过 `OptimizerHook` 来完成模型优化的流程。
+上述流程的一大特点就是调用位置统一（在训练迭代后调用）、执行步骤统一（依次执行步骤 1->2->3->4），非常契合[钩子（Hook）](../design/hook.md)的设计原则，因此这类任务通常会使用 `Hook` 来
+来优化模型。MMCV 为此实现了一系列的 `Hook`，例如 `OptimizerHook`（单精度训练）、`Fp16OptimizerHook`（混合精度训练） 和 `GradientCumulativeFp16OptimizerHook`（混合精度训练 + 梯度累加），为这类任务提供各种优化策略。
 
-然而，对于底层（Low level）深度学习任务，如生成对抗网络（GAN），自监督（Self-supervision），它们的模型参数优化流程完全不同，并不满足调用位置统一、执行步骤统一的原则。因此这类任务通常无法使用 `OptimizerHook` 进行参数优化，而选择在 `model.train_step` 方法里实现了完整的优化流程。这意味着这类深度学习任务无法使用 MMCV 封装的 `OptimizerHook`、`Fp16OptimizerHook`，`GradientCumulativeFp16OptimizerHook` 实现混合精度训练、梯度累加等策略，而需要在 `train_step` 里自自行实现相应逻辑。
+然而，诸如生成对抗网络（GAN），自监督（Self-supervision）一类的任务，它们的参数更新流程更加灵活，并不满足调用位置统一、执行步骤统一的原则，难以使用 `Hook` 对参数进行优化。为了支持训练这类任务，MMCV 的执行器会在调用 `model.train_step` 时，额外传入 `optimizer` 参数，让模型在 `train_step` 里实现自定义的优化流程。这样尽管可以支持训练这类任务，但也会导致无法使用各种 `OptimizerHook`，而需要在 `train_step` 里实现混合精度训练、梯度累加等训练策略。
 
-为了统一底层深度学习任务和上层深度学习任务的训练流程，MMEngine 设计了[优化器封装](mmengine.optim.OptimWrapper)，并在 `model.train_step` 里执行优化流程。
+为了统一深度学习任务的参数优化流程，MMEngine 设计了[优化器封装](mmengine.optim.OptimWrapper)，集成了混合精度训练、梯度累加等训练策略，各类深度学习任务一律在 `model.train_step` 里执行参数优化流程。
 
 ## 迁移模型
 
-### 上层深度学习任务
+### 参数更新流程统一的深度学习任务
 
-考虑到上层深度学习任务模型参数优化的流程基本一致，我们可以通过继承[模型基类](../tutorials/model.md)来完成迁移。
+考虑到目标检测、物体识别一类的深度学习任务参数优化的流程基本一致，我们可以通过继承[模型基类](../tutorials/model.md)来完成迁移。
 
 **基于 MMCV 执行器的模型**
 
@@ -115,15 +115,17 @@ class MMEngineToyModel(BaseModel):
         self.linear = nn.Linear(1, 1)
 
     def forward(self, img, label, mode):
+        feat = self.linear(img)
+        # 被 `train_step` 调用，返回用于更新参数的损失字典
         if mode == 'loss':
-            feat = self.linear(img)
             loss1 = (feat - label).pow(2)
             loss2 = (feat - label).abs()
             return dict(loss1=loss1, loss2=loss2)
-        elif mode == 'tensor':
+        # 被 `val_step` 调用，返回传给 `evaluator` 的预测结果
+        elif mode == 'predict':
             return [feat]
+        # tensor 模式，功能详见模型教程文档： tutorials/model.md
         else:
-            # tensor 模式，功能详见模型教程文档： tutorials/model.md
             pass
 
 
@@ -226,9 +228,9 @@ class MMEngineToyModel(BaseModel):
 - `MMCVToyModel` 和 `MMEngineModel` 的 `forward` 的接口需要匹配 `train_step` 中的调用方式，由于 `MMEngineToyModel` 直接调用基类的 `train_step` 方法，因此 `forward` 需要接受参数 `mode`，具体规则详见[模型教程文档](../tutorials/model.md)
 - `MMEngineModel` 如果没有继承 `BaseModel`，必须实现 `train_step`、`test_step` 和 `val_step` 方法。
 
-### 底层深度学习任务
+### 自定义参数更新流程的深度学习任务
 
-底层深度学习任务可能需要实现自定义的参数更新流程，以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 optimizer，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单的优化模型。
+以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单的优化模型。
 
 参考示例[训练生成对抗网络](../examples/train_a_gan.md)，如果用 MMCV 进行训练，`GAN` 的模型优化接口如下：
 
@@ -348,7 +350,7 @@ class MMEngineToyModel(BaseModel):
 </thead>
 </table>
 
-二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](上层深度学习任务的模型迁移)提到的一致。
+二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](参数更新流程统一的深度学习任务)提到的一致。
 
 ### 迁移分布式训练
 
