@@ -3,7 +3,7 @@
 MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，支持在 Linux、Windows、MacOS 上运行。它具有如下三个亮点：
 
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
-    - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行），同时仅需要 100 行代码训练 CLIP（OpenCLIP 需要上千行）
+    - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行）
     - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
 
 2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
@@ -24,9 +24,11 @@ MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，
 
 ### 模块介绍
 
-![engine_modules](https://user-images.githubusercontent.com/40779233/187065715-1a57d244-72c5-4896-a72a-6430ff823e11.png)
+<img src="https://user-images.githubusercontent.com/40779233/187156277-7c5d020b-7ba6-421b-989d-2990034ff8cc.png" width = "300" alt="模块关系" align=center />
 
 MMEngine 将训练过程中涉及的组件和它们的关系进行了抽象，如上图所示。不同算法库中的同类型组件具有相同的接口定义。
+
+#### 核心模块与相关组件
 
 训练引擎的核心模块是[执行器（Runner）](../tutorials/runner.md)。 执行器负责执行训练、测试和推理任务并管理这些过程中所需要的各个组件。在训练、测试、推理任务执行过程中的特定位置，执行器设置了[钩子（Hook）](../tutorials/hook.md) 来允许用户拓展、插入和执行自定义逻辑。执行器主要调用如下组件来完成训练和推理过程中的循环：
 
@@ -40,6 +42,8 @@ MMEngine 将训练过程中涉及的组件和它们的关系进行了抽象，�
 为了统一接口，OpenMMLab 2.0 中各个算法库的评测器，模型和数据之间交流的接口都使用了[数据元素（Data Element）](../tutorials/data_element.md)来进行封装。
 
 在训练、推理执行过程中，上述各个组件都可以调用日志管理模块和可视化器进行结构化和非结构化日志的存储与展示。[日志管理（Logging Modules）](../tutorials/logging.md)：负责管理执行器运行过程中产生的各种日志信息。其中消息枢纽 （MessageHub）负责实现组件与组件、执行器与执行器之间的数据共享，日志处理器（Log Processor）负责对日志信息进行处理，处理后的日志会分别发送给执行器的日志器（Logger）和可视化器（Visualizer）进行日志的管理与展示。[可视化器（Visualizer）](../tutorials/visualization.md)：可视化器负责对模型的特征图、预测结果和训练过程中产生的结构化日志进行可视化，支持 Tensorboard 和 WanDB 等多种可视化后端。
+
+#### 公共基础模块
 
 MMEngine 中还实现了各种算法模型执行过程中需要用到的公共基础模块，包括
 
