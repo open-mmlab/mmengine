@@ -96,9 +96,9 @@ def all_reduce(data: Tensor,
         if op.lower() == 'mean':
             torch_dist.all_reduce(data_on_device, _get_reduce_op('sum'), group)
 
-            # use true_div to handle torch1.6.0 throws an RuntimeError when
-            #  the type of `data_on_device` is int64
-            data_on_device = torch.true_div(data_on_device, world_size)
+            # use true_divide to handle torch1.6.0 throws an RuntimeError when
+            # the type of `data_on_device` is int64
+            data_on_device = torch.true_divide(data_on_device, world_size)
         else:
             torch_dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 
