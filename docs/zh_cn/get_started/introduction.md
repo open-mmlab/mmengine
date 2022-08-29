@@ -3,18 +3,22 @@
 MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，支持在 Linux、Windows、MacOS 上运行。它具有如下三个亮点：
 
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
-    - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行）
-    - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
+
+   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行）
+   - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
 
 2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
-    - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
-    - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
+
+   - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
+   - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
+
 3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了
-    - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
-    - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) 和 Stochastic Weight Averaging (SWA)
-    - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
-    - 对神经网络模型中各个层的优化配置进行细粒度调整
-    - 混合精度训练的灵活控制
+
+   - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
+   - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) 和 Stochastic Weight Averaging (SWA)
+   - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
+   - 对神经网络模型中各个层的优化配置进行细粒度调整
+   - 混合精度训练的灵活控制
 
 ### 架构
 
@@ -53,4 +57,4 @@ MMEngine 中还实现了各种算法模型执行过程中需要用到的公共�
 - [分布式通信原语（Distributed Communication Primitives）](../tutorials/distributed.md)：负责在程序分布式运行过程中不同进程间的通信。这套接口屏蔽了分布式和非分布式环境的区别，同时也自动处理了数据的设备和通信后端。
 - [其他工具（Utils）](../tutorials/utils.md)：还有一些工具性的模块，如 ManagerMixin，它实现了一种全局变量的创建和获取方式，执行器内很多全局可见对象的基类就是 ManagerMixin。
 
-用户可以进一步阅读[教程]()来了解这些模块的高级用法，也可以参考[设计文档]() 了解它们的设计思路与细节。
+用户可以进一步阅读[教程](<>)来了解这些模块的高级用法，也可以参考[设计文档](<>) 了解它们的设计思路与细节。
