@@ -16,7 +16,7 @@
 val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # 使用分类正确率评测指标
 ```
 
-如果需要同时评测多个指标，也可以将 `val_evaluator` 或 `test_evaluator` 设置为一个列表，其中每一项为一个评测指标的配制信息。例如，在使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 训练全景分割模型时，希望在模型测试阶段同时评测模型的目标检测（COCO AP/AR）和全景分割精度，可以按以下方式配置：
+如果需要同时评测多个指标，也可以将 `val_evaluator` 或 `test_evaluator` 设置为一个列表，其中每一项为一个评测指标的配置信息。例如，在使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 训练全景分割模型时，希望在模型测试阶段同时评测模型的目标检测（COCO AP/AR）和全景分割精度，可以按以下方式配置：
 
 ```python
 test_evaluator = [
@@ -50,8 +50,12 @@ from mmengine.fileio import load
 # 构建评测器。参数 `metrics` 为评测指标配置
 evaluator = Evaluator(metrics=dict(type='Accuracy', top_k=(1, 5)))
 
-data = load('test_data.pkl')  # 从文件中读取测试数据
-predictions = load('prediction.pkl')  # 从文件中读取模型预测结果
+# 从文件中读取测试数据。数据格式需要参考具使用的 metric。
+data = load('test_data.pkl')
+
+# 从文件中读取模型预测结果。该结果由待评测算法在测试数据集上推理得到。
+# 数据格式需要参考具使用的 metric。
+predictions = load('prediction.pkl')
 
 # 调用评测器离线评测接口，得到评测结果
 # chunk_size 表示每次处理的样本数量，可根据内存大小调整
