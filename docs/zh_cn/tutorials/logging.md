@@ -285,3 +285,5 @@ work_dir/
     ...
     └── exp_name_rank63.log
 ```
+
+如果想要更加深入的了解 MMEngine 的日志系统，可以参考[日志系统设计](../design/logging.md)。

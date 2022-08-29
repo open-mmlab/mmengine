@@ -1,8 +1,8 @@
-# 记录日志 (logging)
+# MMEngine 日志系统设计 (logging)
 
 ## 概述
 
-[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)在运行过程中会产生很多日志，例如加载的数据集信息、模型的初始化信息、训练过程中的学习率、损失等。为了让用户能够更加自由的获取这些日志信息，MMEngine 实现了消息枢纽（MessageHub）、历史缓冲区（HistoryBuffer）、日志处理器（LogProcessor） 和记录器（MMLogger）来支持以下功能：
+[执行器（Runner）](./runner.md)在运行过程中会产生很多日志，例如加载的数据集信息、模型的初始化信息、训练过程中的学习率、损失等。为了让用户能够更加自由的获取这些日志信息，MMEngine 实现了[消息枢纽（MessageHub）](mmengine.logging.MessageHub)、[历史缓冲区（HistoryBuffer）](mmengine.logging.HistoryBuffer)、[日志处理器（LogProcessor）](mmengine.runner.LogProcessor) 和 [MMLogger](mmengine.logging.MMLogger) 来支持以下功能：
 
 - 用户可以通过配置文件，根据个人偏好来选择日志统计方式，例如在终端输出整个训练过程中的平均损失而不是基于固定迭代次数平滑的损失
 - 用户可以在任意组件中获取当前的训练状态，例如当前的迭代次数、训练轮次等
@@ -10,11 +10,11 @@
 
 ![image](https://user-images.githubusercontent.com/57566630/163441489-47999f3a-3259-44ab-949c-77a8a599faa5.png)
 
-训练过程中的产生的损失、学习率等数据由历史缓冲区管理和封装，汇总后交给消息枢纽维护。日志处理器将消息枢纽中的数据进行格式化，最后通过[记录器钩子（LoggerHook）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html) 展示到各种可视化后端。**一般情况下用户无需感知数据处理流程，可以直接通过配置日志处理器来选择日志的统计方式**。
+训练过程中的产生的损失、学习率等数据由历史缓冲区管理和封装，汇总后交给消息枢纽维护。日志处理器将消息枢纽中的数据进行格式化，最后通过[记录器钩子（LoggerHook）](mmengine.hook.LoggerHook) 展示到各种可视化后端。**一般情况下用户无需感知数据处理流程，可以直接通过配置日志处理器来选择日志的统计方式**。在介绍 MMEngine 的日志系统的设计之前，可以先阅读[记录日志教程](../tutorials/logging.md)。
 
 ## 历史缓冲区（HistoryBuffer）
 
-MMEngine 实现了历史数据存储的抽象类历史缓冲区（HistoryBuffer），用于存储训练日志的历史轨迹，如模型损失、优化器学习率、迭代时间等。通常情况下，历史缓冲区作为内部类，配合消息枢纽（MessageHub）、[记录器钩子（LoggerHook ）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)和日志处理器（LogProcessor） 实现了训练日志的可配置化。
+MMEngine 实现了历史数据存储的抽象类历史缓冲区（HistoryBuffer），用于存储训练日志的历史轨迹，如模型损失、优化器学习率、迭代时间等。通常情况下，历史缓冲区作为内部类，配合[消息枢纽（MessageHub）](mmengine.logging.MessageHub)、记录器钩子（LoggerHook ）和[日志处理器（LogProcessor）](mmengine.runner.LogProcessor) 实现了训练日志的可配置化。
 
 用户也可以单独使用历史缓冲区来管理训练日志，能够非常简单的使用不同方法来统计训练日志。我们先来介绍如何单独使用历史缓冲区，在消息枢纽一节再进一步介绍二者的联动。
 
@@ -154,7 +154,7 @@ MMEngine 利用历史缓冲区的特性，结合消息枢纽，实现了训练�
 
 消息枢纽存储了两种含义的数据：
 
-- 历史缓冲区字典：消息枢纽会收集各个模块更新的训练日志，如损失、学习率、迭代时间，并将其更新至内部的历史缓冲区字典中。历史缓冲区字典经[消息处理器（LogProcessor）](#%E6%97%A5%E5%BF%97%E5%A4%84%E7%90%86%E5%99%A8%EF%BC%88LogProcessor%EF%BC%89)处理后，会被输出到终端/保存到本地。如果用户需要记录自定义日志，可以往历史缓冲区字典中更新相应内容。
+- 历史缓冲区字典：消息枢纽会收集各个模块更新的训练日志，如损失、学习率、迭代时间，并将其更新至内部的历史缓冲区字典中。历史缓冲区字典经[消息处理器（LogProcessor）](mmengine.runner.LogProcessor)处理后，会被输出到终端/保存到本地。如果用户需要记录自定义日志，可以往历史缓冲区字典中更新相应内容。
 - 运行时信息字典：运行时信息字典用于存储迭代次数、训练轮次等运行时信息，方便 MMEngine 中所有组件共享这些信息。
 
 ```{note}
@@ -208,7 +208,7 @@ message_hub.get_info('iter')  # 2 覆盖上一次结果
 
 ### 消息枢纽的跨组件通讯
 
-执行器运行过程中，各个组件会通过消息枢纽来分发、接受消息。[RuntimeInfoHook](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.hooks.RuntimeInfoHook) 会汇总其他组件更新的学习率、损失等信息，将其导出到用户指定的输出端（Tensorboard，Wandb 等）。由于上述流程较为复杂，这里用一个简单示例来模拟日志钩子和其他组件通讯的过程。
+执行器运行过程中，各个组件会通过消息枢纽来分发、接受消息。[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会汇总其他组件更新的学习率、损失等信息，将其导出到用户指定的输出端（Tensorboard，Wandb 等）。由于上述流程较为复杂，这里用一个简单示例来模拟日志钩子和其他组件通讯的过程。
 
 ```python
 from mmengine import MessageHub
@@ -294,7 +294,7 @@ class CustomModule:
         self.message_hub.update_scalars({'train/b': 1, 'train/c': 2})
 ```
 
-默认情况下，终端上额外显示 a、b、c 最后一次更新的结果。我们也可以通过配置[日志处理器](#%E6%97%A5%E5%BF%97%E5%A4%84%E7%90%86%E5%99%A8%EF%BC%88LogProcessor%EF%BC%89)来切换自定义日志的统计方式。
+默认情况下，终端上额外显示 a、b、c 最后一次更新的结果。我们也可以通过配置[日志处理器](mmengine.runner.LogProcessor)来切换自定义日志的统计方式。
 
 ## 日志处理器（LogProcessor）
 
@@ -318,7 +318,7 @@ log_processor = dict(
 
 我们可以通过配置 `custom_cfg` 列表来选择日志的统计方式。`custom_cfg` 中的每一个元素需要包括以下信息：
 
-- `data_src`：日志的数据源，用户通过指定 `data_src` 来选择需要被重新统计的日志，一份数据源可以有多种统计方式（必填项）
+- `data_src`：日志的数据源，用户通过指定 `data_src` 来选择需要被重新统计的日志，一份数据源可以有多种统计方式。默认的日志源包括模型输出的损失字典的 `key`、学习率（`lr`）和迭代时间（`time`/`data_time`），一切经消息枢纽的 `update_scalar`/`update_scalars` 更新的日志均为可以配置的数据源（需要去掉 `train/`、`val/` 前缀）。（必填项）
 - `method_name`：日志的统计方法，即历史缓冲区中的基本统计方法以及用户注册的自定义统计方法（必填项）
 - `log_name`：日志被重新统计后的名字，如果不定义 `log_name`，新日志会覆盖旧日志（选填项）
 - 其他参数：统计方法会用到的参数，其中 `window_size` 为特殊字段，可以为普通的整型、字符串 epoch 和字符串 global。LogProcessor 会实时解析这些参数，以返回基于 iteration、epoch 和全局平滑的统计结果（选填项）
@@ -358,13 +358,13 @@ log_processor = dict(
 04/15 12:34:24 - mmengine - INFO - Iter [10/12]  , eta: 0:00:00, time: 0.003, data_time: 0.002, loss: 0.11, loss_min: 0.08
 ```
 
-## 记录器（MMLogger）
+## MMLogger
 
-为了能够导出层次分明、格式统一、且不受三方库日志系统干扰的日志，MMEngine 在 `logging` 模块的基础上实现了 `MMLogger`。`MMLogger` 继承自全局管理器（`ManagerMixin`），相比于 `logging.Logger`，`MMLogger` 能够在无法获取记录器名字（logger name）的情况下，拿到当前执行器的记录器。
+为了能够导出层次分明、格式统一、且不受三方库日志系统干扰的日志，MMEngine 在 `logging` 模块的基础上实现了 `MMLogger`。`MMLogger` 继承自全局管理器（`ManagerMixin`），相比于 `logging.Logger`，`MMLogger` 能够在无法获取 `logger` 的名字（logger name）的情况下，拿到当前执行器的 `logger`。
 
-### 创建记录器
+### 创建 MMLogger
 
-我们可以通过 `get_instance` 接口创建全局可获取的记录器实例，默认的日志格式如下
+我们可以通过 `get_instance` 接口创建全局可获取的 `logger`，默认的日志格式如下
 
 ```python
 logger = MMLogger.get_instance('mmengine', log_level='INFO')
@@ -372,7 +372,7 @@ logger.info("this is a test")
 # 04/15 14:01:11 - mmengine - INFO - this is a test
 ```
 
-记录器除了输出消息外，还会额外输出时间戳、记录器名字和日志等级。对于 ERROR 等级的日志，我们会用红色高亮日志等级，并额外输出错误日志的代码位置
+`logger` 除了输出消息外，还会额外输出时间戳、logger 的名字和日志等级。对于 ERROR 等级的日志，我们会用红色高亮日志等级，并额外输出错误日志的代码位置
 
 ```python
 logger = MMLogger.get_instance('mmengine', log_level='INFO')
