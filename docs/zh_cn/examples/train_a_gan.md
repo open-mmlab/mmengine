@@ -8,13 +8,13 @@
 2. 构建生成器网络和判别器网络
 3. 构建一个生成对抗网络模型
 4. 构建优化器
-5. 使用运行器进行训练
+5. 使用执行器进行训练
 
 ## 构建数据加载器
 
 ### 构建数据集
 
-接下来，我们为 MNIST 数据集构建一个数据集类。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
+接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 `BaseDataset`, 并且重载数据集基类的 `load_data_list(self):` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
 
 ```python
 import numpy as np
@@ -148,7 +148,7 @@ data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
 下面的代码实现了基础 GAN 的算法，训练过程在 train_step 中实现。使用 MMEngine 实现的算法类，需要继承 BaseModel 基类，
-关于 BaseModel 的更多信息，请参考(TODO).
+关于 BaseModel 的更多信息，请参考[模型教程](../tutorials/model.md).
 
 ```python
 import torch.nn.functional as F
@@ -242,7 +242,7 @@ def set_requires_grad(nets, requires_grad=False):
     Args:
         nets (nn.Module | list[nn.Module]): A list of networks or a single
             network.
-        requires_grad (bool): Whether the networks require gradients or not
+        requires_grad (bool): Whether the networks require gradients or not.
     """
     if not isinstance(nets, list):
         nets = [nets]
@@ -278,7 +278,7 @@ opt_wrapper_dict = OptimWrapperDict(
 
 ```
 
-## 使用运行器进行训练
+## 使用执行器进行训练
 
 下面的代码演示了如何使用 Runner 进行模型训练。关于 Runner 的更多信息，请参考[执行器教程](../tutorials/runner.md)。
 
