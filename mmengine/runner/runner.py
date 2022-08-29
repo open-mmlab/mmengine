@@ -682,7 +682,10 @@ class Runner:
                 more details.
         """
         self._deterministic = deterministic
-        self._seed = set_random_seed(seed, diff_rank_seed, deterministic)
+        self._seed = set_random_seed(
+            seed=seed,
+            deterministic=deterministic,
+            diff_rank_seed=diff_rank_seed)
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',

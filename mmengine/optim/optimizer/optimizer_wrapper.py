@@ -135,7 +135,7 @@ class OptimWrapper:
             self.step()
             self.zero_grad()
 
-    def backward(self, loss: torch.Tensor) -> None:
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation.
 
         Provide unified ``backward`` interface compatible with automatic mixed
@@ -149,20 +149,25 @@ class OptimWrapper:
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`.
         """
-        loss.backward()
+        loss.backward(**kwargs)
         self._inner_count += 1
 
-    def zero_grad(self) -> None:
+    def zero_grad(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.zero_grad``.
 
         Provide unified ``zero_grad`` interface compatible with automatic mixed
         precision training. Subclass can overload this method to implement the
         required logic.
-        """
-        self.optimizer.zero_grad()
 
-    def step(self) -> None:
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.zero_grad`.
+        """
+        self.optimizer.zero_grad(**kwargs)
+
+    def step(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.step``.
 
         Provide unified ``step`` interface compatible with automatic mixed
@@ -172,10 +177,14 @@ class OptimWrapper:
 
         Clip grad if :attr:`clip_grad_kwargs` is not None, and then update
         parameters.
+
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
         """
         if self.clip_grad_kwargs:
             self._clip_grad()
-        self.optimizer.step()
+        self.optimizer.step(**kwargs)
 
     def state_dict(self) -> dict:
         """A wrapper of ``Optimizer.state_dict``.
