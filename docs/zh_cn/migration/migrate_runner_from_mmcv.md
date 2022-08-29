@@ -6,7 +6,7 @@
 
 在使用 MMCV 执行器和 MMEngine 执行器训练、测试模型时，以下流程有着明显的不同：
 
-01. [准备日志器](准备日志器（logger）)
+01. [准备logger](准备logger)
 02. [设置随机种子](设置随机种子)
 03. [初始化环境变量](初始化训练环境)
 04. [准备数据](准备数据)
@@ -24,11 +24,11 @@
 
 本节主要介绍 MMCV 执行器和 MMEngine 执行器在训练、验证、测试流程上的区别。
 
-### 准备日志器（logger）
+### 准备logger
 
-**MMCV 准备日志器**
+**MMCV 准备 logger**
 
-MMCV 需要在训练脚本里调用 `get_logger` 接口获得日志器，并用它输出、记录训练环境。
+MMCV 需要在训练脚本里调用 `get_logger` 接口获得 logger，并用它输出、记录训练环境。
 
 ```python
 logger = get_logger(name='custom', log_file=log_file, log_level=cfg.log_level)
@@ -39,7 +39,7 @@ env_info_dict = collect_env()
                 dash_line)
 ```
 
-执行器构造时，也需要传入日志器。
+执行器构造时，也需要传入 logger。
 
 ```python
 runner = Runner(
@@ -48,9 +48,9 @@ runner = Runner(
     ...)
 ```
 
-**MMEngine 准备日志器**
+**MMEngine 准备 logger**
 
-在执行器构建时传入日志器的日志等级，执行器构建时会自动创建日志器，并输出、记录训练环境。
+在执行器构建时传入 logger 的日志等级，执行器构建时会自动创建 logger，并输出、记录训练环境。
 
 ```python
 log_level = 'INFO'
@@ -837,3 +837,5 @@ runner = Runner(
 )
 runner.train()
 ```
+
+如果有更加复杂的执行器迁移需求，可以参考[执行器教程](../tutorials/runner.md) 和[执行器设计文档](../design/runner.md)。
