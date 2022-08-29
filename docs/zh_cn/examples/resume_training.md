@@ -20,7 +20,7 @@ runner.train()
 
 ## 指定 checkpoint 路径
 
-如果希望指定恢复训练的路径，除了设置 `resume=True`，还需要设置 `load_from` 参数。需要注意的是，如果只设置了 `load_from` 而没有设置 `resume` 等于 `False`，则只会加载 checkpoint 中的权重并重新开始训练，而不是接着之前的状态继续训练。
+如果希望指定恢复训练的路径，除了设置 `resume=True`，还需要设置 `load_from` 参数。需要注意的是，如果只设置了 `load_from` 而没有设置 `resume=True`，则只会加载 checkpoint 中的权重并重新开始训练，而不是接着之前的状态继续训练。
 
 ```python
 runner = Runner(
