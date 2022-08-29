@@ -1,58 +1,10 @@
 # 初始化
 
-基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule） 和模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
-
-## 函数式初始化
-
-Pytorch 的初始化模块提供了一系列**参数**初始化功能，例如我们想用正态分布初始化一个卷积层的权重（weight）层，常数初始化卷积的偏置（`bias`）层，我们就需要分别去初始化卷积的权重和偏置。
-
-```python
-from torch.nn.init import normal_, constant_
-import torch.nn as nn
-
-model = nn.Conv2d(1, 1, 1)
-normal_(model.weight, mean=0, std=0.01)
-constant_(model.bias, val=0)
-```
-
-```
-Parameter containing:
-tensor([0.], requires_grad=True)
-```
-
-上述流程实际上是卷积正态分布初始化的标准流程，MMEngine 在此基础上做了进一步的简化，实现了一系列常用**模块**的初始化函数。相比于上述 Pytorch 初始化模块的用法，MMEngine 提供的初始化函数可以直接初始化卷积模块，一行代码就能将权重按照正态分布初始化，偏置初始化为 0：
-
-```python
-from mmengine.model import normal_init
-
-normal_init(model, mean=0, std=0.01, bias=0)
-```
-
-类似地，我们也可以用 [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) 初始化和 [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) 初始化：
-
-```python
-from mmengine.model import kaiming_init, xavier_init
-
-kaiming_init(model)
-xavier_init(model)
-```
-
-目前 MMEngine 提供了以下初始化函数：
-
-| 初始化函数                                                            | 功能                                                                                                                               |
-| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
-| [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 以 `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
-| [normal_init](../api.html#mmengine.model.normal_init)                 | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
-| [trunc_normal_init](../api.html#mmengine.model.trunc_normal_init)     | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
-| [uniform_init](../api.html#mmengine.model.uniform_init)               | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
-| [kaiming_init](../api.html#mmengine.model.kaiming_init)               | 将 weight 以 `Kaiming` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                    |
-| [caffe2_xavier_init](../api.html#mmengine.model.caffe2_xavier_init)   | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，通常用于初始化卷积                      |
-| [bias_init_with_prob](../api.html#mmengine.model.bias_init_with_prob) | 以概率值的形式初始化 bias                                                                                                          |
+基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule）,让我们能够通过传参或配置文件来选择模型的初始化方式。此外，`MMEngine` 还提供了一系列模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
 
 ## 配置式初始化
 
-`MMEngine` 为了让模型能够更加灵活的初始化权重，抽象出了模块基类 `BaseModule`。模块基类继承自 `nn.Module`，不仅具备 `nn.Module` 的基础功能时，还能够进行参数初始化。我们只需要让模型继承 `BaseModule`，并在实例化阶段配置构造参数 `init_cfg`，就能够控制模型中任意组件的初始化方式。`MMEngine` 将[函数式初始化](函数式初始化)中提到的函数进一步抽象成初始化器，作为 `init_cfg` 的配置项，目前实现了以下初始化器：
+为了能够更加灵活地初始化模型权重，`MMEngine` 抽象出了模块基类 `BaseModule`。模块基类继承自 `nn.Module`，在具备 `nn.Module` 基础功能的同时，还支持在构造时接受参数，以此来选择权重初始化方式。继承自 `BaseModule` 的模型可以在实例化阶段接受 `init_cfg` 参数，我们可以通过配置 `init_cfg` 为模型中任意组件灵活地选择初始化方式。目前我们可以在 `init_cfg` 中配置以下初始化器：
 
 | 初始化器                                                        |    注册名    | 功能                                                                                                                               |
 | :-------------------------------------------------------------- | :----------: | :--------------------------------------------------------------------------------------------------------------------------------- |
@@ -65,13 +17,11 @@ xavier_init(model)
 | [Caffe2XavierInit](../api.html#mmengine.model.Caffe2XavierInit) | Caffe2Xavier | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，，通常用于初始化卷                      |
 | [PretrainedInit](../api.html#mmengine.model.PretrainedInit)     |  Pretrained  | 加载预训练权重                                                                                                                     |
 
-模块基类接受 `init_cfg` 参数，继承自模块基类的模型可以在 `init_cfg` 里指定初始化器，选择相应的初始化方式。
-
-假设我们定义了模型 `ToyNet`，它继承自模块基类（`BaseModule`），并在 `__init__` 里调用了 `BaseModule` 的 `__init__`。此时我们可以在 `ToyNet` 初始化时传入 `init_cfg` 参数来选择模型的初始化方式，`ToyNet` 实例化后再调用 `init_weights` 方法，完成权重的初始化。
+我们通过几个例子来理解如何在 `init_cfg` 里配置初始化器，来选择模型的初始化方式。
 
 ### 使用预训练权重初始化
 
-当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](./registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
+假设我们定义了模型类 `ToyNet`，它继承自模块基类（`BaseModule`）。此时我们可以在 `ToyNet` 初始化时传入 `init_cfg` 参数来选择模型的初始化方式，实例化后再调用 `init_weights` 方法，完成权重的初始化。以加载预训练权重为例：
 
 ```python
 import torch
@@ -102,6 +52,8 @@ toy_net.init_weights()
 08/19 16:50:24 - mmengine - INFO - load model from: ./pretrained.pth
 08/19 16:50:24 - mmengine - INFO - local loads checkpoint from path: ./pretrained.pth
 ```
+
+当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](./registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
 
 ### 常用的初始化方式
 
@@ -326,3 +278,51 @@ Initialized by user-defined `init_weights` in ToyConv
 - init_weights 的优先级比 `init_cfg` 高
 - 执行器会在 train() 函数中调用 init_weights。
 ```
+
+## 函数式初始化
+
+在[自定义的初始化方式](自定义的初始化方式)一节提到，我们可以在 `init_weights` 里实现自定义的参数初始化逻辑。为了能够更加方便地实现参数初始化，MMEngine 在 `torch.nn.init`的基础上，提供了一系列**模块初始化函数**来初始化整个模块。例如我们对卷积层的权重（`weight`）进行正态分布初始化，卷积层的偏置（`bias`）进行常数初始化，基于 `torch.nn.init` 的实现如下：
+
+```python
+from torch.nn.init import normal_, constant_
+import torch.nn as nn
+
+model = nn.Conv2d(1, 1, 1)
+normal_(model.weight, mean=0, std=0.01)
+constant_(model.bias, val=0)
+```
+
+```
+Parameter containing:
+tensor([0.], requires_grad=True)
+```
+
+上述流程实际上是卷积正态分布初始化的标准流程，因此 MMEngine 在此基础上做了进一步地简化，实现了一系列常用的**模块**初始化函数。相比 `torch.nn.init`，MMEngine 提供的初始化函数直接接受卷积模块，一行代码能实现同样的初始化逻辑：
+
+```python
+from mmengine.model import normal_init
+
+normal_init(model, mean=0, std=0.01, bias=0)
+```
+
+类似地，我们也可以用 [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) 初始化和 [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) 初始化：
+
+```python
+from mmengine.model import kaiming_init, xavier_init
+
+kaiming_init(model)
+xavier_init(model)
+```
+
+目前 MMEngine 提供了以下初始化函数：
+
+| 初始化函数                                                            | 功能                                                                                                                               |
+| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
+| [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 以 `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
+| [normal_init](../api.html#mmengine.model.normal_init)                 | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
+| [trunc_normal_init](../api.html#mmengine.model.trunc_normal_init)     | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
+| [uniform_init](../api.html#mmengine.model.uniform_init)               | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
+| [kaiming_init](../api.html#mmengine.model.kaiming_init)               | 将 weight 以 `Kaiming` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                    |
+| [caffe2_xavier_init](../api.html#mmengine.model.caffe2_xavier_init)   | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，通常用于初始化卷积                      |
+| [bias_init_with_prob](../api.html#mmengine.model.bias_init_with_prob) | 以概率值的形式初始化 bias                                                                                                          |
