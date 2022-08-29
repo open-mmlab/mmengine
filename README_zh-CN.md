@@ -75,7 +75,7 @@ mim install mmengine
 python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 ```
 
-更多安装方式请阅读 [安装文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)
+更多安装方式请阅读[安装文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)
 
 ## 快速上手
 
@@ -265,8 +265,8 @@ runner.train()
 
 ## OpenMMLab 的其他项目
 
-- [MMCV](https://github.com/open-mmlab/mmcv/tree/dev-2.x): OpenMMLab 计算机视觉基础库
 - [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMLab 项目、算法、模型的统一入口
+- [MMCV](https://github.com/open-mmlab/mmcv/tree/dev-2.x): OpenMMLab 计算机视觉基础库
 - [MMClassification](https://github.com/open-mmlab/mmclassification/tree/dev-1.x): OpenMMLab 图像分类工具箱
 - [MMDetection](https://github.com/open-mmlab/mmdetection/tree/dev-3.x): OpenMMLab 目标检测工具箱
 - [MMDetection3D](https://github.com/open-mmlab/mmdetection3d/tree/dev-1.x): OpenMMLab 新一代通用 3D 目标检测平台
