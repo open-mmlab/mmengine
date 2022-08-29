@@ -4,6 +4,22 @@
 
 随着支持的深度学习任务越来越多，用户的需求不断增加，MMCV 的执行器（Runner）逐渐难以满足需求。MMEngine 在此基础上，扩大了执行器的作用域，让执行器承担更多的功能；抽象出[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)以满足更加复杂的执行流程。在开始迁移前，建议先阅读[执行器教程](../tutorials/runner.md)
 
+在使用 MMCV 执行器和 MMEngine 执行器训练、测试模型时，以下流程有着明显的不同：
+
+01. [准备日志器](准备日志器（logger）)
+02. [设置随机种子](设置随机种子)
+03. [初始化环境变量](初始化训练环境)
+04. [准备数据](准备数据)
+05. [准备模型](准备模型)
+06. [准备优化器](准备优化器)
+07. [准备钩子](准备训练钩子)
+08. [准备验证/测试模块](准备验证模块)
+09. [构建执行器](构建执行器)
+10. [开始训练](执行器训练流程)、[开始测试](执行器测试流程)
+11. [迁移自定义训练流程](迁移自定义执行流程)
+
+后续的教程中，我们会对每个流程的差异进行详细介绍：
+
 ## 迁移执行器（Runner）
 
 本节主要介绍 MMCV 执行器和 MMEngine 执行器在训练、验证、测试流程上的区别。
@@ -312,7 +328,7 @@ optimizer = build_optimizer(model, optimizer_cfg)
 
 **MMEngine 准备优化器**
 
-构建 MMEngine 执行器时，需要接受 `optim_wrapper` 参数，即[优化器封装](mmengine.optim.OptimWrapper)实例或者优化器封装配置，对于复杂配置的优化器封装，`MMEngine` 同样只需要配置 ``` optim_wrapper。``optim_wrapper ``` 的详细介绍见[执行器 api 文档](mmengine.runner.Runner.build_optim_wrapper)。
+构建 MMEngine 执行器时，需要接受 `optim_wrapper` 参数，即[优化器封装](mmengine.optim.OptimWrapper)实例或者优化器封装配置，对于复杂配置的优化器封装，`MMEngine` 同样只需要配置 `optim_wrapper`。`optim_wrapper` 的详细介绍见[执行器 api 文档](mmengine.runner.Runner.build_optim_wrapper)。
 
 **OpenMMLab 系列算法库配置变更**
 
@@ -370,17 +386,14 @@ optim_wrapper = dict(
 对于检测、分类一类的上层任务（High level）MMCV 需要配置 `optim_config` 来构建优化器钩子，而 MMEngine 不需要。
 ```
 
-````
-
 本教程使用的 `optim_wrapper` 如下：
-
 
 ```python
 from torch.optim import SGD
 
 optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
 optim_wrapper = dict(optimizer=optimizer)
-````
+```
 
 ### 准备训练钩子
 
