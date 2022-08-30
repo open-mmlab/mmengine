@@ -100,7 +100,7 @@ print(cfg['test_list'])
 [1, 3, 3]
 ```
 
-注意，配置文件中定义的嵌套字段（即类似字典的字段），在 Config 中会将其转化为 ConfigDict 类，该类具有和 Python 内置字典类型相同的接口，可以直接当做普通字典使用。
+注意，配置文件中定义的嵌套字段（即类似字典的字段），在 Config 中会将其转化为 ConfigDict 类，该类继承了 Python 内置字典类型的全部接口，同时也支持以对象属性的方式访问数据。
 
 在算法库中，可以将配置与注册器结合起来使用，达到通过配置文件来控制模块构造的目的。这里举一个在配置文件中定义优化器的例子。
 
@@ -376,7 +376,7 @@ b=2
 使用预定义字段可以方便地实现这种需求，在配置文件 `predefined_var.py` 中可以这样写：
 
 ```Python
-work_dir = './work_dir/{{ fileBasenameNoExtension }}'
+work_dir = './work_dir/{{fileBasenameNoExtension}}'
 ```
 
 这里 `{{ fileBasenameNoExtension }}` 表示该配置文件的文件名（不含拓展名），在配置类读取配置文件的时候，会将这种用双花括号包起来的字符串自动解析为对应的实际值。
@@ -392,10 +392,10 @@ print(cfg.work_dir)
 
 目前支持的预定义字段有以下四种，变量名参考自 [VS Code](https://code.visualstudio.com/docs/editor/variables-reference) 中的相关字段：
 
-- `{{ fileDirname }}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
-- `{{ fileBasename }}` - 当前文件的文件名，例如 `file.py`
-- `{{ fileBasenameNoExtension }}` - 当前文件不包含扩展名的文件名，例如 file
-- `{{ fileExtname }}` - 当前文件的扩展名，例如 `.py`
+- `{{fileDirname}}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
+- `{{fileBasename}}` - 当前文件的文件名，例如 `file.py`
+- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 file
+- `{{fileExtname}}` - 当前文件的扩展名，例如 `.py`
 
 ### 命令行修改配置
 

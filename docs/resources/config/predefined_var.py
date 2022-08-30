@@ -1,1 +1,1 @@
-work_dir = './work_dir/{{ fileBasenameNoExtension }}'
+work_dir = './work_dir/{{fileBasenameNoExtension}}'
