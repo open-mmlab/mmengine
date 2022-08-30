@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from mmengine.dist import master_only
 from mmengine.logging import MMLogger, print_log
+from .weight_init import initialize, update_init_info
 
 
 class BaseModule(nn.Module, metaclass=ABCMeta):
@@ -92,7 +93,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         logger = MMLogger.get_current_instance()
         logger_name = logger.instance_name
 
-        from .utils import initialize, update_init_info
         module_name = self.__class__.__name__
         if not self._is_init:
             if self.init_cfg:

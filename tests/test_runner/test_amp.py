@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 
 from mmengine.runner import autocast
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 class TestAmp(unittest.TestCase):

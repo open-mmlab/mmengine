@@ -1,19 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 
-from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 from mmengine.utils import is_list_of
 from ..base_module import BaseModule
-
-ForwardResults = Union[Dict[str, torch.Tensor], List[BaseDataElement],
-                       Tuple[torch.Tensor], torch.Tensor]
+from .data_preprocessor import BaseDataPreprocessor
 
 
 class BaseModel(BaseModule):
@@ -84,7 +81,7 @@ class BaseModel(BaseModule):
                             f'`nn.Module` instance, but got '
                             f'{type(data_preprocessor)}')
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Implements the default model training process including
         preprocessing, model forward propagation, loss calculation,
@@ -95,7 +92,7 @@ class BaseModel(BaseModule):
         :class:`IterBasedTrainLoop` will call this method to update model
         parameters. The default parameter update process is as follows:
 
-        1. Calls ``self.data_processor(data, training=False) to collext
+        1. Calls ``self.data_processor(data, training=False) to collect
           batch_inputs and corresponding data_samples(labels).
         2. Calls ``self(batch_inputs, data_samples, mode='loss')`` to get raw
           loss
@@ -104,7 +101,7 @@ class BaseModel(BaseModule):
         4. Calls ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapper): OptimWrapper instance
                 used to update model parameters.
 
@@ -113,13 +110,13 @@ class BaseModel(BaseModule):
         """
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.data_preprocessor(data, True)
-            losses = self(batch_inputs, data_samples, mode='loss')
-        parsed_losses, log_vars = self.parse_losses(losses)
+            data = self.data_preprocessor(data, True)
+            losses = self._run_forward(data, mode='loss')  # type: ignore
+        parsed_losses, log_vars = self.parse_losses(losses)  # type: ignore
         optim_wrapper.update_params(parsed_losses)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: Union[tuple, dict, list]) -> list:
         """Gets the predictions of given data.
 
         Calls ``self.data_preprocessor(data, False)`` and
@@ -127,25 +124,25 @@ class BaseModel(BaseModule):
         predictions which will be passed to evaluator.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
-        inputs, data_sample = self.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """``BaseModel`` implements ``test_step`` the same as ``val_step``.
 
         Args:
-            data (List[dict]): Data sampled from dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
-        inputs, data_sample = self.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
 
     def parse_losses(
         self, losses: Dict[str, torch.Tensor]
@@ -177,30 +174,38 @@ class BaseModel(BaseModule):
 
         return loss, log_vars
 
-    def to(self, device: Optional[Union[int, torch.device]], *args,
+    def to(self,
+           device: Optional[Union[int, str, torch.device]] = None,
+           *args,
            **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.to`
         additionally.
 
         Args:
-            device (int or torch.device, optional): the desired device of the
-                parameters and buffers in this module.
+            device (int, str or torch.device, optional): the desired device
+                of the parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.to(device)
+        if device is not None:
+            self._set_device(torch.device(device))
         return super().to(device)
 
-    def cuda(self, *args, **kwargs) -> nn.Module:
+    def cuda(
+        self,
+        device: Optional[Union[int, str, torch.device]] = None,
+    ) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.cuda`
         additionally.
 
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.cuda()
-        return super().cuda()
+        if device is None or isinstance(device, int):
+            device = torch.device('cuda', index=device)
+        self._set_device(torch.device(device))
+        return super().cuda(device)
 
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.cpu`
@@ -209,21 +214,37 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        self.data_preprocessor.cpu()
+        self._set_device(torch.device('cpu'))
         return super().cpu()
+
+    def _set_device(self, device: torch.device) -> None:
+        """Recursively set device for `BaseDataPreprocessor` instance.
+
+        Args:
+            device (torch.device): the desired device of the parameters and
+                    buffers in this module.
+        """
+
+        def apply_fn(module):
+            if not isinstance(module, BaseDataPreprocessor):
+                return
+            if device is not None:
+                module._device = device
+
+        self.apply(apply_fn)
 
     @abstractmethod
     def forward(self,
-                batch_inputs: torch.Tensor,
-                data_samples: Optional[List[BaseDataElement]] = None,
-                mode: str = 'tensor') -> ForwardResults:
+                inputs: torch.Tensor,
+                data_samples: Optional[list] = None,
+                mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
         """Returns losses or predictions of training, validation, testing, and
         simple inference process.
 
         ``forward`` method of BaseModel is an abstract method, its subclasses
         must implement this method.
 
-        Accepts ``batch_inputs`` and ``data_samples`` processed by
+        Accepts ``batch_inputs`` and ``data_sample`` processed by
         :attr:`data_preprocessor`, and returns results according to mode
         arguments.
 
@@ -238,9 +259,9 @@ class BaseModel(BaseModule):
         loss.
 
         Args:
-            batch_inputs (torch.Tensor): batch input tensor collated by
+            inputs (torch.Tensor): batch input tensor collated by
                 :attr:`data_preprocessor`.
-            data_samples (List[BaseDataElement], optional):
+            data_samples (list, optional):
                 data samples collated by :attr:`data_preprocessor`.
             mode (str): mode should be one of ``loss``, ``predict`` and
                 ``tensor``
@@ -248,19 +269,36 @@ class BaseModel(BaseModule):
                 - ``loss``: Called by ``train_step`` and return loss ``dict``
                   used for logging
                 - ``predict``: Called by ``val_step`` and ``test_step``
-                  and return list of ``BaseDataElement`` results used for
-                  computing metric.
+                  and return list of `results used for computing metric.
                 - ``tensor``: Called by custom use to get ``Tensor`` type
                   results.
 
         Returns:
-            ForwardResults:
-
+            dict or list:
                 - If ``mode == loss``, return a ``dict`` of loss tensor used
                   for backward and logging.
-                - If ``mode == predict``, return a ``list`` of
-                  :obj:`BaseDataElement` for computing metric
-                  and getting inference result.
+                - If ``mode == predict``, return a ``list`` of inference
+                  results.
                 - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
                   or ``dict of tensor for custom use.
         """
+
+    def _run_forward(self, data: Union[dict, tuple, list],
+                     mode: str) -> Union[Dict[str, torch.Tensor], list]:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results

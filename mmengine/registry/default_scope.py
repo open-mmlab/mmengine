@@ -23,7 +23,7 @@ class DefaultScope(ManagerMixin):
         scope_name (str): Scope of current task.
 
     Examples:
-        >>> from mmengine import MODELS
+        >>> from mmengine.model import MODELS
         >>> # Define default scope in runner.
         >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.
@@ -32,6 +32,9 @@ class DefaultScope(ManagerMixin):
 
     def __init__(self, name: str, scope_name: str):
         super().__init__(name)
+        assert isinstance(
+            scope_name,
+            str), (f'scope_name should be a string, but got {scope_name}')
         self._scope_name = scope_name
 
     @property
@@ -83,6 +86,8 @@ class DefaultScope(ManagerMixin):
             yield
         else:
             tmp = copy.deepcopy(cls._instance_dict)
+            # To avoid create an instance with the same name.
+            time.sleep(1e-6)
             cls.get_instance(f'overwrite-{time.time()}', scope_name=scope_name)
             try:
                 yield

@@ -2,6 +2,7 @@
 from mmengine.registry import PARAM_SCHEDULERS
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
+                              CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, OneCycleParamScheduler,
                               PolyParamScheduler, StepParamScheduler)
@@ -277,3 +278,35 @@ class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
     .. _Super-Convergence\: Very Fast Training of Neural Networks Using Large Learning Rates:
         https://arxiv.org/abs/1708.07120
     """# noqa E501
+
+
+@PARAM_SCHEDULERS.register_module()
+class CosineRestartLR(LRSchedulerMixin, CosineRestartParamScheduler):
+    """Sets the learning rate of each parameter group according to the cosine
+    annealing with restarts scheme. The cosine restart policy anneals the
+    learning rate from the initial value to `eta_min` with a cosine annealing
+    schedule and then restarts another period from the maximum value multiplied
+    with `restart_weight`.
+
+    Args:
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
+        periods (list[int]): Periods for each cosine anneling cycle.
+        restart_weights (list[float]): Restart weights at each
+            restart iteration. Defaults to [1].
+        eta_min (float): Minimum parameter value at the end of scheduling.
+            Defaults to None.
+        eta_min_ratio (float, optional): The ratio of minimum parameter value
+            to the base parameter value. Either `min_lr` or `min_lr_ratio`
+            should be specified. Default: None.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """

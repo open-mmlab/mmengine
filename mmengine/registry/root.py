@@ -6,7 +6,8 @@ More datails can be found at
 https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
 """
 
-from mmengine.registry import build_model_from_cfg, build_runner_from_cfg
+from .build_functions import (build_model_from_cfg, build_runner_from_cfg,
+                              build_scheduler_from_cfg)
 from .registry import Registry
 
 # manage all kinds of runners like `EpochBasedRunner` and `IterBasedRunner`
@@ -37,7 +38,8 @@ OPTIM_WRAPPERS = Registry('optim_wrapper')
 # manage constructors that customize the optimization hyperparameters.
 OPTIM_WRAPPER_CONSTRUCTORS = Registry('optimizer wrapper constructor')
 # mangage all kinds of parameter schedulers like `MultiStepLR`
-PARAM_SCHEDULERS = Registry('parameter scheduler')
+PARAM_SCHEDULERS = Registry(
+    'parameter scheduler', build_func=build_scheduler_from_cfg)
 
 # manage all kinds of metrics
 METRICS = Registry('metric')

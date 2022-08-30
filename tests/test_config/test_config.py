@@ -12,6 +12,8 @@ import pytest
 
 from mmengine import Config, ConfigDict, DictAction
 from mmengine.fileio import dump, load
+from mmengine.registry import MODELS, DefaultScope, Registry
+from mmengine.utils import is_installed
 
 
 class TestConfig:
@@ -186,6 +188,21 @@ class TestConfig:
         #  overwritten by int
         sys.argv.extend(tmp)
 
+    def test_dict_to_config_dict(self):
+        cfg_dict = dict(
+            a=1, b=dict(c=dict()), d=[dict(e=dict(f=(dict(g=1), [])))])
+        cfg_dict = Config._dict_to_config_dict(cfg_dict)
+        assert isinstance(cfg_dict, ConfigDict)
+        assert isinstance(cfg_dict.a, int)
+        assert isinstance(cfg_dict.b, ConfigDict)
+        assert isinstance(cfg_dict.b.c, ConfigDict)
+        assert isinstance(cfg_dict.d, list)
+        assert isinstance(cfg_dict.d[0], ConfigDict)
+        assert isinstance(cfg_dict.d[0].e, ConfigDict)
+        assert isinstance(cfg_dict.d[0].e.f, tuple)
+        assert isinstance(cfg_dict.d[0].e.f[0], ConfigDict)
+        assert isinstance(cfg_dict.d[0].e.f[1], list)
+
     def test_dump(self, tmp_path):
         file_path = 'config/py_config/test_merge_from_multiple_bases.py'
         cfg_file = osp.join(self.data_path, file_path)
@@ -266,7 +283,7 @@ class TestConfig:
             print(cfg, file=f)
         with open(tmp_txt) as f:
             assert f.read().strip() == f'Config (path: {cfg.filename}): ' \
-                               f'{cfg._cfg_dict.__repr__()}'
+                                       f'{cfg._cfg_dict.__repr__()}'
 
     def test_dict_action(self):
         parser = argparse.ArgumentParser(description='Train a detector')
@@ -417,6 +434,26 @@ class TestConfig:
         self._merge_intermediate_variable()
         self._merge_recursive_bases()
         self._deprecation()
+
+    def test_get_cfg_path(self):
+        filename = 'py_config/simple_config.py'
+        filename = osp.join(self.data_path, 'config', filename)
+        cfg_name = './base.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope is None
+        osp.isfile(cfg_path)
+
+        # Test scope equal to package name.
+        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmdet'
+        osp.isfile(cfg_path)
+
+        # Test scope does not equal to package name.
+        cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmcls'
+        osp.isfile(cfg_path)
 
     def _simple_load(self):
         # test load simple config
@@ -658,6 +695,13 @@ class TestConfig:
         assert cfg['item1'] == 1
         assert cfg['item2'] == 2
 
+        # Test support modifying the value of dict without defining base
+        # config.
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_py_modify_key.py')
+        cfg = Config._file2dict(cfg_file)[0]
+        assert cfg == dict(item1=dict(a=1))
+
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_recursive_bases.py')
@@ -743,3 +787,57 @@ class TestConfig:
         assert new_cfg._cfg_dict is cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
+
+    def test_get_external_cfg(self):
+        ext_cfg_path = osp.join(self.data_path,
+                                'config/py_config/test_get_external_cfg.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+        assert ext_cfg._cfg_dict.model.neck == dict(
+            type='FPN',
+            in_channels=[256, 512, 1024, 2048],
+            out_channels=256,
+            num_outs=5,
+        )
+        assert '_scope_' in ext_cfg._cfg_dict.model
+
+    @pytest.mark.skipif(
+        not is_installed('mmdet'), reason='mmdet should be installed')
+    def test_build_external_package(self):
+        # Test load base config.
+        ext_cfg_path = osp.join(self.data_path,
+                                'config/py_config/test_get_external_cfg.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+
+        LOCAL_MODELS = Registry('local_model', parent=MODELS, scope='test')
+        LOCAL_MODELS.build(ext_cfg.model)
+
+        # Test load non-base config
+        ext_cfg_path = osp.join(self.data_path,
+                                'config/py_config/test_get_external_cfg2.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+        LOCAL_MODELS.build(ext_cfg.model)
+
+        # Test override base variable.
+        ext_cfg_path = osp.join(self.data_path,
+                                'config/py_config/test_get_external_cfg3.py')
+        ext_cfg = Config.fromfile(ext_cfg_path)
+
+        @LOCAL_MODELS.register_module()
+        class ToyLoss:
+            pass
+
+        @LOCAL_MODELS.register_module()
+        class ToyModel:
+            pass
+
+        DefaultScope.get_instance('test1', scope_name='test')
+        assert ext_cfg.model._scope_ == 'mmdet'
+        model = LOCAL_MODELS.build(ext_cfg.model)
+
+        # Local base config should not have scope.
+        assert '_scope_' not in ext_cfg.toy_model
+        toy_model = LOCAL_MODELS.build(ext_cfg.toy_model)
+        assert isinstance(toy_model, ToyModel)
+        assert model.backbone.style == 'pytorch'
+        assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
+        DefaultScope._instance_dict.pop('test1')

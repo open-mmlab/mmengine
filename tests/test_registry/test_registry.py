@@ -2,7 +2,6 @@
 import time
 
 import pytest
-import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
@@ -196,7 +195,7 @@ class TestRegistry:
 
         return registries
 
-    def test_get_root_registry(self):
+    def test__get_root_registry(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
@@ -307,7 +306,7 @@ class TestRegistry:
         assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
 
-    def test_search_child(self):
+    def test__search_child(self):
         #        Hierarchical Registry
         #                           DOGS
         #                      _______|_______
@@ -600,6 +599,11 @@ def test_build_from_cfg(cfg_type):
 
 
 def test_build_model_from_cfg():
+    try:
+        import torch.nn as nn
+    except ImportError:
+        pytest.skip('require torch')
+
     BACKBONES = Registry('backbone', build_func=build_model_from_cfg)
 
     @BACKBONES.register_module()
