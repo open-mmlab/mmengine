@@ -29,6 +29,8 @@
    tutorials/visualization.md
    tutorials/fileio.md
    tutorials/utils.md
+   tutorials/model.md
+   tutorials/initialize.md
 
 .. toctree::
    :maxdepth: 1
