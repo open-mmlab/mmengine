@@ -6,7 +6,8 @@ import torch.nn as nn
 from torch.cuda.amp import GradScaler
 
 from mmengine.registry import OPTIM_WRAPPERS
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 from .optimizer_wrapper import OptimWrapper
 
 
@@ -62,21 +63,27 @@ class AmpOptimWrapper(OptimWrapper):
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
 
-    def backward(self, loss: torch.Tensor):
+    def backward(self, loss: torch.Tensor, **kwargs):
         """Perform gradient back propagation with :attr:`loss_scaler`.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`
         """
-        self.loss_scaler.scale(loss).backward()
+        self.loss_scaler.scale(loss).backward(**kwargs)
         self._inner_count += 1
 
-    def step(self):
-        """Update parameters with :attr:`loss_scaler`."""
+    def step(self, **kwargs):
+        """Update parameters with :attr:`loss_scaler`.
+
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
+        """
         if self.clip_grad_kwargs:
             self.loss_scaler.unscale_(self.optimizer)
             self._clip_grad()
-        self.loss_scaler.step(self.optimizer)
+        self.loss_scaler.step(self.optimizer, **kwargs)
         self.loss_scaler.update(self._scale_update_param)
 
     def state_dict(self) -> dict:

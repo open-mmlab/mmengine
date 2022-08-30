@@ -23,7 +23,7 @@ class DefaultScope(ManagerMixin):
         scope_name (str): Scope of current task.
 
     Examples:
-        >>> from mmengine import MODELS
+        >>> from mmengine.model import MODELS
         >>> # Define default scope in runner.
         >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.

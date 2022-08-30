@@ -29,6 +29,7 @@
    :maxdepth: 1
    :caption: 示例
 
+   examples/resume_training.md
    examples/speed_up_training.md
 
 .. toctree::

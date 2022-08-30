@@ -12,7 +12,7 @@ from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 @HOOKS.register_module()
@@ -470,9 +470,8 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
-            outputs (dict, optional): Outputs from model. Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (dict, optional): Outputs from model.
         """
         if self.by_epoch:
             return

@@ -9,8 +9,9 @@ from torch.nn import GroupNorm, LayerNorm
 from mmengine.logging import print_log
 from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
                                OPTIMIZERS)
-from mmengine.utils import is_list_of, mmcv_full_available
-from mmengine.utils.parrots_wrapper import _BatchNorm, _InstanceNorm
+from mmengine.utils import is_list_of
+from mmengine.utils.dl_utils import mmcv_full_available
+from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 from .optimizer_wrapper import OptimWrapper
 
 
