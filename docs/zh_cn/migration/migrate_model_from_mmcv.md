@@ -2,7 +2,7 @@
 
 ## 简介
 
-MMCV 早期主要适配一些常见的计算机视觉任务，例如目标检测、物体识别。这类任务的模型参数优化流程可以被归纳为以下四个步骤：
+MMCV 早期支持的计算机视觉任务，例如目标检测、物体识别等，都采用了一种典型的模型参数优化流程，可以被归纳为以下四个步骤：
 
 1. 计算损失
 2. 计算梯度
@@ -12,7 +12,7 @@ MMCV 早期主要适配一些常见的计算机视觉任务，例如目标检测
 上述流程的一大特点就是调用位置统一（在训练迭代后调用）、执行步骤统一（依次执行步骤 1->2->3->4），非常契合[钩子（Hook）](../design/hook.md)的设计原则，因此这类任务通常会使用 `Hook` 来
 来优化模型。MMCV 为此实现了一系列的 `Hook`，例如 `OptimizerHook`（单精度训练）、`Fp16OptimizerHook`（混合精度训练） 和 `GradientCumulativeFp16OptimizerHook`（混合精度训练 + 梯度累加），为这类任务提供各种优化策略。
 
-一些例如生成对抗网络（GAN），自监督（Self-supervision）等领域的算法一般有更加灵活的训练流程，这类流程并不满足调用位置统一、执行步骤统一的原则，难以使用 `Hook` 对参数进行优化。为了支持训练这类任务，MMCV 的执行器会在调用 `model.train_step` 时，额外传入 `optimizer` 参数，让模型在 `train_step` 里实现自定义的优化流程。这样尽管可以支持训练这类任务，但也会导致无法使用各种 `OptimizerHook`，而需要在 `train_step` 里实现混合精度训练、梯度累加等训练策略。
+一些例如生成对抗网络（GAN），自监督（Self-supervision）等领域的算法一般有更加灵活的训练流程，这类流程并不满足调用位置统一、执行步骤统一的原则，难以使用 `Hook` 对参数进行优化。为了支持训练这类任务，MMCV 的执行器会在调用 `model.train_step` 时，额外传入 `optimizer` 参数，让模型在 `train_step` 里实现自定义的优化流程。这样虽然可以支持训练这类任务，但也会导致无法使用各种 `OptimizerHook`，需要算法在 `train_step` 中实现混合精度训练、梯度累加等训练策略。
 
 为了统一深度学习任务的参数优化流程，MMEngine 设计了[优化器封装](mmengine.optim.OptimWrapper)，集成了混合精度训练、梯度累加等训练策略，各类深度学习任务一律在 `model.train_step` 里执行参数优化流程。
 
@@ -213,7 +213,7 @@ class MMEngineToyModel(BaseModel):
 </thead>
 </table>
 
-等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor) 和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper) 的说明，详见[模型教程](../tutorials/model.md#数据处理器（DataPreprocessor）)和[优化器封装教程](../tutorials/optim_wrapper.md)。
+关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor) 和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper) 的说明，详见[模型教程](../tutorials/model.md#数据处理器（DataPreprocessor）)和[优化器封装教程](../tutorials/optim_wrapper.md)。
 
 模型具体差异如下：
 
@@ -224,9 +224,9 @@ class MMEngineToyModel(BaseModel):
 
 ### 自定义的参数更新流程
 
-以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单的优化模型。
+以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单地优化模型。
 
-参考示例[训练生成对抗网络](../examples/train_a_gan.md)，如果用 MMCV 进行训练，`GAN` 的模型优化接口如下：
+参考[训练生成对抗网络](../examples/train_a_gan.md)，如果用 MMCV 进行训练，`GAN` 的模型优化接口如下：
 
 ```python
     def train_discriminator(
