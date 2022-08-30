@@ -443,13 +443,14 @@ class TestConfig:
         assert scope is None
         osp.isfile(cfg_path)
 
-        if is_installed('mmdet') and is_installed('mmcls'):
+        if is_installed('mmdet'):
             # Test scope equal to package name.
             cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
             cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
             assert scope == 'mmdet'
             osp.isfile(cfg_path)
 
+        if is_installed('mmcls'):
             # Test scope does not equal to package name.
             cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
             cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
