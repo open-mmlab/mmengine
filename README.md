@@ -36,6 +36,26 @@ English | [简体中文](README_zh-CN.md)
 
 ## Introduction
 
+MMEngine is a base library depending on PyTorch for deep learning model training, and supports Linux, Windows, and MacOS platforms. It has three highlights as follows.
+
+1. Universality: MMEngine implements a high-level general trainer that
+
+   - Support training different tasks with a small amount of code, e.g. imagenet can be trained using only 80 lines of code (pytorch example 400 lines)
+   - Easy compatibility with models from popular algorithm libraries such as TIMM, TorchVision and Detectron2
+
+2. Uniformity: MMEngine has designed an open architecture with a uniform interface, allowing
+
+   - Users can rely on a single piece of code to achieve all tasks, e.g. MMRazor 1.x reduces 40% of the code compared to MMRazor 0.x
+   - The upstream and downstream interfaces are more unified and convenient, supporting multiple backend devices while providing a unified abstraction for the upper-level algorithm library. Currently, MMEngine supports Nvidia CUDA, Mac MPS, AMD, MLU and other devices for model training.
+
+3. Flexibility: MMEngine implements a "Lego" style training process, which supports
+
+   - Dynamically adjust training process, optimization strategies and data augmentation strategies based on the number of iterations, loss and evaluation results. Early stopping is a typical example of adjusting training based on loss and evaluation metrics
+   - Arbitrary forms of model weight averaging, such as Exponential Momentum Average (EMA) and Stochastic Weight Averaging (SWA)
+   - Flexible visualization and logging control for arbitrary data and arbitrary layers during training
+   - Fine-grained adjustment of the optimization strategies of each layer in the neural network model
+   - Flexible control of mixed precision training
+
 ## Installation
 
 Before installing MMEngine, make sure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
