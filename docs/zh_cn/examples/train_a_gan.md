@@ -184,7 +184,7 @@ class GAN(BaseModel):
 
         return log_vars
 
-    def forward(self, batch_inputs, data_samples, mode=None):
+    def forward(self, batch_inputs, data_samples=None, mode=None):
         return self.generator(batch_inputs)
 
     def disc_loss(self, disc_pred_fake, disc_pred_real):
