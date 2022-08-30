@@ -33,12 +33,22 @@
 
    examples/resume_training.md
    examples/speed_up_training.md
+   examples/save_gpu_memory.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 迁移指南
+
+   migration/migrate_hook_from_mmcv.md
+   migration/migrate_param_scheduler_from_mmcv.md
 
 .. toctree::
    :maxdepth: 1
    :caption: 架构设计
 
    design/hook.md
+   design/runner.md
+   design/visualization.md
 
 .. toctree::
    :maxdepth: 2
