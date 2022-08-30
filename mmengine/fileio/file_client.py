@@ -87,7 +87,7 @@ class PetrelBackend(BaseStorageBackend):
         filepath = str(filepath)
         if self.path_mapping is not None:
             for k, v in self.path_mapping.items():
-                filepath = filepath.replace(k, v)
+                filepath = filepath.replace(k, v, 1)
         return filepath
 
     def _format_path(self, filepath: str) -> str:
