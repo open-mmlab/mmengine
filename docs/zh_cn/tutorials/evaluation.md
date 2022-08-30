@@ -4,7 +4,7 @@
 
 - 评测指标： 用于根据测试数据和模型预测结果，完成模型特定精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMClassification](https://github.com/open-mmlab/mmclassification) 中提供了[分类正确率指标（Accuracy）](https://mmclassification.readthedocs.io/zh_CN/dev-1.x/generated/mmcls.evaluation.Accuracy.html) 用于计算分类模型的 Top-k 分类正确率。
 
-- 评测器： 是评测指标的上层模块，用于在数据输入评测指标前完成必要的格式转换，并提供分布式支持。在模型训练和测试中，评测器由[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/api/runner.html)自动构建。用户亦可根据需求手动创建评测器，进行离线评测。
+- 评测器： 是评测指标的上层模块，用于在数据输入评测指标前完成必要的格式转换，并提供分布式支持。在模型训练和测试中，评测器由[执行器（Runner）](runner.md)自动构建。用户亦可根据需求手动创建评测器，进行离线评测。
 
 ## 在模型训练或测试中进行评测
 
@@ -37,7 +37,7 @@ test_evaluator = [
 
 ### 自定义评测指标
 
-如果算法库中提供的常用评测指标无法满足需求，用户也可以增加自定义的评测指标。具体的方法可以参考[评测指标和评测器设计](/docs/zh_cn/design/metric_and_evaluator.md)。
+如果算法库中提供的常用评测指标无法满足需求，用户也可以增加自定义的评测指标。具体的方法可以参考[评测指标和评测器设计](../design/evaluation.md)。
 
 ## 使用离线结果进行评测
 
