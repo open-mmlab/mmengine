@@ -44,6 +44,11 @@ class TestLabelData(TestCase):
         label = LabelData.onehot_to_label(onehot)
         assert (label == item).all()
         assert label.device == item.device
+        item = torch.tensor([2])
+        onehot = LabelData.label_to_onehot(item, num_classes=10)
+        label = LabelData.onehot_to_label(onehot)
+        assert label == item
+        assert label.device == item.device
 
     @pytest.mark.skipif(
         not torch.cuda.is_available(), reason='GPU is required!')

@@ -52,7 +52,7 @@ for img, data_sample in dataloader:
 
 ```python
 import torch
-from mmengine import BaseDataElement
+from mmengine.structures import BaseDataElement
 # 可以声明一个空的 object
 data_element = BaseDataElement()
 
@@ -396,7 +396,7 @@ MMEngine 将数据元素情况划分为三个类别:
 `InstanceData` 中 data 的数据长度要保持一致，如果传入不同长度的新数据，将会报错。
 
 ```python
-from mmengine.data import InstanceData
+from mmengine.structures import InstanceData
 import torch
 import numpy as np
 
@@ -734,7 +734,7 @@ print(instance_data.cat([instance_data, instance_data]))
 `PixelData` 会对传入到 data 的数据进行维度与长宽的校验。
 
 ```python
-from mmengine import PixelData
+from mmengine.structures import PixelData
 import random
 import torch
 import numpy as np
@@ -822,7 +822,7 @@ The shape of slice_data is (10, 20)
 [`LabelData`](mmengine.structures.LabelData) 主要用来封装标签数据，如场景分类标签，文字识别标签等。`LabelData` 没有对 data 做任何限制，只提供了两个额外功能：onehot 与 index 的转换。
 
 ```python
-from mmengine import LabelData
+from mmengine.structures import LabelData
 import torch
 
 item = torch.tensor([1], dtype=torch.int64)
@@ -840,7 +840,7 @@ print(f'{onehot} is convert to', index)
 
 ```
 10 is convert to  tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
-tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor(1)
+tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 ```
 
 ## 数据样本(DataSample)
@@ -863,7 +863,7 @@ tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor(1)
   - proposal(InstanceData): 主要为二阶段中 RPN 的预测结果， 类型约束为 `InstanceData`。
 
 ```python
-from mmengine import BaseDataElement
+from mmengine.structures import BaseDataElement
 import torch
 
 class DetDataSample(BaseDataElement):
