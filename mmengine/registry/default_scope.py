@@ -86,6 +86,8 @@ class DefaultScope(ManagerMixin):
             yield
         else:
             tmp = copy.deepcopy(cls._instance_dict)
+            # To avoid create an instance with the same name.
+            time.sleep(1e-6)
             cls.get_instance(f'overwrite-{time.time()}', scope_name=scope_name)
             try:
                 yield
