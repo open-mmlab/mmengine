@@ -882,23 +882,22 @@ class Config:
                 Defaults to True.
 
         Examples:
-            >>> options = {'model.backbone.depth': 50,
-            ...            'model.backbone.with_cp':True}
+            >>> from mmengine import Config
+            >>> #  Merge dictionary element
+            >>> options = {'model.backbone.depth': 50, 'model.backbone.with_cp': True}
             >>> cfg = Config(dict(model=dict(backbone=dict(type='ResNet'))))
             >>> cfg.merge_from_dict(options)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(
-            ...     model=dict(backbone=dict(depth=50, with_cp=True)))
-
+            >>> cfg._cfg_dict
+            {'model': {'backbone': {'type': 'ResNet', 'depth': 50, 'with_cp': True}}}
             >>> # Merge list element
-            >>> cfg = Config(dict(pipeline=[
-            ...     dict(type='LoadImage'), dict(type='LoadAnnotations')]))
+            >>> cfg = Config(
+            >>>     dict(pipeline=[dict(type='LoadImage'),
+            >>>                    dict(type='LoadAnnotations')]))
             >>> options = dict(pipeline={'0': dict(type='SelfLoadImage')})
             >>> cfg.merge_from_dict(options, allow_list_keys=True)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(pipeline=[
-            ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
-        """
+            >>> cfg._cfg_dict
+            {'pipeline': [{'type': 'SelfLoadImage'}, {'type': 'LoadAnnotations'}]}
+        """  # noqa: E501
         option_cfg_dict: dict = {}
         for full_key, v in options.items():
             d = option_cfg_dict
