@@ -598,7 +598,7 @@ def train_detector(model,
   <td valign="top">
 
 ```python
-# removed
+# `apis/train.py` is removed in `mmengine`
 ```
 
 </td>
