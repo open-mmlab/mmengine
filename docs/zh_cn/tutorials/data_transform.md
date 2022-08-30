@@ -27,7 +27,13 @@ MMEngine 中仅约定了数据变换类的规范，常用的数据变换类实�
 ## 在配置文件中使用
 
 在配置文件中，我们将一系列数据变换组合成为一个列表，称为数据流水线（Data Pipeline），传给数据集的 `pipeline`
-参数。
+参数。通常数据流水线由以下几个部分组成：
+
+1. 数据加载，通常使用 [`LoadImageFromFile`](mmcv.transforms.LoadImageFromFile)
+2. 标签加载，通常使用 [`LoadAnnotations`](mmcv.transforms.LoadAnnotations)
+3. 数据处理及增强，例如 [`RandomResize`](mmcv.transforms.RandomResize)
+4. 数据格式化，根据任务不同，在各个仓库使用自己的变换操作，通常名为 `PackXXXInputs`，其中 XXX 是任务的名称，如
+   分类任务中的 `PackClsInputs`。
 
 以分类任务为例，我们在下图展示了一个典型的数据流水线。对每个样本，数据集中保存的基本信息是一个如图中最左侧所示的字典，之后每经过一个由蓝色块代表的数据变换操作，数据字典中都会加入新的字段（标记为绿色）或更新现有的字段（标记为橙色）。
 
