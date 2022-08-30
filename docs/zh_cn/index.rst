@@ -11,26 +11,31 @@
    get_started/15_minutes.md
 
 .. toctree::
-   :maxdepth: 1
-   :caption: 教程
+   :maxdepth: 3
+   :caption: 入门教程
 
    tutorials/registry.md
    tutorials/config.md
    tutorials/runner.md
    tutorials/hook.md
+   tutorials/model.md
+   tutorials/evaluation.md
    tutorials/optim_wrapper.md
    tutorials/param_scheduler.md
-   tutorials/evaluation.md
-   tutorials/data_element.md
-   tutorials/basedataset.md
    tutorials/data_transform.md
-   tutorials/distributed.md
-   tutorials/logging.md
-   tutorials/visualization.md
-   tutorials/fileio.md
-   tutorials/utils.md
-   tutorials/model.md
-   tutorials/initialize.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 进阶教程
+
+   advanced_tutorials/data_element.md
+   advanced_tutorials/basedataset.md
+   advanced_tutorials/visualization.md
+   advanced_tutorials/initialize.md
+   advanced_tutorials/distributed.md
+   advanced_tutorials/logging.md
+   advanced_tutorials/fileio.md
+   advanced_tutorials/utils.md
 
 .. toctree::
    :maxdepth: 1
@@ -43,19 +48,11 @@
 
 .. toctree::
    :maxdepth: 1
-   :caption: 迁移指南
-
-   migration/migrate_hook_from_mmcv.md
-   migration/migrate_transform.md
-   migration/migrate_param_scheduler_from_mmcv.md
-
-.. toctree::
-   :maxdepth: 1
    :caption: 架构设计
 
    design/hook.md
    design/runner.md
-   design/metric_and_evaluator.md
+   design/evaluation.md
    design/visualization.md
    design/logging.md
 
@@ -63,7 +60,14 @@
    :maxdepth: 1
    :caption: 迁移指南
 
-   migration/migrate_runner_from_mmcv.md
+.. toctree::
+   :maxdepth: 1
+   :caption: 迁移指南
+
+   migration/hook.md
+   migration/transform.md
+   migration/param_scheduler.md
+   migration/runne.md
 
 .. toctree::
    :maxdepth: 2
