@@ -6,7 +6,9 @@
    :maxdepth: 1
    :caption: 开始你的第一步
 
+   get_started/introduction.md
    get_started/installation.md
+   get_started/15_minutes.md
 
 .. toctree::
    :maxdepth: 1
@@ -16,22 +18,33 @@
    tutorials/config.md
    tutorials/runner.md
    tutorials/hook.md
-   tutorials/optimizer.md
+   tutorials/optim_wrapper.md
    tutorials/param_scheduler.md
-   tutorials/metric_and_evaluator.md
+   tutorials/evaluation.md
    tutorials/data_element.md
    tutorials/basedataset.md
    tutorials/distributed.md
    tutorials/logging.md
    tutorials/visualization.md
+   tutorials/fileio.md
    tutorials/utils.md
 
 .. toctree::
    :maxdepth: 1
    :caption: 示例
 
+   examples/resume_training.md
    examples/speed_up_training.md
    examples/save_gpu_memory.md
+   examples/cross_library.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 迁移指南
+
+   migration/migrate_hook_from_mmcv.md
+   migration/migrate_transform.md
+   migration/migrate_param_scheduler_from_mmcv.md
 
 .. toctree::
    :maxdepth: 1
@@ -39,6 +52,8 @@
 
    design/hook.md
    design/runner.md
+   design/metric_and_evaluator.md
+   design/visualization.md
 
 .. toctree::
    :maxdepth: 2

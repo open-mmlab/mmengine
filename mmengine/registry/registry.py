@@ -190,45 +190,45 @@ class Registry:
             scope (str): The target scope.
 
         Examples:
-        >>> from mmengine.registry import Registry, DefaultScope, MODELS
-        >>> import time
-        >>> # External Registry
-        >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
-        >>>     parent=MODELS)
-        >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
-        >>>     parent=MODELS)
-        >>> # Local Registry
-        >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
-        >>>     parent=MODELS)
-        >>>
-        >>> # Initiate DefaultScope
-        >>> DefaultScope.get_instance(f'scope_{time.time()}',
-        >>>     scope_name='custom')
-        >>> # Check default scope
-        >>> DefaultScope.get_current_instance().scope_name
-        custom
-        >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
-        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:  # noqa: E501
-        >>>     DefaultScope.get_current_instance().scope_name
-        mmcls
-        >>>     registry.scope
-        mmcls
-        >>> # Nested switch scope
-        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:  # noqa: E501
-        >>>     DefaultScope.get_current_instance().scope_name
-        mmdet
-        >>>     mmdet_registry.scope
-        mmdet
-        >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:  # noqa: E501
-        >>>         DefaultScope.get_current_instance().scope_name
-        mmcls
-        >>>         mmcls_registry.scope
-        mmcls
-        >>>
-        >>> # Check switch back to original scope.
-        >>> DefaultScope.get_current_instance().scope_name
-        custom
-        """
+            >>> from mmengine.registry import Registry, DefaultScope, MODELS
+            >>> import time
+            >>> # External Registry
+            >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
+            >>>     parent=MODELS)
+            >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
+            >>>     parent=MODELS)
+            >>> # Local Registry
+            >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
+            >>>     parent=MODELS)
+            >>>
+            >>> # Initiate DefaultScope
+            >>> DefaultScope.get_instance(f'scope_{time.time()}',
+            >>>     scope_name='custom')
+            >>> # Check default scope
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+            >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>     registry.scope
+            mmcls
+            >>> # Nested switch scope
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmdet
+            >>>     mmdet_registry.scope
+            mmdet
+            >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:
+            >>>         DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>         mmcls_registry.scope
+            mmcls
+            >>>
+            >>> # Check switch back to original scope.
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+        """  # noqa: E501
         from ..logging import print_log
 
         # Switch to the given scope temporarily. If the corresponding registry

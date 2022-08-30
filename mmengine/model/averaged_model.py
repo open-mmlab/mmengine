@@ -106,6 +106,11 @@ class BaseAveragedModel(nn.Module):
                     self.avg_func(p_avg.data,
                                   src_parameters[k].data.to(device),
                                   self.steps)
+        if not self.update_buffers:
+            # If not update the buffers,
+            # keep the buffers in sync with the source model.
+            for b_avg, b_src in zip(self.module.buffers(), model.buffers()):
+                b_avg.data.copy_(b_src.data.to(b_avg.device))
         self.steps += 1
 
 
