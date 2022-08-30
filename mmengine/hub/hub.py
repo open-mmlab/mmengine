@@ -8,7 +8,7 @@ from mmengine.config.utils import (_get_cfg_metainfo,
                                    _get_package_and_cfg_path)
 from mmengine.registry import MODELS, DefaultScope
 from mmengine.runner import load_checkpoint
-from mmengine.utils import check_install_package, get_installed_path
+from mmengine.utils import get_installed_path, install_package
 
 
 def get_config(cfg_path: str, pretrained: bool = False) -> Config:
@@ -34,7 +34,7 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     # Get package name and relative config path.
     package, cfg_path = _get_package_and_cfg_path(cfg_path)
     # Check package is installed.
-    check_install_package(package)
+    install_package(package)
     package_path = get_installed_path(package)
     try:
         # Use `cfg_path` to search target config file.
