@@ -4,17 +4,17 @@
 
 我们可以通过以下步骤来训练一个生成对抗网络。
 
-1. 构建数据加载器
-2. 构建生成器网络和判别器网络
-3. 构建一个生成对抗网络模型
-4. 构建优化器
-5. 使用执行器进行训练
+1. [构建数据加载器](构建数据加载器)
+2. [构建生成器网络和判别器网络](构建生成器网络和判别器网络)
+3. [构建一个生成对抗网络模型](构建一个生成对抗网络模型)
+4. [构建优化器](构建优化器)
+5. [使用执行器进行训练](使用执行器进行训练)
 
 ## 构建数据加载器
 
 ### 构建数据集
 
-接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 `BaseDataset`, 并且重载数据集基类的 `load_data_list(self):` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
+接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 [BaseDataset](mmengine.dataset.BaseDataset), 并且重载数据集基类的 `load_data_list` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
 
 ```python
 import numpy as np
@@ -22,16 +22,19 @@ from mmcv.transforms import to_tensor
 from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 
-from mmengine import BaseDataset
+from mmengine.dataset import BaseDataset
 
 
 class MNISTDataset(BaseDataset):
 
     def __init__(self, data_root, pipeline, test_mode=False):
-        self.data_root = data_root
-        # 下载全部 MNIST 数据集
-        MNIST(self.data_root, train=True, download=True)
-        MNIST(self.data_root, train=False, download=True)
+        # 下载 MNIST 数据集
+        if test_mode:
+            mnist_full = MNIST(data_root, train=True, download=True)
+            self.mnist_dataset, _ = random_split(mnist_full, [55000, 5000])
+        else:
+            self.mnist_dataset = MNIST(data_root, train=False, download=True)
+
         super().__init__(
             data_root=data_root, pipeline=pipeline, test_mode=test_mode)
 
@@ -43,13 +46,8 @@ class MNISTDataset(BaseDataset):
         return to_tensor(img)
 
     def load_data_list(self):
-        if self.test_mode:
-            mnist_full = MNIST(self.data_root, train=True)
-            mnist_dataset, _ = random_split(mnist_full, [55000, 5000])
-        else:
-            mnist_dataset = MNIST(self.data_root, train=False)
         return [
-            dict(inputs=self.totensor(np.array(x[0]))) for x in mnist_dataset
+            dict(inputs=self.totensor(np.array(x[0]))) for x in self.mnist_dataset
         ]
 
 
@@ -62,7 +60,7 @@ dataset = MNISTDataset("./data", [])
 ```python
 import os
 import torch
-from mmengine import Runner
+from mmengine.runner import Runner
 
 NUM_WORKERS = int(os.cpu_count() / 2)
 BATCH_SIZE = 256 if torch.cuda.is_available() else 64
@@ -139,7 +137,7 @@ discriminator = Discriminator((1, 28, 28))
 
 ## 构建一个生成对抗网络模型
 
-在使用 MMEngine 时，我们用 ImgDataPreprocessor 来对数据进行归一化和颜色通道的转换。
+在使用 MMEngine 时，我们用 [ImgDataPreprocessor](mmengine.model.ImgDataPreprocessor) 来对数据进行归一化和颜色通道的转换。
 
 ```python
 from mmengine.model import ImgDataPreprocessor
@@ -147,7 +145,7 @@ from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
-下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 BaseModel 基类，
+下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 [BaseModel](mmengine.model.BaseModel) 基类，
 在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
 关于 BaseModel 的更多信息，请参考[模型教程](../tutorials/model.md).
 
@@ -261,7 +259,7 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 
 ## 构建优化器
 
-MMEngine 使用 OptimWrapper 来封装优化器，对于多个优化器的情况，使用 OptimWrapperDict 对 OptimWrapper 再进行一次封装。
+MMEngine 使用 [OptimWrapper](mmengine.optim.OptimWrapper) 来封装优化器，对于多个优化器的情况，使用 [OptimWrapperDict](mmengine.optim.OptimWrapperDict) 对 OptimWrapper 再进行一次封装。
 关于优化器的更多信息，请参考[优化器教程](../tutorials/optimizer.md).
 
 ```python
@@ -306,4 +304,4 @@ save_image(img, "result.png", normalize=True)
 
 ![GAN生成图像](https://user-images.githubusercontent.com/22982797/186811532-1517a0f7-5452-4a39-b6d0-6c685e4545e2.png)
 
-如果你想了解更多如何使用 MMEngine 实现 GAN 和生成模型，我们强烈建议你使用同样基于 MMEngine 开发的生成框架 [MMGen](https://github.com/open-mmlab/mmgeneration/tree/1.x)。
+如果你想了解更多如何使用 MMEngine 实现 GAN 和生成模型，我们强烈建议你使用同样基于 MMEngine 开发的生成框架 [MMGen](https://github.com/open-mmlab/mmgeneration/tree/dev-1.x)。
