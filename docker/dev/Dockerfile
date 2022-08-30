@@ -22,8 +22,8 @@ WORKDIR /mmengine
 RUN git rev-parse --short HEAD
 RUN pip install --no-cache-dir -e .[all] -v && pip install pre-commit && pre-commit install
 
-# Install mmcv-full
-ARG MMCV="2.0.0"
+# Install mmcv
+ARG MMCV="2.0.0rc1"
 RUN pip install -U openmim \
-    && mim install mmcv-full==${MMCV} \
+    && mim install mmcv==${MMCV} \
     && python -c 'import mmcv;print(mmcv.__version__);'

@@ -1,19 +1,19 @@
 # Docker images
 
-There are two `Dockerfile` files to build docker images, one to build an image with the mmengine pre-built package and the other with the mmengine development environment.
+There are two `Dockerfile` files to build docker images, one to build an image with the mmengine package and the other with the mmengine development environment.
 
 ```text
 .
 |-- README.md
 |-- dev  # build with mmengine development environment
 |   `-- Dockerfile
-`-- release  # build with mmengine pre-built package
+`-- release  # build with mmengine package
     `-- Dockerfile
 ```
 
 ## Build docker images
 
-### Build with mmengine pre-built package
+### Build with mmengine package
 
 Build with local repository
 
@@ -25,13 +25,13 @@ docker build -t mmengine -f docker/release/Dockerfile .
 Or build with remote repository
 
 ```bash
-docker build -t mmengine https://github.com/open-mmlab/mmengine.git#master:docker/release
+docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
 ```
 
-The [Dockerfile](release/Dockerfile) installs latest released version of mmengine by default, but you can specify mmengine versions to install expected versions.
+The [Dockerfile](release/Dockerfile) installs the latest released version of mmengine by default, but you can specify mmengine versions to install expected versions.
 
 ```bash
-docker image build -t mmengine -f docker/release/Dockerfile --build-arg mmengine=0.5.0 .
+docker image build -t mmengine -f docker/release/Dockerfile --build-arg MMENGINE=0.5.0 .
 ```
 
 If you also want to use other versions of PyTorch and CUDA, you can also pass them when building docker images.
@@ -43,7 +43,6 @@ docker build -t mmengine -f docker/release/Dockerfile \
     --build-arg PYTORCH=1.9.0 \
     --build-arg CUDA=11.1 \
     --build-arg CUDNN=8 \
-    --build-arg MMCV=2.0.0 \
     --build-arg MMENGINE=0.5.0 .
 ```
 

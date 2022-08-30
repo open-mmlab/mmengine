@@ -15,10 +15,10 @@ RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install mmengine and mmcv-full
-ARG MMCV="2.0.0"
+# Install mmengine and mmcv
+ARG MMCV="2.0.0rc1"
 ARG MMENGINE="0.5.0"
 RUN pip install -U openmim \
     && mim install mmengine==${MMENGINE} \
-    && mim install mmcv-full==${MMCV} \
+    && mim install mmcv==${MMCV} \
     && python -c 'import mmengine;print(mmengine.__version__);import mmcv;print(mmcv.__version__)'
