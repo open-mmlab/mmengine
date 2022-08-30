@@ -379,7 +379,7 @@ b=2
 work_dir = './work_dir/{{fileBasenameNoExtension}}'
 ```
 
-这里 `{{ fileBasenameNoExtension }}` 表示该配置文件的文件名（不含拓展名），在配置类读取配置文件的时候，会将这种用双花括号包起来的字符串自动解析为对应的实际值。
+这里 `{{fileBasenameNoExtension}}` 表示该配置文件的文件名（不含拓展名），在配置类读取配置文件的时候，会将这种用双花括号包起来的字符串自动解析为对应的实际值。
 
 ```python
 cfg = Config.fromfile('./predefined_var.py')
