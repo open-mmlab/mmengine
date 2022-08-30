@@ -12,13 +12,13 @@ MMCV 早期主要适配一些常见的计算机视觉任务，例如目标检测
 上述流程的一大特点就是调用位置统一（在训练迭代后调用）、执行步骤统一（依次执行步骤 1->2->3->4），非常契合[钩子（Hook）](../design/hook.md)的设计原则，因此这类任务通常会使用 `Hook` 来
 来优化模型。MMCV 为此实现了一系列的 `Hook`，例如 `OptimizerHook`（单精度训练）、`Fp16OptimizerHook`（混合精度训练） 和 `GradientCumulativeFp16OptimizerHook`（混合精度训练 + 梯度累加），为这类任务提供各种优化策略。
 
-然而，诸如生成对抗网络（GAN），自监督（Self-supervision）一类的任务，它们的参数更新流程更加灵活，并不满足调用位置统一、执行步骤统一的原则，难以使用 `Hook` 对参数进行优化。为了支持训练这类任务，MMCV 的执行器会在调用 `model.train_step` 时，额外传入 `optimizer` 参数，让模型在 `train_step` 里实现自定义的优化流程。这样尽管可以支持训练这类任务，但也会导致无法使用各种 `OptimizerHook`，而需要在 `train_step` 里实现混合精度训练、梯度累加等训练策略。
+一些例如生成对抗网络（GAN），自监督（Self-supervision）等领域的算法一般有更加灵活的训练流程，这类流程并不满足调用位置统一、执行步骤统一的原则，难以使用 `Hook` 对参数进行优化。为了支持训练这类任务，MMCV 的执行器会在调用 `model.train_step` 时，额外传入 `optimizer` 参数，让模型在 `train_step` 里实现自定义的优化流程。这样尽管可以支持训练这类任务，但也会导致无法使用各种 `OptimizerHook`，而需要在 `train_step` 里实现混合精度训练、梯度累加等训练策略。
 
 为了统一深度学习任务的参数优化流程，MMEngine 设计了[优化器封装](mmengine.optim.OptimWrapper)，集成了混合精度训练、梯度累加等训练策略，各类深度学习任务一律在 `model.train_step` 里执行参数优化流程。
 
-## 迁移模型
+## 优化流程的迁移
 
-### 参数更新流程统一的深度学习任务
+### 统一的参数更新流程
 
 考虑到目标检测、物体识别一类的深度学习任务参数优化的流程基本一致，我们可以通过继承[模型基类](../tutorials/model.md)来完成迁移。
 
@@ -123,7 +123,7 @@ class MMEngineToyModel(BaseModel):
             return dict(loss1=loss1, loss2=loss2)
         # 被 `val_step` 调用，返回传给 `evaluator` 的预测结果
         elif mode == 'predict':
-            return [feat]
+            return [_feat for _feat in feat]
         # tensor 模式，功能详见模型教程文档： tutorials/model.md
         else:
             pass
@@ -190,8 +190,8 @@ class MMEngineToyModel(BaseModel):
             loss1 = (feat - label).pow(2)
             loss2 = (feat - label).abs()
             return dict(loss1=loss1, loss2=loss2)
-        elif mode == 'tensor':
-            return [feat]
+        elif mode == 'predict':
+            return [_feat for _feat in feat]
         else:
             # tensor 模式，功能详见模型教程文档： tutorials/model.md
             pass
@@ -206,12 +206,6 @@ class MMEngineToyModel(BaseModel):
     # 调用优化器封装更新模型参数
     #     optim_wrapper.update_params(loss)
     #     return loss_dict
-
-    # 模型基类 `val_step`、`test_step` 等效代码。二者可以根据需求有不同实现
-    # def test_step(self, data, optim_wrapper):
-    # 调用数据处理器处理 data
-    #     data = self.data_preprocessor(data)
-    #     return self(*data, mode='predict')
 ```
 
 </td>
@@ -226,9 +220,9 @@ class MMEngineToyModel(BaseModel):
 - `MMCVToyModel` 继承自 `nn.Module`，而 `MMEngineToyModel` 继承自 `BaseModel`
 - `MMCVToyModel` 必须实现 `train_step`，且必须返回损失字典，损失字典包含 `loss` 和 `log_vars` 和 `num_samples` 字段。`MMEngineToyModel` 继承自 `BaseModel`，只需要实现 `forward` 接口，并返回损失字典，损失字典的每一个值必须是可微的张量
 - `MMCVToyModel` 和 `MMEngineModel` 的 `forward` 的接口需要匹配 `train_step` 中的调用方式，由于 `MMEngineToyModel` 直接调用基类的 `train_step` 方法，因此 `forward` 需要接受参数 `mode`，具体规则详见[模型教程文档](../tutorials/model.md)
-- `MMEngineModel` 如果没有继承 `BaseModel`，必须实现 `train_step`、`test_step` 和 `val_step` 方法。
+- `MMEngineModel` 如果没有继承 `BaseModel`，必须实现 `train_step` 方法。
 
-### 自定义参数更新流程的深度学习任务
+### 自定义的参数更新流程
 
 以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单的优化模型。
 
@@ -352,7 +346,27 @@ class MMEngineToyModel(BaseModel):
 
 二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](参数更新流程统一的深度学习任务)提到的一致。
 
-### 迁移分布式训练
+## 验证/测试流程的迁移
+
+基于 MMCV 执行器实现的模型通常不需要为验证、测试流程提供独立的 `val_step`、`test_step`（测试流程由 `EvalHook` 实现，这里不做展开）。基于 MMEngine 执行器实现的模型则有所不同，[ValLoop](mmengine.runner.ValLoop)、[TestLoop](mmengine.runner.TestLoop) 会分别调用模型的 `val_step` 和 `test_step` 接口，输出会进一步传给 [Evaluator 的 process 接口](mmengine.evaluator.Evaluator.process)。因此模型的 `val_step` 和 `test_step` 接口的输出需要和 `Evaluator.process` 的函数入参对齐，即返回列表（推荐，也可以是其他可迭代类型）类型的结果，列表中的每一个元素代表一个批次（batch）的数据中每个样本的预测结果。模型的 `test_step` 和 `val_step` 会调 `forward` 接口（详见[教模型教程文档](../tutorials/model.md)），因此在上一节的模型示例中，模型 `forward` 的 `predict` 模式会将 `feat` 切片后，以列表的形式返回预测结果。
+
+```python
+
+class MMEngineToyModel(BaseModel):
+
+    ...
+    def forward(self, img, label, mode):
+        if mode == 'loss':
+            ...
+        elif mode == 'predict':
+            # 把一个 batch 的预测结果切片成列表，每个元素代表一个样本的预测结果
+            return [_feat for _feat in feat]
+        else:
+            ...
+            # tensor 模式，功能详见模型教程文档： tutorials/model.md
+```
+
+## 迁移分布式训练
 
 MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型进行分布式封装。MMEngine 实现了 [MMDistributedDataParallel](mmengine.model.MMDistributedDataParallel) 和 [MMSeparateDistributedDataParallel](mmengine.model.MMSeparateDistributedDataParallel) 两种分布式模型封装，供不同类型的任务选择。执行器会在构建时对模型进行分布式封装。
 
@@ -417,7 +431,7 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
 
 3. **单模块优化、自定义流程的深度学习任务**
 
-   有时候我们需要对用自定义的优化流程来优化单个模块，这时候我们就不能复用模型基类的 `train_step`，而需要重新实现，例如我们想用同一批图片对模型优化两次，第一次开启批数据增强，第二次关闭：
+   有时候我们需要用自定义的优化流程来优化单个模块，这时候我们就不能复用模型基类的 `train_step`，而需要重新实现，例如我们想用同一批图片对模型优化两次，第一次开启批数据增强，第二次关闭：
 
    ```python
    class CustomModel(BaseModel):
