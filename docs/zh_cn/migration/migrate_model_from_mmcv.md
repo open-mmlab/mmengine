@@ -348,7 +348,7 @@ class MMEngineToyModel(BaseModel):
 
 ## 验证/测试流程的迁移
 
-基于 MMCV 执行器实现的模型通常不需要为验证、测试流程提供独立的 `val_step`、`test_step`（测试流程由 `EvalHook` 实现，这里不做展开）。基于 MMEngine 执行器实现的模型则有所不同，[ValLoop](mmengine.runner.ValLoop)、[TestLoop](mmengine.runner.TestLoop) 会分别调用模型的 `val_step` 和 `test_step` 接口，输出会进一步传给 [Evaluator 的 process 接口](mmengine.evaluator.Evaluator.process)。因此模型的 `val_step` 和 `test_step` 接口的输出需要和 `Evaluator.process` 的函数入参对齐，即返回列表（推荐，也可以是其他可迭代类型）类型的结果，列表中的每一个元素代表一个批次（batch）的数据中每个样本的预测结果。模型的 `test_step` 和 `val_step` 会调 `forward` 接口（详见[教模型教程文档](../tutorials/model.md)），因此在上一节的模型示例中，模型 `forward` 的 `predict` 模式会将 `feat` 切片后，以列表的形式返回预测结果。
+基于 MMCV 执行器实现的模型通常不需要为验证、测试流程提供独立的 `val_step`、`test_step`（测试流程由 `EvalHook` 实现，这里不做展开）。基于 MMEngine 执行器实现的模型则有所不同，[ValLoop](mmengine.runner.ValLoop)、[TestLoop](mmengine.runner.TestLoop) 会分别调用模型的 `val_step` 和 `test_step` 接口，输出会进一步传给 [Evaluator.process](mmengine.evaluator.Evaluator.process)。因此模型的 `val_step` 和 `test_step` 接口输出需要和 `Evaluator.process` 的入参（第一个参数）对齐，即返回列表（推荐，也可以是其他可迭代类型）类型的结果。列表中的每一个元素代表一个批次（batch）数据中每个样本的预测结果。模型的 `test_step` 和 `val_step` 会调 `forward` 接口（详见[模型教程文档](../tutorials/model.md)），因此在上一节的模型示例中，模型 `forward` 的 `predict` 模式会将 `feat` 切片后，以列表的形式返回预测结果。
 
 ```python
 
