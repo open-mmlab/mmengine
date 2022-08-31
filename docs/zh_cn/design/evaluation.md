@@ -1,9 +1,9 @@
-# 评测指标（Metric）和评测器（Evaluator）
+# 模型精度评测
 
-在模型验证和模型测试中，通常需要对模型精度做定量评测。在 MMEngine 中实现了[评测指标](Todo:metric-doc-link)和[评测器](Todo:evaluator-doc-linek)来完成这一功能。
+在模型验证和模型测试中，通常需要对模型精度做定量评测。在 MMEngine 中实现了[评测指标](mmengine.evaluator.BaseMetric)和[评测器](mmengine.evaluator.Evaluator)来完成这一功能。
 
 **评测指标** 根据模型的输入数据和预测结果，完成特定指标下模型精度的计算。评测指标与数据集之间相互解耦，这使得用户可以任意组合所需的测试数据和评测指标。如 [COCOMetric](Todo:coco-metric-doc-link) 可用于计算 COCO 数据集的 AP，AR 等评测指标，也可用于其他的目标检测数据集上。
-**评测器** 是评测指标的上层模块，通常包含一个或多个评测指标。评测器的作用是在模型评测时完成必要的数据格式转换，并调用评测指标计算模型精度。评测器通常由[执行器](TODO:runner-doc-link)或测试脚本构建，分别用于在线评测和离线评测。
+**评测器** 是评测指标的上层模块，通常包含一个或多个评测指标。评测器的作用是在模型评测时完成必要的数据格式转换，并调用评测指标计算模型精度。评测器通常由[执行器](../tutorials/runner.md)或测试脚本构建，分别用于在线评测和离线评测。
 
 ## 模型精度评测流程
 
@@ -21,7 +21,7 @@
 
 在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测指标。如 MMDetection 中提供了 COCO 评测指标，MMClassification 中提供了 Accuracy、F1Score 等评测指标等。
 
-用户也可以增加自定义的评测指标。在实现自定义评测指标时，需要继承 MMEngine 中提供的评测指标基类 [BaseMetric](Todo:basemetric-doc-link)，并实现对应的抽象方法。
+用户也可以增加自定义的评测指标。在实现自定义评测指标时，需要继承 MMEngine 中提供的评测指标基类 [BaseMetric](mmengine.evaluator.BaseMetric)，并实现对应的抽象方法。
 
 ### 评测指标基类
 
@@ -38,7 +38,7 @@
 
 我们以实现分类正确率（Classification Accuracy）评测指标为例，说明自定义评测指标的方法。
 
-首先，评测指标类应继承自 `BaseMetric`，并应加入注册器 `METRICS` (关于注册器的说明请参考[相关文档](docs%5Czh_cn%5Ctutorials%5Cregistry.md))。
+首先，评测指标类应继承自 `BaseMetric`，并应加入注册器 `METRICS` (关于注册器的说明请参考[相关文档](../tutorials/registry.md))。
 
 `process()` 方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 

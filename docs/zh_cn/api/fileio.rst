@@ -46,7 +46,6 @@ File IO
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    dump
    load
@@ -58,7 +57,6 @@ Parse File
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    dict_from_file
    list_from_file

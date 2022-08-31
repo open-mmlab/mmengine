@@ -81,7 +81,7 @@ data
 
 - `get subset` (可选)：根据给定的索引或整数值采样数据，比如只取前 10 个样本参与训练/测试；默认不采样数据，即使用全部数据样本；
 
-- `serialize data` (可选)：序列化全部样本，以达到节省内存的效果，详情请参考[节省内存](#%E8%8A%82%E7%9C%81%E5%86%85%E5%AD%98)；默认操作为序列化全部样本。
+- `serialize data` (可选)：序列化全部样本，以达到节省内存的效果，详情请参考[节省内存](#节省内存)；默认操作为序列化全部样本。
 
 数据集基类中包含的 `parse_data_info()` 方法用于将标注文件里的一个原始数据处理成一个或若干个训练/测试样本的方法。因此对于自定义数据集类，用户需要实现 `parse_data_info()` 方法。
 
@@ -262,7 +262,7 @@ toy_dataset = ToyDataset(
     lazy_init=True)
 ```
 
-当 `lazy_init=True` 时，`ToyDataset` 的初始化方法只执行了[数据集基类的初始化流程](#%E6%95%B0%E6%8D%AE%E9%9B%86%E5%9F%BA%E7%B1%BB%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B)中的 1、2、3 步骤，此时 `toy_dataset` 并未被完全初始化，因为 `toy_dataset` 并不会读取与解析标注文件，只会设置数据集类的元信息（`metainfo`）。
+当 `lazy_init=True` 时，`ToyDataset` 的初始化方法只执行了[数据集基类的初始化流程](#数据集基类的初始化流程)中的 1、2、3 步骤，此时 `toy_dataset` 并未被完全初始化，因为 `toy_dataset` 并不会读取与解析标注文件，只会设置数据集类的元信息（`metainfo`）。
 
 自然的，如果之后需要访问具体的数据信息，可以手动调用 `toy_dataset.full_init()` 接口来执行完整的初始化过程，在这个过程中数据标注文件将被读取与解析。调用 `get_data_info(idx)`, `__len__()`, `__getitem__(idx)`，`get_subset_(indices)`， `get_subset(indices)` 接口也会自动地调用 `full_init()` 接口来执行完整的初始化过程（仅在第一次调用时，之后调用不会重复地调用 `full_init()` 接口）：
 

@@ -79,6 +79,9 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 
 ## 快速上手
 
+以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 MMEngine 构建一个完整的、
+可配置的训练和验证流程。
+
 <details>
 <summary>构建模型</summary>
 
@@ -243,15 +246,17 @@ runner.train()
 
 - [钩子的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
 - [执行器的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
-- [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
+- [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
 
 </details>
 
 <details>
 <summary>迁移指南</summary>
 
-- [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/migrate_param_scheduler_from_mmcv.html)
-- [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/migrate_hook_from_mmcv.html)
+- [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/param_scheduler.html)
+- [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/hook.html)
+- [迁移 MMCV 执行器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/runner.html)
+- [数据变换类的迁移](https://mmengine.readthedocs.io/zh_CN/latest/migration/transform.html)
 
 </details>
 

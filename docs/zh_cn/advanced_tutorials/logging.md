@@ -1,6 +1,6 @@
 # 记录日志
 
-[执行器（Runner）](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)在运行过程中会产生很多日志，例如损失、迭代时间、学习率等。MMEngine 实现了一套灵活的日志系统让我们能够在配置执行器时，选择不同类型日志的统计方式；在代码的任意位置，新增需要被统计的日志。
+[执行器（Runner）](../tutorials/runner.md)在运行过程中会产生很多日志，例如损失、迭代时间、学习率等。MMEngine 实现了一套灵活的日志系统让我们能够在配置执行器时，选择不同类型日志的统计方式；在代码的任意位置，新增需要被统计的日志。
 
 ## 灵活的日志统计方式
 
@@ -164,7 +164,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-更多配置规则见[日志处理器文档](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.LogProcessor)
+更多配置规则见[日志处理器文档](mmengine.logging.LogProcessor)
 
 ## 自定义统计内容
 
@@ -215,7 +215,7 @@ runner.train()
 08/21 03:40:31 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0028  data_time: 0.0013  loss_tmp: 0.0065  loss: 0.0000
 ```
 
-通过调用[消息枢纽](https://mmengine.readthedocs.io/zh_CN/latest/api.html#mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
+通过调用[消息枢纽](mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
 2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。

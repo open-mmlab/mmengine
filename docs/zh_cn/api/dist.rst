@@ -17,7 +17,6 @@ dist
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    gather
    gather_object
@@ -39,7 +38,6 @@ utils
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    get_dist_info
    init_dist

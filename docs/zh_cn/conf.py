@@ -55,13 +55,14 @@ extensions = [
     'sphinx.ext.autodoc.typehints',
 ]  # yapf: disable
 autodoc_typehints = 'description'
+myst_heading_anchors = 4
 
 # Configuration for intersphinx
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable', None),
     'torch': ('https://pytorch.org/docs/stable/', None),
-    'mmcv': ('https://mmcv.readthedocs.io/en/dev-2.x/', None),
+    'mmcv': ('https://mmcv.readthedocs.io/en/2.x/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.

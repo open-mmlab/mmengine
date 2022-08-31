@@ -10,7 +10,7 @@
 
 ```{note}
 MMEngine 中仅约定了数据变换类的规范，常用的数据变换类实现及基类都在 MMCV 中，因此在本篇教程需要提前安装好 MMCV，
-参见 MMCV 的[安装教程](https://mmcv.readthedocs.io/en/dev-2.x/get_started/installation.html)。
+参见 MMCV 的[安装教程](https://mmcv.readthedocs.io/en/2.x/get_started/installation.html)。
 ```
 
 ```python
@@ -67,34 +67,34 @@ test_dataloader = dict(
 
 为了支持大规模数据集的加载，通常在数据集初始化时不加载数据，只加载相应的路径。因此需要在数据流水线中进行具体数据的加载。
 
-|                                 数据变换类                                  |                   功能                    |
-| :-------------------------------------------------------------------------: | :---------------------------------------: |
-| [`LoadImageFromFile`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) |             根据路径加载图像              |
-|  [`LoadAnnotations`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)  | 加载和组织标注信息，如 bbox、语义分割图等 |
+|                               数据变换类                                |                   功能                    |
+| :---------------------------------------------------------------------: | :---------------------------------------: |
+| [`LoadImageFromFile`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO) |             根据路径加载图像              |
+|  [`LoadAnnotations`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)  | 加载和组织标注信息，如 bbox、语义分割图等 |
 
 ### 数据预处理及增强
 
 数据预处理和增强通常是对图像本身进行变换，如裁剪、填充、缩放等。
 
-|                                  数据变换类                                  |                功能                |
-| :--------------------------------------------------------------------------: | :--------------------------------: |
-|        [`Pad`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)         |            填充图像边缘            |
-|     [`CenterCrop`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |              居中裁剪              |
-|     [`Normalize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)      |          对图像进行归一化          |
-|       [`Resize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)       |     按照指定尺寸或比例缩放图像     |
-|    [`RandomResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)    |    缩放图像至指定范围的随机尺寸    |
-| [`RandomChoiceResize`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) | 缩放图像至多个尺寸中的随机一个尺寸 |
-|  [`RandomGrayscale`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)   |             随机灰度化             |
-|     [`RandomFlip`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)     |            图像随机翻转            |
+|                                数据变换类                                |                功能                |
+| :----------------------------------------------------------------------: | :--------------------------------: |
+|        [`Pad`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)         |            填充图像边缘            |
+|     [`CenterCrop`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)     |              居中裁剪              |
+|     [`Normalize`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)      |          对图像进行归一化          |
+|       [`Resize`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)       |     按照指定尺寸或比例缩放图像     |
+|    [`RandomResize`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)    |    缩放图像至指定范围的随机尺寸    |
+| [`RandomChoiceResize`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO) | 缩放图像至多个尺寸中的随机一个尺寸 |
+|  [`RandomGrayscale`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)   |             随机灰度化             |
+|     [`RandomFlip`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)     |            图像随机翻转            |
 
 ### 数据格式化
 
 数据格式化操作通常是对数据进行的类型转换。
 
-|                               数据变换类                                |               功能                |
-| :---------------------------------------------------------------------: | :-------------------------------: |
-|   [`ToTensor`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)    | 将指定的数据转换为 `torch.Tensor` |
-| [`ImageToTensor`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO) |    将图像转换为 `torch.Tensor`    |
+|                             数据变换类                              |               功能                |
+| :-----------------------------------------------------------------: | :-------------------------------: |
+|   [`ToTensor`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO)    | 将指定的数据转换为 `torch.Tensor` |
+| [`ImageToTensor`](https://mmcv.readthedocs.io/en/2.x/api.html#TODO) |    将图像转换为 `torch.Tensor`    |
 
 ## 自定义数据变换类
 

@@ -227,7 +227,7 @@ print(optim_dict.get_momentum())  # {'gen.momentum': [0], 'disc.momentum': [0]}
 
 如上例所示，`OptimWrapperDict` 可以非常方便的导出所有优化器封装的学习率和动量，同样的，优化器封装也能够导出/加载所有优化器封装的状态字典。
 
-## 在[执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)中配置优化器封装
+## 在[执行器](./runner.md)中配置优化器封装
 
 ### 简单配置
 
@@ -406,7 +406,7 @@ custom_keys 中每一个字段的含义如下：
 
 ### 自定义优化器构造策略
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)管理。
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](./param_scheduler.md)管理。
 我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
 
 例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，能够对模型不同深度的层自动设置递减的学习率：
