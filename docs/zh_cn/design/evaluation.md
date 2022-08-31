@@ -14,7 +14,7 @@
 **离线评测**：与在线评测过程类似，区别是直接读取预先保存的模型预测结果来进行评测。评测器提供了 `offline_evaluate` 接口，用于在离线方式下调用评测指标来计算模型精度。为了避免同时处理大量数据导致内存溢出，离线评测时会将测试数据和预测结果分成若干个块（chunk）进行处理，类似在线评测中的批次。
 
 <div align="center">
-    <img src="https://user-images.githubusercontent.com/15977946/163718224-20a4970a-e540-4a3a-8b01-bf0a604c6841.jpg" width="500"/>
+    <img src="https://user-images.githubusercontent.com/15977946/187579113-279f097c-3530-40c4-9cd3-1bb0ce2fa452.png" width="500"/>
 </div>
 
 ## 增加自定义评测指标
