@@ -42,9 +42,9 @@ class Network(BaseModel):
 model = Network()
 
 # 构建优化器
-optimzier = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 # 构建参数调度器用于调整学习率
-lr_scheduler = MultiStepLR(milestones=[2], by_epoch=True)
+lr_scheduler = MultiStepLR(optimizer, milestones=[2], by_epoch=True)
 # 构建手写数字识别 (MNIST) 数据集
 train_dataset = datasets.MNIST(root="MNIST", download=True, train=True, transform=transforms.ToTensor())
 # 构建数据加载器
@@ -58,7 +58,7 @@ from mmengine.runner import Runner
 
 
 # 训练相关参数设置，按轮次训练，训练3轮
-train_cfg = dict(by_epoch=True, max_epoch=3)
+train_cfg = dict(by_epoch=True, max_epochs=3)
 
 # 初始化执行器
 runner = Runner(model,
