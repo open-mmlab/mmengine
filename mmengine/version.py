@@ -1,13 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-__version__ = '0.0.1'
+__version__ = '0.1.0'
 
 
 def parse_version_info(version_str):
     """Parse the version information.
 
     Args:
-        version_str (str): version string like '0.0.1'.
+        version_str (str): version string like '0.1.0'.
 
     Returns:
         tuple: version information contains major, minor, micro version.
