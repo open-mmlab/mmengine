@@ -112,7 +112,7 @@ runner.train()
 
 事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在 `train_step`、`val_step`、`test_step` 中，被[基础数据处理器（BaseDataPreprocessor）](mmengine.model.BaseDataPreprocessor)搬运到指定设备，进一步将处理好的数据传给模型。数据处理器作为模型基类的一个属性，会在模型基类的构造过程中被实例化。
 
-为了体现数据处理器起到的作用，我们仍然以[上一节](接口约定)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
+为了体现数据处理器起到的作用，我们仍然以[上一节](#接口约定)训练 FashionMNIST 为例, 实现了一个简易的数据处理器，用于搬运数据和归一化：
 
 ```python
 from torch.optim import SGD
