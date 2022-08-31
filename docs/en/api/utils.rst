@@ -47,7 +47,7 @@ Package
    :template: classtemplate.rst
 
    call_command
-   check_install_package
+   install_package
    get_installed_path
    is_installed
 
