@@ -11,6 +11,12 @@ mmengine.utils.dl_utils
    :nosignatures:
    :template: classtemplate.rst
 
+   TimeCounter
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    collect_env
    load_url
    has_batch_norm
@@ -19,6 +25,5 @@ mmengine.utils.dl_utils
    tensor2imgs
    TORCH_VERSION
    set_multi_processing
-   TimeCounter
    torch_meshgrid
    is_jit_tracing

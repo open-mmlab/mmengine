@@ -15,3 +15,9 @@ mmengine.logging
    MessageHub
    HistoryBuffer
    print_log
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   print_log

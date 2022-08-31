@@ -23,6 +23,11 @@ Optimizer
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
     build_optim_wrapper
 
 Scheduler
@@ -33,7 +38,6 @@ Scheduler
    :nosignatures:
    :template: classtemplate.rst
 
-   _ParamScheduler
    ConstantLR
    ConstantMomentum
    ConstantParamScheduler

@@ -28,7 +28,6 @@ Path
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    check_file_exist
    fopen
@@ -44,7 +43,6 @@ Package
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    call_command
    check_install_package
@@ -57,7 +55,6 @@ Version
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    digit_version
    get_git_hash
@@ -71,6 +68,11 @@ Progress Bar
    :template: classtemplate.rst
 
    ProgressBar
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    track_iter_progress
    track_parallel_progress
    track_progress
@@ -83,6 +85,13 @@ Miscellaneous
    :toctree: generated
    :nosignatures:
    :template: classtemplate.rst
+
+   Timer
+   TimerError
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
 
    is_list_of
    is_tuple_of
@@ -105,6 +114,4 @@ Miscellaneous
    import_modules_from_strings
    requires_executable
    requires_package
-   Timer
-   TimerError
    check_time
