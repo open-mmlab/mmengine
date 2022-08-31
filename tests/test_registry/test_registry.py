@@ -340,6 +340,13 @@ class TestRegistry:
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS, SAMOYEDS = registries[:5]
 
         @DOGS.register_module()
+        def bark(times=1):
+            return ' '.join(['woof'] * times)
+
+        bark_cfg = cfg_type(dict(type='bark', times=3))
+        assert DOGS.build(bark_cfg) == 'woof woof woof'
+
+        @DOGS.register_module()
         class GoldenRetriever:
             pass
 

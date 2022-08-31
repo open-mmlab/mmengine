@@ -114,7 +114,8 @@ def build_from_cfg(
             # If `obj_cls` inherits from `ManagerMixin`, it should be
             # instantiated by `ManagerMixin.get_instance` to ensure that it
             # can be accessed globally.
-            if issubclass(obj_cls, ManagerMixin):  # type: ignore
+            if inspect.isclass(obj_cls) and \
+                    issubclass(obj_cls, ManagerMixin):  # type: ignore
                 obj = obj_cls.get_instance(**args)  # type: ignore
             else:
                 obj = obj_cls(**args)  # type: ignore
