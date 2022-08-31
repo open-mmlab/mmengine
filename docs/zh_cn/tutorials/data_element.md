@@ -74,7 +74,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建仅 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 BaseDataElement 与被clone 的 `BaseDataElement` 包含相同状态和数据的 `data` 内容，但 `metainfo` 为新设置的内容。
+用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建仅 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 `BaseDataElement` 与被 clone 的 `BaseDataElement` 包含相同的 `data` 内容，但 `metainfo` 为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
@@ -109,7 +109,7 @@ label in data_element2 is True
 
 ### 3. 属性的增加与查询
 
-对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示的修改。
+对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示地修改。
 
 对查询而言，用户可以可以通过 `keys`，`values`，和 `items` 来访问只存在于 data 中的键值，也可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值。
 用户还能通过 `all_keys`，`all_values`， `all_items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
@@ -588,7 +588,7 @@ instance_data.det_labels = torch.LongTensor([2, 3])
 instance_data.det_scores = torch.Tensor([0.8, 0.7])
 instance_data.bboxes = torch.rand((2, 4))
 print('The length of instance_data is', len(instance_data))
-cat_results = instance_data.cat([instance_data, instance_data])
+cat_results = InstanceData.cat([instance_data, instance_data])
 print('The length of instance_data is', len(cat_results))
 print(cat_results)
 ```
@@ -698,7 +698,7 @@ print(instance_data[instance_data.det_scores > 0.75])
 
 ```python
 # 拼接
-print(instance_data.cat([instance_data, instance_data]))
+print(InstanceData.cat([instance_data, instance_data]))
 ```
 
 ```
@@ -835,7 +835,7 @@ onehot = LabelData.label_to_onehot(label=item, num_classes=num_classes)
 print(f'{num_classes} is convert to ', onehot)
 
 index = LabelData.onehot_to_label(onehot=onehot)
-print(f'{onehot} is convert to', index)
+print(f'{onehot} is convert to ', index)
 ```
 
 ```
@@ -959,7 +959,7 @@ class DetDataSample(BaseDataElement):
 
 ### 类型约束
 
-DetDataSample 的用法如下所示，在数据类型不符合要求的时候（例如用 torch.Tensor 而非 InstanceData 定义 proposals 时） ，DetDataSample 就会报错。
+DetDataSample 的用法如下所示，在数据类型不符合要求的时候(例如用 torch.Tensor 而非 InstanceData 定义 proposals 时)，DetDataSample 就会报错。
 
 ```python
 data_sample = DetDataSample()
