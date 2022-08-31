@@ -14,7 +14,6 @@ mmengine.logging
    MMLogger
    MessageHub
    HistoryBuffer
-   print_log
 
 .. autosummary::
    :toctree: generated

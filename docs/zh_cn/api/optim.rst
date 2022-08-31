@@ -38,6 +38,7 @@ Scheduler
    :nosignatures:
    :template: classtemplate.rst
 
+   _ParamScheduler
    ConstantLR
    ConstantMomentum
    ConstantParamScheduler
