@@ -33,7 +33,7 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     """  # noqa E301
     # Get package name and relative config path.
     package, cfg_path = _get_package_and_cfg_path(cfg_path)
-    # Check package is installed.
+    # Install package if it's not installed.
     install_package(package)
     package_path = get_installed_path(package)
     try:

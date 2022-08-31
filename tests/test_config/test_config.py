@@ -435,7 +435,7 @@ class TestConfig:
         self._merge_recursive_bases()
         self._deprecation()
 
-    def test_get_cfg_path(self):
+    def test_get_cfg_path_local(self):
         filename = 'py_config/simple_config.py'
         filename = osp.join(self.data_path, 'config', filename)
         cfg_name = './base.py'
@@ -443,19 +443,22 @@ class TestConfig:
         assert scope is None
         osp.isfile(cfg_path)
 
-        if is_installed('mmdet'):
-            # Test scope equal to package name.
-            cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
-            cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
-            assert scope == 'mmdet'
-            osp.isfile(cfg_path)
+    @pytest.mark.skipif(
+        not is_installed('mmdet') or not is_installed('mmcls'),
+        reason='mmdet and mmcls should be installed')
+    def test_get_cfg_path_external(self):
+        filename = 'py_config/simple_config.py'
+        filename = osp.join(self.data_path, 'config', filename)
 
-        if is_installed('mmcls'):
-            # Test scope does not equal to package name.
-            cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
-            cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
-            assert scope == 'mmcls'
-            osp.isfile(cfg_path)
+        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmdet'
+        osp.isfile(cfg_path)
+
+        cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
+        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        assert scope == 'mmcls'
+        osp.isfile(cfg_path)
 
     def _simple_load(self):
         # test load simple config
