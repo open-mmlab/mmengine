@@ -34,6 +34,12 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 迁移指南
+
+   migration/migrate_model_from_mmcv.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 示例
 
    examples/resume_training.md
