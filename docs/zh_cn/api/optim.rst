@@ -23,6 +23,11 @@ Optimizer
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
     build_optim_wrapper
 
 Scheduler

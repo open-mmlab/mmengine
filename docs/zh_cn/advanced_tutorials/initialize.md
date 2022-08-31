@@ -53,7 +53,7 @@ toy_net.init_weights()
 08/19 16:50:24 - mmengine - INFO - local loads checkpoint from path: ./pretrained.pth
 ```
 
-当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](./registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
+当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](../tutorials/registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
 
 ### 常用的初始化方式
 
@@ -281,7 +281,7 @@ Initialized by user-defined `init_weights` in ToyConv
 
 ## 函数式初始化
 
-在[自定义的初始化方式](自定义的初始化方式)一节提到，我们可以在 `init_weights` 里实现自定义的参数初始化逻辑。为了能够更加方便地实现参数初始化，MMEngine 在 `torch.nn.init`的基础上，提供了一系列**模块初始化函数**来初始化整个模块。例如我们对卷积层的权重（`weight`）进行正态分布初始化，卷积层的偏置（`bias`）进行常数初始化，基于 `torch.nn.init` 的实现如下：
+在[自定义的初始化方式](#自定义的初始化方式)一节提到，我们可以在 `init_weights` 里实现自定义的参数初始化逻辑。为了能够更加方便地实现参数初始化，MMEngine 在 `torch.nn.init`的基础上，提供了一系列**模块初始化函数**来初始化整个模块。例如我们对卷积层的权重（`weight`）进行正态分布初始化，卷积层的偏置（`bias`）进行常数初始化，基于 `torch.nn.init` 的实现如下：
 
 ```python
 from torch.nn.init import normal_, constant_

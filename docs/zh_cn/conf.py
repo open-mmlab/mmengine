@@ -55,6 +55,7 @@ extensions = [
     'sphinx.ext.autodoc.typehints',
 ]  # yapf: disable
 autodoc_typehints = 'description'
+myst_heading_anchors = 4
 
 # Configuration for intersphinx
 intersphinx_mapping = {

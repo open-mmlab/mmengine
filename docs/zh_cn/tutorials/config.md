@@ -402,7 +402,7 @@ print(cfg.work_dir)
 有时候我们只希望修改部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
 
 1. 使用 `argparser` 解析脚本运行的参数
-2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](https://mmengine.readthedocs.io/zh/latest/api.html#mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
+2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
 3. 使用配置类的 `merge_from_dict` 方法来更新配置
 
 启动脚本示例如下：
