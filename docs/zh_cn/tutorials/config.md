@@ -5,22 +5,22 @@ MMEngine 实现了抽象的配置类（Config），为用户提供统一的配�
 在开始教程之前，我们先将教程中需要用到的配置文件下载到本地（建议在临时目录下执行，方便后续删除示例配置文件）：
 
 ```bash
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/config_sgd.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/cross_repo.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/custom_imports.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/demo_train.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/example.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/learn_read_config.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/my_module.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/optimizer_cfg.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/predefined_var.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/refer_base_var.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_delete_key.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_lr0.01.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50_runtime.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/resnet50.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/runtime_cfg.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/HAOCHENY/config_docs/docs/resources/config/modify_base_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/config_sgd.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/cross_repo.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/custom_imports.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/demo_train.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/example.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/learn_read_config.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/my_module.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/optimizer_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/refer_base_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_delete_key.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_lr0.01.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_runtime.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/runtime_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
 ```
 
 ## 配置文件读取
