@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" width="600"/>
+  <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" height="100"/>
   <div>&nbsp;</div>
   <div align="center">
     <b><font size="5">OpenMMLab website</font></b>
@@ -36,30 +36,28 @@ English | [简体中文](README_zh-CN.md)
 
 ## Introduction
 
-MMEngine is a fundational library for training deep learning models based on PyTorch. It can runs on Linux, Windows, and MacOS.
+MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms on various research areas. Importantly, MMEngine is also generic to be applied to non-OpenMMLab projects.
+
 Major features:
 
-1. A general and powerful runner:
+1. **Universal and powerful runner**.
 
-   - Users can train different models with several lines of code, e.g., training ImageNet in 80 lines (in comparison with PyTorch example that need more than 400 lines).
-   - Can train models in popular libraries like TIMM, TorchVision, and Detectron2.
+   - Fewer code, e.g., train ImageNet with 1/5 lines of code compared with PyTorch example.
+   - Compatible with popular libraries like OpenMMLab, TorchVision, timm and Detectron2.
 
-2. An open framework with unified interfaces:
+2. **Open architecture with unified interfaces**.
 
-   - Users can do one thing to all OpenMMLab 2.x projects with the same code. For example, MMRazor 1.x can compress models in all OpenMMLab 2.x projects with 40% of the code reduced from MMRazor 0.x.
-   - Simplify the support of up/down-streams. Currently, MMEngine can run on Nvidia CUDA, Mac MPS, AMD, MLU, and other devices.
+   - Handle different algorithm tasks with unified API, e.g., implement a method and apply it to all compatible models.
+   - Support different devices and hardwares with unified API, including CPU, GPU, IPU, Apple silicon, etc.
 
-3. A `legoified` training process:
+3. **Customizable training process**.
 
-   - Dynamical training, optimization, and data augmentation strategies like Early stopping
-   - Arbitrary forms of model weight averaging including Exponential Momentum Average (EMA) and Stochastic Weight Averaging (SWA)
-   - Visualize and log whatever you want
-   - Fine-grained optimization strategies of each parameter groups
-   - Flexible control of mixed precision training
+   - Define the training process like playing with Legos. Rich components and strategies are available.
+   - Complete control of training with different level of APIs.
 
 ## Installation
 
-Before installing MMEngine, please make sure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
+Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
 
 Install MMEngine
 
