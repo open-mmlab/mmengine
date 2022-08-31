@@ -21,10 +21,9 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
             by ``cfg.model_path``. Defaults to False.
 
     Examples:
-        >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco',
-        >>>                  pretrained=True)
+        >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
         >>> # Equivalent to
-        >>> Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
+        >>> # cfg = Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
         >>> cfg.model_path
         https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 
@@ -65,9 +64,14 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         pretrained (bool): Whether to load pretrained model. Defaults to False.
         kwargs (dict): Default arguments to build model.
 
+    Examples:
+        >>> model = get_model('mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
+        >>> type(model)
+        <class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
+
     Returns:
         nn.Module: Built model.
-    """
+    """  # noqa E301
     package = cfg_path.split('::')[0]
     with DefaultScope.overwrite_default_scope(package):  # type: ignore
         cfg = get_config(cfg_path, pretrained)
