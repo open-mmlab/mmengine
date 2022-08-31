@@ -28,8 +28,8 @@
    :maxdepth: 1
    :caption: 进阶教程
 
-   advanced_tutorials/data_element.md
    advanced_tutorials/basedataset.md
+   advanced_tutorials/data_element.md
    advanced_tutorials/visualization.md
    advanced_tutorials/initialize.md
    advanced_tutorials/distributed.md
@@ -55,10 +55,6 @@
    design/evaluation.md
    design/visualization.md
    design/logging.md
-
-.. toctree::
-   :maxdepth: 1
-   :caption: 迁移指南
 
 .. toctree::
    :maxdepth: 1
