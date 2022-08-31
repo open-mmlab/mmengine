@@ -36,24 +36,24 @@ English | [简体中文](README_zh-CN.md)
 
 ## Introduction
 
-MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms on various reseach areas. Importantly, MMEngine is also generic to be applied to non-OpenMMLab projects.
+MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms on various research areas. Importantly, MMEngine is also generic to be applied to non-OpenMMLab projects.
 
 Major features:
 
 1. **Universal and powerful runner**.
 
-    - Fewer code, e.g., train ImageNet with 1/5 lines of code compared with PyTorch example.
-    - Compatible with popular libraries like OpenMMLab, TorchVision, timm and Detectron2.
+   - Fewer code, e.g., train ImageNet with 1/5 lines of code compared with PyTorch example.
+   - Compatible with popular libraries like OpenMMLab, TorchVision, timm and Detectron2.
 
 2. **Open architecture with unified interfaces**.
 
-    - Handle different algorithm tasks with unified API, e.g., implement a method and apply it to all compatible models.
-    - Support different devices and hardwares with unified API, including CPU, GPU, IPU, Apple silicon, etc.
+   - Handle different algorithm tasks with unified API, e.g., implement a method and apply it to all compatible models.
+   - Support different devices and hardwares with unified API, including CPU, GPU, IPU, Apple silicon, etc.
 
 3. **Customizable training process**.
 
-    - Define the training process like playing with Legos. Rich components and strategies are available.
-    - Complete control of training with different level of APIs.
+   - Define the training process like playing with Legos. Rich components and strategies are available.
+   - Complete control of training with different level of APIs.
 
 ## Installation
 
