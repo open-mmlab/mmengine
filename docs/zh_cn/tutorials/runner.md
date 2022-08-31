@@ -44,7 +44,7 @@ model = Network()
 # 构建优化器
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 # 构建参数调度器用于调整学习率
-lr_scheduler = MultiStepLR(milestones=[2], by_epoch=True)
+lr_scheduler = MultiStepLR(optimizer, milestones=[2], by_epoch=True)
 # 构建手写数字识别 (MNIST) 数据集
 train_dataset = datasets.MNIST(root="MNIST", download=True, train=True, transform=transforms.ToTensor())
 # 构建数据加载器
