@@ -399,7 +399,7 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
    ```python
    runner = Runner(
        model=model,
-       launcher='pytorch', #开启分布式寻
+       launcher='pytorch', #开启分布式训练
        ..., # 其他参数
    )
    ```
