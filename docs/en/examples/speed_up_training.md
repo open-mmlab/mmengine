@@ -1,3 +1,3 @@
 # Speed up training
 
-Coming soon. Please refer to [chinese documentation](../../zh_cn/examples/speed_up_training.md).
+Coming soon. Please refer to [chinese documentation](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html).

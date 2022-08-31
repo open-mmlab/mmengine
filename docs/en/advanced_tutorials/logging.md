@@ -1,3 +1,3 @@
 # Logging
 
-Coming soon. Please refer to [chinese documentation](../../zh_cn/advanced_tutorials/logging.md).
+Coming soon. Please refer to [chinese documentation](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/logging.html).
