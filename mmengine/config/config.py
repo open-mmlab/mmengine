@@ -18,8 +18,8 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import (check_file_exist, check_install_package,
-                            get_installed_path, import_modules_from_strings)
+from mmengine.utils import (check_file_exist, get_installed_path,
+                            import_modules_from_strings, is_installed)
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
                     _get_external_cfg_path, _get_package_and_cfg_path)
 
@@ -594,8 +594,13 @@ class Config:
             # Get package name and relative config path.
             scope = cfg_path.partition('::')[0]
             package, cfg_path = _get_package_and_cfg_path(cfg_path)
+
+            if not is_installed(package):
+                raise ModuleNotFoundError(
+                    f'{package} is not installed, please install {package} '
+                    f'manually')
+
             # Get installed package path.
-            check_install_package(package)
             package_path = get_installed_path(package)
             try:
                 # Get config path from meta file.
