@@ -77,7 +77,7 @@ runner.train()
 
 ```python
 # 训练相关参数设置，按迭代次数训练，训练9000次迭代
-train_cfg = dict(by_epoch=False, max_epoch=9000)
+train_cfg = dict(by_epoch=False, max_iters=9000)
 ```
 
 ### 手动构建模块进行测试
