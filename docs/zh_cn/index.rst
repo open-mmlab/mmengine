@@ -39,18 +39,13 @@
 
 .. toctree::
    :maxdepth: 1
-   :caption: 迁移指南
-
-   migration/migrate_model_from_mmcv.md
-
-.. toctree::
-   :maxdepth: 1
    :caption: 示例
 
    examples/resume_training.md
    examples/speed_up_training.md
    examples/save_gpu_memory.md
    examples/cross_library.md
+   examples/train_a_gan.md
 
 .. toctree::
    :maxdepth: 1
@@ -66,10 +61,11 @@
    :maxdepth: 1
    :caption: 迁移指南
 
+   migration/runner.md
    migration/hook.md
-   migration/transform.md
+   migration/model.md
    migration/param_scheduler.md
-   migration/runne.md
+   migration/transform.md
 
 .. toctree::
    :maxdepth: 2
