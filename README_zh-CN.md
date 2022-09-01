@@ -38,7 +38,7 @@
 
 ## 简介
 
-MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，支持在 Linux、Windows、MacOS 上运行。它具有如下三个亮点：
+MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，支持在 Linux、Windows、macOS 上运行。它具有如下三个亮点：
 
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
 
