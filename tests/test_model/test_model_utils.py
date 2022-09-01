@@ -9,8 +9,10 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 from mmengine.model import (MMDistributedDataParallel,
                             MMSeparateDistributedDataParallel,
-                            is_model_wrapper, revert_sync_batchnorm)
+                            convert_sync_batchnorm, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.registry import MODEL_WRAPPERS, Registry
+from mmengine.utils import is_installed
 
 
 @pytest.mark.skipif(
@@ -25,6 +27,29 @@ def test_revert_syncbn():
     conv = revert_sync_batchnorm(conv)
     y = conv(x)
     assert y.shape == (1, 8, 9, 9)
+
+
+@pytest.mark.skipif(
+    torch.__version__ == 'parrots', reason='not supported in parrots now')
+def test_convert_syncbn():
+    # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
+    conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.BatchNorm2d(8))
+    x = torch.randn(1, 3, 10, 10)
+    y = conv(x)
+    assert y.shape == (1, 8, 9, 9)
+
+    # Test convert to mmcv SyncBatchNorm
+    if is_installed('mmcv'):
+        # MMCV SyncBatchNorm is only supported on distributed training.
+        with pytest.raises(RuntimeError):
+            convert_sync_batchnorm(conv, sync_bn='mmcv')
+
+    # Test convert to Pytorch SyncBatchNorm
+    # Expect a ValueError prompting that SyncBN is not supported on CPU
+    converted_conv = convert_sync_batchnorm(conv)
+    assert isinstance(converted_conv[1], torch.nn.SyncBatchNorm)
+    with pytest.raises(ValueError):
+        converted_conv(x)
 
 
 def test_is_model_wrapper():

@@ -791,7 +791,7 @@ class TestRunner(TestCase):
 
     def test_build_model(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_model'
+        cfg.experiment_name = 'test_build_model1'
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, ToyModel)
         self.assertIsInstance(runner.model.data_preprocessor,
@@ -834,15 +834,38 @@ class TestRunner(TestCase):
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, BaseModel)
-        if torch.cuda.is_available():
-            os.environ['MASTER_ADDR'] = '127.0.0.1'
-            os.environ['MASTER_PORT'] = '29515'
-            os.environ['RANK'] = str(0)
-            os.environ['WORLD_SIZE'] = str(1)
-            cfg.launcher = 'pytorch'
-            cfg.experiment_name = 'test_wrap_model1'
-            runner = Runner.from_cfg(cfg)
-            self.assertIsInstance(runner.model, CustomModelWrapper)
+
+        # Test with ddp wrapper
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29515'
+        os.environ['RANK'] = str(0)
+        os.environ['WORLD_SIZE'] = str(1)
+        cfg.env_cfg = dict(dist_cfg=dict(backend='gloo'))
+        cfg.launcher = 'pytorch'
+        cfg.experiment_name = 'test_wrap_model1'
+        runner = Runner.from_cfg(cfg)
+        self.assertIsInstance(runner.model, CustomModelWrapper)
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.launcher = 'pytorch'
+        cfg.experiment_name = 'test_wrap_model2'
+        cfg.env_cfg = dict(dist_cfg=dict(backend='gloo'))
+        cfg.convert_sync_bn = 'torch'
+        cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
+
+        @MODELS.register_module()
+        class ToyBN(BaseModel):
+
+            def __init__(self):
+                super().__init__()
+                self.bn = nn.BatchNorm2d(2)
+
+            def forward(self, *args, **kwargs):
+                pass
+
+        cfg.model = dict(type='ToyBN')
+        runner = Runner.from_cfg(cfg)
+        self.assertIsInstance(runner.model.model.bn, torch.nn.SyncBatchNorm)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

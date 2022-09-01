@@ -27,7 +27,8 @@ from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper, revert_sync_batchnorm)
+                            convert_sync_batchnorm, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -837,7 +838,11 @@ class Runner:
                 'layers in the model will be automatically reverted to '
                 'BatchNormXd layers if they are used.')
             model = revert_sync_batchnorm(model)
-            return model
+            return model  # type: ignore
+        else:
+            convert_sync_bn = self.cfg.get('convert_sync_bn', None)
+            if convert_sync_bn is not None:
+                model = convert_sync_batchnorm(model, convert_sync_bn)
 
         if model_wrapper_cfg is None:
             find_unused_parameters = self.cfg.get('find_unused_parameters',
