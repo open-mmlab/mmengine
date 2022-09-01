@@ -836,22 +836,21 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.model, BaseModel)
 
         # Test with ddp wrapper
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29515'
-        os.environ['RANK'] = str(0)
-        os.environ['WORLD_SIZE'] = str(1)
-        cfg.env_cfg = dict(dist_cfg=dict(backend='gloo'))
-        cfg.launcher = 'pytorch'
-        cfg.experiment_name = 'test_wrap_model1'
-        runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model, CustomModelWrapper)
+        if torch.cuda.is_available():
+            os.environ['MASTER_ADDR'] = '127.0.0.1'
+            os.environ['MASTER_PORT'] = '29515'
+            os.environ['RANK'] = str(0)
+            os.environ['WORLD_SIZE'] = str(1)
+            cfg.launcher = 'pytorch'
+            cfg.experiment_name = 'test_wrap_model1'
+            runner = Runner.from_cfg(cfg)
+            self.assertIsInstance(runner.model, CustomModelWrapper)
 
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.launcher = 'pytorch'
-        cfg.experiment_name = 'test_wrap_model2'
-        cfg.env_cfg = dict(dist_cfg=dict(backend='gloo'))
-        cfg.convert_sync_bn = 'torch'
-        cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
+            cfg = copy.deepcopy(self.epoch_based_cfg)
+            cfg.launcher = 'pytorch'
+            cfg.experiment_name = 'test_wrap_model2'
+            cfg.convert_sync_bn = 'torch'
+            cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
 
         @MODELS.register_module()
         class ToyBN(BaseModel):
