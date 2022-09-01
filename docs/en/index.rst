@@ -28,8 +28,8 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 1
    :caption: Advanced tutorials
 
-   advanced_tutorials/data_element.md
    advanced_tutorials/basedataset.md
+   advanced_tutorials/data_element.md
    advanced_tutorials/visualization.md
    advanced_tutorials/initialize.md
    advanced_tutorials/distributed.md
@@ -45,6 +45,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    examples/speed_up_training.md
    examples/save_gpu_memory.md
    examples/cross_library.md
+   examples/train_a_gan.md
 
 .. toctree::
    :maxdepth: 1
@@ -63,8 +64,8 @@ You can switch between Chinese and English documents in the lower-left corner of
    migration/runner.md
    migration/hook.md
    migration/model.md
-   migration/transform.md
    migration/param_scheduler.md
+   migration/transform.md
 
 .. toctree::
    :maxdepth: 2

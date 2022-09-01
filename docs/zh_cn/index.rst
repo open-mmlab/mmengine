@@ -45,6 +45,7 @@
    examples/speed_up_training.md
    examples/save_gpu_memory.md
    examples/cross_library.md
+   examples/train_a_gan.md
 
 .. toctree::
    :maxdepth: 1
@@ -63,8 +64,8 @@
    migration/runner.md
    migration/hook.md
    migration/model.md
-   migration/transform.md
    migration/param_scheduler.md
+   migration/transform.md
 
 .. toctree::
    :maxdepth: 2
