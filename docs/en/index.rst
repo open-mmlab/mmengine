@@ -60,10 +60,11 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 1
    :caption: Migration guide
 
+   migration/runner.md
    migration/hook.md
+   migration/model.md
    migration/transform.md
    migration/param_scheduler.md
-   migration/runne.md
 
 .. toctree::
    :maxdepth: 2

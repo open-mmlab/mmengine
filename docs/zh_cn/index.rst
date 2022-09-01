@@ -60,10 +60,11 @@
    :maxdepth: 1
    :caption: 迁移指南
 
+   migration/runner.md
    migration/hook.md
+   migration/model.md
    migration/transform.md
    migration/param_scheduler.md
-   migration/runne.md
 
 .. toctree::
    :maxdepth: 2
