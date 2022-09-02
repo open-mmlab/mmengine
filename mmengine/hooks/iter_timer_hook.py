@@ -82,26 +82,23 @@ class IterTimerHook(Hook):
         message_hub = runner.message_hub
         message_hub.update_scalar(f'{mode}/time', time.time() - self.t)
         self.t = time.time()
-        window_size = runner.log_processor.window_size
         # Calculate eta every `window_size` iterations. Since test and val
         # loop will not update runner.iter, use `every_n_innter_iters`to check
         # the interval.
-        if self.every_n_inner_iters(batch_idx, window_size):
-            iter_time = message_hub.get_scalar(f'{mode}/time').mean(
-                window_size)
-            if mode == 'train':
-                self.time_sec_tot += iter_time * window_size
-                # Calculate average iterative time.
-                time_sec_avg = self.time_sec_tot / (
-                    runner.iter - self.start_iter + 1)
-                # Calculate eta.
-                eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
-                runner.message_hub.update_info('eta', eta_sec)
+        iter_time = message_hub.get_scalar(f'{mode}/time')
+        if mode == 'train':
+            self.time_sec_tot += iter_time.current()
+            # Calculate average iterative time.
+            time_sec_avg = self.time_sec_tot / (
+                runner.iter - self.start_iter + 1)
+            # Calculate eta.
+            eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
+            runner.message_hub.update_info('eta', eta_sec)
+        else:
+            if mode == 'val':
+                cur_dataloader = runner.val_dataloader
             else:
-                if mode == 'val':
-                    cur_dataloader = runner.val_dataloader
-                else:
-                    cur_dataloader = runner.test_dataloader
+                cur_dataloader = runner.test_dataloader
 
-                eta_sec = iter_time * (len(cur_dataloader) - batch_idx - 1)
-                runner.message_hub.update_info('eta', eta_sec)
+            eta_sec = iter_time.mean() * (len(cur_dataloader) - batch_idx - 1)
+            runner.message_hub.update_info('eta', eta_sec)
