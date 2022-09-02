@@ -176,9 +176,10 @@ class EMAHook(Hook):
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
-            load_state_dict(self.ema_model.module,
-                            checkpoint['ema_state_dict'],
-                            strict=self.strict_load)
+            load_state_dict(
+                self.ema_model.module,
+                checkpoint['ema_state_dict'],
+                strict=self.strict_load)
 
         # Support load checkpoint without ema state dict.
         else:
@@ -186,9 +187,10 @@ class EMAHook(Hook):
                 'There is no `ema_state_dict` in checkpoint. '
                 '`EMAHook` will make a copy of `state_dict` as the '
                 'initial `ema_state_dict`', 'current', logging.WARNING)
-            load_state_dict(self.ema_model.module,
-                            copy.deepcopy(checkpoint['state_dict']),
-                            strict=self.strict_load)
+            load_state_dict(
+                self.ema_model.module,
+                copy.deepcopy(checkpoint['state_dict']),
+                strict=self.strict_load)
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
