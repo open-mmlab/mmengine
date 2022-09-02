@@ -19,6 +19,7 @@ class IterTimerHook(Hook):
 
     def __init__(self):
         self.time_sec_tot = 0
+        self.time_sec_test_val = 0
         self.start_iter = 0
 
     def before_train(self, runner) -> None:
@@ -40,6 +41,9 @@ class IterTimerHook(Hook):
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         self.t = time.time()
+
+    def _after_epoch(self, runner, mode: str = 'train') -> None:
+        self.time_sec_test_val = 0
 
     def _before_iter(self,
                      runner,
@@ -100,5 +104,7 @@ class IterTimerHook(Hook):
             else:
                 cur_dataloader = runner.test_dataloader
 
-            eta_sec = iter_time.mean() * (len(cur_dataloader) - batch_idx - 1)
+            self.time_sec_test_val += iter_time.current()
+            time_sec_avg = self.time_sec_test_val / (batch_idx + 1)
+            eta_sec = time_sec_avg * (len(cur_dataloader) - batch_idx - 1)
             runner.message_hub.update_info('eta', eta_sec)

@@ -53,18 +53,30 @@ class TestIterTimerHook(TestCase):
         runner.iter = 0
         runner.test_dataloader = [0] * 20
         runner.val_dataloader = [0] * 20
-        self.hook._before_epoch(runner)
-        self.hook.before_run(runner)
-        self.hook._after_iter(runner, batch_idx=1)
-        runner.message_hub.update_scalar.assert_called()
-        runner.message_hub.get_log.assert_not_called()
-        runner.message_hub.update_info.assert_not_called()
         runner.message_hub = MessageHub.get_instance('test_iter_timer_hook')
-        runner.iter = 9
+
+        self.hook.before_run(runner)
+        self.hook._before_epoch(runner)
         # eta = (100 - 10) / 1
-        self.hook._after_iter(runner, batch_idx=89)
+        for _ in range(10):
+            self.hook._after_iter(runner, 1)
+            runner.iter += 1
         assert runner.message_hub.get_info('eta') == 90
-        self.hook._after_iter(runner, batch_idx=9, mode='val')
+
+        for i in range(10):
+            self.hook._after_iter(runner, batch_idx=i, mode='val')
         assert runner.message_hub.get_info('eta') == 10
-        self.hook._after_iter(runner, batch_idx=19, mode='test')
+
+        for i in range(11, 20):
+            self.hook._after_iter(runner, batch_idx=i, mode='val')
+        assert runner.message_hub.get_info('eta') == 0
+
+        self.hook.after_val_epoch(runner)
+
+        for i in range(10):
+            self.hook._after_iter(runner, batch_idx=i, mode='test')
+        assert runner.message_hub.get_info('eta') == 10
+
+        for i in range(11, 20):
+            self.hook._after_iter(runner, batch_idx=i, mode='test')
         assert runner.message_hub.get_info('eta') == 0
