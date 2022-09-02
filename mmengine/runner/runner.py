@@ -840,10 +840,14 @@ class Runner:
             model = revert_sync_batchnorm(model)
             return model  # type: ignore
         else:
-            convert_sync_bn = self.cfg.get('convert_sync_bn', None)
-            if convert_sync_bn is not None:
-                model = convert_sync_batchnorm(model, convert_sync_bn)
-
+            sync_bn = self.cfg.get('sync_bn', None)
+            if sync_bn is not None:
+                try:
+                    model = convert_sync_batchnorm(model, sync_bn)
+                except ValueError as e:
+                    self.logger.error('cfg.sync_bn should be "torch" or '
+                                      f'"mmcv", but got {sync_bn}')
+                    raise e
         if model_wrapper_cfg is None:
             find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                   False)

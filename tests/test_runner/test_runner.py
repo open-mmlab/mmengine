@@ -846,11 +846,13 @@ class TestRunner(TestCase):
             runner = Runner.from_cfg(cfg)
             self.assertIsInstance(runner.model, CustomModelWrapper)
 
+            # Test cfg.sync_bn = 'torch', when model does not have BN layer
             cfg = copy.deepcopy(self.epoch_based_cfg)
             cfg.launcher = 'pytorch'
             cfg.experiment_name = 'test_wrap_model2'
-            cfg.convert_sync_bn = 'torch'
+            cfg.sync_bn = 'torch'
             cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
+            runner.from_cfg(cfg)
 
         @MODELS.register_module()
         class ToyBN(BaseModel):
@@ -863,8 +865,14 @@ class TestRunner(TestCase):
                 pass
 
         cfg.model = dict(type='ToyBN')
+        cfg.experiment_name = 'test_data_preprocessor2'
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model.model.bn, torch.nn.SyncBatchNorm)
+
+        cfg.sync_bn = 'unknown'
+        cfg.experiment_name = 'test_data_preprocessor3'
+        with self.assertRaises(ValueError):
+            Runner.from_cfg(cfg)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
