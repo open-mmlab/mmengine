@@ -7,7 +7,7 @@ from typing import Dict, Optional
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
-from mmengine.runner import load_state_dict
+from mmengine.runner.checkpoint import _load_checkpoint_to_model
 from .hook import DATA_BATCH, Hook
 
 
@@ -166,7 +166,10 @@ class EMAHook(Hook):
         # parameters.
         self._swap_ema_state_dict(checkpoint)
 
-    def after_load_checkpoint(self, runner, checkpoint: dict) -> None:
+    def after_load_checkpoint(self,
+                              runner,
+                              checkpoint: dict,
+                              revise_keys: list = [(r'^module.', '')]) -> None:
         """Resume ema parameters from checkpoint.
 
         Args:
@@ -176,10 +179,11 @@ class EMAHook(Hook):
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
-            load_state_dict(
+            _load_checkpoint_to_model(
                 self.ema_model.module,
                 checkpoint['ema_state_dict'],
-                strict=self.strict_load)
+                strict=self.strict_load,
+                revise_keys=revise_keys)
 
         # Support load checkpoint without ema state dict.
         else:
@@ -187,10 +191,11 @@ class EMAHook(Hook):
                 'There is no `ema_state_dict` in checkpoint. '
                 '`EMAHook` will make a copy of `state_dict` as the '
                 'initial `ema_state_dict`', 'current', logging.WARNING)
-            load_state_dict(
+            _load_checkpoint_to_model(
                 self.ema_model.module,
                 copy.deepcopy(checkpoint['state_dict']),
-                strict=self.strict_load)
+                strict=self.strict_load,
+                revise_keys=revise_keys)
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
