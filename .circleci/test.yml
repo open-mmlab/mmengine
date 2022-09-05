@@ -168,7 +168,7 @@ workflows:
             - lint
       - build_cpu:
           name: maximum_version_cpu
-          torch: 1.12.0
+          torch: 1.12.1
           torchvision: 0.13.1
           python: 3.9.0
           requires:
