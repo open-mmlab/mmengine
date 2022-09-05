@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import pickle
 import platform
 import time
 import warnings
@@ -1910,7 +1911,7 @@ class Runner:
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
-        if resumed_dataset_meta != dataset_meta:
+        if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
