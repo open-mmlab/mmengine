@@ -5,7 +5,6 @@ from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
-from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
 from mmengine.logging import MessageHub, print_log
@@ -32,7 +31,27 @@ class OptimWrapper:
             gradients. The parameters will be updated per
             ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
-            the arguments of ``torch.nn.utils.clip_grad``.
+            the arguments of :func:`torch.nn.utils.clip_grad_norm_` or
+            `clip_grad_value_`. ``clip_grad`` should be a dict, and the
+            keys could be set as follows:
+
+            If the key ``type`` is not set, or ``type`` is "norm",
+            the accpeted keys are as follows:
+
+            - max_norm (float or int): Max norm of the gradients.
+            - norm_type (float or int): Type of the used p-norm. Can be
+              ``'inf'`` for infinity norm.
+            - error_if_nonfinite (bool): If True, an error is thrown if
+              the total norm of the gradients from :attr:`parameters` is
+              ``nan``, ``inf``, or ``-inf``. Default: False (will switch
+              to True in the future)
+
+            If the key ``type`` is set to "value", the accpeted keys are as
+            follows:
+
+            - clip_value (float or int): maximum allowed value of the
+              gradients. The gradients are clipped in the range
+              :math:`\\left[\text{-clip\\_value}, \text{clip\\_value}\right]`
 
     Note:
         If ``accumulative_counts`` is larger than 1, perform
@@ -105,7 +124,16 @@ class OptimWrapper:
             # clip_grad_kwargs should not be non-empty dict.
             assert isinstance(clip_grad, dict) and clip_grad, (
                 'If `clip_grad` is not None, it should be a `dict` '
-                'which is the arguments of `torch.nn.utils.clip_grad`')
+                'which is the arguments of `torch.nn.utils.clip_grad_norm_` '
+                'or clip_grad_value_`.')
+            clip_func = clip_grad.pop('type', 'norm')
+            if clip_func == 'norm':
+                self.clip_func = torch.nn.utils.clip_grad_norm_
+            elif clip_func == 'value':
+                self.clip_func = torch.nn.utils.clip_grad_value_
+            else:
+                raise ValueError('type of clip_grad should be "norm" or value',
+                                 f'but gout {clip_func}')
         self.clip_grad_kwargs = clip_grad
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
@@ -305,8 +333,10 @@ class OptimWrapper:
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            grad_norm = clip_grad.clip_grad_norm_(params,
-                                                  **self.clip_grad_kwargs)
+            grad_norm = self.clip_func(params, **self.clip_grad_kwargs)
+
+        # `torch.nn.utils.clip_grad_norm_` will return None.
+        if grad_norm is not None:
             self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
 
     def initialize_count_status(self, model: nn.Module, init_counts: int,
