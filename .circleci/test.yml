@@ -92,13 +92,16 @@ jobs:
             python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Install MMEngine dependencies
-          # python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${MMCV_TORCH}/index.html
-          command: |
-            python -m pip install -r requirements.txt
+          command: python -m pip install -r requirements.txt
       - run:
           name: Build and install
           command: |
             python -m pip install -e .
+      - run:
+          name: Install mmcv>=2.0
+          command: |
+            python -m pip install openmim
+            python -m mim install 'mmcv>=2.0.0rc1'
       - run:
           name: Run unittests
           command: |
@@ -123,24 +126,22 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Get MMCV_TORCH and MMCV_CUDA as environment variables
-          command: |
-            . .circleci/scripts/get_mmcv_var.sh << parameters.torch >> << parameters.cuda >>
-            source $BASH_ENV
-      - run:
           name: Build Docker image
           command: |
             docker build .circleci/docker -t mmengine:gpu --build-arg PYTORCH=<< parameters.torch >> --build-arg CUDA=<< parameters.cuda >> --build-arg CUDNN=<< parameters.cudnn >>
             docker run --gpus all -t -d -v /home/circleci/project:/mmengine -w /mmengine --name mmengine mmengine:gpu
       - run:
           name: Install mmengine dependencies
-          # docker exec mmengine pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/${MMCV_CUDA}/torch${MMCV_TORCH}/index.html
-          command: |
-            docker exec mmengine pip install -r requirements.txt
+          command: docker exec mmengine pip install -r requirements.txt
       - run:
           name: Build and install
           command: |
             docker exec mmengine pip install -e .
+      - run:
+          name: Install mmcv>=2.0
+          command: |
+            docker exec mmengine pip install openmim
+            docker exec mmengine mim install 'mmcv>=2.0.0rc1'
       - run:
           name: Run unittests
           command: |
@@ -180,8 +181,8 @@ workflows:
             - lint
       - build_cpu:
           name: maximum_version_cpu
-          torch: 1.9.0
-          torchvision: 0.10.0
+          torch: 1.12.0
+          torchvision: 0.13.1
           python: 3.9.0
           requires:
             - minimum_version_cpu
