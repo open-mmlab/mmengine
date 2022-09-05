@@ -28,20 +28,17 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Get MMCV_TORCH as the environment variable
-        run: . .github/workflows/scripts/get_mmcv_var.sh ${{matrix.torch}}
-        shell: bash
       - name: Upgrade pip
         run: pip install pip --upgrade
       - name: Install PyTorch
         run: pip install torch==${{matrix.torch}}+cpu torchvision==${{matrix.torchvision}}+cpu -f https://download.pytorch.org/whl/torch_stable.html
-      # - name: Install MMCV
-      #   run: pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${MMCV_TORCH}/index.html
-      - name: Install other dependencies
+      - name: Build MMEngine from souce
+        run: pip install -e . -v
+      - name: Install unit tests dependencies
         run: |
-          pip install -r requirements/tests.txt
-      - name: Build and install
-        run: rm -rf .eggs && pip install -e .
+          pip install requirements/tests.txt
+          pip install openmim
+          mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/
@@ -77,18 +74,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Upgrade pip
         run: pip install pip --upgrade
-      - name: Get MMCV_TORCH as the environment variable
-        run: . .github/workflows/scripts/get_mmcv_var.sh ${{matrix.torch}}
-        shell: bash
       - name: Install PyTorch
         run: pip install torch==${{matrix.torch}}+cpu torchvision==${{matrix.torchvision}}+cpu -f https://download.pytorch.org/whl/torch_stable.html
-      # - name: Install MMCV
-      #   run: pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${MMCV_TORCH}/index.html
-      - name: Install other dependencies
+      - name: Build MMEngine from souce
+        run: pip install -e .
+      - name: Install unit tests dependencies
         run: |
-          pip install -r requirements/tests.txt -r requirements/optional.txt
-      - name: Build and install
-        run: rm -rf .eggs && pip install -e .
+          pip install requirements/tests.txt
+          pip install openmim
+          mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/
@@ -127,26 +121,24 @@ jobs:
         run: |
           apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
           apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub
-      - name: Get MMCV_TORCH and MMCV_CUDA as environment variables
-        run: . .github/workflows/scripts/get_mmcv_var.sh ${{matrix.torch}} ${{matrix.cuda}}
-        shell: bash
       - name: Install Python-dev
         run: apt-get update && apt-get install -y python${{matrix.python-version}}-dev
         if: ${{matrix.python-version != 3.9}}
       - name: Install system dependencies
         run: |
           apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6
-      - name: Install dependencies for compiling onnx when python=3.9
-        run: python -m pip install protobuf && apt-get update && apt-get -y install libprotobuf-dev protobuf-compiler cmake
-        if: ${{matrix.python-version == '3.9'}}
-      - name: Install mmengine dependencies
-        # python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/${MMCV_CUDA}/torch${MMCV_TORCH}/index.html
+      - name: Build MMEngine from souce
+        run: python -m pip install -e . -v
+      - name: Install unit tests dependencies
         run: |
-          python -m pip install -r requirements/tests.txt
-      - name: Build and install
+          python -m pip install requirements/tests.txt
+          python -m pip install openmim
+          python -m mim install 'mmcv>=2.0.0rc1'
+      - name: Run unittests and generate coverage report
         run: |
-          python setup.py check -m -s
-          TORCH_CUDA_ARCH_LIST=7.0 python -m pip install -e .
+          python -m coverage run --branch --source mmengine -m pytest tests/
+          python -m coverage xml
+          python -m coverage report -m
 
   build_windows:
     runs-on: ${{ matrix.os }}
@@ -163,17 +155,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Upgrade pip
         run: python -m pip install pip --upgrade
-      - name: Install lmdb
-        run: python -m pip install lmdb
       - name: Install PyTorch
         run: python -m pip install torch==1.8.1+${{matrix.platform}} torchvision==0.9.1+${{matrix.platform}} -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
-      - name: Install mmengine dependencies
-        # python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch1.8/index.html --only-binary mmcv-full
+      - name: Build MMEngine from souce
+        run: python -m pip install -e .
+      - name: Install unit tests dependencies
         run: |
-          python -m pip install -r requirements/tests.txt
-      - name: Build and install
-        run: |
-          python -m pip install -e .
+          python -m pip install requirements/tests.txt
+          python -m pip install openmim
+          python -m mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests and generate coverage report
         run: |
-          pytest tests/
+          python -m coverage run --branch --source mmengine -m pytest tests/
+          python -m coverage xml
+          python -m coverage report -m
