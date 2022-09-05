@@ -32,8 +32,8 @@ class OptimWrapper:
             ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
             the arguments of :func:`torch.nn.utils.clip_grad_norm_` or
-            `clip_grad_value_`. ``clip_grad`` should be a dict, and the
-            keys could be set as follows:
+            :func:`torch.nn.utils.clip_grad_value_`. ``clip_grad`` should be a
+            dict, and the keys could be set as follows:
 
             If the key ``type`` is not set, or ``type`` is "norm",
             the accpeted keys are as follows:
@@ -51,7 +51,7 @@ class OptimWrapper:
 
             - clip_value (float or int): maximum allowed value of the
               gradients. The gradients are clipped in the range
-              :math:`\\left[\text{-clip\\_value}, \text{clip\\_value}\right]`
+              ``(-clip_value, +clip_value)``.
 
     Note:
         If ``accumulative_counts`` is larger than 1, perform
