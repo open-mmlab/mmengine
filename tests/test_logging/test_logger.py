@@ -107,8 +107,6 @@ class TestLogger:
             f'{file_path} - {function_name} - ' \
             f'{lineno} - welcome\n'
         out, _ = capsys.readouterr()
-        import pdb
-        pdb.set_trace()
         match = re.fullmatch(pattern, out)
         assert match is not None
 

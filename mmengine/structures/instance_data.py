@@ -165,6 +165,9 @@ class InstanceData(BaseDataElement):
         if isinstance(item, list):
             item = np.array(item)
         if isinstance(item, np.ndarray):
+            # In Windows, the dtype of item could be int32, which is not a
+            # valid index for torch.Tensor. Here we simply convert it to int64.
+            item = np.int64(item) if item.dtype == np.int32 else item
             item = torch.from_numpy(item)
         assert isinstance(
             item, (str, slice, int, torch.LongTensor, torch.cuda.LongTensor,
