@@ -42,18 +42,17 @@ jobs:
       - run:
           name: Upgrade pip
           command: |
-            python -V
-            python -m pip install pip --upgrade
-            python -m pip --version
+            pip install pip --upgrade
+            pip --version
       - run:
           name: Build MMEngine from source
-          command: python -m pip install -e . -v
+          command: pip install -e . -v
       - run:
           name: Install unit tests dependencies
-          command: python -m pip install -r requirements/tests.txt
+          command: pip install -r requirements/tests.txt
       - run:
           name: Run unit tests
-          command: python -m pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
+          command: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
 
   build_cpu:
     parameters:
@@ -78,28 +77,26 @@ jobs:
       - run:
           name: Configure Python & pip
           command: |
-            python -m pip install --upgrade pip
-            python -m pip install wheel
+            pip install --upgrade pip
+            pip install wheel
       - run:
           name: Install PyTorch
-          command: |
-            python -V
-            python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+          command: pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - run:
           name: Build MMEngine from source
-          command: python -m pip install -e . -v
+          command: pip install -e . -v
       - run:
           name: Install unit tests dependencies
           command: |
-            docker exec mmengine pip install -r requirements/tests.txt
-            docker exec mmengine pip install openmim
-            docker exec mmengine mim install 'mmcv>=2.0.0rc1'
+            pip install -r requirements/tests.txt
+            pip install openmim
+            mim install 'mmcv>=2.0.0rc1'
       - run:
           name: Run unittests
           command: |
-            python -m coverage run --branch --source mmengine -m pytest tests/
-            python -m coverage xml
-            python -m coverage report -m
+            coverage run --branch --source mmengine -m pytest tests/
+            coverage xml
+            coverage report -m
 
   build_cuda:
     parameters:
