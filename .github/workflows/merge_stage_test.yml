@@ -163,5 +163,4 @@ jobs:
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests
-        run: |
-          pytest tests/
+        run: pytest tests/
