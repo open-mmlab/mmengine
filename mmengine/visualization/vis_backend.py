@@ -342,7 +342,9 @@ class WandbVisBackend(BaseVisBackend):
             input parameters. Default to None.
         define_metric_cfg (dict, optional):
             A dict of metrics and summary for wandb.define_metric.
-            Example. {'coco/bbox_mAP': 'max'}
+            The key is metric and the value is summary.
+            When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
+            The maximum value of``coco/bbox_mAP`` is logged on wandb UI.
             Default: None
         commit: (bool, optional) Save the metrics dict to the wandb server
                 and increment the step.  If false `wandb.log` just
