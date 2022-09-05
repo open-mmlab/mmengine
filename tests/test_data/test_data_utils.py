@@ -131,25 +131,21 @@ class TestDataUtils(TestCase):
 
         self.assertEqual(tuple(batch_inputs_0.shape), (2, 1, 3, 5))
         self.assertEqual(tuple(batch_inputs_1.shape), (2, 1, 3, 5))
+
         self.assertTrue(
             torch.allclose(batch_inputs_0, torch.stack([input1, input1])))
         self.assertTrue(
             torch.allclose(batch_inputs_1, torch.stack([input2, input2])))
 
+        target1 = torch.stack([torch.tensor(1), torch.tensor(1)])
+        target2 = torch.stack([torch.tensor(2), torch.tensor(2)])
+        
         self.assertTrue(
-            torch.allclose(batch_value_0,
-                           torch.stack([torch.tensor(1),
-                                        torch.tensor(1)])))
+            torch.allclose(batch_value_0.to(target1.dtype), target1))
         self.assertTrue(
-            torch.allclose(batch_value_1,
-                           torch.stack([torch.tensor(2),
-                                        torch.tensor(2)])))
+            torch.allclose(batch_value_1.to(target2.dtype), target2))
 
         self.assertTrue(
-            torch.allclose(batch_array_0,
-                           torch.stack([torch.tensor(1),
-                                        torch.tensor(1)])))
+            torch.allclose(batch_array_0.to(target1.dtype), target1))
         self.assertTrue(
-            torch.allclose(batch_array_1,
-                           torch.stack([torch.tensor(2),
-                                        torch.tensor(2)])))
+            torch.allclose(batch_array_1.to(target2.dtype), target2))

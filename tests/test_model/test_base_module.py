@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest import TestCase
+import logging
 
 import torch
 from torch import nn
@@ -106,6 +107,12 @@ class TestBaseModule(TestCase):
                 conv1d=dict(type='FooConv1d')))
 
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
+        self.logger = MMLogger.get_instance(self._testMethodName)
+
+    def tearDown(self) -> None:
+        MMLogger._instance_dict.clear()
+        logging.shutdown()
+        return super().tearDown()
 
     def test_is_init(self):
         assert self.BaseModule.is_init is False
@@ -194,6 +201,7 @@ class TestBaseModule(TestCase):
         model2.init_weights()
         assert len(os.listdir(dump_dir)) == 1
         assert os.stat(log_path).st_size != 0
+        logging.shutdown()
         shutil.rmtree(dump_dir)
 
 

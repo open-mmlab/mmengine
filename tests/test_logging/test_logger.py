@@ -100,13 +100,15 @@ class TestLogger:
         logger = MMLogger.get_instance('test_error', log_level='INFO')
         logger.error('welcome')
         lineno = sys._getframe().f_lineno - 1
-        file_path = __file__
+        file_path = __file__.replace('\\', '\\\\')  # replace \ for windows
         function_name = sys._getframe().f_code.co_name
         pattern = self.stream_handler_regex_time + \
             r' - mmengine - (.*)ERROR(.*) - ' \
             f'{file_path} - {function_name} - ' \
             f'{lineno} - welcome\n'
         out, _ = capsys.readouterr()
+        import pdb
+        pdb.set_trace()
         match = re.fullmatch(pattern, out)
         assert match is not None
 

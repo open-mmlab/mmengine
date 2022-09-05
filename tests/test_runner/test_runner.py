@@ -5,6 +5,7 @@ import os.path as osp
 import shutil
 import tempfile
 from unittest import TestCase
+import logging
 
 import numpy as np
 import torch
@@ -410,6 +411,7 @@ class TestRunner(TestCase):
             sampler_seed=dict(type='DistSamplerSeedHook'))
 
     def tearDown(self):
+        logging.shutdown()
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):
@@ -580,7 +582,7 @@ class TestRunner(TestCase):
         runner.test()
 
         # 5. Test building multiple runners
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             cfg = copy.deepcopy(self.epoch_based_cfg)
             cfg.experiment_name = 'test_init15'
             cfg.launcher = 'pytorch'
@@ -680,8 +682,11 @@ class TestRunner(TestCase):
                 osp.join(runner.work_dir, f'{runner.timestamp}.py'))
             # dump config from file.
             with tempfile.TemporaryDirectory() as temp_config_dir:
+                # Set `delete=Flase` and close the file to make it 
+                # works in windows.
                 temp_config_file = tempfile.NamedTemporaryFile(
-                    dir=temp_config_dir, suffix='.py')
+                    dir=temp_config_dir, suffix='.py', delete=False)
+                temp_config_file.close()
                 file_cfg = Config(
                     self.epoch_based_cfg._cfg_dict,
                     filename=temp_config_file.name)
@@ -834,7 +839,7 @@ class TestRunner(TestCase):
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, BaseModel)
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             os.environ['MASTER_ADDR'] = '127.0.0.1'
             os.environ['MASTER_PORT'] = '29515'
             os.environ['RANK'] = str(0)
