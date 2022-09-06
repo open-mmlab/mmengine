@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from unittest import TestCase
 import logging
+from unittest import TestCase
 
 import torch
 from torch import nn

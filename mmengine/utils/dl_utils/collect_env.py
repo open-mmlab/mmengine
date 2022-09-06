@@ -3,8 +3,8 @@
 import os.path as osp
 import subprocess
 import sys
-from distutils import errors
 from collections import OrderedDict, defaultdict
+from distutils import errors
 
 import cv2
 import numpy as np

@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os.path as osp
 import tempfile
 from unittest import TestCase
 from unittest.mock import Mock
-import logging
 
 import torch
 import torch.nn as nn
@@ -16,6 +16,7 @@ from mmengine.optim import OptimWrapper
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
 from mmengine.runner import Runner
 from mmengine.testing import assert_allclose
+
 
 class ToyModel(nn.Module):
 

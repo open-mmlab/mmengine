@@ -139,7 +139,7 @@ class TestDataUtils(TestCase):
 
         target1 = torch.stack([torch.tensor(1), torch.tensor(1)])
         target2 = torch.stack([torch.tensor(2), torch.tensor(2)])
-        
+
         self.assertTrue(
             torch.allclose(batch_value_0.to(target1.dtype), target1))
         self.assertTrue(

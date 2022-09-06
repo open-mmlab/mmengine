@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import shutil
 import tempfile
 from unittest import TestCase
-import logging
 
 import numpy as np
 import torch
@@ -682,7 +682,7 @@ class TestRunner(TestCase):
                 osp.join(runner.work_dir, f'{runner.timestamp}.py'))
             # dump config from file.
             with tempfile.TemporaryDirectory() as temp_config_dir:
-                # Set `delete=Flase` and close the file to make it 
+                # Set `delete=Flase` and close the file to make it
                 # works in windows.
                 temp_config_file = tempfile.NamedTemporaryFile(
                     dir=temp_config_dir, suffix='.py', delete=False)

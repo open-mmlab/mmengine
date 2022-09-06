@@ -46,7 +46,8 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(
             interval=1, by_epoch=True, out_dir='test_dir')
         checkpoint_hook.before_train(runner)
-        assert checkpoint_hook.out_dir == osp.join('test_dir', osp.join(osp.basename(work_dir)))
+        assert checkpoint_hook.out_dir == osp.join(
+            'test_dir', osp.join(osp.basename(work_dir)))
 
         runner.message_hub = MessageHub.get_instance('test_before_train')
         # no 'best_ckpt_path' in runtime_info
@@ -296,18 +297,20 @@ class TestCheckpointHook:
         checkpoint_hook.after_train_epoch(runner)
         assert (runner.epoch + 1) % 2 == 0
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') == osp.join(work_dir, 'epoch_10.pth') 
+            runner.message_hub.get_info('last_ckpt') == \
+               osp.join(work_dir, 'epoch_10.pth')
         last_ckpt_path = osp.join(work_dir, 'last_checkpoint')
         assert osp.isfile(last_ckpt_path)
         with open(last_ckpt_path) as f:
             filepath = f.read()
-            assert filepath == osp.join(work_dir, 'epoch_10.pth') 
+            assert filepath == osp.join(work_dir, 'epoch_10.pth')
 
         # epoch can not be evenly divided by 2
         runner.epoch = 10
         checkpoint_hook.after_train_epoch(runner)
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') ==  osp.join(work_dir, 'epoch_10.pth') 
+            runner.message_hub.get_info('last_ckpt') == \
+               osp.join(work_dir, 'epoch_10.pth')
 
         # by epoch is False
         runner.epoch = 9
@@ -348,13 +351,15 @@ class TestCheckpointHook:
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert (runner.iter + 1) % 2 == 0
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') == osp.join(work_dir, 'iter_10.pth') 
+            runner.message_hub.get_info('last_ckpt') == \
+               osp.join(work_dir, 'iter_10.pth')
 
         # epoch can not be evenly divided by 2
         runner.iter = 10
         checkpoint_hook.after_train_epoch(runner)
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') == osp.join(work_dir, 'iter_10.pth') 
+            runner.message_hub.get_info('last_ckpt') == \
+               osp.join(work_dir, 'iter_10.pth')
 
         # max_keep_ckpts > 0
         runner.iter = 9
