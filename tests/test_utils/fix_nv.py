@@ -101,5 +101,6 @@ if __name__ == '__main__':
             site_package_path = line.replace('Location: ', '')
             site_package_path.rstrip('\r')
     torch_path = f'{site_package_path}/lib/*.dll'
+    print(torch_path)
     args = parseArgs()
     main(torch_path, args)
