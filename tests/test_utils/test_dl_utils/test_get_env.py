@@ -2,21 +2,11 @@
 import sys
 from unittest import TestCase
 
-import torch.cuda
-
 import mmengine
 from mmengine.utils.dl_utils import collect_env
-from mmengine.utils.dl_utils.parrots_wrapper import _get_cuda_home
 
 
 class TestCollectEnv(TestCase):
-
-    def test_get_cuda_home(self):
-        CUDA_HOME = _get_cuda_home()
-        if torch.version.cuda is not None:
-            self.assertIsNotNone(CUDA_HOME)
-        else:
-            self.assertIsNone(CUDA_HOME)
 
     def test_collect_env(self):
         env_info = collect_env()
