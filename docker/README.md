@@ -31,7 +31,7 @@ docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/
 The [Dockerfile](release/Dockerfile) installs the latest released version of mmengine by default, but you can specify mmengine versions to install expected versions.
 
 ```bash
-docker image build -t mmengine -f docker/release/Dockerfile --build-arg MMENGINE=0.5.0 .
+docker image build -t mmengine -f docker/release/Dockerfile --build-arg MMENGINE=0.1.0 .
 ```
 
 If you also want to use other versions of PyTorch and CUDA, you can also pass them when building docker images.
@@ -42,8 +42,7 @@ An example to build an image with PyTorch 1.11 and CUDA 11.3.
 docker build -t mmengine -f docker/release/Dockerfile \
     --build-arg PYTORCH=1.9.0 \
     --build-arg CUDA=11.1 \
-    --build-arg CUDNN=8 \
-    --build-arg MMENGINE=0.5.0 .
+    --build-arg CUDNN=8 .
 ```
 
 More available versions of PyTorch and CUDA can be found at [dockerhub/pytorch](https://hub.docker.com/r/pytorch/pytorch/tags).
