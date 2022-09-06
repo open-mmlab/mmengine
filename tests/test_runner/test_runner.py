@@ -414,6 +414,7 @@ class TestRunner(TestCase):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):

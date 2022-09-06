@@ -46,6 +46,7 @@ class TestLogger:
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     @patch('mmengine.logging.logger._get_rank', lambda: 1)
     def test_init_rank1(self, tmp_path):
@@ -67,6 +68,7 @@ class TestLogger:
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     @pytest.mark.parametrize('log_level',
                              [logging.WARNING, logging.INFO, logging.DEBUG])
@@ -99,6 +101,7 @@ class TestLogger:
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     def test_error_format(self, capsys):
         # test error level log can output file path, function name and

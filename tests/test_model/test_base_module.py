@@ -109,6 +109,11 @@ class TestBaseModule(TestCase):
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
         self.logger = MMLogger.get_instance(self._testMethodName)
 
+    def tearDown(self) -> None:
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
+        return super().tearDown()
+
     def test_is_init(self):
         assert self.BaseModule.is_init is False
 
@@ -199,6 +204,7 @@ class TestBaseModule(TestCase):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
         shutil.rmtree(dump_dir)
 
 

@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import EMAHook
+from mmengine.logging import MMLogger
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.optim import OptimWrapper
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
@@ -83,6 +84,7 @@ class TestEMAHook(TestCase):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
         self.temp_dir.cleanup()
 
     def test_ema_hook(self):
