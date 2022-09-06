@@ -100,7 +100,9 @@ if __name__ == '__main__':
         if line.startswith('Location: '):
             site_package_path = line.replace('Location: ', '')
             site_package_path.rstrip('\r')
-    torch_path = f'{site_package_path}/lib/*.dll'
+    torch_path = f'{site_package_path}/torch/lib/*.dll'
     print(torch_path)
+    tmp_path = f'{site_package_path}/torch/lib'
+    print(f'torch_path exists: {os.path.exists(tmp_path)}')
     args = parseArgs()
     main(torch_path, args)
