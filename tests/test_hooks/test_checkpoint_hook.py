@@ -369,4 +369,3 @@ class TestCheckpointHook:
             interval=2, by_epoch=False, max_keep_ckpts=1)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
-        os.system(f'touch {osp.join(work_dir, "iter_8.pth")}')

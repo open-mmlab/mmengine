@@ -100,7 +100,10 @@ class TestLogger:
         logger = MMLogger.get_instance('test_error', log_level='INFO')
         logger.error('welcome')
         lineno = sys._getframe().f_lineno - 1
-        file_path = __file__.replace('\\', '\\\\')  # replace \ for windows
+        # replace \ for windows:
+        # origin: c:\\a\\b\\c.py
+        # replaced: c:\\\\a\\\\b\\\\c.py for re.match.
+        file_path = __file__.replace('\\', '\\\\')
         function_name = sys._getframe().f_code.co_name
         pattern = self.stream_handler_regex_time + \
             r' - mmengine - (.*)ERROR(.*) - ' \
