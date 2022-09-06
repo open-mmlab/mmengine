@@ -6,9 +6,12 @@ on:
       - ".github/**.md"
       - "docker/**"
       - "docs/**"
-      - "docs_zh-CN/**"
       - "README.md"
       - "README_zh-CN.md"
+      - "CONTRIBUTING.md"
+      - "CONTRIBUTING_zh-CN.md"
+      - ".pre-commit-config.yaml"
+      - ".pre-commit-config-zh-cn.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
