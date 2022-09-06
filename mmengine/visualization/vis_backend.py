@@ -411,8 +411,7 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Useless parameter. Wandb does not
                 need this parameter. Default to 0.
         """
-        import wandb
-        image = wandb.Image(image)
+        image = self._wandb.Image(image)
         self._wandb.log({name: image}, commit=self._commit)
 
     @force_init_env
