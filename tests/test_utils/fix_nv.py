@@ -7,10 +7,10 @@ import argparse
 import glob
 import os
 import shutil
-import subprocess
 
 import pefile
 import torch
+from pkg_resources import get_distribution
 
 
 def main(inputs, args):
@@ -94,15 +94,9 @@ def parseArgs():
 # program entry point
 #
 if __name__ == '__main__':
-    out = subprocess.check_output(['pip', 'show', 'torch'])
-    location = out.decode('utf-8').split('\n')
-    for line in location:
-        if line.startswith('Location: '):
-            site_package_path = line.replace('Location: ', '')
-            site_package_path.rstrip('\r')
-    torch_path = f'{site_package_path}/torch/lib/*.dll'
-    print(torch_path)
-    tmp_path = f'{site_package_path}/torch/lib'
-    print(f'torch_path exists: {os.path.exists(tmp_path)}')
+    pkg = get_distribution('torch')
+    site_package_path = os.path.join(pkg.location, 'torch')
+    site_package_path = os.path.join(site_package_path, 'lib', '*.dll')
+    print(os.path.exists(site_package_path))
     args = parseArgs()
-    main(torch_path, args)
+    main(site_package_path, args)
