@@ -345,6 +345,9 @@ class WandbVisBackend(BaseVisBackend):
             The key is metric and the value is summary.
             When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
             The maximum value of``coco/bbox_mAP`` is logged on wandb UI.
+            See
+            `wandb docs <https://docs.wandb.ai/ref/python/run#define_metric>`_
+            for details.
             Default: None
         commit: (bool, optional) Save the metrics dict to the wandb server
                 and increment the step.  If false `wandb.log` just
