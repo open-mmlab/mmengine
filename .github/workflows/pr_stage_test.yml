@@ -103,6 +103,9 @@ jobs:
         platform: [cpu, cu111]
     steps:
       - uses: actions/checkout@v2
+      - uses: mxschmitt/action-tmate@v3
+        with:
+          sudo: false
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
