@@ -80,6 +80,8 @@ class TestEMAHook(TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
         self.temp_dir.cleanup()
 

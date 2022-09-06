@@ -43,6 +43,8 @@ class TestLogger:
             'rank0.pkg3', logger_name='logger_test', log_level='INFO')
         assert logger.name == 'logger_test'
         assert logger.instance_name == 'rank0.pkg3'
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
 
     @patch('mmengine.logging.logger._get_rank', lambda: 1)
@@ -62,6 +64,8 @@ class TestLogger:
         assert logger.handlers[1].level == logging.INFO
         assert len(logger.handlers) == 2
         assert os.path.exists(log_path)
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
 
     @pytest.mark.parametrize('log_level',
@@ -92,6 +96,8 @@ class TestLogger:
                 f' - mmengine - {loglevl_name} - '
                 f'welcome\n', log_text)
             assert match is not None
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
 
     def test_error_format(self, capsys):

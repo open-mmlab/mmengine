@@ -411,6 +411,8 @@ class TestRunner(TestCase):
             sampler_seed=dict(type='DistSamplerSeedHook'))
 
     def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
         shutil.rmtree(self.temp_dir)
 
