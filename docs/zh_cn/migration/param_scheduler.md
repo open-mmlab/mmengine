@@ -11,9 +11,9 @@ MMCV 中的学习率配置与 MMEngine 中的参数调度器配置对应关系�
 
 ### 学习率预热（Warmup）迁移
 
-由于 MMEngine 中的学习率调度器在实现时增加了 begin 和 end 参数，指定了调度器的生效区间，所以可以通过调度器组合的方式实现学习率预热。MMCV 中有 3 种学习率预热方式，分别是 'constant', 'linear', 'exp'，在 MMEngine 中对应的配置应修改为:
+由于 MMEngine 中的学习率调度器在实现时增加了 begin 和 end 参数，指定了调度器的生效区间，所以可以通过调度器组合的方式实现学习率预热。MMCV 中有 3 种学习率预热方式，分别是 `'constant'`, `'linear'`, `'exp'`，在 MMEngine 中对应的配置应修改为:
 
-#### 常数预热('constant')
+#### 常数预热(constant)
 
 <table class="docutils">
   <thead>
@@ -52,7 +52,7 @@ param_scheduler = [
   </thead>
   </table>
 
-#### 线性预热('linear')
+#### 线性预热(linear)
 
 <table class="docutils">
   <thead>
@@ -91,7 +91,7 @@ param_scheduler = [
   </thead>
   </table>
 
-#### 指数预热('exp')
+#### 指数预热(exp)
 
 <table class="docutils">
   <thead>
@@ -130,7 +130,7 @@ param_scheduler = [
   </thead>
   </table>
 
-### 'fixed' 学习率（FixedLrUpdaterHook）迁移
+### fixed 学习率（FixedLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -159,7 +159,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'step' 学习率（StepLrUpdaterHook）迁移
+### step 学习率（StepLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -196,7 +196,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'poly' 学习率（PolyLrUpdaterHook）迁移
+### poly 学习率（PolyLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -235,7 +235,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'exp' 学习率（ExpLrUpdaterHook）迁移
+### exp 学习率（ExpLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -272,7 +272,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'CosineAnnealing' 学习率（CosineAnnealingLrUpdaterHook）迁移
+### CosineAnnealing 学习率（CosineAnnealingLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -310,7 +310,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'FlatCosineAnnealing' 学习率（FlatCosineAnnealingLrUpdaterHook）迁移
+### FlatCosineAnnealing 学习率（FlatCosineAnnealingLrUpdaterHook）迁移
 
 像 FlatCosineAnnealing 这种由多个学习率策略拼接而成的学习率，原本需要重写 Hook 来实现，而在 MMEngine 中只需将两个参数调度器组合即可
 
@@ -352,7 +352,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'CosineRestart' 学习率（CosineRestartLrUpdaterHook）迁移
+### CosineRestart 学习率（CosineRestartLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -389,7 +389,7 @@ param_scheduler = [
 </thead>
 </table>
 
-### 'OneCycle' 学习率（OneCycleLrUpdaterHook）迁移
+### OneCycle 学习率（OneCycleLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
@@ -436,7 +436,7 @@ param_scheduler = [
 
 需要注意的是 `by_epoch` 参数 MMCV 默认是 `False`, MMEngine 默认是 `True`
 
-### 'LinearAnnealing' 学习率（LinearAnnealingLrUpdaterHook）迁移
+### LinearAnnealing 学习率（LinearAnnealingLrUpdaterHook）迁移
 
 <table class="docutils">
 <thead>
