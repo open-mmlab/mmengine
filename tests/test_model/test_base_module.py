@@ -110,7 +110,6 @@ class TestBaseModule(TestCase):
         self.logger = MMLogger.get_instance(self._testMethodName)
 
     def tearDown(self) -> None:
-        MMLogger._instance_dict.clear()
         logging.shutdown()
         return super().tearDown()
 
