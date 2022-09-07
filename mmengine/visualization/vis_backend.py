@@ -340,6 +340,15 @@ class WandbVisBackend(BaseVisBackend):
             produced by the visualizer.
         init_kwargs (dict, optional): wandb initialization
             input parameters. Default to None.
+        define_metric_cfg (dict, optional):
+            A dict of metrics and summary for wandb.define_metric.
+            The key is metric and the value is summary.
+            When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
+            The maximum value of``coco/bbox_mAP`` is logged on wandb UI.
+            See
+            `wandb docs <https://docs.wandb.ai/ref/python/run#define_metric>`_
+            for details.
+            Default: None
         commit: (bool, optional) Save the metrics dict to the wandb server
                 and increment the step.  If false `wandb.log` just
                 updates the current metrics dict with the row argument
@@ -350,9 +359,11 @@ class WandbVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
+                 define_metric_cfg: Optional[dict] = None,
                  commit: Optional[bool] = True):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
+        self._define_metric_cfg = define_metric_cfg
         self._commit = commit
 
     def _init_env(self):
@@ -370,6 +381,9 @@ class WandbVisBackend(BaseVisBackend):
                 'Please run "pip install wandb" to install wandb')
 
         wandb.init(**self._init_kwargs)
+        if self._define_metric_cfg is not None:
+            for metric, summary in self._define_metric_cfg.items():
+                wandb.define_metric(metric, summary=summary)
         self._wandb = wandb
 
     @property  # type: ignore
