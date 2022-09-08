@@ -33,13 +33,6 @@ class EMAHook(Hook):
             Defaults to 0.
         begin_epoch (int): The number of epoch to enable ``EMAHook``. Defaults
             to 0.
-        revise_keys (list): A list of customized keywords to modify the
-                state_dict in checkpoint. Each item is a (pattern, replacement)
-                pair of the regular expression operations. Default: strip
-                the prefix 'module.' by [(r'^module\\.', '')].
-        resume (bool): Whether to resume ema model. If ``resume`` is True and
-            ``ema_state_dict`` is not found in checkpoint, resuming does
-            nothing. Defaults to True.
         **kwargs: Keyword arguments passed to subclasses of
             :obj:`BaseAveragedModel`
     """
@@ -51,8 +44,6 @@ class EMAHook(Hook):
                  strict_load: bool = True,
                  begin_iter: int = 0,
                  begin_epoch: int = 0,
-                 revise_keys: list = [(r'^module.', '')],
-                 resume: bool = True,
                  **kwargs):
         self.strict_load = strict_load
         self.ema_cfg = dict(type=ema_type, **kwargs)
@@ -67,9 +58,6 @@ class EMAHook(Hook):
         # If `begin_epoch` and `begin_iter` are not set, `EMAHook` will be
         # enabled at 0 iteration.
         self.enabled_by_epoch = self.begin_epoch > 0
-
-        self.revise_keys = revise_keys
-        self.resume = resume
 
     def before_run(self, runner) -> None:
         """Create an ema copy of the model.
@@ -184,7 +172,7 @@ class EMAHook(Hook):
         Args:
             runner (Runner): The runner of the testing process.
         """
-        if 'ema_state_dict' in checkpoint and self.resume:
+        if 'ema_state_dict' in checkpoint and runner._resume:
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
@@ -193,7 +181,7 @@ class EMAHook(Hook):
 
         # Support load checkpoint without ema state dict.
         else:
-            if self.resume:
+            if runner._resume:
                 print_log(
                     'There is no `ema_state_dict` in checkpoint. '
                     '`EMAHook` will make a copy of `state_dict` as the '
@@ -201,8 +189,7 @@ class EMAHook(Hook):
             _load_checkpoint_to_model(
                 self.ema_model.module,
                 copy.deepcopy(checkpoint['state_dict']),
-                strict=self.strict_load,
-                revise_keys=self.revise_keys)
+                strict=self.strict_load)
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
