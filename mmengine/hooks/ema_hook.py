@@ -7,7 +7,6 @@ from typing import Dict, Optional
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
-from mmengine.runner.checkpoint import _load_checkpoint_to_model
 from .hook import DATA_BATCH, Hook
 
 
@@ -172,6 +171,7 @@ class EMAHook(Hook):
         Args:
             runner (Runner): The runner of the testing process.
         """
+        from mmengine.runner.checkpoint import load_state_dict
         if 'ema_state_dict' in checkpoint and runner._resume:
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
@@ -186,7 +186,7 @@ class EMAHook(Hook):
                     'There is no `ema_state_dict` in checkpoint. '
                     '`EMAHook` will make a copy of `state_dict` as the '
                     'initial `ema_state_dict`', 'current', logging.WARNING)
-            _load_checkpoint_to_model(
+            load_state_dict(
                 self.ema_model.module,
                 copy.deepcopy(checkpoint['state_dict']),
                 strict=self.strict_load)
