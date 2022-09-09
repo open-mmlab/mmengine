@@ -584,7 +584,8 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
-        # 5. Test building multiple runners
+        # 5. Test building multiple runners. In Windows, nccl could not be
+        # available, and this test will be skipped.
         if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             cfg = copy.deepcopy(self.epoch_based_cfg)
             cfg.experiment_name = 'test_init15'
@@ -594,9 +595,9 @@ class TestRunner(TestCase):
             os.environ['RANK'] = '0'
             os.environ['WORLD_SIZE'] = '1'
             os.environ['LOCAL_RANK'] = '0'
-            runner = Runner(**cfg)
+            Runner(**cfg)
             cfg.experiment_name = 'test_init16'
-            runner = Runner(**cfg)
+            Runner(**cfg)
 
         # 6.1 Test initializing with empty scheduler.
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -686,7 +687,7 @@ class TestRunner(TestCase):
             # dump config from file.
             with tempfile.TemporaryDirectory() as temp_config_dir:
                 # Set `delete=Flase` and close the file to make it
-                # works in windows.
+                # work in Windows.
                 temp_config_file = tempfile.NamedTemporaryFile(
                     dir=temp_config_dir, suffix='.py', delete=False)
                 temp_config_file.close()
