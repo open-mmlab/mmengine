@@ -60,7 +60,7 @@ class ToyModel3(BaseModel, ToyModel):
 
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(2, 2)
+        self.linear = nn.Linear(2, 2)
 
     def forward(self, *args, **kwargs):
         return super(BaseModel, self).forward(*args, **kwargs)
@@ -226,10 +226,11 @@ class TestEMAHook(TestCase):
             test_evaluator=evaluator,
             test_cfg=dict(),
             work_dir=self.temp_dir.name,
-            load_from=osp.join(self.temp_dir.name, 'epoch_2.pth'),
+            load_from=osp.join(self.temp_dir.name,
+                               'without_ema_state_dict.pth'),
             default_hooks=dict(logger=None),
             custom_hooks=[dict(type='EMAHook', strict_load=False)],
-            experiment_name='test5')
+            experiment_name='test5.1')
         runner.test()
 
         # Test enable ema at 5 epochs.
