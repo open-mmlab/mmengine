@@ -37,7 +37,7 @@ def test_timer_context(capsys):
     out, _ = capsys.readouterr()
     # In Windows, the error could be larger than 20ms. More details in
     # https://stackoverflow.com/questions/11657734/sleep-for-exact-time-in-python.  # noqa: E501
-    assert abs(float(out) - 1) < 2e-2
+    assert abs(float(out) - 1) < 3e-2
     with mmengine.Timer(print_tmpl='time: {:.1f}s'):
         time.sleep(1)
     out, _ = capsys.readouterr()
