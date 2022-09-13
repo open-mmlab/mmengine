@@ -18,10 +18,12 @@ def test_timer_init():
 def test_timer_run():
     timer = mmengine.Timer()
     time.sleep(1)
-    assert abs(timer.since_start() - 1) < 1e-2
+    # In Windows, the error could be larger than 20ms. More details in
+    # https://stackoverflow.com/questions/11657734/sleep-for-exact-time-in-python.  # noqa: E501
+    assert abs(timer.since_start() - 1) < 3e-2
     time.sleep(1)
-    assert abs(timer.since_last_check() - 1) < 1e-2
-    assert abs(timer.since_start() - 2) < 1e-2
+    assert abs(timer.since_last_check() - 1) < 3e-2
+    assert abs(timer.since_start() - 2) < 3e-2
     timer = mmengine.Timer(False)
     with pytest.raises(mmengine.TimerError):
         timer.since_start()
@@ -33,7 +35,9 @@ def test_timer_context(capsys):
     with mmengine.Timer():
         time.sleep(1)
     out, _ = capsys.readouterr()
-    assert abs(float(out) - 1) < 1e-2
+    # In Windows, the error could be larger than 20ms. More details in
+    # https://stackoverflow.com/questions/11657734/sleep-for-exact-time-in-python.  # noqa: E501
+    assert abs(float(out) - 1) < 3e-2
     with mmengine.Timer(print_tmpl='time: {:.1f}s'):
         time.sleep(1)
     out, _ = capsys.readouterr()

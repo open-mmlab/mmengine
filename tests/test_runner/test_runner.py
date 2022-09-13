@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import shutil
@@ -410,6 +411,10 @@ class TestRunner(TestCase):
             sampler_seed=dict(type='DistSamplerSeedHook'))
 
     def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):
@@ -579,8 +584,9 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
-        # 5. Test building multiple runners
-        if torch.cuda.is_available():
+        # 5. Test building multiple runners. In Windows, nccl could not be
+        # available, and this test will be skipped.
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             cfg = copy.deepcopy(self.epoch_based_cfg)
             cfg.experiment_name = 'test_init15'
             cfg.launcher = 'pytorch'
@@ -589,9 +595,9 @@ class TestRunner(TestCase):
             os.environ['RANK'] = '0'
             os.environ['WORLD_SIZE'] = '1'
             os.environ['LOCAL_RANK'] = '0'
-            runner = Runner(**cfg)
+            Runner(**cfg)
             cfg.experiment_name = 'test_init16'
-            runner = Runner(**cfg)
+            Runner(**cfg)
 
         # 6.1 Test initializing with empty scheduler.
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -680,8 +686,11 @@ class TestRunner(TestCase):
                 osp.join(runner.work_dir, f'{runner.timestamp}.py'))
             # dump config from file.
             with tempfile.TemporaryDirectory() as temp_config_dir:
+                # Set `delete=Flase` and close the file to make it
+                # work in Windows.
                 temp_config_file = tempfile.NamedTemporaryFile(
-                    dir=temp_config_dir, suffix='.py')
+                    dir=temp_config_dir, suffix='.py', delete=False)
+                temp_config_file.close()
                 file_cfg = Config(
                     self.epoch_based_cfg._cfg_dict,
                     filename=temp_config_file.name)
@@ -834,7 +843,7 @@ class TestRunner(TestCase):
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, BaseModel)
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             os.environ['MASTER_ADDR'] = '127.0.0.1'
             os.environ['MASTER_PORT'] = '29515'
             os.environ['RANK'] = str(0)
