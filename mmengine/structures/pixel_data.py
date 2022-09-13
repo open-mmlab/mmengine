@@ -9,7 +9,7 @@ from .base_data_element import BaseDataElement
 
 
 class PixelData(BaseDataElement):
-    """Data structure for pixel-level annnotations or predictions.
+    """Data structure for pixel-level annotations or predictions.
 
     All data items in ``data_fields`` of ``PixelData`` meet the following
     requirements:

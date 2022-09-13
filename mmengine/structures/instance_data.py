@@ -16,7 +16,7 @@ IndexType = Union[str, slice, int, list, torch.LongTensor,
 # Modified from
 # https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/data_structures/instance_data.py # noqa
 class InstanceData(BaseDataElement):
-    """Data structure for instance-level annnotations or predictions.
+    """Data structure for instance-level annotations or predictions.
 
     Subclass of :class:`BaseDataElement`. All value in `data_fields`
     should have the same length. This design refer to
