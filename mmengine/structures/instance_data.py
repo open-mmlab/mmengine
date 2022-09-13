@@ -22,7 +22,7 @@ class InstanceData(BaseDataElement):
     should have the same length. This design refer to
     https://github.com/facebookresearch/detectron2/blob/master/detectron2/structures/instances.py # noqa E501
     InstanceData also support extra functions: ``index``, ``slice`` and ``cat`` for data field. The type of value
-    in data field can be base data structure such as `torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`,
+    in data field can be base data structure such as `torch.tensor`, `numpy.ndarray`, `list`, `str`, `tuple`,
     and can be customized data structure that has ``__len__``, ``__getitem__`` and ``cat`` attributes.
 
     Examples:
