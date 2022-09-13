@@ -11,4 +11,4 @@ mmengine.hub
    :nosignatures:
 
    get_config
-   get_config
+   get_model
