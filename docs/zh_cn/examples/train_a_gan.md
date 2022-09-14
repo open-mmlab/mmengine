@@ -147,8 +147,7 @@ from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
-下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 [BaseModel](mmengine.model.BaseModel) 基类，
-在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
+下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 [BaseModel](mmengine.model.BaseModel) 基类，在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
 关于 BaseModel 的更多信息，请参考[模型教程](../tutorials/model.md).
 
 ```python
