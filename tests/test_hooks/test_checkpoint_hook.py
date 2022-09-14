@@ -54,6 +54,8 @@ class DummyDataset(Dataset):
 
 class TriangleMetric(BaseMetric):
 
+    default_prefix: str = 'test'
+
     def __init__(self, length):
         super().__init__()
         self.length = length
@@ -61,7 +63,7 @@ class TriangleMetric(BaseMetric):
         self.cur_idx = 0
 
     def process(self, *args, **kwargs):
-        pass
+        self.results.append(0)
 
     def compute_metrics(self, *args, **kwargs):
         self.cur_idx += 1
