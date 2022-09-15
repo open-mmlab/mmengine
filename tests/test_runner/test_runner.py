@@ -863,20 +863,21 @@ class TestRunner(TestCase):
             cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
             runner.from_cfg(cfg)
 
-        @MODELS.register_module()
-        class ToyBN(BaseModel):
+            @MODELS.register_module()
+            class ToyBN(BaseModel):
 
-            def __init__(self):
-                super().__init__()
-                self.bn = nn.BatchNorm2d(2)
+                def __init__(self):
+                    super().__init__()
+                    self.bn = nn.BatchNorm2d(2)
 
-            def forward(self, *args, **kwargs):
-                pass
+                def forward(self, *args, **kwargs):
+                    pass
 
-        cfg.model = dict(type='ToyBN')
-        cfg.experiment_name = 'test_data_preprocessor2'
-        runner = Runner.from_cfg(cfg)
-        self.assertIsInstance(runner.model.model.bn, torch.nn.SyncBatchNorm)
+            cfg.model = dict(type='ToyBN')
+            cfg.experiment_name = 'test_data_preprocessor2'
+            runner = Runner.from_cfg(cfg)
+            self.assertIsInstance(runner.model.model.bn,
+                                  torch.nn.SyncBatchNorm)
 
         cfg.sync_bn = 'unknown'
         cfg.experiment_name = 'test_data_preprocessor3'
