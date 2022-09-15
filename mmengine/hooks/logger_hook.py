@@ -91,7 +91,7 @@ class LoggerHook(Hook):
 
         if file_client_args is not None:
             warnings.warn(
-                '"file_client_args" will be deprecated in future. ',
+                '"file_client_args" will be deprecated in future. '
                 'Please use "backend_args" instead', DeprecationWarning)
             if backend_args is not None:
                 raise ValueError(
@@ -131,8 +131,8 @@ class LoggerHook(Hook):
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
             self.out_dir = self.file_backend.join_path(self.out_dir, basename)
             runner.logger.info(
-                f'Text logs will be saved to {self.out_dir} after the training process.'
-            )
+                f'Text logs will be saved to {self.out_dir} after the '
+                'training process.')
 
         self.json_log_path = f'{runner.timestamp}.json'
 

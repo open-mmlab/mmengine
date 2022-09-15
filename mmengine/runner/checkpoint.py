@@ -344,7 +344,8 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     Args:
         filename (str): checkpoint file path with s3 prefix
         map_location (str, optional): Same as :func:`torch.load`.
-        backend (str, optional): The storage backend type. Defaults to 'petrel'.
+        backend (str, optional): The storage backend type.
+            Defaults to 'petrel'.
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.

@@ -133,7 +133,7 @@ class CheckpointHook(Hook):
 
         if file_client_args is not None:
             warnings.warn(
-                '"file_client_args" will be deprecated in future. ',
+                '"file_client_args" will be deprecated in future. '
                 'Please use "backend_args" instead', DeprecationWarning)
             if backend_args is not None:
                 raise ValueError(

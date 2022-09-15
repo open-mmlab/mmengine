@@ -2052,7 +2052,8 @@ class Runner:
             file_client = FileClient.infer_client(file_client_args, out_dir)
             filepath = file_client.join_path(out_dir, filename)
         else:
-            filepath = join_path(out_dir, filename, backend_args=backend_args)
+            filepath = join_path(  # type: ignore
+                out_dir, filename, backend_args=backend_args)
 
         meta.update(
             cfg=self.cfg.pretty_text,
