@@ -3,10 +3,12 @@
 以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 MMEngine 构建一个完整的、
 可配置的训练和验证流程，整个流程包含如下步骤：
 
-1. [构建模型](#构建模型)
-2. [构建数据集和数据加载器](#构建数据集和数据加载器)
-3. [构建评测指标](#构建评测指标)
-4. [构建执行器并执行任务](#构建执行器并执行任务)
+- [15 分钟上手 MMEngine](#15-分钟上手-mmengine)
+  - [构建模型](#构建模型)
+  - [构建数据集和数据加载器](#构建数据集和数据加载器)
+  - [构建评测指标](#构建评测指标)
+  - [构建执行器并执行任务](#构建执行器并执行任务)
+  - [下一步的建议](#下一步的建议)
 
 ## 构建模型
 
@@ -129,6 +131,9 @@ runner.train()
 
 最后，让我们把以上部分汇总成为一个完整的，利用 MMEngine 执行器进行训练和验证的脚本：
 
+<details>
+<summary>完整代码</summary>
+
 <a href="https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/get_started.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="在 Colab 中打开"/></a>
 
 ```python
@@ -208,7 +213,10 @@ runner = Runner(
 runner.train()
 ```
 
-输出的训练日志如下：
+</details>
+
+<details>
+<summary>输出的训练日志</summary>
 
 ```
 2022/08/22 15:51:53 - mmengine - INFO -
@@ -239,4 +247,10 @@ System environment:
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
 
-除了以上基础组件，你还可以利用**执行器**轻松地组合配置各种训练技巧，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/evaluation.md)）等。
+</details>
+
+## 下一步的建议
+
+在上面的例子中，我们只用 80 行以内代码，便构建好了训练和验证流程，并且兼具极佳的可读性、可扩展性。真棒！相信你已经注意到，MMEngine 做到这一点的关键在于**执行器（Runner）**，所以我们强烈建议先花一些时间了解下[执行器基础](../tutorials/runner_basics.md)。这一点很重要！因为使用执行器是 MMEngine 用户的最佳实践。
+
+如果你对于执行器已经有了一定的了解，并且对一些特定的组件、功能感兴趣，也可以点击左侧的对应链接进行跳转，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/evaluation.md)）等。
