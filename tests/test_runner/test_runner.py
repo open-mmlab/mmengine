@@ -879,10 +879,10 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner.model.model.bn,
                                   torch.nn.SyncBatchNorm)
 
-        cfg.sync_bn = 'unknown'
-        cfg.experiment_name = 'test_data_preprocessor3'
-        with self.assertRaises(ValueError):
-            Runner.from_cfg(cfg)
+            cfg.sync_bn = 'unknown'
+            cfg.experiment_name = 'test_data_preprocessor3'
+            with self.assertRaises(ValueError):
+                Runner.from_cfg(cfg)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
