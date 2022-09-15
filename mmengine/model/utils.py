@@ -197,7 +197,8 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
     return module_output
 
 
-def convert_sync_batchnorm(module: nn.Module, sync_bn='torch') -> nn.Module:
+def convert_sync_batchnorm(module: nn.Module,
+                           implementation='torch') -> nn.Module:
     """Helper function to convert all `BatchNorm` layers in the model to
     `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN)
     layers. Adapted from <https://pytorch.org/docs/stable/generated/torch.nn.Sy
@@ -205,7 +206,7 @@ def convert_sync_batchnorm(module: nn.Module, sync_bn='torch') -> nn.Module:
 
     Args:
         module (nn.Module): The module containing `SyncBatchNorm` layers.
-        sync_bn (str): The type of `SyncBatchNorm` to convert to.
+        implementation (str): The type of `SyncBatchNorm` to convert to.
 
             - 'torch': convert to `torch.nn.modules.batchnorm.SyncBatchNorm`.
             - 'mmcv': convert to `mmcv.ops.sync_bn.SyncBatchNorm`.
@@ -216,13 +217,13 @@ def convert_sync_batchnorm(module: nn.Module, sync_bn='torch') -> nn.Module:
     module_output = module
 
     if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
-        if sync_bn == 'torch':
+        if implementation == 'torch':
             SyncBatchNorm = torch.nn.modules.batchnorm.SyncBatchNorm
-        elif sync_bn == 'mmcv':
+        elif implementation == 'mmcv':
             from mmcv.ops import SyncBatchNorm  # type: ignore
         else:
             raise ValueError('sync_bn should be "torch" or "mmcv", but got '
-                             f'{sync_bn}')
+                             f'{implementation}')
 
         module_output = SyncBatchNorm(module.num_features, module.eps,
                                       module.momentum, module.affine,
@@ -238,6 +239,7 @@ def convert_sync_batchnorm(module: nn.Module, sync_bn='torch') -> nn.Module:
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
     for name, child in module.named_children():
-        module_output.add_module(name, convert_sync_batchnorm(child, sync_bn))
+        module_output.add_module(name,
+                                 convert_sync_batchnorm(child, implementation))
     del module
     return module_output
