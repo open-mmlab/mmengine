@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import time
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
@@ -52,6 +53,9 @@ class TestOptimWrapper(MultiProcessTestCase):
     def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
+
+    def tearDown(self) -> None:
+        time.sleep(1)
 
     def run_test(self, test_name: str, parent_pipe) -> None:
         self.model = ToyModel()
