@@ -193,7 +193,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     # TODO: This unit test could cause CI to fail with some probability, which
     #       is caused by MultiProcessTestCase. This problem should be solved
     #       in the future).
-    @pytest.mark.skipif(True, 'Solved in the future')
+    @pytest.mark.skipif(True, reason='Solved in the future')
     def test_clip_grads(self):
         optim_wrapper = OptimWrapper(
             self.optimizer, clip_grad=dict(max_norm=35))
