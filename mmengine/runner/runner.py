@@ -26,8 +26,9 @@ from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
-from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper, revert_sync_batchnorm)
+from mmengine.model import (BaseModel, BaseTestTimeAugModel,
+                            MMDistributedDataParallel, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -820,16 +821,17 @@ class Runner:
             BaseModel or DistributedDataParallel: BaseModel or subclass of
             ``DistributedDataParallel``.
         """
-        if is_model_wrapper(model):
+        # Set `export CUDA_VISIBLE_DEVICES=-1` to enable CPU training.
+        model = model.to(get_device())
+
+        if is_model_wrapper(model) and not \
+                isinstance(model, BaseTestTimeAugModel):
             if model_wrapper_cfg is not None:
                 raise TypeError(
                     'model has been wrapped and "model_wrapper_cfg" should be '
                     f'None, but got {model_wrapper_cfg}')
 
             return model
-
-        # Set `export CUDA_VISIBLE_DEVICES=-1` to enable CPU training.
-        model = model.to(get_device())
 
         if not self.distributed:
             self.logger.info(
