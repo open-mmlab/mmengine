@@ -60,6 +60,12 @@ Model Wrapper
    MMDistributedDataParallel
    MMSeparateDistributedDataParallel
    MMFullyShardedDataParallel
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: classtemplate.rst
+
    is_model_wrapper
 
 Weight Initialization
@@ -79,6 +85,11 @@ Weight Initialization
    TruncNormalInit
    UniformInit
    XavierInit
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    bias_init_with_prob
    caffe2_xavier_init
    constant_init
@@ -96,7 +107,6 @@ Utils
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    detect_anomalous_params
    merge_dict

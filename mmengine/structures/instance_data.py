@@ -16,13 +16,13 @@ IndexType = Union[str, slice, int, list, torch.LongTensor,
 # Modified from
 # https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/data_structures/instance_data.py # noqa
 class InstanceData(BaseDataElement):
-    """Data structure for instance-level annnotations or predictions.
+    """Data structure for instance-level annotations or predictions.
 
     Subclass of :class:`BaseDataElement`. All value in `data_fields`
     should have the same length. This design refer to
     https://github.com/facebookresearch/detectron2/blob/master/detectron2/structures/instances.py # noqa E501
     InstanceData also support extra functions: ``index``, ``slice`` and ``cat`` for data field. The type of value
-    in data field can be base data structure such as `torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`,
+    in data field can be base data structure such as `torch.tensor`, `numpy.ndarray`, `list`, `str`, `tuple`,
     and can be customized data structure that has ``__len__``, ``__getitem__`` and ``cat`` attributes.
 
     Examples:
@@ -165,6 +165,11 @@ class InstanceData(BaseDataElement):
         if isinstance(item, list):
             item = np.array(item)
         if isinstance(item, np.ndarray):
+            # The default int type of numpy is platform dependent, int32 for
+            # windows and int64 for linux. `torch.Tensor` requires the index
+            # should be int64, therefore we simply convert it to int64 here.
+            # More details in https://github.com/numpy/numpy/issues/9464
+            item = item.astype(np.int64) if item.dtype == np.int32 else item
             item = torch.from_numpy(item)
         assert isinstance(
             item, (str, slice, int, torch.LongTensor, torch.cuda.LongTensor,

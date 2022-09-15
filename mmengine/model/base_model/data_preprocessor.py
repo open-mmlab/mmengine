@@ -175,7 +175,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                 f'RGB or gray image, but got {len(mean)} values')
             assert len(std) == 3 or len(std) == 1, (  # type: ignore
                 '`std` should have 1 or 3 values, to be compatible with RGB '  # type: ignore # noqa: E501
-                f'or gray image, but got {len(std)} values')
+                f'or gray image, but got {len(std)} values')  # type: ignore
             self._enable_normalize = True
             self.register_buffer('mean',
                                  torch.tensor(mean).view(-1, 1, 1), False)

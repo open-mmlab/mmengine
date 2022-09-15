@@ -97,6 +97,9 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             computation overlapping.
             Pros and cons of each algorithm is explained in class
             ``BackwardPrefetch``.
+
+        **kwargs: Keyword arguments passed to
+            :class:`FullyShardedDataParallel`.
     """
 
     def __init__(
@@ -106,6 +109,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         cpu_offload: Optional[Union[bool, CPUOffload]] = None,
         fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
         backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+        **kwargs,
     ):
 
         if cpu_offload is not None:
@@ -150,8 +154,13 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
-        super().__init__(module, process_group, cpu_offload,
-                         fsdp_auto_wrap_policy, backward_prefetch)
+        super().__init__(
+            module=module,
+            process_group=process_group,
+            auto_wrap_policy=fsdp_auto_wrap_policy,
+            cpu_offload=cpu_offload,
+            backward_prefetch=backward_prefetch,
+            **kwargs)
 
     def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:

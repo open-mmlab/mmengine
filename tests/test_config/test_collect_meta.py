@@ -9,7 +9,7 @@ from mmengine.config.utils import (_get_external_cfg_base_path,
 
 def test_get_external_cfg_base_path(tmp_path):
     package_path = tmp_path
-    rel_cfg_path = 'cfg_dir/cfg_file'
+    rel_cfg_path = os.path.join('cfg_dir', 'cfg_file')
     with pytest.raises(FileNotFoundError):
         _get_external_cfg_base_path(str(package_path), rel_cfg_path)
     cfg_dir = tmp_path / '.mim' / 'configs' / 'cfg_dir'

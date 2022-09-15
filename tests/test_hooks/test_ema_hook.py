@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os.path as osp
 import tempfile
 from unittest import TestCase
@@ -10,6 +11,7 @@ from torch.utils.data import Dataset
 
 from mmengine.evaluator import Evaluator
 from mmengine.hooks import EMAHook
+from mmengine.logging import MMLogger
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.optim import OptimWrapper
 from mmengine.registry import DATASETS, MODEL_WRAPPERS
@@ -56,6 +58,16 @@ class ToyModel2(BaseModel, ToyModel):
         return super(BaseModel, self).forward(*args, **kwargs)
 
 
+class ToyModel3(BaseModel, ToyModel):
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(2, 2)
+
+    def forward(self, *args, **kwargs):
+        return super(BaseModel, self).forward(*args, **kwargs)
+
+
 @DATASETS.register_module()
 class DummyDataset(Dataset):
     METAINFO = dict()  # type: ignore
@@ -79,6 +91,10 @@ class TestEMAHook(TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
         self.temp_dir.cleanup()
 
     def test_ema_hook(self):
@@ -201,6 +217,26 @@ class TestEMAHook(TestCase):
             default_hooks=dict(logger=None),
             custom_hooks=[dict(type='EMAHook', strict_load=False)],
             experiment_name='test5')
+        runner.test()
+
+        # Test does not load ckpt strict_loadly.
+        # Test load checkpoint without ema_state_dict
+        # Test with different size head.
+        runner = Runner(
+            model=ToyModel3(),
+            test_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            test_evaluator=evaluator,
+            test_cfg=dict(),
+            work_dir=self.temp_dir.name,
+            load_from=osp.join(self.temp_dir.name,
+                               'without_ema_state_dict.pth'),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook', strict_load=False)],
+            experiment_name='test5.1')
         runner.test()
 
         # Test enable ema at 5 epochs.

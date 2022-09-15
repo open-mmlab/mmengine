@@ -39,6 +39,5 @@ Utils
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    get_metric_value
