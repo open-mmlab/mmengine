@@ -21,7 +21,6 @@ Dataset
 
    BaseDataset
    Compose
-   force_full_init
 
 Dataset Wrapper
 ----------------
@@ -52,7 +51,6 @@ Utils
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    default_collate
    pseudo_collate
