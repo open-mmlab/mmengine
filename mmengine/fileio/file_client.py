@@ -1017,6 +1017,10 @@ class FileClient:
         """
         self.client.remove(filepath)
 
+    get_bytes = get
+    put_bytes = put
+    rmfile = remove
+
     def exists(self, filepath: Union[str, Path]) -> bool:
         """Check whether a file path exists.
 
