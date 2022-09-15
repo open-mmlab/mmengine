@@ -31,6 +31,7 @@ Examples:
     >>> fileio.get_bytes('s3://path/of/your/file')
 """
 import json
+import warnings
 from contextlib import contextmanager
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -775,7 +776,11 @@ def generate_presigned_url(
     return backend.generate_presigned_url(url, client_method, expires_in)
 
 
-def load(file, file_format=None, file_client_args=None, **kwargs):
+def load(file,
+         file_format=None,
+         file_client_args=None,
+         backend_args=None,
+         **kwargs):
     """Load data from json/yaml/pickle files.
 
     This method provides a unified api for loading data from serialized files.
@@ -792,7 +797,11 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
             "pickle/pkl".
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> load('/path/of/your/file')  # file is storaged in disk
@@ -809,14 +818,27 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
     if file_format not in file_handlers:
         raise TypeError(f'Unsupported format: {file_format}')
 
+    if file_client_args is not None:
+        warnings.warn(
+            '"file_client_args" will be deprecated in future. '
+            'Please use "backend_args" instead', DeprecationWarning)
+        if backend_args is not None:
+            raise ValueError(
+                '"file_client_args and "backend_args" cannot be both set.')
+
     handler = file_handlers[file_format]
     if is_str(file):
-        file_client = FileClient.infer_client(file_client_args, file)
+        if file_client_args is not None:
+            file_client = FileClient.infer_client(file_client_args, file)
+            file_backend = file_client
+        else:
+            file_backend = get_file_backend(file, backend_args=backend_args)
+
         if handler.str_like:
-            with StringIO(file_client.get_text(file)) as f:
+            with StringIO(file_backend.get_text(file)) as f:
                 obj = handler.load_from_fileobj(f, **kwargs)
         else:
-            with BytesIO(file_client.get(file)) as f:
+            with BytesIO(file_backend.get_bytes(file)) as f:
                 obj = handler.load_from_fileobj(f, **kwargs)
     elif hasattr(file, 'read'):
         obj = handler.load_from_fileobj(file, **kwargs)
@@ -825,7 +847,12 @@ def load(file, file_format=None, file_client_args=None, **kwargs):
     return obj
 
 
-def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
+def dump(obj,
+         file=None,
+         file_format=None,
+         file_client_args=None,
+         backend_args=None,
+         **kwargs):
     """Dump data to json/yaml/pickle strings or files.
 
     This method provides a unified api for dumping data as strings or to files,
@@ -842,7 +869,11 @@ def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
         file_format (str, optional): Same as :func:`load`.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> dump('hello world', '/path/of/your/file')  # disk
@@ -862,19 +893,32 @@ def dump(obj, file=None, file_format=None, file_client_args=None, **kwargs):
     if file_format not in file_handlers:
         raise TypeError(f'Unsupported format: {file_format}')
 
+    if file_client_args is not None:
+        warnings.warn(
+            '"file_client_args" will be deprecated in future. '
+            'Please use "backend_args" instead', DeprecationWarning)
+        if backend_args is not None:
+            raise ValueError(
+                '"file_client_args and "backend_args" cannot be both set.')
+
     handler = file_handlers[file_format]
     if file is None:
         return handler.dump_to_str(obj, **kwargs)
     elif is_str(file):
-        file_client = FileClient.infer_client(file_client_args, file)
+        if file_client_args is not None:
+            file_client = FileClient.infer_client(file_client_args, file)
+            file_backend = file_client
+        else:
+            file_backend = get_file_backend(file, backend_args=backend_args)
+
         if handler.str_like:
             with StringIO() as f:
                 handler.dump_to_fileobj(obj, f, **kwargs)
-                file_client.put_text(f.getvalue(), file)
+                file_backend.put_text(f.getvalue(), file)
         else:
             with BytesIO() as f:
                 handler.dump_to_fileobj(obj, f, **kwargs)
-                file_client.put(f.getvalue(), file)
+                file_backend.put_bytes(f.getvalue(), file)
     elif hasattr(file, 'write'):
         handler.dump_to_fileobj(obj, file, **kwargs)
     else:
