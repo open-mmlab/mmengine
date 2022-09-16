@@ -67,19 +67,19 @@ class BaseTestTimeAugModel(BaseModel):
         implement it.
 
     Args:
-        model (BaseModel): Tested model.
+        module (BaseModel): Tested model.
         data_preprocessor (BaseDataPreprocessor or dict, optional): The
             pre-process config For :class:`BaseDataPreprocessor`.
     """
 
     def __init__(
             self,
-            model: BaseModel,
+            module: BaseModel,
             data_preprocessor: Optional[Union[dict,
                                               BaseDataPreprocessor]] = None):
 
         super().__init__(data_preprocessor)
-        self.module = model
+        self.module = module
 
     @abstractmethod
     def merge_results(self, data_samples_list: EnhancedDataSamples) \
