@@ -11,7 +11,7 @@ def test_register_backend():
     @register_backend('example')
     class ExampleBackend(BaseStorageBackend):
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):
@@ -22,7 +22,7 @@ def test_register_backend():
     # 1.2 use it as a normal function
     class ExampleBackend1(BaseStorageBackend):
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):
@@ -51,7 +51,7 @@ def test_register_backend():
 
     class ExampleBackend2:
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):
@@ -73,7 +73,7 @@ def test_register_backend():
     # 5. test `prefixes` parameter
     class ExampleBackend3(BaseStorageBackend):
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):
@@ -102,7 +102,7 @@ def test_register_backend():
 
     class ExampleBackend4(BaseStorageBackend):
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):

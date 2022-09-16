@@ -169,10 +169,10 @@ def test_get_file_backend():
     assert backend7 is not backend6
 
 
-def test_get_bytes():
+def test_get():
     # test HardDiskBackend
     filepath = Path(img_path)
-    img_bytes = fileio.get_bytes(filepath)
+    img_bytes = fileio.get(filepath)
     assert filepath.open('rb').read() == img_bytes
 
 
@@ -183,18 +183,18 @@ def test_get_text():
     assert filepath.open('r').read() == text
 
 
-def test_put_bytes():
+def test_put():
     # test HardDiskBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         filepath = Path(tmp_dir) / 'img.png'
-        fileio.put_bytes(b'disk', filepath)
-        assert fileio.get_bytes(filepath) == b'disk'
+        fileio.put(b'disk', filepath)
+        assert fileio.get(filepath) == b'disk'
 
-        # If the directory does not exist, put_bytes will create a
+        # If the directory does not exist, put will create a
         # directory first
         filepath = Path(tmp_dir) / 'not_existed_dir' / 'test.jpg'
-        fileio.put_bytes(b'disk', filepath)
-        assert fileio.get_bytes(filepath) == b'disk'
+        fileio.put(b'disk', filepath)
+        assert fileio.get(filepath) == b'disk'
 
 
 def test_put_text():
@@ -362,26 +362,26 @@ def test_copytree_to_local():
             fileio.copytree(src, Path(tmp_dir) / 'dir2')
 
 
-def test_rmfile():
+def test_remove():
     # test HardDiskBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         # filepath is a Path object
         filepath = Path(tmp_dir) / 'test.txt'
         fileio.put_text('disk', filepath)
         assert fileio.exists(filepath)
-        fileio.rmfile(filepath)
+        fileio.remove(filepath)
         assert not fileio.exists(filepath)
 
         # raise error if file does not exist
         with pytest.raises(FileNotFoundError):
             filepath = Path(tmp_dir) / 'test1.txt'
-            fileio.rmfile(filepath)
+            fileio.remove(filepath)
 
         # can not remove directory
         filepath = Path(tmp_dir) / 'dir'
         filepath.mkdir()
         with pytest.raises(IsADirectoryError):
-            fileio.rmfile(filepath)
+            fileio.remove(filepath)
 
 
 def test_rmtree():

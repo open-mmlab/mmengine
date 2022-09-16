@@ -154,13 +154,12 @@ except ImportError:
                 backend.join_path(self.petrel_dir, 'dir', 'file'),
                 f'{self.petrel_dir}/dir/file')
 
-        def test_get_bytes(self):
+        def test_get(self):
             backend = PetrelBackend()
             with patch.object(
                     backend._client, 'Get',
                     return_value=b'petrel') as patched_get:
-                self.assertEqual(
-                    backend.get_bytes(self.petrel_path), b'petrel')
+                self.assertEqual(backend.get(self.petrel_path), b'petrel')
                 patched_get.assert_called_once_with(self.expected_path)
 
         def test_get_text(self):
@@ -171,10 +170,10 @@ except ImportError:
                 self.assertEqual(backend.get_text(self.petrel_path), 'petrel')
                 patched_get.assert_called_once_with(self.expected_path)
 
-        def test_put_bytes(self):
+        def test_put(self):
             backend = PetrelBackend()
             with patch.object(backend._client, 'put') as patched_put:
-                backend.put_bytes(b'petrel', self.petrel_path)
+                backend.put(b'petrel', self.petrel_path)
                 patched_put.assert_called_once_with(self.expected_path,
                                                     b'petrel')
 
@@ -287,24 +286,24 @@ except ImportError:
 
         def test_copytree(self):
             backend = PetrelBackend()
-            put_bytes_inputs = []
-            get_bytes_inputs = []
+            put_inputs = []
+            get_inputs = []
 
-            def put_bytes(obj, filepath):
-                put_bytes_inputs.append((obj, filepath))
+            def put(obj, filepath):
+                put_inputs.append((obj, filepath))
 
-            def get_bytes(filepath):
-                get_bytes_inputs.append(filepath)
+            def get(filepath):
+                get_inputs.append(filepath)
 
             with build_temporary_directory() as tmp_dir, \
-                 patch.object(backend, 'put_bytes', side_effect=put_bytes),\
-                 patch.object(backend, 'get_bytes', side_effect=get_bytes),\
+                 patch.object(backend, 'put', side_effect=put),\
+                 patch.object(backend, 'get', side_effect=get),\
                  patch.object(backend, 'exists', return_value=False):
                 dst = f'{tmp_dir}/dir'
                 self.assertEqual(backend.copytree(tmp_dir, dst), dst)
 
-                self.assertEqual(len(put_bytes_inputs), 5)
-                self.assertEqual(len(get_bytes_inputs), 5)
+                self.assertEqual(len(put_inputs), 5)
+                self.assertEqual(len(get_inputs), 5)
 
                 # dst should not exist
                 with patch.object(backend, 'exists', return_value=True):
@@ -386,32 +385,32 @@ except ImportError:
             backend = PetrelBackend()
             inputs = []
 
-            def get_bytes(filepath):
+            def get(filepath):
                 inputs.append(filepath)
                 return b'petrel'
 
             with build_temporary_directory() as tmp_dir, \
-                 patch.object(backend, 'get_bytes', side_effect=get_bytes):
+                 patch.object(backend, 'get', side_effect=get):
                 dst = f'{tmp_dir}/dir'
                 backend.copytree_to_local(tmp_dir, dst)
 
                 self.assertEqual(len(inputs), 5)
 
-        def test_rmfile(self):
+        def test_remove(self):
             backend = PetrelBackend()
             self.assertTrue(has_method(backend._client, 'delete'))
             # raise Exception if `delete` is not implemented
             with delete_and_reset_method(backend._client, 'delete'):
                 self.assertFalse(has_method(backend._client, 'delete'))
                 with self.assertRaises(NotImplementedError):
-                    backend.rmfile(self.petrel_path)
+                    backend.remove(self.petrel_path)
 
             with patch.object(backend._client, 'delete') as patched_delete, \
                  patch.object(backend._client, 'isdir', return_value=False) \
                  as patched_isdir, \
                  patch.object(backend._client, 'contains', return_value=True) \
                  as patched_contains:
-                backend.rmfile(self.petrel_path)
+                backend.remove(self.petrel_path)
                 patched_delete.assert_called_once_with(self.expected_path)
                 patched_isdir.assert_called_once_with(self.expected_path)
                 patched_contains.assert_called_once_with(self.expected_path)
@@ -420,11 +419,11 @@ except ImportError:
             backend = PetrelBackend()
             inputs = []
 
-            def rmfile(filepath):
+            def remove(filepath):
                 inputs.append(filepath)
 
             with build_temporary_directory() as tmp_dir,\
-                 patch.object(backend, 'rmfile', side_effect=rmfile):
+                 patch.object(backend, 'remove', side_effect=remove):
                 backend.rmtree(tmp_dir)
 
                 self.assertEqual(len(inputs), 5)
@@ -586,20 +585,20 @@ else:
             self.assertTrue(backend.isfile(text4_path))
             self.assertTrue(backend.isfile(img_path))
 
-        def test_get_bytes(self):
+        def test_get(self):
             backend = PetrelBackend()
             img_path = f'{self.petrel_dir}/dir2/img.jpg'
-            self.assertEqual(backend.get_bytes(img_path), b'img')
+            self.assertEqual(backend.get(img_path), b'img')
 
         def test_get_text(self):
             backend = PetrelBackend()
             text_path = f'{self.petrel_dir}/text1.txt'
             self.assertEqual(backend.get_text(text_path), 'text1')
 
-        def test_put_bytes(self):
+        def test_put(self):
             backend = PetrelBackend()
             img_path = f'{self.petrel_dir}/img.jpg'
-            backend.put_bytes(b'img', img_path)
+            backend.put(b'img', img_path)
 
         def test_put_text(self):
             backend = PetrelBackend()
@@ -728,11 +727,11 @@ else:
                 self.assertTrue(osp.exists(Path(tmp_dir) / 'text1.txt'))
                 self.assertTrue(osp.exists(Path(tmp_dir) / 'dir2' / 'img.jpg'))
 
-        def test_rmfile(self):
+        def test_remove(self):
             backend = PetrelBackend()
             img_path = f'{self.petrel_dir}/dir2/img.jpg'
             self.assertTrue(backend.isfile(img_path))
-            backend.rmfile(img_path)
+            backend.remove(img_path)
             self.assertFalse(backend.exists(img_path))
 
         def test_rmtree(self):

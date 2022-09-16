@@ -352,7 +352,7 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     """
     file_backend = get_file_backend(
         filename, backend_args={'backend': backend})
-    with io.BytesIO(file_backend.get_bytes(filename)) as buffer:
+    with io.BytesIO(file_backend.get(filename)) as buffer:
         checkpoint = torch.load(buffer, map_location=map_location)
     return checkpoint
 
@@ -697,7 +697,7 @@ def save_checkpoint(checkpoint,
 
         with io.BytesIO() as f:
             torch.save(checkpoint, f)
-            file_backend.put_bytes(f.getvalue(), filename)
+            file_backend.put(f.getvalue(), filename)
 
 
 def find_latest_checkpoint(path: str) -> Optional[str]:

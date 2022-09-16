@@ -43,9 +43,9 @@ class TestMemcachedBackend(TestCase):
     @patch('mc.MemcachedClient.GetInstance', MockMemcachedClient)
     @patch('mc.pyvector', MagicMock)
     @patch('mc.ConvertBuffer', lambda x: x.content)
-    def test_get_bytes(self, path_type):
+    def test_get(self, path_type):
         backend = MemcachedBackend(**self.mc_cfg)
-        img_bytes = backend.get_bytes(path_type(self.img_path))
+        img_bytes = backend.get(path_type(self.img_path))
         self.assertEqual(self.img_path.open('rb').read(), img_bytes)
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, self.img_shape)

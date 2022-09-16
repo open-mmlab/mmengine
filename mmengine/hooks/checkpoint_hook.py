@@ -337,7 +337,7 @@ class CheckpointHook(Hook):
                 ckpt_path = self.file_backend.join_path(
                     self.out_dir, filename_tmpl.format(_step))
                 if self.file_backend.isfile(ckpt_path):
-                    self.file_backend.rmfile(ckpt_path)
+                    self.file_backend.remove(ckpt_path)
                 else:
                     break
 

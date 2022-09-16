@@ -13,7 +13,9 @@ from .base import BaseStorageBackend
 class LocalBackend(BaseStorageBackend):
     """Raw hard disks storage backend."""
 
-    def get_bytes(self, filepath: Union[str, Path]) -> bytes:
+    _allow_symlink = True
+
+    def get(self, filepath: Union[str, Path]) -> bytes:
         """Read bytes from a given ``filepath`` with 'rb' mode.
 
         Args:
@@ -25,7 +27,7 @@ class LocalBackend(BaseStorageBackend):
         Examples:
             >>> backend = LocalBackend()
             >>> filepath = '/path/of/file'
-            >>> backend.get_bytes(filepath)
+            >>> backend.get(filepath)
             b'hello world'
         """
         with open(filepath, 'rb') as f:
@@ -55,11 +57,11 @@ class LocalBackend(BaseStorageBackend):
             text = f.read()
         return text
 
-    def put_bytes(self, obj: bytes, filepath: Union[str, Path]) -> None:
+    def put(self, obj: bytes, filepath: Union[str, Path]) -> None:
         """Write bytes to a given ``filepath`` with 'wb' mode.
 
         Note:
-            ``put_bytes`` will create a directory if the directory of
+            ``put`` will create a directory if the directory of
             ``filepath`` does not exist.
 
         Args:
@@ -69,7 +71,7 @@ class LocalBackend(BaseStorageBackend):
         Examples:
             >>> backend = LocalBackend()
             >>> filepath = '/path/of/file'
-            >>> backend.put_bytes(b'hello world', filepath)
+            >>> backend.put(b'hello world', filepath)
         """
         mmengine.mkdir_or_exist(osp.dirname(filepath))
         with open(filepath, 'wb') as f:
@@ -393,7 +395,7 @@ class LocalBackend(BaseStorageBackend):
         """
         return self.copytree(src, dst)
 
-    def rmfile(self, filepath: Union[str, Path]) -> None:
+    def remove(self, filepath: Union[str, Path]) -> None:
         """Remove a file.
 
         Args:
@@ -408,7 +410,7 @@ class LocalBackend(BaseStorageBackend):
         Examples:
             >>> backend = LocalBackend()
             >>> filepath = '/path/of/file'
-            >>> backend.rmfile(filepath)
+            >>> backend.remove(filepath)
         """
         os.remove(filepath)
 

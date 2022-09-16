@@ -16,12 +16,12 @@ def test_base_storage_backend():
 
     class ExampleBackend(BaseStorageBackend):
 
-        def get_bytes(self, filepath):
+        def get(self, filepath):
             return filepath
 
         def get_text(self, filepath):
             return filepath
 
     backend = ExampleBackend()
-    assert backend.get_bytes('test') == 'test'
+    assert backend.get('test') == 'test'
     assert backend.get_text('test') == 'test'

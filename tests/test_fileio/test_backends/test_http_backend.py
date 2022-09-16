@@ -33,9 +33,9 @@ class TestHTTPBackend(TestCase):
         cls.test_data_dir = Path(__file__).parent.parent.parent / 'data'
         cls.text_path = cls.test_data_dir / 'filelist.txt'
 
-    def test_get_bytes(self):
+    def test_get(self):
         backend = HTTPBackend()
-        img_bytes = backend.get_bytes(self.img_url)
+        img_bytes = backend.get(self.img_url)
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, self.img_shape)
 

@@ -32,7 +32,7 @@ class MemcachedBackend(BaseStorageBackend):
         # mc.pyvector servers as a point which points to a memory cache
         self._mc_buffer = mc.pyvector()
 
-    def get_bytes(self, filepath: Union[str, Path]):
+    def get(self, filepath: Union[str, Path]):
         filepath = str(filepath)
         import mc
         self._client.Get(filepath, self._mc_buffer)

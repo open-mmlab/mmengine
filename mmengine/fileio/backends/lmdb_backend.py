@@ -41,7 +41,7 @@ class LmdbBackend(BaseStorageBackend):
         self.kwargs = kwargs
         self._client = None
 
-    def get_bytes(self, filepath: Union[str, Path]) -> bytes:
+    def get(self, filepath: Union[str, Path]) -> bytes:
         """Get values according to the filepath.
 
         Args:
@@ -52,7 +52,7 @@ class LmdbBackend(BaseStorageBackend):
 
         Examples:
             >>> backend = LmdbBackend('path/to/lmdb')
-            >>> backend.get_bytes('key')
+            >>> backend.get('key')
             b'hello world'
         """
         if self._client is None:

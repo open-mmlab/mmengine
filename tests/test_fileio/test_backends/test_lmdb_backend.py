@@ -23,9 +23,9 @@ class TestLmdbBackend(TestCase):
         cls.lmdb_path = cls.test_data_dir / 'demo.lmdb'
 
     @parameterized.expand([[Path], [str]])
-    def test_get_bytes(self, path_type):
+    def test_get(self, path_type):
         backend = LmdbBackend(path_type(self.lmdb_path))
-        img_bytes = backend.get_bytes('baboon')
+        img_bytes = backend.get('baboon')
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, (120, 125, 3))
 

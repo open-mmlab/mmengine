@@ -32,8 +32,8 @@ class PetrelBackend(BaseStorageBackend):
         >>> backend = PetrelBackend()
         >>> filepath1 = 'petrel://path/of/file'
         >>> filepath2 = 'cluster-name:petrel://path/of/file'
-        >>> backend.get_bytes(filepath1)  # get data from default cluster
-        >>> client.get_bytes(filepath2)  # get data from 'cluster-name' cluster
+        >>> backend.get(filepath1)  # get data from default cluster
+        >>> client.get(filepath2)  # get data from 'cluster-name' cluster
     """
 
     def __init__(self,
@@ -79,7 +79,7 @@ class PetrelBackend(BaseStorageBackend):
         filepath = str(filepath)
         return filepath.replace('petrel://', 's3://')
 
-    def get_bytes(self, filepath: Union[str, Path]) -> bytes:
+    def get(self, filepath: Union[str, Path]) -> bytes:
         """Read bytes from a given ``filepath`` with 'rb' mode.
 
         Args:
@@ -91,7 +91,7 @@ class PetrelBackend(BaseStorageBackend):
         Examples:
             >>> backend = PetrelBackend()
             >>> filepath = 'petrel://path/of/file'
-            >>> backend.get_bytes(filepath)
+            >>> backend.get(filepath)
             b'hello world'
         """
         filepath = self._map_path(filepath)
@@ -121,9 +121,9 @@ class PetrelBackend(BaseStorageBackend):
             >>> backend.get_text(filepath)
             'hello world'
         """
-        return str(self.get_bytes(filepath), encoding=encoding)
+        return str(self.get(filepath), encoding=encoding)
 
-    def put_bytes(self, obj: bytes, filepath: Union[str, Path]) -> None:
+    def put(self, obj: bytes, filepath: Union[str, Path]) -> None:
         """Write bytes to a given ``filepath``.
 
         Args:
@@ -133,7 +133,7 @@ class PetrelBackend(BaseStorageBackend):
         Examples:
             >>> backend = PetrelBackend()
             >>> filepath = 'petrel://path/of/file'
-            >>> backend.put_bytes(b'hello world', filepath)
+            >>> backend.put(b'hello world', filepath)
         """
         filepath = self._map_path(filepath)
         filepath = self._format_path(filepath)
@@ -159,7 +159,7 @@ class PetrelBackend(BaseStorageBackend):
             >>> filepath = 'petrel://path/of/file'
             >>> backend.put_text('hello world', filepath)
         """
-        self.put_bytes(bytes(obj, encoding=encoding), filepath)
+        self.put(bytes(obj, encoding=encoding), filepath)
 
     def exists(self, filepath: Union[str, Path]) -> bool:
         """Check whether a file path exists.
@@ -305,7 +305,7 @@ class PetrelBackend(BaseStorageBackend):
         assert self.isfile(filepath)
         try:
             f = tempfile.NamedTemporaryFile(delete=False)
-            f.write(self.get_bytes(filepath))
+            f.write(self.get(filepath))
             f.close()
             yield f.name
         finally:
@@ -354,7 +354,7 @@ class PetrelBackend(BaseStorageBackend):
         if src == dst:
             raise SameFileError('src and dst should not be same')
 
-        self.put_bytes(self.get_bytes(src), dst)
+        self.put(self.get(src), dst)
         return dst
 
     def copytree(
@@ -396,7 +396,7 @@ class PetrelBackend(BaseStorageBackend):
         for path in self.list_dir_or_file(src, list_dir=False, recursive=True):
             src_path = self.join_path(src, path)
             dst_path = self.join_path(dst, path)
-            self.put_bytes(self.get_bytes(src_path), dst_path)
+            self.put(self.get(src_path), dst_path)
 
         return dst
 
@@ -435,7 +435,7 @@ class PetrelBackend(BaseStorageBackend):
             dst = self.join_path(dst, osp.basename(src))
 
         with open(src, 'rb') as f:
-            self.put_bytes(f.read(), dst)
+            self.put(f.read(), dst)
 
         return dst
 
@@ -520,7 +520,7 @@ class PetrelBackend(BaseStorageBackend):
                 dst = dst / basename
 
         with open(dst, 'wb') as f:
-            f.write(self.get_bytes(src))
+            f.write(self.get(src))
 
         return dst
 
@@ -552,11 +552,11 @@ class PetrelBackend(BaseStorageBackend):
             dst_path = osp.join(dst, path)
             mmengine.mkdir_or_exist(osp.dirname(dst_path))
             with open(dst_path, 'wb') as f:
-                f.write(self.get_bytes(self.join_path(src, path)))
+                f.write(self.get(self.join_path(src, path)))
 
         return dst
 
-    def rmfile(self, filepath: Union[str, Path]) -> None:
+    def remove(self, filepath: Union[str, Path]) -> None:
         """Remove a file.
 
         Args:
@@ -571,7 +571,7 @@ class PetrelBackend(BaseStorageBackend):
         Examples:
             >>> backend = PetrelBackend()
             >>> filepath = 'petrel://path/of/file'
-            >>> backend.rmfile(filepath)
+            >>> backend.remove(filepath)
         """
         if not has_method(self._client, 'delete'):
             raise NotImplementedError(
@@ -604,7 +604,7 @@ class PetrelBackend(BaseStorageBackend):
         for path in self.list_dir_or_file(
                 dir_path, list_dir=False, recursive=True):
             filepath = self.join_path(dir_path, path)
-            self.rmfile(filepath)
+            self.remove(filepath)
 
     def copy_if_symlink_fails(
         self,

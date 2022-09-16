@@ -12,7 +12,7 @@ from .base import BaseStorageBackend
 class HTTPBackend(BaseStorageBackend):
     """HTTP and HTTPS storage bachend."""
 
-    def get_bytes(self, filepath: str) -> bytes:
+    def get(self, filepath: str) -> bytes:
         """ead bytes from a given ``filepath``.
 
         Args:
@@ -23,7 +23,7 @@ class HTTPBackend(BaseStorageBackend):
 
         Examples:
             >>> backend = HTTPBackend()
-            >>> backend.get_bytes('http://path/of/file')
+            >>> backend.get('http://path/of/file')
             b'hello world'
         """
         return urlopen(filepath).read()
@@ -67,7 +67,7 @@ class HTTPBackend(BaseStorageBackend):
         """
         try:
             f = tempfile.NamedTemporaryFile(delete=False)
-            f.write(self.get_bytes(filepath))
+            f.write(self.get(filepath))
             f.close()
             yield f.name
         finally:

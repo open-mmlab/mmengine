@@ -25,10 +25,10 @@ Examples:
     >>> # Initialize a file backend and call its methods
     >>> import mmengine.fileio as fileio
     >>> backend = fileio.get_file_backend(backend_args={'backend': 'petrel'})
-    >>> backend.get_bytes('s3://path/of/your/file')
+    >>> backend.get('s3://path/of/your/file')
 
     >>> # Directory call unified I/O functions
-    >>> fileio.get_bytes('s3://path/of/your/file')
+    >>> fileio.get('s3://path/of/your/file')
 """
 import json
 import warnings
@@ -37,19 +37,15 @@ from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Generator, Iterator, Optional, Tuple, Union
 
-from mmengine.utils import is_filepath, is_list_of, is_str
+from mmengine.utils import is_filepath, is_str
 from .backends import backends, prefix_to_backends
 from .file_client import FileClient
-from .handlers import BaseFileHandler, JsonHandler, PickleHandler, YamlHandler
+# file_handlers and register_handler had been moved to
+# mmengine/fileio/handlers/registry_utis. Import them
+# in this file to keep backward compatibility.
+from .handlers import file_handlers, register_handler  # noqa: F401
 
 backend_instances: dict = {}
-file_handlers = {
-    'json': JsonHandler(),
-    'yaml': YamlHandler(),
-    'yml': YamlHandler(),
-    'pickle': PickleHandler(),
-    'pkl': PickleHandler()
-}
 
 
 def _parse_uri_prefix(uri: Union[str, Path]) -> str:
@@ -159,7 +155,7 @@ def get_file_backend(
         return backend
 
 
-def get_bytes(
+def get(
     filepath: Union[str, Path],
     backend_args: Optional[dict] = None,
 ) -> bytes:
@@ -175,12 +171,12 @@ def get_bytes(
 
     Examples:
         >>> filepath = '/path/of/file'
-        >>> get_bytes(filepath)
+        >>> get(filepath)
         b'hello world'
     """
     backend = get_file_backend(
         filepath, backend_args=backend_args, enable_singleton=True)
-    return backend.get_bytes(filepath)
+    return backend.get(filepath)
 
 
 def get_text(
@@ -210,7 +206,7 @@ def get_text(
     return backend.get_text(filepath, encoding)
 
 
-def put_bytes(
+def put(
     obj: bytes,
     filepath: Union[str, Path],
     backend_args: Optional[dict] = None,
@@ -218,7 +214,7 @@ def put_bytes(
     """Write bytes to a given ``filepath`` with 'wb' mode.
 
     Note:
-        ``put_bytes`` should create a directory if the directory of
+        ``put`` should create a directory if the directory of
         ``filepath`` does not exist.
 
     Args:
@@ -229,11 +225,11 @@ def put_bytes(
 
     Examples:
         >>> filepath = '/path/of/file'
-        >>> put_bytes(b'hello world', filepath)
+        >>> put(b'hello world', filepath)
     """
     backend = get_file_backend(
         filepath, backend_args=backend_args, enable_singleton=True)
-    backend.put_bytes(obj, filepath)
+    backend.put(obj, filepath)
 
 
 def put_text(
@@ -628,7 +624,7 @@ def copytree_to_local(
     return backend.copytree_to_local(src, dst)
 
 
-def rmfile(
+def remove(
     filepath: Union[str, Path],
     backend_args: Optional[dict] = None,
 ) -> None:
@@ -647,11 +643,11 @@ def rmfile(
 
     Examples:
         >>> filepath = '/path/of/file'
-        >>> rmfile(filepath)
+        >>> remove(filepath)
     """
     backend = get_file_backend(
         filepath, backend_args=backend_args, enable_singleton=True)
-    backend.rmfile(filepath)
+    backend.remove(filepath)
 
 
 def rmtree(
@@ -838,7 +834,7 @@ def load(file,
             with StringIO(file_backend.get_text(file)) as f:
                 obj = handler.load_from_fileobj(f, **kwargs)
         else:
-            with BytesIO(file_backend.get_bytes(file)) as f:
+            with BytesIO(file_backend.get(file)) as f:
                 obj = handler.load_from_fileobj(f, **kwargs)
     elif hasattr(file, 'read'):
         obj = handler.load_from_fileobj(file, **kwargs)
@@ -918,36 +914,8 @@ def dump(obj,
         else:
             with BytesIO() as f:
                 handler.dump_to_fileobj(obj, f, **kwargs)
-                file_backend.put_bytes(f.getvalue(), file)
+                file_backend.put(f.getvalue(), file)
     elif hasattr(file, 'write'):
         handler.dump_to_fileobj(obj, file, **kwargs)
     else:
         raise TypeError('"file" must be a filename str or a file-object')
-
-
-def _register_handler(handler, file_formats):
-    """Register a handler for some file extensions.
-
-    Args:
-        handler (:obj:`BaseFileHandler`): Handler to be registered.
-        file_formats (str or list[str]): File formats to be handled by this
-            handler.
-    """
-    if not isinstance(handler, BaseFileHandler):
-        raise TypeError(
-            f'handler must be a child of BaseFileHandler, not {type(handler)}')
-    if isinstance(file_formats, str):
-        file_formats = [file_formats]
-    if not is_list_of(file_formats, str):
-        raise TypeError('file_formats must be a str or a list of str')
-    for ext in file_formats:
-        file_handlers[ext] = handler
-
-
-def register_handler(file_formats, **kwargs):
-
-    def wrap(cls):
-        _register_handler(cls(**kwargs), file_formats)
-        return cls
-
-    return wrap
