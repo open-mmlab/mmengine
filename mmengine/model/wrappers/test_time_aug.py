@@ -78,8 +78,14 @@ class BaseTestTimeAugModel(BaseModel):
             data_preprocessor: Optional[Union[dict,
                                               BaseDataPreprocessor]] = None):
 
-        super().__init__(data_preprocessor)
-        self.module = module
+        super().__init__(module)
+        if isinstance(module, BaseModel):
+            self.module = module
+        elif isinstance(module, dict):
+            self.module = MODELS.build(module)
+        else:
+            raise TypeError('The type of module should be `BaseModel` or a '
+                            f'dict, but got {module}')
 
     @abstractmethod
     def merge_results(self, data_samples_list: EnhancedDataSamples) \
