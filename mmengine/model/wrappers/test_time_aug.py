@@ -94,9 +94,18 @@ class BaseTestTimeAugModel(BaseModel):
             List[BaseDataElement]: Merged prediction.
         """
 
-    def forward(  # type: ignore[override]
-            self, inputs: EnhancedInputs, data_samples: EnhancedDataSamples,
-            mode: str):
+    def forward(self,
+                inputs: torch.Tensor,
+                data_samples: Optional[list] = None,
+                mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
+        """``BaseTestTimeAugModel`` will directly call ``test_step`` of
+        corresponding algorithm, therefore its forward should not be called."""
+        raise NotImplementedError(
+            '`BaseTestTimeAugModel` will directly call '
+            f'{self.module.__class__.__name__}.test_step, its `forward` '
+            f'should not be called')
+
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Get predictions of each enhanced data, a multiple predictionsa.
 
         Args:
@@ -110,12 +119,23 @@ class BaseTestTimeAugModel(BaseModel):
         Returns:
             MergedDataSamples: Merged prediction.
         """
-        data_samples_list = []
-        for batch_inputs, batch_data_samples in zip(inputs, data_samples):
-            data = self.module.data_preprocessor(
-                dict(inputs=batch_inputs, data_samples=batch_data_samples))
-            data_samples_list.append(self.module(**data, mode='predict'))
-        return self.merge_results(data_samples_list)
+        data_list: Union[List[dict], List[list]]
+        if isinstance(data, dict):
+            num_augs = len(data[next(iter(data))])
+            data_list = [{key: value[idx]
+                          for key, value in data.items()}
+                         for idx in range(num_augs)]
+        elif isinstance(data, (tuple, list)):
+            num_augs = len(data[0])
+            data_list = [[_data[idx] for _data in data]
+                         for idx in range(num_augs)]
+        else:
+            raise TypeError
+
+        predictions = []
+        for data in data_list:
+            predictions.append(self.module.test_step(data))
+        return self.merge_results(predictions)
 
     def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
