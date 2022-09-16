@@ -94,8 +94,10 @@ class BaseTestTimeAugModel(BaseModel):
             List[BaseDataElement]: Merged prediction.
         """
 
-    def forward(self, inputs, data_samples, mode):
-        """
+    def forward(  # type: ignore[override]
+            self, inputs: EnhancedInputs, data_samples: EnhancedDataSamples,
+            mode: str):
+        """Get predictions of each enhanced data, a multiple predictionsa.
 
         Args:
             inputs (EnhancedInputs): List of enhanced batch data from single
@@ -117,6 +119,8 @@ class BaseTestTimeAugModel(BaseModel):
 
     def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """``BaseTestTimeAugModel`` is only for testing for validation,
-        ``train_step`` should not be called."""
-        raise NotImplementedError('train_step ')
+        """``BaseTestTimeAugModel`` is only for testing or validation,
+        therefore ``train_step`` should not be called."""
+        raise NotImplementedError('train_step should not be called! '
+                                  f'{self.__class__.__name__} should only be'
+                                  f'used for testing.')
