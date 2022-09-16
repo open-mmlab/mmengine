@@ -13,7 +13,7 @@ class HTTPBackend(BaseStorageBackend):
     """HTTP and HTTPS storage bachend."""
 
     def get(self, filepath: str) -> bytes:
-        """ead bytes from a given ``filepath``.
+        """Read bytes from a given ``filepath``.
 
         Args:
             filepath (str): Path to read data.

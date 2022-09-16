@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator, Iterator, Optional, Tuple, Union
@@ -10,6 +11,12 @@ from .backends import (BaseStorageBackend, HTTPBackend, LmdbBackend,
 
 
 class HardDiskBackend(LocalBackend):
+    """Raw hard disks storage backend."""
+
+    def __init__(self) -> None:
+        warnings.warn(
+            '"HardDiskBackend" is the alias of "LocalBackend" '
+            'and the former will be deprecated in future.', DeprecationWarning)
 
     @property
     def name(self):
@@ -30,9 +37,13 @@ class FileClient:
     avoid repeated object creation. If the arguments are the same, the same
     object will be returned.
 
+    Warning:
+        `FileClient` will be deprecated in future. Please use io functions
+        in https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io
+
     Args:
         backend (str, optional): The storage backend type. Options are "disk",
-            "ceph", "memcached", "lmdb", "http" and "petrel". Default: None.
+            "memcached", "lmdb", "http" and "petrel". Default: None.
         prefix (str, optional): The prefix of the registered storage backend.
             Options are "s3", "http", "https". Default: None.
 
@@ -71,6 +82,11 @@ class FileClient:
     client: Any
 
     def __new__(cls, backend=None, prefix=None, **kwargs):
+        warnings.warn(
+            '"FileClient" will be deprecated in future. Please use io '
+            'functions in '
+            'https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io'
+        )
         if backend is None and prefix is None:
             backend = 'disk'
         if backend is not None and backend not in cls._backends:

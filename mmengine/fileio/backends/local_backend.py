@@ -11,7 +11,7 @@ from .base import BaseStorageBackend
 
 
 class LocalBackend(BaseStorageBackend):
-    """Raw hard disks storage backend."""
+    """Raw local storage backend."""
 
     _allow_symlink = True
 
