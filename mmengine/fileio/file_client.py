@@ -73,6 +73,7 @@ class FileClient:
 
     _prefix_to_backends: dict = {
         's3': PetrelBackend,
+        'petrel': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
     }
