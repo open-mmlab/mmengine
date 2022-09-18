@@ -855,6 +855,3 @@ else:
                         ('dir2', 'dir3', 'text4.txt')), '/'.join(
                             ('dir2', 'img.jpg')), 'text1.txt', 'text2.txt'
                 })
-
-        def test_generate_presigned_url(self):
-            pass

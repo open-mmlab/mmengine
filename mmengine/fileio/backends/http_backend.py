@@ -49,7 +49,8 @@ class HTTPBackend(BaseStorageBackend):
     @contextmanager
     def get_local_path(
             self, filepath: str) -> Generator[Union[str, Path], None, None]:
-        """Download a file from ``filepath``.
+        """Download a file from ``filepath`` to a local temporary directory,
+        and return the temporary path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
         can be called with ``with`` statement, and when exists from the
@@ -57,6 +58,9 @@ class HTTPBackend(BaseStorageBackend):
 
         Args:
             filepath (str): Download a file from ``filepath``.
+
+        Yields:
+            Iterable[str]: Only yield one temporary path.
 
         Examples:
             >>> backend = HTTPBackend()

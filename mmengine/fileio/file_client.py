@@ -85,8 +85,8 @@ class FileClient:
         warnings.warn(
             '"FileClient" will be deprecated in future. Please use io '
             'functions in '
-            'https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io'
-        )
+            'https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io',  # noqa: E501
+            DeprecationWarning)
         if backend is None and prefix is None:
             backend = 'disk'
         if backend is not None and backend not in cls._backends:

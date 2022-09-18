@@ -530,7 +530,3 @@ def test_list_dir_or_file():
                     osp.join('dir2', 'dir3', 'text4.txt'),
                     osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
                 }
-
-
-def test_generate_presigned_url():
-    pass

@@ -5,7 +5,7 @@ backend_args.
 
 MMEngine currently supports five file backends:
 
-- HardDiskBackend
+- LocalBackend
 - PetrelBackend
 - HTTPBackend
 - LmdbBackend
@@ -69,7 +69,7 @@ def _parse_uri_prefix(uri: Union[str, Path]) -> str:
     assert is_filepath(uri)
     uri = str(uri)
     # if uri does not contains '://', the uri will be handled by
-    # HardDiskBackend by default
+    # LocalBackend by default
     if '://' not in uri:
         return ''
     else:
@@ -484,7 +484,7 @@ def copyfile_from_local(
     """Copy a local file src to dst and return the destination file.
 
     Note:
-        If the backend is the instance of HardDiskBackend, it does the same
+        If the backend is the instance of LocalBackend, it does the same
         thing with :func:`copyfile`.
 
     Args:
@@ -525,7 +525,7 @@ def copytree_from_local(
     named dst and return the destination directory.
 
     Note:
-        If the backend is the instance of HardDiskBackend, it does the same
+        If the backend is the instance of LocalBackend, it does the same
         thing with :func:`copytree`.
 
     Args:
@@ -560,7 +560,7 @@ def copyfile_to_local(
     exists, it will be replaced.
 
     Note:
-        If the backend is the instance of HardDiskBackend, it does the same
+        If the backend is the instance of LocalBackend, it does the same
         thing with :func:`copyfile`.
 
     Args:
@@ -601,7 +601,7 @@ def copytree_to_local(
     directory named dst and return the destination directory.
 
     Note:
-        If the backend is the instance of HardDiskBackend, it does the same
+        If the backend is the instance of LocalBackend, it does the same
         thing with :func:`copytree`.
 
     Args:

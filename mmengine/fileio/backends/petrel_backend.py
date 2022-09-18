@@ -282,7 +282,8 @@ class PetrelBackend(BaseStorageBackend):
         self,
         filepath: Union[str, Path],
     ) -> Generator[Union[str, Path], None, None]:
-        """Download a file from ``filepath`` and return a temporary path.
+        """Download a file from ``filepath`` to a local temporary directory,
+        and return the temporary path.
 
         ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
         can be called with ``with`` statement, and when exists from the
