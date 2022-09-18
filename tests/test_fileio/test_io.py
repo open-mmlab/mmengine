@@ -170,21 +170,21 @@ def test_get_file_backend():
 
 
 def test_get():
-    # test HardDiskBackend
+    # test LocalBackend
     filepath = Path(img_path)
     img_bytes = fileio.get(filepath)
     assert filepath.open('rb').read() == img_bytes
 
 
 def test_get_text():
-    # test HardDiskBackend
+    # test LocalBackend
     filepath = Path(text_path)
     text = fileio.get_text(filepath)
     assert filepath.open('r').read() == text
 
 
 def test_put():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         filepath = Path(tmp_dir) / 'img.png'
         fileio.put(b'disk', filepath)
@@ -198,7 +198,7 @@ def test_put():
 
 
 def test_put_text():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         filepath = Path(tmp_dir) / 'text.txt'
         fileio.put_text('text', filepath)
@@ -212,7 +212,7 @@ def test_put_text():
 
 
 def test_exists():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         assert fileio.exists(tmp_dir)
         filepath = Path(tmp_dir) / 'test.txt'
@@ -222,7 +222,7 @@ def test_exists():
 
 
 def test_isdir():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         assert fileio.isdir(tmp_dir)
         filepath = Path(tmp_dir) / 'test.txt'
@@ -231,7 +231,7 @@ def test_isdir():
 
 
 def test_isfile():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         assert not fileio.isfile(tmp_dir)
         filepath = Path(tmp_dir) / 'test.txt'
@@ -240,7 +240,7 @@ def test_isfile():
 
 
 def test_join_path():
-    # test HardDiskBackend
+    # test LocalBackend
     filepath = fileio.join_path(test_data_dir, 'file')
     expected = osp.join(test_data_dir, 'file')
     assert filepath == expected
@@ -251,13 +251,13 @@ def test_join_path():
 
 
 def test_get_local_path():
-    # test HardDiskBackend
+    # test LocalBackend
     with fileio.get_local_path(text_path) as filepath:
         assert str(text_path) == filepath
 
 
 def test_copyfile():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         src = Path(tmp_dir) / 'test.txt'
         fileio.put_text('disk', src)
@@ -277,7 +277,7 @@ def test_copyfile():
 
 
 def test_copytree():
-    # test HardDiskBackend
+    # test LocalBackend
     with build_temporary_directory() as tmp_dir:
         # src and dst are Path objects
         src = Path(tmp_dir) / 'dir1'
@@ -293,7 +293,7 @@ def test_copytree():
 
 
 def test_copyfile_from_local():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         src = Path(tmp_dir) / 'test.txt'
         fileio.put_text('disk', src)
@@ -312,7 +312,7 @@ def test_copyfile_from_local():
 
 
 def test_copytree_from_local():
-    # test HardDiskBackend
+    # test LocalBackend
     with build_temporary_directory() as tmp_dir:
         # src and dst are Path objects
         src = Path(tmp_dir) / 'dir1'
@@ -328,7 +328,7 @@ def test_copytree_from_local():
 
 
 def test_copyfile_to_local():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         src = Path(tmp_dir) / 'test.txt'
         fileio.put_text('disk', src)
@@ -347,7 +347,7 @@ def test_copyfile_to_local():
 
 
 def test_copytree_to_local():
-    # test HardDiskBackend
+    # test LocalBackend
     with build_temporary_directory() as tmp_dir:
         # src and dst are Path objects
         src = Path(tmp_dir) / 'dir1'
@@ -363,7 +363,7 @@ def test_copytree_to_local():
 
 
 def test_remove():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         # filepath is a Path object
         filepath = Path(tmp_dir) / 'test.txt'
@@ -385,7 +385,7 @@ def test_remove():
 
 
 def test_rmtree():
-    # test HardDiskBackend
+    # test LocalBackend
     with build_temporary_directory() as tmp_dir:
         # src and dst are Path objects
         dir_path = Path(tmp_dir) / 'dir1'
@@ -400,7 +400,7 @@ def test_rmtree():
 
 
 def test_copy_if_symlink_fails():
-    # test HardDiskBackend
+    # test LocalBackend
     with tempfile.TemporaryDirectory() as tmp_dir:
         # create a symlink for a file
         src = Path(tmp_dir) / 'test.txt'
@@ -445,7 +445,7 @@ def test_copy_if_symlink_fails():
 
 
 def test_list_dir_or_file():
-    # test HardDiskBackend
+    # test LocalBackend
     with build_temporary_directory() as tmp_dir:
         # list directories and files
         assert set(fileio.list_dir_or_file(tmp_dir)) == {

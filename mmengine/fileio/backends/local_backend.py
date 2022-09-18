@@ -412,6 +412,12 @@ class LocalBackend(BaseStorageBackend):
             >>> filepath = '/path/of/file'
             >>> backend.remove(filepath)
         """
+        if not self.exists(filepath):
+            raise FileNotFoundError(f'filepath {filepath} does not exist')
+
+        if self.isdir(filepath):
+            raise IsADirectoryError('filepath should be a file')
+
         os.remove(filepath)
 
     def rmtree(self, dir_path: Union[str, Path]) -> None:

@@ -299,6 +299,7 @@ except ImportError:
                  patch.object(backend, 'put', side_effect=put),\
                  patch.object(backend, 'get', side_effect=get),\
                  patch.object(backend, 'exists', return_value=False):
+                tmp_dir = tmp_dir.replace('\\', '/')
                 dst = f'{tmp_dir}/dir'
                 self.assertEqual(backend.copytree(tmp_dir, dst), dst)
 
