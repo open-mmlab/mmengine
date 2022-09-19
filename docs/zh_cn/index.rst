@@ -14,10 +14,7 @@
    :maxdepth: 3
    :caption: 入门教程
 
-   tutorials/registry.md
-   tutorials/config.md
-   tutorials/runner.md
-   tutorials/hook.md
+   tutorials/runner_basics.md
    tutorials/model.md
    tutorials/evaluation.md
    tutorials/optim_wrapper.md
@@ -28,6 +25,9 @@
    :maxdepth: 1
    :caption: 进阶教程
 
+   tutorials/registry.md
+   tutorials/config.md
+   tutorials/hook.md
    advanced_tutorials/basedataset.md
    advanced_tutorials/data_element.md
    advanced_tutorials/visualization.md
