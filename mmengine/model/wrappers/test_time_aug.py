@@ -139,7 +139,8 @@ class BaseTTAModel(BaseModel):
             data_list = [[_data[idx] for _data in data]
                          for idx in range(num_augs)]
         else:
-            raise TypeError
+            raise TypeError('data given by dataLoader should be a dict, '
+                            f'tuple or a list, but got {type(data)}')
 
         predictions = []
         for data in data_list:
