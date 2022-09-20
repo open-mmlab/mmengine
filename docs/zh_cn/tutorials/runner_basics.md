@@ -222,7 +222,7 @@ runner.train()
 <details>
 <summary>什么是 data preprocessor？我可以用它做裁减缩放等图像预处理吗？</summary>
 
-虽然图中的 data preprocessor 与 model 是分离的，但在实际中前者是后者的一部分，因此可以在[模型-数据处理器](./model.md#数据处理器（DataPreprocessor）)文档中找到。通常来说，默认的数据处理器只是将数据搬运到 GPU 中；如果你的模型与数据加载器的数据格式不匹配，你也可以自定义一个数据处理器来进行格式转换。裁减缩放等图像预处理更推荐在[数据变换](./data_transform.md)中进行，但如果是 batch 相关的数据处理（如 batch-resize 等），可以在这里实现。
+虽然图中的 data preprocessor 与 model 是分离的，但在实际中前者是后者的一部分，因此可以在[模型](./model.md)文档中的数据处理器章节找到。通常来说，默认的数据处理器只是将数据搬运到 GPU 中；如果你的模型与数据加载器的数据格式不匹配，你也可以自定义一个数据处理器来进行格式转换。裁减缩放等图像预处理更推荐在[数据变换](./data_transform.md)中进行，但如果是 batch 相关的数据处理（如 batch-resize 等），可以在这里实现。
 
 </details>
 
