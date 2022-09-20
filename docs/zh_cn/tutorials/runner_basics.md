@@ -206,7 +206,46 @@ runner.train()
 
 接下来，我们将**稍微**深入执行器的内部，结合图示来理清其中数据的流向与格式约定。
 
-（此处应该有图，但还没完成）
+![基本数据流](https://user-images.githubusercontent.com/112053249/191187150-58ac9e7e-7cf6-4b36-a0f8-39067f95e229.jpg)
+
+上图是执行器的**基本**数据流，其中虚线边框、灰色填充的不同形状代表不同的数据格式，实线方框代表模块或方法。由于 MMEngine 强大的灵活性与可扩展性，你总可以继承某些关键基类并重载其中的方法，因此上图并不总是成立。只有当你的自定义模型没有重载`train_step`、`val_step`与`test_step`方法时上图才会成立（而这在检测、分割等任务上是常见的，参考[模型](./model.md)教程）。
+
+<details>
+<summary>可以确切地说明每个数据元素的具体类型吗？</summary>
+
+很遗憾，这一点无法做到。虽然 MMEngine 做了大量类型注释，但`Python`是一门高度动态化的编程语言，同时以数据为核心的深度学习系统也需要足够的灵活性来处理纷繁复杂的数据源，你有充分的自由决定何时需要（有时是必须）打破类型约定。因此，在你自定义某一或某几个模块（如`val_evaluator`）时，你需要确保它的输入与上游（如`model`的输出）兼容，同时输出可以被下游解析。MMEngine 将处理数据的灵活性交给了用户，因而也需要用户保证数据流的兼容性——当然，实际上手后会发现，这一点并不十分困难。
+
+数据一致性的考验一直存在于深度学习领域，MMEngine 也在尝试用自己的方式改进。如果你有兴趣，可以参考[数据集基类](../advanced_tutorials/basedataset.md)与[抽象数据接口](../advanced_tutorials/data_element.md)文档——但是请注意，它们主要面向进阶用户。
+
+</details>
+
+<details>
+<summary>什么是 data preprocessor？我可以用它做裁减缩放等图像预处理吗？</summary>
+
+虽然图中的 data preprocessor 与 model 是分离的，但在实际中前者是后者的一部分，因此可以在[模型-数据处理器](./model.md#数据处理器（DataPreprocessor）)文档中找到。通常来说，默认的数据处理器只是将数据搬运到 GPU 中；如果你的模型与数据加载器的数据格式不匹配，你也可以自定义一个数据处理器来进行格式转换。裁减缩放等图像预处理更推荐在[数据变换](./data_transform.md)中进行，但如果是 batch 相关的数据处理（如 batch-resize 等），可以在这里实现。
+
+</details>
+
+<details>
+<summary>为什么 model 产生了 3 个不同的输出？ loss、predict、tensor 是什么含义？</summary>
+
+[15 分钟上手](../get_started/15_minutes.md)对此有一定的描述，你需要在自定义模型的`forward`函数中实现 3 条数据通路，适配训练、验证等不同需求。[模型](./model.md)文档中对此有详细解释。
+
+</details>
+
+<details>
+<summary>我可以看出红线是训练流程，蓝线是验证/测试流程，但绿线是什么？</summary>
+
+在目前的执行器流程中，`'tensor'`模式的输出并未被使用，大多数情况下用户无需实现。但一些情况下输出中间结果可以方便地进行 debug
+
+</details>
+
+<details>
+<summary>如果我重载了`train_step`等方法，上图会完全失效吗？</summary>
+
+默认的`train_step`、`val_step`、`test_step`的行为，覆盖了从数据进入`data preprocessor`到`model`输出`loss`、`predict`结果的这一段流程，不影响其余部分。
+
+</details>
 
 ## 执行器的设计理念（可选）
 
