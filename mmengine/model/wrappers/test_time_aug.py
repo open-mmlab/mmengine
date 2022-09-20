@@ -147,10 +147,17 @@ class BaseTTAModel(BaseModel):
             predictions.append(self.module.test_step(data))
         return self.merge_preds(predictions)
 
+    def val_step(self, data: Union[tuple, dict, list]) -> list:
+        """``BaseTTAModel`` is only for testing, therefore ``val_step`` should
+        not be called."""
+        raise NotImplementedError('train_step should not be called! '
+                                  f'{self.__class__.__name__} should only be'
+                                  f'used for testing.')
+
     def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """``BaseTTAModel`` is only for testing or validation, therefore
-        ``train_step`` should not be called."""
+        """``BaseTTAModel`` is only for testing, therefore ``train_step``
+        should not be called."""
         raise NotImplementedError('train_step should not be called! '
                                   f'{self.__class__.__name__} should only be'
                                   f'used for testing.')
