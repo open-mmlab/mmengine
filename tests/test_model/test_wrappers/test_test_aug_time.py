@@ -3,12 +3,12 @@ from unittest import TestCase
 
 from torch.utils.data import DataLoader
 
-from mmengine.model import BaseModel, BaseTestTimeAugModel
+from mmengine.model import BaseModel, BaseTTAModel
 
 
-class ToyTestTimeAugModel(BaseTestTimeAugModel):
+class ToyTestTimeAugModel(BaseTTAModel):
 
-    def merge_results(self, data_samples_list):
+    def merge_preds(self, data_samples_list):
         result = list(map(lambda x: sum(x), zip(*data_samples_list)))
         return result
 
@@ -19,7 +19,7 @@ class ToyModel(BaseModel):
         return data_samples
 
 
-class TestBaseTestTimeAugModel(TestCase):
+class TestBaseTTAModel(TestCase):
 
     def setUp(self) -> None:
         dict_dataset = [dict(inputs=[1, 2], data_samples=[3, 4])] * 10
