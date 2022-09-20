@@ -20,14 +20,13 @@
    tutorials/optim_wrapper.md
    tutorials/param_scheduler.md
    tutorials/data_transform.md
+   tutorials/registry.md
+   tutorials/config.md
 
 .. toctree::
    :maxdepth: 1
    :caption: 进阶教程
 
-   tutorials/registry.md
-   tutorials/config.md
-   tutorials/hook.md
    advanced_tutorials/basedataset.md
    advanced_tutorials/data_element.md
    advanced_tutorials/visualization.md
@@ -36,6 +35,7 @@
    advanced_tutorials/logging.md
    advanced_tutorials/fileio.md
    advanced_tutorials/utils.md
+   tutorials/hook.md
 
 .. toctree::
    :maxdepth: 1
