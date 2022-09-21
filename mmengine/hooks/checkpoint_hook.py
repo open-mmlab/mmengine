@@ -77,7 +77,7 @@ class CheckpointHook(Hook):
         filename_tmpl (str, optional): String template to indicate checkpoint
             name. If specified, must contain one and only one "{}", which will
             be replaced with ``epoch + 1`` if ``by_epoch=True`` else
-            ``interval + 1``.
+            ``iteration + 1``.
             Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
             accordingly.
 
