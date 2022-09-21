@@ -77,4 +77,5 @@ class LmdbBackend(BaseStorageBackend):
             **self.kwargs)
 
     def __del__(self):
-        self._client.close()
+        if self._client is not None:
+            self._client.close()
