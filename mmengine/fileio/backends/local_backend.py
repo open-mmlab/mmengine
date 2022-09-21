@@ -498,9 +498,22 @@ class LocalBackend(BaseStorageBackend):
         Examples:
             >>> backend = LocalBackend()
             >>> dir_path = '/path/of/dir'
+            >>> # list those files and directories in current directory
             >>> for file_path in backend.list_dir_or_file(dir_path):
             ...     print(file_path)
-        """
+            >>> # only list files
+            >>> for file_path in backend.list_dir_or_file(dir_path, list_dir=False):
+            ...     print(file_path)
+            >>> # only list directories
+            >>> for file_path in backend.list_dir_or_file(dir_path, list_file=False):
+            ...     print(file_path)
+            >>> # only list files ending with specified suffixes
+            >>> for file_path in backend.list_dir_or_file(dir_path, suffix='.txt'):
+            ...     print(file_path)
+            >>> # list all files and directory recursively
+            >>> for file_path in backend.list_dir_or_file(dir_path, recursive):
+            ...     print(file_path)
+        """  # noqa: E501
         if list_dir and suffix is not None:
             raise TypeError('`suffix` should be None when `list_dir` is True')
 

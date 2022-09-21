@@ -679,9 +679,22 @@ class PetrelBackend(BaseStorageBackend):
         Examples:
             >>> backend = PetrelBackend()
             >>> dir_path = 'petrel://path/of/dir'
-            >>> for path in backend.list_dir_or_file(dir_path):
-            ...     print(path)
-        """
+            >>> # list those files and directories in current directory
+            >>> for file_path in backend.list_dir_or_file(dir_path):
+            ...     print(file_path)
+            >>> # only list files
+            >>> for file_path in backend.list_dir_or_file(dir_path, list_dir=False):
+            ...     print(file_path)
+            >>> # only list directories
+            >>> for file_path in backend.list_dir_or_file(dir_path, list_file=False):
+            ...     print(file_path)
+            >>> # only list files ending with specified suffixes
+            >>> for file_path in backend.list_dir_or_file(dir_path, suffix='.txt'):
+            ...     print(file_path)
+            >>> # list all files and directory recursively
+            >>> for file_path in backend.list_dir_or_file(dir_path, recursive):
+            ...     print(file_path)
+        """  # noqa: E501
         if not has_method(self._client, 'list'):
             raise NotImplementedError(
                 'Current version of Petrel Python SDK has not supported '

@@ -737,6 +737,21 @@ def list_dir_or_file(
         >>> dir_path = '/path/of/dir'
         >>> for file_path in list_dir_or_file(dir_path):
         ...     print(file_path)
+        >>> # list those files and directories in current directory
+        >>> for file_path in list_dir_or_file(dir_path):
+        ...     print(file_path)
+        >>> # only list files
+        >>> for file_path in list_dir_or_file(dir_path, list_dir=False):
+        ...     print(file_path)
+        >>> # only list directories
+        >>> for file_path in list_dir_or_file(dir_path, list_file=False):
+        ...     print(file_path)
+        >>> # only list files ending with specified suffixes
+        >>> for file_path in list_dir_or_file(dir_path, suffix='.txt'):
+        ...     print(file_path)
+        >>> # list all files and directory recursively
+        >>> for file_path in list_dir_or_file(dir_path, recursive):
+        ...     print(file_path)
     """
     backend = get_file_backend(
         dir_path, backend_args=backend_args, enable_singleton=True)
