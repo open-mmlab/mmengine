@@ -243,7 +243,7 @@ class Registry:
                 if scope_name in PKG2PROJECT:
                     try:
                         module = import_module(f'{scope_name}.utils')
-                        module.register_all_modules()  # type: ignore
+                        module.register_all_modules(False)  # type: ignore
                     except ImportError as e:
                         raise e
                 root = self._get_root_registry()
@@ -347,6 +347,11 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            try:
+                module = import_module(f'{scope_name}.utils')
+                module.register_all_modules(False)  # type: ignore
+            except ImportError as e:
+                raise e
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
