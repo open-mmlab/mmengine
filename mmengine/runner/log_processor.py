@@ -265,7 +265,7 @@ class LogProcessor:
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
-            if ('loss' in key) or key in ('time', 'data_time', 'grad_norm'):
+            if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
                 tag[key] = mode_history_scalars[key].mean(self.window_size)
             else:
                 # Default statistic method is current.
