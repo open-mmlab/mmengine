@@ -112,3 +112,4 @@ Utils
    merge_dict
    stack_batch
    revert_sync_batchnorm
+   convert_sync_batchnorm

@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import pickle
 import platform
 import time
 import warnings
@@ -27,7 +28,8 @@ from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper, revert_sync_batchnorm)
+                            convert_sync_batchnorm, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -837,8 +839,16 @@ class Runner:
                 'layers in the model will be automatically reverted to '
                 'BatchNormXd layers if they are used.')
             model = revert_sync_batchnorm(model)
-            return model
-
+            return model  # type: ignore
+        else:
+            sync_bn = self.cfg.get('sync_bn', None)
+            if sync_bn is not None:
+                try:
+                    model = convert_sync_batchnorm(model, sync_bn)
+                except ValueError as e:
+                    self.logger.error('cfg.sync_bn should be "torch" or '
+                                      f'"mmcv", but got {sync_bn}')
+                    raise e
         if model_wrapper_cfg is None:
             find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                   False)
@@ -1910,7 +1920,11 @@ class Runner:
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
-        if resumed_dataset_meta != dataset_meta:
+
+        # `resumed_dataset_meta` and `dataset_meta` could be object like
+        # np.ndarray, which cannot be directly judged as equal or not,
+        # therefore we just compared their dumped results.
+        if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
