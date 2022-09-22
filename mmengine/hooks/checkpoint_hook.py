@@ -74,6 +74,12 @@ class CheckpointHook(Hook):
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmcv.fileio.FileClient` for details.
             Defaults to None.
+        filename_tmpl (str, optional): String template to indicate checkpoint
+            name. If specified, must contain one and only one "{}", which will
+            be replaced with ``epoch + 1`` if ``by_epoch=True`` else
+            ``iteration + 1``.
+            Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
+            accordingly.
 
     Examples:
         >>> # Save best based on single metric
@@ -116,6 +122,7 @@ class CheckpointHook(Hook):
                  greater_keys: Optional[Sequence[str]] = None,
                  less_keys: Optional[Sequence[str]] = None,
                  file_client_args: Optional[dict] = None,
+                 filename_tmpl: Optional[str] = None,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -124,8 +131,15 @@ class CheckpointHook(Hook):
         self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
-        self.args = kwargs
         self.file_client_args = file_client_args
+        if filename_tmpl is None:
+            if self.by_epoch:
+                self.filename_tmpl = 'epoch_{}.pth'
+            else:
+                self.filename_tmpl = 'iter_{}.pth'
+        else:
+            self.filename_tmpl = filename_tmpl
+        self.args = kwargs
 
         # save best logic
         assert (isinstance(save_best, str) or is_list_of(save_best, str)
@@ -277,11 +291,9 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if self.by_epoch:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'epoch_{}.pth').format(runner.epoch + 1)
+            ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
         else:
-            ckpt_filename = self.args.get(
-                'filename_tmpl', 'iter_{}.pth').format(runner.iter + 1)
+            ckpt_filename = self.filename_tmpl.format(runner.iter + 1)
 
         runner.save_checkpoint(
             self.out_dir,
@@ -299,18 +311,15 @@ class CheckpointHook(Hook):
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
             if self.by_epoch:
-                name = 'epoch_{}.pth'
                 current_ckpt = runner.epoch + 1
             else:
-                name = 'iter_{}.pth'
                 current_ckpt = runner.iter + 1
             redundant_ckpts = range(
                 current_ckpt - self.max_keep_ckpts * self.interval, 0,
                 -self.interval)
-            filename_tmpl = self.args.get('filename_tmpl', name)
             for _step in redundant_ckpts:
                 ckpt_path = self.file_client.join_path(
-                    self.out_dir, filename_tmpl.format(_step))
+                    self.out_dir, self.filename_tmpl.format(_step))
                 if self.file_client.isfile(ckpt_path):
                     self.file_client.remove(ckpt_path)
                 else:
@@ -334,12 +343,10 @@ class CheckpointHook(Hook):
             return
 
         if self.by_epoch:
-            ckpt_filename = self.args.get('filename_tmpl',
-                                          'epoch_{}.pth').format(runner.epoch)
+            ckpt_filename = self.filename_tmpl.format(runner.epoch)
             cur_type, cur_time = 'epoch', runner.epoch
         else:
-            ckpt_filename = self.args.get('filename_tmpl',
-                                          'iter_{}.pth').format(runner.iter)
+            ckpt_filename = self.filename_tmpl.format(runner.iter)
             cur_type, cur_time = 'iter', runner.iter
 
         # handle auto in self.key_indicators and self.rules before the loop
