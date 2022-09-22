@@ -1911,6 +1911,10 @@ class Runner:
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
+
+        # `resumed_dataset_meta` and `dataset_meta` could be object like
+        # np.ndarray, which cannot be directly judged as equal or not,
+        # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
