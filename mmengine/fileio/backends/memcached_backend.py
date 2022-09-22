@@ -33,6 +33,21 @@ class MemcachedBackend(BaseStorageBackend):
         self._mc_buffer = mc.pyvector()
 
     def get(self, filepath: Union[str, Path]):
+        """Get values according to the filepath.
+
+        Args:
+            filepath (str or Path): Path to read data.
+
+        Returns:
+            bytes: Expected bytes object.
+
+        Examples:
+            >>> server_list_cfg = '/path/of/server_list.conf'
+            >>> client_cfg = '/path/of/mc.conf'
+            >>> backend = MemcachedBackend(server_list_cfg, client_cfg)
+            >>> backend.get('/path/of/file')
+            b'hello world'
+        """
         filepath = str(filepath)
         import mc
         self._client.Get(filepath, self._mc_buffer)

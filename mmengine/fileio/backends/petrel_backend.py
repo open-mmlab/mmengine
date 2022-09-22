@@ -692,7 +692,7 @@ class PetrelBackend(BaseStorageBackend):
             >>> for file_path in backend.list_dir_or_file(dir_path, suffix='.txt'):
             ...     print(file_path)
             >>> # list all files and directory recursively
-            >>> for file_path in backend.list_dir_or_file(dir_path, recursive):
+            >>> for file_path in backend.list_dir_or_file(dir_path, recursive=True):
             ...     print(file_path)
         """  # noqa: E501
         if not has_method(self._client, 'list'):

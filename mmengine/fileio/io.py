@@ -750,7 +750,7 @@ def list_dir_or_file(
         >>> for file_path in list_dir_or_file(dir_path, suffix='.txt'):
         ...     print(file_path)
         >>> # list all files and directory recursively
-        >>> for file_path in list_dir_or_file(dir_path, recursive):
+        >>> for file_path in list_dir_or_file(dir_path, recursive=True):
         ...     print(file_path)
     """
     backend = get_file_backend(
