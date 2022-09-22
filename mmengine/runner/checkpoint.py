@@ -610,8 +610,7 @@ def _save_to_state_dict(module, destination, prefix, keep_vars):
         if param is not None:
             destination[prefix + name] = param if keep_vars else param.detach()
     for name, buf in module._buffers.items():
-        # remove check of _non_persistent_buffers_set to allow nn.BatchNorm2d
-        if buf is not None:
+        if buf is not None and name not in module._non_persistent_buffers_set:
             destination[prefix + name] = buf if keep_vars else buf.detach()
 
 
