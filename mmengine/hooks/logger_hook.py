@@ -95,7 +95,8 @@ class LoggerHook(Hook):
                 'Please use "backend_args" instead', DeprecationWarning)
             if backend_args is not None:
                 raise ValueError(
-                    '"file_client_args and "backend_args" cannot be both set.')
+                    '"file_client_args" and "backend_args" cannot be set '
+                    'at the same time.')
 
         if not (out_dir is None or isinstance(out_dir, str)
                 or is_tuple_of(out_dir, str)):

@@ -48,7 +48,8 @@ def list_from_file(filename,
             'Please use "backend_args" instead', DeprecationWarning)
         if backend_args is not None:
             raise ValueError(
-                '"file_client_args and "backend_args" cannot be both set.')
+                '"file_client_args" and "backend_args" cannot be set at the '
+                'same time.')
     cnt = 0
     item_list = []
 
@@ -111,7 +112,8 @@ def dict_from_file(filename,
             'Please use "backend_args" instead', DeprecationWarning)
         if backend_args is not None:
             raise ValueError(
-                '"file_client_args and "backend_args" cannot be both set.')
+                '"file_client_args" and "backend_args" cannot be set at the '
+                'same time.')
 
     mapping = {}
 

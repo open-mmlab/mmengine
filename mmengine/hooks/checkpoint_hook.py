@@ -144,7 +144,8 @@ class CheckpointHook(Hook):
                 'Please use "backend_args" instead', DeprecationWarning)
             if backend_args is not None:
                 raise ValueError(
-                    '"file_client_args and "backend_args" cannot be both set.')
+                    '"file_client_args" and "backend_args" cannot be set '
+                    'at the same time.')
 
         self.file_client_args = file_client_args
         self.backend_args = backend_args

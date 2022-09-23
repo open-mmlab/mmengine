@@ -2061,7 +2061,8 @@ class Runner:
                 'Please use "backend_args" instead', DeprecationWarning)
             if backend_args is not None:
                 raise ValueError(
-                    '"file_client_args and "backend_args" cannot be both set.')
+                    '"file_client_args" and "backend_args" cannot be set at '
+                    'the same time.')
 
             file_client = FileClient.infer_client(file_client_args, out_dir)
             filepath = file_client.join_path(out_dir, filename)
