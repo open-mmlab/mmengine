@@ -350,8 +350,11 @@ class Registry:
             try:
                 module = import_module(f'{scope_name}.utils')
                 module.register_all_modules(False)  # type: ignore
-            except ImportError as e:
-                raise e
+            except ImportError:
+                print_log(f'{scope_name} is not a package of OpenMMLab, '
+                          'and its modules will not be registered. If you '
+                          f'want to use modules defined in {scope_name}, '
+                          f'please import corresponding modules firstly.')
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
