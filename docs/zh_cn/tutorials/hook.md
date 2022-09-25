@@ -258,7 +258,7 @@ custom_hooks = dict(
 )
 ```
 
-也可以在定义类是给定优先级
+也可以在定义类时给定优先级
 
 ```python
 @HOOKS.register_module()
