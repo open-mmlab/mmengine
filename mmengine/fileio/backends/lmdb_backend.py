@@ -17,6 +17,7 @@ class LmdbBackend(BaseStorageBackend):
         readahead (bool): Lmdb environment parameter. If False, disable the OS
             filesystem readahead mechanism, which may improve random read
             performance when a database is larger than RAM. Defaults to False.
+        **kwargs: Keyword arguments passed to `lmdb.open`.
 
     Attributes:
         db_path (str): Lmdb database path.
