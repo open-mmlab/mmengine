@@ -36,24 +36,25 @@ English | [简体中文](README_zh-CN.md)
 
 ## Introduction
 
-MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms on various research areas. Importantly, MMEngine is also generic to be applied to non-OpenMMLab projects.
+MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
 
 Major features:
 
-1. **Universal and powerful runner**.
+1. **A universal and powerful runner**:
 
-   - Fewer code, e.g., train ImageNet with 1/5 lines of code compared with PyTorch example.
-   - Compatible with popular libraries like OpenMMLab, TorchVision, timm and Detectron2.
+   - Supports training different tasks with a small amount of code, e.g., ImageNet can be trained with only 80 lines of code (400 lines of the original PyTorch example)
+   - Easily compatible with models from popular algorithm libraries such as TIMM, TorchVision, and Detectron2
 
-2. **Open architecture with unified interfaces**.
+2. **Open architecture with unified interfaces**:
 
-   - Handle different algorithm tasks with unified API, e.g., implement a method and apply it to all compatible models.
-   - Support different devices and hardwares with unified API, including CPU, GPU, IPU, Apple silicon, etc.
+   - Handles different algorithm tasks with unified APIs, e.g., implement a method and apply it to all compatible models.
+   - Provides a unified abstraction for the upper-level algorithm library, which supports various back-end devices such as Nvidia CUDA, Mac MPS, AMD, MLU, and other devices for model training.
 
-3. **Customizable training process**.
+3. **Customizable training process**:
 
-   - Define the training process like playing with Legos. Rich components and strategies are available.
-   - Complete control of training with different level of APIs.
+   - Defines the training process just like playing with Legos.
+   - Provides rich components and strategies.
+   - Complete controls on the training process with different levels of APIs.
 
 ## Installation
 
@@ -74,12 +75,15 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 
 ## Get Started
 
-As an example of training a ResNet-50 model on the CIFAR-10 dataset, we will build a complete, configurable training and validation process using MMEngine in less than 80 lines of code.
+Taking the training of a ResNet-50 model on the CIFAR-10 dataset as an example, we will use MMEngine to build a complete, configurable training and validation process in less than 80 lines of code.
 
 <details>
 <summary>Build Models</summary>
 
-First, we need to define a **Model** that 1) inherits from `BaseModel`, and 2) accepts an additional argument `mode` in the `forward` method, in addition to those arguments related to the dataset. During training, the value of `mode` is "loss" and the `forward` method should return a dict containing the key "loss". During validation, the value of `mode` is "predict" and the forward method should return results containing both predictions and labels.
+First, we need to define a **model** which 1) inherits from `BaseModel` and 2) accepts an additional argument `mode` in the `forward` method, in addition to those arguments related to the dataset.
+
+- During training, the value of `mode` is "loss," and the `forward` method should return a   `dict` containing the key "loss".
+- During validation, the value of `mode` is "predict", and the forward method should return results containing both predictions and labels.
 
 ```python
 import torch.nn.functional as F
@@ -104,7 +108,7 @@ class MMResNet50(BaseModel):
 <details>
 <summary>Build Datasets</summary>
 
-Next, we need to create a **Dataset** and **DataLoader** for training and validation.
+Next, we need to create **Dataset**s and **DataLoader**s for training and validation.
 In this case, we simply use built-in datasets supported in TorchVision.
 
 ```python
@@ -141,7 +145,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>Build Metrics</summary>
 
-To validate and test the model, we need to define a **Metric** like accuracy to evaluate the model. This metric needs inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
+To validate and test the model, we need to define a **Metric** called accuracy to evaluate the model. This metric needs inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -167,7 +171,7 @@ class Accuracy(BaseMetric):
 <details>
 <summary>Build a Runner</summary>
 
-Finally, we can construct a **Runner** with previously defined Model, DataLoader, Metrics and some other configs, as shown below.
+Finally, we can construct a **Runner** with previously defined `Model`, `DataLoader`, and `Metrics`, with some other configs, as shown below.
 
 ```python
 from torch.optim import SGD
