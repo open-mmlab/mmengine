@@ -83,8 +83,8 @@ class TestCheckpointHook:
 
         with pytest.raises(
                 ValueError,
-                match='"file_client_args and "backend_args" cannot be both set'
-        ):
+                match='"file_client_args" and "backend_args" cannot be set '
+                'at the same time'):
             CheckpointHook(
                 file_client_args={'backend': 'disk'},
                 backend_args={'backend': 'local'})

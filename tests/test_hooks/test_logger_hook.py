@@ -35,8 +35,8 @@ class TestLoggerHook:
 
         with pytest.raises(
                 ValueError,
-                match='"file_client_args and "backend_args" cannot be both set'
-        ):
+                match='"file_client_args" and "backend_args" cannot be '
+                'set at the same time'):
             logger_hook = LoggerHook(
                 out_dir='tmp.txt',
                 file_client_args={'backend': 'disk'},
