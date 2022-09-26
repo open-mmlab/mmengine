@@ -24,7 +24,7 @@ from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
 from mmengine.evaluator import Evaluator
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
@@ -2005,14 +2005,17 @@ class Runner:
         return checkpoint
 
     @master_only
-    def save_checkpoint(self,
-                        out_dir: str,
-                        filename: str,
-                        file_client_args: Optional[dict] = None,
-                        save_optimizer: bool = True,
-                        save_param_scheduler: bool = True,
-                        meta: dict = None,
-                        by_epoch: bool = True):
+    def save_checkpoint(
+        self,
+        out_dir: str,
+        filename: str,
+        file_client_args: Optional[dict] = None,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        meta: dict = None,
+        by_epoch: bool = True,
+        backend_args: Optional[dict] = None,
+    ):
         """Save checkpoints.
 
         ``CheckpointHook`` invokes this method to save checkpoints
@@ -2022,7 +2025,9 @@ class Runner:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
             file_client_args (dict, optional): Arguments to instantiate a
-                FileClient. Default: None.
+                FileClient. See :class:`mmengine.fileio.FileClient` for
+                details. Defaults to None. It will be deprecated in future.
+                Please use `backend_args` instead.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -2031,6 +2036,9 @@ class Runner:
                 checkpoint. Defaults to None.
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
+            backend_args (dict, optional): Arguments to instantiate the
+                preifx of uri corresponding backend. Defaults to None.
+                New in v0.2.0.
         """
         if meta is None:
             meta = {}
@@ -2047,8 +2055,20 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        file_client = FileClient.infer_client(file_client_args, out_dir)
-        filepath = file_client.join_path(out_dir, filename)
+        if file_client_args is not None:
+            warnings.warn(
+                '"file_client_args" will be deprecated in future. '
+                'Please use "backend_args" instead', DeprecationWarning)
+            if backend_args is not None:
+                raise ValueError(
+                    '"file_client_args" and "backend_args" cannot be set at '
+                    'the same time.')
+
+            file_client = FileClient.infer_client(file_client_args, out_dir)
+            filepath = file_client.join_path(out_dir, filename)
+        else:
+            filepath = join_path(  # type: ignore
+                out_dir, filename, backend_args=backend_args)
 
         meta.update(
             cfg=self.cfg.pretty_text,

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from mmengine.dist import master_only
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, get_file_backend
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
@@ -72,14 +72,18 @@ class CheckpointHook(Hook):
             inferred by 'less' comparison rule. If ``None``, _default_less_keys
             will be used. Defaults to None.
         file_client_args (dict, optional): Arguments to instantiate a
-            FileClient. See :class:`mmcv.fileio.FileClient` for details.
-            Defaults to None.
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
         filename_tmpl (str, optional): String template to indicate checkpoint
             name. If specified, must contain one and only one "{}", which will
             be replaced with ``epoch + 1`` if ``by_epoch=True`` else
             ``iteration + 1``.
             Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
             accordingly.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> # Save best based on single metric
@@ -123,6 +127,7 @@ class CheckpointHook(Hook):
                  less_keys: Optional[Sequence[str]] = None,
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
+                 backend_args: Optional[dict] = None,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -131,7 +136,20 @@ class CheckpointHook(Hook):
         self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
+        self.args = kwargs
+
+        if file_client_args is not None:
+            warnings.warn(
+                '"file_client_args" will be deprecated in future. '
+                'Please use "backend_args" instead', DeprecationWarning)
+            if backend_args is not None:
+                raise ValueError(
+                    '"file_client_args" and "backend_args" cannot be set '
+                    'at the same time.')
+
         self.file_client_args = file_client_args
+        self.backend_args = backend_args
+
         if filename_tmpl is None:
             if self.by_epoch:
                 self.filename_tmpl = 'epoch_{}.pth'
@@ -139,7 +157,6 @@ class CheckpointHook(Hook):
                 self.filename_tmpl = 'iter_{}.pth'
         else:
             self.filename_tmpl = filename_tmpl
-        self.args = kwargs
 
         # save best logic
         assert (isinstance(save_best, str) or is_list_of(save_best, str)
@@ -211,19 +228,28 @@ class CheckpointHook(Hook):
         if self.out_dir is None:
             self.out_dir = runner.work_dir
 
+        # If self.file_client_args is None, self.file_client will not
+        # used in CheckpointHook. To avoid breaking backward compatibility,
+        # it will not be removed util the release of MMEngine1.0
         self.file_client = FileClient.infer_client(self.file_client_args,
                                                    self.out_dir)
+
+        if self.file_client_args is None:
+            self.file_backend = get_file_backend(
+                self.out_dir, backend_args=self.backend_args)
+        else:
+            self.file_backend = self.file_client
+
         # if `self.out_dir` is not equal to `runner.work_dir`, it means that
         # `self.out_dir` is set so the final `self.out_dir` is the
         # concatenation of `self.out_dir` and the last level directory of
         # `runner.work_dir`
         if self.out_dir != runner.work_dir:
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-            self.out_dir = self.file_client.join_path(
+            self.out_dir = self.file_backend.join_path(
                 self.out_dir, basename)  # type: ignore  # noqa: E501
 
-        runner.logger.info(f'Checkpoints will be saved to {self.out_dir} by '
-                           f'{self.file_client.name}.')
+        runner.logger.info(f'Checkpoints will be saved to {self.out_dir}.')
 
         if self.save_best is not None:
             if len(self.key_indicators) == 1:
@@ -302,11 +328,12 @@ class CheckpointHook(Hook):
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
             by_epoch=self.by_epoch,
+            backend_args=self.backend_args,
             **self.args)
 
         runner.message_hub.update_info(
-            'last_ckpt', self.file_client.join_path(self.out_dir,
-                                                    ckpt_filename))
+            'last_ckpt',
+            self.file_backend.join_path(self.out_dir, ckpt_filename))
 
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
@@ -318,16 +345,15 @@ class CheckpointHook(Hook):
                 current_ckpt - self.max_keep_ckpts * self.interval, 0,
                 -self.interval)
             for _step in redundant_ckpts:
-                ckpt_path = self.file_client.join_path(
+                ckpt_path = self.file_backend.join_path(
                     self.out_dir, self.filename_tmpl.format(_step))
-                if self.file_client.isfile(ckpt_path):
-                    self.file_client.remove(ckpt_path)
+                if self.file_backend.isfile(ckpt_path):
+                    self.file_backend.remove(ckpt_path)
                 else:
                     break
 
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
-        file_client = FileClient.infer_client(uri=self.out_dir)
-        filepath = file_client.join_path(self.out_dir, ckpt_filename)
+        filepath = self.file_backend.join_path(self.out_dir, ckpt_filename)
         with open(save_file, 'w') as f:
             f.write(filepath)
 
@@ -404,7 +430,8 @@ class CheckpointHook(Hook):
                 file_client_args=self.file_client_args,
                 save_optimizer=False,
                 save_param_scheduler=False,
-                by_epoch=False)
+                by_epoch=False,
+                backend_args=self.backend_args)
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')

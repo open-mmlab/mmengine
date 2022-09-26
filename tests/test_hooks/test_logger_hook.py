@@ -26,6 +26,22 @@ class TestLoggerHook:
         with pytest.raises(ValueError):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
+        # test `file_client_args` and `backend_args`
+        with pytest.warns(
+                DeprecationWarning,
+                match='"file_client_args" will be deprecated in future'):
+            logger_hook = LoggerHook(
+                out_dir='tmp.txt', file_client_args={'backend': 'disk'})
+
+        with pytest.raises(
+                ValueError,
+                match='"file_client_args" and "backend_args" cannot be '
+                'set at the same time'):
+            logger_hook = LoggerHook(
+                out_dir='tmp.txt',
+                file_client_args={'backend': 'disk'},
+                backend_args={'backend': 'local'})
+
     def test_before_run(self):
         runner = MagicMock()
         runner.iter = 10
