@@ -402,9 +402,6 @@ class Runner:
             # Merge the data_preprocessor to model config.
             model.setdefault('data_preprocessor', data_preprocessor)
         self.model = self.build_model(model)
-        # wrap model
-        self.model = self.wrap_model(
-            self.cfg.get('model_wrapper_cfg'), self.model)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
@@ -1608,6 +1605,16 @@ class Runner:
         Returns:
             nn.Module: The model after training.
         """
+
+        # initialize the model weights
+        self._init_model_weights()
+        # make sure checkpoint-related hooks are triggered after `before_run`
+        self.load_or_resume()
+        # lazy wrap model
+        if not is_model_wrapper(self.model):
+            self.model = self.wrap_model(
+                self.cfg.get('model_wrapper_cfg'), self.model)
+
         if is_model_wrapper(self.model):
             ori_model = self.model.module
         else:
@@ -1647,11 +1654,6 @@ class Runner:
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
 
-        # initialize the model weights
-        self._init_model_weights()
-        # make sure checkpoint-related hooks are triggered after `before_run`
-        self.load_or_resume()
-
         # Initiate inner count of `optim_wrapper`.
         self.optim_wrapper.initialize_count_status(
             self.model,
@@ -1680,6 +1682,10 @@ class Runner:
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
+        # lazy wrap model
+        if not is_model_wrapper(self.model):
+            self.model = self.wrap_model(
+                self.cfg.get('model_wrapper_cfg'), self.model)
 
         metrics = self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -1703,6 +1709,10 @@ class Runner:
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
+        # lazy wrap model
+        if not is_model_wrapper(self.model):
+            self.model = self.wrap_model(
+                self.cfg.get('model_wrapper_cfg'), self.model)
 
         metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
