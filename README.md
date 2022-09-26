@@ -48,7 +48,7 @@ Major features:
 2. **Open architecture with unified interfaces**:
 
    - Handles different algorithm tasks with unified APIs, e.g., implement a method and apply it to all compatible models.
-   - Provides a unified abstraction for the upper-level algorithm library, which supports various back-end devices such as Nvidia CUDA, Mac MPS, AMD, MLU, and other devices for model training.
+   - Provides a unified abstraction for upper-level algorithm libraries, which supports various back-end devices such as Nvidia CUDA, Mac MPS, AMD, MLU, and more for model training.
 
 3. **Customizable training process**:
 
