@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
+from mmengine.model import MMDistributedDataParallel
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
@@ -759,6 +760,7 @@ class TestZeroOptimizer(MultiProcessTestCase):
     def test_build_zero_redundancy_optimizer(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ExampleModel()
+        model = MMDistributedDataParallel(module=model)
         self.base_lr = 0.01
         self.momentum = 0.0001
         self.base_wd = 0.9
@@ -773,17 +775,8 @@ class TestZeroOptimizer(MultiProcessTestCase):
                 momentum=self.momentum))
         optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
         self.assertIsInstance(optim_wrapper.optimizer, ZeroRedundancyOptimizer)
-        self._check_default_optimizer(optim_wrapper.optimizer, model)
-
-        # test build optimizer without ``optimizer_type``
-        with self.assertRaises(TypeError):
-            optim_wrapper_cfg = dict(
-                optimizer=dict(
-                    type='ZeroRedundancyOptimizer',
-                    lr=self.base_lr,
-                    weight_decay=self.base_wd,
-                    momentum=self.momentum))
-            optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+        self._check_default_optimizer(
+            optim_wrapper.optimizer, model, prefix='module.')
 
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
