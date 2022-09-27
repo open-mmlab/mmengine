@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import sys
+import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -11,12 +13,17 @@ from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
 from mmengine.registry import build_from_cfg
-from mmengine.utils.dl_utils import mmcv_full_available
+from mmengine.testing._internal import MultiProcessTestCase
+from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
+from mmengine.utils.version_utils import digit_version
 
 MMCV_FULL_AVAILABLE = mmcv_full_available()
 if not MMCV_FULL_AVAILABLE:
     sys.modules['mmcv.ops'] = MagicMock(
         DeformConv2d=dict, ModulatedDeformConv2d=dict)
+
+if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
+    from mmengine.optim.optimizer import ZeroRedundancyOptimizer  # noqa: F401
 
 
 class ExampleModel(nn.Module):
@@ -713,3 +720,75 @@ class TestBuilder(TestCase):
                     for setting in settings:
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
+
+
+@unittest.skipIf(
+    digit_version(TORCH_VERSION) < digit_version('1.8.0'),
+    reason='ZeRO needs Pytorch 1.8 or higher')
+class TestZeroOptimizer(MultiProcessTestCase):
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._spawn_processes()
+
+    def _check_default_optimizer(self, optimizer, model, prefix=''):
+        assert isinstance(optimizer.optim, torch.optim.SGD)
+        assert optimizer.defaults['lr'] == self.base_lr
+        assert optimizer.defaults['momentum'] == self.momentum
+        assert optimizer.defaults['weight_decay'] == self.base_wd
+        param_groups = optimizer.param_groups[0]
+        if MMCV_FULL_AVAILABLE:
+            param_names = [
+                'param1', 'conv1.weight', 'conv2.weight', 'conv2.bias',
+                'bn.weight', 'bn.bias', 'sub.param1', 'sub.conv1.weight',
+                'sub.conv1.bias', 'sub.gn.weight', 'sub.gn.bias', 'dcn.weight',
+                'dcn.conv_offset.weight', 'dcn.conv_offset.bias'
+            ]
+        else:
+            param_names = [
+                'param1', 'conv1.weight', 'conv2.weight', 'conv2.bias',
+                'bn.weight', 'bn.bias', 'sub.param1', 'sub.conv1.weight',
+                'sub.conv1.bias', 'sub.gn.weight', 'sub.gn.bias'
+            ]
+        param_dict = dict(model.named_parameters())
+        assert len(param_groups['params']) == len(param_names)
+        for i in range(len(param_groups['params'])):
+            assert torch.equal(param_groups['params'][i],
+                               param_dict[prefix + param_names[i]])
+
+    def test_build_zero_redundancy_optimizer(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ExampleModel()
+        self.base_lr = 0.01
+        self.momentum = 0.0001
+        self.base_wd = 0.9
+
+        # test build function
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='ZeroRedundancyOptimizer',
+                optimizer_type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+        self.assertIsInstance(optim_wrapper.optimizer, ZeroRedundancyOptimizer)
+        self._check_default_optimizer(optim_wrapper.optimizer, model)
+
+        # test build optimizer without ``optimizer_type``
+        with self.assertRaises(TypeError):
+            optim_wrapper_cfg = dict(
+                optimizer=dict(
+                    type='ZeroRedundancyOptimizer',
+                    lr=self.base_lr,
+                    weight_decay=self.base_wd,
+                    momentum=self.momentum))
+            optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+
+    def _init_dist_env(self, rank, world_size):
+        """Initialize the distributed environment."""
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29510'
+        os.environ['RANK'] = str(rank)
+        torch.distributed.init_process_group(
+            backend='gloo', rank=rank, world_size=world_size)
