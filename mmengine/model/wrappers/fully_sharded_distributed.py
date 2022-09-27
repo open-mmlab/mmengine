@@ -154,159 +154,18 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
-        super().__init__(
-            module=module,
-            process_group=process_group,
-            auto_wrap_policy=fsdp_auto_wrap_policy,
-            cpu_offload=cpu_offload,
-            backward_prefetch=backward_prefetch,
-            **kwargs)
-
-    def train_step(self, data: dict,
-                   optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """Interface for model forward, backward and parameters updating during
-        training process.
-
-        :meth:`train_step` will perform the following steps in order:
-
-        - If :attr:`module` defines the preprocess method,
-            call ``module.preprocess`` to pre-processing data.
-        - Call ``module.forward(**data)`` and get losses.
-        - Parse losses.
-        - Call ``optim_wrapper.optimizer_step`` to update parameters.
-        - Return log messages of losses.
-
-        Args:
-            data (dict): Data sampled by dataloader.
-            optim_wrapper (OptimWrapper): A wrapper of optimizer to
-                update parameters.
-
-        Returns:
-            Dict[str, torch.Tensor]: A ``dict`` of tensor for logging.
-        """
-        # enable automatic mixed precision training context.
-        with optim_wrapper.optim_context(self):
-            data = self.module.data_preprocessor(data, training=True)
-            losses = self._run_forward(data, mode='loss')
-        parsed_loss, log_vars = self.module.parse_losses(losses)
-        optim_wrapper.update_params(parsed_loss)
-        return log_vars
-
-    def val_step(self, data: dict) -> List[BaseDataElement]:
-        """Gets the prediction of module during validation process.
-
-        Args:
-            data (dict): Data sampled by dataloader.
-
-        Returns:
-            List[BaseDataElement] or dict: The predictions of given data.
-        """
-        data = self.module.data_preprocessor(data, False)
-        return self._run_forward(data, mode='predict')  # type: ignore
-
-    def test_step(self, data: dict) -> List[BaseDataElement]:
-        """Gets the predictions of module during testing process.
-
-        Args:
-            data (dict): Data sampled by dataloader.
-
-        Returns:
-            List[BaseDataElement]: The predictions of given data.
-        """
-        data = self.module.data_preprocessor(data, False)
-        return self._run_forward(data, mode='predict')  # type: ignore
-
-    def _run_forward(self, data: Union[dict, tuple, list],
-                     mode: str) -> Union[Dict[str, torch.Tensor], list]:
-        """Unpacks data for :meth:`forward`
-
-        Args:
-            data (dict or tuple or list): Data sampled from dataset.
-            mode (str): Mode of forward.
-
-        Returns:
-            dict or list: Results of training or testing mode.
-        """
-        if isinstance(data, dict):
-            results = self(**data, mode=mode)
-        elif isinstance(data, (list, tuple)):
-            results = self(*data, mode=mode)
-        else:
-            raise TypeError('Output of `data_preprocessor` should be '
-                            f'list, tuple or dict, but got {type(data)}')
-        return results
-
-
-class _MMFSDP(FullyShardedDataParallel):
-
-    def __init__(
-        self,
-        module: nn.Module,
-        process_group: Optional[ProcessGroup] = None,
-        cpu_offload: Optional[Union[bool, CPUOffload]] = None,
-        fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
-        backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
-        **kwargs,
-    ):
-
-        if cpu_offload is not None:
-            if isinstance(cpu_offload, bool):
-                cpu_offload = CPUOffload(offload_params=cpu_offload)
-            elif not isinstance(cpu_offload, CPUOffload):
-                raise TypeError(
-                    '`cpu_offload` should be `None`, `bool`'
-                    f'or `CPUOffload`, but has type {type(cpu_offload)}')
-
-        if fsdp_auto_wrap_policy is not None:
-            if isinstance(fsdp_auto_wrap_policy, str):
-                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
-                    '`FSDP_WRAP_POLICYS` has no ' \
-                    f'function {fsdp_auto_wrap_policy}'
-                fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
-                    fsdp_auto_wrap_policy)
-                if not isinstance(fsdp_auto_wrap_policy,
-                                  Callable):  # type: ignore
-                    raise TypeError(
-                        'Registered `fsdp_auto_wrap_policy` needs to be '
-                        '`Callable`, but has type '
-                        f'{type(fsdp_auto_wrap_policy)}')
-            elif not isinstance(fsdp_auto_wrap_policy,
-                                Callable):  # type: ignore
-                raise TypeError(
-                    '`fsdp_auto_wrap_policy` should be `None`, `str` '
-                    'or `Callable`, but has type '
-                    f'{type(fsdp_auto_wrap_policy)}')
-
-        if backward_prefetch is not None:
-            if isinstance(backward_prefetch, str):
-                assert backward_prefetch in ['pre', 'post'], \
-                    '`backward_prefetch` should be either `pre` or `post`,' \
-                    f' but get {backward_prefetch}'
-                if backward_prefetch == 'pre':
-                    backward_prefetch = BackwardPrefetch.BACKWARD_PRE
-                else:
-                    backward_prefetch = BackwardPrefetch.BACKWARD_POST
-            elif not isinstance(backward_prefetch, BackwardPrefetch):
-                raise TypeError('`backward_prefetch` should be `None`, `str` '
-                                'or `BackwardPrefetch`, but has type '
-                                f'{type(backward_prefetch)}')
-
-        super().__init__(
-            module=module,
-            process_group=process_group,
-            auto_wrap_policy=fsdp_auto_wrap_policy,
-            cpu_offload=cpu_offload,
-            backward_prefetch=backward_prefetch,
-            **kwargs)
-
-
-@MODEL_WRAPPERS.register_module()
-class MMFullyShardedDataParallelWrapper:
-
-    def __init__(self, module: nn.Module, *args, **kwargs):
-
         def find_fixed_modules_recursively(
                 root_module: nn.Module) -> List[nn.Module]:
+            """Helper function to find fixed modules whose parameters are all
+            untrainable, i.e. `requires_grad=False`. This function performs
+            recursively.
+
+            Args:
+                root_module (nn.Module): root module for recursion
+
+            Returns:
+                List[nn.Module]: fixed modules in root_module
+            """
             if all(p.requires_grad for p in root_module.parameters()):
                 return []
             if all(not p.requires_grad for p in root_module.parameters()):
@@ -318,24 +177,23 @@ class MMFullyShardedDataParallelWrapper:
             return fixed_modules
 
         self._mm_fixed_modules = find_fixed_modules_recursively(module)
+        # Set `requires_grad=True` to avoid FSDP AssertionError.
+        # See https://github.com/pytorch/pytorch/issues/75943
+        # We make sure these params are untrained by some tricky methods
         for m in self._mm_fixed_modules:
             for p in m.parameters():
                 p.requires_grad = True
 
-        for name, p in module.named_parameters():
-            print(f'module param name = {name}')
-        self.module = _MMFSDP(module, ignored_modules=self._mm_fixed_modules)
-        for name, p in self.module.named_parameters():
-            print(f'FSDP param name = {name}')
-        for name, p in module.named_parameters():
-            print(f'module param name = {name}')
-
-    def __getattr__(self, name):
-        """Forward missing attributes to wrapped module."""
-        return getattr(self.module, name)
-
-    def __call__(self, *args, **kwargs):
-        return self.module(*args, **kwargs)
+        super().__init__(
+            module=module,
+            process_group=process_group,
+            auto_wrap_policy=fsdp_auto_wrap_policy,
+            cpu_offload=cpu_offload,
+            backward_prefetch=backward_prefetch,
+            # ignored modules are not sharded and thus not in FSDP.parameters()
+            # we use this tricky method to make fixed_modules untrained.
+            ignored_modules=self._mm_fixed_modules,
+            **kwargs)
 
     def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
@@ -364,12 +222,14 @@ class MMFullyShardedDataParallelWrapper:
             data = self.module.data_preprocessor(data, training=True)
             losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.module.parse_losses(losses)
-        # manually zero_grad fixed parameters. Is this necessary?
-        for m in self._mm_fixed_modules:
-            for p in m.parameters():
-                if p.grad:
-                    torch._foreach_zero_(p.grad)
         optim_wrapper.update_params(parsed_loss)
+        # manually zero_grad fixed parameters,
+        # since they are not in any optimizer
+        if optim_wrapper.should_update():
+            for m in self._mm_fixed_modules:
+                for p in m.parameters():
+                    if p.grad:
+                        torch._foreach_zero_(p.grad)
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
