@@ -36,7 +36,7 @@ class OptimWrapper:
             dict, and the keys could be set as follows:
 
             If the key ``type`` is not set, or ``type`` is "norm",
-            the accpeted keys are as follows:
+            the accepted keys are as follows:
 
             - max_norm (float or int): Max norm of the gradients.
             - norm_type (float or int): Type of the used p-norm. Can be
@@ -46,7 +46,7 @@ class OptimWrapper:
               ``nan``, ``inf``, or ``-inf``. Default: False (will switch
               to True in the future)
 
-            If the key ``type`` is set to "value", the accpeted keys are as
+            If the key ``type`` is set to "value", the accepted keys are as
             follows:
 
             - clip_value (float or int): maximum allowed value of the
@@ -133,7 +133,11 @@ class OptimWrapper:
                 self.clip_func = torch.nn.utils.clip_grad_value_
             else:
                 raise ValueError('type of clip_grad should be "norm" or value',
-                                 f'but gout {clip_func}')
+                                 f'but got {clip_func}')
+            assert clip_grad, ('`clip_grad` should contain other arguments '
+                               'besides `type`. The arguments should match '
+                               'with the `torch.nn.utils.clip_grad_norm_` or '
+                               'clip_grad_value_`')
         self.clip_grad_kwargs = clip_grad
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
