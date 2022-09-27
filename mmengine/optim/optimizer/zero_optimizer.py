@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 import torch
+
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 
@@ -16,8 +17,9 @@ from .builder import OPTIMIZERS
 @OPTIMIZERS.register_module()
 class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
     """A wrapper class of :class:`ZeroRedundancyOptimizer` that gets a
-    optimizer type as string.
-    This class wraps an arbitrary :class:`optim.Optimizer
+    optimizer type as string. This class wraps an arbitrary
+    :class:`optim.Optimizer.
+
     <torch.optim.Optimizer>` and shards its states across ranks in the group as
     described by ZeRO_. The local optimizer instance in each rank is only
     responsible for updating approximately ``1 / world_size`` parameters and
