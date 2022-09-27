@@ -48,3 +48,8 @@ class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
             'available when pytorch version >= 1.8')
         optimizer_class = getattr(torch.optim, optimizer_type)
         super().__init__(params, optimizer_class, **kwargs)
+
+    def state_dict(self):
+        """Consolidate `state_dict`s from ranks to save the `state_dict`"""
+        self.consolidate_state_dict()
+        return super().state_dict()
