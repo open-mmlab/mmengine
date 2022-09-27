@@ -22,8 +22,10 @@ if not MMCV_FULL_AVAILABLE:
     sys.modules['mmcv.ops'] = MagicMock(
         DeformConv2d=dict, ModulatedDeformConv2d=dict)
 
-if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
-    from mmengine.optim.optimizer import ZeroRedundancyOptimizer  # noqa: F401
+try:
+    from torch.distributed.optim import ZeroRedundancyOptimizer
+except ImportError:
+    ZeroRedundancyOptimizer = None
 
 
 class ExampleModel(nn.Module):
@@ -728,6 +730,9 @@ class TestBuilder(TestCase):
 class TestZeroOptimizer(MultiProcessTestCase):
 
     def setUp(self) -> None:
+        if ZeroRedundancyOptimizer is None:
+            self.skipTest('ZeroRedundancyOptimizer is not available.')
+
         super().setUp()
         self._spawn_processes()
 
