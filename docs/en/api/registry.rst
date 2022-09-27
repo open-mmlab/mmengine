@@ -13,6 +13,11 @@ mmengine.registry
 
    Registry
    DefaultScope
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    build_from_cfg
    build_model_from_cfg
    build_runner_from_cfg

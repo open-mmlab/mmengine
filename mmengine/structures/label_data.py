@@ -6,7 +6,7 @@ from .base_data_element import BaseDataElement
 
 
 class LabelData(BaseDataElement):
-    """Data structure for label-level annnotations or predictions."""
+    """Data structure for label-level annotations or predictions."""
 
     @staticmethod
     def onehot_to_label(onehot: torch.Tensor) -> torch.Tensor:

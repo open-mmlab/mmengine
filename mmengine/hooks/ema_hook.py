@@ -171,7 +171,8 @@ class EMAHook(Hook):
         Args:
             runner (Runner): The runner of the testing process.
         """
-        if 'ema_state_dict' in checkpoint:
+        from mmengine.runner.checkpoint import load_state_dict
+        if 'ema_state_dict' in checkpoint and runner._resume:
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
@@ -180,11 +181,13 @@ class EMAHook(Hook):
 
         # Support load checkpoint without ema state dict.
         else:
-            print_log(
-                'There is no `ema_state_dict` in checkpoint. '
-                '`EMAHook` will make a copy of `state_dict` as the '
-                'initial `ema_state_dict`', 'current', logging.WARNING)
-            self.ema_model.module.load_state_dict(
+            if runner._resume:
+                print_log(
+                    'There is no `ema_state_dict` in checkpoint. '
+                    '`EMAHook` will make a copy of `state_dict` as the '
+                    'initial `ema_state_dict`', 'current', logging.WARNING)
+            load_state_dict(
+                self.ema_model.module,
                 copy.deepcopy(checkpoint['state_dict']),
                 strict=self.strict_load)
 

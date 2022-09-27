@@ -72,7 +72,7 @@ class Registry:
             assert isinstance(scope, str)
             self._scope = scope
         else:
-            self._scope = self.infer_scope() if scope is None else scope
+            self._scope = self.infer_scope()
 
         # See https://mypy.readthedocs.io/en/stable/common_issues.html#
         # variables-vs-type-aliases for the use

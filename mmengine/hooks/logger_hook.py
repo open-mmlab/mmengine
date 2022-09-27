@@ -1,10 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
+import warnings
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
 
 from mmengine.fileio import FileClient, dump
+from mmengine.fileio.io import get_file_backend
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
@@ -50,12 +52,16 @@ class LoggerHook(Hook):
             removed. Defaults to True.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Defaults to None.
+            Defaults to None. It will be deprecated in future. Please use
+            `backend_args` instead.
         log_metric_by_epoch (bool): Whether to output metric in validation step
             by epoch. It can be true when running in epoch based runner.
             If set to True, `after_val_epoch` will set `step` to self.epoch in
             `runner.visualizer.add_scalars`. Otherwise `step` will be
             self.iter. Default to True.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> # The simplest LoggerHook config.
@@ -71,7 +77,8 @@ class LoggerHook(Hook):
                  out_suffix: SUFFIX_TYPE = ('.json', '.log', '.py', 'yaml'),
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
-                 log_metric_by_epoch: bool = True):
+                 log_metric_by_epoch: bool = True,
+                 backend_args: Optional[dict] = None):
         self.interval = interval
         self.ignore_last = ignore_last
         self.interval_exp_name = interval_exp_name
@@ -82,6 +89,15 @@ class LoggerHook(Hook):
                 'specified.')
         self.out_dir = out_dir
 
+        if file_client_args is not None:
+            warnings.warn(
+                '"file_client_args" will be deprecated in future. '
+                'Please use "backend_args" instead', DeprecationWarning)
+            if backend_args is not None:
+                raise ValueError(
+                    '"file_client_args" and "backend_args" cannot be set '
+                    'at the same time.')
+
         if not (out_dir is None or isinstance(out_dir, str)
                 or is_tuple_of(out_dir, str)):
             raise TypeError('out_dir should be None or string or tuple of '
@@ -91,9 +107,16 @@ class LoggerHook(Hook):
         self.keep_local = keep_local
         self.file_client_args = file_client_args
         self.json_log_path: Optional[str] = None
+
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
+            if file_client_args is None:
+                self.file_backend = get_file_backend(
+                    self.out_dir, backend_args=backend_args)
+            else:
+                self.file_backend = self.file_client
+
         self.log_metric_by_epoch = log_metric_by_epoch
 
     def before_run(self, runner) -> None:
@@ -107,10 +130,10 @@ class LoggerHook(Hook):
             # The final `self.out_dir` is the concatenation of `self.out_dir`
             # and the last level directory of `runner.work_dir`
             basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-            self.out_dir = self.file_client.join_path(self.out_dir, basename)
+            self.out_dir = self.file_backend.join_path(self.out_dir, basename)
             runner.logger.info(
-                f'Text logs will be saved to {self.out_dir} by '
-                f'{self.file_client.name} after the training process.')
+                f'Text logs will be saved to {self.out_dir} after the '
+                'training process.')
 
         self.json_log_path = f'{runner.timestamp}.json'
 
@@ -245,9 +268,9 @@ class LoggerHook(Hook):
             return
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
-            out_filepath = self.file_client.join_path(self.out_dir, filename)
+            out_filepath = self.file_backend.join_path(self.out_dir, filename)
             with open(local_filepath) as f:
-                self.file_client.put_text(f.read(), out_filepath)
+                self.file_backend.put_text(f.read(), out_filepath)
 
             runner.logger.info(
                 f'The file {local_filepath} has been uploaded to '

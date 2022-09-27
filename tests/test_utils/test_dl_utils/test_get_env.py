@@ -2,21 +2,11 @@
 import sys
 from unittest import TestCase
 
-import torch.cuda
-
 import mmengine
 from mmengine.utils.dl_utils import collect_env
-from mmengine.utils.dl_utils.parrots_wrapper import _get_cuda_home
 
 
 class TestCollectEnv(TestCase):
-
-    def test_get_cuda_home(self):
-        CUDA_HOME = _get_cuda_home()
-        if torch.cuda.is_available():
-            self.assertIsNotNone(CUDA_HOME)
-        else:
-            self.assertIsNone(CUDA_HOME)
 
     def test_collect_env(self):
         env_info = collect_env()
@@ -30,9 +20,6 @@ class TestCollectEnv(TestCase):
         if env_info['CUDA available']:
             for key in ['CUDA_HOME', 'NVCC']:
                 assert key in env_info
-
-        if sys.platform == 'win32':
-            assert 'MSVC' in env_info
 
         assert env_info['sys.platform'] == sys.platform
         assert env_info['Python'] == sys.version.replace('\n', '')

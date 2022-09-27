@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import pytest
 
-from mmengine import BaseStorageBackend, FileClient
+from mmengine.fileio import BaseStorageBackend, FileClient
 from mmengine.utils import has_method
 
 sys.modules['ceph'] = MagicMock()
@@ -354,9 +354,15 @@ class TestFileClient:
                 petrel_backend.remove(petrel_path)
 
         with patch.object(petrel_backend.client._client,
-                          'delete') as mock_delete:
+                          'delete') as mock_delete, \
+            patch.object(petrel_backend.client._client,
+                         'isdir', return_value=False) as mock_isdir, \
+            patch.object(petrel_backend.client._client,
+                         'contains', return_value=True) as mock_contains:
             petrel_backend.remove(petrel_path)
             mock_delete.assert_called_once_with(petrel_path)
+            mock_isdir.assert_called_once_with(petrel_path)
+            mock_contains.assert_called_once_with(petrel_path)
 
         # test `exists`
         assert has_method(petrel_backend.client._client, 'contains')

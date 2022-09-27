@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import pickle
 import platform
 import time
 import warnings
@@ -23,11 +24,12 @@ from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
 from mmengine.evaluator import Evaluator
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            is_model_wrapper, revert_sync_batchnorm)
+                            convert_sync_batchnorm, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -837,8 +839,16 @@ class Runner:
                 'layers in the model will be automatically reverted to '
                 'BatchNormXd layers if they are used.')
             model = revert_sync_batchnorm(model)
-            return model
-
+            return model  # type: ignore
+        else:
+            sync_bn = self.cfg.get('sync_bn', None)
+            if sync_bn is not None:
+                try:
+                    model = convert_sync_batchnorm(model, sync_bn)
+                except ValueError as e:
+                    self.logger.error('cfg.sync_bn should be "torch" or '
+                                      f'"mmcv", but got {sync_bn}')
+                    raise e
         if model_wrapper_cfg is None:
             find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                   False)
@@ -1910,7 +1920,11 @@ class Runner:
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
-        if resumed_dataset_meta != dataset_meta:
+
+        # `resumed_dataset_meta` and `dataset_meta` could be object like
+        # np.ndarray, which cannot be directly judged as equal or not,
+        # therefore we just compared their dumped results.
+        if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
@@ -1991,14 +2005,17 @@ class Runner:
         return checkpoint
 
     @master_only
-    def save_checkpoint(self,
-                        out_dir: str,
-                        filename: str,
-                        file_client_args: Optional[dict] = None,
-                        save_optimizer: bool = True,
-                        save_param_scheduler: bool = True,
-                        meta: dict = None,
-                        by_epoch: bool = True):
+    def save_checkpoint(
+        self,
+        out_dir: str,
+        filename: str,
+        file_client_args: Optional[dict] = None,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        meta: dict = None,
+        by_epoch: bool = True,
+        backend_args: Optional[dict] = None,
+    ):
         """Save checkpoints.
 
         ``CheckpointHook`` invokes this method to save checkpoints
@@ -2008,7 +2025,9 @@ class Runner:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
             file_client_args (dict, optional): Arguments to instantiate a
-                FileClient. Default: None.
+                FileClient. See :class:`mmengine.fileio.FileClient` for
+                details. Defaults to None. It will be deprecated in future.
+                Please use `backend_args` instead.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -2017,6 +2036,9 @@ class Runner:
                 checkpoint. Defaults to None.
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
+            backend_args (dict, optional): Arguments to instantiate the
+                preifx of uri corresponding backend. Defaults to None.
+                New in v0.2.0.
         """
         if meta is None:
             meta = {}
@@ -2033,8 +2055,20 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        file_client = FileClient.infer_client(file_client_args, out_dir)
-        filepath = file_client.join_path(out_dir, filename)
+        if file_client_args is not None:
+            warnings.warn(
+                '"file_client_args" will be deprecated in future. '
+                'Please use "backend_args" instead', DeprecationWarning)
+            if backend_args is not None:
+                raise ValueError(
+                    '"file_client_args" and "backend_args" cannot be set at '
+                    'the same time.')
+
+            file_client = FileClient.infer_client(file_client_args, out_dir)
+            filepath = file_client.join_path(out_dir, filename)
+        else:
+            filepath = join_path(  # type: ignore
+                out_dir, filename, backend_args=backend_args)
 
         meta.update(
             cfg=self.cfg.pretty_text,
