@@ -330,8 +330,9 @@ class CheckpointHook(Hook):
             backend_args=self.backend_args,
             **self.args)
 
-        # Model parallel-like training should involve pulling sharded states
-        # from all ranks, but skip the following procedure.
+        # Model parallel-like training such as FSDP/ZeroOptimizer should 
+        # involve pulling sharded states from all ranks, but skip the 
+        # following procedure.
         if not is_main_process():
             return
 

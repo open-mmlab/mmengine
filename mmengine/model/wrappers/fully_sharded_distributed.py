@@ -5,7 +5,10 @@ import torch
 import torch.nn as nn
 from torch.distributed import ProcessGroup
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
-    BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
+    BackwardPrefetch, CPUOffload, FullStateDictConfig)
+from torch.distributed.fsdp.fully_sharded_data_parallel import \
+    FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp.fully_sharded_data_parallel import StateDictType
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS, Registry
@@ -16,7 +19,7 @@ FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
-class MMFullyShardedDataParallel(FullyShardedDataParallel):
+class MMFullyShardedDataParallel(FSDP):
     """A wrapper for sharding Module parameters across data parallel workers.
 
     Different from FullyShardedDataParallel, MMFullyShardedDataParallel
@@ -275,3 +278,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             raise TypeError('Output of `data_preprocessor` should be '
                             f'list, tuple or dict, but got {type(data)}')
         return results
+
+    def _mm_fsdp_state_dict(self):
+        full_state_dict_config = FullStateDictConfig(
+            offload_to_cpu=True, rank0_only=True)
+        with FSDP.state_dict_type(self, StateDictType.FULL_STATE_DICT,
+                                  full_state_dict_config):
+            state_dict = self.state_dict()
+        return state_dict

@@ -22,7 +22,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only)
+                           is_distributed, is_main_process, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
@@ -2034,7 +2034,6 @@ class Runner:
 
         return checkpoint
 
-    @master_only
     def save_checkpoint(
         self,
         out_dir: str,
@@ -2110,14 +2109,28 @@ class Runner:
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
 
-        if is_model_wrapper(self.model):
-            model = self.model.module
+        # models with this attribute are FSDP models, which has special logic
+        # for `state_dict()` and should run across all processes
+        if hasattr(self.model, '_mm_fsdp_state_dict'):
+            state_dict = self.model._mm_fsdp_state_dict()
+            # after gathering state_dict, other processes should stop to avoid
+            # multiple saves of a checkpoint
+            if not is_main_process():
+                return
         else:
-            model = self.model
+            # other model should only run in main process
+            if not is_main_process():
+                return
+            if is_model_wrapper(self.model):
+                model = self.model.module
+                state_dict = weights_to_cpu(get_state_dict(model))
+            else:
+                model = self.model
+                state_dict = weights_to_cpu(get_state_dict(model))
 
         checkpoint = {
             'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model)),
+            'state_dict': state_dict,
             'message_hub': self.message_hub.state_dict()
         }
         # save optimizer state dict to checkpoint
