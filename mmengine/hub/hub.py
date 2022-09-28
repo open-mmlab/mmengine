@@ -80,4 +80,6 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
             load_checkpoint(model, cfg.model_path)
+            # Hack to use pretrained weights
+            model._is_init = True
         return model
