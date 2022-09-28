@@ -28,12 +28,15 @@ class ConcatDataset(_ConcatDataset):
     Args:
         datasets (Sequence[BaseDataset] or Sequence[dict]): A list of datasets
             which will be concatenated.
+        ignore_keys (List[str] or str): Ignore the keys that can be
+            unequal in `dataset.metainfo`.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
                  datasets: Sequence[Union[BaseDataset, dict]],
+                 ignore_keys: Union[str, List[str]] = [],
                  lazy_init: bool = False):
         self.datasets: List[BaseDataset] = []
         for i, dataset in enumerate(datasets):
@@ -45,13 +48,23 @@ class ConcatDataset(_ConcatDataset):
                 raise TypeError(
                     'elements in datasets sequence should be config or '
                     f'`BaseDataset` instance, but got {type(dataset)}')
+        if isinstance(ignore_keys, str):
+            self.ignore_keys = [ignore_keys]
+        elif isinstance(ignore_keys, list):
+            self.ignore_keys = ignore_keys
+        else:
+            raise TypeError('ignore_keys should be a list or str, '
+                            f'but got {type(ignore_keys)}')
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
         for i, dataset in enumerate(self.datasets, 1):
-            if self._metainfo != dataset.metainfo:
-                raise ValueError(
-                    f'The meta information of the {i}-th dataset does not '
-                    'match meta information of the first dataset')
+            for key in self.metainfo.keys():
+                if key in self.ignore_keys:
+                    continue
+                if self._metainfo[key] != dataset.metainfo[key]:
+                    raise ValueError(
+                        f'The meta information of the {i}-th dataset does not '
+                        'match meta information of the first dataset')
 
         self._fully_initialized = False
         if not lazy_init:
