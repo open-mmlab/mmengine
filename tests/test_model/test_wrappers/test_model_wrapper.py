@@ -244,9 +244,9 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         optimizer = SGD(fsdp_model.parameters(), lr=0)
-        optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
+        optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
-        data = dict(inputs=[inputs], data_sample=MagicMock())
+        data = dict(inputs=inputs, data_sample=None)
         fsdp_model.train()
         self.assertTrue(fsdp_model.training)
         fsdp_model.train_step(data, optim_wrapper=optim_wrapper)
@@ -256,7 +256,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
-        data = dict(inputs=[inputs], data_sample=MagicMock())
+        data = dict(inputs=inputs, data_sample=None)
         # Test get predictions.
         predictions = fsdp_model.val_step(data)
         self.assertIsInstance(predictions, torch.Tensor)

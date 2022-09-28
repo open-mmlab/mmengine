@@ -834,6 +834,8 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_revert_syncbn'
         cfg.model = dict(type='ToySyncBNModel')
         runner = Runner.from_cfg(cfg)
+        runner.model = runner.wrap_model(
+            runner.cfg.get('model_wrapper_cfg'), runner.model)
         self.assertIsInstance(runner.model, BaseModel)
         assert not isinstance(runner.model.bn, nn.SyncBatchNorm)
 
@@ -842,6 +844,8 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_wrap_model'
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
+        runner.model = runner.wrap_model(
+            runner.cfg.get('model_wrapper_cfg'), runner.model)
         self.assertIsInstance(runner.model, BaseModel)
 
         # Test with ddp wrapper
@@ -853,6 +857,8 @@ class TestRunner(TestCase):
             cfg.launcher = 'pytorch'
             cfg.experiment_name = 'test_wrap_model1'
             runner = Runner.from_cfg(cfg)
+            runner.model = runner.wrap_model(
+                runner.cfg.get('model_wrapper_cfg'), runner.model)
             self.assertIsInstance(runner.model, CustomModelWrapper)
 
             # Test cfg.sync_bn = 'torch', when model does not have BN layer
@@ -861,7 +867,9 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_wrap_model2'
             cfg.sync_bn = 'torch'
             cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
-            runner.from_cfg(cfg)
+            runner = Runner.from_cfg(cfg)
+            runner.model = runner.wrap_model(
+                runner.cfg.get('model_wrapper_cfg'), runner.model)
 
             @MODELS.register_module()
             class ToyBN(BaseModel):
@@ -876,13 +884,17 @@ class TestRunner(TestCase):
             cfg.model = dict(type='ToyBN')
             cfg.experiment_name = 'test_data_preprocessor2'
             runner = Runner.from_cfg(cfg)
+            runner.model = runner.wrap_model(
+                runner.cfg.get('model_wrapper_cfg'), runner.model)
             self.assertIsInstance(runner.model.model.bn,
                                   torch.nn.SyncBatchNorm)
 
             cfg.sync_bn = 'unknown'
             cfg.experiment_name = 'test_data_preprocessor3'
             with self.assertRaises(ValueError):
-                Runner.from_cfg(cfg)
+                runner = Runner.from_cfg(cfg)
+                runner.model = runner.wrap_model(
+                    runner.cfg.get('model_wrapper_cfg'), runner.model)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
