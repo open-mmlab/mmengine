@@ -2,6 +2,7 @@
 from mmengine.registry import HOOKS
 from .hook import Hook
 
+
 @HOOKS.register_module()
 class BenchmarkHook(Hook):
     """A hook that logs the training speed of each epch for benchmark."""
@@ -9,9 +10,8 @@ class BenchmarkHook(Hook):
     priority = 'NORMAL'
 
     def after_train_epoch(self, runner) -> None:
-        """We use the average throughput in iterations of the entire training
-        run and skip the first 50 iterations of each epoch to skip GPU warmup
-        time.
+        """We use the average throughput in iterations of each training epcoh
+        and skip the first 50 iterations of each epoch to skip GPU warmup time.
 
         Args:
             runner (Runner): The runner of the training process.
