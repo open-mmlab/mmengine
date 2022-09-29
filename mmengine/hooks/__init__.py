@@ -10,9 +10,10 @@ from .param_scheduler_hook import ParamSchedulerHook
 from .runtime_info_hook import RuntimeInfoHook
 from .sampler_seed_hook import DistSamplerSeedHook
 from .sync_buffer_hook import SyncBuffersHook
+from .benchmark_hook import BenchmarkHook
 
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
-    'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook'
+    'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'BenchmarkHook'
 ]
