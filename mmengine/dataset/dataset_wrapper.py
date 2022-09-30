@@ -48,7 +48,7 @@ class ConcatDataset(_ConcatDataset):
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
         for i, dataset in enumerate(self.datasets, 1):
-            if self._metainfo != dataset.metainfo:
+            if self._metainfo.get('CLASSES') != dataset.metainfo.get('CLASSES'):
                 raise ValueError(
                     f'The meta information of the {i}-th dataset does not '
                     'match meta information of the first dataset')
