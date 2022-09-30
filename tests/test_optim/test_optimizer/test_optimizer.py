@@ -721,7 +721,8 @@ class TestBuilder(TestCase):
 
 
 @unittest.skipIf(
-    (digit_version(TORCH_VERSION) < digit_version('1.8.0')) and is_available(),
+    (digit_version(TORCH_VERSION) < digit_version('1.8.0'))
+    or not is_available(),
     reason='ZeRO requires pytorch>=1.8 with torch.distributed.rpc available.')
 class TestZeroOptimizer(MultiProcessTestCase):
 
