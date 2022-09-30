@@ -19,7 +19,7 @@ from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
-if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+if digit_version(TORCH_VERSION) >= digit_version('1.12.0'):
     from mmengine.model import MMFullyShardedDataParallel  # noqa: F401
 
 
@@ -219,8 +219,8 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
 @unittest.skipIf(
     torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
 @unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('1.11.0'),
-    reason='fsdp needs Pytorch 1.11 or higher')
+    digit_version(TORCH_VERSION) < digit_version('1.12.0'),
+    reason='MMEngine only support fsdp with Pytorch 1.12 or higher')
 class TestMMFullyShardedDataParallel(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
