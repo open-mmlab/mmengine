@@ -6,7 +6,6 @@ from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-from mmengine.dist import master_only
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
@@ -309,7 +308,6 @@ class CheckpointHook(Hook):
 
         return eval_res[key_indicator]
 
-    @master_only
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
@@ -357,7 +355,6 @@ class CheckpointHook(Hook):
         with open(save_file, 'w') as f:
             f.write(filepath)
 
-    @master_only
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 

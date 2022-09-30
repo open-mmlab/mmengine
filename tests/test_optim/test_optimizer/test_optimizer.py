@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
+from mmengine.dist import is_main_process
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
@@ -736,11 +737,11 @@ class TestZeroOptimizer(MultiProcessTestCase):
         super().setUp()
         self._spawn_processes()
 
-    def _check_default_optimizer(self, optimizer, model, prefix=''):
-        assert isinstance(optimizer.optim, torch.optim.SGD)
-        assert optimizer.defaults['lr'] == self.base_lr
-        assert optimizer.defaults['momentum'] == self.momentum
-        assert optimizer.defaults['weight_decay'] == self.base_wd
+    def _check_default_optimizer(self, optimizer, model):
+        self.assertIsInstance(optimizer.optim, torch.optim.SGD)
+        self.assertEqual(optimizer.defaults['lr'], self.base_lr)
+        self.assertEqual(optimizer.defaults['momentum'], self.momentum)
+        self.assertEqual(optimizer.defaults['weight_decay'], self.base_wd)
         param_groups = optimizer.param_groups[0]
         if MMCV_FULL_AVAILABLE:
             param_names = [
@@ -756,10 +757,10 @@ class TestZeroOptimizer(MultiProcessTestCase):
                 'sub.conv1.bias', 'sub.gn.weight', 'sub.gn.bias'
             ]
         param_dict = dict(model.named_parameters())
-        assert len(param_groups['params']) == len(param_names)
+        self.assertEqual(len(param_groups['params']), len(param_names))
         for i in range(len(param_groups['params'])):
             assert torch.equal(param_groups['params'][i],
-                               param_dict[prefix + param_names[i]])
+                               param_dict[param_names[i]])
 
     def test_build_zero_redundancy_optimizer(self):
         self._init_dist_env(self.rank, self.world_size)

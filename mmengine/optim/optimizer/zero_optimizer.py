@@ -2,13 +2,15 @@
 
 import torch
 
+from mmengine.dist import is_main_process
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 try:
     from torch.distributed.optim import \
         ZeroRedundancyOptimizer as _ZeroReundancyOptimizer
-except ImportError:
+except ImportError as e:
+    print(e)
     _ZeroReundancyOptimizer = object
 
 from .builder import OPTIMIZERS
@@ -52,4 +54,5 @@ class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
     def state_dict(self):
         """Consolidate `state_dict`s from ranks to save the `state_dict`"""
         self.consolidate_state_dict()
-        return super().state_dict()
+        if is_main_process():
+            return super().state_dict()
