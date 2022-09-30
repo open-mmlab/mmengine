@@ -5,12 +5,13 @@ import torch
 from mmengine.dist import is_main_process
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+import warnings
 
 try:
     from torch.distributed.optim import \
         ZeroRedundancyOptimizer as _ZeroReundancyOptimizer
 except ImportError as e:
-    print(e)
+    warnings.warn(e)
     _ZeroReundancyOptimizer = object
 
 from .builder import OPTIMIZERS
