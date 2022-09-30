@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import torch
 import torch.nn as nn
 
-from mmengine.dist import is_main_process
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
