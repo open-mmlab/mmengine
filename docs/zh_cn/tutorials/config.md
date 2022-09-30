@@ -113,7 +113,7 @@ optimizer = dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001)
 然后在算法库中可以通过如下代码构造优化器对象。
 
 ```python
-from mmengine import Config
+from mmengine import Config, optim
 from mmengine.registry import OPTIMIZERS
 
 import torch.nn as nn
