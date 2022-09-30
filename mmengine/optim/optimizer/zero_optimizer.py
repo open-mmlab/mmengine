@@ -1,17 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 import torch
+from torch.distributed.rpc import is_available
 
 from mmengine.dist import is_main_process
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
-import warnings
 
 try:
     from torch.distributed.optim import \
         ZeroRedundancyOptimizer as _ZeroReundancyOptimizer
-except ImportError as e:
-    warnings.warn(e)
+except ImportError:
     _ZeroReundancyOptimizer = object
 
 from .builder import OPTIMIZERS
@@ -49,6 +48,7 @@ class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
         assert digit_version(TORCH_VERSION) >= digit_version('1.8.0'), (
             '`torch.distributed.optim.ZeroReundancyOptimizer` is only '
             'available when pytorch version >= 1.8')
+        assert is_available(), 'torch.distributed.rpc is not available'
         optimizer_class = getattr(torch.optim, optimizer_type)
         super().__init__(params, optimizer_class, **kwargs)
 

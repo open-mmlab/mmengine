@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import torch
 import torch.nn as nn
+from torch.distributed.rpc import is_available
 
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
@@ -21,11 +22,6 @@ MMCV_FULL_AVAILABLE = mmcv_full_available()
 if not MMCV_FULL_AVAILABLE:
     sys.modules['mmcv.ops'] = MagicMock(
         DeformConv2d=dict, ModulatedDeformConv2d=dict)
-
-try:
-    from torch.distributed.optim import ZeroRedundancyOptimizer
-except ImportError:
-    ZeroRedundancyOptimizer = None
 
 
 class ExampleModel(nn.Module):
@@ -725,14 +721,11 @@ class TestBuilder(TestCase):
 
 
 @unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('1.8.0'),
-    reason='ZeRO needs Pytorch 1.8 or higher')
+    (digit_version(TORCH_VERSION) < digit_version('1.8.0')) and is_available(),
+    reason='ZeRO requires pytorch>=1.8 with torch.distributed.rpc available.')
 class TestZeroOptimizer(MultiProcessTestCase):
 
     def setUp(self) -> None:
-        if ZeroRedundancyOptimizer is None:
-            self.skipTest('ZeroRedundancyOptimizer is not available.')
-
         super().setUp()
         self._spawn_processes()
 
@@ -762,6 +755,7 @@ class TestZeroOptimizer(MultiProcessTestCase):
                                param_dict[param_names[i]])
 
     def test_build_zero_redundancy_optimizer(self):
+        from torch.distributed.optim import ZeroRedundancyOptimizer
         self._init_dist_env(self.rank, self.world_size)
         model = ExampleModel()
         self.base_lr = 0.01
