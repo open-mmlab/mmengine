@@ -573,7 +573,7 @@ MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符�
 用户可以通过指定 `pretrained=True` 获得已经加载预训练权重的模型以进行训练或者推理。
 
 ```python
-from mmengine import get_model
+from mmengine.hub import get_model
 
 model = get_model(
     'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
@@ -590,7 +590,7 @@ http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0
 同时，如果用户指定 `pretrained=True` ，得到的配置文件中会新增 `model_path` 字段，指定了对应模型预训练权重的路径。
 
 ```python
-from mmengine import get_config
+from mmengine.hub import get_config
 
 cfg = get_config(
     'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
