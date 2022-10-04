@@ -47,13 +47,13 @@ class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
     def __init__(self, params, optimizer_type: str, **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.8.0'), (
             '`torch.distributed.optim.ZeroReundancyOptimizer` is only '
-            'available when pytorch version >= 1.8')
-        assert is_available(), 'torch.distributed.rpc is not available'
+            'available when pytorch version >= 1.8.')
+        assert is_available(), 'torch.distributed.rpc is not available.'
         optimizer_class = getattr(torch.optim, optimizer_type)
         super().__init__(params, optimizer_class, **kwargs)
 
     def state_dict(self):
-        """Consolidate `state_dict`s from ranks to save the `state_dict`"""
+        """Consolidate `state_dict`s from ranks to save the `state_dict`."""
         self.consolidate_state_dict()
         if is_main_process():
             return super().state_dict()
