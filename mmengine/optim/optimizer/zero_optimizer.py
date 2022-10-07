@@ -9,7 +9,7 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 
 try:
     from torch.distributed.optim import \
-        ZeroRedundancyOptimizer as _ZeroReundancyOptimizer
+        ZeroRedundancyOptimizer as _ZeroRedundancyOptimizer
 except ImportError:
     _ZeroReundancyOptimizer = object
 
@@ -17,7 +17,7 @@ from .builder import OPTIMIZERS
 
 
 @OPTIMIZERS.register_module()
-class ZeroRedundancyOptimizer(_ZeroReundancyOptimizer):
+class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
     """A wrapper class of :class:`ZeroRedundancyOptimizer` that gets a
     optimizer type as string. This class wraps an arbitrary
     :class:`optim.Optimizer.
