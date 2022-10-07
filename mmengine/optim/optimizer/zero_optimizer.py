@@ -11,7 +11,7 @@ try:
     from torch.distributed.optim import \
         ZeroRedundancyOptimizer as _ZeroRedundancyOptimizer
 except ImportError:
-    _ZeroReundancyOptimizer = object
+    _ZeroRedundancyOptimizer = object
 
 from .builder import OPTIMIZERS
 
