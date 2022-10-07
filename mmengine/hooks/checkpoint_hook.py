@@ -6,6 +6,7 @@ from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
+from mmengine.dist import is_main_process
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
@@ -328,6 +329,11 @@ class CheckpointHook(Hook):
             by_epoch=self.by_epoch,
             backend_args=self.backend_args,
             **self.args)
+
+        # Model parallel-like training should involve pulling sharded states
+        # from all ranks, but skip the following procedure.
+        if not is_main_process():
+            return
 
         runner.message_hub.update_info(
             'last_ckpt',
