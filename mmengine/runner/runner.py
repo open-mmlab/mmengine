@@ -1609,10 +1609,14 @@ class Runner:
             ori_model = self.model.module
         else:
             ori_model = self.model
-        assert hasattr(ori_model, 'train_step') and \
-               hasattr(ori_model, 'val_step'), (
+        assert hasattr(ori_model, 'train_step'), (
             'If you want to train your model, please make sure your model '
-            'has implemented `train_step` and `val_step`.')
+            'has implemented `train_step`.')
+
+        if self._val_loop is not None:
+            assert hasattr(ori_model, 'val_step'), (
+                'If you want to validate your model, please make sure your '
+                'model has implemented `val_step`.')
 
         if self._train_loop is None:
             raise RuntimeError(

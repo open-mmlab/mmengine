@@ -104,17 +104,6 @@ class BaseTTAModel:
             List[BaseDataElement]: Merged prediction.
         """
 
-    def forward(self,
-                inputs: torch.Tensor,
-                data_samples: Union[list, None] = None,
-                mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
-        """``BaseTTAModel`` will directly call ``test_step`` of corresponding
-        algorithm, therefore its forward should not be called."""
-        raise NotImplementedError(
-            '`BaseTTAModel` will directly call '
-            f'{self.module.__class__.__name__}.test_step, so its `forward` '
-            f'should not be called')
-
     def test_step(self, data: DATA_BATCH) -> MergedDataSamples:
         """Get predictions of each enhanced data, a multiple predictions.
 
