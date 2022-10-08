@@ -1608,7 +1608,7 @@ class Runner:
         if is_model_wrapper(self.model):
             ori_model = self.model.module
         else:
-            ori_model = self.model.module
+            ori_model = self.model
         assert hasattr(ori_model, 'train_step') and \
                hasattr(ori_model, 'val_step'), (
             'If you want to train your model, please make sure your model '
@@ -1664,7 +1664,7 @@ class Runner:
         if is_model_wrapper(self.model):
             ori_model = self.model.module
         else:
-            ori_model = self.model.module
+            ori_model = self.model
         assert hasattr(ori_model, 'val_step'), (
             'If you want to train your model, please make sure your model '
             'has implemented `val_step`.')
@@ -1695,7 +1695,7 @@ class Runner:
         if is_model_wrapper(self.model):
             ori_model = self.model.module
         else:
-            ori_model = self.model.module
+            ori_model = self.model
         assert hasattr(ori_model, 'test_step'), (
             'If you want to train your model, please make sure your model '
             'has implemented `test_step`.')
