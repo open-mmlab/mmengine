@@ -25,9 +25,14 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
             non-distributed environment, it is a constant number `0`.
         seed (int): Random seed.
     """
+    # according to https://github.com/open-mmlab/mmdetection/issues/8110
+    # numpy may be set the same seed at each epoch.
+    # The solution can be found at
+    # https://pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading # noqa
+    initial_seed = torch.initial_seed() % 2**32
     # The seed of each worker equals to
-    # num_worker * rank + worker_id + user_seed
-    worker_seed = num_workers * rank + worker_id + seed
+    # num_worker * rank + worker_id + user_seed + initial_seed
+    worker_seed = num_workers * rank + worker_id + seed + initial_seed
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     torch.manual_seed(worker_seed)
