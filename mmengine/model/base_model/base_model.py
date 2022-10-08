@@ -92,12 +92,12 @@ class BaseModel(BaseModule):
         :class:`IterBasedTrainLoop` will call this method to update model
         parameters. The default parameter update process is as follows:
 
-        1. Calls ``self.data_processor(data, training=False) to collect
-          batch_inputs and corresponding data_samples(labels).
+        1. Calls ``self.data_processor(data, training=False)`` to collect
+           batch_inputs and corresponding data_samples(labels).
         2. Calls ``self(batch_inputs, data_samples, mode='loss')`` to get raw
-          loss
+           loss
         3. Calls ``self.parse_losses`` to get ``parsed_losses`` tensor used to
-          backward and dict of loss tensor used to log messages.
+           backward and dict of loss tensor used to log messages.
         4. Calls ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
