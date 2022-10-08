@@ -153,7 +153,7 @@ class LogProcessor:
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter}/{runner.max_iters}]  ')
             else:
-                log_str = (f'Iter({mode}) [{batch_idx+1}'
+                log_str = (f'Iter({mode}) [{batch_idx + 1}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
@@ -266,8 +266,7 @@ class LogProcessor:
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
-            if key.startswith('loss') or key in ('time', 'data_time',
-                                                 'grad_norm'):
+            if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
                 tag[key] = mode_history_scalars[key].mean(self.window_size)
             else:
                 # Default statistic method is current.
