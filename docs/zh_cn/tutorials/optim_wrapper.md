@@ -132,6 +132,18 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
         optim_wrapper.zero_grad()
 ```
 
+我们同样可以为优化器封装配置梯度裁减策略：
+
+```python
+# 基于 torch.nn.utils.clip_grad_norm_ 对梯度进行裁减
+optim_wrapper = AmpOptimWrapper(
+    optimizer=optimizer, clip_grad=dict(max_norm=1))
+
+# 基于 torch.nn.utils.clip_grad_value_ 对梯度进行裁减
+optim_wrapper = AmpOptimWrapper(
+    optimizer=optimizer, clip_grad=dict(clip_value=0.2))
+```
+
 ### 获取学习率/动量：
 
 优化器封装提供了 `get_lr` 和 `get_momentum` 接口用于获取优化器的一个参数组的学习率

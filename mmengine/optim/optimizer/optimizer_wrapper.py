@@ -68,11 +68,18 @@ class OptimWrapper:
         ``_inner_count += 1`` is automatically performed.
 
     Examples:
-        >>> # Config sample of OptimWrapper.
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # norm.
         >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
         >>>     _accumulative_counts=1,
         >>>     clip_grad=dict(max_norm=0.2))
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # value.
+        >>> optim_wrapper_cfg = dict(
+        >>>     type='OptimWrapper',
+        >>>     _accumulative_counts=1,
+        >>>     clip_grad=dict(clip_value=0.2))
         >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
         >>> import torch
