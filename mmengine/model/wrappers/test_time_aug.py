@@ -24,7 +24,7 @@ class BaseTTAModel:
     """Base model for inference with test-time augmentation.
 
     ``BaseTTAModel`` is a wrapper for inference given multi-batch data.
-    It implements the :meth:`forward` for multi-batch data inference.
+    It implements the :meth:`test_step` for multi-batch data inference.
     ``multi-batch`` data means data processed by different augmentation
     from the same batch.
 
