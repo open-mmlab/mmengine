@@ -77,7 +77,7 @@ class BaseTTAModel:
     """
 
     def __init__(self,
-                 module: nn.Module,
+                 module: Union[dict, nn.Module],
                  data_preprocessor: Union[dict, BaseDataPreprocessor,
                                           None] = None):
         super().__init__()
