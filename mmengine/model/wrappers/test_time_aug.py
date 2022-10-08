@@ -7,7 +7,6 @@ import torch.nn as nn
 
 from mmengine import MODELS
 from mmengine.structures import BaseDataElement
-from ..base_model import BaseDataPreprocessor
 
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
@@ -71,15 +70,10 @@ class BaseTTAModel:
         implement it.
 
     Args:
-        module (BaseModel): Tested model.
-        data_preprocessor (BaseDataPreprocessor or dict, optional): The
-            pre-process config for :class:`BaseDataPreprocessor`.
+        module (dict or nn.Module): Tested model.
     """
 
-    def __init__(self,
-                 module: Union[dict, nn.Module],
-                 data_preprocessor: Union[dict, BaseDataPreprocessor,
-                                          None] = None):
+    def __init__(self, module: Union[dict, nn.Module]):
         super().__init__()
         if isinstance(module, nn.Module):
             assert hasattr(module, 'test_step'), (
