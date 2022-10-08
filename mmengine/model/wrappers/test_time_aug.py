@@ -6,16 +6,17 @@ import torch
 import torch.nn as nn
 
 from mmengine import MODELS
-from mmengine.optim import OptimWrapper
 from mmengine.structures import BaseDataElement
 from ..base_model import BaseDataPreprocessor
 
 # multi-batch inputs processed by different augmentations from the same batch.
-TestTimeAugInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
+EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
 # multi-batch data samples processed by different augmentations from the same
 # batch. The outer list stands for different augs and the inner list stands for
 # batch.
 EnhancedBatchDataSamples = List[List[BaseDataElement]]
+DATA_BATCH = Union[Dict[str, Union[EnhancedBatchInputs,
+                                   EnhancedBatchDataSamples]], tuple, dict]
 MergedDataSamples = List[BaseDataElement]
 
 
@@ -115,17 +116,11 @@ class BaseTTAModel:
             f'{self.module.__class__.__name__}.test_step, so its `forward` '
             f'should not be called')
 
-    def test_step(self, data: Union[dict, tuple, list]) -> list:
+    def test_step(self, data: DATA_BATCH) -> MergedDataSamples:
         """Get predictions of each enhanced data, a multiple predictions.
 
         Args:
-            inputs (TestTimeAugInputs): List of enhanced batch data from single
-                batch data. The outer list stands for different augs and the
-                inner list stands for batch.
-            data_samples (EnhancedBatchDataSamples): List of enhanced data
-                samples from single batch data sample.
-            mode (str): Current mode of model, see more information in
-                :meth:`mmengine.model.BaseModel.forward`.
+            data (DataBatch): Enhanced data batch sampled from dataloader.
 
         Returns:
             MergedDataSamples: Merged prediction.
@@ -145,21 +140,6 @@ class BaseTTAModel:
                             f'tuple or a list, but got {type(data)}')
 
         predictions = []
-        for data in data_list:
+        for data in data_list:  # type: ignore
             predictions.append(self.module.test_step(data))
         return self.merge_preds(predictions)
-
-    def val_step(self, data: Union[tuple, dict, list]) -> list:
-        """``BaseTTAModel`` is only for testing, therefore ``val_step`` should
-        not be called."""
-        raise NotImplementedError('train_step should not be called! '
-                                  f'{self.__class__.__name__} should only be'
-                                  f'used for testing.')
-
-    def train_step(self, data: Union[dict, tuple, list],
-                   optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        """``BaseTTAModel`` is only for testing, therefore ``train_step``
-        should not be called."""
-        raise NotImplementedError('train_step should not be called! '
-                                  f'{self.__class__.__name__} should only be'
-                                  f'used for testing.')
