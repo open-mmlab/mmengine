@@ -771,7 +771,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
+    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object.
@@ -782,7 +782,7 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (BaseModel or dict): A nn.Module object or a dict to build
+            model (nn.Module or dict): A nn.Module object or a dict to build
                 nn.Module object. If ``model`` is a nn.Module object, just
                 returns itself.
 
@@ -794,13 +794,18 @@ class Runner:
         elif isinstance(model, dict):
             model = MODELS.build(model)
             return model  # type: ignore
+        elif isinstance(model, nn.Module):
+            self.logger.warning('Your model is not a BaseModel instance, '
+                                'please make sure your model implements '
+                                '`train_step`, `val_step` or `test_step` '
+                                'methods.')
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
 
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
-            model: BaseModel) -> Union[DistributedDataParallel, BaseModel]:
+            model: nn.Module) -> Union[DistributedDataParallel, nn.Module]:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 
@@ -815,10 +820,10 @@ class Runner:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``DistributedDataParallel`` will be used in
                 distributed environment. Defaults to None.
-            model (BaseModel): Model to be wrapped.
+            model (nn.Module): Model to be wrapped.
 
         Returns:
-            BaseModel or DistributedDataParallel: BaseModel or subclass of
+            nn.Module or DistributedDataParallel: nn.Module or subclass of
             ``DistributedDataParallel``.
         """
         if is_model_wrapper(model):
@@ -1600,6 +1605,15 @@ class Runner:
         Returns:
             nn.Module: The model after training.
         """
+        if is_model_wrapper(self.model):
+            ori_model = self.model.module
+        else:
+            ori_model = self.model.module
+        assert hasattr(ori_model, 'train_step') and \
+               hasattr(ori_model, 'val_step'), (
+            'If you want to train your model, please make sure your model '
+            'has implemented `train_step` and `val_step`.')
+
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '
@@ -1647,6 +1661,14 @@ class Runner:
         Returns:
             dict: A dict of metrics on validation set.
         """
+        if is_model_wrapper(self.model):
+            ori_model = self.model.module
+        else:
+            ori_model = self.model.module
+        assert hasattr(ori_model, 'val_step'), (
+            'If you want to train your model, please make sure your model '
+            'has implemented `val_step`.')
+
         if self._val_loop is None:
             raise RuntimeError(
                 '`self._val_loop` should not be None when calling val method.'
@@ -1670,6 +1692,14 @@ class Runner:
         Returns:
             dict: A dict of metrics on testing set.
         """
+        if is_model_wrapper(self.model):
+            ori_model = self.model.module
+        else:
+            ori_model = self.model.module
+        assert hasattr(ori_model, 'test_step'), (
+            'If you want to train your model, please make sure your model '
+            'has implemented `test_step`.')
+
         if self._test_loop is None:
             raise RuntimeError(
                 '`self._test_loop` should not be None when calling test '

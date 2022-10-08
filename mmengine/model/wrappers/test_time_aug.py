@@ -1,24 +1,26 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import torch
+import torch.nn as nn
 
 from mmengine import MODELS
 from mmengine.optim import OptimWrapper
 from mmengine.structures import BaseDataElement
-from ..base_model import BaseDataPreprocessor, BaseModel
+from ..base_model import BaseDataPreprocessor
 
 # multi-batch inputs processed by different augmentations from the same batch.
 TestTimeAugInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
 # multi-batch data samples processed by different augmentations from the same
-# batch. Each element in `EnhancedDataSamples` means an enhanced batch data.
-EnhancedDataSamples = List[List[BaseDataElement]]
+# batch. The outer list stands for different augs and the inner list stands for
+# batch.
+EnhancedBatchDataSamples = List[List[BaseDataElement]]
 MergedDataSamples = List[BaseDataElement]
 
 
 @MODELS.register_module()
-class BaseTTAModel(BaseModel):
+class BaseTTAModel:
     """Base model for inference with test-time augmentation.
 
     ``BaseTTAModel`` is a wrapper for inference given multi-batch data.
@@ -45,8 +47,8 @@ class BaseTTAModel(BaseModel):
             ]
         )
 
-    ``image{1}_aug{1}`` means the 1st image of the batch, which is
-    augmented by the 1st augmentation.
+    ``image{i}_aug{j}`` means the i-th image of the batch, which is
+    augmented by the j-th augmentation.
 
     ``BaseTTAModel`` will collate the data to:
 
@@ -63,7 +65,7 @@ class BaseTTAModel(BaseModel):
         )
 
     ``data1`` and ``data2`` will be passed to model, and the results will be
-    merged by :meth:`merge_preds`
+    merged by :meth:`merge_preds`.
 
     Note:
         :meth:`merge_results` is an abstract method, all subclasses should
@@ -72,17 +74,16 @@ class BaseTTAModel(BaseModel):
     Args:
         module (BaseModel): Tested model.
         data_preprocessor (BaseDataPreprocessor or dict, optional): The
-            pre-process config For :class:`BaseDataPreprocessor`.
+            pre-process config for :class:`BaseDataPreprocessor`.
     """
 
-    def __init__(
-            self,
-            module: BaseModel,
-            data_preprocessor: Optional[Union[dict,
-                                              BaseDataPreprocessor]] = None):
+    def __init__(self,
+                 module: nn.Module,
+                 data_preprocessor: Union[dict, BaseDataPreprocessor,
+                                          None] = None):
 
-        super().__init__(module)
-        if isinstance(module, BaseModel):
+        super().__init__()
+        if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
             self.module = MODELS.build(module)
@@ -91,13 +92,13 @@ class BaseTTAModel(BaseModel):
                             f'dict, but got {module}')
 
     @abstractmethod
-    def merge_preds(self, data_samples_list: EnhancedDataSamples) \
+    def merge_preds(self, data_samples_list: EnhancedBatchDataSamples) \
             -> List[BaseDataElement]:
         """Merge predictions of enhanced data to one prediction.
 
         Args:
-            data_samples_list (EnhancedDataSamples): List of predictions of
-                all enhanced data.
+            data_samples_list (EnhancedBatchDataSamples): List of predictions
+                of all enhanced data.
 
         Returns:
             List[BaseDataElement]: Merged prediction.
@@ -105,22 +106,23 @@ class BaseTTAModel(BaseModel):
 
     def forward(self,
                 inputs: torch.Tensor,
-                data_samples: Optional[list] = None,
+                data_samples: Union[list, None] = None,
                 mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
         """``BaseTTAModel`` will directly call ``test_step`` of corresponding
         algorithm, therefore its forward should not be called."""
         raise NotImplementedError(
             '`BaseTTAModel` will directly call '
-            f'{self.module.__class__.__name__}.test_step, its `forward` '
+            f'{self.module.__class__.__name__}.test_step, so its `forward` '
             f'should not be called')
 
     def test_step(self, data: Union[dict, tuple, list]) -> list:
-        """Get predictions of each enhanced data, a multiple predictionsa.
+        """Get predictions of each enhanced data, a multiple predictions.
 
         Args:
             inputs (TestTimeAugInputs): List of enhanced batch data from single
-                batch data.
-            data_samples (EnhancedDataSamples): List of enhanced data
+                batch data. The outer list stands for different augs and the
+                inner list stands for batch.
+            data_samples (EnhancedBatchDataSamples): List of enhanced data
                 samples from single batch data sample.
             mode (str): Current mode of model, see more information in
                 :meth:`mmengine.model.BaseModel.forward`.
