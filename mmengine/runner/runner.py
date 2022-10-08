@@ -1661,14 +1661,6 @@ class Runner:
         Returns:
             dict: A dict of metrics on validation set.
         """
-        if is_model_wrapper(self.model):
-            ori_model = self.model.module
-        else:
-            ori_model = self.model
-        assert hasattr(ori_model, 'val_step'), (
-            'If you want to train your model, please make sure your model '
-            'has implemented `val_step`.')
-
         if self._val_loop is None:
             raise RuntimeError(
                 '`self._val_loop` should not be None when calling val method.'
@@ -1692,14 +1684,6 @@ class Runner:
         Returns:
             dict: A dict of metrics on testing set.
         """
-        if is_model_wrapper(self.model):
-            ori_model = self.model.module
-        else:
-            ori_model = self.model
-        assert hasattr(ori_model, 'test_step'), (
-            'If you want to train your model, please make sure your model '
-            'has implemented `test_step`.')
-
         if self._test_loop is None:
             raise RuntimeError(
                 '`self._test_loop` should not be None when calling test '

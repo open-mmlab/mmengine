@@ -12,8 +12,8 @@ from ..base_model import BaseDataPreprocessor
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
 # multi-batch data samples processed by different augmentations from the same
-# batch. The outer list stands for different augs and the inner list stands for
-# batch.
+# batch. The outer list stands for different augmentations and the inner list
+# stands for batch.
 EnhancedBatchDataSamples = List[List[BaseDataElement]]
 DATA_BATCH = Union[Dict[str, Union[EnhancedBatchInputs,
                                    EnhancedBatchDataSamples]], tuple, dict]
@@ -26,14 +26,12 @@ class BaseTTAModel:
 
     ``BaseTTAModel`` is a wrapper for inference given multi-batch data.
     It implements the :meth:`forward` for multi-batch data inference.
-    `multi-batch` data means data processed by different augmentation
+    ``multi-batch`` data means data processed by different augmentation
     from the same batch.
-
-    All subclasses should implement :meth:`merge_preds` for results fusion.
 
     During test time augmentation, the data processed by
     :obj:`mmcv.transforms.TestTimeAug`, and then collated by
-    `pseudo_collate` will have the following format:
+    ``pseudo_collate`` will have the following format:
 
     .. code-block::
 
@@ -82,15 +80,16 @@ class BaseTTAModel:
                  module: nn.Module,
                  data_preprocessor: Union[dict, BaseDataPreprocessor,
                                           None] = None):
-
         super().__init__()
         if isinstance(module, nn.Module):
+            assert hasattr(module, 'test_step'), (
+                'Model wrapped by BaseTTAModel must implement `test_step!`')
             self.module = module
         elif isinstance(module, dict):
             self.module = MODELS.build(module)
         else:
-            raise TypeError('The type of module should be `BaseModel` or a '
-                            f'dict, but got {module}')
+            raise TypeError('The type of module should be a `nn.Module` '
+                            f'instance or a dict, but got {module}')
 
     @abstractmethod
     def merge_preds(self, data_samples_list: EnhancedBatchDataSamples) \
