@@ -92,7 +92,6 @@ activation = ACTIVATION.build(act_cfg)
 output = activation(input)
 # call Sigmoid.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 如果我们想使用 `ReLU`，仅需修改配置。
@@ -103,7 +102,6 @@ activation = ACTIVATION.build(act_cfg)
 output = activation(input)
 # call Sigmoid.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 如果我们希望在创建实例前检查输入参数的类型（或者任何其他操作），我们可以实现一个构建方法并将其传递给注册器从而实现自定义构建流程。
@@ -141,7 +139,6 @@ output = activation(input)
 # build activation: Tanh
 # call Tanh.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 ```{note}
@@ -262,7 +259,6 @@ input = torch.randn(2)
 output = model(input)
 # call RReLU.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
 
 ### 调用兄弟节点的模块
@@ -289,7 +285,6 @@ model = MODELS.build(cfg=dict(type='mmalpha.LogSoftmax'))
 output = model(input)
 # call LogSoftmax.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
 
 调用兄弟节点的模块需要在 `type` 中指定 `scope` 前缀，所以上面的配置需要加前缀 `mmalpha`。
@@ -303,5 +298,4 @@ model = MODELS.build(cfg=dict(type='LogSoftmax', _scope_='mmalpha'))
 output = model(input)
 # call LogSoftmax.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
