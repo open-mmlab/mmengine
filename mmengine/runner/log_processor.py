@@ -129,7 +129,8 @@ class LogProcessor:
         for key, value in tag.items():
             if key.endswith('lr'):
                 log_tag.pop(key)
-                lr_str_list.append(f'{key}: ' f'{value:.{self.num_digits}e}')
+                lr_str_list.append(f'{key}: '
+                                   f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
         # Format log header.
         # by_epoch == True
