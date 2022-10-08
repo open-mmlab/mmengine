@@ -119,10 +119,10 @@ class MMDistributedDataParallel(DistributedDataParallel):
         with optim_wrapper.optim_context(self):
             data = self.module.data_preprocessor(data, training=True)
             losses = self._run_forward(data, mode='loss')
-        if self.detect_anomalous_params:
-            detect_anomalous_params(losses, model=self)
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
+        if self.detect_anomalous_params:
+            detect_anomalous_params(parsed_loss, model=self)
         return log_vars
 
     def val_step(self, data: Union[dict, tuple, list]) -> list:
