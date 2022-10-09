@@ -71,14 +71,11 @@ class TestAmp(unittest.TestCase):
                                         'User specified autocast device_type'):
                 with autocast(enabled=True):
                     pass
-            mmengine.runner.amp.get_device = get_device
-
         # Native pytorch does not support mlu, here we simply test autocast
         # will call `torch.autocast`, which will be overridden by mlu version
         # pytorch
-        mmengine.runner.amp.get_device = lambda: 'mlu'
-        with self.assertRaises(RuntimeError):
-            pass
-            with autocast(enabled=False):
-                pass
-        mmengine.runner.amp.get_device = get_device
+            mmengine.runner.amp.get_device = lambda: 'mlu'
+            with self.assertRaises(RuntimeError):
+                with autocast(enabled=False):
+                    pass
+            mmengine.runner.amp.get_device = get_device
