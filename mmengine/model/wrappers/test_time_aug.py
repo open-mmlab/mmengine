@@ -87,7 +87,7 @@ class BaseTTAModel:
 
     @abstractmethod
     def merge_preds(self, data_samples_list: EnhancedBatchDataSamples) \
-            -> List[BaseDataElement]:
+            -> MergedDataSamples:
         """Merge predictions of enhanced data to one prediction.
 
         Args:
