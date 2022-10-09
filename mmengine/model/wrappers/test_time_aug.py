@@ -66,7 +66,7 @@ class BaseTTAModel:
     merged by :meth:`merge_preds`.
 
     Note:
-        :meth:`merge_results` is an abstract method, all subclasses should
+        :meth:`merge_preds` is an abstract method, all subclasses should
         implement it.
 
     Args:
