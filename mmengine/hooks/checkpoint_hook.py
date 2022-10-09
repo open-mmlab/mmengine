@@ -409,7 +409,12 @@ class CheckpointHook(Hook):
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
 
-            if best_ckpt_path and self.file_client.isfile(best_ckpt_path):
+            # FSDP needs all processes to collect sharded parameters in
+            # `runner.save_checkpoint`, so early return is not a choice.
+            # Add `is_main_process` to avoid multiple processes trying to
+            # remove the same file
+            if (is_main_process() and best_ckpt_path
+                    and self.file_client.isfile(best_ckpt_path)):
                 self.file_client.remove(best_ckpt_path)
                 runner.logger.info(
                     f'The previous best checkpoint {best_ckpt_path} '
