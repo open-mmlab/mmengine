@@ -104,9 +104,26 @@ runner = Runner(
     train_dataloader=train_dataloader,
     train_cfg=dict(by_epoch=True, max_epochs=1),
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
-    cfg=dict(model_wrapper_cfg=dict(type='MMFullyShardedDataParallel', cpu_offload=True))
+    cfg=dict(model_wrapper_cfg=dict(
+        type='MMFullyShardedDataParallel',
+        # 启用 cpu_offload 可以减少内存占用，但会影响训练速度
+        cpu_offload=True,
+        # 合理选择 auto_wrap_policy 以降低显存占用，参考
+        # https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html
+        # 目前需要手动将函数注册到 FSDP_WRAP_POLICYS 注册器中
+        # 之后的更新会提供更便利的方式
+        fsdp_auto_wrap_policy='my_auto_wrap_policy'
+        ))
 )
 runner.train()
 ```
 
 注意必须在分布式训练环境中 FSDP 才能生效。
+
+```{note}
+尽管 PyTorch 1.11 中已经原生支持 FSDP，但并不完善。在 MMEngine 中我们仅在 PyTorch 1.12+ 版本支持 FSDP 技术
+```
+
+```{warning}
+目前为止，MMEngine 的 FSDP 暂时不支持保存 `optimizer_state`，因此无法继续训练（resume training）。我们将在之后的更新中支持更多功能
+```
