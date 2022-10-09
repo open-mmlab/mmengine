@@ -11,7 +11,7 @@ from mmengine.structures import BaseDataElement
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
 # multi-batch data samples processed by different augmentations from the same
-# batch. The outer list stands for different augmentations and the inner list
+# batch. The inner list stands for different augmentations and the outer list
 # stands for batch.
 EnhancedBatchDataSamples = List[List[BaseDataElement]]
 DATA_BATCH = Union[Dict[str, Union[EnhancedBatchInputs,
@@ -74,7 +74,6 @@ class BaseTTAModel:
     """
 
     def __init__(self, module: Union[dict, nn.Module]):
-        super().__init__()
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
@@ -83,7 +82,7 @@ class BaseTTAModel:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
         assert hasattr(self.module, 'test_step'), (
-            'Model wrapped by BaseTTAModel must implement `test_step!`')
+            'Model wrapped by BaseTTAModel must implement `test_step`!')
 
     @abstractmethod
     def merge_preds(self, data_samples_list: EnhancedBatchDataSamples) \
@@ -124,4 +123,4 @@ class BaseTTAModel:
         predictions = []
         for data in data_list:  # type: ignore
             predictions.append(self.module.test_step(data))
-        return self.merge_preds(predictions)
+        return self.merge_preds(list(zip(*predictions)))  # type: ignore

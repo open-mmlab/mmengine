@@ -9,7 +9,7 @@ from mmengine.model import BaseModel, BaseTTAModel
 class ToyTestTimeAugModel(BaseTTAModel):
 
     def merge_preds(self, data_samples_list):
-        result = list(map(lambda x: sum(x), zip(*data_samples_list)))
+        result = [sum(x) for x in data_samples_list]
         return result
 
 

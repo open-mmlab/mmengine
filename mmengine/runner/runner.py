@@ -26,9 +26,8 @@ from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
-from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            convert_sync_batchnorm, is_model_wrapper,
-                            revert_sync_batchnorm)
+from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -782,23 +781,24 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (nn.Module or dict): A nn.Module object or a dict to build
-                nn.Module object. If ``model`` is a nn.Module object, just
-                returns itself.
+            model (nn.Module or dict): A ``nn.Module`` object or a dict to
+                build nn.Module object. If ``model`` is a nn.Module object,
+                just returns itself.
+
+        Note:
+            The returned model must implement ``train_step``, ``test_step``
+            if ``runner.train`` or ``runner.test`` will be called. If
+            ``runner.val`` will be called or ``val_cfg`` is configured,
+            model must implement `val_step`.
 
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, BaseModel):
+        if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
             return model  # type: ignore
-        elif isinstance(model, nn.Module):
-            self.logger.warning('Your model is not a BaseModel instance, '
-                                'please make sure your model implements '
-                                '`train_step`, `val_step` or `test_step` '
-                                'methods.')
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
