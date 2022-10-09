@@ -86,9 +86,6 @@ class IterTimerHook(Hook):
         message_hub = runner.message_hub
         message_hub.update_scalar(f'{mode}/time', time.time() - self.t)
         self.t = time.time()
-        # Calculate eta every `window_size` iterations. Since test and val
-        # loop will not update runner.iter, use `every_n_innter_iters`to check
-        # the interval.
         iter_time = message_hub.get_scalar(f'{mode}/time')
         if mode == 'train':
             self.time_sec_tot += iter_time.current()
