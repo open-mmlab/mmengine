@@ -76,14 +76,14 @@ class BaseTTAModel:
     def __init__(self, module: Union[dict, nn.Module]):
         super().__init__()
         if isinstance(module, nn.Module):
-            assert hasattr(module, 'test_step'), (
-                'Model wrapped by BaseTTAModel must implement `test_step!`')
             self.module = module
         elif isinstance(module, dict):
             self.module = MODELS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
+        assert hasattr(self.module, 'test_step'), (
+            'Model wrapped by BaseTTAModel must implement `test_step!`')
 
     @abstractmethod
     def merge_preds(self, data_samples_list: EnhancedBatchDataSamples) \
