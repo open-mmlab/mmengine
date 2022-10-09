@@ -1679,7 +1679,7 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_train12.2'
         runner = Runner.from_cfg(cfg)
 
-        with self.assertRaisesRegex(AssertionError, 'If you want to validat'):
+        with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
     def test_val(self):

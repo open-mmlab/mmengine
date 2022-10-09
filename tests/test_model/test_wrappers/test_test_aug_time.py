@@ -4,6 +4,7 @@ from unittest import TestCase
 from torch.utils.data import DataLoader
 
 from mmengine.model import BaseModel, BaseTTAModel
+from mmengine.registry import MODELS
 
 
 class ToyTestTimeAugModel(BaseTTAModel):
@@ -13,6 +14,7 @@ class ToyTestTimeAugModel(BaseTTAModel):
         return result
 
 
+@MODELS.register_module()
 class ToyModel(BaseModel):
 
     def forward(self, inputs, data_samples, mode='tensor'):
@@ -47,3 +49,7 @@ class TestBaseTTAModel(TestCase):
     def test_init(self):
         tta_model = ToyTestTimeAugModel(self.model)
         self.assertIs(tta_model.module, self.model)
+        # Test build from cfg.
+        model = dict(type='ToyModel')
+        tta_model = ToyTestTimeAugModel(model)
+        self.assertIsInstance(tta_model.module, ToyModel)
