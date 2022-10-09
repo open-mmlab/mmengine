@@ -28,10 +28,6 @@ class TestBaseTTAModel(TestCase):
         self.dict_dataloader = DataLoader(dict_dataset, batch_size=2)
         self.tuple_dataloader = DataLoader(tuple_dataset, batch_size=2)
 
-    def test_init(self):
-        tta_model = ToyTestTimeAugModel(self.model)
-        self.assertIs(tta_model.module, self.model)
-
     def test_test_step(self):
         tta_model = ToyTestTimeAugModel(self.model)
 
@@ -46,8 +42,6 @@ class TestBaseTTAModel(TestCase):
             result = tta_model.test_step(data)
             self.assertEqual(result, [7, 7])
 
-    def test_train_step(self):
+    def test_init(self):
         tta_model = ToyTestTimeAugModel(self.model)
-        with self.assertRaisesRegex(NotImplementedError,
-                                    'train_step should not be called'):
-            tta_model.train_step(None, None)
+        self.assertIs(tta_model.module, self.model)
