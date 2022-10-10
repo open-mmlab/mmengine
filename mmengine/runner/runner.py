@@ -27,9 +27,8 @@ from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
-from mmengine.model import (BaseModel, MMDistributedDataParallel,
-                            convert_sync_batchnorm, is_model_wrapper,
-                            revert_sync_batchnorm)
+from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
+                            is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
@@ -772,7 +771,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
+    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object.
@@ -783,14 +782,20 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (BaseModel or dict): A nn.Module object or a dict to build
-                nn.Module object. If ``model`` is a nn.Module object, just
-                returns itself.
+            model (nn.Module or dict): A ``nn.Module`` object or a dict to
+                build nn.Module object. If ``model`` is a nn.Module object,
+                just returns itself.
+
+        Note:
+            The returned model must implement ``train_step``, ``test_step``
+            if ``runner.train`` or ``runner.test`` will be called. If
+            ``runner.val`` will be called or ``val_cfg`` is configured,
+            model must implement `val_step`.
 
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, BaseModel):
+        if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
@@ -801,7 +806,7 @@ class Runner:
 
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
-            model: BaseModel) -> Union[DistributedDataParallel, BaseModel]:
+            model: nn.Module) -> Union[DistributedDataParallel, nn.Module]:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 
@@ -816,10 +821,10 @@ class Runner:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``DistributedDataParallel`` will be used in
                 distributed environment. Defaults to None.
-            model (BaseModel): Model to be wrapped.
+            model (nn.Module): Model to be wrapped.
 
         Returns:
-            BaseModel or DistributedDataParallel: BaseModel or subclass of
+            nn.Module or DistributedDataParallel: nn.Module or subclass of
             ``DistributedDataParallel``.
         """
         if is_model_wrapper(model):
@@ -1601,6 +1606,19 @@ class Runner:
         Returns:
             nn.Module: The model after training.
         """
+        if is_model_wrapper(self.model):
+            ori_model = self.model.module
+        else:
+            ori_model = self.model
+        assert hasattr(ori_model, 'train_step'), (
+            'If you want to train your model, please make sure your model '
+            'has implemented `train_step`.')
+
+        if self._val_loop is not None:
+            assert hasattr(ori_model, 'val_step'), (
+                'If you want to validate your model, please make sure your '
+                'model has implemented `val_step`.')
+
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '

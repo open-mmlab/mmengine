@@ -450,7 +450,7 @@ class TestConfig:
         filename = 'py_config/simple_config.py'
         filename = osp.join(self.data_path, 'config', filename)
 
-        cfg_name = 'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
+        cfg_name = 'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py'
         cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
         assert scope == 'mmdet'
         osp.isfile(cfg_path)

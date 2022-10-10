@@ -18,7 +18,7 @@ from mmengine.dist import get_dist_info
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
-from mmengine.model import is_model_wrapper
+from mmengine.model import BaseTTAModel, is_model_wrapper
 from mmengine.utils import mkdir_or_exist
 from mmengine.utils.dl_utils import load_url
 
@@ -73,7 +73,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
     def load(module, prefix=''):
         # recursively check parallel module in case that the model has a
         # complicated structure, e.g., nn.Module(nn.Module(DDP))
-        if is_model_wrapper(module):
+        if is_model_wrapper(module) or isinstance(module, BaseTTAModel):
             module = module.module
         local_metadata = {} if metadata is None else metadata.get(
             prefix[:-1], {})

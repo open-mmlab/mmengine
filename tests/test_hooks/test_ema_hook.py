@@ -19,7 +19,7 @@ from mmengine.runner import Runner
 from mmengine.testing import assert_allclose
 
 
-class ToyModel(nn.Module):
+class ToyModel(BaseModel):
 
     def __init__(self):
         super().__init__()
@@ -39,33 +39,33 @@ class ToyModel(nn.Module):
             return outputs
 
 
-class ToyModel1(BaseModel, ToyModel):
+class ToyModel1(ToyModel):
 
     def __init__(self):
         super().__init__()
 
     def forward(self, *args, **kwargs):
-        return super(BaseModel, self).forward(*args, **kwargs)
+        return super().forward(*args, **kwargs)
 
 
-class ToyModel2(BaseModel, ToyModel):
+class ToyModel2(ToyModel):
 
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(2, 1)
 
     def forward(self, *args, **kwargs):
-        return super(BaseModel, self).forward(*args, **kwargs)
+        return super().forward(*args, **kwargs)
 
 
-class ToyModel3(BaseModel, ToyModel):
+class ToyModel3(ToyModel):
 
     def __init__(self):
         super().__init__()
         self.linear = nn.Linear(2, 2)
 
     def forward(self, *args, **kwargs):
-        return super(BaseModel, self).forward(*args, **kwargs)
+        return super().forward(*args, **kwargs)
 
 
 @DATASETS.register_module()
