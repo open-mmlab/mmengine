@@ -1653,6 +1653,35 @@ class TestRunner(TestCase):
             runner = Runner.from_cfg(cfg)
             runner.train()
 
+        # 12.1 Test train with model, which does not inherit from BaseModel
+        @MODELS.register_module()
+        class ToyModel3(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(1, 1)
+
+            def train_step(self, *args, **kwargs):
+                return dict(loss=torch.tensor(1))
+
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.pop('val_cfg')
+        cfg.pop('val_dataloader')
+        cfg.pop('val_evaluator')
+        cfg.model = dict(type='ToyModel3')
+        cfg.experiment_name = 'test_train12.1'
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 12.2 Test val_step should be implemented if val_cfg is not None
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.model = dict(type='ToyModel3')
+        cfg.experiment_name = 'test_train12.2'
+        runner = Runner.from_cfg(cfg)
+
+        with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
+            runner.train()
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'

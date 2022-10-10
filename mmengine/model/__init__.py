@@ -14,7 +14,7 @@ from .weight_init import (BaseInit, Caffe2XavierInit, ConstantInit,
                           constant_init, initialize, kaiming_init, normal_init,
                           trunc_normal_init, uniform_init, update_init_info,
                           xavier_init)
-from .wrappers import (MMDistributedDataParallel,
+from .wrappers import (BaseTTAModel, MMDistributedDataParallel,
                        MMSeparateDistributedDataParallel, is_model_wrapper)
 
 __all__ = [
@@ -29,7 +29,7 @@ __all__ = [
     'bias_init_with_prob', 'BaseInit', 'ConstantInit', 'XavierInit',
     'NormalInit', 'TruncNormalInit', 'UniformInit', 'KaimingInit',
     'Caffe2XavierInit', 'PretrainedInit', 'initialize',
-    'convert_sync_batchnorm'
+    'convert_sync_batchnorm', 'BaseTTAModel'
 ]
 
 if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
