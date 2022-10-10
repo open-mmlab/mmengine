@@ -232,7 +232,7 @@ class MMFullyShardedDataParallel(FSDP):
             for m in self._mm_fixed_modules:
                 for p in m.parameters():
                     if p.grad:
-                        torch._foreach_zero_(p.grad)
+                        p.grad = None
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
