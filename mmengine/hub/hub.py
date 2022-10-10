@@ -80,4 +80,8 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
             load_checkpoint(model, cfg.model_path)
+            # Hack to use pretrained weights.
+            # If we do not set _is_init here, Runner will call
+            # `model.init_weights()` to overwrite the pretrained model.
+            model._is_init = True
         return model
