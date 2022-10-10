@@ -4,7 +4,7 @@ import copy
 import math
 import warnings
 from collections import defaultdict
-from typing import List, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
@@ -29,14 +29,14 @@ class ConcatDataset(_ConcatDataset):
         datasets (Sequence[BaseDataset] or Sequence[dict]): A list of datasets
             which will be concatenated.
         ignore_keys (List[str] or str): Ignore the keys that can be
-            unequal in `dataset.metainfo`.
+            unequal in `dataset.metainfo`. Defaults to None.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
     """
 
     def __init__(self,
                  datasets: Sequence[Union[BaseDataset, dict]],
-                 ignore_keys: Union[str, List[str]] = [],
+                 ignore_keys: Optional[Union[str, List[str]]] = None,
                  lazy_init: bool = False):
         self.datasets: List[BaseDataset] = []
         for i, dataset in enumerate(datasets):
@@ -48,7 +48,9 @@ class ConcatDataset(_ConcatDataset):
                 raise TypeError(
                     'elements in datasets sequence should be config or '
                     f'`BaseDataset` instance, but got {type(dataset)}')
-        if isinstance(ignore_keys, str):
+        if ignore_keys is None:
+            self.ignore_keys = []
+        elif isinstance(ignore_keys, str):
             self.ignore_keys = [ignore_keys]
         elif isinstance(ignore_keys, list):
             self.ignore_keys = ignore_keys
