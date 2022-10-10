@@ -66,7 +66,7 @@
 - Fix loss smooth when loss name doesn't start with `loss` by @liuyanyi in
   https://github.com/open-mmlab/mmengine/pull/539
 
-## New Contributors
+### New Contributors
 
 - @okotaku made their first contribution in https://github.com/open-mmlab/mmengine/pull/510
 - @MengzhangLI made their first contribution in https://github.com/open-mmlab/mmengine/pull/527
