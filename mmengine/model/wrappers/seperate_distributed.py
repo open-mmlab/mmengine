@@ -41,7 +41,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         find_unused_parameters (bool): Same as that in
             ``torch.nn.parallel.distributed.DistributedDataParallel``.
             Traverse the autograd graph of all tensors contained in returned
-            value of the wrapped module’s forward function. Defaults to False.
+            value of the wrapped module's forward function. Defaults to False.
         **kwargs: Keyword arguments passed to ``MMDistributedDataParallel``.
 
             - device_ids (List[int] or torch.device, optional): CUDA devices
@@ -58,7 +58,8 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
             - gradient_as_bucket_view (bool): Defaults to False.
             - static_graph (bool): Defaults to False.
 
-    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
+    See more information about arguments in
+    :class:`torch.nn.parallel.DistributedDataParallel`.
     """
 
     def __init__(self,
@@ -144,7 +145,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
 
         Args:
             mode (bool): whether to set training mode (``True``) or evaluation
-                 mode (``False``). Default: ``True``.
+                mode (``False``). Defaults to ``True``.
 
         Returns:
             Module: self.

@@ -1,41 +1,111 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset
 
+from mmengine.evaluator import BaseMetric
+from mmengine.fileio import FileClient, LocalBackend
 from mmengine.hooks import CheckpointHook
 from mmengine.logging import MessageHub
+from mmengine.model import BaseModel
+from mmengine.optim import OptimWrapper
+from mmengine.runner import Runner
 
 
-class MockPetrel:
-
-    _allow_symlink = False
+class ToyModel(BaseModel):
 
     def __init__(self):
-        pass
+        super().__init__()
+        self.linear = nn.Linear(2, 1)
+
+    def forward(self, inputs, data_sample, mode='tensor'):
+        labels = torch.stack(data_sample)
+        inputs = torch.stack(inputs)
+        outputs = self.linear(inputs)
+        if mode == 'tensor':
+            return outputs
+        elif mode == 'loss':
+            loss = (labels - outputs).sum()
+            outputs = dict(loss=loss)
+            return outputs
+        else:
+            return outputs
+
+
+class DummyDataset(Dataset):
+    METAINFO = dict()  # type: ignore
+    data = torch.randn(12, 2)
+    label = torch.ones(12)
 
     @property
-    def name(self):
-        return self.__class__.__name__
+    def metainfo(self):
+        return self.METAINFO
 
-    @property
-    def allow_symlink(self):
-        return self._allow_symlink
+    def __len__(self):
+        return self.data.size(0)
+
+    def __getitem__(self, index):
+        return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-prefix_to_backends = {'s3': MockPetrel}
+class TriangleMetric(BaseMetric):
+
+    default_prefix: str = 'test'
+
+    def __init__(self, length):
+        super().__init__()
+        self.length = length
+        self.best_idx = length // 2
+        self.cur_idx = 0
+
+    def process(self, *args, **kwargs):
+        self.results.append(0)
+
+    def compute_metrics(self, *args, **kwargs):
+        self.cur_idx += 1
+        acc = 1.0 - abs(self.cur_idx - self.best_idx) / self.length
+        return dict(acc=acc)
 
 
 class TestCheckpointHook:
 
-    @patch('mmengine.fileio.file_client.FileClient._prefix_to_backends',
-           prefix_to_backends)
+    def test_init(self, tmp_path):
+        # Test file_client_args and backend_args
+        with pytest.warns(
+                DeprecationWarning,
+                match='"file_client_args" will be deprecated in future'):
+            CheckpointHook(file_client_args={'backend': 'disk'})
+
+        with pytest.raises(
+                ValueError,
+                match='"file_client_args" and "backend_args" cannot be set '
+                'at the same time'):
+            CheckpointHook(
+                file_client_args={'backend': 'disk'},
+                backend_args={'backend': 'local'})
+
     def test_before_train(self, tmp_path):
         runner = Mock()
         work_dir = str(tmp_path)
         runner.work_dir = work_dir
+
+        # file_client_args is None
+        checkpoint_hook = CheckpointHook()
+        checkpoint_hook.before_train(runner)
+        assert isinstance(checkpoint_hook.file_client, FileClient)
+        assert isinstance(checkpoint_hook.file_backend, LocalBackend)
+
+        # file_client_args is not None
+        checkpoint_hook = CheckpointHook(file_client_args={'backend': 'disk'})
+        checkpoint_hook.before_train(runner)
+        assert isinstance(checkpoint_hook.file_client, FileClient)
+        # file_backend is the alias of file_client
+        assert checkpoint_hook.file_backend is checkpoint_hook.file_client
 
         # the out_dir of the checkpoint hook is None
         checkpoint_hook = CheckpointHook(interval=1, by_epoch=True)
@@ -330,6 +400,26 @@ class TestCheckpointHook:
         assert (runner.epoch + 1) % 2 == 0
         assert not os.path.exists(f'{work_dir}/epoch_8.pth')
 
+        # save_checkpoint of runner should be called with expected arguments
+        runner = Mock()
+        work_dir = str(tmp_path)
+        runner.work_dir = tmp_path
+        runner.epoch = 1
+        runner.message_hub = MessageHub.get_instance('test_after_train_epoch2')
+
+        checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
+        checkpoint_hook.before_train(runner)
+        checkpoint_hook.after_train_epoch(runner)
+
+        runner.save_checkpoint.assert_called_once_with(
+            runner.work_dir,
+            'epoch_2.pth',
+            None,
+            backend_args=None,
+            by_epoch=True,
+            save_optimizer=True,
+            save_param_scheduler=True)
+
     def test_after_train_iter(self, tmp_path):
         work_dir = str(tmp_path)
         runner = Mock()
@@ -370,3 +460,40 @@ class TestCheckpointHook:
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
         assert not os.path.exists(f'{work_dir}/iter_8.pth')
+
+    def test_with_runner(self, tmp_path):
+        max_epoch = 10
+        work_dir = osp.join(str(tmp_path), 'runner_test')
+        tmpl = '{}.pth'
+        save_interval = 2
+        checkpoint_cfg = dict(
+            type='CheckpointHook',
+            interval=save_interval,
+            filename_tmpl=tmpl,
+            by_epoch=True)
+        runner = Runner(
+            model=ToyModel(),
+            work_dir=work_dir,
+            train_dataloader=dict(
+                dataset=DummyDataset(),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            val_dataloader=dict(
+                dataset=DummyDataset(),
+                sampler=dict(type='DefaultSampler', shuffle=False),
+                batch_size=3,
+                num_workers=0),
+            val_evaluator=dict(type=TriangleMetric, length=max_epoch),
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
+            train_cfg=dict(
+                by_epoch=True, max_epochs=max_epoch, val_interval=1),
+            val_cfg=dict(),
+            default_hooks=dict(checkpoint=checkpoint_cfg))
+        runner.train()
+        for epoch in range(max_epoch):
+            if epoch % save_interval != 0 or epoch == 0:
+                continue
+            path = osp.join(work_dir, tmpl.format(epoch))
+            assert osp.isfile(path=path)

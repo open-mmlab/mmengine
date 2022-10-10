@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import pickle
 import platform
 import time
 import warnings
@@ -23,10 +24,10 @@ from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
 from mmengine.evaluator import Evaluator
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
-from mmengine.model import (BaseModel, MMDistributedDataParallel,
+from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
@@ -770,7 +771,7 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[BaseModel, Dict]) -> BaseModel:
+    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object.
@@ -781,14 +782,20 @@ class Runner:
             model = dict(type='ResNet')
 
         Args:
-            model (BaseModel or dict): A nn.Module object or a dict to build
-                nn.Module object. If ``model`` is a nn.Module object, just
-                returns itself.
+            model (nn.Module or dict): A ``nn.Module`` object or a dict to
+                build nn.Module object. If ``model`` is a nn.Module object,
+                just returns itself.
+
+        Note:
+            The returned model must implement ``train_step``, ``test_step``
+            if ``runner.train`` or ``runner.test`` will be called. If
+            ``runner.val`` will be called or ``val_cfg`` is configured,
+            model must implement `val_step`.
 
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, BaseModel):
+        if isinstance(model, nn.Module):
             return model
         elif isinstance(model, dict):
             model = MODELS.build(model)
@@ -799,7 +806,7 @@ class Runner:
 
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
-            model: BaseModel) -> Union[DistributedDataParallel, BaseModel]:
+            model: nn.Module) -> Union[DistributedDataParallel, nn.Module]:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 
@@ -814,10 +821,10 @@ class Runner:
             model_wrapper_cfg (dict, optional): Config to wrap model. If not
                 specified, ``DistributedDataParallel`` will be used in
                 distributed environment. Defaults to None.
-            model (BaseModel): Model to be wrapped.
+            model (nn.Module): Model to be wrapped.
 
         Returns:
-            BaseModel or DistributedDataParallel: BaseModel or subclass of
+            nn.Module or DistributedDataParallel: nn.Module or subclass of
             ``DistributedDataParallel``.
         """
         if is_model_wrapper(model):
@@ -837,8 +844,16 @@ class Runner:
                 'layers in the model will be automatically reverted to '
                 'BatchNormXd layers if they are used.')
             model = revert_sync_batchnorm(model)
-            return model
-
+            return model  # type: ignore
+        else:
+            sync_bn = self.cfg.get('sync_bn', None)
+            if sync_bn is not None:
+                try:
+                    model = convert_sync_batchnorm(model, sync_bn)
+                except ValueError as e:
+                    self.logger.error('cfg.sync_bn should be "torch" or '
+                                      f'"mmcv", but got {sync_bn}')
+                    raise e
         if model_wrapper_cfg is None:
             find_unused_parameters = self.cfg.get('find_unused_parameters',
                                                   False)
@@ -1591,6 +1606,19 @@ class Runner:
         Returns:
             nn.Module: The model after training.
         """
+        if is_model_wrapper(self.model):
+            ori_model = self.model.module
+        else:
+            ori_model = self.model
+        assert hasattr(ori_model, 'train_step'), (
+            'If you want to train your model, please make sure your model '
+            'has implemented `train_step`.')
+
+        if self._val_loop is not None:
+            assert hasattr(ori_model, 'val_step'), (
+                'If you want to validate your model, please make sure your '
+                'model has implemented `val_step`.')
+
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '
@@ -1910,7 +1938,11 @@ class Runner:
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
-        if resumed_dataset_meta != dataset_meta:
+
+        # `resumed_dataset_meta` and `dataset_meta` could be object like
+        # np.ndarray, which cannot be directly judged as equal or not,
+        # therefore we just compared their dumped results.
+        if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
             warnings.warn(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
@@ -1991,14 +2023,17 @@ class Runner:
         return checkpoint
 
     @master_only
-    def save_checkpoint(self,
-                        out_dir: str,
-                        filename: str,
-                        file_client_args: Optional[dict] = None,
-                        save_optimizer: bool = True,
-                        save_param_scheduler: bool = True,
-                        meta: dict = None,
-                        by_epoch: bool = True):
+    def save_checkpoint(
+        self,
+        out_dir: str,
+        filename: str,
+        file_client_args: Optional[dict] = None,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        meta: dict = None,
+        by_epoch: bool = True,
+        backend_args: Optional[dict] = None,
+    ):
         """Save checkpoints.
 
         ``CheckpointHook`` invokes this method to save checkpoints
@@ -2008,7 +2043,9 @@ class Runner:
             out_dir (str): The directory that checkpoints are saved.
             filename (str): The checkpoint filename.
             file_client_args (dict, optional): Arguments to instantiate a
-                FileClient. Default: None.
+                FileClient. See :class:`mmengine.fileio.FileClient` for
+                details. Defaults to None. It will be deprecated in future.
+                Please use `backend_args` instead.
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -2017,6 +2054,9 @@ class Runner:
                 checkpoint. Defaults to None.
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
+            backend_args (dict, optional): Arguments to instantiate the
+                preifx of uri corresponding backend. Defaults to None.
+                New in v0.2.0.
         """
         if meta is None:
             meta = {}
@@ -2033,8 +2073,20 @@ class Runner:
         else:
             meta.update(epoch=self.epoch, iter=self.iter + 1)
 
-        file_client = FileClient.infer_client(file_client_args, out_dir)
-        filepath = file_client.join_path(out_dir, filename)
+        if file_client_args is not None:
+            warnings.warn(
+                '"file_client_args" will be deprecated in future. '
+                'Please use "backend_args" instead', DeprecationWarning)
+            if backend_args is not None:
+                raise ValueError(
+                    '"file_client_args" and "backend_args" cannot be set at '
+                    'the same time.')
+
+            file_client = FileClient.infer_client(file_client_args, out_dir)
+            filepath = file_client.join_path(out_dir, filename)
+        else:
+            filepath = join_path(  # type: ignore
+                out_dir, filename, backend_args=backend_args)
 
         meta.update(
             cfg=self.cfg.pretty_text,

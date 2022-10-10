@@ -92,12 +92,12 @@ class BaseModel(BaseModule):
         :class:`IterBasedTrainLoop` will call this method to update model
         parameters. The default parameter update process is as follows:
 
-        1. Calls ``self.data_processor(data, training=False) to collect
-          batch_inputs and corresponding data_samples(labels).
+        1. Calls ``self.data_processor(data, training=False)`` to collect
+           batch_inputs and corresponding data_samples(labels).
         2. Calls ``self(batch_inputs, data_samples, mode='loss')`` to get raw
-          loss
+           loss
         3. Calls ``self.parse_losses`` to get ``parsed_losses`` tensor used to
-          backward and dict of loss tensor used to log messages.
+           backward and dict of loss tensor used to log messages.
         4. Calls ``optim_wrapper.update_params(loss)`` to update model.
 
         Args:
@@ -159,20 +159,23 @@ class BaseModel(BaseModule):
             all losses, and the second is log_vars which will be sent to the
             logger.
         """
-        log_vars = OrderedDict()
+        log_vars = []
         for loss_name, loss_value in losses.items():
             if isinstance(loss_value, torch.Tensor):
-                log_vars[loss_name] = loss_value.mean()
+                log_vars.append([loss_name, loss_value.mean()])
             elif is_list_of(loss_value, torch.Tensor):
-                log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
+                log_vars.append(
+                    [loss_name,
+                     sum(_loss.mean() for _loss in loss_value)])
             else:
                 raise TypeError(
                     f'{loss_name} is not a tensor or list of tensors')
 
-        loss = sum(value for key, value in log_vars.items() if 'loss' in key)
-        log_vars['loss'] = loss
+        loss = sum(value for key, value in log_vars if 'loss' in key)
+        log_vars.insert(0, ['loss', loss])
+        log_vars = OrderedDict(log_vars)  # type: ignore
 
-        return loss, log_vars
+        return loss, log_vars  # type: ignore
 
     def to(self,
            device: Optional[Union[int, str, torch.device]] = None,
