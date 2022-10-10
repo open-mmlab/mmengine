@@ -12,7 +12,7 @@ from mmengine.registry import MODEL_WRAPPERS, Registry
 from mmengine.structures import BaseDataElement
 
 # support customize fsdp policy
-FSDP_WRAP_POLICYS = Registry('fsdp wrap policy')
+FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
@@ -60,7 +60,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             users' pre-defined config in MMEngine, its type is expected to be
             `None`, `str` or `Callable`. If it's `str`, then
             MMFullyShardedDataParallel will try to get specified method in
-            ``FSDP_WRAP_POLICYS`` registry,and this method will be passed to
+            ``FSDP_WRAP_POLICIES`` registry,and this method will be passed to
             FullyShardedDataParallel to finally initialize model.
 
             Note that this policy currently will only apply to child modules of
@@ -97,6 +97,9 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             computation overlapping.
             Pros and cons of each algorithm is explained in class
             ``BackwardPrefetch``.
+
+        **kwargs: Keyword arguments passed to
+            :class:`FullyShardedDataParallel`.
     """
 
     def __init__(
@@ -106,6 +109,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         cpu_offload: Optional[Union[bool, CPUOffload]] = None,
         fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
         backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+        **kwargs,
     ):
 
         if cpu_offload is not None:
@@ -118,10 +122,10 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
         if fsdp_auto_wrap_policy is not None:
             if isinstance(fsdp_auto_wrap_policy, str):
-                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
-                    '`FSDP_WRAP_POLICYS` has no ' \
+                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICIES, \
+                    '`FSDP_WRAP_POLICIES` has no ' \
                     f'function {fsdp_auto_wrap_policy}'
-                fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
+                fsdp_auto_wrap_policy = FSDP_WRAP_POLICIES.get(  # type: ignore
                     fsdp_auto_wrap_policy)
                 if not isinstance(fsdp_auto_wrap_policy,
                                   Callable):  # type: ignore
@@ -150,8 +154,13 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
-        super().__init__(module, process_group, cpu_offload,
-                         fsdp_auto_wrap_policy, backward_prefetch)
+        super().__init__(
+            module=module,
+            process_group=process_group,
+            auto_wrap_policy=fsdp_auto_wrap_policy,
+            cpu_offload=cpu_offload,
+            backward_prefetch=backward_prefetch,
+            **kwargs)
 
     def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:

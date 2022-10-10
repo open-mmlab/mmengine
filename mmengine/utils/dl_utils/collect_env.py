@@ -4,6 +4,7 @@ import os.path as osp
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
+from distutils import errors
 
 import cv2
 import numpy as np
@@ -103,7 +104,7 @@ def collect_env():
                 sys.stdout.fileno()) or locale.getpreferredencoding()
             env_info['MSVC'] = cc.decode(encoding).partition('\n')[0].strip()
             env_info['GCC'] = 'n/a'
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, errors.DistutilsPlatformError):
         env_info['GCC'] = 'n/a'
 
     env_info['PyTorch'] = torch.__version__

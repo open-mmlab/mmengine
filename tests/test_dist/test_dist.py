@@ -641,6 +641,7 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
                 ]
 
             data_gen = (item for item in data)
+            dist.all_reduce_params(data_gen, coalesce=coalesce, op=reduce_op)
 
             if reduce_op == 'sum':
                 expected = (

@@ -114,7 +114,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
 
 也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
 
-除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_bes` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
+除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_best` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
 
 - 指定保存权重的路径
 
@@ -258,7 +258,7 @@ custom_hooks = dict(
 )
 ```
 
-也可以在定义类是给定优先级
+也可以在定义类时给定优先级
 
 ```python
 @HOOKS.register_module()

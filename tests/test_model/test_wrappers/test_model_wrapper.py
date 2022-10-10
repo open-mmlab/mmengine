@@ -109,6 +109,16 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
         assert_allclose(all_grads[1], torch.zeros_like(all_grads[0]))
 
+        # Test enable detect_anomalous_params.
+        ddp_model = MMDistributedDataParallel(
+            module=model, detect_anomalous_params=True)
+        optimizer = SGD(ddp_model.parameters(), lr=0)
+        optim_wrapper = AmpOptimWrapper(
+            optimizer=optimizer, accumulative_counts=3)
+        inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
+        data = dict(inputs=inputs, data_sample=None)
+        res = ddp_model.train_step(data, optim_wrapper=optim_wrapper)['loss']
+
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()

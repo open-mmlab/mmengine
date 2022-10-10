@@ -29,12 +29,13 @@ class BaseAveragedModel(nn.Module):
     In mmengine, we provide two ways to use the model averaging:
 
     1. Use the model averaging module in hook:
-       We provide an EMAHook to apply the model averaging during training.
-       Add ``custom_hooks=[dict(type='EMAHook')]`` to the config or the runner.
-       The hook is implemented in mmengine/hooks/ema_hook.py
+       We provide an :class:`mmengine.hooks.EMAHook` to apply the model
+       averaging during training. Add ``custom_hooks=[dict(type='EMAHook')]``
+       to the config or the runner.
 
     2. Use the model averaging module directly in the algorithm. Take the ema
        teacher in semi-supervise as an example:
+
        >>> from mmengine.model import ExponentialMovingAverage
        >>> student = ResNet(depth=50)
        >>> # use ema model as teacher
@@ -187,8 +188,7 @@ class ExponentialMovingAverage(BaseAveragedModel):
             steps (int): The number of times the parameters have been
                 updated.
         """
-        averaged_param.mul_(1 - self.momentum).add_(
-            source_param, alpha=self.momentum)
+        averaged_param.lerp_(source_param, self.momentum)
 
 
 @MODELS.register_module()
@@ -242,4 +242,4 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
                 updated.
         """
         momentum = max(self.momentum, self.gamma / (self.gamma + self.steps))
-        averaged_param.mul_(1 - momentum).add_(source_param, alpha=momentum)
+        averaged_param.lerp_(source_param, momentum)

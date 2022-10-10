@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import logging
 import os
 import os.path as osp
 import shutil
@@ -410,6 +411,10 @@ class TestRunner(TestCase):
             sampler_seed=dict(type='DistSamplerSeedHook'))
 
     def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):
@@ -579,8 +584,9 @@ class TestRunner(TestCase):
         runner.train()
         runner.test()
 
-        # 5. Test building multiple runners
-        if torch.cuda.is_available():
+        # 5. Test building multiple runners. In Windows, nccl could not be
+        # available, and this test will be skipped.
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             cfg = copy.deepcopy(self.epoch_based_cfg)
             cfg.experiment_name = 'test_init15'
             cfg.launcher = 'pytorch'
@@ -589,9 +595,9 @@ class TestRunner(TestCase):
             os.environ['RANK'] = '0'
             os.environ['WORLD_SIZE'] = '1'
             os.environ['LOCAL_RANK'] = '0'
-            runner = Runner(**cfg)
+            Runner(**cfg)
             cfg.experiment_name = 'test_init16'
-            runner = Runner(**cfg)
+            Runner(**cfg)
 
         # 6.1 Test initializing with empty scheduler.
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -680,8 +686,11 @@ class TestRunner(TestCase):
                 osp.join(runner.work_dir, f'{runner.timestamp}.py'))
             # dump config from file.
             with tempfile.TemporaryDirectory() as temp_config_dir:
+                # Set `delete=Flase` and close the file to make it
+                # work in Windows.
                 temp_config_file = tempfile.NamedTemporaryFile(
-                    dir=temp_config_dir, suffix='.py')
+                    dir=temp_config_dir, suffix='.py', delete=False)
+                temp_config_file.close()
                 file_cfg = Config(
                     self.epoch_based_cfg._cfg_dict,
                     filename=temp_config_file.name)
@@ -791,7 +800,7 @@ class TestRunner(TestCase):
 
     def test_build_model(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.experiment_name = 'test_build_model'
+        cfg.experiment_name = 'test_build_model1'
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, ToyModel)
         self.assertIsInstance(runner.model.data_preprocessor,
@@ -834,7 +843,9 @@ class TestRunner(TestCase):
         cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
         runner = Runner.from_cfg(cfg)
         self.assertIsInstance(runner.model, BaseModel)
-        if torch.cuda.is_available():
+
+        # Test with ddp wrapper
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
             os.environ['MASTER_ADDR'] = '127.0.0.1'
             os.environ['MASTER_PORT'] = '29515'
             os.environ['RANK'] = str(0)
@@ -843,6 +854,35 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_wrap_model1'
             runner = Runner.from_cfg(cfg)
             self.assertIsInstance(runner.model, CustomModelWrapper)
+
+            # Test cfg.sync_bn = 'torch', when model does not have BN layer
+            cfg = copy.deepcopy(self.epoch_based_cfg)
+            cfg.launcher = 'pytorch'
+            cfg.experiment_name = 'test_wrap_model2'
+            cfg.sync_bn = 'torch'
+            cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
+            runner.from_cfg(cfg)
+
+            @MODELS.register_module()
+            class ToyBN(BaseModel):
+
+                def __init__(self):
+                    super().__init__()
+                    self.bn = nn.BatchNorm2d(2)
+
+                def forward(self, *args, **kwargs):
+                    pass
+
+            cfg.model = dict(type='ToyBN')
+            cfg.experiment_name = 'test_data_preprocessor2'
+            runner = Runner.from_cfg(cfg)
+            self.assertIsInstance(runner.model.model.bn,
+                                  torch.nn.SyncBatchNorm)
+
+            cfg.sync_bn = 'unknown'
+            cfg.experiment_name = 'test_data_preprocessor3'
+            with self.assertRaises(ValueError):
+                Runner.from_cfg(cfg)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1611,6 +1651,35 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_train11'
             cfg.train_dataloader.update(collate_fn=dict(type='custom_collate'))
             runner = Runner.from_cfg(cfg)
+            runner.train()
+
+        # 12.1 Test train with model, which does not inherit from BaseModel
+        @MODELS.register_module()
+        class ToyModel3(nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(1, 1)
+
+            def train_step(self, *args, **kwargs):
+                return dict(loss=torch.tensor(1))
+
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.pop('val_cfg')
+        cfg.pop('val_dataloader')
+        cfg.pop('val_evaluator')
+        cfg.model = dict(type='ToyModel3')
+        cfg.experiment_name = 'test_train12.1'
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 12.2 Test val_step should be implemented if val_cfg is not None
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.model = dict(type='ToyModel3')
+        cfg.experiment_name = 'test_train12.2'
+        runner = Runner.from_cfg(cfg)
+
+        with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
     def test_val(self):
