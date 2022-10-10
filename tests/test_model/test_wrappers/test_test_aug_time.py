@@ -15,7 +15,7 @@ class ToyTestTimeAugModel(BaseTTAModel):
 
 
 @MODELS.register_module()
-class ToyModel(BaseModel):
+class TTAToyModel(BaseModel):
 
     def forward(self, inputs, data_samples, mode='tensor'):
         return data_samples
@@ -28,7 +28,7 @@ class TestBaseTTAModel(TestCase):
             dict(inputs=[1, 2], data_samples=[3, 4]) for _ in range(10)
         ]
         tuple_dataset = [([1, 2], [3, 4]) for _ in range(10)]
-        self.model = ToyModel()
+        self.model = TTAToyModel()
         self.dict_dataloader = DataLoader(dict_dataset, batch_size=2)
         self.tuple_dataloader = DataLoader(tuple_dataset, batch_size=2)
 
@@ -50,6 +50,6 @@ class TestBaseTTAModel(TestCase):
         tta_model = ToyTestTimeAugModel(self.model)
         self.assertIs(tta_model.module, self.model)
         # Test build from cfg.
-        model = dict(type='ToyModel')
+        model = dict(type='TTAToyModel')
         tta_model = ToyTestTimeAugModel(model)
-        self.assertIsInstance(tta_model.module, ToyModel)
+        self.assertIsInstance(tta_model.module, TTAToyModel)
