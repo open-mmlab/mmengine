@@ -58,6 +58,16 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
    - 对神经网络模型中各个层的优化配置进行细粒度调整
    - 混合精度训练的灵活控制
 
+## 最近进展
+
+最新版本 v0.2.0 在 2022.10.10 发布。
+
+1. FileIO 重构，提供更加统一的接口，且向下兼容
+2. 新增 Test time augmentation 模型基类。
+3. 分布式训练时，支持将 BN 自动转化为 SyncBN
+
+阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "10/10/2022")
+
 ## 安装
 
 在安装 MMengine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。

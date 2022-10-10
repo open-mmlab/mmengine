@@ -56,6 +56,16 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
+## What's New
+
+v0.6.1 was released in 2022-10-10.
+
+1. Refactor FileIO, more unified interface, no BC breaking.
+2. Add base model for test time augmentation.
+3. Support convert `BN` to `SyncBN` during distributed data parallel training.
+
+阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "10/10/2022")
+
 ## Installation
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
