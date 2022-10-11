@@ -5,8 +5,8 @@
 ### New Features & Enhancements
 
 - Support defining metric name in wandb backend @okotaku in https://github.com/open-mmlab/mmengine/pull/509
-- Use `torch.lerp\_()` to speed up EMA. by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/519
-- Add test time augmentation base model. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/538
+- Use `torch.lerp\_()` to speed up EMA by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/519
+- Add test time augmentation base model by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/538
 - Support converting `BN` to `SyncBN` by config by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/506
 - Refactor `FileIO` but without breaking bc by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/533
 - Add dockerfile by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/347
@@ -22,7 +22,7 @@
 - Update Github Action CI and CircleCI by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/512
 - Fix upload image in wandb backend @okotaku in https://github.com/open-mmlab/mmengine/pull/510
 - Fix loading state dictionary in EMAHook @okotaku in https://github.com/open-mmlab/mmengine/pull/507
-- Fix error argument sequence in `FSDP`. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/520
+- Fix error argument sequence in `FSDP` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/520
 - Fix circle import in EMAHook by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/523
 - Fix unit test in windows by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/515
 - Fix typo in docstring by @MengzhangLI in https://github.com/open-mmlab/mmengine/pull/527
