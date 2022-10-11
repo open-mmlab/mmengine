@@ -3,12 +3,17 @@ from contextlib import contextmanager
 
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler
 
+from mmengine.device import is_npu_available
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 from .optimizer_wrapper import OptimWrapper
+
+if is_npu_available():
+    from torch.npu.amp import GradScaler
+else:
+    from torch.cuda.amp import GradScaler
 
 
 @OPTIM_WRAPPERS.register_module()
@@ -44,7 +49,7 @@ class AmpOptimWrapper(OptimWrapper):
     def __init__(self, loss_scale='dynamic', **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
-        assert torch.cuda.is_available(), (
+        assert torch.cuda.is_available() or is_npu_available(), (
             '``AmpOptimizerWrapper`` is only available training on gpu')
         super().__init__(**kwargs)
         self._scale_update_param = None
