@@ -7,7 +7,7 @@
 - Support defining metric name in wandb backend @okotaku in https://github.com/open-mmlab/mmengine/pull/509
 - Use torch.lerp\_() to speed up EMA. by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/519
 - Add test time augmentation base model. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/538
-- Support converting `BN` to `SyncBN` by config by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/506
+- Support convert `BN` to `SyncBN` by config by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/506
 - Refactor `FileIO` but without breaking bc by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/533
 - Add dockerfile by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/347
 

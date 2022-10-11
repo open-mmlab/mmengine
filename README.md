@@ -61,8 +61,8 @@ Major features:
 v0.2.0 was released in 2022-10-11.
 
 1. Refactor FileIO, more unified interface, no BC breaking.
-2. Add base model for test time augmentation.
-3. Support converting `BN` to `SyncBN` during distributed data parallel training.
+2. Add the base model for test time augmentation.
+3. Support converting `BN` to `SyncBN` during distributed data-parallel training.
 
 Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "10/10/2022") for more details.
 
