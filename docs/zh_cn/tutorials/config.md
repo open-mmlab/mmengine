@@ -308,7 +308,7 @@ print(cfg.a)
 {'type': 'MobileNet', 'depth': 50}
 ```
 
-解析后发现，`a` 的 type 变成了 `MobileNet。`
+解析后发现，`a` 的 type 变成了 `MobileNet`。
 
 ## 配置文件的导出
 
@@ -316,7 +316,7 @@ print(cfg.a)
 接口来导出更改后的配置文件。与读取配置文件类似，用户可以通过 `cfg.dump('config.xxx')` 来选择导出文件的格式。`dump`
 同样可以导出有继承关系的配置文件，导出的文件可以被独立使用，不再依赖于 `_base_` 中定义的文件。
 
-基于继承一节定义的 `resnet50.py`,我们将其加载后导出:
+基于继承一节定义的 `resnet50.py`，我们将其加载后导出：
 
 ```python
 cfg = Config.fromfile('resnet50.py')
@@ -394,14 +394,14 @@ print(cfg.work_dir)
 
 - `{{fileDirname}}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
 - `{{fileBasename}}` - 当前文件的文件名，例如 `file.py`
-- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 file
+- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 `file`
 - `{{fileExtname}}` - 当前文件的扩展名，例如 `.py`
 
 ### 命令行修改配置
 
 有时候我们只希望修改部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
 
-1. 使用 `argparser` 解析脚本运行的参数
+1. 使用 `argparse` 解析脚本运行的参数
 2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
 3. 使用配置类的 `merge_from_dict` 方法来更新配置
 
