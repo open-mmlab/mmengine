@@ -445,7 +445,7 @@ class Registry:
 
         Args:
             module (type): Module to be registered. Typically a class or a
-                function, but generally all `Callable` are acceptable.
+                function, but generally all ``Callable`` are acceptable.
             module_name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
                 Defaults to None.
