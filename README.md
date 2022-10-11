@@ -155,7 +155,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>Build Metrics</summary>
 
-To validate and test the model, we need to define a **Metric** called accuracy to evaluate the model. This metric needs inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
+To validate and test the model, we need to define a **Metric** called accuracy to evaluate the model. This metric needs to inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
 
 ```python
 from mmengine.evaluator import BaseMetric
