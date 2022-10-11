@@ -81,6 +81,7 @@ class BaseTTAModel:
         else:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
+        self.data_preprocessor = lambda data: data
         assert hasattr(self.module, 'test_step'), (
             'Model wrapped by BaseTTAModel must implement `test_step`!')
 
@@ -97,7 +98,7 @@ class BaseTTAModel:
             List[BaseDataElement]: Merged prediction.
         """
 
-    def test_step(self, data: DATA_BATCH) -> MergedDataSamples:
+    def forward(self, inputs, datasamples) -> MergedDataSamples:
         """Get predictions of each enhanced data, a multiple predictions.
 
         Args:
@@ -106,21 +107,10 @@ class BaseTTAModel:
         Returns:
             MergedDataSamples: Merged prediction.
         """
-        data_list: Union[List[dict], List[list]]
-        if isinstance(data, dict):
-            num_augs = len(data[next(iter(data))])
-            data_list = [{key: value[idx]
-                          for key, value in data.items()}
-                         for idx in range(num_augs)]
-        elif isinstance(data, (tuple, list)):
-            num_augs = len(data[0])
-            data_list = [[_data[idx] for _data in data]
-                         for idx in range(num_augs)]
-        else:
-            raise TypeError('data given by dataLoader should be a dict, '
-                            f'tuple or a list, but got {type(data)}')
-
         predictions = []
-        for data in data_list:  # type: ignore
-            predictions.append(self.module.test_step(data))
+        for input, datasample in zip(datasamples, inputs):  # type: ignore
+            predictions.append(
+                self.module.test_step(
+                    dict(inputs=input, datasamples=datasample)))
+        super
         return self.merge_preds(list(zip(*predictions)))  # type: ignore

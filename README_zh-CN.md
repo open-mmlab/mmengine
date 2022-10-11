@@ -66,7 +66,7 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 2. 新增 Test time augmentation 模型基类。
 3. 分布式训练时，支持将 BN 自动转化为 SyncBN
 
-阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "10/10/2022")
+阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022")
 
 ## 安装
 
