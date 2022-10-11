@@ -39,7 +39,7 @@
 
 - Remove unnecessary "if statement" by @MambaWong in https://github.com/open-mmlab/mmengine/pull/536
 
-- CheckpointHook behavior incorrect if given `filename_tmpl` argument by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/518
+- Fix CheckpointHook behavior unexpected if given `filename_tmpl` argument by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/518
 
 - Fix `_save_to_state_dict` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/542
 
