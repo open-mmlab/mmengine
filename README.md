@@ -58,7 +58,7 @@ Major features:
 
 ## What's New
 
-v0.2.0 was released in 2022-10-10.
+v0.2.0 was released in 2022-10-11.
 
 1. Refactor FileIO, more unified interface, no BC breaking.
 2. Add base model for test time augmentation.
