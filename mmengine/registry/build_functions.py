@@ -104,7 +104,8 @@ def build_from_cfg(
                     'can be found at '
                     'https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
                 )
-        elif inspect.isclass(obj_type) or inspect.isfunction(obj_type):
+        # this will include classes, functions, partial functions and more
+        elif callable(obj_type):
             obj_cls = obj_type
         else:
             raise TypeError(
@@ -120,10 +121,15 @@ def build_from_cfg(
             else:
                 obj = obj_cls(**args)  # type: ignore
 
+            # For some rare cases (e.g. obj_cls is a partial function), obj_cls
+            # doesn't have the following attributes. Use default value to
+            # prevent error
+            cls_name = getattr(obj_cls, '__name__', str(obj_cls))
+            cls_module = getattr(obj_cls, '__module__', '{module not found}')
             print_log(
-                f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+                f'An `{cls_name}` instance is built from '  # type: ignore # noqa: E501
                 'registry, its implementation can be found in '
-                f'{obj_cls.__module__}',  # type: ignore
+                f'{cls_module}',  # type: ignore
                 logger='current',
                 level=logging.DEBUG)
             return obj

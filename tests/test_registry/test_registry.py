@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import functools
 import time
 
 import pytest
@@ -59,22 +60,11 @@ class TestRegistry:
         CATS = Registry('cat')
 
         @CATS.register_module()
-        def muchkin():
+        def muchkin(size):
             pass
 
         assert CATS.get('muchkin') is muchkin
         assert 'muchkin' in CATS
-
-        # can only decorate a class or a function
-        with pytest.raises(TypeError):
-
-            class Demo:
-
-                def some_method(self):
-                    pass
-
-            method = Demo().some_method
-            CATS.register_module(name='some_method', module=method)
 
         # test `name` parameter which must be either of None, a string or a
         # sequence of string
@@ -146,7 +136,7 @@ class TestRegistry:
         # decorator, which must be a class
         with pytest.raises(
                 TypeError,
-                match='module must be a class or a function,'
+                match='module must be Callable,'
                 " but got <class 'str'>"):
             CATS.register_module(module='string')
 
@@ -165,6 +155,14 @@ class TestRegistry:
         assert CATS.get('Sphynx2') is SphynxCat
         assert CATS.get('Sphynx3') is SphynxCat
         assert len(CATS) == 9
+
+        # partial functions can be registered
+        muchkin0 = functools.partial(muchkin, size=0)
+        CATS.register_module('muchkin0', False, muchkin0)
+
+        assert CATS.get('muchkin0') is muchkin0
+        assert 'muchkin0' in CATS
+        assert len(CATS) == 10
 
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""
@@ -228,11 +226,20 @@ class TestRegistry:
         MID_HOUNDS, SAMOYEDS, LITTLE_SAMOYEDS = registries[3:]
 
         @DOGS.register_module()
+        def bark(word, times):
+            return [word] * times
+
+        dog_bark = functools.partial(bark, 'woof')
+        DOGS.register_module('dog_bark', False, dog_bark)
+
+        @DOGS.register_module()
         class GoldenRetriever:
             pass
 
-        assert len(DOGS) == 1
+        assert len(DOGS) == 3
         assert DOGS.get('GoldenRetriever') is GoldenRetriever
+        assert DOGS.get('bark') is bark
+        assert DOGS.get('dog_bark') is dog_bark
 
         @HOUNDS.register_module()
         class BloodHound:
@@ -249,6 +256,8 @@ class TestRegistry:
         # If the key is not found in the current registry, then look for its
         # parent
         assert HOUNDS.get('GoldenRetriever') is GoldenRetriever
+        assert HOUNDS.get('bark') is bark
+        assert HOUNDS.get('dog_bark') is dog_bark
 
         @LITTLE_HOUNDS.register_module()
         class Dachshund:
@@ -340,11 +349,14 @@ class TestRegistry:
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS, SAMOYEDS = registries[:5]
 
         @DOGS.register_module()
-        def bark(times=1):
-            return ' '.join(['woof'] * times)
+        def bark(word, times):
+            return ' '.join([word] * times)
 
-        bark_cfg = cfg_type(dict(type='bark', times=3))
-        assert DOGS.build(bark_cfg) == 'woof woof woof'
+        dog_bark = functools.partial(bark, word='woof')
+        DOGS.register_module('dog_bark', False, dog_bark)
+
+        bark_cfg = cfg_type(dict(type='bark', word='meow', times=3))
+        dog_bark_cfg = cfg_type(dict(type='dog_bark', times=3))
 
         @DOGS.register_module()
         class GoldenRetriever:
@@ -352,6 +364,8 @@ class TestRegistry:
 
         gr_cfg = cfg_type(dict(type='GoldenRetriever'))
         assert isinstance(DOGS.build(gr_cfg), GoldenRetriever)
+        assert DOGS.build(bark_cfg) == 'meow meow meow'
+        assert DOGS.build(dog_bark_cfg) == 'woof woof woof'
 
         @HOUNDS.register_module()
         class BloodHound:
@@ -360,6 +374,8 @@ class TestRegistry:
         bh_cfg = cfg_type(dict(type='BloodHound'))
         assert isinstance(HOUNDS.build(bh_cfg), BloodHound)
         assert isinstance(HOUNDS.build(gr_cfg), GoldenRetriever)
+        assert HOUNDS.build(bark_cfg) == 'meow meow meow'
+        assert HOUNDS.build(dog_bark_cfg) == 'woof woof woof'
 
         @LITTLE_HOUNDS.register_module()
         class Dachshund:
