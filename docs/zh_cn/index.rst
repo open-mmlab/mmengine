@@ -90,6 +90,12 @@
    mmengine.utils.dl_utils <api/utils.dl_utils>
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Notes
+
+   notes/changelog.md
+
+.. toctree::
    :caption: 语言切换
 
    switch_language.md

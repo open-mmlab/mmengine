@@ -56,6 +56,17 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
+## What's New
+
+v0.2.0 was released in 2022-10-11.
+
+1. Refactor FileIO to provide a more unified interface without BC breaking.
+2. Add the base model for test time augmentation.
+3. Support converting `BN` to `SyncBN` during distributed data-parallel training.
+4. Add SMDDP backend and support running on AWS.
+
+Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022") for more details.
+
 ## Installation
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
@@ -145,7 +156,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>Build Metrics</summary>
 
-To validate and test the model, we need to define a **Metric** called accuracy to evaluate the model. This metric needs inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
+To validate and test the model, we need to define a **Metric** called accuracy to evaluate the model. This metric needs to inherit from `BaseMetric` and implements the `process` and `compute_metrics` methods.
 
 ```python
 from mmengine.evaluator import BaseMetric
