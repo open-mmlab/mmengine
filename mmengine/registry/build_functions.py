@@ -125,7 +125,7 @@ def build_from_cfg(
             # doesn't have the following attributes. Use default value to
             # prevent error
             cls_name = getattr(obj_cls, '__name__', str(obj_cls))
-            cls_module = getattr(obj_cls, '__module__', '{module not found}')
+            cls_module = getattr(obj_cls, '__module__', 'unknown')
             print_log(
                 f'An `{cls_name}` instance is built from '  # type: ignore # noqa: E501
                 'registry, its implementation can be found in '
