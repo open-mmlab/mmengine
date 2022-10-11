@@ -64,7 +64,7 @@ v0.2.0 was released in 2022-10-11.
 2. Add the base model for test time augmentation.
 3. Support converting `BN` to `SyncBN` during distributed data-parallel training.
 
-Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "10/10/2022") for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022") for more details.
 
 ## Installation
 
