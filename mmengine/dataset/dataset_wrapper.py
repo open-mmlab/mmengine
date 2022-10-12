@@ -4,7 +4,7 @@ import copy
 import math
 import warnings
 from collections import defaultdict
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
@@ -36,7 +36,7 @@ class ConcatDataset(_ConcatDataset):
 
     def __init__(self,
                  datasets: Sequence[Union[BaseDataset, dict]],
-                 ignore_keys: Optional[Union[str, List[str]]] = None,
+                 ignore_keys: Union[None, str, List[str]] = None,
                  lazy_init: bool = False):
         self.datasets: List[BaseDataset] = []
         for i, dataset in enumerate(datasets):
