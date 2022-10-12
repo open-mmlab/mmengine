@@ -42,7 +42,7 @@ class BaseDataPreprocessor(nn.Module):
         """
         if isinstance(data, Mapping):
             return {key: self.cast_data(data[key]) for key in data}
-        elif isinstance(data, (str, bytes)):
+        elif isinstance(data, (str, bytes)) or data is None:
             return data  # type: ignore
         elif isinstance(data, tuple) and hasattr(data, '_fields'):
             # namedtuple
