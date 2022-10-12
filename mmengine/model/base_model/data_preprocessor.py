@@ -42,17 +42,20 @@ class BaseDataPreprocessor(nn.Module):
         """
         if isinstance(data, Mapping):
             return {key: self.cast_data(data[key]) for key in data}
+        elif isinstance(data, (str, bytes)):
+            return data  # type: ignore
         elif isinstance(data, tuple) and hasattr(data, '_fields'):
             # namedtuple
             return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
             return [self.cast_data(sample) for sample in data]
-        elif isinstance(data, torch.Tensor):
-            return data.to(self.device)
-        elif isinstance(data, BaseDataElement):
+        elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device)
         else:
-            return data
+            raise TypeError(
+                '`BaseDataPreprocessor.cast_data`: batch must contain '
+                'tensors, numpy arrays, numbers, dicts or lists, but '
+                f'found {type(data)}')
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
