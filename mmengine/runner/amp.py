@@ -89,7 +89,7 @@ def autocast(device_type: Optional[str] = None,
         if is_npu_available():
             with torch.npu.amp.autocast(enabled=enabled):
                 yield
-        elif torch.cuda.is_available():
+        elif is_cuda_available():
             with torch.cuda.amp.autocast(enabled=enabled):
                 yield
         else:
