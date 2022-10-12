@@ -114,7 +114,8 @@ def build_from_cfg(
             # If `obj_cls` inherits from `ManagerMixin`, it should be
             # instantiated by `ManagerMixin.get_instance` to ensure that it
             # can be accessed globally.
-            if issubclass(obj_cls, ManagerMixin):  # type: ignore
+            if inspect.isclass(obj_cls) and \
+                    issubclass(obj_cls, ManagerMixin):  # type: ignore
                 obj = obj_cls.get_instance(**args)  # type: ignore
             else:
                 obj = obj_cls(**args)  # type: ignore
@@ -175,7 +176,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     # temporarily.
     scope = args.pop('_scope_', None)
     with registry.switch_scope_and_registry(scope) as registry:
-        obj_type = args.pop('runner_type', 'mmengine.Runner')
+        obj_type = args.get('runner_type', 'mmengine.Runner')
         if isinstance(obj_type, str):
             runner_cls = registry.get(obj_type)
             if runner_cls is None:

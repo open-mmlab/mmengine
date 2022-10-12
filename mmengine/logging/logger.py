@@ -109,7 +109,7 @@ class MMLogger(Logger, ManagerMixin):
           ``MMLogger.get_instance`` but not ``logging.getLogger``. This feature
           ensures ``MMLogger`` will not be incluenced by third-party logging
           config.
-        - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
+        - Different from ``logging.Logger``, ``MMLogger`` will not log warning
           or error message without ``Handler``.
 
     Examples:

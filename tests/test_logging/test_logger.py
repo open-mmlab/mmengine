@@ -43,7 +43,10 @@ class TestLogger:
             'rank0.pkg3', logger_name='logger_test', log_level='INFO')
         assert logger.name == 'logger_test'
         assert logger.instance_name == 'rank0.pkg3'
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     @patch('mmengine.logging.logger._get_rank', lambda: 1)
     def test_init_rank1(self, tmp_path):
@@ -62,7 +65,10 @@ class TestLogger:
         assert logger.handlers[1].level == logging.INFO
         assert len(logger.handlers) == 2
         assert os.path.exists(log_path)
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     @pytest.mark.parametrize('log_level',
                              [logging.WARNING, logging.INFO, logging.DEBUG])
@@ -92,7 +98,10 @@ class TestLogger:
                 f' - mmengine - {loglevl_name} - '
                 f'welcome\n', log_text)
             assert match is not None
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
         logging.shutdown()
+        MMLogger._instance_dict.clear()
 
     def test_error_format(self, capsys):
         # test error level log can output file path, function name and
@@ -100,7 +109,10 @@ class TestLogger:
         logger = MMLogger.get_instance('test_error', log_level='INFO')
         logger.error('welcome')
         lineno = sys._getframe().f_lineno - 1
-        file_path = __file__
+        # replace \ for windows:
+        # origin: c:\\a\\b\\c.py
+        # replaced: c:\\\\a\\\\b\\\\c.py for re.match.
+        file_path = __file__.replace('\\', '\\\\')
         function_name = sys._getframe().f_code.co_name
         pattern = self.stream_handler_regex_time + \
             r' - mmengine - (.*)ERROR(.*) - ' \

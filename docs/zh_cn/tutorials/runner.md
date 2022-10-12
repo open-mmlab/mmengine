@@ -2,15 +2,15 @@
 
 深度学习算法的训练、验证和测试通常都拥有相似的流程，因此 MMEngine 提供了执行器以帮助用户简化这些任务的实现流程。 用户只需要准备好模型训练、验证、测试所需要的模块构建执行器，便能够通过简单调用执行器的接口来完成这些任务。用户如果需要使用这几项功能中的某一项，只需要准备好对应功能所依赖的模块即可。
 
-用户可以手动构建这些模块的实例，也可以通过编写[配置文件](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)，
-由执行器自动从[注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)中构建所需要的模块，我们推荐使用后一种方式。
+用户可以手动构建这些模块的实例，也可以通过编写[配置文件](./config.md)，
+由执行器自动从[注册器](./registry.md)中构建所需要的模块，我们推荐使用后一种方式。
 
 ## 手动构建模块来使用执行器
 
 ### 手动构建模块进行训练
 
-如上文所说，使用执行器的某一项功能时需要准备好对应功能所依赖的模块。以使用执行器的训练功能为例，用户需要准备[模型](TODO) 、[优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optimizer.html) 、
-[参数调度器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html) 还有训练[数据集](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/basedataset.html) 。
+如上文所说，使用执行器的某一项功能时需要准备好对应功能所依赖的模块。以使用执行器的训练功能为例，用户需要准备[模型](TODO) 、[优化器](./optim_wrapper.md) 、
+[参数调度器](./param_scheduler.md) 还有训练[数据集](../advanced_tutorials/basedataset.md) 。
 
 ```python
 # 准备训练任务所需要的模块
@@ -42,9 +42,9 @@ class Network(BaseModel):
 model = Network()
 
 # 构建优化器
-optimzier = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 # 构建参数调度器用于调整学习率
-lr_scheduler = MultiStepLR(milestones=[2], by_epoch=True)
+lr_scheduler = MultiStepLR(optimizer, milestones=[2], by_epoch=True)
 # 构建手写数字识别 (MNIST) 数据集
 train_dataset = datasets.MNIST(root="MNIST", download=True, train=True, transform=transforms.ToTensor())
 # 构建数据加载器
@@ -58,7 +58,7 @@ from mmengine.runner import Runner
 
 
 # 训练相关参数设置，按轮次训练，训练3轮
-train_cfg = dict(by_epoch=True, max_epoch=3)
+train_cfg = dict(by_epoch=True, max_epochs=3)
 
 # 初始化执行器
 runner = Runner(model,
@@ -77,12 +77,12 @@ runner.train()
 
 ```python
 # 训练相关参数设置，按迭代次数训练，训练9000次迭代
-train_cfg = dict(by_epoch=False, max_epoch=9000)
+train_cfg = dict(by_epoch=False, max_iters=9000)
 ```
 
 ### 手动构建模块进行测试
 
-再举一个模型测试的例子，模型的测试需要用户准备模型和训练好的权重路径、测试数据集以及[评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluator.html) ：
+再举一个模型测试的例子，模型的测试需要用户准备模型和训练好的权重路径、测试数据集以及[评测器](./evaluation.md) ：
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -114,7 +114,7 @@ runner.test()
 
 ### 手动构建模块在训练过程中进行验证
 
-在模型训练过程中，通常会按一定的间隔在验证集上对模型的进行进行验证。在使用 MMEngine 时，只需要构建训练和验证的模块，并在训练配置中设置验证间隔即可
+在模型训练过程中，通常会按一定的间隔在验证集上对模型进行验证。在使用 MMEngine 时，只需要构建训练和验证的模块，并在训练配置中设置验证间隔即可
 
 ```python
 # 准备训练任务所需要的模块
@@ -241,7 +241,7 @@ resume = False
 一个完整的配置文件主要由模型、数据、优化器、参数调度器、评测器等模块的配置，训练、验证、测试等流程的配置，还有执行流程过程中的各种钩子模块的配置，以及环境和日志等其他配置的字段组成。
 通过配置文件构建的执行器采用了懒初始化 (lazy initialization)，只有当调用到训练或测试等执行函数时，才会根据配置文件去完整初始化所需要的模块。
 
-关于配置文件的更详细的使用方式，请参考[配置文件教程](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.md)
+关于配置文件的更详细的使用方式，请参考[配置文件教程](./config.md)
 
 ## 加载权重或恢复训练
 
@@ -258,4 +258,4 @@ runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=tes
 
 如果仅设置 `resume=True`，执行器将会尝试从 `work_dir` 文件夹中寻找并读取最新的检查点文件。
 
-你可能还想阅读[执行器的设计](../design/runner.md)或者[执行器的 API 文档](https://mmengine.readthedocs.io/zh_CN/latest/api/runner.html)。
+你可能还想阅读[执行器的设计](../design/runner.md)或者[执行器的 API 文档](mmengine.runner.Runner)。

@@ -6,8 +6,8 @@ from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
                    iter_cast, list_cast, requires_executable, requires_package,
                    slice_list, to_1tuple, to_2tuple, to_3tuple, to_4tuple,
                    to_ntuple, tuple_cast)
-from .package_utils import (call_command, check_install_package,
-                            get_installed_path, is_installed)
+from .package_utils import (call_command, get_installed_path, install_package,
+                            is_installed)
 from .path import (check_file_exist, fopen, is_abs, is_filepath,
                    mkdir_or_exist, scandir, symlink)
 from .progressbar import (ProgressBar, track_iter_progress,
@@ -22,9 +22,9 @@ __all__ = [
     'is_filepath', 'fopen', 'check_file_exist', 'mkdir_or_exist', 'symlink',
     'scandir', 'deprecated_api_warning', 'import_modules_from_strings',
     'to_1tuple', 'to_2tuple', 'to_3tuple', 'to_4tuple', 'to_ntuple',
-    'is_installed', 'call_command', 'get_installed_path',
-    'check_install_package', 'is_abs', 'is_method_overridden', 'has_method',
-    'digit_version', 'get_git_hash', 'ManagerMeta', 'ManagerMixin', 'Timer',
-    'check_time', 'TimerError', 'ProgressBar', 'track_iter_progress',
+    'is_installed', 'call_command', 'get_installed_path', 'install_package',
+    'is_abs', 'is_method_overridden', 'has_method', 'digit_version',
+    'get_git_hash', 'ManagerMeta', 'ManagerMixin', 'Timer', 'check_time',
+    'TimerError', 'ProgressBar', 'track_iter_progress',
     'track_parallel_progress', 'track_progress'
 ]

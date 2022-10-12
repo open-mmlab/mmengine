@@ -1,6 +1,27 @@
 # 配置（Config）
 
-MMEngine 实现了抽象的配置类，为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
+MMEngine 实现了抽象的配置类（Config），为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
+
+在开始教程之前，我们先将教程中需要用到的配置文件下载到本地（建议在临时目录下执行，方便后续删除示例配置文件）：
+
+```bash
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/config_sgd.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/cross_repo.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/custom_imports.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/demo_train.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/example.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/learn_read_config.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/my_module.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/optimizer_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/refer_base_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_delete_key.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_lr0.01.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_runtime.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/runtime_cfg.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
+```
 
 ## 配置文件读取
 
@@ -36,13 +57,19 @@ test_dict:
   key2: 0.1
 ```
 
-对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，则我们调用 `Config.fromfile('config.xxx')` 接口都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例：
+对于以上三种格式的文件，假设文件名分别为 `config.py`，`config.json`，`config.yml`，调用 `Config.fromfile('config.xxx')` 接口加载这三个文件都会得到相同的结果，构造了包含 3 个字段的配置对象。我们以 `config.py` 为例，我们先将示例配置文件下载到本地：
+
+然后通过配置类的 `fromfile` 接口读取配置文件：
 
 ```python
-from mmengine import Config
+from mmengine.config import Config
 
-cfg = Config.fromfile('/path/to/config.py')
-# Config (path: config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1: 'value1', "key2": 0.1}
+cfg = Config.fromfile('learn_read_config.py')
+print(cfg)
+```
+
+```
+Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1': 'value1', 'key2': 0.1}}
 ```
 
 ## 配置文件的使用
@@ -51,20 +78,29 @@ cfg = Config.fromfile('/path/to/config.py')
 我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
 
 ```python
-cfg = Config.fromfile('config.py')
+print(cfg.test_int)
+print(cfg.test_list)
+print(cfg.test_dict)
+cfg.test_int = 2
 
-cfg.test_int  # 1
-cfg.test_list  # [1, 2, 3]
-cfg.test_dict  # ConfigDict(key1='value1', key2=0.1)
-cfg.test_int = 2  # 这里发生了配置字段修改，test_int 字段的值变成了 2
-
-cfg['test_int']  # 2
-cfg['test_list']  # [1, 2, 3]
-cfg['test_dict']  # ConfigDict(key1='value1', key2=0.1)
-cfg['test_list'][1] = 3  # 这里发生了字段修改，test_list 字段的值变成了 [1, 3, 3]
+print(cfg['test_int'])
+print(cfg['test_list'])
+print(cfg['test_dict'])
+cfg['test_list'][1] = 3
+print(cfg['test_list'])
 ```
 
-注意，配置文件中定义的嵌套字段（即类似字典的字段），在 Config 中会将其转化为 ConfigDict 类，该类具有和 Python 内置字典类型相同的接口，可以直接当做普通字典使用。
+```
+1
+[1, 2, 3]
+{'key1': 'value1', 'key2': 0.1}
+2
+[1, 2, 3]
+{'key1': 'value1', 'key2': 0.1}
+[1, 3, 3]
+```
+
+注意，配置文件中定义的嵌套字段（即类似字典的字段），在 Config 中会将其转化为 ConfigDict 类，该类继承了 Python 内置字典类型的全部接口，同时也支持以对象属性的方式访问数据。
 
 在算法库中，可以将配置与注册器结合起来使用，达到通过配置文件来控制模块构造的目的。这里举一个在配置文件中定义优化器的例子。
 
@@ -77,15 +113,31 @@ optimizer = dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001)
 然后在算法库中可以通过如下代码构造优化器对象。
 
 ```python
-from mmengine import Config
-from mmengine.Registry import OPTIMIZERS
+from mmengine import Config, optim
+from mmengine.registry import OPTIMIZERS
+
+import torch.nn as nn
 
 cfg = Config.fromfile('config_sgd.py')
+
+model = nn.Conv2d(1, 1, 1)
+cfg.optimizer.params = model.parameters()
 optimizer = OPTIMIZERS.build(cfg.optimizer)
-# 这里 optimizer 就是一个 torch.optim.SGD 对象
+print(optimizer)
 ```
 
-这样，我们就可以在不改动算法库代码的情况下，仅通过修改配置文件，来使用不同的优化器。
+```
+SGD (
+Parameter Group 0
+    dampening: 0
+    foreach: None
+    lr: 0.1
+    maximize: False
+    momentum: 0.9
+    nesterov: False
+    weight_decay: 0.0001
+)
+```
 
 ## 配置文件的继承
 
@@ -114,7 +166,11 @@ model = dict(type='ResNet', depth=50)
 
 ```python
 cfg = Config.fromfile('resnet50.py')
-cfg.optimizer  # ConfigDict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+print(cfg.optimizer)
+```
+
+```
+{'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
 这里 `_base_` 是配置文件的保留字段，指定了该配置文件的继承来源。支持继承多个文件，将同时获得这多个文件中的所有字段，但是要求继承的多个文件中**没有**相同名称的字段，否则会报错。
@@ -125,14 +181,23 @@ cfg.optimizer  # ConfigDict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.00
 gpu_ids = [0, 1]
 ```
 
-`resnet50.py`：
+`resnet50_runtime.py`：
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
 model = dict(type='ResNet', depth=50)
 ```
 
-这时，读取配置文件 `resnet50.py` 会获得 3 个字段 `model`，`optimizer`，`gpu_ids`。
+这时，读取配置文件 `resnet50_runtime.py` 会获得 3 个字段 `model`，`optimizer`，`gpu_ids`。
+
+```python
+cfg = Config.fromfile('resnet50_runtime.py')
+print(cfg.optimizer)
+```
+
+```
+{'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001}
+```
 
 通过这种方式，我们可以将配置文件进行拆分，定义一些通用配置文件，在实际配置文件中继承各种通用配置文件，可以减少具体任务的配置流程。
 
@@ -154,7 +219,11 @@ optimizer = dict(lr=0.01)
 
 ```python
 cfg = Config.fromfile('resnet50_lr0.01.py')
-cfg.optimizer  # ConfigDict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+print(cfg.optimizer)
+```
+
+```
+{'type': 'SGD', 'lr': 0.01, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
 对于非字典类型的字段，例如整数，字符串，列表等，重新定义即可完全覆盖，例如下面的写法就将 `gpu_ids` 这个字段的值修改成了 `[0]`。
@@ -169,7 +238,7 @@ gpu_ids = [0]
 
 有时候我们对于继承过来的字典类型字段，不仅仅是想修改其中某些 key，可能还需要删除其中的一些 key。这时候在重新定义这个字典时，需要指定 `_delete_=True`，表示将没有在新定义的字典中出现的 key 全部删除。
 
-`resnet50.py`：
+`resnet50_delete_key.py`：
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -180,19 +249,66 @@ optimizer = dict(_delete_=True, type='SGD', lr=0.01)
 这时候，`optimizer` 这个字典中就只有 `type` 和 `lr` 这两个 key，`momentum` 和 `weight_decay` 将不再被继承。
 
 ```python
-cfg = Config.fromfile('resnet50_lr0.01.py')
-cfg.optimizer  # ConfigDict(type='SGD', lr=0.01)
+cfg = Config.fromfile('resnet50_delete_key.py')
+print(cfg.optimizer)
+```
+
+```
+{'type': 'SGD', 'lr': 0.01}
 ```
 
 ### 引用被继承文件中的变量
 
 有时我们想重复利用 `_base_` 中定义的字段内容，就可以通过 `{{_base_.xxxx}}` 获取来获取对应变量的拷贝。例如：
 
+`refer_base_var.py`
+
 ```python
 _base_ = ['resnet50.py']
 a = {{_base_.model}}
-# 等价于 a = dict(type='ResNet', depth=50)
 ```
+
+解析后发现，`a` 的值变成了 `resnet50.py` 中定义的 `model`
+
+```python
+cfg = Config.fromfile('refer_base_var.py')
+print(cfg.a)
+```
+
+```
+{'type': 'ResNet', 'depth': 50}
+```
+
+我们可以在 `json`、`yaml`、`python` 三种类型的配置文件中，使用这种方式来获取 `_base_` 中定义的变量。
+
+尽管这种获取 `_base_` 中定义变量的方式非常通用，但是在语法上存在一些限制，无法充分利用 `python` 类配置文件的动态特性。比如我们想在 `python` 类配置文件中，修改 `_base_` 中定义的变量：
+
+```python
+_base_ = ['resnet50.py']
+a = {{_base_.model}}
+a['type'] = 'MobileNet'
+```
+
+配置类是无法解析这样的配置文件的（解析时报错）。配置类提供了一种更 `pythonic` 的方式，让我们能够在 `python` 类配置文件中修改 `_base_` 中定义的变量（`python` 类配置文件专属特性，目前不支持在 `json`、`yaml` 配置文件中修改 `_base_` 中定义的变量）。
+
+`modify_base_var.py`：
+
+```python
+_base_ = ['resnet50.py']
+a = _base_.model
+a.type = 'MobileNet'
+```
+
+```python
+cfg = Config.fromfile('modify_base_var.py')
+print(cfg.a)
+```
+
+```
+{'type': 'MobileNet', 'depth': 50}
+```
+
+解析后发现，`a` 的 type 变成了 `MobileNet。`
 
 ## 配置文件的导出
 
@@ -200,36 +316,25 @@ a = {{_base_.model}}
 接口来导出更改后的配置文件。与读取配置文件类似，用户可以通过 `cfg.dump('config.xxx')` 来选择导出文件的格式。`dump`
 同样可以导出有继承关系的配置文件，导出的文件可以被独立使用，不再依赖于 `_base_` 中定义的文件。
 
-基于继承一节定义的 `resnet50.py`
-
-```python
-_base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
-model = dict(type='ResNet', depth=50)
-```
-
-我们将其加载后导出:
+基于继承一节定义的 `resnet50.py`,我们将其加载后导出:
 
 ```python
 cfg = Config.fromfile('resnet50.py')
 cfg.dump('resnet50_dump.py')
 ```
 
-`dumped_resnet50.py`
+`resnet50_dump.py`
 
 ```python
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
-gpu_ids = [0, 1]
 model = dict(type='ResNet', depth=50)
 ```
 
 类似的，我们可以导出 json、yaml 格式的配置文件
 
-`dumped_resnet50.yaml`
+`resnet50_dump.yaml`
 
 ```yaml
-gpu_ids:
-- 0
-- 1
 model:
   depth: 50
   type: ResNet
@@ -240,20 +345,20 @@ optimizer:
   weight_decay: 0.0001
 ```
 
-`dumped_resnet50.json`
+`resnet50_dump.json`
 
 ```json
-{"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "gpu_ids": [0, 1], "model": {"type": "ResNet", "depth": 50}}
+{"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "model": {"type": "ResNet", "depth": 50}}
 ```
 
 此外，`dump` 不仅能导出加载自文件的 `cfg`，还能导出加载自字典的 `cfg`
 
 ```python
 cfg = Config(dict(a=1, b=2))
-cfg.dump('demo.py')
+cfg.dump('dump_dict.py')
 ```
 
-`demo.py`
+`dump_dict.py`
 
 ```python
 a=1
@@ -266,32 +371,164 @@ b=2
 
 ### 预定义字段
 
-有时候我们希望配置文件中的一些字段和当前路径或者文件名等相关，这里举一个典型使用场景的例子。在训练模型时，我们会在配置文件中定义一个工作目录，存放这组实验配置的模型和日志，那么对于不同的配置文件，我们期望定义不同的工作目录。用户的一种常见选择是，直接使用配置文件名作为工作目录名的一部分，例如对于配置文件 `config_setting1.py`，工作目录就是 `./work_dir/config_setting1`。
+有时候我们希望配置文件中的一些字段和当前路径或者文件名等相关，这里举一个典型使用场景的例子。在训练模型时，我们会在配置文件中定义一个工作目录，存放这组实验配置的模型和日志，那么对于不同的配置文件，我们期望定义不同的工作目录。用户的一种常见选择是，直接使用配置文件名作为工作目录名的一部分，例如对于配置文件 `predefined_var.py`，工作目录就是 `./work_dir/predefined_var`。
 
-使用预定义字段可以方便地实现这种需求，在配置文件 `config_setting1.py` 中可以这样写：
+使用预定义字段可以方便地实现这种需求，在配置文件 `predefined_var.py` 中可以这样写：
 
 ```Python
-work_dir = './work_dir/{{ fileBasenameNoExtension }}'
+work_dir = './work_dir/{{fileBasenameNoExtension}}'
 ```
 
-这里 `{{ fileBasenameNoExtension }}` 表示该配置文件的文件名（不含拓展名），在配置类读取配置文件的时候，会将这种用双花括号包起来的字符串自动解析为对应的实际值。
+这里 `{{fileBasenameNoExtension}}` 表示该配置文件的文件名（不含拓展名），在配置类读取配置文件的时候，会将这种用双花括号包起来的字符串自动解析为对应的实际值。
 
-```Python
-cfg = Config.fromfile('./config_setting1.py')
-cfg.work_dir  # "./work_dir/config_setting1"
+```python
+cfg = Config.fromfile('./predefined_var.py')
+print(cfg.work_dir)
+```
+
+```
+./work_dir/predefined_var
 ```
 
 目前支持的预定义字段有以下四种，变量名参考自 [VS Code](https://code.visualstudio.com/docs/editor/variables-reference) 中的相关字段：
 
-- `{{ fileDirname }}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
-- `{{ fileBasename }}` - 当前文件的文件名，例如 `file.py`
-- `{{ fileBasenameNoExtension }}` - 当前文件不包含扩展名的文件名，例如 file
-- `{{ fileExtname }}` - 当前文件的扩展名，例如 `.py`
+- `{{fileDirname}}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
+- `{{fileBasename}}` - 当前文件的文件名，例如 `file.py`
+- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 file
+- `{{fileExtname}}` - 当前文件的扩展名，例如 `.py`
+
+### 命令行修改配置
+
+有时候我们只希望修改部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
+
+1. 使用 `argparser` 解析脚本运行的参数
+2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
+3. 使用配置类的 `merge_from_dict` 方法来更新配置
+
+启动脚本示例如下：
+
+`demo_train.py`
+
+```python
+import argparse
+
+from mmengine.config import Config, DictAction
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train a model')
+    parser.add_argument('config', help='train config file path')
+    parser.add_argument(
+        '--cfg-options',
+        nargs='+',
+        action=DictAction,
+        help='override some settings in the used config, the key-value pair '
+        'in xxx=yyy format will be merged into config file. If the value to '
+        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
+        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
+        'Note that the quotation marks are necessary and that no white space '
+        'is allowed.')
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parse_args()
+    cfg = Config.fromfile(args.config)
+    if args.cfg_options is not None:
+        cfg.merge_from_dict(args.cfg_options)
+    print(cfg)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+示例配置文件如下：
+
+`example.py`
+
+```python
+model = dict(type='CustomModel', in_channels=[1, 2, 3])
+optimizer = dict(type='SGD', lr=0.01)
+```
+
+我们在命令行里通过 `.` 的方式来访问配置文件中的深层配置，例如我们想修改学习率，只需要在命令行执行：
+
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
+```
+
+我们成功地把学习率从 0.01 修改成 0.1。如果想改变列表、元组类型的配置，如上例中的 `in_channels`，则需要在命令行赋值时给 `()`，`[]` 外加上双引号：
+
+```bash
+python demo_train.py ./example.py --cfg-options model.in_channels="[1, 1, 1]"
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
+```
+
+`model.in_channels` 已经从 \[1, 2, 3\] 修改成 \[1, 1, 1\]。
+
+```{note}
+上述流程只支持在命令行里修改字符串、整型、浮点型、布尔型、None、列表、元组类型的配置项。对于列表、元组类型的配置，里面每个元素的类型也必须为上述七种类型之一。
+```
+
+### 导入自定义 Python 模块
+
+将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
+
+例如我们新实现了一种优化器 `CustomOptim`，相应代码在 `my_module.py` 中。
+
+```python
+from mmengine.registry import OPTIMIZERS
+
+@OPTIMIZERS.register_module()
+class CustomOptim:
+    pass
+```
+
+我们为这个优化器的使用写了一个新的配置文件 `custom_imports.py`：
+
+```python
+optimizer = dict(type='CustomOptim')
+```
+
+那么就需要在读取配置文件和构造优化器之前，增加一行 `import my_module` 来保证将自定义的类 `CustomOptim` 注册到 OPTIMIZERS 注册器中：
+为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
+
+`custom_imports.py`
+
+```python
+custom_imports = dict(imports=['my_module'], allow_failed_imports=False)
+optimizer = dict(type='CustomOptim')
+```
+
+这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。
+
+```python
+cfg = Config.fromfile('custom_imports.py')
+
+from mmengine.registry import OPTIMIZERS
+
+custom_optim = OPTIMIZERS.build(cfg.optimizer)
+print(custom_optim)
+```
+
+```
+<my_module.CustomOptim object at 0x7f6983a87970>
+```
 
 ### 跨项目继承配置文件
 
-为了避免基于已有算法库开发的新项目复制大量的配置文件，MMEngine 中的 config 支持配置文件的跨项目继承。
-假定 MMDetection 项目中存在如下配置文件
+为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
+开发新的算法库，需要使用以下 MMDetection 的配置文件：
 
 ```text
 configs/_base_/schedules/schedule_1x.py
@@ -300,21 +537,35 @@ configs/_base_/default_runtime.py
 configs/_base_/models/faster_rcnn_r50_fpn.py
 ```
 
-在 MMDetection 被安装进环境（如使用 `pip install mmdet`）以后，新的项目可以直接在自己的配置文件中继承 MMDetection 的配置文件而无需拷贝，使用方式如下所示
+如果没有配置文件跨项目继承的功能，我们就需要把 MMDetection 的配置文件拷贝到当前项目，而我们现在只需要安装 MMDetection
+（如使用 `mim install mmdet`），在新项目的配置文件中按照以下方式继承 MMDetection 的配置文件：
+
+`cross_repo.py`
 
 ```python
 _base_ = [
     'mmdet::_base_/schedules/schedule_1x.py',
-    'mmdet::_base_/datasets.coco_instance.py',
-    'mmdet::_base_/default_runtime.py'
+    'mmdet::_base_/datasets/coco_instance.py',
+    'mmdet::_base_/default_runtime.py',
     'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
 ]
+```
+
+我们可以像加载普通配置文件一样加载 `cross_repo.py`
+
+```python
+cfg = Config.fromfile('cross_repo.py')
+print(cfg.train_cfg)
+```
+
+```
+{'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
 ```
 
 通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
 实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
 
-### 跨项目使用配置文件
+### 跨项目获取配置文件
 
 MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口可以获得构建好的模型。通过 `get_config` 接口可以获得配置文件。
 
@@ -322,8 +573,16 @@ MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符�
 用户可以通过指定 `pretrained=True` 获得已经加载预训练权重的模型以进行训练或者推理。
 
 ```python
-from mmengine import get_model
-model = get_model('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=True)
+from mmengine.hub import get_model
+
+model = get_model(
+    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+print(type(model))
+```
+
+```
+http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+<class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
 ```
 
 `get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。
@@ -331,54 +590,14 @@ model = get_model('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=T
 同时，如果用户指定 `pretrained=True` ，得到的配置文件中会新增 `model_path` 字段，指定了对应模型预训练权重的路径。
 
 ```python
-from mmengine import get_config
-cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco', pretrained=True)
-model_path = cfg.model_path
+from mmengine.hub import get_config
 
-from mmdet.models import build_model
-model = build_model(cfg.model)
-load_checkpoint(model, model_path)
+cfg = get_config(
+    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+print(cfg.model_path)
+
 ```
 
-### 导入自定义 Python 模块
-
-将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。
-
-例如我们新实现了一种优化器 `SuperOptim`，相应代码在 my_package/my_module.py 中。
-
-```python
-from mmengine.registry import OPTIMIZERS
-
-@OPTIMIZERS.register_module()
-class SuperOptim:
-    pass
 ```
-
-我们为这个优化器的使用写了一个新的配置文件 `optimizer_cfg.py`：
-
-```python
-optimizer = dict(type='SuperOptim')
+https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 ```
-
-那么就需要在读取配置文件和构造优化器之前，增加一行 `from my_package import my_module` 来保证将自定义的类 `SuperOptim` 注册到 OPTIMIZERS 注册器中：
-
-```python
-from mmengine import Config
-from mmengine.Registry import OPTIMIZERS
-
-from my_package import my_module
-
-cfg = Config.fromfile('config_super_optim.py')
-optimizer = OPTIMIZERS.build(cfg.optimizer)
-```
-
-这样就会导致除了修改配置文件之外，还需要根据配置文件的内容，来对应修改训练源代码（即增加一些 import 语句），违背了我们希望仅通过修改配置文件就能控制模块构造和使用的初衷。
-
-为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
-
-```python
-custom_imports = dict(imports=['my_package.my_module'], allow_failed_imports=False)
-optimizer = dict(type='SuperOptim')
-```
-
-这样我们就不用在训练代码中增加对应的 import 语句，只需要修改配置文件就可以实现非侵入式导入自定义注册模块。

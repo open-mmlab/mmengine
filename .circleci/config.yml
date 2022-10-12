@@ -1,148 +1,32 @@
 version: 2.1
 
-jobs:
-  lint:
-    docker:
-      - image: cimg/python:3.7.4
-    steps:
-      - checkout
-      - run:
-          name: Linting
-          command: |
-            pip install pre-commit
-            pre-commit run --all-files
-      - run:
-          name: Check docstring coverage
-          command: |
-            pip install interrogate
-            interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 80 mmengine
+# this allows you to use CircleCI's dynamic configuration feature
+setup: true
 
-  build_without_torch:
-    parameters:
-      # The python version must match available image tags in
-      # https://circleci.com/developer/images/image/cimg/python
-      python:
-        type: string
-        default: "3.7.4"
-    docker:
-      - image: cimg/python:<< parameters.python >>
-    resource_class: large
-    steps:
-      - checkout
-      - run:
-          name: Upgrade pip
-          command: |
-            python -V
-            python -m pip install pip --upgrade
-            python -m pip --version
-      - run:
-          name: Install mmengine dependencies
-          command: python -m pip install -r requirements.txt
-      - run:
-          name: Build and install
-          command: python -m pip install -e .
-      - run:
-          name: Run unit tests
-          command: python -m pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
-
-  build_cpu:
-    parameters:
-      # The python version must match available image tags in
-      # https://circleci.com/developer/images/image/cimg/python
-      python:
-        type: string
-        default: "3.7.4"
-      torch:
-        type: string
-      torchvision:
-        type: string
-    docker:
-      - image: cimg/python:<< parameters.python >>
-    resource_class: large
-    steps:
-      - checkout
-      - run:
-          name: Upgrade pip
-          command: |
-            python -V
-            python -m pip install pip --upgrade
-            python -m pip --version
-      - run:
-          name: Install PyTorch
-          command: python -m pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
-      - run:
-          name: Install mmcv-full
-          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch1.8.0/index.html
-      - run:
-          name: Install mmengine dependencies
-          command: python -m pip install -r requirements.txt
-      - run:
-          name: Build and install
-          command: python -m pip install -e .
-      - run:
-          name: Run unit tests
-          command: python -m pytest tests/
-
-  build_cu102:
-    machine:
-      image: ubuntu-1604-cuda-10.1:201909-23 # the actual version of cuda is 10.2
-    resource_class: gpu.nvidia.small
-    steps:
-      - checkout
-      - run:
-          # https://github.com/pytorch/vision/issues/2921
-          name: Install dependency of torchvision when using pyenv
-          command: sudo apt-get install -y liblzma-dev
-      - run:
-          # python3.7 should be re-installed due to the issue https://github.com/pytorch/vision/issues/2921
-          name: Select python3.7
-          command: |
-            pyenv uninstall -f 3.7.0
-            pyenv install 3.7.0
-            pyenv global 3.7.0
-      - run:
-          name: Upgrade pip
-          command: |
-            python -V
-            python -m pip install pip --upgrade
-            python -m pip --version
-      - run:
-          name: Install PyTorch
-          command: python -m pip install torch==1.8.1+cu102 torchvision==0.9.1+cu102 -f https://download.pytorch.org/whl/torch_stable.html
-      - run:
-          name: Install mmcv-full
-          command: python -m pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
-      - run:
-          name: Install mmengine dependencies
-          command: python -m pip install -r requirements.txt
-      - run:
-          name: Build and install
-          command: python -m pip install -e .
-      - run:
-          name: Run unit tests
-          command: |
-            python -m coverage run --branch --source mmengine -m pytest tests/
-            python -m coverage xml
-            python -m coverage report -m
+# the path-filtering orb is required to continue a pipeline based on
+# the path of an updated fileset
+orbs:
+  path-filtering: circleci/path-filtering@0.1.2
 
 workflows:
-  unit_tests:
+  # the always-run workflow is always triggered, regardless of the pipeline parameters.
+  always-run:
     jobs:
-      - lint
-      - build_without_torch:
-          requires:
-            - lint
-      - build_cpu:
-          name: build_cpu_th1.8_py3.7
-          torch: 1.8.0
-          torchvision: 0.9.0
-          requires:
-            - lint
-            - build_without_torch
-      - hold:
-          type: approval # <<< This key-value pair will set your workflow to a status of "On Hold"
-          requires:
-            - build_cpu_th1.8_py3.7
-      - build_cu102:
-          requires:
-            - hold
+      # the path-filtering/filter job determines which pipeline
+      # parameters to update.
+      - path-filtering/filter:
+          name: check-updated-files
+          # 3-column, whitespace-delimited mapping. One mapping per
+          # line:
+          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          mapping: |
+            mmengine/.* lint_only false
+            requirements/.* lint_only false
+            tests/.* lint_only false
+            .circleci/.* lint_only false
+          base-revision: main
+          # this is the path of the configuration we should trigger once
+          # path filtering and pipeline parameter value updates are
+          # complete. In this case, we are using the parent dynamic
+          # configuration itself.
+          config-path: .circleci/test.yml

@@ -73,7 +73,7 @@ class MultiProcessTestCase(TestCase):
 
     @property
     def timeout(self) -> int:
-        return 500
+        return 1000
 
     def join_or_run(self, fn):
 

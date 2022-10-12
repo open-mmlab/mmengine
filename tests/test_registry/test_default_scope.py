@@ -33,3 +33,16 @@ class TestDefaultScope:
             ).scope_name == 'test_overwrite'
         assert DefaultScope.get_current_instance(
         ).scope_name == origin_scope.scope_name == 'origin_scope'
+
+        # Test overwrite default scope immediately.
+        # Test sequentially overwrite.
+        with DefaultScope.overwrite_default_scope(scope_name='test_overwrite'):
+            pass
+        with DefaultScope.overwrite_default_scope(scope_name='test_overwrite'):
+            pass
+
+        # Test nested overwrite.
+        with DefaultScope.overwrite_default_scope(scope_name='test_overwrite'):
+            with DefaultScope.overwrite_default_scope(
+                    scope_name='test_overwrite'):
+                pass
