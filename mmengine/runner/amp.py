@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 
-from mmengine.device import get_device, is_npu_available
+from mmengine.device import get_device, is_npu_available, is_cuda_available
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
