@@ -11,7 +11,8 @@ from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
+CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list, bytes, str,
+                 None]
 
 
 @MODELS.register_module()
@@ -43,7 +44,7 @@ class BaseDataPreprocessor(nn.Module):
         if isinstance(data, Mapping):
             return {key: self.cast_data(data[key]) for key in data}
         elif isinstance(data, (str, bytes)) or data is None:
-            return data  # type: ignore
+            return data
         elif isinstance(data, tuple) and hasattr(data, '_fields'):
             # namedtuple
             return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
