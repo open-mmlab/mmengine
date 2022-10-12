@@ -23,8 +23,8 @@ class TestBaseDataPreprocessor(TestCase):
         label1 = torch.randn(1)
         label2 = torch.randn(1)
 
+        # Test with dict of batch inputs and batch data samples
         data = dict(inputs=[input1, input2], data_sample=[label1, label2])
-
         output = base_data_preprocessor(data)
         batch_inputs, batch_labels = output['inputs'], output['data_sample']
         self.assertTrue(torch.is_floating_point(batch_inputs[0]))
@@ -36,39 +36,53 @@ class TestBaseDataPreprocessor(TestCase):
         assert_allclose(label2, batch_labels[1])
 
         # Test with tuple of batch inputs and batch data samples
-        data = dict(
-            inputs=torch.stack([input1, input2]), data_sample=[label1, label2])
-        output = base_data_preprocessor(data)['inputs']
+        data = (torch.stack([input1, input2]), (label1, label2))
+        batch_inputs, batch_labels = base_data_preprocessor(data)
+        self.assertTrue(torch.is_floating_point(batch_inputs))
+        self.assertEqual(batch_inputs[0].shape, (1, 3, 5))
+        self.assertEqual(batch_inputs[1].shape, (1, 3, 5))
         self.assertTrue(torch.is_floating_point(batch_inputs[0]))
 
         # Test cuda forward
         if torch.cuda.is_available():
             # Test with list of data samples.
+            data = dict(inputs=[input1, input2], data_sample=[label1, label2])
             base_data_preprocessor = base_data_preprocessor.cuda()
             output = base_data_preprocessor(data)
             batch_inputs, batch_labels = output['inputs'], output[
                 'data_sample']
-            self.assertTrue(torch.is_floating_point(batch_inputs))
-            self.assertEqual(batch_inputs.device.type, 'cuda')
+            self.assertTrue(torch.is_floating_point(batch_inputs[0]))
+            self.assertEqual(batch_inputs[0].device.type, 'cuda')
 
+            # Fallback to test with cpu.
             base_data_preprocessor = base_data_preprocessor.cpu()
             output = base_data_preprocessor(data)
             batch_inputs, batch_labels = output['inputs'], output[
                 'data_sample']
-            self.assertTrue(torch.is_floating_point(batch_inputs))
-            self.assertEqual(batch_inputs.device.type, 'cpu')
+            self.assertTrue(torch.is_floating_point(batch_inputs[0]))
+            self.assertEqual(batch_inputs[0].device.type, 'cpu')
 
+            # Test `base_data_preprocessor` can be moved to cuda again.
             base_data_preprocessor = base_data_preprocessor.to('cuda:0')
             output = base_data_preprocessor(data)
             batch_inputs, batch_labels = output['inputs'], output[
                 'data_sample']
-            self.assertTrue(torch.is_floating_point(batch_inputs))
-            self.assertEqual(batch_inputs.device.type, 'cuda')
+            self.assertTrue(torch.is_floating_point(batch_inputs[0]))
+            self.assertEqual(batch_inputs[0].device.type, 'cuda')
 
             # device of `base_data_preprocessor` is cuda, output should be
             # cuda tensor.
-            self.assertEqual(batch_inputs.device.type, 'cuda')
+            self.assertEqual(batch_inputs[0].device.type, 'cuda')
             self.assertEqual(batch_labels[0].device.type, 'cuda')
+
+        # Test forward with string value
+        data = dict(string='abc')
+        base_data_preprocessor(data)
+
+        with self.assertRaisesRegex(TypeError,
+                                    '`BaseDataPreprocessor.cast_data`:'):
+            data = dict(string=object())
+            base_data_preprocessor(data)
 
 
 class TestImgDataPreprocessor(TestBaseDataPreprocessor):
