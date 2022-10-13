@@ -50,7 +50,7 @@ class AmpOptimWrapper(OptimWrapper):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         assert is_cuda_available() or is_npu_available(), (
-            '``AmpOptimizerWrapper`` is only available training on gpu')
+            '``AmpOptimizerWrapper`` is only available training on gpu or npu')
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':
