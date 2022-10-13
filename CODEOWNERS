@@ -3,15 +3,13 @@
 # related to a specific file path, and each line is a file pattern followed by
 # one or more owners.
 
+# Order is important; the last matching pattern takes the most
+# precedence.
+
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
-
-# Order is important; the last matching pattern takes the most
-# precedence.
-
-# Lowest priority, If file is not assigned, PR review will be assigned to:
 * @zhouzaida @HAOCHENYE
 
 # Docs
