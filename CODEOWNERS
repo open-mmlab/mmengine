@@ -76,6 +76,8 @@
 
 # visualization
 /mmengine/visualization/ @Harold-lkk @HAOCHENYE
+
+# version
 /mmengine/__version__.py @zhouzaida
 
 # unit test
