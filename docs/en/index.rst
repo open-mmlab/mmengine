@@ -93,7 +93,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 2
    :caption: Notes
 
-   notes/changelog.md
+   ../en/notes/changelog.md
 
 .. toctree::
    :caption: Switch Language
