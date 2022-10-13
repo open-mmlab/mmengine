@@ -28,10 +28,10 @@ class ConcatDataset(_ConcatDataset):
     Args:
         datasets (Sequence[BaseDataset] or Sequence[dict]): A list of datasets
             which will be concatenated.
-        ignore_keys (List[str] or str): Ignore the keys that can be
-            unequal in `dataset.metainfo`. Defaults to None.
         lazy_init (bool, optional): Whether to load annotation during
             instantiation. Defaults to False.
+        ignore_keys (List[str] or str): Ignore the keys that can be
+            unequal in `dataset.metainfo`. Defaults to None.
     """
 
     def __init__(self,
@@ -63,7 +63,8 @@ class ConcatDataset(_ConcatDataset):
             for key in self.metainfo.keys():
                 if key in self.ignore_keys:
                     continue
-                if self._metainfo[key] != dataset.metainfo[key]:
+                if dataset.metainfo.get(key, None) is None or \
+                        self._metainfo[key] != dataset.metainfo[key]:
                     raise ValueError(
                         f'The meta information of the {i}-th dataset does not '
                         'match meta information of the first dataset')
