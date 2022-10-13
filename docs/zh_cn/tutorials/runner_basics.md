@@ -67,9 +67,8 @@ class MyAwesomeModel(BaseModel):
         self.mlp = nn.Sequential(*sequence)
         self.classifier = nn.Linear(64, 2)
 
-    def forward(self, imgs, labels, mode):
-        x = imgs.flatten(1)
-        x = self.mlp(x)
+    def forward(self, data, labels, mode):
+        x = self.mlp(data)
         x = self.classifier(x)
         if mode == 'tensor':
             return x
