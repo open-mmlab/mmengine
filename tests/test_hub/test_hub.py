@@ -47,6 +47,6 @@ def test_get_config():
 def test_get_model():
     # TODO compatible with downstream codebase.
     DefaultScope.get_instance('test_get_model', scope_name='test_scope')
-    get_model('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py')
+    get_model('mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py')
     assert DefaultScope.get_current_instance().scope_name == 'test_scope'
     DefaultScope._instance_dict.pop('test_get_model')

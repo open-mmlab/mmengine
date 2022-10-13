@@ -35,6 +35,7 @@ Model
    BaseModel
    BaseDataPreprocessor
    ImgDataPreprocessor
+   BaseTTAModel
 
 EMA
 ----------------

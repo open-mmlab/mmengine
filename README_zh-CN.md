@@ -38,25 +38,36 @@
 
 ## 简介
 
-MMEngine 是一个用于深度学习模型训练的基础库，基于 PyTorch，支持在 Linux、Windows、macOS 上运行。它具有如下三个亮点：
+MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，支持在 Linux、Windows、macOS 上运行。它具有如下三个亮点：
 
 1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
 
-   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（pytorch example 400 行）
-   - 轻松兼容流行的算法库如 TIMM、TorchVision 和 Detectron2 中的模型
+   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（原始pytorch example 400 行）
+   - 轻松兼容流行的算法库 (如 TIMM、TorchVision 和 Detectron2 ) 中的模型
 
-2. 统一：MMEngine 设计了一个接口统一的开放架构，使得
+2. 统一：MMEngine 设计了一个接口统一的开放架构，使得:
 
    - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
    - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
 
-3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了
+3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了:
 
    - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
    - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) 和 Stochastic Weight Averaging (SWA)
    - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
    - 对神经网络模型中各个层的优化配置进行细粒度调整
    - 混合精度训练的灵活控制
+
+## 最近进展
+
+最新版本 v0.2.0 在 2022.10.11 发布。
+
+1. 重构 FileIO 以提供更加易用的接口并保持向下兼容。
+2. 新增 Test time augmentation 模型基类。
+3. 分布式训练时，支持将 BN 自动转化为 SyncBN。
+4. 新增了 SMDDP 后端并支持在 AWS 进行分布式训练。
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022")
 
 ## 安装
 
@@ -79,15 +90,15 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 
 ## 快速上手
 
-以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 MMEngine 构建一个完整的、
-可配置的训练和验证流程。
+以在 CIFAR-10 数据集上训练一个 ResNet-50 模型为例，我们将使用 80 行以内的代码，利用 MMEngine 构建一个完整的、可配置的训练和验证流程。
 
 <details>
 <summary>构建模型</summary>
 
-首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，
-还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
-对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
+首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：
+
+- 对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
+- 对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
 
 ```python
 import torch.nn.functional as F
