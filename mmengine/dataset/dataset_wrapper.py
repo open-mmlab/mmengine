@@ -36,8 +36,8 @@ class ConcatDataset(_ConcatDataset):
 
     def __init__(self,
                  datasets: Sequence[Union[BaseDataset, dict]],
-                 ignore_keys: Union[None, str, List[str]] = None,
-                 lazy_init: bool = False):
+                 lazy_init: bool = False,
+                 ignore_keys: Union[str, List[str], None] = None):
         self.datasets: List[BaseDataset] = []
         for i, dataset in enumerate(datasets):
             if isinstance(dataset, dict):
