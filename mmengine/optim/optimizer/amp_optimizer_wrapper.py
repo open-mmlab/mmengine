@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import torch
 import torch.nn as nn
 
-from mmengine.device import is_npu_available, is_cuda_available
+from mmengine.device import is_cuda_available, is_npu_available
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
