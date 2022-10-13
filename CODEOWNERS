@@ -27,7 +27,7 @@
 /mmengine/device/ @zhouzaida
 
 # dist
-/mmengine/dist/ @zhouzaida
+/mmengine/dist/ @zhouzaida @C1rN09
 
 # evaluator
 /mmengine/evaluator/ @RangiLyu @ice-tong
@@ -46,7 +46,7 @@
 /mmengine/logging/ @HAOCHENYE
 
 # model
-/mmengine/model/ @HAOCHENYE
+/mmengine/model/ @HAOCHENYE @C1rN09
 /mmengine/model/averaged_model.py @RangiLyu
 /mmengine/model/wrappers/fully_sharded_distributed.py @C1rN09
 
@@ -55,7 +55,7 @@
 /mmengine/optim/scheduler/ @RangiLyu
 
 # registry
-/mmengine/registry/ @zhouzaida @HAOCHENYE
+/mmengine/registry/ @C1rN09 @HAOCHENYE
 
 # runner
 /mmengine/runner/ @zhouzaida @RangiLyu @HAOCHENYE
