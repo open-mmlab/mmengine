@@ -73,12 +73,12 @@ class FuncRewriter:
             target_instance: Optional[str] = None,
             target_variable: Optional[List[str]] = None,
             resume: bool = False):
-        module = import_module(module_name)
-        self.ori_func = getattr(module, function_name)
+        self.module = import_module(module_name)
+        self.ori_func = getattr(self.module, function_name)
         # TODO check orifunc should not accept "enable_rewrite"
 
         # Get modified function.
-        act_module_path = inspect.getmodule(module).__file__
+        act_module_path = inspect.getmodule(self.module).__file__
         self.function_name = function_name
         self.target_instance = target_instance
         visitor = RecorderVisitor(
@@ -96,12 +96,19 @@ class FuncRewriter:
 
         self.modified_func = global_dict[function_name]
 
-    def __call__(self, runner, *args, enable_rewrite=False, **kwargs):
-        if enable_rewrite:
-            return self.modified_func
+    def patch(self, runner, *args, **kwargs):
+        if self.target_instance:
+            target_instance = self._get_instance_from_runner(runner)
+            setattr(target_instance, self.function_name, self.modified_func)
         else:
-            return self.ori_func
+            setattr(self.module, self.function_name, self.modified_func)
 
+    def _get_instance_from_runner(self, runner):
+        target_instance = self.target_instance.split('.')
+        result = runner
+        for instance in target_instance:
+            result = getattr(result, instance)
+        return result
 
 
 class RecorderHook(Hook):
