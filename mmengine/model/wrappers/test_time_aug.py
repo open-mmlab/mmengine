@@ -138,6 +138,12 @@ def build_runner_with_tta(cfg) -> 'Runner':
         'make please sure your config define the tta_pipeline')
     from mmengine.hooks import PrepareTTAHook
     cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
-    runner = RUNNERS.build(cfg)
+
+    if 'runner_type' in cfg:
+        runner = RUNNERS.build(cfg)
+    else:
+        from mmengine.runner import Runner
+        runner = Runner.from_cfg(cfg)
+
     runner.register_hook(PrepareTTAHook(tta_cfg=cfg.tta_model))
     return runner
