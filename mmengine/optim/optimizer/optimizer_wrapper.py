@@ -141,8 +141,8 @@ class OptimWrapper:
                 self.clip_func = torch.nn.utils.clip_grad_value_
                 self.grad_name = 'grad_value'
             else:
-                raise ValueError('type of clip_grad should be "norm" or value',
-                                 f'but got {clip_type}')
+                raise ValueError('type of clip_grad should be "norm" or '
+                                 f'"value" but got {clip_type}')
             assert clip_grad, ('`clip_grad` should contain other arguments '
                                'besides `type`. The arguments should match '
                                'with the `torch.nn.utils.clip_grad_norm_` or '
