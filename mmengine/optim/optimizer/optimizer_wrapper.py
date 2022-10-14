@@ -133,14 +133,16 @@ class OptimWrapper:
                 'If `clip_grad` is not None, it should be a `dict` '
                 'which is the arguments of `torch.nn.utils.clip_grad_norm_` '
                 'or clip_grad_value_`.')
-            clip_func = clip_grad.pop('type', 'norm')
-            if clip_func == 'norm':
+            clip_type = clip_grad.pop('type', 'norm')
+            if clip_type == 'norm':
                 self.clip_func = torch.nn.utils.clip_grad_norm_
-            elif clip_func == 'value':
+                self.grad_name = 'grad_norm'
+            elif clip_type == 'value':
                 self.clip_func = torch.nn.utils.clip_grad_value_
+                self.grad_name = 'grad_value'
             else:
                 raise ValueError('type of clip_grad should be "norm" or value',
-                                 f'but got {clip_func}')
+                                 f'but got {clip_type}')
             assert clip_grad, ('`clip_grad` should contain other arguments '
                                'besides `type`. The arguments should match '
                                'with the `torch.nn.utils.clip_grad_norm_` or '
@@ -344,11 +346,13 @@ class OptimWrapper:
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            grad_norm = self.clip_func(params, **self.clip_grad_kwargs)
+            grad = self.clip_func(params, **self.clip_grad_kwargs)
 
-        # `torch.nn.utils.clip_grad_norm_` will return None.
-        if grad_norm is not None:
-            self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
+            # `torch.nn.utils.clip_grad_norm_` or
+            # `torch.nn.utils.clip_grad_value_` will return None.
+            if grad is not None:
+                self.message_hub.update_scalar(f'train/{self.grad_name}',
+                                               float(grad))
 
     def initialize_count_status(self, model: nn.Module, init_counts: int,
                                 max_counts: int) -> None:
