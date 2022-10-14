@@ -10,7 +10,7 @@ from .param_scheduler_hook import ParamSchedulerHook
 from .runtime_info_hook import RuntimeInfoHook
 from .sampler_seed_hook import DistSamplerSeedHook
 from .sync_buffer_hook import SyncBuffersHook
-from .test_time_aug import PrepareTTAHook
+from .test_time_aug_hook import PrepareTTAHook
 
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
