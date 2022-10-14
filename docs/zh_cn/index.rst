@@ -93,7 +93,7 @@
    :maxdepth: 2
    :caption: Notes
 
-   notes/changelog.md
+   ../en/notes/changelog.md
 
 .. toctree::
    :caption: 语言切换
