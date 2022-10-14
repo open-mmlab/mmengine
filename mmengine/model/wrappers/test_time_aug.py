@@ -1,12 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
-from typing import Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import torch
 import torch.nn as nn
 
-from mmengine import MODELS
+from mmengine.registry import MODEL_WRAPPERS, RUNNERS
 from mmengine.structures import BaseDataElement
+
+if TYPE_CHECKING:
+    from mmengine.runner import Runner
 
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
@@ -19,7 +22,7 @@ DATA_BATCH = Union[Dict[str, Union[EnhancedBatchInputs,
 MergedDataSamples = List[BaseDataElement]
 
 
-@MODELS.register_module()
+@MODEL_WRAPPERS.register_module()
 class BaseTTAModel(nn.Module):
     """Base model for inference with test-time augmentation.
 
@@ -78,7 +81,7 @@ class BaseTTAModel(nn.Module):
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
-            self.module = MODELS.build(module)
+            self.module = MODEL_WRAPPERS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
@@ -125,3 +128,16 @@ class BaseTTAModel(nn.Module):
         for data in data_list:  # type: ignore
             predictions.append(self.module.test_step(data))
         return self.merge_preds(list(zip(*predictions)))  # type: ignore
+
+
+def build_runner_with_tta(cfg) -> 'Runner':
+    assert hasattr(
+        cfg,
+        'tta_model'), ('make please sure your config define the tta_model')
+    assert hasattr(cfg, 'tta_pipeline'), (
+        'make please sure your config define the tta_pipeline')
+    from mmengine.hooks import PrepareTTAHook
+    cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
+    runner = RUNNERS.build(cfg)
+    runner.register_hook(PrepareTTAHook(tta_cfg=cfg.tta_model))
+    return runner
