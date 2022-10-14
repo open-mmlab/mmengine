@@ -347,8 +347,6 @@ class OptimWrapper:
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
             grad = self.clip_func(params, **self.clip_grad_kwargs)
-
-            # `torch.nn.utils.clip_grad_norm_` or
             # `torch.nn.utils.clip_grad_value_` will return None.
             if grad is not None:
                 self.message_hub.update_scalar(f'train/{self.grad_name}',
