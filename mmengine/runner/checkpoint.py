@@ -626,7 +626,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
         destination._metadata = OrderedDict()
     destination._metadata[prefix[:-1]] = local_metadata = dict(
         version=module._version)
-    _save_to_state_dict(module, destination, prefix, keep_vars)
+    module._save_to_state_dict(destination, prefix, keep_vars)
     for name, child in module._modules.items():
         if child is not None:
             get_state_dict(
