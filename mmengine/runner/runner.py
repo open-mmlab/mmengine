@@ -357,7 +357,8 @@ class Runner:
             if 'work_dir' in self.cfg and self.cfg.work_dir is not None:
                 work_dir = self.cfg.work_dir
             elif self._experiment_name is not None:
-                work_dir = osp.join('./work_dirs', self._experiment_name, self._experiment_id)
+                work_dir = osp.join('./work_dirs', self._experiment_name,
+                                    self._experiment_id)
             else:
                 raise ValueError(
                     'work_dir, cfg.work_dir, experiment_name and cfg.filename'
@@ -473,7 +474,8 @@ class Runner:
     @property
     def experiment_name(self):
         """str: Name of experiment."""
-        return f'{self._experiment_name}_{self._timestamp}' if self._experiment_name is not None else self._timestamp
+        return f'{self._experiment_name}_{self._timestamp}' if \
+            self._experiment_name is not None else self._timestamp
 
     @property
     def model_name(self):
