@@ -156,6 +156,7 @@ class Visualizer(ManagerMixin):
     def __init__(
         self,
         name='visualizer',
+        id: Optional[str] = None,
         image: Optional[np.ndarray] = None,
         vis_backends: Optional[List[Dict]] = None,
         save_dir: Optional[str] = None,
@@ -163,6 +164,7 @@ class Visualizer(ManagerMixin):
         fig_show_cfg=dict(frameon=False)
     ) -> None:
         super().__init__(name)
+        self._instance_id = id
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
@@ -197,6 +199,8 @@ class Visualizer(ManagerMixin):
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
                 vis_backend.setdefault('save_dir', save_dir)
+                vis_backend.setdefault('experiment_name', self._instance_name)
+                vis_backend.setdefault('experiment_id', self._instance_id)
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.fig_save = None

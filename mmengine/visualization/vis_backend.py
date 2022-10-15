@@ -67,8 +67,13 @@ class BaseVisBackend(metaclass=ABCMeta):
             the files produced by the backend.
     """
 
-    def __init__(self, save_dir: str):
+    def __init__(self,
+                 save_dir: str,
+                 experiment_name: Optional[str] = 'default_experiment',
+                 experiment_id: Optional[str] = None):
         self._save_dir = save_dir
+        self._experiment_name = experiment_name
+        self._experiment_id = experiment_id
         self._env_initialized = False
 
     @property
@@ -192,12 +197,14 @@ class LocalVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
+                 experiment_name: Optional[str] = 'default_experiment',
+                 experiment_id: Optional[str] = None,
                  img_save_dir: str = 'vis_image',
                  config_save_file: str = 'config.py',
                  scalar_save_file: str = 'scalars.json'):
         assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
-        super().__init__(save_dir)
+        super().__init__(save_dir, experiment_name, experiment_id)
         self._img_save_dir = img_save_dir
         self._config_save_file = config_save_file
         self._scalar_save_file = scalar_save_file
@@ -358,10 +365,12 @@ class WandbVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
+                 experiment_name: Optional[str] = 'default_experiment',
+                 experiment_id: Optional[str] = None,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
                  commit: Optional[bool] = True):
-        super().__init__(save_dir)
+        super().__init__(save_dir, experiment_name, experiment_id)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
@@ -371,9 +380,10 @@ class WandbVisBackend(BaseVisBackend):
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         if self._init_kwargs is None:
-            self._init_kwargs = {'dir': self._save_dir}
-        else:
-            self._init_kwargs.setdefault('dir', self._save_dir)
+            self._init_kwargs = {}
+        self._init_kwargs.setdefault('dir', self._save_dir)
+        self._init_kwargs.setdefault('name', self._experiment_name)
+        self._init_kwargs.setdefault('id', self._experiment_id)
         try:
             import wandb
         except ImportError:
@@ -491,9 +501,6 @@ class TensorboardVisBackend(BaseVisBackend):
         save_dir (str): The root directory to save the files
             produced by the backend.
     """
-
-    def __init__(self, save_dir: str):
-        super().__init__(save_dir)
 
     def _init_env(self):
         """Setup env for Tensorboard."""

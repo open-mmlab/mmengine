@@ -753,7 +753,7 @@ class TestRunner(TestCase):
         self.epoch_based_cfg.experiment_name = 'test_build_visualizer1'
         runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.visualizer, Visualizer)
-        self.assertEqual(runner.experiment_name,
+        self.assertEqual('test_build_visualizer1',
                          runner.visualizer.instance_name)
 
         # input is a Visualizer object
@@ -772,7 +772,7 @@ class TestRunner(TestCase):
         visualizer_cfg = None
         visualizer = runner.build_visualizer(visualizer_cfg)
         self.assertIsInstance(visualizer, Visualizer)
-        self.assertEqual(visualizer.instance_name, runner.experiment_name)
+        self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'visualizer should be'):
