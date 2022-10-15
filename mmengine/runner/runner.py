@@ -440,7 +440,7 @@ class Runner:
         cfg = copy.deepcopy(cfg)
         runner = cls(
             model=cfg['model'],
-            work_dir=cfg['work_dir'],
+            work_dir=cfg.get('work_dir'),
             train_dataloader=cfg.get('train_dataloader'),
             val_dataloader=cfg.get('val_dataloader'),
             test_dataloader=cfg.get('test_dataloader'),
