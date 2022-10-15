@@ -360,10 +360,12 @@ class WandbVisBackend(BaseVisBackend):
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
+                 log_code_name: Optional[str] = None,
                  commit: Optional[bool] = True):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
+        self._log_code_name = log_code_name
         self._commit = commit
 
     def _init_env(self):
@@ -404,11 +406,8 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        cfg_path = os.path.join(self._wandb.run.dir, 'config.py')
-        config.dump(cfg_path)
-        # Files under run.dir are automatically uploaded,
-        # so no need to manually call save.
-        # self._wandb.save(cfg_path)
+        self._wandb.config.update(dict(config))
+        self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
     def add_image(self,
