@@ -723,7 +723,7 @@ class TestRunner(TestCase):
         runner._experiment_name = 'test_build_logger3'
         logger = runner.build_logger()
         self.assertIsInstance(logger, MMLogger)
-        self.assertEqual(logger.instance_name, 'test_build_logger3')
+        self.assertEqual(logger.instance_name, runner.experiment_name)
 
     def test_build_message_hub(self):
         self.epoch_based_cfg.experiment_name = 'test_build_message_hub1'
@@ -743,7 +743,7 @@ class TestRunner(TestCase):
         message_hub_cfg = dict()
         message_hub = runner.build_message_hub(message_hub_cfg)
         self.assertIsInstance(message_hub, MessageHub)
-        self.assertEqual(message_hub.instance_name, 'test_build_message_hub3')
+        self.assertEqual(message_hub.instance_name, runner.experiment_name)
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'message_hub should be'):
@@ -772,7 +772,7 @@ class TestRunner(TestCase):
         visualizer_cfg = None
         visualizer = runner.build_visualizer(visualizer_cfg)
         self.assertIsInstance(visualizer, Visualizer)
-        self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')
+        self.assertEqual(visualizer.instance_name, runner.experiment_name)
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'visualizer should be'):
