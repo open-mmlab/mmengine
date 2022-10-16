@@ -301,13 +301,14 @@ class CustomRunner(Runner):
 
     def __init__(self,
                  model,
-                 work_dir,
+                 work_dir=None,
                  train_dataloader=None,
                  val_dataloader=None,
                  test_dataloader=None,
                  train_cfg=None,
                  val_cfg=None,
                  test_cfg=None,
+                 auto_distinguish_experiment=None,
                  auto_scale_lr=None,
                  optim_wrapper=None,
                  param_scheduler=None,
@@ -883,6 +884,33 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_data_preprocessor3'
             with self.assertRaises(ValueError):
                 Runner.from_cfg(cfg)
+
+    def test_distinguish_experiment(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.work_dir = None
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name by default.
+        cfg.auto_distinguish_experiment = False
+        cfg.experiment_name = 'test_distinguish_experiment_false'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs',
+                             'test_distinguish_experiment_false')))
+        shutil.rmtree(runner.work_dir)
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name/timestamp
+        # by default.
+        cfg.auto_distinguish_experiment = True
+        cfg.experiment_name = 'test_distinguish_experiment_true'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs', 'test_distinguish_experiment_true',
+                             runner.timestamp)))
+        shutil.rmtree(runner.work_dir)
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
