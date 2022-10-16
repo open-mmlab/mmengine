@@ -155,6 +155,8 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Defaults to False.
         rgb_to_bgr (bool): whether to convert image from RGB to RGB.
             Defaults to False.
+        non_blocking (bool): Whether block current process
+            when transferring data to device.
 
     Note:
         if images do not need to be normalized, `std` and `mean` should be
@@ -163,13 +165,13 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
     """
 
     def __init__(self,
-                 non_blocking: Optional[bool] = False,
                  mean: Optional[Sequence[Union[float, int]]] = None,
                  std: Optional[Sequence[Union[float, int]]] = None,
                  pad_size_divisor: int = 1,
                  pad_value: Union[float, int] = 0,
                  bgr_to_rgb: bool = False,
-                 rgb_to_bgr: bool = False):
+                 rgb_to_bgr: bool = False,
+                 non_blocking: Optional[bool] = False):
         super().__init__(non_blocking)
         assert not (bgr_to_rgb and rgb_to_bgr), (
             '`bgr2rgb` and `rgb2bgr` cannot be set to True at the same time')
