@@ -24,7 +24,7 @@ class BaseDataPreprocessor(nn.Module):
 
     Args:
         non_blocking (bool): Whether block current process
-         when transfer tensor to device.
+            when transferring data to device.
 
     Note:
         Data dictionary returned by dataloader must be a dict and at least
