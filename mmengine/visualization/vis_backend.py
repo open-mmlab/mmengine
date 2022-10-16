@@ -355,10 +355,11 @@ class WandbVisBackend(BaseVisBackend):
                 and metrics won't be saved until `wandb.log` is called
                 with `commit=True`. Default to True.
         log_code_name: (str, optional) The name of code artifact.
-                By default, the artifact will be named
-                source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
-                `wandb docs <https://docs.wandb.ai/ref/python/run#log_code>`_
-                for details. Default: None.
+            By default, the artifact will be named
+            source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
+            `wandb docs <https://docs.wandb.ai/ref/python/run#log_code>`_
+            for details. Defaults to None.
+            New in version 0.3.0.
     """
 
     def __init__(self,
