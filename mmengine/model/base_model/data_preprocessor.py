@@ -25,6 +25,7 @@ class BaseDataPreprocessor(nn.Module):
     Args:
         non_blocking (bool): Whether block current process
             when transferring data to device.
+            New in version 0.3.0.
 
     Note:
         Data dictionary returned by dataloader must be a dict and at least
