@@ -772,7 +772,8 @@ class Runner:
         """
         if visualizer is None:
             visualizer = dict(
-                name=self._experiment_name,
+                name=self._experiment_name
+                if self._experiment_name is not None else 'visualizer',
                 id=self._experiment_id,
                 vis_backends=[dict(type='LocalVisBackend')],
                 save_dir=self._log_dir)
@@ -783,7 +784,8 @@ class Runner:
 
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
-            visualizer.setdefault('name', self._experiment_name)
+            if self._experiment_name is not None:
+                visualizer.setdefault('name', self._experiment_name)
             visualizer.setdefault('id', self._experiment_name)
             visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
