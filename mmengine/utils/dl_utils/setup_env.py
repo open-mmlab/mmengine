@@ -9,9 +9,9 @@ import torch.multiprocessing as mp
 
 def set_multi_processing(mp_start_method: str = 'fork',
                          opencv_num_threads: int = 0,
+                         distributed: bool = False,
                          omp_num_threads: Optional[int] = None,
-                         mkl_num_threads: Optional[int] = None,
-                         distributed: bool = False) -> None:
+                         mkl_num_threads: Optional[int] = None) -> None:
     """Set multi-processing related environment.
 
     Args:
@@ -19,12 +19,12 @@ def set_multi_processing(mp_start_method: str = 'fork',
             child processes. Defaults to 'fork'.
         opencv_num_threads (int): Number of threads for opencv.
             Defaults to 0.
+        distributed (bool): True if distributed environment.
+            Defaults to False.
         omp_num_threads (int, optional): Number of threads for OMP.
             Defaults to 1 when distributed is True, otherwise no change.
         mkl_num_threads (int, optional): Number of threads for MKL.
             Defaults to 1 when distributed is True, otherwise no change.
-        distributed (bool): True if distributed environment.
-            Defaults to False.
     """
     # set multi-process start method as `fork` to speed up the training
     if platform.system() != 'Windows':
