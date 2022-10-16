@@ -893,17 +893,19 @@ class TestRunner(TestCase):
         # work_dir is set to work_dirs/experiment_name by default.
         cfg.auto_distinguish_experiment = False
         runner = Runner.from_cfg(cfg)
-        self.assertTrue(runner.work_dir.endswith(
-            os.path.join('work_dirs', 'test_distinguish_experiment')))
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs', 'test_distinguish_experiment')))
 
         # When do not auto distinguish experiments
         # work_dir is set to work_dirs/experiment_name/timestamp
         # by default.
         cfg.auto_distinguish_experiment = True
         runner = Runner.from_cfg(cfg)
-        self.assertTrue(runner.work_dir.endswith(
-            os.path.join('work_dirs', 'test_distinguish_experiment',
-                         runner.timestamp)))
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs', 'test_distinguish_experiment',
+                             runner.timestamp)))
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
