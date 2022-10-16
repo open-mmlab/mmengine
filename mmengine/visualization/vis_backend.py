@@ -354,19 +354,24 @@ class WandbVisBackend(BaseVisBackend):
                 updates the current metrics dict with the row argument
                 and metrics won't be saved until `wandb.log` is called
                 with `commit=True`. Default to True.
+        log_code_name: (str, optional) The name of code artifact.
+                By default, the artifact will be named
+                source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
+                `wandb docs <https://docs.wandb.ai/ref/python/run#log_code>`_
+                for details. Default: None.
     """
 
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
-                 log_code_name: Optional[str] = None,
-                 commit: Optional[bool] = True):
+                 commit: Optional[bool] = True,
+                 log_code_name: Optional[str] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
-        self._log_code_name = log_code_name
         self._commit = commit
+        self._log_code_name = log_code_name
 
     def _init_env(self):
         """Setup env for wandb."""
