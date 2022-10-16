@@ -158,6 +158,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             Defaults to False.
         non_blocking (bool): Whether block current process
             when transferring data to device.
+            New in version v0.3.0.
 
     Note:
         if images do not need to be normalized, `std` and `mean` should be
