@@ -420,7 +420,8 @@ def deprecated_function(since: str, removed_in: str, instructions: str):
 
         # Add a deprecation note to the docstring.
         docstring = function.__doc__ or ''
-        indent = re.findall(r'(?<=\n\n)\s*(?!^\s)', docstring)[0]
+        indent = re.findall(r'(?<=\n\n)\s*(?!^\s)', docstring)
+        indent = '   ' if not indent else indent[0]
         # Add a note to the docstring.
         deprecation_note = textwrap.dedent(f"""\
             .. deprecated:: {since}
@@ -445,9 +446,6 @@ def deprecated_function(since: str, removed_in: str, instructions: str):
             ]
         else:
             summary = summary_and_body[0]
-            summary = '\n'.join(
-                [textwrap.dedent(string) for string in summary.split('\n')])
-            summary = textwrap.indent(summary, prefix=indent)
             new_docstring_parts = [deprecation_note, '\n\n', summary]
 
         wrapper.__doc__ = ''.join(new_docstring_parts)

@@ -269,3 +269,35 @@ def test_deprecated_function():
         """
     assert expected_docstring == deprecated_demo.__doc__
     MMLogger._instance_dict.clear()
+
+    # Test with short summary without args.
+    @deprecated_function('0.2.0', '0.3.0', 'toy instruction')
+    def deprecated_demo1():
+        """Short summary."""
+
+    expected_docstring = \
+        """.. deprecated:: 0.2.0
+        Deprecated and will be removed in version 0.3.0.
+        Please toy instruction.
+
+
+        Short summary"""
+    assert expected_docstring == deprecated_demo1.__doc__
+
+    # Test with long summary without args.
+    @deprecated_function('0.2.0', '0.3.0', 'toy instruction')
+    def deprecated_demo2():
+        """Long summary.
+
+        Long summary. Long summary. Long summary. Long summary.
+        """
+
+    expected_docstring = \
+        """.. deprecated:: 0.2.0
+        Deprecated and will be removed in version 0.3.0.
+        Please toy instruction.
+
+
+        This is a long summary. This is a long summary. This is a long
+        summary. This is a long summary."""
+    assert expected_docstring == deprecated_demo2.__doc__
