@@ -95,10 +95,7 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 <details>
 <summary>构建模型</summary>
 
-首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：
-
-- 对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
-- 对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
+首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
 
 ```python
 import torch.nn.functional as F
@@ -160,8 +157,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>构建评测指标</summary>
 
-为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，
-并实现 `process` 和 `compute_metrics` 方法。
+为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，并实现 `process` 和 `compute_metrics` 方法。
 
 ```python
 from mmengine.evaluator import BaseMetric
