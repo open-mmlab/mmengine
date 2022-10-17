@@ -886,6 +886,7 @@ class TestRunner(TestCase):
                 Runner.from_cfg(cfg)
 
     def test_distinguish_experiment(self):
+        self.temp_dir = 'work_dirs'
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.work_dir = None
 
@@ -898,7 +899,6 @@ class TestRunner(TestCase):
             runner.work_dir.endswith(
                 os.path.join('work_dirs',
                              'test_distinguish_experiment_false')))
-        shutil.rmtree(runner.work_dir)
 
         # When do not auto distinguish experiments
         # work_dir is set to work_dirs/experiment_name/timestamp
@@ -910,7 +910,7 @@ class TestRunner(TestCase):
             runner.work_dir.endswith(
                 os.path.join('work_dirs', 'test_distinguish_experiment_true',
                              runner.timestamp)))
-        shutil.rmtree(runner.work_dir)
+
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
