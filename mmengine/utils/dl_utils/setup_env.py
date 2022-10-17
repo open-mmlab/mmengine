@@ -46,26 +46,27 @@ def set_multi_processing(mp_start_method: str = 'fork',
     except ImportError:
         pass
 
-    if distributed:
-        # setup OMP threads
-        # This code is referred from https://github.com/pytorch/pytorch/blob/master/torch/distributed/run.py  # noqa
-        if omp_num_threads is None and 'OMP_NUM_THREADS' not in os.environ:
-            omp_num_threads = 1
+    # setup OMP threads
+    # This code is referred from https://github.com/pytorch/pytorch/blob/master/torch/distributed/run.py  # noqa
+    if omp_num_threads is None:
+        if 'OMP_NUM_THREADS' not in os.environ and distributed:
+            os.environ['OMP_NUM_THREADS'] = '1'
             warnings.warn(
                 'Setting OMP_NUM_THREADS environment variable for each process'
-                f' to be {omp_num_threads} in default, to avoid your system '
-                'being overloaded, please further tune the variable for '
-                'optimal performance in your application as needed.')
-        if omp_num_threads is not None:
-            os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
+                ' to be 1 in default, to avoid your system being overloaded, '
+                'please further tune the variable for optimal performance in '
+                'your application as needed.')
+    else:
+        os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
 
-        # setup MKL threads
-        if mkl_num_threads is None and 'MKL_NUM_THREADS' not in os.environ:
-            mkl_num_threads = 1
+    # setup MKL threads
+    if mkl_num_threads is None:
+        if 'MKL_NUM_THREADS' not in os.environ and distributed:
+            os.environ['MKL_NUM_THREADS'] = '1'
             warnings.warn(
                 'Setting MKL_NUM_THREADS environment variable for each process'
-                f' to be {mkl_num_threads} in default, to avoid your system '
-                'being overloaded, please further tune the variable for '
-                'optimal performance in your application as needed.')
-        if mkl_num_threads is not None:
-            os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
+                ' to be 1 in default, to avoid your system being overloaded, '
+                'please further tune the variable for optimal performance in '
+                'your application as needed.')
+    else:
+        os.environ['MKL_NUM_THREADS'] = str(mkl_num_threads)
