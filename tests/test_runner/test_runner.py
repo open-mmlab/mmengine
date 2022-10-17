@@ -911,7 +911,6 @@ class TestRunner(TestCase):
                 os.path.join('work_dirs', 'test_distinguish_experiment_true',
                              runner.timestamp)))
 
-
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_scale_lr'
