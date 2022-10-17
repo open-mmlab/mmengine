@@ -79,7 +79,7 @@ class OptimWrapper:
         >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
         >>>     _accumulative_counts=1,
-        >>>     clip_grad=dict(clip_value=0.2))
+        >>>     clip_grad=dict(type='value', clip_value=0.2))
         >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
         >>> import torch
