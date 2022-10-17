@@ -47,7 +47,7 @@ visualizer.show()
 <img src="https://user-images.githubusercontent.com/17425982/186052726-bd8f1571-b34b-471a-9876-9f0ae8c4e2be.png" width="400"/>
 </div>
 
-你也可以通过通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
+你也可以通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
 
 ```python
 visualizer.set_image(image=image)
