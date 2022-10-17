@@ -212,7 +212,7 @@ class BaseModel(BaseModule):
 
     def npu(
         self,
-        device: Optional[Union[int, str, torch.device]] = None,
+        device: Union[int, str, torch.device, None] = None,
     ) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.npu`
         additionally.
