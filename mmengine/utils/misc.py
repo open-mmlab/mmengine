@@ -418,15 +418,14 @@ def deprecated_function(since: str, removed_in: str, instructions: str):
             )
             return function(*args, **kwargs)
 
+        indent = '    '
         # Add a deprecation note to the docstring.
         docstring = function.__doc__ or ''
-        indent = re.findall(r'(?<=\n\n)\s*(?!^\s)', docstring)
-        indent = '   ' if not indent else indent[0]
         # Add a note to the docstring.
         deprecation_note = textwrap.dedent(f"""\
             .. deprecated:: {since}
-            {indent}Deprecated and will be removed in version {removed_in}.
-            {indent}Please {instructions}.
+                Deprecated and will be removed in version {removed_in}.
+                Please {instructions}.
             """)
         # Split docstring at first occurrence of newline
         pattern = '\n\n'
@@ -434,7 +433,7 @@ def deprecated_function(since: str, removed_in: str, instructions: str):
 
         if len(summary_and_body) > 1:
             summary, body = summary_and_body
-
+            body = textwrap.indent(textwrap.dedent(body), indent)
             summary = '\n'.join(
                 [textwrap.dedent(string) for string in summary.split('\n')])
             summary = textwrap.indent(summary, prefix=indent)
@@ -446,6 +445,9 @@ def deprecated_function(since: str, removed_in: str, instructions: str):
             ]
         else:
             summary = summary_and_body[0]
+            summary = '\n'.join(
+                [textwrap.dedent(string) for string in summary.split('\n')])
+            summary = textwrap.indent(summary, prefix=indent)
             new_docstring_parts = [deprecation_note, '\n\n', summary]
 
         wrapper.__doc__ = ''.join(new_docstring_parts)

@@ -250,23 +250,23 @@ def test_deprecated_function():
     assert (1, 2) == deprecated_demo(1, 2)
 
     expected_docstring = \
-        """.. deprecated:: 0.2.0
-        Deprecated and will be removed in version 0.3.0.
-        Please toy instruction.
+    """.. deprecated:: 0.2.0
+    Deprecated and will be removed in version 0.3.0.
+    Please toy instruction.
 
 
-        This is a long summary. This is a long summary. This is a long
-        summary. This is a long summary.
+    This is a long summary. This is a long summary. This is a long
+    summary. This is a long summary.
 
-        Args:
-            arg1 (int): Long description with a line break. Long description
-                with a line break.
-            arg2 (int): short description.
+    Args:
+        arg1 (int): Long description with a line break. Long description
+            with a line break.
+        arg2 (int): short description.
 
-        Returns:
-            Long description without a line break. Long description without
-            a line break.
-        """
+    Returns:
+        Long description without a line break. Long description without
+        a line break.
+    """  # noqa: E122
     assert expected_docstring == deprecated_demo.__doc__
     MMLogger._instance_dict.clear()
 
@@ -276,28 +276,29 @@ def test_deprecated_function():
         """Short summary."""
 
     expected_docstring = \
-        """.. deprecated:: 0.2.0
-        Deprecated and will be removed in version 0.3.0.
-        Please toy instruction.
+    """.. deprecated:: 0.2.0
+    Deprecated and will be removed in version 0.3.0.
+    Please toy instruction.
 
 
-        Short summary"""
+    Short summary."""  # noqa: E122
     assert expected_docstring == deprecated_demo1.__doc__
 
     # Test with long summary without args.
     @deprecated_function('0.2.0', '0.3.0', 'toy instruction')
     def deprecated_demo2():
-        """Long summary.
+        """This is a long summary.
 
-        Long summary. Long summary. Long summary. Long summary.
+        This is a long summary. This is a long summary. This is a long summary.
         """
 
     expected_docstring = \
-        """.. deprecated:: 0.2.0
-        Deprecated and will be removed in version 0.3.0.
-        Please toy instruction.
+    """.. deprecated:: 0.2.0
+    Deprecated and will be removed in version 0.3.0.
+    Please toy instruction.
 
 
-        This is a long summary. This is a long summary. This is a long
-        summary. This is a long summary."""
+    This is a long summary. This is a long summary. This is a long
+    summary. This is a long summary.
+    """  # noqa: E122
     assert expected_docstring == deprecated_demo2.__doc__
