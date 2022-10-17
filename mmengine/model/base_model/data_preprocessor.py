@@ -49,12 +49,12 @@ class BaseDataPreprocessor(nn.Module):
             # namedtuple
             return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
-            return [self.cast_data(sample) for sample in data]
+            return type(data)([self.cast_data(sample) for sample in data])  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device)
         else:
             raise TypeError(
-                '`BaseDataPreprocessor.cast_data`: batch must contain '
+                '`BaseDataPreprocessor.cast_data`: batch data must contain '
                 'tensors, numpy arrays, numbers, dicts or lists, but '
                 f'found {type(data)}')
 
