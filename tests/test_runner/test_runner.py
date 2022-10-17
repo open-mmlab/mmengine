@@ -1803,7 +1803,7 @@ class TestRunner(TestCase):
         predictions.clear()
 
         # Test fp16 `autocast` context.
-        cfg.experiment_name = 'test_val3'
+        cfg.experiment_name = 'test_test3'
         cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
