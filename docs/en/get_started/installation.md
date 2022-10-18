@@ -26,7 +26,7 @@
 
 ## Install MMEngine
 
-#### Install with mim
+### Install with mim
 
 [mim](https://github.com/open-mmlab/mim) is a package management tool for OpenMMLab projects, which can be used to install the OpenMMLab project easily.
 
