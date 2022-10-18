@@ -136,6 +136,8 @@ class MMLogger(Logger, ManagerMixin):
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level (str): The log level of the handler and logger. Defaults to
             "NOTSET".
+        log_datefmt (str): The log date formatter. If `log_datefmt` is not
+            defined, defaults to '%m/%d %H:%M:%S'.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
@@ -146,6 +148,7 @@ class MMLogger(Logger, ManagerMixin):
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: str = 'INFO',
+                 log_datefmt: str = '%m/%d %H:%M:%S',
                  file_mode: str = 'w',
                  distributed=False):
         Logger.__init__(self, logger_name)
@@ -160,7 +163,7 @@ class MMLogger(Logger, ManagerMixin):
         # `StreamHandler` record month, day, hour, minute, and second
         # timestamp.
         stream_handler.setFormatter(
-            MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
+            MMFormatter(color=True, datefmt=log_datefmt))
         # Only rank0 `StreamHandler` will log messages below error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
