@@ -16,8 +16,9 @@ from mmengine.config import Config
 from mmengine.evaluator import BaseMetric
 from mmengine.logging import MMLogger
 from mmengine.model import BaseModel
-from mmengine.registry import DATASETS, METRICS, MODELS
+from mmengine.registry import DATASETS, METRICS, MODELS, DefaultScope
 from mmengine.runner import Runner
+from mmengine.visualization import Visualizer
 
 
 @MODELS.register_module()
@@ -131,6 +132,8 @@ class RunnerTestCase(TestCase):
         # delete the temporary directory
         logging.shutdown()
         MMLogger._instance_dict.clear()
+        Visualizer._instance_dict.clear()
+        DefaultScope._instance_dict.clear()
         self.temp_dir.cleanup()
 
     def build_epoch_based_runner(self, cfg):
