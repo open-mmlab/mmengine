@@ -7,7 +7,7 @@
 - CUDA 9.2+
 - GCC 5.4+
 
-### Prepare the Environment
+## Prepare the Environment
 
 1. Use conda and activate the environment:
 
