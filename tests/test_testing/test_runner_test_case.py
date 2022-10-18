@@ -25,6 +25,8 @@ class TestRunnerTestCase(RunnerTestCase):
         self.assertEqual(MessageHub._instance_dict, {})
         self.assertEqual(Visualizer._instance_dict, {})
         self.assertEqual(DefaultScope._instance_dict, {})
+        # tearDown should not be called twice.
+        self.tearDown = super(RunnerTestCase, self).tearDown
 
     def test_build_runner(self):
         runner = self.build_runner(self.epoch_based_cfg)

@@ -21,7 +21,6 @@ from mmengine.runner import Runner
 from mmengine.visualization import Visualizer
 
 
-@MODELS.register_module()
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
@@ -47,7 +46,6 @@ class ToyModel(BaseModel):
             return outputs
 
 
-@DATASETS.register_module()
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
@@ -64,7 +62,6 @@ class ToyDataset(Dataset):
         return dict(inputs=self.data[index], data_samples=self.label[index])
 
 
-@METRICS.register_module()
 class ToyMetric(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
@@ -89,6 +86,11 @@ class RunnerTestCase(TestCase):
 
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
+        # Prevent from registering module with the same name by other unit
+        # test. These registries will be cleared in `tearDown`
+        MODELS.register_module(module=ToyModel, force=True)
+        METRICS.register_module(module=ToyMetric, force=True)
+        DATASETS.register_module(module=ToyDataset, force=True)
         epoch_based_cfg = dict(
             work_dir=self.temp_dir.name,
             model=dict(type='ToyModel'),
@@ -141,6 +143,9 @@ class RunnerTestCase(TestCase):
         Visualizer._instance_dict.clear()
         DefaultScope._instance_dict.clear()
         MessageHub._instance_dict.clear()
+        MODELS.module_dict.pop('ToyModel')
+        METRICS.module_dict.pop('ToyMetric')
+        DATASETS.module_dict.pop('ToyDataset')
         self.temp_dir.cleanup()
 
     def build_runner(self, cfg):
