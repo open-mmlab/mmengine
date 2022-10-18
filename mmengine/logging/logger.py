@@ -136,11 +136,11 @@ class MMLogger(Logger, ManagerMixin):
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level (str): The log level of the handler and logger. Defaults to
             "NOTSET".
-        log_datefmt (str): The log date formatter. If `log_datefmt` is not
-            defined, defaults to '%m/%d %H:%M:%S'.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
+        log_datefmt (str): The log date formatter. If `log_datefmt` is not
+            defined, defaults to '%m/%d %H:%M:%S'.
     """
 
     def __init__(self,
@@ -148,9 +148,9 @@ class MMLogger(Logger, ManagerMixin):
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: str = 'INFO',
-                 log_datefmt: str = '%m/%d %H:%M:%S',
                  file_mode: str = 'w',
-                 distributed=False):
+                 distributed=False,
+                 log_datefmt: str = '%m/%d %H:%M:%S'):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
