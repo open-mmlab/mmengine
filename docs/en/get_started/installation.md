@@ -43,7 +43,7 @@ pip install mmengine
 
 #### Use docker images
 
-1. build the image
+1. Build the image
 
    ```bash
    docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
