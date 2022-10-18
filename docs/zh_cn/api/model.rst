@@ -68,6 +68,7 @@ Model Wrapper
    :template: classtemplate.rst
 
    is_model_wrapper
+   build_runner_with_tta
 
 Weight Initialization
 ----------------------
