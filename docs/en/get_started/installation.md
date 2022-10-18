@@ -51,7 +51,7 @@ pip install mmengine
 
    More information can be referred from [mmengine/docker](https://github.com/open-mmlab/mmengine/tree/main/docker).
 
-2. run the image
+2. Run the image
 
    ```bash
    docker run --gpus all --shm-size=8g -it mmengine
