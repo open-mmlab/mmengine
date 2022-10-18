@@ -57,13 +57,24 @@ class ConcatDataset(_ConcatDataset):
         else:
             raise TypeError('ignore_keys should be a list or str, '
                             f'but got {type(ignore_keys)}')
+
+        metainfos = [dataset.metainfo.keys() for dataset in self.datasets]
+        meta_keys = set(metainfos[0])
+        for metainfo in metainfos:
+            meta_keys = meta_keys | metainfo
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
         for i, dataset in enumerate(self.datasets, 1):
-            for key in self.metainfo.keys():
+            for key in meta_keys:
                 if key in self.ignore_keys:
+                    if key in self._metainfo:
+                        self._metainfo.pop(key)
                     continue
-                if dataset.metainfo.get(key, None) is None or \
+                if key not in self._metainfo:
+                    raise ValueError(
+                        f'{key} does not in the meta information of '
+                        'the first dataset')
+                if key not in dataset.metainfo or \
                         self._metainfo[key] != dataset.metainfo[key]:
                     raise ValueError(
                         f'The meta information of the {i}-th dataset does not '
