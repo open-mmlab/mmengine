@@ -1,12 +1,27 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 from unittest import TestCase
 
-from torch.utils.data import DataLoader
+import torch
+from torch.utils.data import DataLoader, Dataset
 
-from mmengine.model import BaseModel, BaseTTAModel
-from mmengine.registry import MODELS
+from mmengine.model import BaseModel, BaseTTAModel, build_runner_with_tta
+from mmengine.registry import DATASETS, MODEL_WRAPPERS, MODELS, TRANSFORMS
+from mmengine.testing import RunnerTestCase
 
 
+def pseudo_pipeline(x):
+    return x
+
+
+@TRANSFORMS.register_module()
+class ToyTTAPipeline:
+
+    def __call__(self, result):
+        return {key: [value] for key, value in result.items()}
+
+
+@MODEL_WRAPPERS.register_module()
 class ToyTestTimeAugModel(BaseTTAModel):
 
     def merge_preds(self, data_samples_list):
@@ -19,6 +34,29 @@ class TTAToyModel(BaseModel):
 
     def forward(self, inputs, data_samples, mode='tensor'):
         return data_samples
+
+
+@DATASETS.register_module()
+class ToyDatasetTTA(Dataset):
+    METAINFO = dict()  # type: ignore
+    data = torch.randn(12, 2)
+    label = torch.ones(12)
+
+    def __init__(self, pipeline=None):
+        self.pipeline = pseudo_pipeline if pipeline is None else \
+            TRANSFORMS.build(pipeline)
+
+    @property
+    def metainfo(self):
+        return self.METAINFO
+
+    def __len__(self):
+        return self.data.size(0)
+
+    def __getitem__(self, index):
+        result = dict(inputs=self.data[index], data_samples=self.label[index])
+        result = self.pipeline(result)
+        return result
 
 
 class TestBaseTTAModel(TestCase):
@@ -53,3 +91,15 @@ class TestBaseTTAModel(TestCase):
         model = dict(type='TTAToyModel')
         tta_model = ToyTestTimeAugModel(model)
         self.assertIsInstance(tta_model.module, TTAToyModel)
+
+
+class TestBuildRunenrWithTTA(RunnerTestCase):
+
+    def test_build_runner_with_tta(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.test_dataloader.dataset = dict(type='ToyDatasetTTA')
+        cfg.tta_pipeline = dict(type='ToyTTAPipeline')
+        cfg.tta_model = dict(type='ToyTestTimeAugModel')
+        runner = build_runner_with_tta(cfg)
+        runner.test()
+        self.assertIsInstance(runner.model, ToyTestTimeAugModel)

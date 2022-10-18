@@ -137,7 +137,7 @@ def build_runner_with_tta(cfg) -> 'Runner':
     assert hasattr(cfg, 'tta_pipeline'), (
         'make please sure your config define the tta_pipeline')
     from mmengine.hooks import PrepareTTAHook
-    cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
+    cfg['test_dataloader']['dataset']['pipeline'] = cfg.tta_pipeline
 
     if 'runner_type' in cfg:
         runner = RUNNERS.build(cfg)
