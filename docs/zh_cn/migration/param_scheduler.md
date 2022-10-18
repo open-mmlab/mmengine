@@ -520,8 +520,7 @@ param_scheduler = [
 
 ## 参数更新频率相关配置迁移
 
-如果在使用 epoch-based 训练循环且配置文件中按 epoch 设置生效区间（`begin`，`end`）或周期（`T_max`）等变量的同时希望参数率按 iteration 更新，在 MMCV 中需要将 `by_epoch` 设置为 False。而在 MMEngine 中需要注意，配置中的 `by_epoch` 仍需设置为 True，通过在配置中添加 `convert_to_iter_based=True` 来构建按 iteration 更新的参数调度器，
-关于此配置详见[参数调度器教程](../tutorials/param_scheduler.md)。
+如果在使用 epoch-based 训练循环且配置文件中按 epoch 设置生效区间（`begin`，`end`）或周期（`T_max`）等变量的同时希望参数率按 iteration 更新，在 MMCV 中需要将 `by_epoch` 设置为 False。而在 MMEngine 中需要注意，配置中的 `by_epoch` 仍需设置为 True，通过在配置中添加 `convert_to_iter_based=True` 来构建按 iteration 更新的参数调度器，关于此配置详见[参数调度器教程](../tutorials/param_scheduler.md)。
 以迁移CosineAnnealing为例：
 
 <table class="docutils">
