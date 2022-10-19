@@ -56,3 +56,6 @@ VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
 LOG_PROCESSORS = Registry('log_processor')
+
+# manage path filter func
+PATH_FILTERS = Registry('path_filter')
