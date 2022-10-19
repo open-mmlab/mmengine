@@ -109,9 +109,6 @@ class Runner:
             specified. If ``ValLoop`` is built with `fp16=True``,
             ``runner.val()`` will be performed under fp16 precision.
             Defaults to None. See :meth:`build_test_loop` for more details.
-        auto_distinguish_experiment (bool, Optional): Use different work_dir
-            for experiments with same config file name by set it to timestamp
-            sub folder. Only work with work_dir is None.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -246,7 +243,6 @@ class Runner:
         train_cfg: Optional[Dict] = None,
         val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
-        auto_distinguish_experiment: bool = False,
         auto_scale_lr: Optional[Dict] = None,
         optim_wrapper: Optional[Union[OptimWrapper, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
@@ -368,7 +364,8 @@ class Runner:
                     'can not be all None.')
 
         self._work_dir = osp.abspath(work_dir)
-        if auto_distinguish_experiment:
+        if 'auto_distinguish_experiment' in self.cfg \
+                and self.cfg.auto_distinguish_experiment:
             self._work_dir = osp.join(self._work_dir, self._experiment_id)
         self._log_dir = osp.join(self._work_dir, self._experiment_id)
         mmengine.mkdir_or_exist(self._log_dir)
@@ -453,8 +450,6 @@ class Runner:
             train_cfg=cfg.get('train_cfg'),
             val_cfg=cfg.get('val_cfg'),
             test_cfg=cfg.get('test_cfg'),
-            auto_distinguish_experiment=cfg.get('auto_distinguish_experiment',
-                                                False),
             auto_scale_lr=cfg.get('auto_scale_lr'),
             optim_wrapper=cfg.get('optim_wrapper'),
             param_scheduler=cfg.get('param_scheduler'),
