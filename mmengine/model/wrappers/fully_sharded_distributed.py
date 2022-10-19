@@ -179,11 +179,11 @@ class MMFullyShardedDataParallel(FSDP):
                     find_fixed_modules_recursively(sub_module))
             return fixed_modules
 
-        self._mm_fixed_modules = find_fixed_modules_recursively(module)
+        self._fixed_modules = find_fixed_modules_recursively(module)
         # Set `requires_grad=True` to avoid FSDP AssertionError.
         # See https://github.com/pytorch/pytorch/issues/75943
         # We make sure these params are untrained by some tricky methods
-        for m in self._mm_fixed_modules:
+        for m in self._fixed_modules:
             m.requires_grad_(True)
 
         super().__init__(
@@ -194,7 +194,7 @@ class MMFullyShardedDataParallel(FSDP):
             backward_prefetch=backward_prefetch,
             # ignored modules are not sharded and thus not in FSDP.parameters()
             # we use this tricky method to make fixed_modules untrained.
-            ignored_modules=self._mm_fixed_modules,
+            ignored_modules=self._fixed_modules,
             **kwargs)
 
     def train_step(self, data: dict,
@@ -228,7 +228,7 @@ class MMFullyShardedDataParallel(FSDP):
         # manually zero_grad fixed parameters,
         # since they are not in any optimizer
         if optim_wrapper.should_update():
-            for m in self._mm_fixed_modules:
+            for m in self._fixed_modules:
                 m.zero_grad(set_to_none=True)
         return log_vars
 
@@ -276,7 +276,7 @@ class MMFullyShardedDataParallel(FSDP):
                             f'list, tuple or dict, but got {type(data)}')
         return results
 
-    def _mm_fsdp_state_dict(self):
+    def _collect_state_dict(self):
         full_state_dict_config = FullStateDictConfig(
             offload_to_cpu=True, rank0_only=True)
         with FSDP.state_dict_type(self, StateDictType.FULL_STATE_DICT,

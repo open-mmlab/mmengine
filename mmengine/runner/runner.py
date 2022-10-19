@@ -2111,8 +2111,8 @@ class Runner:
 
         # models with this attribute are FSDP models, which has special logic
         # for `state_dict()` and should run across all processes
-        if hasattr(self.model, '_mm_fsdp_state_dict'):
-            state_dict = self.model._mm_fsdp_state_dict()
+        if hasattr(self.model, '_collect_state_dict'):
+            state_dict = self.model._collect_state_dict()
             # after gathering state_dict, other processes should stop to avoid
             # multiple saves of a checkpoint
             if not is_main_process():
