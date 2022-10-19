@@ -18,7 +18,7 @@
 
 2. Install PyTorch
 
-   Before installing `MMEngine`, please make sure that PyTorch has been successfully installed in the environment, you can refer to [PyTorch official installation documentation](https://pytorch.org/get-started/locally/#start-locally). Verify if PyTorch is installed with the following command:
+   Before installing `MMEngine`, please make sure that PyTorch has been successfully installed in the environment. You can refer to [PyTorch official installation documentation](https://pytorch.org/get-started/locally/#start-locally). Verify the installation with the following command:
 
    ```bash
    python -c 'import torch;print(torch.__version__)'
