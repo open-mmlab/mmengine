@@ -4,6 +4,7 @@ import copy
 import math
 import warnings
 from collections import defaultdict
+from functools import reduce
 from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
@@ -59,16 +60,12 @@ class ConcatDataset(_ConcatDataset):
                             f'but got {type(ignore_keys)}')
 
         metainfos = [dataset.metainfo.keys() for dataset in self.datasets]
-        meta_keys = set(metainfos[0])
-        for metainfo in metainfos:
-            meta_keys = meta_keys | metainfo
+        meta_keys = reduce(lambda x, y: x | y, metainfos)  # type:ignore
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
         for i, dataset in enumerate(self.datasets, 1):
             for key in meta_keys:
                 if key in self.ignore_keys:
-                    if key in self._metainfo:
-                        self._metainfo.pop(key)
                     continue
                 if key not in self._metainfo:
                     raise ValueError(
