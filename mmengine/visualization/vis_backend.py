@@ -6,7 +6,7 @@ import os.path as osp
 import re
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Optional, Sequence, Union
+from typing import Any, Callable, List, Optional, Sequence, Union
 
 import cv2
 import numpy as np
@@ -322,7 +322,7 @@ class LocalVisBackend(BaseVisBackend):
 
 
 @PATH_FILTERS.register_module()
-def regular_path_filter(regular_pattern_templates: list[str],
+def regular_path_filter(regular_pattern_templates: List[str],
                         full_match: bool = False):
     regular_patterns = [re.compile(p) for p in regular_pattern_templates]
     if full_match:
