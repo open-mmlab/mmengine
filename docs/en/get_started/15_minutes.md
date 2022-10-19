@@ -1,6 +1,6 @@
 # 15 minutes to get started with MMEngine
 
-Take training a ResNet-50 model on CIFAR-10 dataset as an example, we could build a complete, and configurable process for both training and validation in only 80 lines of code with `MMEgnine`.
+In this tutorial, we'll take training a ResNet-50 model on CIFAR-10 dataset as an example. We will build a complete and configurable pipeline for both training and validation in only 80 lines of code with `MMEgnine`.
 The whole process includes the following steps:
 
 1. [Build a Model](#build-a-model)
