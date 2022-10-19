@@ -360,11 +360,13 @@ class WandbVisBackend(BaseVisBackend):
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
-                 commit: Optional[bool] = True):
+                 commit: Optional[bool] = True,
+                 watch_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
+        self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
 
     def _init_env(self):
         """Setup env for wandb."""
@@ -409,6 +411,17 @@ class WandbVisBackend(BaseVisBackend):
         # Files under run.dir are automatically uploaded,
         # so no need to manually call save.
         # self._wandb.save(cfg_path)
+
+    @force_init_env
+    def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
+                  **kwargs) -> None:
+        """Record the model graph.
+
+        Args:
+            model (torch.nn.Module): Model to draw.
+            data_batch (Sequence[dict]): Batch of data from dataloader.
+        """
+        self._wandb.watch(model, **self._watch_kwargs)
 
     @force_init_env
     def add_image(self,

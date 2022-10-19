@@ -403,6 +403,7 @@ class Runner:
         # wrap model
         self.model = self.wrap_model(
             self.cfg.get('model_wrapper_cfg'), self.model)
+        self.visualizer.add_graph(self.model, None)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
