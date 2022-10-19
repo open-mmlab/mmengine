@@ -10,7 +10,7 @@ The whole process includes the following steps:
 
 ## Build a Model
 
-First, we need to build a **model**. In MMEngine, the model should inherit from `BaseModel`. Besides accepting several parameters from the dataset, its `forward` method needs to accept an extra argument called `mode`:
+First, we need to build a **model**. In MMEngine, the model should inherit from `BaseModel`. Aside from parameters representing inputs from the dataset, its `forward` method needs to accept an extra argument called `mode`:
 
 - for training, the value of `mode` is "loss," and the `forward` method should return a `dict` containing the key "loss".
 - for validation, the value of `mode` is "predict", and the forward method should return results containing both predictions and labels.
