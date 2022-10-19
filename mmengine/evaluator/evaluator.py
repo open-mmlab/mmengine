@@ -119,8 +119,8 @@ class Evaluator:
 
         if data is not None:
             assert len(data_samples) == len(data), (
-                'outputs and data should have the same length, but got '
-                f'outputs length: {len(data_samples)} '
+                'data_samples and data should have the same length, but got '
+                f'data_samples length: {len(data_samples)} '
                 f'data length: {len(data)}')
             data = get_chunks(iter(data), chunk_size)
 
