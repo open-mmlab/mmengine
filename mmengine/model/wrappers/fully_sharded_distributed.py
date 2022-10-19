@@ -174,7 +174,7 @@ class MMFullyShardedDataParallel(FSDP):
             if all(not p.requires_grad for p in root_module.parameters()):
                 return [root_module]
             fixed_modules = []
-            for name, sub_module in root_module._modules.items():
+            for name, sub_module in root_module.named_children():
                 fixed_modules.extend(
                     find_fixed_modules_recursively(sub_module))
             return fixed_modules
@@ -184,8 +184,7 @@ class MMFullyShardedDataParallel(FSDP):
         # See https://github.com/pytorch/pytorch/issues/75943
         # We make sure these params are untrained by some tricky methods
         for m in self._mm_fixed_modules:
-            for p in m.parameters():
-                p.requires_grad = True
+            m.requires_grad_(True)
 
         super().__init__(
             module=module,
@@ -230,9 +229,7 @@ class MMFullyShardedDataParallel(FSDP):
         # since they are not in any optimizer
         if optim_wrapper.should_update():
             for m in self._mm_fixed_modules:
-                for p in m.parameters():
-                    if p.grad:
-                        p.grad = None
+                m.zero_grad(set_to_none=True)
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
