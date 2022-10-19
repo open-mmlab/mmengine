@@ -372,8 +372,11 @@ class Runner:
                     'can not be all None.')
 
         self._work_dir = osp.abspath(work_dir)
-        self._log_dir = self.work_dir
-        mmengine.mkdir_or_exist(self._work_dir)
+        if auto_distinguish_experiment:
+            self._log_dir = self.work_dir
+        else:
+            self._log_dir = osp.join(self._work_dir, self._experiment_id)
+        mmengine.mkdir_or_exist(self._log_dir)
 
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
