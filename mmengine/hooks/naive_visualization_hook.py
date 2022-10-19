@@ -50,7 +50,7 @@ class NaiveVisualizationHook(Hook):
         return unpad_image
 
     def before_train(self, runner) -> None:
-        """Call add graph func of visualizer.
+        """Call add_graph method of visualizer.
 
         Args:
             runner (Runner): The runner of the training process.
