@@ -79,14 +79,14 @@ class MyAwesomeModel(BaseModel):
 
 @DATASETS.register_module()
 class MyDataset(Dataset):
-    def __init__(self, is_train):
+    def __init__(self, is_train, size):
         self.is_train = is_train
         if self.is_train:
             torch.manual_seed(0)
-            self.labels = torch.randint(0, 2, (10000,))
+            self.labels = torch.randint(0, 2, (size,))
         else:
             torch.manual_seed(3407)
-            self.labels = torch.randint(0, 2, (1000,))
+            self.labels = torch.randint(0, 2, (size,))
         r = 3 * (self.labels+1) + torch.randn(self.labels.shape)
         theta = torch.rand(self.labels.shape) * 2 * torch.pi
         self.data = torch.vstack([r*torch.cos(theta), r*torch.sin(theta)]).T
