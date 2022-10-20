@@ -353,7 +353,7 @@ class Runner:
         self._experiment_id = self._timestamp
 
         if work_dir is None:
-            if 'work_dir' in self.cfg and self.cfg.work_dir is not None:
+            if self.cfg.get('word_dir') is not None:
                 work_dir = self.cfg.work_dir
             elif self._experiment_name is not None:
                 work_dir = osp.join('./work_dirs', self._experiment_name)
