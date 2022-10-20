@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 from unittest import TestCase
+from uuid import uuid4
 
 import torch
 import torch.nn as nn
@@ -155,7 +156,8 @@ class RunnerTestCase(TestCase):
 
     @property
     def experiment_name(self):
-        return f'{self._testMethodName}_{time.time_ns()}'
+        return f'{self._testMethodName}_{time.time()} + ' \
+               f'{uuid4()}'
 
     def setup_dist_env(self):
         self.dist_cfg['MASTER_PORT'] += 1
