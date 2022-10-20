@@ -88,6 +88,7 @@ def collect_env():
                     nvcc = nvcc[release:build].strip()
                 except subprocess.SubprocessError:
                     nvcc = 'Not Available'
+            env_info['NVCC'] = nvcc
 
     try:
         # Check C++ Compiler.
