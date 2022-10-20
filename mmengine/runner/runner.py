@@ -363,8 +363,7 @@ class Runner:
                     'can not be all None.')
 
         self._work_dir = osp.abspath(work_dir)
-        if 'auto_distinguish_experiment' in self.cfg \
-                and self.cfg.auto_distinguish_experiment:
+        if self.cfg.get(auto_distinguish_experiment) is True:
             self._work_dir = osp.join(self._work_dir, self._experiment_id)
         self._log_dir = osp.join(self._work_dir, self._experiment_id)
         mmengine.mkdir_or_exist(self._log_dir)
