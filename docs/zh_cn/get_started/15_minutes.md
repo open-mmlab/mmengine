@@ -251,6 +251,6 @@ System environment:
 
 ## 下一步的建议
 
-在上面的例子中，我们只用 80 行的代码便构建好了训练和验证流程，并且兼具极佳的可读性、可扩展性。真棒！相信你已经注意到，MMEngine 做到这一点的关键在于**执行器（Runner）**，所以我们强烈建议先花一些时间了解一下[执行器基础](../tutorials/runner_basics.md)。这一点很重要！因为使用执行器是 MMEngine 用户的最佳实践。
+在上面的例子中，我们只用 80 行的代码便构建好了训练和验证流程，并且兼具极佳的可读性、可扩展性。真棒！相信你已经注意到，MMEngine 做到这一点的关键在于**执行器（Runner）**，所以我们强烈建议先花一些时间了解一下[执行器基础](../tutorials/runner_basics.md)。这一点很重要！了解了如何使用执行器，你将能基于 MMEngine 更轻松地开发自己的项目。
 
-如果你对于执行器已经有了一定的了解，并且对一些特定的组件、功能感兴趣，也可以点击左侧的对应链接进行跳转，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/evaluation.md)）等。
+如果你对于执行器已经有了一定的了解，并且对一些特定的组件、功能感兴趣，也可以点击左侧的对应链接进行跳转，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [优化器参数调整策略（Parameter Scheduler）](../tutorials/param_scheduler.md)）等。
