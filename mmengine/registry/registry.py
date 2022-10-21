@@ -245,6 +245,20 @@ class Registry:
                         module = import_module(f'{scope_name}.utils')
                         module.register_all_modules(False)  # type: ignore
                     except ImportError as e:
+                        if scope in PKG2PROJECT:
+                            print_log(
+                                f'{scope} is not installed and its '
+                                'modules will not be registered. If you '
+                                'want to use modules defined in '
+                                f'{scope}, Please install {scope} by '
+                                f'`pip install {PKG2PROJECT[scope]}.',
+                                logger='current',
+                                level=logging.WARNING)
+                        else:
+                            print_log(
+                                f'Failed to import {scope} and register '
+                                'its modules, please register the module '
+                                'mannuly.')
                         raise e
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
@@ -348,13 +362,21 @@ class Registry:
                     parent = parent.parent
         else:
             try:
-                module = import_module(f'{scope_name}.utils')
+                module = import_module(f'{scope}.utils')
                 module.register_all_modules(False)  # type: ignore
-            except ImportError:
-                print_log(f'{scope_name} is not a package of OpenMMLab, '
-                          'and its modules will not be registered. If you '
-                          f'want to use modules defined in {scope_name}, '
-                          f'please import corresponding modules firstly.')
+            except Exception as e:
+                if scope in PKG2PROJECT:
+                    print_log(
+                        f'{scope} is not installed and its modules '
+                        'will not be registered. If you want to use '
+                        f'modules defined in {scope}, Please install '
+                        f'{scope} by `pip install {PKG2PROJECT[scope]} ',
+                        logger='current',
+                        level=logging.WARNING)
+                else:
+                    print_log(f'Failed to import {scope} and register its '
+                              f'modules, please register {real_key} mannuly.')
+                raise e
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
