@@ -267,7 +267,7 @@ def test_deprecated_function():
         Long description without a line break. Long description without
         a line break.
     """  # noqa: E122
-    assert expected_docstring == deprecated_demo.__doc__
+    assert expected_docstring.strip(' ') == deprecated_demo.__doc__
     MMLogger._instance_dict.clear()
 
     # Test with short summary without args.
@@ -282,7 +282,7 @@ def test_deprecated_function():
 
 
     Short summary."""  # noqa: E122
-    assert expected_docstring == deprecated_demo1.__doc__
+    assert expected_docstring.strip(' ') == deprecated_demo1.__doc__
 
     # Test with long summary without args.
     @deprecated_function('0.2.0', '0.3.0', 'toy instruction')
@@ -301,4 +301,4 @@ def test_deprecated_function():
     This is a long summary. This is a long summary. This is a long
     summary. This is a long summary.
     """  # noqa: E122
-    assert expected_docstring == deprecated_demo2.__doc__
+    assert expected_docstring.strip(' ') == deprecated_demo2.__doc__
