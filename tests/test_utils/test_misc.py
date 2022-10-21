@@ -283,22 +283,3 @@ def test_deprecated_function():
 
     Short summary."""  # noqa: E122
     assert expected_docstring.strip(' ') == deprecated_demo1.__doc__
-
-    # Test with long summary without args.
-    @deprecated_function('0.2.0', '0.3.0', 'toy instruction')
-    def deprecated_demo2():
-        """This is a long summary.
-
-        This is a long summary. This is a long summary. This is a long summary.
-        """
-
-    expected_docstring = \
-    """.. deprecated:: 0.2.0
-    Deprecated and will be removed in version 0.3.0.
-    Please toy instruction.
-
-
-    This is a long summary. This is a long summary. This is a long
-    summary. This is a long summary.
-    """  # noqa: E122
-    assert expected_docstring.strip(' ') == deprecated_demo2.__doc__
