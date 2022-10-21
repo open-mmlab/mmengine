@@ -244,7 +244,7 @@ class Registry:
                     try:
                         module = import_module(f'{scope_name}.utils')
                         module.register_all_modules(False)  # type: ignore
-                    except ImportError as e:
+                    except (ImportError, AttributeError, ModuleNotFoundError):
                         if scope in PKG2PROJECT:
                             print_log(
                                 f'{scope} is not installed and its '
@@ -257,9 +257,10 @@ class Registry:
                         else:
                             print_log(
                                 f'Failed to import {scope} and register '
-                                'its modules, please register the module '
-                                'mannuly.')
-                        raise e
+                                'its modules, please make sure you '
+                                'haveregister the module mannuly.',
+                                logger='current',
+                                level=logging.WARNING)
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
@@ -364,7 +365,7 @@ class Registry:
             try:
                 module = import_module(f'{scope}.utils')
                 module.register_all_modules(False)  # type: ignore
-            except Exception as e:
+            except (ImportError, AttributeError, ModuleNotFoundError):
                 if scope in PKG2PROJECT:
                     print_log(
                         f'{scope} is not installed and its modules '
@@ -374,9 +375,11 @@ class Registry:
                         logger='current',
                         level=logging.WARNING)
                 else:
-                    print_log(f'Failed to import {scope} and register its '
-                              f'modules, please register {real_key} mannuly.')
-                raise e
+                    print_log(
+                        f'Failed to import "{scope}", and register its '
+                        f'modules. Please register {real_key} mannuly.',
+                        logger='current',
+                        level=logging.WARNING)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
