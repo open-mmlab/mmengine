@@ -352,19 +352,21 @@ class Runner:
         self._experiment_name = experiment_name
         self._experiment_id = self._timestamp
 
+        have_distinguished_experiment = False
         if work_dir is None:
             if self.cfg.get('word_dir') is not None:
                 work_dir = self.cfg.work_dir
             elif self._experiment_name is not None:
                 work_dir = osp.join('./work_dirs', self._experiment_name)
             else:
-                raise ValueError(
-                    'work_dir, cfg.work_dir, experiment_name and cfg.filename'
-                    'can not be all None.')
+                work_dir = osp.join('./work_dirs', self._experiment_id)
+                have_distinguished_experiment = True
+
+        if not have_distinguished_experiment and \
+                self.cfg.get('auto_distinguish_experiment') is True:
+            work_dir = osp.join(work_dir, self._experiment_id)
 
         self._work_dir = osp.abspath(work_dir)
-        if self.cfg.get('auto_distinguish_experiment') is True:
-            self._work_dir = osp.join(self._work_dir, self._experiment_id)
         self._log_dir = osp.join(self._work_dir, self._experiment_id)
         mmengine.mkdir_or_exist(self._log_dir)
 
