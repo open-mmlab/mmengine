@@ -90,6 +90,12 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.utils.dl_utils <api/utils.dl_utils>
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Notes
+
+   notes/changelog.md
+
+.. toctree::
    :caption: Switch Language
 
    switch_language.md

@@ -29,7 +29,7 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 from mmengine.model import BaseModel
 from mmengine.evaluator import BaseMetric
-from mmengine import Runner
+from mmengine.runner import Runner
 
 
 training_data = datasets.FashionMNIST(

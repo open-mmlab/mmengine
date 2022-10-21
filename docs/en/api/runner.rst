@@ -44,6 +44,11 @@ Checkpoints
    :template: classtemplate.rst
 
    CheckpointLoader
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    find_latest_checkpoint
    get_deprecated_model_names
    get_external_models
@@ -61,7 +66,6 @@ AMP
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    autocast
 
@@ -75,4 +79,9 @@ Miscellaneous
 
    LogProcessor
    Priority
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    get_priority

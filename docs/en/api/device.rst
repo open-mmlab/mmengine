@@ -9,7 +9,6 @@ mmengine.device
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: classtemplate.rst
 
    get_device
    get_max_cuda_memory

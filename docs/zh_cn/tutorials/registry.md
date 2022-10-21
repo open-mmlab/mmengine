@@ -6,8 +6,7 @@ OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，�
 
 ## 什么是注册器
 
-MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；
-而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。
+MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。
 MMEngine 中的注册器默认使用 [build_from_cfg](mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
 
 一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `MODELS` 可以被视作所有模型的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
@@ -92,7 +91,6 @@ activation = ACTIVATION.build(act_cfg)
 output = activation(input)
 # call Sigmoid.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 如果我们想使用 `ReLU`，仅需修改配置。
@@ -103,7 +101,6 @@ activation = ACTIVATION.build(act_cfg)
 output = activation(input)
 # call Sigmoid.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 如果我们希望在创建实例前检查输入参数的类型（或者任何其他操作），我们可以实现一个构建方法并将其传递给注册器从而实现自定义构建流程。
@@ -141,7 +138,6 @@ output = activation(input)
 # build activation: Tanh
 # call Tanh.forward
 print(output)
-# tensor([0.0159, 0.0815])
 ```
 
 ```{note}
@@ -262,7 +258,6 @@ input = torch.randn(2)
 output = model(input)
 # call RReLU.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
 
 ### 调用兄弟节点的模块
@@ -289,7 +284,6 @@ model = MODELS.build(cfg=dict(type='mmalpha.LogSoftmax'))
 output = model(input)
 # call LogSoftmax.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
 
 调用兄弟节点的模块需要在 `type` 中指定 `scope` 前缀，所以上面的配置需要加前缀 `mmalpha`。
@@ -303,5 +297,4 @@ model = MODELS.build(cfg=dict(type='LogSoftmax', _scope_='mmalpha'))
 output = model(input)
 # call LogSoftmax.forward
 print(output)
-# tensor([-1.5774, -0.5850])
 ```
