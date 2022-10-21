@@ -3,10 +3,9 @@ import copy
 import functools
 import os
 import os.path as osp
-import re
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, List, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
 
 import cv2
 import numpy as np
@@ -15,7 +14,7 @@ import torch
 from mmengine.config import Config
 from mmengine.fileio import dump
 from mmengine.logging import MMLogger
-from mmengine.registry import PATH_FILTERS, VISBACKENDS
+from mmengine.registry import VISBACKENDS
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
@@ -321,17 +320,6 @@ class LocalVisBackend(BaseVisBackend):
             f.write('\n')
 
 
-@PATH_FILTERS.register_module()
-def regular_path_filter(regular_pattern_templates: List[str],
-                        full_match: bool = False):
-    regular_patterns = [re.compile(p) for p in regular_pattern_templates]
-    if full_match:
-        return lambda path: any(
-            [re.fullmatch(p, path) for p in regular_patterns])
-    else:
-        return lambda path: any([re.match(p, path) for p in regular_patterns])
-
-
 @VISBACKENDS.register_module()
 class WandbVisBackend(BaseVisBackend):
     """Wandb visualization backend class.
@@ -379,19 +367,12 @@ class WandbVisBackend(BaseVisBackend):
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
                  commit: Optional[bool] = True,
-                 log_code_kwargs: Optional[dict] = None):
+                 log_code_name: Optional[str] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
-
-        if log_code_kwargs is not None:
-            for key in ['include_fn', 'exclude_fn']:
-                if key in log_code_kwargs and isinstance(
-                        log_code_kwargs[key], dict):
-                    log_code_kwargs[key] = PATH_FILTERS.build(
-                        log_code_kwargs[key])
-        self._log_code_kwargs = log_code_kwargs
+        self._log_code_name = log_code_name
 
     def _init_env(self):
         """Setup env for wandb."""
@@ -432,7 +413,7 @@ class WandbVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         self._wandb.config.update(dict(config))
-        self._wandb.run.log_code(**self._log_code_kwargs)
+        self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
     def add_image(self,
