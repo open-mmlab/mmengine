@@ -1,10 +1,10 @@
 # 优化器参数调整策略（Parameter Scheduler）
 
-在模型训练过程中，我们往往不是采用固定的优化参数，例如学习率等，会随着训练轮数的增加进行调整。最简单常见的学习率调整策略就是阶梯式下降，例如每隔一段时间将学习率降低为原来的几分之一。PyTorch 中有学习率调度器 LRScheduler 来对各种不同的学习率调整方式进行抽象，但支持仍然比较有限，在 MMEngine 中，我们对其进行了拓展，实现了更通用的参数调度器 `mmengine.optim.scheduler`，可以对学习率、动量等优化器相关的参数进行调整，并且支持多个调度器进行组合，应用更复杂的调度策略。
+在模型训练过程中，我们往往不是采用固定的优化参数，例如学习率等，会随着训练轮数的增加进行调整。最简单常见的学习率调整策略就是阶梯式下降，例如每隔一段时间将学习率降低为原来的几分之一。PyTorch 中有学习率调度器 LRScheduler 来对各种不同的学习率调整方式进行抽象，但支持仍然比较有限，在 MMEngine 中，我们对其进行了拓展，实现了更通用的[参数调度器](mmengine.optim._ParamScheduler)，可以对学习率、动量等优化器相关的参数进行调整，并且支持多个调度器进行组合，应用更复杂的调度策略。
 
 ## 参数调度器的使用
 
-这里我们先简单介绍一下如何使用 PyTorch 内置的学习率调度器来进行学习率的调整。下面是参考 [PyTorch 官方文档](https://pytorch.org/docs/stable/optim.html) 实现的一个例子，我们构造一个 ExponentialLR，并且在每个 epoch 结束后调用 `scheduler.step()`，实现了随 epoch 指数下降的学习率调整策略。
+这里我们先简单介绍一下如何使用 PyTorch 内置的学习率调度器来进行学习率的调整。下面是参考 [PyTorch 官方文档](https://pytorch.org/docs/stable/optim.html) 实现的一个例子，我们构造一个 [ExponentialLR](mmengine.optim.ExponentialLR)，并且在每个 epoch 结束后调用 `scheduler.step()`，实现了随 epoch 指数下降的学习率调整策略。
 
 ```python
 import torch
@@ -26,7 +26,7 @@ for epoch in range(10):
     scheduler.step()
 ```
 
-在 `mmengine.optim.scheduler` 中，我们支持大部分 PyTorch 中的学习率调度器，例如 `ExponentialLR`，`LinearLR`，`StepLR`，`MultiStepLR` 等，使用方式也基本一致，所有支持的调度器见[调度器接口文档](mmengine.optim.scheduler)。同时增加了对动量的调整，在类名中将 `LR` 替换成 `Momentum` 即可，例如 `ExponentialMomentum`，`LinearMomentum`。更进一步地，我们实现了通用的参数调度器 ParamScheduler，用于调整优化器的中的其他参数，包括 weight_decay 等。这个特性可以很方便地配置一些新算法中复杂的调整策略。
+在 MMEngine 中，我们支持大部分 PyTorch 中的学习率调度器，例如 `ExponentialLR`，`LinearLR`，`StepLR`，`MultiStepLR` 等，使用方式也基本一致，所有支持的调度器见[调度器接口文档](https://mmengine.readthedocs.io/zh_CN/latest/api/optim.html#scheduler)。同时增加了对动量的调整，在类名中将 `LR` 替换成 `Momentum` 即可，例如 `ExponentialMomentum`，`LinearMomentum`。更进一步地，我们实现了通用的参数调度器 ParamScheduler，用于调整优化器的中的其他参数，包括 weight_decay 等。这个特性可以很方便地配置一些新算法中复杂的调整策略。
 
 和 PyTorch 文档中所给示例不同，MMEngine 中通常不需要手动来实现训练循环以及调用 `optimizer.step()`，而是在执行器（Runner）中对训练流程进行自动管理，同时通过 `ParamSchedulerHook` 来控制参数调度器的执行。
 
