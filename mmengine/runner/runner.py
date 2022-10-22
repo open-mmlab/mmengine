@@ -109,6 +109,9 @@ class Runner:
             specified. If ``ValLoop`` is built with `fp16=True``,
             ``runner.val()`` will be performed under fp16 precision.
             Defaults to None. See :meth:`build_test_loop` for more details.
+        auto_distinguish_experiment (bool, Optional): Use different work_dir
+            for experiments with same config file name by set it to timestamp
+            sub folder. Only work with work_dir is None.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -236,13 +239,14 @@ class Runner:
     def __init__(
         self,
         model: Union[nn.Module, Dict],
-        work_dir: str,
+        work_dir: Optional[str] = None,
         train_dataloader: Optional[Union[DataLoader, Dict]] = None,
         val_dataloader: Optional[Union[DataLoader, Dict]] = None,
         test_dataloader: Optional[Union[DataLoader, Dict]] = None,
         train_cfg: Optional[Dict] = None,
         val_cfg: Optional[Dict] = None,
         test_cfg: Optional[Dict] = None,
+        auto_distinguish_experiment: Optional[bool] = True,
         auto_scale_lr: Optional[Dict] = None,
         optim_wrapper: Optional[Union[OptimWrapper, Dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
@@ -263,9 +267,6 @@ class Runner:
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
     ):
-        self._work_dir = osp.abspath(work_dir)
-        mmengine.mkdir_or_exist(self._work_dir)
-
         # recursively copy the `cfg` because `self.cfg` will be modified
         # everywhere.
         if cfg is not None:
@@ -349,19 +350,35 @@ class Runner:
         self._randomness_cfg = randomness
         self.set_randomness(**randomness)
 
-        if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self._timestamp}'
-        elif self.cfg.filename is not None:
+        if experiment_name is None and self.cfg.filename is not None:
             filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
-        else:
-            self._experiment_name = self.timestamp
-        self._log_dir = osp.join(self.work_dir, self.timestamp)
-        mmengine.mkdir_or_exist(self._log_dir)
+            experiment_name = f'{filename_no_ext}'
+
+        self._experiment_name = experiment_name
+        self._experiment_id = self._timestamp
+
+        if work_dir is None:
+            if 'work_dir' in self.cfg and self.cfg.work_dir is not None:
+                work_dir = self.cfg.work_dir
+            elif self._experiment_name is not None:
+                if auto_distinguish_experiment:
+                    work_dir = osp.join('./work_dirs', self._experiment_name,
+                                        self._experiment_id)
+                else:
+                    work_dir = osp.join('./work_dirs', self._experiment_name)
+            else:
+                raise ValueError(
+                    'work_dir, cfg.work_dir, experiment_name and cfg.filename'
+                    'can not be all None.')
+
+        self._work_dir = osp.abspath(work_dir)
+        self._log_dir = self.work_dir
+        mmengine.mkdir_or_exist(self._work_dir)
+
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+            self.experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -431,13 +448,14 @@ class Runner:
         cfg = copy.deepcopy(cfg)
         runner = cls(
             model=cfg['model'],
-            work_dir=cfg['work_dir'],
+            work_dir=cfg.get('work_dir'),
             train_dataloader=cfg.get('train_dataloader'),
             val_dataloader=cfg.get('val_dataloader'),
             test_dataloader=cfg.get('test_dataloader'),
             train_cfg=cfg.get('train_cfg'),
             val_cfg=cfg.get('val_cfg'),
             test_cfg=cfg.get('test_cfg'),
+            auto_distinguish_experiment=cfg.get('auto_distinguish_experiment'),
             auto_scale_lr=cfg.get('auto_scale_lr'),
             optim_wrapper=cfg.get('optim_wrapper'),
             param_scheduler=cfg.get('param_scheduler'),
@@ -464,7 +482,8 @@ class Runner:
     @property
     def experiment_name(self):
         """str: Name of experiment."""
-        return self._experiment_name
+        return f'{self._experiment_name}_{self._timestamp}' if \
+            self._experiment_name is not None else self._timestamp
 
     @property
     def model_name(self):
@@ -708,7 +727,7 @@ class Runner:
             log_file = osp.join(self._log_dir, f'{self.timestamp}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
-        log_cfg.setdefault('name', self._experiment_name)
+        log_cfg.setdefault('name', self.experiment_name)
 
         return MMLogger.get_instance(**log_cfg)  # type: ignore
 
@@ -725,10 +744,10 @@ class Runner:
             MessageHub: A MessageHub object build from ``message_hub``.
         """
         if message_hub is None:
-            message_hub = dict(name=self._experiment_name)
+            message_hub = dict(name=self.experiment_name)
         elif isinstance(message_hub, dict):
             # ensure message_hub containing name key
-            message_hub.setdefault('name', self._experiment_name)
+            message_hub.setdefault('name', self.experiment_name)
         else:
             raise TypeError(
                 f'message_hub should be dict or None, but got {message_hub}')
@@ -753,7 +772,9 @@ class Runner:
         """
         if visualizer is None:
             visualizer = dict(
-                name=self._experiment_name,
+                name=self._experiment_name
+                if self._experiment_name is not None else 'visualizer',
+                id=self._experiment_id,
                 vis_backends=[dict(type='LocalVisBackend')],
                 save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
@@ -763,7 +784,9 @@ class Runner:
 
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
-            visualizer.setdefault('name', self._experiment_name)
+            if self._experiment_name is not None:
+                visualizer.setdefault('name', self._experiment_name)
+            visualizer.setdefault('id', self._experiment_name)
             visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
         else:

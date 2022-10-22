@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import time
-from typing import Any
+from typing import Any, Optional
 from unittest import TestCase
 
 import numpy as np
@@ -16,8 +16,13 @@ from mmengine.visualization import Visualizer
 @VISBACKENDS.register_module()
 class MockVisBackend:
 
-    def __init__(self, save_dir: str):
+    def __init__(self,
+                 save_dir: str,
+                 experiment_name: Optional[str] = 'default_experiment',
+                 experiment_id: Optional[str] = None):
         self._save_dir = save_dir
+        self._experiment_name = experiment_name
+        self._experiment_id = experiment_id
         self._close = False
 
     @property

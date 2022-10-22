@@ -301,13 +301,14 @@ class CustomRunner(Runner):
 
     def __init__(self,
                  model,
-                 work_dir,
+                 work_dir=None,
                  train_dataloader=None,
                  val_dataloader=None,
                  test_dataloader=None,
                  train_cfg=None,
                  val_cfg=None,
                  test_cfg=None,
+                 auto_distinguish_experiment=None,
                  auto_scale_lr=None,
                  optim_wrapper=None,
                  param_scheduler=None,
@@ -723,7 +724,7 @@ class TestRunner(TestCase):
         runner._experiment_name = 'test_build_logger3'
         logger = runner.build_logger()
         self.assertIsInstance(logger, MMLogger)
-        self.assertEqual(logger.instance_name, 'test_build_logger3')
+        self.assertEqual(logger.instance_name, runner.experiment_name)
 
     def test_build_message_hub(self):
         self.epoch_based_cfg.experiment_name = 'test_build_message_hub1'
@@ -743,7 +744,7 @@ class TestRunner(TestCase):
         message_hub_cfg = dict()
         message_hub = runner.build_message_hub(message_hub_cfg)
         self.assertIsInstance(message_hub, MessageHub)
-        self.assertEqual(message_hub.instance_name, 'test_build_message_hub3')
+        self.assertEqual(message_hub.instance_name, runner.experiment_name)
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'message_hub should be'):
@@ -753,7 +754,7 @@ class TestRunner(TestCase):
         self.epoch_based_cfg.experiment_name = 'test_build_visualizer1'
         runner = Runner.from_cfg(self.epoch_based_cfg)
         self.assertIsInstance(runner.visualizer, Visualizer)
-        self.assertEqual(runner.experiment_name,
+        self.assertEqual('test_build_visualizer1',
                          runner.visualizer.instance_name)
 
         # input is a Visualizer object
@@ -883,6 +884,32 @@ class TestRunner(TestCase):
             cfg.experiment_name = 'test_data_preprocessor3'
             with self.assertRaises(ValueError):
                 Runner.from_cfg(cfg)
+
+    def test_distinguish_experiment(self):
+        self.temp_dir = 'work_dirs'
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.work_dir = None
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name by default.
+        cfg.auto_distinguish_experiment = False
+        cfg.experiment_name = 'test_distinguish_experiment_false'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs',
+                             'test_distinguish_experiment_false')))
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name/timestamp
+        # by default.
+        cfg.auto_distinguish_experiment = True
+        cfg.experiment_name = 'test_distinguish_experiment_true'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs', 'test_distinguish_experiment_true',
+                             runner.timestamp)))
 
     def test_scale_lr(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1775,7 +1802,7 @@ class TestRunner(TestCase):
         predictions.clear()
 
         # Test fp16 `autocast` context.
-        cfg.experiment_name = 'test_val3'
+        cfg.experiment_name = 'test_test3'
         cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
