@@ -139,6 +139,8 @@ class MMLogger(Logger, ManagerMixin):
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
+        datefmt (str): The log date formatter. If `datefmt` is not
+            defined, defaults to '%m/%d %H:%M:%S'.
     """
 
     def __init__(self,
@@ -147,7 +149,8 @@ class MMLogger(Logger, ManagerMixin):
                  log_file: Optional[str] = None,
                  log_level: str = 'INFO',
                  file_mode: str = 'w',
-                 distributed=False):
+                 distributed=False,
+                 datefmt: str = '%m/%d %H:%M:%S'):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
@@ -159,8 +162,7 @@ class MMLogger(Logger, ManagerMixin):
         stream_handler = logging.StreamHandler(stream=sys.stdout)
         # `StreamHandler` record month, day, hour, minute, and second
         # timestamp.
-        stream_handler.setFormatter(
-            MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
+        stream_handler.setFormatter(MMFormatter(color=True, datefmt=datefmt))
         # Only rank0 `StreamHandler` will log messages below error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
