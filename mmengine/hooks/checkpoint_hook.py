@@ -55,6 +55,8 @@ class CheckpointHook(Hook):
             detection and instance segmentation. ``AR@100`` for proposal
             recall. If ``save_best`` is ``auto``, the first key of the returned
             ``OrderedDict`` result will be used. Defaults to None.
+        save_start (int): Start saving the number of epochs or
+            iterations of model weights. Defaults to 0.
         rule (str, List[str], optional): Comparison rule for best score. If
             set to None, it will infer a reasonable rule. Keys such as 'acc',
             'top' .etc will be inferred by 'greater' rule. Keys contain 'loss'
@@ -122,6 +124,7 @@ class CheckpointHook(Hook):
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
                  save_best: Union[str, List[str], None] = None,
+                 save_start: int = 0,
                  rule: Union[str, List[str], None] = None,
                  greater_keys: Optional[Sequence[str]] = None,
                  less_keys: Optional[Sequence[str]] = None,
@@ -136,6 +139,7 @@ class CheckpointHook(Hook):
         self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
+        self.save_start = save_start
         self.args = kwargs
 
         if file_client_args is not None:
@@ -316,6 +320,10 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
+        if (self.by_epoch and runner.epoch < self.save_start) or (
+                not self.by_epoch and runner.iter < self.save_start):
+            return
+
         if self.by_epoch:
             ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
         else:
