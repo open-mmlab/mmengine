@@ -323,9 +323,6 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if (self.by_epoch and runner.epoch < self.save_start) or (
-                not self.by_epoch and runner.iter < self.save_start):
-            return
 
         if self.by_epoch:
             ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
