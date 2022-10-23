@@ -55,8 +55,6 @@ class CheckpointHook(Hook):
             detection and instance segmentation. ``AR@100`` for proposal
             recall. If ``save_best`` is ``auto``, the first key of the returned
             ``OrderedDict`` result will be used. Defaults to None.
-        save_start (int): Start saving the number of epochs or
-            iterations of model weights. Defaults to 0.
         rule (str, List[str], optional): Comparison rule for best score. If
             set to None, it will infer a reasonable rule. Keys such as 'acc',
             'top' .etc will be inferred by 'greater' rule. Keys contain 'loss'
@@ -86,6 +84,8 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
+        save_start (int): Start saving the number of epochs or
+            iterations of model weights. Defaults to 0.
 
     Examples:
         >>> # Save best based on single metric
@@ -124,13 +124,13 @@ class CheckpointHook(Hook):
                  max_keep_ckpts: int = -1,
                  save_last: bool = True,
                  save_best: Union[str, List[str], None] = None,
-                 save_start: int = 0,
                  rule: Union[str, List[str], None] = None,
                  greater_keys: Optional[Sequence[str]] = None,
                  less_keys: Optional[Sequence[str]] = None,
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
+                 save_start: int = 0,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -279,6 +279,9 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if not self.by_epoch:
+            return
+
+        if runner.epoch < self.save_start:
             return
 
         # save checkpoint for following cases:
@@ -518,6 +521,9 @@ class CheckpointHook(Hook):
         if self.by_epoch:
             return
 
+        if runner.iter < self.save_start:
+            return
+
         # save checkpoint for following cases:
         # 1. every ``self.interval`` iterations
         # 2. reach the last iteration of training
@@ -527,3 +533,31 @@ class CheckpointHook(Hook):
             runner.logger.info(
                 f'Saving checkpoint at {runner.iter + 1} iterations')
             self._save_checkpoint(runner)
+
+    def every_n_train_iters(self, runner, n: int) -> bool:
+        """Test whether current training iteration can be evenly divided by n.
+
+        Args:
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            n (int): Whether current iteration can be evenly divided by n.
+
+        Returns:
+            bool: Return True if the current iteration can be evenly divided
+            by n, otherwise False.
+        """
+        return (runner.iter + 1 - self.save_start) % n == 0 if n > 0 else False
+
+    def every_n_epochs(self, runner, n: int) -> bool:
+        """Test whether current epoch can be evenly divided by n.
+
+        Args:
+            runner (Runner): The runner of the training, validation or testing
+                process.
+            n (int): Whether current epoch can be evenly divided by n.
+
+        Returns:
+            bool: Whether current epoch can be evenly divided by n.
+        """
+        return (runner.epoch + 1 -
+                self.save_start) % n == 0 if n > 0 else False
