@@ -91,7 +91,7 @@
 
 .. toctree::
    :maxdepth: 2
-   :caption: Notes
+   :caption: 说明
 
    notes/changelog.md
 

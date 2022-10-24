@@ -4,6 +4,8 @@ import unittest
 import torch
 import torch.nn as nn
 
+import mmengine
+from mmengine.device import get_device
 from mmengine.runner import autocast
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -56,3 +58,24 @@ class TestAmp(unittest.TestCase):
                     layer = nn.Conv2d(1, 1, 1).to(device)
                     res = layer(torch.randn(1, 1, 1, 1).to(device))
                     self.assertEqual(res.dtype, torch.float32)
+
+        # Test mps
+        if digit_version(TORCH_VERSION) >= digit_version('1.12.0'):
+            mmengine.runner.amp.get_device = lambda: 'mps'
+            with autocast(enabled=False):
+                layer = nn.Conv2d(1, 1, 1)
+                res = layer(torch.randn(1, 1, 1, 1))
+                self.assertEqual(res.dtype, torch.float32)
+
+            with self.assertRaisesRegex(ValueError,
+                                        'User specified autocast device_type'):
+                with autocast(enabled=True):
+                    pass
+        # Native pytorch does not support mlu, here we simply test autocast
+        # will call `torch.autocast`, which will be overridden by mlu version
+        # pytorch
+            mmengine.runner.amp.get_device = lambda: 'mlu'
+            with self.assertRaises(RuntimeError):
+                with autocast(enabled=False):
+                    pass
+            mmengine.runner.amp.get_device = get_device
