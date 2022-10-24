@@ -58,10 +58,9 @@ class ConcatDataset(_ConcatDataset):
             raise TypeError('ignore_keys should be a list or str, '
                             f'but got {type(ignore_keys)}')
 
-        metainfos = [dataset.metainfo.keys() for dataset in self.datasets]
         meta_keys: set = set()
-        for metainfo in metainfos:
-            meta_keys = meta_keys | metainfo
+        for dataset in self.datasets:
+            meta_keys |= dataset.metainfo.keys()
         # Only use metainfo of first dataset.
         self._metainfo = self.datasets[0].metainfo
         for i, dataset in enumerate(self.datasets, 1):
