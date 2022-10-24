@@ -206,7 +206,7 @@ class TestWandbVisBackend:
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        wandb_vis_backend = WandbVisBackend('temp_dir')
+        wandb_vis_backend = WandbVisBackend('temp_dir', log_code_name='code')
         _wandb = wandb_vis_backend.experiment
         _wandb.run.dir = 'temp_dir'
         wandb_vis_backend.add_config(cfg)
