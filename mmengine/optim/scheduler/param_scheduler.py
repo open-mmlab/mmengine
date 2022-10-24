@@ -1224,10 +1224,9 @@ class CosineRestartParamScheduler(_ParamScheduler):
                                      self.optimizer.param_groups):
             eta_max = base_value * current_weight
             if self.eta_min_ratio is None:
-                eta_min = self.eta_min * (1 - current_weight)
+                eta_min = self.eta_min
             else:
-                eta_min = base_value * self.eta_min_ratio * (1 -
-                                                             current_weight)
+                eta_min = base_value * self.eta_min_ratio
             if step == 0:
                 values.append(eta_max)
 
