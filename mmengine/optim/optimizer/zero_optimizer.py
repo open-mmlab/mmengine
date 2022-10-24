@@ -19,8 +19,8 @@ from .builder import OPTIMIZERS
 @OPTIMIZERS.register_module()
 class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
     """A wrapper class of :class:`ZeroRedundancyOptimizer` that gets a
-    optimizer type as string. 
-    
+    optimizer type as string.
+
     This class wraps an arbitrary :class:`torch.optim.Optimizer` and shards its
     states across ranks in the group as described by ZeRO_. The local optimizer
     instance in each rank is only responsible for updating approximately
@@ -44,7 +44,7 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
             or :class:`dict` s giving all parameters, which will be sharded
             across ranks.
         optimizer_type (str): the string of the local optimizer class.
-        
+
     .. _ZeRO: https://arxiv.org/abs/1910.02054
     """
 
