@@ -59,5 +59,5 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
     def state_dict(self):
         """Consolidate `state_dict`s from ranks to save the `state_dict`."""
         self.consolidate_state_dict()
-        if is_main_process():
-            return super().state_dict()
+        state_dict = super().state_dict() if is_main_process() else dict()
+        return state_dict
