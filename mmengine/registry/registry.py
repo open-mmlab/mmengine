@@ -258,7 +258,7 @@ class Registry:
                             print_log(
                                 f'Failed to import {scope} and register '
                                 'its modules, please make sure you '
-                                'have registered the module mannuly.',
+                                'have registered the module manually.',
                                 logger='current',
                                 level=logging.WARNING)
                 root = self._get_root_registry()
@@ -377,7 +377,7 @@ class Registry:
                 else:
                     print_log(
                         f'Failed to import "{scope}", and register its '
-                        f'modules. Please register {real_key} mannuly.',
+                        f'modules. Please register {real_key} manually.',
                         logger='current',
                         level=logging.WARNING)
             # get from self._children
