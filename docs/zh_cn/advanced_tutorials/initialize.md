@@ -179,8 +179,7 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
 `override` 可以理解成一个嵌套的 `init_cfg`， 他同样可以是 `list` 或者 `dict`，也需要通过 `type`
 字段指定初始化方式。不同的是 `override` 必须指定 `name`，`name` 相当于 `override`
-的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`，
-我们会以 `Xavier` 初始化方式初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
+的作用域，如上例中，`override` 的作用域为 `toy_net.conv2`，我们会以 `Xavier` 初始化方式初始化 `toy_net.conv2` 下的所有参数，而不会影响作用域以外的模块。
 
 ### 自定义的初始化方式
 

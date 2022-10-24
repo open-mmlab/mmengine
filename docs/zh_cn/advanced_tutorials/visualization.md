@@ -47,7 +47,7 @@ visualizer.show()
 <img src="https://user-images.githubusercontent.com/17425982/186052726-bd8f1571-b34b-471a-9876-9f0ae8c4e2be.png" width="400"/>
 </div>
 
-你也可以通过通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
+你也可以通过各个绘制接口中提供的参数来定制绘制对象的颜色和宽度等等
 
 ```python
 visualizer.set_image(image=image)
@@ -106,8 +106,7 @@ def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
 
 - 考虑到输入的特征图通常非常小，函数支持输入 `resize_shape` 参数，方便将特征图进行上采样后进行可视化。
 
-常见用法如下：
-以预训练好的 ResNet18 模型为例，通过提取 layer4 层输出进行特征图可视化
+常见用法如下：以预训练好的 ResNet18 模型为例，通过提取 layer4 层输出进行特征图可视化
 
 (1) 将多通道特征图采用 `select_max` 参数压缩为单通道并显示
 

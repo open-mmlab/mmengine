@@ -199,7 +199,7 @@ class Config:
         # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and
         #  second in `Config.from_file`.
         # In addition, a named temporary file will be removed after closed.
-        # As a workround we set `delete=False` and close the temporary file
+        # As a workaround we set `delete=False` and close the temporary file
         # before opening again.
 
         with tempfile.NamedTemporaryFile(

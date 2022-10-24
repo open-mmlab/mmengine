@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import mmengine
-from mmengine.fileio.file_client import HTTPBackend, PetrelBackend
+from mmengine.fileio import HTTPBackend, PetrelBackend
 
 sys.modules['petrel_client'] = MagicMock()
 sys.modules['petrel_client.client'] = MagicMock()
@@ -151,22 +151,26 @@ def test_list_from_file():
     assert filelist == ['4.jpg', '5.jpg']
 
     # get list from http
+    filename = 'http://path/of/your/file'
     with patch.object(
             HTTPBackend, 'get_text', return_value='1.jpg\n2.jpg\n3.jpg'):
-        filename = 'http://path/of/your/file'
         filelist = mmengine.list_from_file(
             filename, file_client_args={'backend': 'http'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
         filelist = mmengine.list_from_file(
             filename, file_client_args={'prefix': 'http'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
+
         filelist = mmengine.list_from_file(filename)
+        assert filelist == ['1.jpg', '2.jpg', '3.jpg']
+        filelist = mmengine.list_from_file(
+            filename, backend_args={'backend': 'http'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
 
     # get list from petrel
+    filename = 's3://path/of/your/file'
     with patch.object(
             PetrelBackend, 'get_text', return_value='1.jpg\n2.jpg\n3.jpg'):
-        filename = 's3://path/of/your/file'
         filelist = mmengine.list_from_file(
             filename, file_client_args={'backend': 'petrel'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
@@ -174,6 +178,9 @@ def test_list_from_file():
             filename, file_client_args={'prefix': 's3'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
         filelist = mmengine.list_from_file(filename)
+        assert filelist == ['1.jpg', '2.jpg', '3.jpg']
+        filelist = mmengine.list_from_file(
+            filename, backend_args={'backend': 'petrel'})
         assert filelist == ['1.jpg', '2.jpg', '3.jpg']
 
 
@@ -186,28 +193,36 @@ def test_dict_from_file():
     assert mapping == {1: 'cat', 2: ['dog', 'cow'], 3: 'panda'}
 
     # get dict from http
+    filename = 'http://path/of/your/file'
     with patch.object(
             HTTPBackend, 'get_text', return_value='1 cat\n2 dog cow\n3 panda'):
-        filename = 'http://path/of/your/file'
         mapping = mmengine.dict_from_file(
             filename, file_client_args={'backend': 'http'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
         mapping = mmengine.dict_from_file(
             filename, file_client_args={'prefix': 'http'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+
         mapping = mmengine.dict_from_file(filename)
+        assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+        mapping = mmengine.dict_from_file(
+            filename, backend_args={'backend': 'http'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
 
     # get dict from petrel
+    filename = 's3://path/of/your/file'
     with patch.object(
             PetrelBackend, 'get_text',
             return_value='1 cat\n2 dog cow\n3 panda'):
-        filename = 's3://path/of/your/file'
         mapping = mmengine.dict_from_file(
             filename, file_client_args={'backend': 'petrel'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
         mapping = mmengine.dict_from_file(
             filename, file_client_args={'prefix': 's3'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+
         mapping = mmengine.dict_from_file(filename)
+        assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+        mapping = mmengine.dict_from_file(
+            filename, backend_args={'backend': 'petrel'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}

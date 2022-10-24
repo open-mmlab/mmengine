@@ -563,9 +563,9 @@ class ExponentialParamScheduler(_ParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class CosineAnnealingParamScheduler(_ParamScheduler):
-    r"""Set the parameter value of each parameter group using a cosine annealing
-    schedule, where :math:`\eta_{max}` is set to the initial value and
-    :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
+    r"""Set the parameter value of each parameter group using a cosine
+    annealing schedule, where :math:`\eta_{max}` is set to the initial value
+    and :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
 
     .. math::
         \begin{aligned}

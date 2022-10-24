@@ -132,6 +132,18 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
         optim_wrapper.zero_grad()
 ```
 
+我们同样可以为优化器封装配置梯度裁减策略：
+
+```python
+# 基于 torch.nn.utils.clip_grad_norm_ 对梯度进行裁减
+optim_wrapper = AmpOptimWrapper(
+    optimizer=optimizer, clip_grad=dict(max_norm=1))
+
+# 基于 torch.nn.utils.clip_grad_value_ 对梯度进行裁减
+optim_wrapper = AmpOptimWrapper(
+    optimizer=optimizer, clip_grad=dict(clip_value=0.2))
+```
+
 ### 获取学习率/动量：
 
 优化器封装提供了 `get_lr` 和 `get_momentum` 接口用于获取优化器的一个参数组的学习率
@@ -278,8 +290,7 @@ optimizer = SGD([{'params': model.backbone.parameters()},
 #### 为不同类型的参数设置不同的超参系数
 
 MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。
-例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，
-来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
+例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
 具体示例如下，我们将 `ToyModel` 中所有正则化层（`head.bn`）的的权重衰减系数设置为 0：
 
