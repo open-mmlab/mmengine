@@ -392,16 +392,20 @@ def has_method(obj: object, method: str) -> bool:
     return hasattr(obj, method) and callable(getattr(obj, method))
 
 
-def deprecated_function(since: str, removed_in: str, instructions: str):
+def deprecated_function(since: str, removed_in: str,
+                        instructions: str) -> Callable:
     """Marks functions as deprecated.
 
     Throw a warning when a deprecated function is called, and add a note in the
     docstring. Modified from https://github.com/pytorch/pytorch/blob/master/torch/onnx/_deprecation.py
 
     Args:
-        since: The version when the function was first deprecated.
-        removed_in: The version when the function will be removed.
-        instructions: The action users should take.
+        since (str): The version when the function was first deprecated.
+        removed_in (str): The version when the function will be removed.
+        instructions (str): The action users should take.
+
+    Returns:
+        Callable: A new function, which will be deprecated soon.
     """  # noqa: E501
     from mmengine import print_log
 
