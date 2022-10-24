@@ -258,7 +258,7 @@ class Registry:
                             print_log(
                                 f'Failed to import {scope} and register '
                                 'its modules, please make sure you '
-                                'haveregister the module mannuly.',
+                                'have registered the module mannuly.',
                                 logger='current',
                                 level=logging.WARNING)
                 root = self._get_root_registry()
