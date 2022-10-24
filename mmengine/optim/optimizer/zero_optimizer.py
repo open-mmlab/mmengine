@@ -24,12 +24,12 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
     This class wraps an arbitrary :class:`torch.optim.Optimizer` and shards its
     states across ranks in the group as described by ZeRO_. The local optimizer
     instance in each rank is only responsible for updating approximately
-    ``1 / world_size`` parameters and hence only needs to keep ``1 / world_size``
-    optimizer states. After parameters are updated locally, each rank will
-    broadcast its parameters to all other peers to keep all model replicas
-    in the same state. ``ZeroRedundancyOptimizer`` can be used in conjunction
-    with :class:`torch.nn.parallel.DistributedDataParallel` to reduce per-rank peak
-    memory consumption.
+    ``1 / world_size`` parameters and hence only needs to keep
+    ``1 / world_size`` optimizer states. After parameters are updated locally,
+    each rank will broadcast its parameters to all other peers to keep all
+    model replicas in the same state. ``ZeroRedundancyOptimizer`` can be used
+    in conjunction with :class:`torch.nn.parallel.DistributedDataParallel` to
+    reduce per-rank peak memory consumption.
 
     ``ZeroRedundancyOptimizer`` uses a sorted-greedy algorithm to pack a number
     of parameters at each rank. Each parameter belongs to a single rank and is
