@@ -26,4 +26,5 @@ def is_model_wrapper(model: nn.Module, registry: Registry = MODEL_WRAPPERS):
     if not registry.children:
         return False
 
-    return any(is_model_wrapper(child) for child in registry.children.values())
+    return any(
+        is_model_wrapper(model, child) for child in registry.children.values())
