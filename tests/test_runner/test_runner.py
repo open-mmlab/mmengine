@@ -37,7 +37,7 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
 
-@MODELS.register_module()
+@MODELS.register_module(force=True)
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
@@ -63,14 +63,14 @@ class ToyModel(BaseModel):
             return outputs
 
 
-@MODELS.register_module()
+@MODELS.register_module(force=True)
 class ToyModel1(ToyModel):
 
     def __init__(self):
         super().__init__()
 
 
-@MODELS.register_module()
+@MODELS.register_module(force=True)
 class ToySyncBNModel(BaseModel):
 
     def __init__(self):
@@ -95,7 +95,7 @@ class ToySyncBNModel(BaseModel):
             return outputs
 
 
-@MODELS.register_module()
+@MODELS.register_module(force=True)
 class ToyGANModel(BaseModel):
 
     def __init__(self):
@@ -127,7 +127,7 @@ class ToyGANModel(BaseModel):
         return loss
 
 
-@MODEL_WRAPPERS.register_module()
+@MODEL_WRAPPERS.register_module(force=True)
 class CustomModelWrapper(nn.Module):
 
     def __init__(self, module):
@@ -135,7 +135,7 @@ class CustomModelWrapper(nn.Module):
         self.model = module
 
 
-@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
+@OPTIM_WRAPPER_CONSTRUCTORS.register_module(force=True)
 class ToyMultipleOptimizerConstructor:
 
     def __init__(self, optim_wrapper_cfg, paramwise_cfg=None):
@@ -163,7 +163,7 @@ class ToyMultipleOptimizerConstructor:
         return OptimWrapperDict(**optimizers)
 
 
-@DATASETS.register_module()
+@DATASETS.register_module(force=True)
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
@@ -180,7 +180,7 @@ class ToyDataset(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-@DATASETS.register_module()
+@DATASETS.register_module(force=True)
 class ToyDatasetNoMeta(Dataset):
     data = torch.randn(12, 2)
     label = torch.ones(12)
@@ -192,7 +192,7 @@ class ToyDatasetNoMeta(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-@METRICS.register_module()
+@METRICS.register_module(force=True)
 class ToyMetric1(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
@@ -207,7 +207,7 @@ class ToyMetric1(BaseMetric):
         return dict(acc=1)
 
 
-@METRICS.register_module()
+@METRICS.register_module(force=True)
 class ToyMetric2(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
@@ -222,12 +222,12 @@ class ToyMetric2(BaseMetric):
         return dict(acc=1)
 
 
-@OPTIM_WRAPPERS.register_module()
+@OPTIM_WRAPPERS.register_module(force=True)
 class ToyOptimWrapper(OptimWrapper):
     ...
 
 
-@HOOKS.register_module()
+@HOOKS.register_module(force=True)
 class ToyHook(Hook):
     priority = 'Lowest'
 
@@ -235,7 +235,7 @@ class ToyHook(Hook):
         pass
 
 
-@HOOKS.register_module()
+@HOOKS.register_module(force=True)
 class ToyHook2(Hook):
     priority = 'Lowest'
 
@@ -243,7 +243,7 @@ class ToyHook2(Hook):
         pass
 
 
-@LOOPS.register_module()
+@LOOPS.register_module(force=True)
 class CustomTrainLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, max_epochs):
@@ -254,7 +254,7 @@ class CustomTrainLoop(BaseLoop):
         pass
 
 
-@LOOPS.register_module()
+@LOOPS.register_module(force=True)
 class CustomValLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, evaluator):
@@ -270,7 +270,7 @@ class CustomValLoop(BaseLoop):
         pass
 
 
-@LOOPS.register_module()
+@LOOPS.register_module(force=True)
 class CustomTestLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, evaluator):
@@ -286,7 +286,7 @@ class CustomTestLoop(BaseLoop):
         pass
 
 
-@LOG_PROCESSORS.register_module()
+@LOG_PROCESSORS.register_module(force=True)
 class CustomLogProcessor(LogProcessor):
 
     def __init__(self, window_size=10, by_epoch=True, custom_cfg=None):
@@ -296,7 +296,7 @@ class CustomLogProcessor(LogProcessor):
         self._check_custom_cfg()
 
 
-@RUNNERS.register_module()
+@RUNNERS.register_module(force=True)
 class CustomRunner(Runner):
 
     def __init__(self,
@@ -333,7 +333,7 @@ class CustomRunner(Runner):
         pass
 
 
-@EVALUATOR.register_module()
+@EVALUATOR.register_module(force=True)
 class ToyEvaluator(Evaluator):
 
     def __init__(self, metrics):
@@ -344,7 +344,7 @@ def collate_fn(data_batch):
     return pseudo_collate(data_batch)
 
 
-@COLLATE_FUNCTIONS.register_module()
+@COLLATE_FUNCTIONS.register_module(force=True)
 def custom_collate(data_batch, pad_value):
     return pseudo_collate(data_batch)
 
@@ -782,7 +782,7 @@ class TestRunner(TestCase):
         TOY_SCHEDULERS = Registry(
             'parameter scheduler', parent=PARAM_SCHEDULERS, scope='toy')
 
-        @TOY_SCHEDULERS.register_module()
+        @TOY_SCHEDULERS.register_module(force=True)
         class ToyScheduler(MultiStepLR):
 
             def __init__(self, *args, **kwargs):
@@ -863,7 +863,7 @@ class TestRunner(TestCase):
             cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
             runner.from_cfg(cfg)
 
-            @MODELS.register_module()
+            @MODELS.register_module(force=True)
             class ToyBN(BaseModel):
 
                 def __init__(self):
@@ -1349,7 +1349,7 @@ class TestRunner(TestCase):
         val_epoch_results = []
         val_epoch_targets = [i for i in range(2, 4)]
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestEpochHook(Hook):
 
             def before_train_epoch(self, runner):
@@ -1394,7 +1394,7 @@ class TestRunner(TestCase):
         val_iter_targets = [i for i in range(4, 12)]
         val_batch_idx_targets = [i for i in range(4)] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestIterHook(Hook):
 
             def before_train_epoch(self, runner):
@@ -1487,7 +1487,7 @@ class TestRunner(TestCase):
         val_interval_results = []
         val_interval_targets = [5] * 10 + [2] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestIterDynamicIntervalHook(Hook):
 
             def before_val(self, runner):
@@ -1524,7 +1524,7 @@ class TestRunner(TestCase):
         val_interval_results = []
         val_interval_targets = [5] * 10 + [2] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestEpochDynamicIntervalHook(Hook):
 
             def before_val_epoch(self, runner):
@@ -1553,7 +1553,7 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
 
         # 7. test init weights
-        @MODELS.register_module()
+        @MODELS.register_module(force=True)
         class ToyModel2(ToyModel):
 
             def __init__(self):
@@ -1654,7 +1654,7 @@ class TestRunner(TestCase):
             runner.train()
 
         # 12.1 Test train with model, which does not inherit from BaseModel
-        @MODELS.register_module()
+        @MODELS.register_module(force=True)
         class ToyModel3(nn.Module):
 
             def __init__(self):
@@ -1901,7 +1901,7 @@ class TestRunner(TestCase):
 
     def test_custom_loop(self):
         # test custom loop with additional hook
-        @LOOPS.register_module()
+        @LOOPS.register_module(force=True)
         class CustomTrainLoop2(IterBasedTrainLoop):
             """Custom train loop with additional warmup stage."""
 
@@ -1942,7 +1942,7 @@ class TestRunner(TestCase):
         before_warmup_iter_results = []
         after_warmup_iter_results = []
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestWarmupHook(Hook):
             """test custom train loop."""
 
