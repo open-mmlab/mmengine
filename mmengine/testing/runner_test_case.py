@@ -144,9 +144,9 @@ class RunnerTestCase(TestCase):
         Visualizer._instance_dict.clear()
         DefaultScope._instance_dict.clear()
         MessageHub._instance_dict.clear()
-        MODELS.module_dict.pop('ToyModel')
-        METRICS.module_dict.pop('ToyMetric')
-        DATASETS.module_dict.pop('ToyDataset')
+        MODELS.module_dict.pop('ToyModel', None)
+        METRICS.module_dict.pop('ToyMetric', None)
+        DATASETS.module_dict.pop('ToyDataset', None)
         self.temp_dir.cleanup()
 
     def build_runner(self, cfg):
