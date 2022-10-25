@@ -191,6 +191,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     #       in the future).
     @pytest.mark.skipif(True, reason='Solved in the future')
     def test_clip_grads(self):
+        # Test `clip_grad` with `clip_norm_`
         optim_wrapper = OptimWrapper(
             self.optimizer, clip_grad=dict(max_norm=35))
         loss = self.model(torch.Tensor(1, 1, 1, 1))
@@ -198,6 +199,15 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper._clip_grad()
         log_scalars = self.message_hub.log_scalars
         self.assertIn('train/grad_norm', log_scalars)
+        self.message_hub._log_scalars.clear()
+
+        # Test `clip_grad` with `clip_value_`
+        optim_wrapper = OptimWrapper(
+            self.optimizer, clip_grad=dict(type='value', clip_value=0.5))
+        loss = self.model(torch.Tensor(1, 1, 1, 1))
+        loss.backward()
+        optim_wrapper._clip_grad()
+        self.assertNotIn('train/grad_norm', log_scalars)
 
     def test_state_dict(self):
         optim_wrapper = OptimWrapper(self.optimizer)

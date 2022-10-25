@@ -14,6 +14,11 @@ class TestBaseDataPreprocessor(TestCase):
     def test_init(self):
         base_data_preprocessor = BaseDataPreprocessor()
         self.assertEqual(base_data_preprocessor._device.type, 'cpu')
+        self.assertEqual(base_data_preprocessor._non_blocking, False)
+
+        base_data_preprocessor = BaseDataPreprocessor(True)
+        self.assertEqual(base_data_preprocessor._device.type, 'cpu')
+        self.assertEqual(base_data_preprocessor._non_blocking, True)
 
     def test_forward(self):
         # Test cpu forward with list of data samples.

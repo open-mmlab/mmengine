@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 
-from mmengine.device import get_device
+from mmengine.device import get_device, is_cuda_available, is_npu_available
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -86,7 +86,10 @@ def autocast(device_type: Optional[str] = None,
                 logger='current',
                 level=logging.WARNING)
 
-        if torch.cuda.is_available():
+        if is_npu_available():
+            with torch.npu.amp.autocast(enabled=enabled):
+                yield
+        elif is_cuda_available():
             with torch.cuda.amp.autocast(enabled=enabled):
                 yield
         else:
@@ -121,9 +124,18 @@ def autocast(device_type: Optional[str] = None,
             assert dtype == torch.bfloat16, (
                 'In CPU autocast, only support `torch.bfloat16` dtype')
 
+        elif device_type == 'mlu':
+            pass
         else:
-            raise ValueError('User specified autocast device_type must be '
-                             F'cuda or cpu, but got {device_type}')
+            # Device like MPS does not support fp16 training or testing.
+            # If an inappropriate device is set and fp16 is enabled, an error
+            # will be thrown.
+            if enabled is False:
+                yield
+                return
+            else:
+                raise ValueError('User specified autocast device_type must be '
+                                 f'cuda or cpu, but got {device_type}')
 
         with torch.autocast(
                 device_type=device_type,
