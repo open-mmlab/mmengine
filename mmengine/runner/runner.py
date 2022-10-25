@@ -389,6 +389,8 @@ class Runner:
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
+        if self.cfg:
+            self.visualizer.add_config(self.cfg)
 
         self._load_from = load_from
         self._resume = resume

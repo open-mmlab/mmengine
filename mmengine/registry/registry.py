@@ -243,9 +243,24 @@ class Registry:
                 if scope_name in PKG2PROJECT:
                     try:
                         module = import_module(f'{scope_name}.utils')
-                        module.register_all_modules()  # type: ignore
-                    except ImportError as e:
-                        raise e
+                        module.register_all_modules(False)  # type: ignore
+                    except (ImportError, AttributeError, ModuleNotFoundError):
+                        if scope in PKG2PROJECT:
+                            print_log(
+                                f'{scope} is not installed and its '
+                                'modules will not be registered. If you '
+                                'want to use modules defined in '
+                                f'{scope}, Please install {scope} by '
+                                f'`pip install {PKG2PROJECT[scope]}.',
+                                logger='current',
+                                level=logging.WARNING)
+                        else:
+                            print_log(
+                                f'Failed to import {scope} and register '
+                                'its modules, please make sure you '
+                                'have registered the module manually.',
+                                logger='current',
+                                level=logging.WARNING)
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
@@ -347,6 +362,24 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            try:
+                module = import_module(f'{scope}.utils')
+                module.register_all_modules(False)  # type: ignore
+            except (ImportError, AttributeError, ModuleNotFoundError):
+                if scope in PKG2PROJECT:
+                    print_log(
+                        f'{scope} is not installed and its modules '
+                        'will not be registered. If you want to use '
+                        f'modules defined in {scope}, Please install '
+                        f'{scope} by `pip install {PKG2PROJECT[scope]} ',
+                        logger='current',
+                        level=logging.WARNING)
+                else:
+                    print_log(
+                        f'Failed to import "{scope}", and register its '
+                        f'modules. Please register {real_key} manually.',
+                        logger='current',
+                        level=logging.WARNING)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)

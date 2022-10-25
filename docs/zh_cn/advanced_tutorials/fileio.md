@@ -1,8 +1,7 @@
 # 文件读写
 
 `MMEngine` 实现了一套统一的文件读写接口，可以用同一个函数来处理不同的文件格式，如 `json`、
-`yaml` 和 `pickle`，并且可以方便地拓展其它的文件格式。除此之外，文件读写模块还支持从多种文件
-存储后端读写文件，包括本地磁盘、Petrel（内部使用）、Memcached、LMDB 和 HTTP。
+`yaml` 和 `pickle`，并且可以方便地拓展其它的文件格式。除此之外，文件读写模块还支持从多种文件存储后端读写文件，包括本地磁盘、Petrel（内部使用）、Memcached、LMDB 和 HTTP。
 
 ## 读取和保存数据
 
@@ -47,9 +46,7 @@ data = load('s3://bucket-name/test.pkl')
 dump(data, 's3://bucket-name/out.pkl')
 ```
 
-我们提供了易于拓展的方式以支持更多的文件格式，我们只需要创建一个继承自 `BaseFileHandler` 的
-文件句柄类，句柄类至少需要重写三个方法。然后使用使用 `register_handler` 装饰器将句柄类注册
-为对应文件格式的读写句柄。
+我们提供了易于拓展的方式以支持更多的文件格式，我们只需要创建一个继承自 `BaseFileHandler` 的文件句柄类，句柄类至少需要重写三个方法。然后使用使用 `register_handler` 装饰器将句柄类注册为对应文件格式的读写句柄。
 
 ```python
 from mmengine import register_handler, BaseFileHandler
