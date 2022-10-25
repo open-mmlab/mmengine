@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from mmengine.runner import Runner
 
 from mmengine.hooks import Hook
-from mmengine.registry import HOOKS, MODELS
+from mmengine.registry import HOOKS, MODELS, RUNNERS
 
 
 @HOOKS.register_module()
@@ -29,3 +29,35 @@ class PrepareTTAHook(Hook):
         self.tta_cfg['module'] = runner.model  # type: ignore
         model_wrapper = MODELS.build(self.tta_cfg)
         runner.model = model_wrapper  # type: ignore
+
+
+# Only used for FSDP TTA.
+def build_runner_with_tta(cfg: dict) -> 'Runner':
+    """Builds runner with tta(test time augmentation) transformation and
+    TTAModel.
+
+    Note:
+        This function will only be used with :obj:`MMFullyShardedDataParallel`.
+
+    Args:
+        cfg (dict): cfg with ``tta_pipeline`` and ``tta_model``
+
+    Returns:
+        Runner: Runner with tta transformation and TTAModel
+    """
+    assert hasattr(
+        cfg,
+        'tta_model'), ('make please sure your config define the tta_model')
+    assert hasattr(cfg, 'tta_pipeline'), (
+        'make please sure your config define the tta_pipeline')
+    from mmengine.hooks import PrepareTTAHook
+    cfg['test_dataloader']['dataset']['pipeline'] = cfg['tta_pipeline']
+
+    if 'runner_type' in cfg:
+        runner = RUNNERS.build(cfg)
+    else:
+        from mmengine.runner import Runner
+        runner = Runner.from_cfg(cfg)
+
+    runner.register_hook(PrepareTTAHook(tta_cfg=cfg['tta_model']))
+    return runner

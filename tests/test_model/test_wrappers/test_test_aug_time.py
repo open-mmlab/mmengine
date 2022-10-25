@@ -1,17 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-from unittest import TestCase
 
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from mmengine.model import BaseModel, BaseTTAModel, build_runner_with_tta
+from mmengine.dataset.utils import pseudo_collate
+from mmengine.model import BaseModel, BaseTTAModel
 from mmengine.registry import DATASETS, MODELS, TRANSFORMS
 from mmengine.testing import RunnerTestCase
-
-
-def pseudo_pipeline(x):
-    return x
 
 
 class ToyTTAPipeline:
@@ -27,7 +23,12 @@ class ToyTestTimeAugModel(BaseTTAModel):
         return result
 
 
-class TTAToyModel(BaseModel):
+class ToyModel(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        # DDPWrapper requires at least one parameter.
+        self.linear = torch.nn.Linear(1, 1)
 
     def forward(self, inputs, data_samples, mode='tensor'):
         return data_samples
@@ -39,8 +40,7 @@ class ToyDatasetTTA(Dataset):
     label = torch.ones(12)
 
     def __init__(self, pipeline=None):
-        self.pipeline = pseudo_pipeline if pipeline is None else \
-            TRANSFORMS.build(pipeline)
+        self.pipeline = TRANSFORMS.build(pipeline)
 
     @property
     def metainfo(self):
@@ -55,53 +55,63 @@ class ToyDatasetTTA(Dataset):
         return result
 
 
-class TestBaseTTAModel(TestCase):
+class TestBaseTTAModel(RunnerTestCase):
 
     def setUp(self) -> None:
+        super().setUp()
+        DATASETS.register_module(module=ToyDatasetTTA, force=True)
+        MODELS.register_module(module=ToyTestTimeAugModel, force=True)
+        MODELS.register_module(module=ToyModel, force=True)
+        TRANSFORMS.register_module(module=ToyTTAPipeline, force=True)
+
+    def tearDown(self):
+        super().tearDown()
+        DATASETS.module_dict.pop('ToyDatasetTTA', None)
+        MODELS.module_dict.pop('ToyTestTimeAugModel', None)
+        MODELS.module_dict.pop('ToyModel', None)
+        TRANSFORMS.module_dict.pop('ToyTTAPipeline', None)
+
+    def test_test_step(self):
+        model = ToyModel()
+        tta_model = ToyTestTimeAugModel(model)
         dict_dataset = [
             dict(inputs=[1, 2], data_samples=[3, 4]) for _ in range(10)
         ]
         tuple_dataset = [([1, 2], [3, 4]) for _ in range(10)]
-        self.model = TTAToyModel()
-        self.dict_dataloader = DataLoader(dict_dataset, batch_size=2)
-        self.tuple_dataloader = DataLoader(tuple_dataset, batch_size=2)
 
-    def test_test_step(self):
-        tta_model = ToyTestTimeAugModel(self.model)
+        dict_dataloader = DataLoader(
+            dict_dataset, batch_size=2, collate_fn=pseudo_collate)
+        tuple_dataloader = DataLoader(
+            tuple_dataset, batch_size=2, collate_fn=pseudo_collate)
 
-        # Test dict dataset
-
-        for data in self.dict_dataloader:
-            # Test step will call forward.
+        for data in dict_dataloader:
             result = tta_model.test_step(data)
             self.assertEqual(result, [7, 7])
 
-        for data in self.tuple_dataloader:
+        for data in tuple_dataloader:
             result = tta_model.test_step(data)
             self.assertEqual(result, [7, 7])
 
     def test_init(self):
-        tta_model = ToyTestTimeAugModel(self.model)
-        self.assertIs(tta_model.module, self.model)
-        # Test build from cfg.
-        model = dict(type='TTAToyModel')
+        model = ToyModel()
         tta_model = ToyTestTimeAugModel(model)
-        self.assertIsInstance(tta_model.module, TTAToyModel)
+        self.assertIs(tta_model.module, model)
+        # Test build from cfg.
+        model = dict(type='ToyModel')
+        tta_model = ToyTestTimeAugModel(model)
+        self.assertIsInstance(tta_model.module, ToyModel)
 
-
-class TestBuildRunenrWithTTA(RunnerTestCase):
-
-    def setUp(self) -> None:
-        DATASETS.register_module(module=ToyDatasetTTA)
-        TRANSFORMS.register_module(module=ToyTTAPipeline)
-        MODELS.register_module(module=ToyTestTimeAugModel)
-        super().setUp()
-
-    def test_build_runner_with_tta(self):
+    def test_with_runner(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.model = dict(
+            type='ToyTestTimeAugModel', module=dict(type='ToyModel'))
         cfg.test_dataloader.dataset = dict(type='ToyDatasetTTA')
-        cfg.tta_pipeline = dict(type='ToyTTAPipeline')
-        cfg.tta_model = dict(type='ToyTestTimeAugModel')
-        runner = build_runner_with_tta(cfg)
+        cfg.test_dataloader.dataset['pipeline'] = dict(type='ToyTTAPipeline')
+        runner = self.build_runner(cfg)
         runner.test()
-        self.assertIsInstance(runner.model, ToyTestTimeAugModel)
+
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
+            cfg.launcher = 'pytorch'
+            self.setup_dist_env()
+            runner = self.build_runner(cfg)
+            runner.test()

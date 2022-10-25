@@ -1,15 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
 
-from mmengine.registry import MODEL_WRAPPERS, RUNNERS
+from mmengine.registry import MODEL_WRAPPERS, MODELS
 from mmengine.structures import BaseDataElement
-
-if TYPE_CHECKING:
-    from mmengine.runner import Runner
+from .base_model import BaseModel
 
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
@@ -22,8 +20,8 @@ DATA_BATCH = Union[Dict[str, Union[EnhancedBatchInputs,
 MergedDataSamples = List[BaseDataElement]
 
 
-@MODEL_WRAPPERS.register_module()
-class BaseTTAModel(nn.Module):
+@MODELS.register_module()
+class BaseTTAModel(BaseModel):
     """Base model for inference with test-time augmentation.
 
     ``BaseTTAModel`` is a wrapper for inference given multi-batch data.
@@ -76,12 +74,15 @@ class BaseTTAModel(nn.Module):
         module (dict or nn.Module): Tested model.
     """
 
-    def __init__(self, module: Union[dict, nn.Module]):
+    def __init__(self, module: Union[dict, nn.Module], fsdp: bool = False):
         super().__init__()
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
-            self.module = MODEL_WRAPPERS.build(module)
+            if not fsdp:
+                self.module = MODELS.build(module)
+            else:
+                self.module = MODEL_WRAPPERS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
@@ -101,7 +102,7 @@ class BaseTTAModel(nn.Module):
             List[BaseDataElement]: Merged prediction.
         """
 
-    def test_step(self, data: DATA_BATCH) -> MergedDataSamples:
+    def test_step(self, data):
         """Get predictions of each enhanced data, a multiple predictions.
 
         Args:
@@ -129,21 +130,8 @@ class BaseTTAModel(nn.Module):
             predictions.append(self.module.test_step(data))
         return self.merge_preds(list(zip(*predictions)))  # type: ignore
 
-
-def build_runner_with_tta(cfg) -> 'Runner':
-    assert hasattr(
-        cfg,
-        'tta_model'), ('make please sure your config define the tta_model')
-    assert hasattr(cfg, 'tta_pipeline'), (
-        'make please sure your config define the tta_pipeline')
-    from mmengine.hooks import PrepareTTAHook
-    cfg['test_dataloader']['dataset']['pipeline'] = cfg.tta_pipeline
-
-    if 'runner_type' in cfg:
-        runner = RUNNERS.build(cfg)
-    else:
-        from mmengine.runner import Runner
-        runner = Runner.from_cfg(cfg)
-
-    runner.register_hook(PrepareTTAHook(tta_cfg=cfg.tta_model))
-    return runner
+    def forward(self,
+                inputs: torch.Tensor,
+                data_samples: Optional[list] = None,
+                mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
+        raise NotImplementedError()

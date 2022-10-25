@@ -1203,6 +1203,7 @@ class TestRunner(TestCase):
     def test_build_dataloader(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_dataloader'
+        breakpoint()
         runner = Runner.from_cfg(cfg)
 
         cfg = dict(

@@ -5,6 +5,7 @@ from .averaged_model import (BaseAveragedModel, ExponentialMovingAverage,
                              MomentumAnnealingEMA, StochasticWeightAverage)
 from .base_model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from .base_module import BaseModule, ModuleDict, ModuleList, Sequential
+from .test_time_aug import BaseTTAModel
 from .utils import (convert_sync_batchnorm, detect_anomalous_params,
                     merge_dict, revert_sync_batchnorm, stack_batch)
 from .weight_init import (BaseInit, Caffe2XavierInit, ConstantInit,
@@ -14,9 +15,8 @@ from .weight_init import (BaseInit, Caffe2XavierInit, ConstantInit,
                           constant_init, initialize, kaiming_init, normal_init,
                           trunc_normal_init, uniform_init, update_init_info,
                           xavier_init)
-from .wrappers import (BaseTTAModel, MMDistributedDataParallel,
-                       MMSeparateDistributedDataParallel,
-                       build_runner_with_tta, is_model_wrapper)
+from .wrappers import (MMDistributedDataParallel,
+                       MMSeparateDistributedDataParallel, is_model_wrapper)
 
 __all__ = [
     'MMDistributedDataParallel', 'is_model_wrapper', 'BaseAveragedModel',
@@ -30,7 +30,7 @@ __all__ = [
     'bias_init_with_prob', 'BaseInit', 'ConstantInit', 'XavierInit',
     'NormalInit', 'TruncNormalInit', 'UniformInit', 'KaimingInit',
     'Caffe2XavierInit', 'PretrainedInit', 'initialize',
-    'convert_sync_batchnorm', 'BaseTTAModel', 'build_runner_with_tta'
+    'convert_sync_batchnorm', 'BaseTTAModel'
 ]
 
 if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
