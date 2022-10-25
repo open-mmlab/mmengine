@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.model import BaseModel, BaseTTAModel, build_runner_with_tta
-from mmengine.registry import DATASETS, MODEL_WRAPPERS, MODELS, TRANSFORMS
+from mmengine.registry import DATASETS, MODELS, TRANSFORMS
 from mmengine.testing import RunnerTestCase
 
 
@@ -14,14 +14,12 @@ def pseudo_pipeline(x):
     return x
 
 
-@TRANSFORMS.register_module()
 class ToyTTAPipeline:
 
     def __call__(self, result):
         return {key: [value] for key, value in result.items()}
 
 
-@MODEL_WRAPPERS.register_module()
 class ToyTestTimeAugModel(BaseTTAModel):
 
     def merge_preds(self, data_samples_list):
@@ -29,14 +27,12 @@ class ToyTestTimeAugModel(BaseTTAModel):
         return result
 
 
-@MODELS.register_module()
 class TTAToyModel(BaseModel):
 
     def forward(self, inputs, data_samples, mode='tensor'):
         return data_samples
 
 
-@DATASETS.register_module()
 class ToyDatasetTTA(Dataset):
     METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
@@ -94,6 +90,12 @@ class TestBaseTTAModel(TestCase):
 
 
 class TestBuildRunenrWithTTA(RunnerTestCase):
+
+    def setUp(self) -> None:
+        DATASETS.register_module(module=ToyDatasetTTA)
+        TRANSFORMS.register_module(module=ToyTTAPipeline)
+        MODELS.register_module(module=ToyTestTimeAugModel)
+        super().setUp()
 
     def test_build_runner_with_tta(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from mmengine.runner import Runner
 
 from mmengine.hooks import Hook
-from mmengine.registry import HOOKS, MODEL_WRAPPERS
+from mmengine.registry import HOOKS, MODELS
 
 
 @HOOKS.register_module()
@@ -27,5 +27,5 @@ class PrepareTTAHook(Hook):
             runner (Runner): The runner of the testing process.
         """
         self.tta_cfg['module'] = runner.model  # type: ignore
-        model_wrapper = MODEL_WRAPPERS.build(self.tta_cfg)
+        model_wrapper = MODELS.build(self.tta_cfg)
         runner.model = model_wrapper  # type: ignore
