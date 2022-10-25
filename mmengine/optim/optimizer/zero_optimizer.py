@@ -54,7 +54,11 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
             'available when pytorch version >= 1.8.')
         assert is_available(), 'torch.distributed.rpc is not available.'
         optimizer_class = getattr(torch.optim, optimizer_type)
-        super().__init__(params, optimizer_class, **kwargs)
+        # TODO: Register a DDP communication hook for `overlap_with_ddp=True`.
+        # Currently only `overlap_with_ddp=False` is supported. For more
+        # details, please refer to the pytorch's official documentation.
+        super().__init__(
+            params, optimizer_class, overlap_with_ddp=False, **kwargs)
 
     def state_dict(self):
         """Consolidate `state_dict`s from ranks to save the `state_dict`."""
