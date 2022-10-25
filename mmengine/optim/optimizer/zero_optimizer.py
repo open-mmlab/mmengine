@@ -57,8 +57,7 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
         # TODO: Register a DDP communication hook for `overlap_with_ddp=True`.
         # Currently only `overlap_with_ddp=False` is supported. For more
         # details, please refer to the pytorch's official documentation.
-        super().__init__(
-            params, optimizer_class, overlap_with_ddp=False, **kwargs)
+        super().__init__(params, optimizer_class, **kwargs)
 
     def state_dict(self):
         """Consolidate `state_dict`s from ranks to save the `state_dict`."""
