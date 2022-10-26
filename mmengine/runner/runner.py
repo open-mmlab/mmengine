@@ -372,11 +372,6 @@ class Runner:
         # Collect and log environment information.
         self._log_env(env_cfg)
 
-        # collect information of all modules registered in the registries
-        registries_info = count_registered_modules(
-            self.work_dir if self.rank == 0 else None, verbose=False)
-        self.logger.debug(registries_info)
-
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
         # runtime information (iter and epoch). Those components that do not
@@ -1680,6 +1675,11 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
+
+        # collect information of all modules registered in the registries
+        registries_info = count_registered_modules(
+            self.work_dir if self.rank == 0 else None, verbose=False)
+        self.logger.debug(registries_info)
 
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')

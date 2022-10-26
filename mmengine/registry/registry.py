@@ -62,11 +62,14 @@ class Registry:
                  name: str,
                  build_func: Optional[Callable] = None,
                  parent: Optional['Registry'] = None,
-                 scope: Optional[str] = None):
+                 scope: Optional[str] = None,
+                 locations: List = []):
         from .build_functions import build_from_cfg
         self._name = name
         self._module_dict: Dict[str, Type] = dict()
         self._children: Dict[str, 'Registry'] = dict()
+        self._locations = locations
+        self._imported = False
 
         if scope is not None:
             assert isinstance(scope, str)
@@ -242,8 +245,7 @@ class Registry:
                 scope_name = default_scope.scope_name
                 if scope_name in PKG2PROJECT:
                     try:
-                        module = import_module(f'{scope_name}.utils')
-                        module.register_all_modules(False)  # type: ignore
+                        import_module(f'{scope_name}.registry')
                     except (ImportError, AttributeError, ModuleNotFoundError):
                         if scope in PKG2PROJECT:
                             print_log(
@@ -289,6 +291,16 @@ class Registry:
         while root.parent is not None:
             root = root.parent
         return root
+
+    def import_from_location(self):
+        """import modules from the pre-defined locations in self._location."""
+        if not self._imported:
+            # Avoid circular import
+            from ..logging import print_log
+            for loc in self._locations:
+                import_module(loc)
+                print_log(f'auto imported: {loc}', level=logging.DEBUG)
+            self._imported = True
 
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
@@ -346,21 +358,22 @@ class Registry:
         obj_cls = None
         registry_name = self.name
         scope_name = self.scope
+
+        if scope is not None:
+            # import the registry to add the nodes into the registry tree
+            import_module(f'{scope}.registry')
+            print_log(f'auto imported: {scope}.registry', level=logging.DEBUG)
+        # lazy import the modules to register them into the registry
+        self.import_from_location()
+
         if scope is None or scope == self._scope:
             # get from self
             if real_key in self._module_dict:
                 obj_cls = self._module_dict[real_key]
-
+            # get from the root registry
             elif scope is None:
-                # try to get the target from its parent or ancestors
-                parent = self.parent
-                while parent is not None:
-                    if real_key in parent._module_dict:
-                        obj_cls = parent._module_dict[real_key]
-                        registry_name = parent.name
-                        scope_name = parent.scope
-                        break
-                    parent = parent.parent
+                root = self._get_root_registry()
+                obj_cls = root.get(key)
         else:
             try:
                 module = import_module(f'{scope}.utils')
