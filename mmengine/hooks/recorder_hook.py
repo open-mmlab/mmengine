@@ -22,14 +22,9 @@ class RecorderVisitor(NodeTransformer):
         super().__init__(*args, **kwargs)
         self.func_name = func_name
         self.vars = var if var is not None else []
-        self.recorded_buffer = {var: [] for var in self.vars}
-        self.recorded_buffer['output'] = []
         self.function_flag = False
         self.class_flag = False
         self.class_name = class_name
-
-        MessageHub.get_current_instance().update_info(
-            func_name, self.recorded_buffer, resumed=resume)
 
     def visit_FunctionDef(self, node: FunctionDef):
         # function_name could be 'class_name.function_name'
@@ -87,14 +82,61 @@ class RecorderVisitor(NodeTransformer):
         return result
 
 
-class FuncRewriter:
+from abc import ABCMeta, abstractmethod
 
+from mmengine.registry import TASK_UTILS
+
+
+class BaseRecorder(metaclass=ABCMeta):
+
+    def __init__(self, recorded_name=None):
+        self.recorded_name = recorded_name
+
+    @abstractmethod
+    def initialize(self, instance):
+        pass
+
+    def deinitialize(self, instance):
+        pass
+
+    def clear(self):
+        pass
+
+
+@TASK_UTILS.register_module()
+class AttributeGetterRecorder(BaseRecorder):
+
+    def __init__(self, target_attribute, **kwargs):
+        super().__init__(**kwargs)
+        self.target_attribute = target_attribute
+        _, self.attribute_name = target_attribute.rsplit('.', 1)
+        if self.recorded_name is None:
+            self.recorded_name = target_attribute
+
+    def get_target_instance(self, instance):
+        target_instance = self.target_instance.split('.')
+        result = instance
+        for instance in target_instance:
+            result = getattr(result, instance)
+        return result
+
+    def initialize(self, instance):
+        MessageHub.get_current_instance().update_info(self.recorded_name, {})
+
+
+@TASK_UTILS.register_module()
+class FuncRewriterRecorder(BaseRecorder):
+    # TODO: huo qu di jige shuru
+    # TODO: bie ming
+    # TODO: Attribute getter
+    # TODO: quanju kongzhi rewriter de mokuai
     def __init__(self,
                  function: str,
                  target_instance: Optional[str] = None,
                  target_variable: Optional[List[str]] = None,
-                 resume: bool = False):
-
+                 resume: bool = False,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.module, self.class_type, self.ori_func = \
             self.get_module_and_function(function)
 
@@ -110,10 +152,13 @@ class FuncRewriter:
             self.class_name = self.class_type
             self.recoded_func_name = self.function_name
 
+        if self.recorded_name is None:
+            self.recorded_name = self.recoded_func_name
+
         act_module_path = self.act_module.__file__
 
         visitor = RecorderVisitor(
-            func_name=self.recoded_func_name,
+            func_name=self.recorded_name,
             var=target_variable,
             class_name=self.class_name,
             resume=resume)
@@ -129,6 +174,11 @@ class FuncRewriter:
                                          self.function_name)
         else:
             self.modified_func = global_dict[self.function_name]
+
+        self.recorded_buffer = {var: [] for var in self.vars}
+        self.recorded_buffer['output'] = []
+        MessageHub.get_current_instance().update_info(
+            self.recorded_name, self.recorded_buffer, resumed=resume)
 
     def get_module_and_function(self, full_function_name):
         try:
@@ -150,9 +200,9 @@ class FuncRewriter:
                 raise e
         return module, class_type, function
 
-    def patch(self, runner, *args, **kwargs):
+    def initializer(self, runner, *args, **kwargs):
         if self.target_instance:
-            target_instance = self._get_instance_from_runner(runner)
+            target_instance = self.get_target_instance(runner)
             setattr(target_instance, self.function_name,
                     partial(self.modified_func, (target_instance, )))
         elif self.class_type is not None:
@@ -160,25 +210,25 @@ class FuncRewriter:
         else:
             setattr(self.act_module, self.function_name, self.modified_func)
 
-    def unpatch(self, runner):
+    def deinitializer(self, runner):
         if self.target_instance:
-            target_instance = self._get_instance_from_runner(runner)
+            target_instance = self.get_target_instance(runner)
             setattr(target_instance, self.function_name, self.ori_func)
         elif self.class_type is not None:
             setattr(self.class_type, self.function_name, self.ori_func)
         else:
             setattr(self.act_module, self.function_name, self.ori_func)
 
-    def _get_instance_from_runner(self, runner):
+    def get_target_instance(self, instance):
         target_instance = self.target_instance.split('.')
-        result = runner
+        result = instance
         for instance in target_instance:
             result = getattr(result, instance)
         return result
 
     def clear(self):
         message_hub = MessageHub.get_current_instance()
-        for value in message_hub.get_info(self.recoded_func_name).values():
+        for value in message_hub.get_info(self.recorded_name).values():
             value.clear()
 
 

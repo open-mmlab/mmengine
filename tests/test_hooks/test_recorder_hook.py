@@ -43,10 +43,10 @@ class TestFuncRewriter(TestCase):
     def test_init(self):
         func_rewriter = FuncRewriter(
             function='test_recorder_hook.func1', target_variable=('a', 'b'))
-        func_rewriter.patch(Mock())
+        func_rewriter.initializer(Mock())
         func1(2, 3)
         print(MessageHub.get_current_instance().runtime_info)
-        func_rewriter.unpatch(Mock())
+        func_rewriter.deinitializer(Mock())
         func_rewriter.clear()
 
         func_rewriter = FuncRewriter(
@@ -54,10 +54,10 @@ class TestFuncRewriter(TestCase):
             target_variable=('d', ),
         )
         runner = Mock()
-        func_rewriter.patch(runner)
+        func_rewriter.initializer(runner)
         ToyClass().func2(2)
         print(MessageHub.get_current_instance().runtime_info)
-        func_rewriter.unpatch(Mock())
+        func_rewriter.deinitializer(Mock())
         func_rewriter.clear()
 
         func_rewriter = FuncRewriter(
@@ -66,8 +66,8 @@ class TestFuncRewriter(TestCase):
             target_instance='cls1')
 
         runner = ToyRunner()
-        func_rewriter.patch(runner)
+        func_rewriter.initializer(runner)
         runner.run()
-        func_rewriter.unpatch(Mock())
+        func_rewriter.deinitializer(Mock())
         func_rewriter.clear()
         print(MessageHub.get_current_instance().runtime_info)
