@@ -8,7 +8,8 @@ from .root import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
                    OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS, OPTIMIZERS,
                    PARAM_SCHEDULERS, RUNNER_CONSTRUCTORS, RUNNERS, TASK_UTILS,
                    TRANSFORMS, VISBACKENDS, VISUALIZERS, WEIGHT_INITIALIZERS)
-from .utils import count_registered_modules, traverse_registry_tree
+from .utils import (count_registered_modules, init_default_scope,
+                    traverse_registry_tree)
 
 __all__ = [
     'Registry', 'RUNNERS', 'RUNNER_CONSTRUCTORS', 'HOOKS', 'DATASETS',
@@ -18,5 +19,5 @@ __all__ = [
     'VISBACKENDS', 'VISUALIZERS', 'LOG_PROCESSORS', 'EVALUATOR',
     'DefaultScope', 'traverse_registry_tree', 'count_registered_modules',
     'build_model_from_cfg', 'build_runner_from_cfg', 'build_from_cfg',
-    'build_scheduler_from_cfg'
+    'build_scheduler_from_cfg', 'init_default_scope'
 ]
