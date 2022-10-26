@@ -40,7 +40,7 @@ class EMAHook(Hook):
 
     def __init__(self,
                  ema_type: str = 'ExponentialMovingAverage',
-                 strict_load: bool = True,
+                 strict_load: bool = False,
                  begin_iter: int = 0,
                  begin_epoch: int = 0,
                  **kwargs):
