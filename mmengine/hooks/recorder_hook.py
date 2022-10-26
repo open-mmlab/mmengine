@@ -2,90 +2,121 @@
 import ast
 import inspect
 from ast import *
+from functools import partial
 from importlib import import_module
-from typing import Optional
+from typing import List, Optional
 
 from mmengine import MessageHub
 from .hook import Hook
 
 
 class RecorderVisitor(NodeTransformer):
+
     def __init__(self,
                  func_name: str,
                  var: Optional[List[str]] = None,
+                 class_name: Optional[str] = None,
                  resume: bool = False,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.func_name = func_name
-        self.recorded_buffer = dict()
+        self.vars = var if var is not None else []
+        self.recorded_buffer = {var: [] for var in self.vars}
+        self.recorded_buffer['output'] = []
+        self.function_flag = False
+        self.class_flag = False
+        self.class_name = class_name
+
         MessageHub.get_current_instance().update_info(
             func_name, self.recorded_buffer, resumed=resume)
-        self.vars = var if var is not None else []
 
     def visit_FunctionDef(self, node: FunctionDef):
-        if node.name == 'hello':
-            self.flag = True
+        # function_name could be 'class_name.function_name'
+        if self.func_name.endswith(node.name):
+            self.function_flag = True
         return self.generic_visit(node)
 
-    def generic_visit(self, node):
-        print(node)
-        return super().generic_visit(node)
+    def visit_ClassDef(self, node: ClassDef):
+        if node.name == self.class_name:
+            self.class_flag = True
+        return self.generic_visit(node)
 
     def visit_Return(self, node: Return):
-        if self.flag:
-            result = [
-                eval(ast.dump(ast.parse(
-                    'from mmengine import MessageHub').body[0])),
-                eval(ast.dump(ast.parse(
-                    'recorded_buffer = '
-                    f'MessageHub.get_current_instance().get_info('
-                    f'{self.func_name})').body[0]))
-            ]
+        if not self.function_flag:
+            return super().generic_visit(node)
 
-            for var in self.vars:
-                result.append(
-                eval(ast.dump(ast.parse(
-                    f'recorded_buffer.update({var}=locals()["{var}"])'
-                ).body[0])))
+        if self.class_name is not None and not self.class_flag:
+            return super().generic_visit(node)
 
-            result.append(Expr(
+        result = [
+            eval(
+                ast.dump(
+                    ast.parse('from mmengine import MessageHub').body[0])),
+            eval(
+                ast.dump(
+                    ast.parse('recorded_buffer = '
+                              f'MessageHub.get_current_instance().get_info('
+                              f'"{self.func_name}")').body[0]))
+        ]
+
+        for var in self.vars:
+            result.extend([
+                eval(
+                    ast.dump(
+                        ast.parse(f'var = recorded_buffer["{var}"]').body[0])),
+                eval(
+                    ast.dump(
+                        ast.parse(f'var.append(locals()["{var}"])').body[0]))
+            ])
+
+        result.append(
+            Expr(
                 value=Call(
                     func=Attribute(
-                        value=Name(
-                            id='recorded_buffer', ctx=Load()),
-                        attr='update',
+                        value=Subscript(
+                            value=Name(id='recorded_buffer', ctx=Load()),
+                            slice=Index(
+                                value=Constant(value='output', kind=None)),
+                            ctx=Load()),
+                        attr='append',
                         ctx=Load()),
-                    args=[],
-                    keywords=[
-                        keyword(arg='output',
-                                value=node.value)]))
-            )
-            result.append(super().generic_visit(node))
-            return result
+                    args=[node.value],
+                    keywords=[])))
+        result.append(super().generic_visit(node))
+        return result
 
 
 class FuncRewriter:
-    def __init__(
-            self,
-            module_name: str,
-            function_name: str,
-            target_instance: Optional[str] = None,
-            target_variable: Optional[List[str]] = None,
-            resume: bool = False):
-        self.module = import_module(module_name)
-        self.ori_func = getattr(self.module, function_name)
-        # TODO check orifunc should not accept "enable_rewrite"
 
-        # Get modified function.
-        act_module_path = inspect.getmodule(self.module).__file__
-        self.function_name = function_name
+    def __init__(self,
+                 function: str,
+                 target_instance: Optional[str] = None,
+                 target_variable: Optional[List[str]] = None,
+                 resume: bool = False):
+
+        self.module, self.class_type, self.ori_func = \
+            self.get_module_and_function(function)
+
+        self.function_name = self.ori_func.__name__
         self.target_instance = target_instance
+        if self.class_type is not None:
+            self.act_module = inspect.getmodule(self.class_type)
+            self.class_name = self.class_type.__name__
+            self.recoded_func_name = f'{self.class_name}.{self.function_name}'
+
+        else:
+            self.act_module = inspect.getmodule(self.ori_func)
+            self.class_name = self.class_type
+            self.recoded_func_name = self.function_name
+
+        act_module_path = self.act_module.__file__
+
         visitor = RecorderVisitor(
-            func_name=function_name,
+            func_name=self.recoded_func_name,
             var=target_variable,
-            resume=resume
-        )
+            class_name=self.class_name,
+            resume=resume)
         with open(act_module_path) as f:
             ast_tree = ast.parse(f.read())
         ast_tree = visitor.visit(ast_tree)
@@ -93,15 +124,50 @@ class FuncRewriter:
         code = compile(ast_tree, '', mode='exec')
         global_dict = dict()
         eval(code, global_dict, global_dict)
+        if self.class_type is not None:
+            self.modified_func = getattr(global_dict[self.class_name],
+                                         self.function_name)
+        else:
+            self.modified_func = global_dict[self.function_name]
 
-        self.modified_func = global_dict[function_name]
+    def get_module_and_function(self, full_function_name):
+        try:
+            module_name, function_name = full_function_name.rsplit('.', 1)
+            module = import_module(module_name)
+            function = getattr(module, function_name)
+            class_type = None
+        except (ModuleNotFoundError, AttributeError):
+            module, class_type, function = None, None, None
+
+        if module is None:
+            try:
+                module_name, class_name, function_name = \
+                    full_function_name.rsplit('.', 2)
+                module = import_module(module_name)
+                class_type = getattr(module, class_name)
+                function = getattr(class_type, function_name)
+            except (ModuleNotFoundError, AttributeError) as e:
+                raise e
+        return module, class_type, function
 
     def patch(self, runner, *args, **kwargs):
         if self.target_instance:
             target_instance = self._get_instance_from_runner(runner)
-            setattr(target_instance, self.function_name, self.modified_func)
+            setattr(target_instance, self.function_name,
+                    partial(self.modified_func, (target_instance, )))
+        elif self.class_type is not None:
+            setattr(self.class_type, self.function_name, self.modified_func)
         else:
-            setattr(self.module, self.function_name, self.modified_func)
+            setattr(self.act_module, self.function_name, self.modified_func)
+
+    def unpatch(self, runner):
+        if self.target_instance:
+            target_instance = self._get_instance_from_runner(runner)
+            setattr(target_instance, self.function_name, self.ori_func)
+        elif self.class_type is not None:
+            setattr(self.class_type, self.function_name, self.ori_func)
+        else:
+            setattr(self.act_module, self.function_name, self.ori_func)
 
     def _get_instance_from_runner(self, runner):
         target_instance = self.target_instance.split('.')
@@ -110,13 +176,18 @@ class FuncRewriter:
             result = getattr(result, instance)
         return result
 
+    def clear(self):
+        message_hub = MessageHub.get_current_instance()
+        for value in message_hub.get_info(self.recoded_func_name).values():
+            value.clear()
+
 
 class RecorderHook(Hook):
-    def __init__(self,
-                 rewrited_funcs: List[dict] = []
-                 ):
+
+    def __init__(self, rewrited_funcs: List[dict] = []):
         self.rewrite_funcs = []
         for cfg in rewrited_funcs:
             self.rewrite_funcs.append(FuncRewriter(**cfg))
 
     def before_run(self, runner) -> None:
+        pass
