@@ -80,6 +80,16 @@ class ToyMetric(BaseMetric):
 
 
 class RunnerTestCase(TestCase):
+    """A test case to build runner easily.
+
+    `RunnerTestCase` will do the following things:
+
+    1. Registers a toy model, toy metric, toy dataset, which can be used to
+       run the `Runner` successfully.
+    2. Provides epoch based and iteration based cfg to build runner.
+    3. Provides `build_runner` method to build runner easily.
+    4. Clean the global variable used by the runner.
+    """
     dist_cfg = dict(
         MASTER_ADDR='127.0.0.1',
         MASTER_PORT=29600,
@@ -123,6 +133,8 @@ class RunnerTestCase(TestCase):
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
             experiment_name='test1')
         self.epoch_based_cfg = Config(epoch_based_cfg)
+
+        # prepare iter based cfg.
         self.iter_based_cfg: Config = copy.deepcopy(self.epoch_based_cfg)
         self.iter_based_cfg.train_dataloader = dict(
             dataset=dict(type='ToyDataset'),
@@ -131,7 +143,6 @@ class RunnerTestCase(TestCase):
             num_workers=0)
         self.iter_based_cfg.log_processor = dict(by_epoch=False)
 
-        # prepare iter based cfg.
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
             logger=dict(type='LoggerHook', interval=1),
@@ -153,13 +164,16 @@ class RunnerTestCase(TestCase):
         if is_distributed():
             destroy_process_group()
 
-    def build_runner(self, cfg):
+    def build_runner(self, cfg: Config):
         cfg.experiment_name = self.experiment_name
         runner = Runner.from_cfg(cfg)
         return runner
 
     @property
     def experiment_name(self):
+        # Since runners could be built too fast to have a unique experiment
+        # name(timestamp is the same), here we use uuid to make sure each
+        # runner has the unique experiment name.
         return f'{self._testMethodName}_{time.time()} + ' \
                f'{uuid4()}'
 
