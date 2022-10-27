@@ -210,6 +210,25 @@ class BaseModel(BaseModule):
         self._set_device(torch.device(device))
         return super().cuda(device)
 
+    def npu(
+        self,
+        device: Union[int, str, torch.device, None] = None,
+    ) -> nn.Module:
+        """Overrides this method to call :meth:`BaseDataPreprocessor.npu`
+        additionally.
+
+        Returns:
+            nn.Module: The model itself.
+
+        Note:
+            This generation of NPU(Ascend910) does not support
+            the use of multiple cards in a single process,
+            so the index here needs to be consistent with the default device
+        """
+        device = torch.npu.current_device()
+        self._set_device(device)
+        return super().npu()
+
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.cpu`
         additionally.
