@@ -1,6 +1,6 @@
 # 跨库调用模块
 
-通过使用 MMEngine 的[注册器（Registry）](../tutorials/registry.md)和[配置文件（Config）](../tutorials/config.md)，用户可以实现跨软件包的模块构建。
+通过使用 MMEngine 的[注册器（Registry）](registry.md)和[配置文件（Config）](config.md)，用户可以实现跨软件包的模块构建。
 例如，在 [MMDetection](https://github.com/open-mmlab/mmdetection) 中使用 [MMClassification](https://github.com/open-mmlab/mmclassification) 的 Backbone，或者在 [MMRotate](https://github.com/open-mmlab/mmrotate) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Transform，或者在 [MMTracking](https://github.com/open-mmlab/mmtracking) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Detector。
 一般来说，同类模块都可以进行跨库调用，只需要在配置文件的模块类型前加上软件包名的前缀即可。下面举几个常见的例子：
 
@@ -91,4 +91,4 @@ model = dict(
 
 以上这两种写法互相等价。
 
-若希望了解更多关于注册器和配置文件的内容，请参考[配置文件教程](../tutorials/config.md)和[注册器教程](../tutorials/registry.md)
+若希望了解更多关于注册器和配置文件的内容，请参考[配置文件教程](config.md)和[注册器教程](registry.md)
