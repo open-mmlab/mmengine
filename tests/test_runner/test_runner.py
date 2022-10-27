@@ -680,7 +680,6 @@ class TestRunner(TestCase):
         # 7. Test auto distinguish experiment
         cur_dir = os.getcwd()
         os.chdir(self.temp_dir)
-        self.temp_dir = 'work_dirs'
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.work_dir = None
 
