@@ -12,7 +12,7 @@ You can switch between Chinese and English documents in the lower-left corner of
 
 .. toctree::
    :maxdepth: 1
-   :caption: Level Up
+   :caption: Common Usage
 
    examples/resume_training
    examples/speed_up_training
