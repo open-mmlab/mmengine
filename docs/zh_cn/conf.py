@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import subprocess
 import sys
 
 import pytorch_sphinx_theme
@@ -102,3 +103,11 @@ html_css_files = ['css/readthedocs.css']
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
 copybutton_prompt_is_regexp = True
+
+
+def builder_inited_handler(app):
+    subprocess.run(['./cp_origin_docs.sh'])
+
+
+def setup(app):
+    app.connect('builder-inited', builder_inited_handler)

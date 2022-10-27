@@ -20,6 +20,7 @@ from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_comm_device, cast_data_device)
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.device import is_npu_available
 
 
 def _get_reduce_op(name: str) -> torch_dist.ReduceOp:
@@ -411,7 +412,11 @@ def _broadcast_object_list(object_list: List[Any],
     group_backend = get_backend(group)
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     current_device = torch.device('cpu')
-    if is_nccl_backend:
+    is_hccl_backend = group_backend == 'hccl'
+    if is_hccl_backend:
+        current_device = torch.npu.current_device()
+        object_sizes_tensor = object_sizes_tensor.to(current_device)
+    elif is_nccl_backend:
         # See note about using torch.cuda.current_device() here in
         # docstring. We cannot simply use my_rank since rank == device is
         # not necessarily true.
@@ -430,7 +435,7 @@ def _broadcast_object_list(object_list: List[Any],
             dtype=torch.uint8,
         )
 
-    if is_nccl_backend:
+    if is_nccl_backend or is_hccl_backend:
         object_tensor = object_tensor.to(current_device)
     torch_dist.broadcast(object_tensor, src=src, group=group)
     # Deserialize objects using their stored sizes.
@@ -504,7 +509,8 @@ def broadcast_object_list(data: List[Any],
         if group is None:
             group = get_default_group()
 
-        if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
+        if digit_version(TORCH_VERSION) >= digit_version(
+                '1.8.0') and not is_npu_available():
             torch_dist.broadcast_object_list(data, src, group)
         else:
             _broadcast_object_list(data, src, group)

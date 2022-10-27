@@ -102,7 +102,7 @@ class DefaultOptimWrapperConstructor:
         >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
         >>>     type='SGD', lr=0.01, weight_decay=0.95))
         >>> paramwise_cfg = dict(custom_keys={
-        >>>     '.backbone': dict(lr_mult=0.1, decay_mult=0.9)})
+        >>>     'backbone': dict(lr_mult=0.1, decay_mult=0.9)})
         >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
         >>>     optim_wrapper_cfg, paramwise_cfg)
         >>> optim_wrapper = optim_wrapper_builder(model)
