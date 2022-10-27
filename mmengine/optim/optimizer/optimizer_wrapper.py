@@ -5,7 +5,6 @@ from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
-from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
 from mmengine.logging import MessageHub, print_log
@@ -32,7 +31,27 @@ class OptimWrapper:
             gradients. The parameters will be updated per
             ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
-            the arguments of ``torch.nn.utils.clip_grad``.
+            the arguments of :func:`torch.nn.utils.clip_grad_norm_` or
+            :func:`torch.nn.utils.clip_grad_value_`. ``clip_grad`` should be a
+            dict, and the keys could be set as follows:
+
+            If the key ``type`` is not set, or ``type`` is "norm",
+            the accepted keys are as follows:
+
+            - max_norm (float or int): Max norm of the gradients.
+            - norm_type (float or int): Type of the used p-norm. Can be
+              ``'inf'`` for infinity norm.
+            - error_if_nonfinite (bool): If True, an error is thrown if
+              the total norm of the gradients from :attr:`parameters` is
+              ``nan``, ``inf``, or ``-inf``. Default: False (will switch
+              to True in the future)
+
+            If the key ``type`` is set to "value", the accepted keys are as
+            follows:
+
+            - clip_value (float or int): maximum allowed value of the
+              gradients. The gradients are clipped in the range
+              ``(-clip_value, +clip_value)``.
 
     Note:
         If ``accumulative_counts`` is larger than 1, perform
@@ -49,11 +68,18 @@ class OptimWrapper:
         ``_inner_count += 1`` is automatically performed.
 
     Examples:
-        >>> # Config sample of OptimWrapper.
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # norm.
         >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
         >>>     _accumulative_counts=1,
         >>>     clip_grad=dict(max_norm=0.2))
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # value.
+        >>> optim_wrapper_cfg = dict(
+        >>>     type='OptimWrapper',
+        >>>     _accumulative_counts=1,
+        >>>     clip_grad=dict(type='value', clip_value=0.2))
         >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
         >>> import torch
@@ -105,7 +131,22 @@ class OptimWrapper:
             # clip_grad_kwargs should not be non-empty dict.
             assert isinstance(clip_grad, dict) and clip_grad, (
                 'If `clip_grad` is not None, it should be a `dict` '
-                'which is the arguments of `torch.nn.utils.clip_grad`')
+                'which is the arguments of `torch.nn.utils.clip_grad_norm_` '
+                'or clip_grad_value_`.')
+            clip_type = clip_grad.pop('type', 'norm')
+            if clip_type == 'norm':
+                self.clip_func = torch.nn.utils.clip_grad_norm_
+                self.grad_name = 'grad_norm'
+            elif clip_type == 'value':
+                self.clip_func = torch.nn.utils.clip_grad_value_
+                self.grad_name = 'grad_value'
+            else:
+                raise ValueError('type of clip_grad should be "norm" or '
+                                 f'"value" but got {clip_type}')
+            assert clip_grad, ('`clip_grad` should contain other arguments '
+                               'besides `type`. The arguments should match '
+                               'with the `torch.nn.utils.clip_grad_norm_` or '
+                               'clip_grad_value_`')
         self.clip_grad_kwargs = clip_grad
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
@@ -135,7 +176,7 @@ class OptimWrapper:
             self.step()
             self.zero_grad()
 
-    def backward(self, loss: torch.Tensor) -> None:
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation.
 
         Provide unified ``backward`` interface compatible with automatic mixed
@@ -149,20 +190,25 @@ class OptimWrapper:
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`.
         """
-        loss.backward()
+        loss.backward(**kwargs)
         self._inner_count += 1
 
-    def zero_grad(self) -> None:
+    def zero_grad(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.zero_grad``.
 
         Provide unified ``zero_grad`` interface compatible with automatic mixed
         precision training. Subclass can overload this method to implement the
         required logic.
-        """
-        self.optimizer.zero_grad()
 
-    def step(self) -> None:
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.zero_grad`.
+        """
+        self.optimizer.zero_grad(**kwargs)
+
+    def step(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.step``.
 
         Provide unified ``step`` interface compatible with automatic mixed
@@ -172,10 +218,14 @@ class OptimWrapper:
 
         Clip grad if :attr:`clip_grad_kwargs` is not None, and then update
         parameters.
+
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
         """
         if self.clip_grad_kwargs:
             self._clip_grad()
-        self.optimizer.step()
+        self.optimizer.step(**kwargs)
 
     def state_dict(self) -> dict:
         """A wrapper of ``Optimizer.state_dict``.
@@ -296,9 +346,11 @@ class OptimWrapper:
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            grad_norm = clip_grad.clip_grad_norm_(params,
-                                                  **self.clip_grad_kwargs)
-            self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
+            grad = self.clip_func(params, **self.clip_grad_kwargs)
+            # `torch.nn.utils.clip_grad_value_` will return None.
+            if grad is not None:
+                self.message_hub.update_scalar(f'train/{self.grad_name}',
+                                               float(grad))
 
     def initialize_count_status(self, model: nn.Module, init_counts: int,
                                 max_counts: int) -> None:

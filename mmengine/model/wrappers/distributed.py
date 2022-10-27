@@ -1,13 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, List
+from typing import Any, Dict, Union
 
 import torch
-from torch.nn.parallel.distributed import DistributedDataParallel
+from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.structures import BaseDataElement
 from ..utils import detect_anomalous_params
+
+MODEL_WRAPPERS.register_module(module=DistributedDataParallel)
+MODEL_WRAPPERS.register_module(module=DataParallel)
 
 
 @MODEL_WRAPPERS.register_module()
@@ -24,9 +26,10 @@ class MMDistributedDataParallel(DistributedDataParallel):
       default model forward, gradient back propagation, parameter updating
       logic. To take advantage of DistributedDataParallel's automatic gradient
       synchronization, ``train_step`` calls ``DistributedDataParallel.forward``
-      to calculate the losses, and call other methods of :obj:`BaseModel` to
+      to calculate the losses, and call other methods of :class:`BaseModel` to
       pre-process data and parse losses. Finally, update model parameters by
-      :obj:``OptimWrapper`` and return the loss dictionary used for logging.
+      :class:`OptimWrapper` and return the loss dictionary used
+      for logging.
 
     - ``val_step``: Called by ``runner.val_loop`` and get the inference
       results. Since there is no gradient synchronization requirement,
@@ -41,11 +44,10 @@ class MMDistributedDataParallel(DistributedDataParallel):
             the computational graph with `loss` as the root.
             There are two cases
 
-                - Parameters were not used during
-                  forward pass.
-                - Parameters were not used to produce
-                  loss.
-            Default: False.
+            - Parameters were not used during forward pass.
+            - Parameters were not used to produce loss.
+
+            Defaults to False.
 
         **kwargs: keyword arguments passed to ``DistributedDataParallel``.
 
@@ -55,8 +57,8 @@ class MMDistributedDataParallel(DistributedDataParallel):
               output for single-device CUDA modules.
             - dim (int): Defaults to 0.
             - broadcast_buffers (bool): Flag that enables syncing (
-                broadcasting) buffers of the module at beginning of the
-                ``forward`` function. Defaults to True
+              broadcasting) buffers of the module at beginning of the
+              ``forward`` function. Defaults to True
             - find_unused_parameters (bool): Whether to find parameters of
               module, which are not in the forward graph. Defaults to False.
             - process_group (ProcessGroup, optional): The process group to be
@@ -68,7 +70,8 @@ class MMDistributedDataParallel(DistributedDataParallel):
             - gradient_as_bucket_view (bool): Defaults to False.
             - static_graph (bool): Defaults to False.
 
-    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
+    See more information about arguments in
+    :class:`torch.nn.parallel.DistributedDataParallel`.
 
     Note:
         If model has multiple submodules and each module has
@@ -90,7 +93,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         super().__init__(module=module, **kwargs)
         self.detect_anomalous_params = detect_anomalous_params
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -98,14 +101,14 @@ class MMDistributedDataParallel(DistributedDataParallel):
         :meth:`train_step` will perform the following steps in order:
 
         - If :attr:`module` defines the preprocess method,
-            call ``module.preprocess`` to pre-processing data.
+          call ``module.preprocess`` to pre-processing data.
         - Call ``module.forward(**data)`` and get losses.
         - Parse losses.
         - Call ``optim_wrapper.optimizer_step`` to update parameters.
         - Return log messages of losses.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
@@ -114,33 +117,51 @@ class MMDistributedDataParallel(DistributedDataParallel):
         """
         # Enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.module.data_preprocessor(
-                data, training=True)
-            losses = self(batch_inputs, data_samples, mode='loss')
-        if self.detect_anomalous_params:
-            detect_anomalous_params(losses, model=self)
+            data = self.module.data_preprocessor(data, training=True)
+            losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
+        if self.detect_anomalous_params:
+            detect_anomalous_params(parsed_loss, model=self)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement] or dict: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.val_step(data)
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.test_step(data)
+
+    def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results

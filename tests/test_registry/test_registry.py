@@ -340,6 +340,13 @@ class TestRegistry:
         DOGS, HOUNDS, LITTLE_HOUNDS, MID_HOUNDS, SAMOYEDS = registries[:5]
 
         @DOGS.register_module()
+        def bark(times=1):
+            return ' '.join(['woof'] * times)
+
+        bark_cfg = cfg_type(dict(type='bark', times=3))
+        assert DOGS.build(bark_cfg) == 'woof woof woof'
+
+        @DOGS.register_module()
         class GoldenRetriever:
             pass
 
@@ -412,7 +419,7 @@ class TestRegistry:
         assert isinstance(dog.friend, YourSamoyed)
         assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
-    def test_get_registry_by_scope(self):
+    def test_switch_scope_and_registry(self):
         DOGS = Registry('dogs')
         HOUNDS = Registry('hounds', scope='hound', parent=DOGS)
         SAMOYEDS = Registry('samoyeds', scope='samoyed', parent=DOGS)

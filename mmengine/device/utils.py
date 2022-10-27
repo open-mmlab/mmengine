@@ -32,6 +32,15 @@ def is_cuda_available() -> bool:
     return torch.cuda.is_available()
 
 
+def is_npu_available() -> bool:
+    """Returns True if Ascend PyTorch and npu devices exist."""
+    try:
+        import torch_npu  # noqa: F401
+    except Exception:
+        return False
+    return hasattr(torch, 'npu') and torch.npu.is_available()
+
+
 def is_mlu_available() -> bool:
     """Returns True if Cambricon PyTorch and mlu devices exist."""
     return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
@@ -49,9 +58,11 @@ def get_device() -> str:
     """Returns the currently existing device type.
 
     Returns:
-        str: cuda | mlu | mps | cpu.
+        str: cuda | npu | mlu | mps | cpu.
     """
-    if is_cuda_available():
+    if is_npu_available():
+        return 'npu'
+    elif is_cuda_available():
         return 'cuda'
     elif is_mlu_available():
         return 'mlu'

@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import ExitStack, contextmanager
-from typing import Dict, List
+from typing import Dict, Union
 
 import torch
 import torch.nn as nn
@@ -9,7 +9,6 @@ from torch.nn.parallel.distributed import DistributedDataParallel
 from mmengine.device import get_device
 from mmengine.optim import OptimWrapperDict
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.structures import BaseDataElement
 from .distributed import MMDistributedDataParallel
 
 
@@ -42,7 +41,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         find_unused_parameters (bool): Same as that in
             ``torch.nn.parallel.distributed.DistributedDataParallel``.
             Traverse the autograd graph of all tensors contained in returned
-            value of the wrapped module’s forward function. Defaults to False.
+            value of the wrapped module's forward function. Defaults to False.
         **kwargs: Keyword arguments passed to ``MMDistributedDataParallel``.
 
             - device_ids (List[int] or torch.device, optional): CUDA devices
@@ -59,7 +58,8 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
             - gradient_as_bucket_view (bool): Defaults to False.
             - static_graph (bool): Defaults to False.
 
-    See more information about arguments in `https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel`_  # noqa E501
+    See more information about arguments in
+    :class:`torch.nn.parallel.DistributedDataParallel`.
     """
 
     def __init__(self,
@@ -86,13 +86,13 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
                     **kwargs)
             module._modules[name] = sub_module
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapperDict) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
             optim_wrapper (OptimWrapperDict): A wrapper of optimizer to
                 update parameters.
 
@@ -101,25 +101,25 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
         """
         return self.module.train_step(data, optim_wrapper)
 
-    def val_step(self, data) -> List[BaseDataElement]:
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            List[BaseDataElement]: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.val_step(data)
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict or tuple or list): Data sampled from dataset.
 
         Returns:
-            ForwardResults: The predictions of given data.
+            list: The predictions of given data.
         """
         return self.module.test_step(data)
 
@@ -145,7 +145,7 @@ class MMSeparateDistributedDataParallel(DistributedDataParallel):
 
         Args:
             mode (bool): whether to set training mode (``True``) or evaluation
-                 mode (``False``). Default: ``True``.
+                mode (``False``). Defaults to ``True``.
 
         Returns:
             Module: self.

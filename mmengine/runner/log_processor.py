@@ -129,7 +129,8 @@ class LogProcessor:
         for key, value in tag.items():
             if key.endswith('lr'):
                 log_tag.pop(key)
-                lr_str_list.append(f'{key}: ' f'{value:.{self.num_digits}e}')
+                lr_str_list.append(f'{key}: '
+                                   f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
         # Format log header.
         # by_epoch == True
@@ -285,8 +286,7 @@ class LogProcessor:
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
-            if key.startswith('loss') or key in ('time', 'data_time',
-                                                 'grad_norm'):
+            if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
                 tag[key] = mode_history_scalars[key].mean(self.window_size)
             else:
                 # Default statistic method is current.

@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 from unittest import TestCase
 
 import torch
@@ -106,6 +107,12 @@ class TestBaseModule(TestCase):
                 conv1d=dict(type='FooConv1d')))
 
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
+        self.logger = MMLogger.get_instance(self._testMethodName)
+
+    def tearDown(self) -> None:
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
+        return super().tearDown()
 
     def test_is_init(self):
         assert self.BaseModule.is_init is False
@@ -194,6 +201,10 @@ class TestBaseModule(TestCase):
         model2.init_weights()
         assert len(os.listdir(dump_dir)) == 1
         assert os.stat(log_path).st_size != 0
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
         shutil.rmtree(dump_dir)
 
 

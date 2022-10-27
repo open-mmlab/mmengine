@@ -1,14 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
 
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.structures import BaseDataElement
 from mmengine.utils.dl_utils import tensor2imgs
+
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 # TODO: Due to interface changes, the current class
@@ -48,21 +49,18 @@ class NaiveVisualizationHook(Hook):
         unpad_image = input[:unpad_height, :unpad_width]
         return unpad_image
 
-    def after_test_iter(
-            self,
-            runner,
-            batch_idx: int,
-            data_batch: Optional[Sequence[dict]] = None,
-            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
+    def after_test_iter(self,
+                        runner,
+                        batch_idx: int,
+                        data_batch: DATA_BATCH = None,
+                        outputs: Optional[Sequence] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[dict], optional): Data
-                from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataElement], optional): Outputs from model.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (Sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self._interval):
             for data, output in zip(data_batch, outputs):  # type: ignore

@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
 from io import StringIO
 
 from .file_client import FileClient
+from .io import get_text
 
 
 def list_from_file(filename,
@@ -9,7 +11,8 @@ def list_from_file(filename,
                    offset=0,
                    max_num=0,
                    encoding='utf-8',
-                   file_client_args=None):
+                   file_client_args=None,
+                   backend_args=None):
     """Load a text file and parse the content as a list of strings.
 
     ``list_from_file`` supports loading a text file which can be storaged in
@@ -21,10 +24,14 @@ def list_from_file(filename,
         offset (int): The offset of lines.
         max_num (int): The maximum number of lines to be read,
             zeros and negatives mean no limitation.
-        encoding (str): Encoding used to open the file. Default utf-8.
+        encoding (str): Encoding used to open the file. Defaults to utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> list_from_file('/path/of/your/file')  # disk
@@ -35,10 +42,24 @@ def list_from_file(filename,
     Returns:
         list[str]: A list of strings.
     """
+    if file_client_args is not None:
+        warnings.warn(
+            '"file_client_args" will be deprecated in future. '
+            'Please use "backend_args" instead', DeprecationWarning)
+        if backend_args is not None:
+            raise ValueError(
+                '"file_client_args" and "backend_args" cannot be set at the '
+                'same time.')
     cnt = 0
     item_list = []
-    file_client = FileClient.infer_client(file_client_args, filename)
-    with StringIO(file_client.get_text(filename, encoding)) as f:
+
+    if file_client_args is not None:
+        file_client = FileClient.infer_client(file_client_args, filename)
+        text = file_client.get_text(filename, encoding)
+    else:
+        text = get_text(filename, encoding, backend_args=backend_args)
+
+    with StringIO(text) as f:
         for _ in range(offset):
             f.readline()
         for line in f:
@@ -52,7 +73,8 @@ def list_from_file(filename,
 def dict_from_file(filename,
                    key_type=str,
                    encoding='utf-8',
-                   file_client_args=None):
+                   file_client_args=None,
+                   backend_args=None):
     """Load a text file and parse the content as a dict.
 
     Each line of the text file will be two or more columns split by
@@ -66,10 +88,14 @@ def dict_from_file(filename,
         filename(str): Filename.
         key_type(type): Type of the dict keys. str is user by default and
             type conversion will be performed if specified.
-        encoding (str): Encoding used to open the file. Default utf-8.
+        encoding (str): Encoding used to open the file. Defaults to utf-8.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Default: None.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
 
     Examples:
         >>> dict_from_file('/path/of/your/file')  # disk
@@ -80,9 +106,24 @@ def dict_from_file(filename,
     Returns:
         dict: The parsed contents.
     """
+    if file_client_args is not None:
+        warnings.warn(
+            '"file_client_args" will be deprecated in future. '
+            'Please use "backend_args" instead', DeprecationWarning)
+        if backend_args is not None:
+            raise ValueError(
+                '"file_client_args" and "backend_args" cannot be set at the '
+                'same time.')
+
     mapping = {}
-    file_client = FileClient.infer_client(file_client_args, filename)
-    with StringIO(file_client.get_text(filename, encoding)) as f:
+
+    if file_client_args is not None:
+        file_client = FileClient.infer_client(file_client_args, filename)
+        text = file_client.get_text(filename, encoding)
+    else:
+        text = get_text(filename, encoding, backend_args=backend_args)
+
+    with StringIO(text) as f:
         for line in f:
             items = line.rstrip('\n').split()
             assert len(items) >= 2

@@ -114,7 +114,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
 
 也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
 
-除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_bes` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
+除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_best` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
 
 - 指定保存权重的路径
 
@@ -150,8 +150,7 @@ default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 
 ### RuntimeInfoHook
 
-[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
-以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### EMAHook
 
@@ -228,10 +227,8 @@ class CheckInvalidLossHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
             outputs (dict, optional): Outputs from model.
-                Defaults to None.
         """
         if self.every_n_train_iters(runner, self.interval):
             assert torch.isfinite(outputs['loss']),\
@@ -260,7 +257,7 @@ custom_hooks = dict(
 )
 ```
 
-也可以在定义类是给定优先级
+也可以在定义类时给定优先级
 
 ```python
 @HOOKS.register_module()

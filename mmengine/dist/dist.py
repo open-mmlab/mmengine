@@ -1,24 +1,26 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, List, Optional, Tuple, Dict, Generator, Union
-from collections import OrderedDict
-import shutil
-import pickle
-import numpy as np
-import tempfile
-import torch
 import os.path as osp
+import pickle
+import shutil
+import tempfile
+from collections import OrderedDict
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+
+import numpy as np
+import torch
 from torch import Tensor
+from torch import distributed as torch_dist
 from torch._utils import (_flatten_dense_tensors, _take_tensors,
                           _unflatten_dense_tensors)
-from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
 
 import mmengine
 from .utils import (get_world_size, get_rank, get_backend, get_dist_info,
                     get_default_group, barrier, get_data_device,
                     get_comm_device, cast_data_device)
-from mmengine.utils.version_utils import digit_version
+from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.device import is_npu_available
 
 
 def _get_reduce_op(name: str) -> torch_dist.ReduceOp:
@@ -95,10 +97,9 @@ def all_reduce(data: Tensor,
         if op.lower() == 'mean':
             torch_dist.all_reduce(data_on_device, _get_reduce_op('sum'), group)
 
-            # When the type of `data_on_device` is int64,
-            # `data_on_device.div_(world_size)` will  appear RuntimeError:
-            # result type Float can't be cast to  the desired output type Long.
-            data_on_device = data_on_device / world_size  # type: ignore
+            # use true_divide to handle torch1.6.0 throws an RuntimeError when
+            # the type of `data_on_device` is int64
+            data_on_device = torch.true_divide(data_on_device, world_size)
         else:
             torch_dist.all_reduce(data_on_device, _get_reduce_op(op), group)
 
@@ -411,7 +412,11 @@ def _broadcast_object_list(object_list: List[Any],
     group_backend = get_backend(group)
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     current_device = torch.device('cpu')
-    if is_nccl_backend:
+    is_hccl_backend = group_backend == 'hccl'
+    if is_hccl_backend:
+        current_device = torch.npu.current_device()
+        object_sizes_tensor = object_sizes_tensor.to(current_device)
+    elif is_nccl_backend:
         # See note about using torch.cuda.current_device() here in
         # docstring. We cannot simply use my_rank since rank == device is
         # not necessarily true.
@@ -430,7 +435,7 @@ def _broadcast_object_list(object_list: List[Any],
             dtype=torch.uint8,
         )
 
-    if is_nccl_backend:
+    if is_nccl_backend or is_hccl_backend:
         object_tensor = object_tensor.to(current_device)
     torch_dist.broadcast(object_tensor, src=src, group=group)
     # Deserialize objects using their stored sizes.
@@ -504,7 +509,8 @@ def broadcast_object_list(data: List[Any],
         if group is None:
             group = get_default_group()
 
-        if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
+        if digit_version(TORCH_VERSION) >= digit_version(
+                '1.8.0') and not is_npu_available():
             torch_dist.broadcast_object_list(data, src, group)
         else:
             _broadcast_object_list(data, src, group)

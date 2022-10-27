@@ -8,7 +8,7 @@ from mmengine.config.utils import (_get_cfg_metainfo,
                                    _get_package_and_cfg_path)
 from mmengine.registry import MODELS, DefaultScope
 from mmengine.runner import load_checkpoint
-from mmengine.utils import check_install_package, get_installed_path
+from mmengine.utils import get_installed_path, install_package
 
 
 def get_config(cfg_path: str, pretrained: bool = False) -> Config:
@@ -21,10 +21,9 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
             by ``cfg.model_path``. Defaults to False.
 
     Examples:
-        >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco',
-        >>>                  pretrained=True)
+        >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
         >>> # Equivalent to
-        >>> Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
+        >>> # cfg = Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
         >>> cfg.model_path
         https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 
@@ -33,8 +32,8 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
     """  # noqa E301
     # Get package name and relative config path.
     package, cfg_path = _get_package_and_cfg_path(cfg_path)
-    # Check package is installed.
-    check_install_package(package)
+    # Install package if it's not installed.
+    install_package(package)
     package_path = get_installed_path(package)
     try:
         # Use `cfg_path` to search target config file.
@@ -65,9 +64,14 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         pretrained (bool): Whether to load pretrained model. Defaults to False.
         kwargs (dict): Default arguments to build model.
 
+    Examples:
+        >>> model = get_model('mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
+        >>> type(model)
+        <class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
+
     Returns:
         nn.Module: Built model.
-    """
+    """  # noqa E301
     package = cfg_path.split('::')[0]
     with DefaultScope.overwrite_default_scope(package):  # type: ignore
         cfg = get_config(cfg_path, pretrained)
@@ -76,4 +80,8 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
             load_checkpoint(model, cfg.model_path)
+            # Hack to use pretrained weights.
+            # If we do not set _is_init here, Runner will call
+            # `model.init_weights()` to overwrite the pretrained model.
+            model._is_init = True
         return model

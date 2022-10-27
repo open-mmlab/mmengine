@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Any, Iterator, List, Optional, Sequence, Union
 
+from mmengine.dataset import pseudo_collate
 from mmengine.registry import EVALUATOR, METRICS
 from mmengine.structures import BaseDataElement
 from .metric import BaseMetric
@@ -37,34 +38,26 @@ class Evaluator:
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[BaseDataElement]):
+    def process(self,
+                data_samples: Sequence[BaseDataElement],
+                data_batch: Optional[Any] = None):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Sequence[dict]): A batch of data from the dataloader.
-            predictions (Sequence[BaseDataElement]): A batch of outputs from
-                the model.
+            data_samples (Sequence[BaseDataElement]): predictions of the model,
+                and the ground truth of the validation set.
+            data_batch (Any, optional): A batch of data from the dataloader.
         """
-        _data_batch = []
-        for data in data_batch:
-            if isinstance(data['data_sample'], BaseDataElement):
-                _data_batch.append(
-                    dict(
-                        inputs=data['inputs'],
-                        data_sample=data['data_sample'].to_dict()))
+        _data_samples = []
+        for data_sample in data_samples:
+            if isinstance(data_sample, BaseDataElement):
+                _data_samples.append(data_sample.to_dict())
             else:
-                _data_batch.append(data)
-        _predictions = []
-        for pred in predictions:
-            if isinstance(pred, BaseDataElement):
-                _predictions.append(pred.to_dict())
-            else:
-                _predictions.append(pred)
+                _data_samples.append(data_sample)
 
         for metric in self.metrics:
-            metric.process(_data_batch, _predictions)
+            metric.process(data_batch, _data_samples)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
@@ -97,20 +90,26 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         data: Sequence,
-                         predictions: Sequence,
+                         data_samples: Sequence,
+                         data: Optional[Sequence] = None,
                          chunk_size: int = 1):
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            data (Sequence): All data of the validation set.
-            predictions (Sequence): All predictions of the model on the
-                validation set.
+            data_samples (Sequence): All predictions and ground truth of the
+                model and the validation set.
+            data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
         """
 
         # support chunking iterable objects
+        if data is not None:
+            assert len(data_samples) == len(data), (
+                'outputs and data should have the same length, but got '
+                f'outputs length: {len(data_samples)} '
+                f'data length: {len(data)}')
+
         def get_chunks(seq: Iterator, chunk_size=1):
             stop = False
             while not stop:
@@ -125,9 +124,11 @@ class Evaluator:
                     yield chunk
 
         size = 0
-        for data_chunk, pred_chunk in zip(
-                get_chunks(iter(data), chunk_size),
-                get_chunks(iter(predictions), chunk_size)):
-            size += len(data_chunk)
-            self.process(data_chunk, pred_chunk)
+        for output_chunk in get_chunks(iter(data_samples), chunk_size):
+            if data is not None:
+                data_chunk = pseudo_collate(data[size:size + chunk_size])
+            else:
+                data_chunk = None
+            size += len(output_chunk)
+            self.process(output_chunk, data_chunk)
         return self.evaluate(size)

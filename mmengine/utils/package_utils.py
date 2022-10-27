@@ -66,6 +66,6 @@ def call_command(cmd: list) -> None:
         raise e  # type: ignore
 
 
-def check_install_package(package: str):
+def install_package(package: str):
     if not is_installed(package):
         call_command(['python', '-m', 'pip', 'install', package])

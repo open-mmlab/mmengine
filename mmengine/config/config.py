@@ -18,8 +18,8 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import (check_file_exist, check_install_package,
-                            get_installed_path, import_modules_from_strings)
+from mmengine.utils import (check_file_exist, get_installed_path,
+                            import_modules_from_strings, is_installed)
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
                     _get_external_cfg_path, _get_package_and_cfg_path)
 
@@ -199,7 +199,7 @@ class Config:
         # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and
         #  second in `Config.from_file`.
         # In addition, a named temporary file will be removed after closed.
-        # As a workround we set `delete=False` and close the temporary file
+        # As a workaround we set `delete=False` and close the temporary file
         # before opening again.
 
         with tempfile.NamedTemporaryFile(
@@ -594,8 +594,13 @@ class Config:
             # Get package name and relative config path.
             scope = cfg_path.partition('::')[0]
             package, cfg_path = _get_package_and_cfg_path(cfg_path)
+
+            if not is_installed(package):
+                raise ModuleNotFoundError(
+                    f'{package} is not installed, please install {package} '
+                    f'manually')
+
             # Get installed package path.
-            check_install_package(package)
             package_path = get_installed_path(package)
             try:
                 # Get config path from meta file.
@@ -882,23 +887,22 @@ class Config:
                 Defaults to True.
 
         Examples:
-            >>> options = {'model.backbone.depth': 50,
-            ...            'model.backbone.with_cp':True}
+            >>> from mmengine import Config
+            >>> #  Merge dictionary element
+            >>> options = {'model.backbone.depth': 50, 'model.backbone.with_cp': True}
             >>> cfg = Config(dict(model=dict(backbone=dict(type='ResNet'))))
             >>> cfg.merge_from_dict(options)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(
-            ...     model=dict(backbone=dict(depth=50, with_cp=True)))
-
+            >>> cfg._cfg_dict
+            {'model': {'backbone': {'type': 'ResNet', 'depth': 50, 'with_cp': True}}}
             >>> # Merge list element
-            >>> cfg = Config(dict(pipeline=[
-            ...     dict(type='LoadImage'), dict(type='LoadAnnotations')]))
+            >>> cfg = Config(
+            >>>     dict(pipeline=[dict(type='LoadImage'),
+            >>>                    dict(type='LoadAnnotations')]))
             >>> options = dict(pipeline={'0': dict(type='SelfLoadImage')})
             >>> cfg.merge_from_dict(options, allow_list_keys=True)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(pipeline=[
-            ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
-        """
+            >>> cfg._cfg_dict
+            {'pipeline': [{'type': 'SelfLoadImage'}, {'type': 'LoadAnnotations'}]}
+        """  # noqa: E501
         option_cfg_dict: dict = {}
         for full_key, v in options.items():
             d = option_cfg_dict

@@ -72,7 +72,7 @@ class Registry:
             assert isinstance(scope, str)
             self._scope = scope
         else:
-            self._scope = self.infer_scope() if scope is None else scope
+            self._scope = self.infer_scope()
 
         # See https://mypy.readthedocs.io/en/stable/common_issues.html#
         # variables-vs-type-aliases for the use
@@ -190,45 +190,45 @@ class Registry:
             scope (str): The target scope.
 
         Examples:
-        >>> from mmengine.registry import Registry, DefaultScope, MODELS
-        >>> import time
-        >>> # External Registry
-        >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
-        >>>     parent=MODELS)
-        >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
-        >>>     parent=MODELS)
-        >>> # Local Registry
-        >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
-        >>>     parent=MODELS)
-        >>>
-        >>> # Initiate DefaultScope
-        >>> DefaultScope.get_instance(f'scope_{time.time()}',
-        >>>     scope_name='custom')
-        >>> # Check default scope
-        >>> DefaultScope.get_current_instance().scope_name
-        custom
-        >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
-        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:  # noqa: E501
-        >>>     DefaultScope.get_current_instance().scope_name
-        mmcls
-        >>>     registry.scope
-        mmcls
-        >>> # Nested switch scope
-        >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:  # noqa: E501
-        >>>     DefaultScope.get_current_instance().scope_name
-        mmdet
-        >>>     mmdet_registry.scope
-        mmdet
-        >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:  # noqa: E501
-        >>>         DefaultScope.get_current_instance().scope_name
-        mmcls
-        >>>         mmcls_registry.scope
-        mmcls
-        >>>
-        >>> # Check switch back to original scope.
-        >>> DefaultScope.get_current_instance().scope_name
-        custom
-        """
+            >>> from mmengine.registry import Registry, DefaultScope, MODELS
+            >>> import time
+            >>> # External Registry
+            >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
+            >>>     parent=MODELS)
+            >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
+            >>>     parent=MODELS)
+            >>> # Local Registry
+            >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
+            >>>     parent=MODELS)
+            >>>
+            >>> # Initiate DefaultScope
+            >>> DefaultScope.get_instance(f'scope_{time.time()}',
+            >>>     scope_name='custom')
+            >>> # Check default scope
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+            >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>     registry.scope
+            mmcls
+            >>> # Nested switch scope
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmdet
+            >>>     mmdet_registry.scope
+            mmdet
+            >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:
+            >>>         DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>         mmcls_registry.scope
+            mmcls
+            >>>
+            >>> # Check switch back to original scope.
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+        """  # noqa: E501
         from ..logging import print_log
 
         # Switch to the given scope temporarily. If the corresponding registry
@@ -243,9 +243,24 @@ class Registry:
                 if scope_name in PKG2PROJECT:
                     try:
                         module = import_module(f'{scope_name}.utils')
-                        module.register_all_modules()  # type: ignore
-                    except ImportError as e:
-                        raise e
+                        module.register_all_modules(False)  # type: ignore
+                    except (ImportError, AttributeError, ModuleNotFoundError):
+                        if scope in PKG2PROJECT:
+                            print_log(
+                                f'{scope} is not installed and its '
+                                'modules will not be registered. If you '
+                                'want to use modules defined in '
+                                f'{scope}, Please install {scope} by '
+                                f'`pip install {PKG2PROJECT[scope]}.',
+                                logger='current',
+                                level=logging.WARNING)
+                        else:
+                            print_log(
+                                f'Failed to import {scope} and register '
+                                'its modules, please make sure you '
+                                'have registered the module manually.',
+                                logger='current',
+                                level=logging.WARNING)
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
@@ -347,6 +362,24 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            try:
+                module = import_module(f'{scope}.utils')
+                module.register_all_modules(False)  # type: ignore
+            except (ImportError, AttributeError, ModuleNotFoundError):
+                if scope in PKG2PROJECT:
+                    print_log(
+                        f'{scope} is not installed and its modules '
+                        'will not be registered. If you want to use '
+                        f'modules defined in {scope}, Please install '
+                        f'{scope} by `pip install {PKG2PROJECT[scope]} ',
+                        logger='current',
+                        level=logging.WARNING)
+                else:
+                    print_log(
+                        f'Failed to import "{scope}", and register its '
+                        f'modules. Please register {real_key} manually.',
+                        logger='current',
+                        level=logging.WARNING)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)

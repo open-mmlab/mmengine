@@ -6,7 +6,7 @@ from .base_data_element import BaseDataElement
 
 
 class LabelData(BaseDataElement):
-    """Data structure for label-level annnotations or predictions."""
+    """Data structure for label-level annotations or predictions."""
 
     @staticmethod
     def onehot_to_label(onehot: torch.Tensor) -> torch.Tensor:
@@ -22,7 +22,7 @@ class LabelData(BaseDataElement):
         assert isinstance(onehot, torch.Tensor)
         if (onehot.ndim == 1 and onehot.max().item() <= 1
                 and onehot.min().item() >= 0):
-            return onehot.nonzero().squeeze()
+            return onehot.nonzero().squeeze(-1)
         else:
             raise ValueError(
                 'input is not one-hot and can not convert to label')
