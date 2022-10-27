@@ -55,7 +55,7 @@ class BaseDataPreprocessor(nn.Module):
             # namedtuple
             return type(data)(*(self.cast_data(sample) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
-            return type(data)([self.cast_data(sample) for sample in data])  # type: ignore  # noqa: E501  # yapf:disable
+            return type(data)(self.cast_data(sample) for sample in data)  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
