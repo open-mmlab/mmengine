@@ -23,6 +23,7 @@ Optimizer
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
+    ZeroRedundancyOptimizer
 
 .. autosummary::
    :toctree: generated
