@@ -263,7 +263,7 @@ class Config:
            cfg.work_dir # ". /work_dir/config_setting1"
 
 
-        For details, Please refer to docs/zh_cn/tutorials/config.md .
+        For details, Please refer to docs/zh_cn/advanced_tutorials/config.md .
 
         Args:
             filename (str): Filename of config.
