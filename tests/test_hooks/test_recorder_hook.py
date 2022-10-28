@@ -1,10 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
+import os
 import sys
 from unittest import TestCase
 from unittest.mock import Mock
 
+import mmengine
+import mmengine.testing as testing
 from mmengine import MessageHub
-from mmengine.hooks.recorder_hook import FuncRewriter
+from mmengine.hooks import RecorderHook
+from mmengine.hooks.recorder_hook import FuncRewriterRecorder
 
 
 def func1(a, b):
@@ -29,6 +34,10 @@ class ToyRunner:
         self.cls2.func2(2)
 
 
+def toy_collate_fn(data_batches):
+    return data_batches
+
+
 class TestFuncRewriter(TestCase):
 
     def setUp(self) -> None:
@@ -41,33 +50,50 @@ class TestFuncRewriter(TestCase):
         return super().tearDown()
 
     def test_init(self):
-        func_rewriter = FuncRewriter(
+        func_rewriter = FuncRewriterRecorder(
             function='test_recorder_hook.func1', target_variable=('a', 'b'))
-        func_rewriter.initializer(Mock())
+        func_rewriter.initialize(Mock())
         func1(2, 3)
         print(MessageHub.get_current_instance().runtime_info)
-        func_rewriter.deinitializer(Mock())
+        func_rewriter.deinitialize(Mock())
         func_rewriter.clear()
 
-        func_rewriter = FuncRewriter(
+        func_rewriter = FuncRewriterRecorder(
             function='test_recorder_hook.ToyClass.func2',
             target_variable=('d', ),
         )
         runner = Mock()
-        func_rewriter.initializer(runner)
+        func_rewriter.initialize(runner)
         ToyClass().func2(2)
         print(MessageHub.get_current_instance().runtime_info)
-        func_rewriter.deinitializer(Mock())
+        func_rewriter.deinitialize(Mock())
         func_rewriter.clear()
 
-        func_rewriter = FuncRewriter(
+        func_rewriter = FuncRewriterRecorder(
             function='test_recorder_hook.ToyClass.func2',
             target_variable=('d', ),
             target_instance='cls1')
 
         runner = ToyRunner()
-        func_rewriter.initializer(runner)
+        func_rewriter.initialize(runner)
         runner.run()
-        func_rewriter.deinitializer(Mock())
+        func_rewriter.deinitialize(Mock())
         func_rewriter.clear()
         print(MessageHub.get_current_instance().runtime_info)
+
+
+class  TestRecorderHook(testing.RunnerTestCase):
+    def setUp(self):
+        super().setUp()
+        sys.path.append(os.path.dirname(__file__))
+        sys.path.append(os.path.dirname(testing.__file__))
+    def test_with_runner(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.custom_hooks = [
+            dict(type='RecorderHook', recorders=[
+                dict(type='FuncRewriterRecorder',
+                     function='runner_test_case.ToyModel.forward',
+                     target_variable=('inputs', 'data_samples'),
+                     target_instance='linear1'),
+                ),
+            ])]

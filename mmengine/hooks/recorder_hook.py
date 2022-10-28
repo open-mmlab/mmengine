@@ -1,12 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import inspect
+from abc import ABCMeta, abstractmethod
 from ast import *
 from functools import partial
 from importlib import import_module
 from typing import List, Optional, Union
 
-from mmengine import ManagerMixin, MessageHub
+from matplotlib.pyplot import isinteractive
+
+from mmengine.model import is_model_wrapper
+from mmengine.registry import HOOKS, TASK_UTILS
+from mmengine.utils import ManagerMixin
 from .hook import DATA_BATCH, Hook
 
 
@@ -82,15 +87,11 @@ class RecorderVisitor(NodeTransformer):
         return result
 
 
-from abc import ABCMeta, abstractmethod
-
-from mmengine.registry import TASK_UTILS
-
-
 class BaseRecorder(metaclass=ABCMeta):
 
     def __init__(self, recorded_name=None):
         self.recorded_name = recorded_name
+        self.message_hub_cls = import_module('mmengine').MessageHub
 
     @abstractmethod
     def initialize(self, instance):
@@ -105,7 +106,8 @@ class BaseRecorder(metaclass=ABCMeta):
 
 class RecorderManager(ManagerMixin):
 
-    def __init__(self, recorders: List[Union[dict, BaseRecorder]]):
+    def __init__(self, name, recorders: List[Union[dict, BaseRecorder]]):
+        super().__init__(name=name)
         self.recorders: List[BaseRecorder] = []
         for recorder in recorders:
             if isinstance(recorder, dict):
@@ -146,14 +148,15 @@ class AttributeGetterRecorder(BaseRecorder):
             for target_attribute in target_attributes.split():
                 result = getattr(result, target_attribute)
             results.append(result)
-        MessageHub.get_current_instance().update_info(self.recorded_name,
-                                                      results)
+        self.message_hub.get_current_instance().update_info(
+            self.recorded_name, results)
 
     def deinitialize(self, instance):
         pass
 
     def clear(self):
-        MessageHub.get_current_instance().get_info(self.recorded_name).clear()
+        self.message_hub_cls.get_current_instance().get_info(
+            self.recorded_name).clear()
 
 
 @TASK_UTILS.register_module()
@@ -205,9 +208,9 @@ class FuncRewriterRecorder(BaseRecorder):
         else:
             self.modified_func = global_dict[self.function_name]
 
-        self.recorded_buffer = {var: [] for var in self.vars}
+        self.recorded_buffer = {var: [] for var in target_variable}
         self.recorded_buffer['output'] = []
-        MessageHub.get_current_instance().update_info(
+        self.message_hub_cls.get_current_instance().update_info(
             self.recorded_name, self.recorded_buffer, resumed=resume)
 
     def get_module_and_function(self, full_function_name):
@@ -230,7 +233,7 @@ class FuncRewriterRecorder(BaseRecorder):
                 raise e
         return module, class_type, function
 
-    def initializer(self, runner, *args, **kwargs):
+    def initialize(self, runner, *args, **kwargs):
         if self.target_instance:
             target_instance = self.get_target_instance(runner)
             setattr(target_instance, self.function_name,
@@ -240,7 +243,7 @@ class FuncRewriterRecorder(BaseRecorder):
         else:
             setattr(self.act_module, self.function_name, self.modified_func)
 
-    def deinitializer(self, runner):
+    def deinitialize(self, runner):
         if self.target_instance:
             target_instance = self.get_target_instance(runner)
             setattr(target_instance, self.function_name, self.ori_func)
@@ -257,20 +260,41 @@ class FuncRewriterRecorder(BaseRecorder):
         return result
 
     def clear(self):
-        message_hub = MessageHub.get_current_instance()
+        message_hub = self.message_hub_cls.get_current_instance()
         for value in message_hub.get_info(self.recorded_name).values():
             value.clear()
 
 
+@HOOKS.register_module()
 class RecorderHook(Hook):
 
     priority = 'VERY_HIGH'
 
-    def __init__(self, recorders: List[dict, BaseRecorder] = []):
-        self.recorder_manage = RecorderManager(recorders)
+    def __init__(self, recorders: List[Union[dict, BaseRecorder]] = []):
+        self.recorder_manager = RecorderManager(recorders)
+
+    def before_train(self, runner) -> None:
+        if is_model_wrapper(runner.model):
+            model = runner.model.module
+        else:
+            model = runner.model
+        self.recorder_manager.initialize(model)
+
+    def after_train(self, runner) -> None:
+        if is_model_wrapper(runner.model):
+            model = runner.model.module
+        else:
+            model = runner.model
+        self.recorder_manager.deinitialize(model)
 
     def before_train_iter(self,
                           runner,
                           batch_idx: int,
                           data_batch: DATA_BATCH = None) -> None:
-        return data_batch
+        return self.recorder_manager.clear()
+
+    def after_train_iter(self,
+                         runner,
+                         batch_idx: int,
+                         data_batch: DATA_BATCH = None) -> None:
+        return self.recorder_manager.clear()
