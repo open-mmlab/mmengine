@@ -79,7 +79,7 @@ def test_is_model_wrapper():
 
         pass
 
-    CHILD_REGISTRY.register_module(module=CustomModelWrapper)
+    CHILD_REGISTRY.register_module(module=CustomModelWrapper, force=True)
 
     for wrapper in [
             DistributedDataParallel, MMDistributedDataParallel,
