@@ -14,10 +14,10 @@
    :maxdepth: 1
    :caption: 常用功能
 
-   examples/resume_training
-   examples/speed_up_training
-   examples/save_gpu_memory
-   examples/train_a_gan
+   examples/resume_training.md
+   examples/speed_up_training.md
+   examples/save_gpu_memory.md
+   examples/train_a_gan.md
 
 .. toctree::
    :maxdepth: 3
