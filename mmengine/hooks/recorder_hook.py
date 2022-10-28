@@ -4,10 +4,10 @@ import inspect
 from ast import *
 from functools import partial
 from importlib import import_module
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from mmengine import MessageHub
-from .hook import Hook
+from mmengine import ManagerMixin, MessageHub
+from .hook import DATA_BATCH, Hook
 
 
 class RecorderVisitor(NodeTransformer):
@@ -103,38 +103,68 @@ class BaseRecorder(metaclass=ABCMeta):
         pass
 
 
+class RecorderManager(ManagerMixin):
+
+    def __init__(self, recorders: List[Union[dict, BaseRecorder]]):
+        self.recorders: List[BaseRecorder] = []
+        for recorder in recorders:
+            if isinstance(recorder, dict):
+                self.recorders.append(TASK_UTILS.build(recorder))
+            elif isinstance(recorder, BaseRecorder):
+                self.recorders.append(recorder)
+            else:
+                raise TypeError()
+
+    def initialize(self):
+        for recorder in self.recorders:
+            recorder.initialize()
+
+    def deinitialize(self):
+        for recorder in self.recorders:
+            recorder.deinitialize()
+
+    def clear(self):
+        for recorder in self.recorders:
+            recorder.clear()
+
+
 @TASK_UTILS.register_module()
 class AttributeGetterRecorder(BaseRecorder):
 
-    def __init__(self, target_attribute, **kwargs):
+    def __init__(self, target_attributes, **kwargs):
         super().__init__(**kwargs)
-        self.target_attribute = target_attribute
-        _, self.attribute_name = target_attribute.rsplit('.', 1)
+        self.target_attributes_list = target_attributes
+        if not isinstance(target_attributes, list):
+            self.target_attributes_list = [target_attributes]
         if self.recorded_name is None:
-            self.recorded_name = target_attribute
-
-    def get_target_instance(self, instance):
-        target_instance = self.target_instance.split('.')
-        result = instance
-        for instance in target_instance:
-            result = getattr(result, instance)
-        return result
+            self.recorded_name = 'attributes'
 
     def initialize(self, instance):
-        MessageHub.get_current_instance().update_info(self.recorded_name, {})
+        results = []
+        for target_attributes in self.target_attributes_list:
+            result = instance
+            for target_attribute in target_attributes.split():
+                result = getattr(result, target_attribute)
+            results.append(result)
+        MessageHub.get_current_instance().update_info(self.recorded_name,
+                                                      results)
+
+    def deinitialize(self, instance):
+        pass
+
+    def clear(self):
+        MessageHub.get_current_instance().get_info(self.recorded_name).clear()
 
 
 @TASK_UTILS.register_module()
 class FuncRewriterRecorder(BaseRecorder):
-    # TODO: huo qu di jige shuru
-    # TODO: bie ming
-    # TODO: Attribute getter
-    # TODO: quanju kongzhi rewriter de mokuai
+
     def __init__(self,
                  function: str,
                  target_instance: Optional[str] = None,
                  target_variable: Optional[List[str]] = None,
                  resume: bool = False,
+                 indices: int = 0,
                  **kwargs):
         super().__init__(**kwargs)
         self.module, self.class_type, self.ori_func = \
@@ -234,10 +264,13 @@ class FuncRewriterRecorder(BaseRecorder):
 
 class RecorderHook(Hook):
 
-    def __init__(self, rewrited_funcs: List[dict] = []):
-        self.rewrite_funcs = []
-        for cfg in rewrited_funcs:
-            self.rewrite_funcs.append(FuncRewriter(**cfg))
+    priority = 'VERY_HIGH'
 
-    def before_run(self, runner) -> None:
-        pass
+    def __init__(self, recorders: List[dict, BaseRecorder] = []):
+        self.recorder_manage = RecorderManager(recorders)
+
+    def before_train_iter(self,
+                          runner,
+                          batch_idx: int,
+                          data_batch: DATA_BATCH = None) -> None:
+        return data_batch
