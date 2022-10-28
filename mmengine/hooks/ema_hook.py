@@ -27,11 +27,12 @@ class EMAHook(Hook):
             Defaults to 'ExponentialMovingAverage'.
         strict_load (bool): Whether to strictly enforce that the keys of
             ``state_dict`` in checkpoint match the keys returned by
-            ``self.module.state_dict``. Defaults to True.
+            ``self.module.state_dict``. Defaults to False.
+            Changed in v0.3.0.
         begin_iter (int): The number of iteration to enable ``EMAHook``.
             Defaults to 0.
-        begin_epoch (int): The number of epoch to enable ``EMAHook``. Defaults
-            to 0.
+        begin_epoch (int): The number of epoch to enable ``EMAHook``.
+            Defaults to 0.
         **kwargs: Keyword arguments passed to subclasses of
             :obj:`BaseAveragedModel`
     """
