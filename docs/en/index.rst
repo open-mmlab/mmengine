@@ -46,7 +46,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    advanced_tutorials/logging.md
    advanced_tutorials/fileio.md
    advanced_tutorials/utils.md
-   advanced_tutorials/cross_library
+   advanced_tutorials/cross_library.md
 
 .. toctree::
    :maxdepth: 1
