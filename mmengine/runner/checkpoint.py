@@ -575,7 +575,7 @@ def weights_to_cpu(state_dict):
 
 
 @deprecated_function(
-    since='0.1.0',
+    since='0.3.0',
     removed_in='0.5.0',
     instructions='`_save_to_state_dict` will be deprecated in the future, '
     'please use `nn.Module._save_to_state_dict` directly.')
