@@ -38,7 +38,7 @@
 
 我们以实现分类正确率（Classification Accuracy）评测指标为例，说明自定义评测指标的方法。
 
-首先，评测指标类应继承自 `BaseMetric`，并应加入注册器 `METRICS` (关于注册器的说明请参考[相关文档](../tutorials/registry.md))。
+首先，评测指标类应继承自 `BaseMetric`，并应加入注册器 `METRICS` (关于注册器的说明请参考[相关文档](../advanced_tutorials/registry.md))。
 
 `process()` 方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 
