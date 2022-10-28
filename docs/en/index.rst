@@ -14,10 +14,10 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 1
    :caption: Common Usage
 
-   examples/resume_training
-   examples/speed_up_training
-   examples/save_gpu_memory
-   examples/train_a_gan
+   examples/resume_training.md
+   examples/speed_up_training.md
+   examples/save_gpu_memory.md
+   examples/train_a_gan.md
 
 .. toctree::
    :maxdepth: 3
