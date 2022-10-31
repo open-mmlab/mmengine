@@ -276,7 +276,7 @@ class MMFullyShardedDataParallel(FSDP):
                             f'list, tuple or dict, but got {type(data)}')
         return results
 
-    def _collect_state_dict(self):
+    def collect_state_dict(self):
         full_state_dict_config = FullStateDictConfig(
             offload_to_cpu=True, rank0_only=True)
         with FSDP.state_dict_type(self, StateDictType.FULL_STATE_DICT,
