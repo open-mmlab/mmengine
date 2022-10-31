@@ -67,12 +67,11 @@ class ConcatDataset(_ConcatDataset):
             for key in meta_keys:
                 if key in self.ignore_keys:
                     continue
-                if key not in self._metainfo:
+                if key not in dataset.metainfo:
                     raise ValueError(
                         f'{key} does not in the meta information of '
-                        'the first dataset')
-                if key not in dataset.metainfo or \
-                        self._metainfo[key] != dataset.metainfo[key]:
+                        f'the {i}-th dataset')
+                if self._metainfo[key] != dataset.metainfo[key]:
                     raise ValueError(
                         f'The meta information of the {i}-th dataset does not '
                         'match meta information of the first dataset')
