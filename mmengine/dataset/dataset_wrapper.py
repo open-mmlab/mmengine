@@ -32,6 +32,7 @@ class ConcatDataset(_ConcatDataset):
             instantiation. Defaults to False.
         ignore_keys (List[str] or str): Ignore the keys that can be
             unequal in `dataset.metainfo`. Defaults to None.
+            `New in version 0.3.0.`
     """
 
     def __init__(self,
