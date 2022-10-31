@@ -188,8 +188,8 @@ def main():
 - after_train_iter
 - before_val
 - after_val
-- before_test_epoch
-- after_test_epoch
+- before_val_epoch
+- after_val_epoch
 - before_val_iter
 - after_val_iter
 - before_test

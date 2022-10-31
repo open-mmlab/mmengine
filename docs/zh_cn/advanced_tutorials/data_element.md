@@ -222,7 +222,7 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
 
-同时为了操作的便捷性，对 `data` 和 `metainfo` 中的数据可以通过 `del` 直接删除，也支持 `pop` 在在访问属性后删除属性。
+同时为了操作的便捷性，对 `data` 和 `metainfo` 中的数据可以通过 `del` 直接删除，也支持 `pop` 在访问属性后删除属性。
 
 ```python
 data_element = BaseDataElement(
