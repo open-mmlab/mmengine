@@ -418,7 +418,7 @@ class Config:
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
-                with open(temp_config_file.name) as f:
+                with open(temp_config_file.name, encoding='utf-8') as f:
                     codes = ast.parse(f.read())
                     codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
                 codeobj = compile(codes, '', mode='exec')
@@ -550,7 +550,7 @@ class Config:
         file_format = filename.partition('.')[-1]
         if file_format == 'py':
             Config._validate_py_syntax(filename)
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 codes = ast.parse(f.read()).body
 
                 def is_base_line(c):
