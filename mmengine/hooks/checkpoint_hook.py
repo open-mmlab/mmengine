@@ -282,7 +282,7 @@ class CheckpointHook(Hook):
         if not self.by_epoch:
             return
 
-        if runner.epoch < self.save_start:
+        if runner.epoch + 1 < self.save_start:
             return
 
         # save checkpoint for following cases:
