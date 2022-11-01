@@ -430,6 +430,8 @@ class TestParameterScheduler(TestCase):
         targets = [
             single_targets, [t * self.layer2_mult for t in single_targets]
         ]
+
+        # Test with non-zero eta-min.
         scheduler = CosineRestartParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -440,14 +442,16 @@ class TestParameterScheduler(TestCase):
 
         epochs = 10
         t = 10
-        eta_min = 1e-7
-        single_targets = [
+        eta_min = 5e-3
+        targets1 = [
             eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
             for x in range(epochs)
         ]
-        targets = [
-            single_targets, [x * self.layer2_mult for x in single_targets]
+        targets2 = [
+            eta_min + (0.5 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
         ]
+        targets = [targets1, targets2]
         scheduler = CosineRestartParamScheduler(
             self.optimizer,
             param_name='lr',
