@@ -373,7 +373,7 @@ runner.train()
 
 接下来，我们将**稍微**深入执行器的内部，结合图示来理清其中数据的流向与格式约定。
 
-![基本数据流](https://user-images.githubusercontent.com/112053249/191187150-58ac9e7e-7cf6-4b36-a0f8-39067f95e229.jpg)
+![基本数据流](https://user-images.githubusercontent.com/112053249/199228350-5f80699e-7fd2-4b4c-ac32-0b16b1922c2e.png)
 
 上图是执行器的**基本**数据流，其中虚线边框、灰色填充的不同形状代表不同的数据格式，实线方框代表模块或方法。由于 MMEngine 强大的灵活性与可扩展性，你总可以继承某些关键基类并重载其中的方法，因此上图并不总是成立。只有当你没有自定义 `Runner` 或 `TrainLoop` ，并且你的自定义模型没有重载 `train_step`、`val_step` 与 `test_step` 方法时上图才会成立（而这在检测、分割等任务上是常见的，参考[模型](./model.md)教程）。
 
