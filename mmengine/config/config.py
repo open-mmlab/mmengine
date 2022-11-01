@@ -143,7 +143,7 @@ class Config:
         if cfg_text:
             text = cfg_text
         elif filename:
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 text = f.read()
         else:
             text = ''
