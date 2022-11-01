@@ -374,8 +374,8 @@ class WandbVisBackend(BaseVisBackend):
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
-        self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
         self._log_code_name = log_code_name
+        self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
 
     def _init_env(self):
         """Setup env for wandb."""
