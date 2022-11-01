@@ -361,6 +361,7 @@ class WandbVisBackend(BaseVisBackend):
             for details. Defaults to None.
             New in version 0.3.0.
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
+            New in version 0.3.0.
     """
 
     def __init__(self,
