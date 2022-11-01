@@ -106,7 +106,7 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
         raise ValueError(
             '`_get_package_and_cfg_path` is used for get external package, '
             'please specify the package name and relative config path, just '
-            'like `mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py`')
+            'like `mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py`')
     package_cfg = cfg_path.split('::')
     if len(package_cfg) > 2:
         raise ValueError('`::` should only be used to separate package and '
