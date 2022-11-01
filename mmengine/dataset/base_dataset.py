@@ -192,6 +192,7 @@ class BaseDataset(Dataset):
         conflicts with original dataset.
 
     Examples:
+        >>> # Assume the annotation file is given above.
         >>> class CustomDataset(BaseDataset):
         >>>     METAINFO: dict = dict(task_name='custom_task',
         >>>                           dataset_type='custom_type')
