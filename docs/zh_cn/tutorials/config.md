@@ -533,7 +533,7 @@ print(custom_optim)
 configs/_base_/schedules/schedule_1x.py
 configs/_base_/datasets.coco_instance.py
 configs/_base_/default_runtime.py
-configs/_base_/models/faster_rcnn_r50_fpn.py
+configs/_base_/models/faster-rcnn_r50_fpn.py
 ```
 
 如果没有配置文件跨项目继承的功能，我们就需要把 MMDetection 的配置文件拷贝到当前项目，而我们现在只需要安装 MMDetection
@@ -546,7 +546,7 @@ _base_ = [
     'mmdet::_base_/schedules/schedule_1x.py',
     'mmdet::_base_/datasets/coco_instance.py',
     'mmdet::_base_/default_runtime.py',
-    'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
+    'mmdet::_base_/models/faster-rcnn_r50_fpn.py',
 ]
 ```
 
@@ -575,7 +575,7 @@ MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符�
 from mmengine.hub import get_model
 
 model = get_model(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+    'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
 print(type(model))
 ```
 
@@ -592,7 +592,7 @@ http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0
 from mmengine.hub import get_config
 
 cfg = get_config(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+    'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
 print(cfg.model_path)
 
 ```
