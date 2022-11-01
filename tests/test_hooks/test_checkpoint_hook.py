@@ -469,6 +469,7 @@ class TestCheckpointHook:
         checkpoint_cfg = dict(
             type='CheckpointHook',
             interval=save_interval,
+            save_start=5,
             filename_tmpl=tmpl,
             by_epoch=True)
         runner = Runner(
@@ -492,8 +493,12 @@ class TestCheckpointHook:
             val_cfg=dict(),
             default_hooks=dict(checkpoint=checkpoint_cfg))
         runner.train()
-        for epoch in range(max_epoch):
-            if epoch % save_interval != 0 or epoch == 0:
-                continue
+        for epoch in range(1, max_epoch + 1):
             path = osp.join(work_dir, tmpl.format(epoch))
-            assert osp.isfile(path=path)
+            # save ckpt every 2 epoch since from epoch 5. Also save the
+            # last ckpt
+            if epoch >= 5 and ((epoch - 5) % save_interval == 0
+                               or epoch == max_epoch):
+                assert osp.exists(path)
+            else:
+                assert not osp.isfile(path=path)
