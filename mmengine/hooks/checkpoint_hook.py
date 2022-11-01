@@ -85,7 +85,8 @@ class CheckpointHook(Hook):
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
         save_start (int): Start saving the number of epochs or
-            iterations of model weights. Defaults to 0.
+            epochs or iterations of model weights. Defaults to 0.
+            New in v0.3.0.
 
     Examples:
         >>> # Save best based on single metric
@@ -291,6 +292,36 @@ class CheckpointHook(Hook):
                 self.save_last and self.is_last_train_epoch(runner)):
             runner.logger.info(
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
+            self._save_checkpoint(runner)
+
+    def after_train_iter(self,
+                         runner,
+                         batch_idx: int,
+                         data_batch: DATA_BATCH = None,
+                         outputs=Optional[dict]) -> None:
+        """Save the checkpoint and synchronize buffers after each iteration.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): The index of the current batch in the train loop.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (dict, optional): Outputs from model.
+        """
+
+        if self.by_epoch:
+            return
+
+        if runner.iter < self.save_start:
+            return
+
+        # save checkpoint for following cases:
+        # 1. every ``self.interval`` iterations
+        # 2. reach the last iteration of training
+        if self.every_n_train_iters(runner, self.interval) or \
+                (self.save_last and
+                 self.is_last_train_iter(runner)):
+            runner.logger.info(
+                f'Saving checkpoint at {runner.iter + 1} iterations')
             self._save_checkpoint(runner)
 
     def after_val_epoch(self, runner, metrics):
@@ -501,35 +532,6 @@ class CheckpointHook(Hook):
             self.rules.append(rule)
 
         self.key_indicators = key_indicators
-
-    def after_train_iter(self,
-                         runner,
-                         batch_idx: int,
-                         data_batch: DATA_BATCH = None,
-                         outputs=Optional[dict]) -> None:
-        """Save the checkpoint and synchronize buffers after each iteration.
-
-        Args:
-            runner (Runner): The runner of the training process.
-            batch_idx (int): The index of the current batch in the train loop.
-            data_batch (dict or tuple or list, optional): Data from dataloader.
-            outputs (dict, optional): Outputs from model.
-        """
-        if self.by_epoch:
-            return
-
-        if runner.iter < self.save_start:
-            return
-
-        # save checkpoint for following cases:
-        # 1. every ``self.interval`` iterations
-        # 2. reach the last iteration of training
-        if self.every_n_train_iters(runner, self.interval) or \
-                (self.save_last and
-                 self.is_last_train_iter(runner)):
-            runner.logger.info(
-                f'Saving checkpoint at {runner.iter + 1} iterations')
-            self._save_checkpoint(runner)
 
     def every_n_train_iters(self, runner, n: int) -> bool:
         """Test whether current training iteration can be evenly divided by n.
