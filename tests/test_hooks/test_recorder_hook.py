@@ -86,14 +86,29 @@ class  TestRecorderHook(testing.RunnerTestCase):
     def setUp(self):
         super().setUp()
         sys.path.append(os.path.dirname(__file__))
-        sys.path.append(os.path.dirname(testing.__file__))
+
     def test_with_runner(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.custom_hooks = [
-            dict(type='RecorderHook', recorders=[
-                dict(type='FuncRewriterRecorder',
-                     function='runner_test_case.ToyModel.forward',
-                     target_variable=('inputs', 'data_samples'),
-                     target_instance='linear1'),
-                ),
-            ])]
+            dict(
+                type='RecorderHook',
+                recorders=[
+                    dict(
+                        type='FuncRewriterRecorder',
+                        function='mmengine.testing.runner_test_case.ToyModel.forward',
+                        target_variable=('inputs', 'data_samples')),
+                    dict(
+                        type='FuncRewriterRecorder',
+                        function='torch.nn.Linear.forward',
+                        target_instance='linear1',
+                    ),
+                    dict(
+                        type='AttributeGetterRecorder',
+                        target_attributes='linear1.weight',
+                    )
+                ],
+            )
+        ]
+        runner = self.build_runner(cfg)
+        # TODO add more tests
+        runner.train()

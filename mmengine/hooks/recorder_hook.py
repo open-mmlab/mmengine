@@ -1,13 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import inspect
+import os
+import sys
 from abc import ABCMeta, abstractmethod
 from ast import *
 from functools import partial
 from importlib import import_module
 from typing import List, Optional, Union
-
-from matplotlib.pyplot import isinteractive
 
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, TASK_UTILS
@@ -49,16 +49,18 @@ class RecorderVisitor(NodeTransformer):
         if self.class_name is not None and not self.class_flag:
             return super().generic_visit(node)
 
-        result = [
+        result = []
+        result.append(
             eval(
                 ast.dump(
-                    ast.parse('from mmengine import MessageHub').body[0])),
+                    ast.parse('from mmengine import MessageHub').body[0])))
+        result.append(
             eval(
                 ast.dump(
                     ast.parse('recorded_buffer = '
-                              f'MessageHub.get_current_instance().get_info('
-                              f'"{self.func_name}")').body[0]))
-        ]
+                            f'MessageHub.get_current_instance().get_info('
+                            f'"{self.func_name}")').body[0])))
+
 
         for var in self.vars:
             result.extend([
@@ -117,13 +119,13 @@ class RecorderManager(ManagerMixin):
             else:
                 raise TypeError()
 
-    def initialize(self):
+    def initialize(self, instance):
         for recorder in self.recorders:
-            recorder.initialize()
+            recorder.initialize(instance)
 
-    def deinitialize(self):
+    def deinitialize(self, instance):
         for recorder in self.recorders:
-            recorder.deinitialize()
+            recorder.deinitialize(instance)
 
     def clear(self):
         for recorder in self.recorders:
@@ -145,18 +147,17 @@ class AttributeGetterRecorder(BaseRecorder):
         results = []
         for target_attributes in self.target_attributes_list:
             result = instance
-            for target_attribute in target_attributes.split():
+            for target_attribute in target_attributes.split('.'):
                 result = getattr(result, target_attribute)
             results.append(result)
-        self.message_hub.get_current_instance().update_info(
+        self.message_hub_cls.get_current_instance().update_info(
             self.recorded_name, results)
 
     def deinitialize(self, instance):
         pass
 
     def clear(self):
-        self.message_hub_cls.get_current_instance().get_info(
-            self.recorded_name).clear()
+        pass
 
 
 @TASK_UTILS.register_module()
@@ -172,7 +173,8 @@ class FuncRewriterRecorder(BaseRecorder):
         super().__init__(**kwargs)
         self.module, self.class_type, self.ori_func = \
             self.get_module_and_function(function)
-
+        target_variable = (
+            target_variable if target_variable is not None else [])
         self.function_name = self.ori_func.__name__
         self.target_instance = target_instance
         if self.class_type is not None:
@@ -200,7 +202,8 @@ class FuncRewriterRecorder(BaseRecorder):
         ast_tree = visitor.visit(ast_tree)
         ast.fix_missing_locations(ast_tree)
         code = compile(ast_tree, '', mode='exec')
-        global_dict = dict()
+        # Overwrites package for relative imports
+        global_dict = dict(__package__=self.act_module.__package__)
         eval(code, global_dict, global_dict)
         if self.class_type is not None:
             self.modified_func = getattr(global_dict[self.class_name],
@@ -233,23 +236,28 @@ class FuncRewriterRecorder(BaseRecorder):
                 raise e
         return module, class_type, function
 
-    def initialize(self, runner, *args, **kwargs):
+    def initialize(self, instance):
         if self.target_instance:
-            target_instance = self.get_target_instance(runner)
+            target_instance = self.get_target_instance(instance)
             setattr(target_instance, self.function_name,
-                    partial(self.modified_func, (target_instance, )))
+                    partial(self.modified_func, target_instance))
         elif self.class_type is not None:
+            # Both module and act_module  have a reference for target function.
             setattr(self.class_type, self.function_name, self.modified_func)
+            setattr(self.act_module, self.class_name, self.class_type)
+            setattr(self.module, self.class_name, self.class_type)
         else:
             setattr(self.act_module, self.function_name, self.modified_func)
+            setattr(self.module, self.function_name, self.modified_func)
 
-    def deinitialize(self, runner):
+    def deinitialize(self, instance):
         if self.target_instance:
-            target_instance = self.get_target_instance(runner)
+            target_instance = self.get_target_instance(instance)
             setattr(target_instance, self.function_name, self.ori_func)
         elif self.class_type is not None:
             setattr(self.class_type, self.function_name, self.ori_func)
         else:
+            setattr(self.module, self.function_name, self.ori_func)
             setattr(self.act_module, self.function_name, self.ori_func)
 
     def get_target_instance(self, instance):
@@ -271,7 +279,8 @@ class RecorderHook(Hook):
     priority = 'VERY_HIGH'
 
     def __init__(self, recorders: List[Union[dict, BaseRecorder]] = []):
-        self.recorder_manager = RecorderManager(recorders)
+        self.recorder_manager = RecorderManager(
+            name='mmengine', recorders=recorders)
 
     def before_train(self, runner) -> None:
         if is_model_wrapper(runner.model):
@@ -296,5 +305,6 @@ class RecorderHook(Hook):
     def after_train_iter(self,
                          runner,
                          batch_idx: int,
-                         data_batch: DATA_BATCH = None) -> None:
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[dict] = None) -> None:
         return self.recorder_manager.clear()
