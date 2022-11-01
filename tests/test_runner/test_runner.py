@@ -308,7 +308,6 @@ class CustomRunner(Runner):
                  train_cfg=None,
                  val_cfg=None,
                  test_cfg=None,
-                 auto_distinguish_experiment=None,
                  auto_scale_lr=None,
                  optim_wrapper=None,
                  param_scheduler=None,
