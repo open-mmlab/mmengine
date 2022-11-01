@@ -360,6 +360,7 @@ class WandbVisBackend(BaseVisBackend):
             `wandb docs <https://docs.wandb.ai/ref/python/run#log_code>`_
             for details. Defaults to None.
             New in version 0.3.0.
+        watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
     """
 
     def __init__(self,
@@ -367,8 +368,8 @@ class WandbVisBackend(BaseVisBackend):
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
                  commit: Optional[bool] = True,
-                 watch_kwargs: Optional[dict] = None,
-                 log_code_name: Optional[str] = None):
+                 log_code_name: Optional[str] = None,
+                 watch_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
