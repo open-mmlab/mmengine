@@ -545,7 +545,7 @@ class Config:
             TypeError: Name of config file.
 
         Returns:
-            list: A list of base config
+            list: A list of base config.
         """
         file_format = filename.partition('.')[-1]
         if file_format == 'py':
