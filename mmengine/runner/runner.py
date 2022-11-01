@@ -346,7 +346,7 @@ class Runner:
         self._randomness_cfg = randomness
         self.set_randomness(**randomness)
 
-        if experiment_name is None and self.cfg.filename is not None:
+        if experiment_name is None and self.cfg.get('filename') is not None:
             experiment_name = osp.splitext(osp.basename(self.cfg.filename))[0]
 
         self._experiment_name = experiment_name
