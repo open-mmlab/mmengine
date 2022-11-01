@@ -19,6 +19,7 @@ class RecorderVisitor(NodeTransformer):
 
     def __init__(self,
                  func_name: str,
+                 recorded_name: Optional[str] = None,
                  var: Optional[List[str]] = None,
                  class_name: Optional[str] = None,
                  resume: bool = False,
@@ -26,6 +27,10 @@ class RecorderVisitor(NodeTransformer):
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.func_name = func_name
+        self.recorded_name = recorded_name if recorded_name is not None else func_name
+        self.var = var
+        self.class_name = class_name
+        self.resume = resume
         self.vars = var if var is not None else []
         self.function_flag = False
         self.class_flag = False
@@ -58,8 +63,8 @@ class RecorderVisitor(NodeTransformer):
             eval(
                 ast.dump(
                     ast.parse('recorded_buffer = '
-                            f'MessageHub.get_current_instance().get_info('
-                            f'"{self.func_name}")').body[0])))
+                              f'MessageHub.get_current_instance().get_info('
+                              f'"{self.recorded_name}")').body[0])))
 
 
         for var in self.vars:
@@ -177,6 +182,7 @@ class FuncRewriterRecorder(BaseRecorder):
             target_variable if target_variable is not None else [])
         self.function_name = self.ori_func.__name__
         self.target_instance = target_instance
+
         if self.class_type is not None:
             self.act_module = inspect.getmodule(self.class_type)
             self.class_name = self.class_type.__name__
@@ -193,7 +199,8 @@ class FuncRewriterRecorder(BaseRecorder):
         act_module_path = self.act_module.__file__
 
         visitor = RecorderVisitor(
-            func_name=self.recorded_name,
+            func_name=self.function_name,
+            recorded_name=self.recorded_name,
             var=target_variable,
             class_name=self.class_name,
             resume=resume)
@@ -276,7 +283,7 @@ class FuncRewriterRecorder(BaseRecorder):
 @HOOKS.register_module()
 class RecorderHook(Hook):
 
-    priority = 'VERY_HIGH'
+    priority = 'VERY_LOW'
 
     def __init__(self, recorders: List[Union[dict, BaseRecorder]] = []):
         self.recorder_manager = RecorderManager(

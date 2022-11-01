@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from cgitb import Hook
 import copy
 import os
 import sys
@@ -10,6 +11,8 @@ import mmengine.testing as testing
 from mmengine import MessageHub
 from mmengine.hooks import RecorderHook
 from mmengine.hooks.recorder_hook import FuncRewriterRecorder
+from mmengine.registry import HOOKS
+
 
 
 def func1(a, b):
@@ -85,6 +88,7 @@ class TestFuncRewriter(TestCase):
 class  TestRecorderHook(testing.RunnerTestCase):
     def setUp(self):
         super().setUp()
+        HOOKS.register_module()
         sys.path.append(os.path.dirname(__file__))
 
     def test_with_runner(self):
@@ -95,16 +99,20 @@ class  TestRecorderHook(testing.RunnerTestCase):
                 recorders=[
                     dict(
                         type='FuncRewriterRecorder',
-                        function='mmengine.testing.runner_test_case.ToyModel.forward',
-                        target_variable=('inputs', 'data_samples')),
+                        function=
+                        'mmengine.testing.runner_test_case.ToyModel.forward',
+                        target_variable=('inputs', 'data_samples'),
+                        recorded_name='model'),
                     dict(
                         type='FuncRewriterRecorder',
                         function='torch.nn.Linear.forward',
                         target_instance='linear1',
+                        recorded_name='linear1',
                     ),
                     dict(
                         type='AttributeGetterRecorder',
                         target_attributes='linear1.weight',
+                        recorded_name='linear1_weight'
                     )
                 ],
             )
