@@ -1229,10 +1229,6 @@ class CosineRestartParamScheduler(_ParamScheduler):
                 eta_min = base_value * self.eta_min_ratio
             if step == 0:
                 values.append(eta_max)
-
-            elif (step - 1 - current_periods) % (2 * current_periods) == 0:
-                values.append(group[self.param_name] + (eta_max - eta_min) *
-                              (1 - math.cos(math.pi / current_periods)) / 2)
             else:
                 values.append(
                     (1 + math.cos(math.pi * step / current_periods)) /
