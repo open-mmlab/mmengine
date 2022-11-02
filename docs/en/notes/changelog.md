@@ -1,5 +1,63 @@
 # Changelog of v0.x
 
+## v0.3.0 (11/02/2022)
+
+### New Features & Enhancements
+
+- Support engine with NPU backend. by @wangjiangben-hw in https://github.com/open-mmlab/mmengine/pull/572
+- Support torch ZeroRedundancyOptimizer by @nijkah in https://github.com/open-mmlab/mmengine/pull/551
+- Add non-blocking feature to BaseDataPreprocessor by @shenmishajing in https://github.com/open-mmlab/mmengine/pull/618
+- Add documents for `clip_grad` , and support clip grad by value. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/513
+- Add ROCm info when collecting env by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/633
+- Add a function to mark the deprecated function. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/609
+- Call `register_all_modules`  in `Registry.get()` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/541
+- Deprecate `_save_to_state_dict` implemented in mmengine by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/610
+- Add `ignore_keys` in ConcatDataset by @BIGWangYuDong in https://github.com/open-mmlab/mmengine/pull/556
+- Add issue or pr assignees by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/608
+- Add `CODEOWNERS` file for auto assigning reviewer by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/605
+
+### Docs
+
+- Fix typo in docs/zh_cn/tutorials/model.md by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/598
+- Fix typo in docs/zh_cn/tutorials/config.md by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/596
+- Fix cannot show `changelog.md` in chinese documents. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/606
+- Fix typo by @MambaWong in https://github.com/open-mmlab/mmengine/pull/616
+- Fix Chinese docs whitespaces by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/521
+- Translate installation and 15_min by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/629
+- Refine chinese doc by @Tau-J in https://github.com/open-mmlab/mmengine/pull/516
+- Add mmyolo link in README by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/634
+- Add mmengine logo in docs by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/641
+- Fix typo in docstring by @triple-Mu in https://github.com/open-mmlab/mmengine/pull/644
+- Fix error implementation of `is_model_wrapper` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/640
+- Fix typo in advanced tutorial by @cxiang26 in https://github.com/open-mmlab/mmengine/pull/650
+- Fix typo in `Config` docstring by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/654
+- Fix docstring of BaseDataset by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/656
+- Fix docstring and documentation used for `hub.get_model` by @zengyh1900 in https://github.com/open-mmlab/mmengine/pull/659
+
+### Bug Fixes
+
+- Fix pip upgrade CI by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/622
+- Fix the total number of iterations in log is a float number. by @jbwang1997 in https://github.com/open-mmlab/mmengine/pull/604
+- Make autocast compatible with mps by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/587
+- Fix error format of log message by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/508
+- Fix add_config func is not called bug by @shenmishajing in https://github.com/open-mmlab/mmengine/pull/613
+- Fix `BaseDataPreprocessor.cast_data` could not handle string data by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/602
+- Change strict_load of EMAHook to False by default by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/642
+- Fix `open` encoding problem of Config in Windows by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/648
+- Fix error calculation of `eta_min` in `CosineRestartParamScheduler` by @Z-Fran in https://github.com/open-mmlab/mmengine/pull/639
+
+### New Contributors
+
+- @Xiangxu-0103 made their first contribution in https://github.com/open-mmlab/mmengine/pull/596
+- @shenmishajing made their first contribution in https://github.com/open-mmlab/mmengine/pull/618
+- @Tau-J made their first contribution in https://github.com/open-mmlab/mmengine/pull/516
+- @wangjiangben-hw made their first contribution in https://github.com/open-mmlab/mmengine/pull/572
+- @triple-Mu made their first contribution in https://github.com/open-mmlab/mmengine/pull/644
+- @sanbuphy made their first contribution in https://github.com/open-mmlab/mmengine/pull/648
+- @Z-Fran made their first contribution in https://github.com/open-mmlab/mmengine/pull/639
+- @BIGWangYuDong made their first contribution in https://github.com/open-mmlab/mmengine/pull/556
+- @zengyh1900 made their first contribution in https://github.com/open-mmlab/mmengine/pull/659
+
 ## v0.2.0 (11/10/2022)
 
 ### New Features & Enhancements

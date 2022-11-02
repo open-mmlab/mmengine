@@ -58,14 +58,13 @@ Major features:
 
 ## What's New
 
-v0.2.0 was released in 2022-10-11.
+v0.3.0 was released in 2022-11-02.
 
-1. Refactor FileIO to provide a more unified interface without BC breaking.
-2. Add the base model for test time augmentation.
-3. Support converting `BN` to `SyncBN` during distributed data-parallel training.
-4. Add SMDDP backend and support running on AWS.
+1. Support NPU backend.
+2. Support torch `ZeroRedundancyOptimizer`.
+3. Fix error calculation of `eta_min` in `CosineRestartParamScheduler`.
 
-Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022") for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0.3.0 "02/11/2022") for more details.
 
 ## Installation
 
