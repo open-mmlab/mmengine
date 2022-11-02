@@ -66,7 +66,6 @@ class RecorderVisitor(NodeTransformer):
                               f'MessageHub.get_current_instance().get_info('
                               f'"{self.recorded_name}")').body[0])))
 
-
         for var in self.vars:
             result.extend([
                 eval(
@@ -104,9 +103,11 @@ class BaseRecorder(metaclass=ABCMeta):
     def initialize(self, instance):
         pass
 
+    @abstractmethod
     def deinitialize(self, instance):
         pass
 
+    @abstractmethod
     def clear(self):
         pass
 
