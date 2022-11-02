@@ -106,7 +106,7 @@ runner = Runner(
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
     cfg=dict(model_wrapper_cfg=dict(
         type='MMFullyShardedDataParallel',
-        # 启用 cpu_offload 可以减少内存占用，但会影响训练速度
+        # 启用 cpu_offload 可以减少内存占用，但会降低训练速度
         cpu_offload=True,
         # 合理选择 auto_wrap_policy 以降低显存占用，参考
         # https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html
@@ -124,6 +124,13 @@ runner.train()
 尽管 PyTorch 1.11 中已经原生支持 FSDP，但并不完善。在 MMEngine 中我们仅在 PyTorch 1.12+ 版本支持 FSDP 技术
 ```
 
+```{note}
+PyTorch 1.12 引入的一些新特性，暂时还未在 MMEngine 中得到支持。以下特性将会在后续更新中逐渐支持：
+
+- Local/Shareded 模式的模型权重保存/加载方式（目前仅使用 Full 模式）
+- `sharding_strategy` `mixed_precision` 支持在配置文件中配置
+```
+
 ```{warning}
-目前为止，MMEngine 的 FSDP 暂时不支持保存 `optimizer_state`，因此无法继续训练（resume training）。我们将在之后的更新中支持更多功能
+目前为止，MMEngine 的 FSDP 暂时不支持保存完整的 `optimizer_state`，因此无法继续训练（resume training）。我们将在接下来的更新中支持这一功能
 ```

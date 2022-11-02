@@ -103,6 +103,22 @@ class MMFullyShardedDataParallel(FSDP):
 
         **kwargs: Keyword arguments passed to
             :class:`FullyShardedDataParallel`.
+
+    .. warning::
+        FSDP in MMEngine is currently not compatible with resume training.
+        Resume your training from a saved FSDP model will lead to error,
+        because full optimizer state is not saved properly. This issue will
+        be fixed soon.
+
+    .. note::
+        Saving checkpoint frequently is currently not recommended when you
+        are using FSDP, because we only support ``FULL_STATE_DICT`` now.
+        This requires synchronization between processes and will slow down
+        your training. We will improve it in the future.
+
+    .. note::
+        More features such as ``sharding_strategy``, ``mixed_precision`` etc.
+        will be supported in MMEngine's config file system soon.
     """
 
     def __init__(
