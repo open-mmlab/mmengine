@@ -472,7 +472,7 @@ class PretrainedInit:
         map_location (str): map tensors into proper locations.
     """
 
-    def __init__(self, checkpoint, prefix=None, map_location=None):
+    def __init__(self, checkpoint, prefix=None, map_location='cpu'):
         self.checkpoint = checkpoint
         self.prefix = prefix
         self.map_location = map_location
