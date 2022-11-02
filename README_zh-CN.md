@@ -62,7 +62,7 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 
 最新版本 v0.3.0 在 2022.11.02 发布。
 
-1. 支持 NPU 后端。
+1. 支持华为昇腾芯片。
 2. 支持使用 `ZeroRedundancyOptimizer`。
 3. 修复了 `CosineRestartParamScheduler` 中 `eta_min` 计算错误的问题。
 

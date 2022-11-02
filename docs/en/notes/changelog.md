@@ -4,10 +4,10 @@
 
 ### New Features & Enhancements
 
-- Support running with NPU backend. by @wangjiangben-hw in https://github.com/open-mmlab/mmengine/pull/572
+- Support running on Ascend chip by @wangjiangben-hw in https://github.com/open-mmlab/mmengine/pull/572
 - Support torch `ZeroRedundancyOptimizer` by @nijkah in https://github.com/open-mmlab/mmengine/pull/551
 - Add non-blocking feature to `BaseDataPreprocessor` by @shenmishajing in https://github.com/open-mmlab/mmengine/pull/618
-- Add documents for `clip_grad` , and support clip grad by value. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/513
+- Add documents for `clip_grad`, and support clip grad by value. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/513
 - Add ROCm info when collecting env by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/633
 - Add a function to mark the deprecated function. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/609
 - Call `register_all_modules`  in `Registry.get()` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/541
