@@ -60,14 +60,13 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 
 ## 最近进展
 
-最新版本 v0.2.0 在 2022.10.11 发布。
+最新版本 v0.3.0 在 2022.11.02 发布。
 
-1. 重构 FileIO 以提供更加易用的接口并保持向下兼容。
-2. 新增 Test time augmentation 模型基类。
-3. 分布式训练时，支持将 BN 自动转化为 SyncBN。
-4. 新增了 SMDDP 后端并支持在 AWS 进行分布式训练。
+1. 支持华为昇腾芯片。
+2. 支持使用 `ZeroRedundancyOptimizer`。
+3. 修复了 `CosineRestartParamScheduler` 中 `eta_min` 计算错误的问题。
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022")
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.3.0 "02/11/2022")
 
 ## 安装
 
