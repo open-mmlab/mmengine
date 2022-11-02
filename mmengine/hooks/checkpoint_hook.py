@@ -84,7 +84,7 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-        save_start (int): Start saving the number of epochs or
+        save_begin (int): Start saving the number of epochs or
             epochs or iterations of model weights. Defaults to 0.
             New in v0.3.0.
 
@@ -131,7 +131,7 @@ class CheckpointHook(Hook):
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
-                 save_start: int = 0,
+                 save_begin: int = 0,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -140,7 +140,7 @@ class CheckpointHook(Hook):
         self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
         self.save_last = save_last
-        self.save_start = save_start
+        self.save_begin = save_begin
         self.args = kwargs
 
         if file_client_args is not None:
@@ -282,7 +282,7 @@ class CheckpointHook(Hook):
         if not self.by_epoch:
             return
 
-        if runner.epoch + 1 < self.save_start:
+        if runner.epoch + 1 < self.save_begin:
             return
 
         # save checkpoint for following cases:
@@ -311,7 +311,7 @@ class CheckpointHook(Hook):
         if self.by_epoch:
             return
 
-        if runner.iter < self.save_start:
+        if runner.iter + 1 < self.save_begin:
             return
 
         # save checkpoint for following cases:
@@ -545,7 +545,7 @@ class CheckpointHook(Hook):
             bool: Return True if the current iteration can be evenly divided
             by n, otherwise False.
         """
-        return (runner.iter + 1 - self.save_start) % n == 0 if n > 0 else False
+        return (runner.iter + 1 - self.save_begin) % n == 0 if n > 0 else False
 
     def every_n_epochs(self, runner, n: int) -> bool:
         """Test whether current epoch can be evenly divided by n.
@@ -559,4 +559,4 @@ class CheckpointHook(Hook):
             bool: Whether current epoch can be evenly divided by n.
         """
         return (runner.epoch + 1 -
-                self.save_start) % n == 0 if n > 0 else False
+                self.save_begin) % n == 0 if n > 0 else False

@@ -469,7 +469,7 @@ class TestCheckpointHook:
         checkpoint_cfg = dict(
             type='CheckpointHook',
             interval=save_interval,
-            save_start=5,
+            save_begin=5,
             filename_tmpl=tmpl,
             by_epoch=True)
         runner = Runner(
