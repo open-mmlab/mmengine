@@ -13,25 +13,23 @@
 - Call `register_all_modules`  in `Registry.get()` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/541
 - Deprecate `_save_to_state_dict` implemented in mmengine by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/610
 - Add `ignore_keys` in ConcatDataset by @BIGWangYuDong in https://github.com/open-mmlab/mmengine/pull/556
-- Add issue or pr assignees by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/608
-- Add `CODEOWNERS` file for auto assigning reviewer by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/605
 
 ### Docs
 
-- Fix typo in `docs/zh_cn/tutorials/model.md` by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/598
-- Fix typo in `docs/zh_cn/tutorials/config.md` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/596
 - Fix cannot show `changelog.md` in chinese documents. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/606
-- Fix typo in `docs/zh_cn/advanced_tutorials/visualization.md` by @MambaWong in https://github.com/open-mmlab/mmengine/pull/616
 - Fix Chinese docs whitespaces by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/521
 - Translate installation and 15_min by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/629
 - Refine chinese doc by @Tau-J in https://github.com/open-mmlab/mmengine/pull/516
-- Add mmyolo link in README by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/634
+- Add MMYOLO link in README by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/634
 - Add MMEngine logo in docs by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/641
+- Fix docstring of `BaseDataset` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/656
+- Fix docstring and documentation used for `hub.get_model` by @zengyh1900 in https://github.com/open-mmlab/mmengine/pull/659
+- Fix typo in `docs/zh_cn/advanced_tutorials/visualization.md` by @MambaWong in https://github.com/open-mmlab/mmengine/pull/616
 - Fix typo docstring of `DefaultOptimWrapperConstructor` by @triple-Mu in https://github.com/open-mmlab/mmengine/pull/644
 - Fix typo in advanced tutorial by @cxiang26 in https://github.com/open-mmlab/mmengine/pull/650
 - Fix typo in `Config` docstring by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/654
-- Fix docstring of `BaseDataset` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/656
-- Fix docstring and documentation used for `hub.get_model` by @zengyh1900 in https://github.com/open-mmlab/mmengine/pull/659
+- Fix typo in `docs/zh_cn/tutorials/config.md` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/596
+- Fix typo in `docs/zh_cn/tutorials/model.md` by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/598
 
 ### Bug Fixes
 
