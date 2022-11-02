@@ -469,10 +469,10 @@ class PretrainedInit:
             initialize. For example, if we would like to only load the
             backbone of a detector model, we can set ``prefix='backbone.'``.
             Defaults to None.
-        map_location (str): map tensors into proper locations.
+        map_location (str): map tensors into proper locations. Defaults to cpu.
     """
 
-    def __init__(self, checkpoint, prefix=None, map_location=None):
+    def __init__(self, checkpoint, prefix=None, map_location='cpu'):
         self.checkpoint = checkpoint
         self.prefix = prefix
         self.map_location = map_location
