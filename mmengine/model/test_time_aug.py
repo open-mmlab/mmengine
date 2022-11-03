@@ -131,6 +131,6 @@ class BaseTTAModel(BaseModel):
                 inputs: torch.Tensor,
                 data_samples: Optional[list] = None,
                 mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
-        """forward of ``BaseTTAModel`` should not be called."""
-        raise NotImplementedError('`forward` of ``BaseTTAModel`` should not '
+        """``BaseTTAModel.forward`` should not be called."""
+        raise NotImplementedError('`BaseTTAModel.forward` should not '
                                   'be called')
