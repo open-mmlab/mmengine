@@ -2311,44 +2311,7 @@ class TestRunner(TestCase):
         # test get_hooks_info() function
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_get_hooks_info_from_test_runner_py'
-
-        @RUNNERS.register_module()
-        class CustomHooksRunner(Runner):
-
-            def __init__(self,
-                         model,
-                         work_dir,
-                         train_dataloader=None,
-                         val_dataloader=None,
-                         test_dataloader=None,
-                         train_cfg=None,
-                         val_cfg=None,
-                         test_cfg=None,
-                         auto_scale_lr=None,
-                         optim_wrapper=None,
-                         param_scheduler=None,
-                         val_evaluator=None,
-                         test_evaluator=None,
-                         default_hooks=None,
-                         custom_hooks=None,
-                         data_preprocessor=None,
-                         load_from=None,
-                         resume=False,
-                         launcher='none',
-                         env_cfg=dict(dist_cfg=dict(backend='nccl')),
-                         log_processor=None,
-                         log_level='INFO',
-                         visualizer=None,
-                         default_scope=None,
-                         randomness=dict(seed=None),
-                         experiment_name=None,
-                         cfg=None):
-                super().__init__(model=model, work_dir=work_dir)
-
-            # def setup_env(self, env_cfg):
-            #     pass
-
-        cfg.runner_type = 'CustomHooksRunner'
+        cfg.runner_type = 'Runner'
         runner = RUNNERS.build(cfg)
-        assert isinstance(runner, CustomHooksRunner)
+        assert isinstance(runner, Runner)
         assert '(VERY_HIGH   ) RuntimeInfoHook' in runner.get_hook_info()
