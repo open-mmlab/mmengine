@@ -85,7 +85,7 @@ class CheckpointHook(Hook):
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
         save_begin (int): Start saving the number of epochs or
-            epochs or iterations of model weights. Defaults to 0.
+            epochs or iterations of model weights. Defaults to 1.
             New in v0.3.0.
 
     Examples:
@@ -131,7 +131,7 @@ class CheckpointHook(Hook):
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
-                 save_begin: int = 0,
+                 save_begin: int = 1,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
