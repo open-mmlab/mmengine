@@ -13,8 +13,9 @@
 
 作为 MMEngine 中的“集大成者”，执行器涵盖了整个框架的方方面面，肩负着串联所有组件的重要责任；因此，其中的代码和实现逻辑需要兼顾各种情景，相对庞大复杂。但是**不用担心**！在这篇教程中，我们将隐去繁杂的细节，速览执行器常用的接口、功能、示例，为你呈现一个清晰易懂的用户界面。阅读完本篇教程，你将会：
 
-- 掌握执行器的常见使用方式与最佳实践
-- 了解执行器基本数据流
+- 掌握执行器的常见参数与使用方式
+- 了解执行器的最佳实践——配置文件的写法
+- 了解执行器基本数据流与简要执行逻辑
 - 亲身感受使用执行器的优越性（也许）
 
 ## 执行器示例
@@ -22,7 +23,7 @@
 使用执行器构建属于你自己的训练流程，通常有两种开始方式：
 
 - 参考 [API 文档](mmengine.runner.Runner)，逐项确认和配置参数
-- 在已有配置（如 [15 分钟上手](../get_started/15_minutes.md)或 [mmdet](https://github.com/open-mmlab/mmdetection) 等下游算法库）的基础上，进行定制化修改
+- 在已有配置（如 [15 分钟上手](../get_started/15_minutes.md)或 [MMDet](https://github.com/open-mmlab/mmdetection) 等下游算法库）的基础上，进行定制化修改
 
 两种方式各有利弊。使用前者，初学者很容易迷失在茫茫多的参数项中不知所措；而使用后者，一份过度精简或过度详细的参考配置都不利于初学者快速找到所需内容。
 
@@ -216,7 +217,7 @@ runner.train()
 <details>
 <summary>参数项实在是太多了！</summary>
 
-不用担心，正如我们前面所说，**把执行器作为备忘录**。执行器涵盖了方方面面，防止你漏掉重要内容；但你不需要配置所有参数。如[15分钟上手](../tutorials/../get_started/15_minutes.md)中的极简例子（甚至，舍去 `val_evaluator`）也可以正常运行。所有的参数由你的需求驱动，不关注的内容往往缺省值也可以工作得很好。
+不用担心，正如我们前面所说，**把执行器作为备忘录**。执行器涵盖了方方面面，防止你漏掉重要内容，但是这并不意味着你需要配置所有参数。如[15分钟上手](../get_started/15_minutes.md)中的极简例子（甚至，舍去 `val_evaluator` `val_dataloader` 和 `val_cfg`）也可以正常运行。所有的参数由你的需求驱动，不关注的内容往往缺省值也可以工作得很好。
 
 </details>
 
@@ -255,6 +256,8 @@ runner = Runner(
 
 ![Runner Registry 示意图](https://user-images.githubusercontent.com/112053249/199191651-44174d17-0fc5-4443-8d15-76f561ec0585.png)
 
+看到这你可能仍然很疑惑，为什么我要传入字典让 Runner 来构建实例，这样又有什么好处？如果你有产生这样的疑问，那我们就会很自豪的回答：“当然！（没有好处）”。事实上，基于注册机制的构建方式只有在结合配置文件时才会发挥它的最大优势。这里直接传入字典的写法也并非使用执行器的最佳实践。在这里，我们希望你能够通过这个例子读懂并习惯这种写法，方便理解我们马上将要讲到的执行器最佳实践——配置文件。敬请期待！
+
 如果你作为初学者无法立刻理解，使用*手动构建的方式*依然不失为一种好选择，甚至在小规模使用、试错和调试时是一种更加推荐的方式，因为对于 IDE 更加友好。但我们也希望你能够读懂并习惯基于注册机制的写法，并且在后续教程中不会因此而产生不必要的混淆和疑惑。
 
 </details>
@@ -267,7 +270,7 @@ runner = Runner(
 </details>
 
 <details>
-<summary>我来自 mmdet/mmcls...下游库，为什么例子写法与我接触的不同？</summary>
+<summary>我来自 MMDet/MMCls...下游库，为什么例子写法与我接触的不同？</summary>
 
 OpenMMLab 下游库广泛采用了配置文件的方式。我们将在下个章节，基于上述示例稍微变换，从而展示配置文件——MMEngine 中执行器的最佳实践——的用法。
 
@@ -275,7 +278,7 @@ OpenMMLab 下游库广泛采用了配置文件的方式。我们将在下个章�
 
 ## 执行器最佳实践——配置文件
 
-MMEngine 提供了一套 `Python` 语法的、功能强大的配置文件系统。你可以从之前的示例代码中**近乎**（我们将在下面说明）无缝地转换到配置文件。下面给出一段示例代码：
+MMEngine 提供了一套支持 `Python` 语法的、功能强大的配置文件系统。你可以从之前的示例代码中**近乎**（我们将在下面说明）无缝地转换到配置文件。下面给出一段示例代码：
 
 ```python
 # 以下代码存放在 example_config.py 文件中
@@ -363,7 +366,7 @@ runner.train()
 虽然与示例中的写法一致，但 `from_cfg` 与 `__init__` 的缺省值处理可能存在些微不同，例如 `env_cfg` 参数。
 ```
 
-执行器配置文件已经在 OpenMMLab 的众多下游库（mmcls，mmdet...）中被广泛使用，并成为事实标准与最佳实践。配置文件的功能远不止如此，如果你对于继承、覆写等进阶功能感兴趣，请参考[配置（Config）](../advanced_tutorials/config.md)文档。
+执行器配置文件已经在 OpenMMLab 的众多下游库（MMCls，MMDet...）中被广泛使用，并成为事实标准与最佳实践。配置文件的功能远不止如此，如果你对于继承、覆写等进阶功能感兴趣，请参考[配置（Config）](../advanced_tutorials/config.md)文档。
 
 ## 基本数据流
 
@@ -378,11 +381,11 @@ runner.train()
 上图是执行器的**基本**数据流，其中虚线边框、灰色填充的不同形状代表不同的数据格式，实线方框代表模块或方法。由于 MMEngine 强大的灵活性与可扩展性，你总可以继承某些关键基类并重载其中的方法，因此上图并不总是成立。只有当你没有自定义 `Runner` 或 `TrainLoop` ，并且你的自定义模型没有重载 `train_step`、`val_step` 与 `test_step` 方法时上图才会成立（而这在检测、分割等任务上是常见的，参考[模型](./model.md)教程）。
 
 <details>
-<summary>可以确切地说明每个数据元素的具体类型吗？</summary>
+<summary>可以确切地说明图中传递的每项数据的具体类型吗？</summary>
 
 很遗憾，这一点无法做到。虽然 MMEngine 做了大量类型注释，但 `Python` 是一门高度动态化的编程语言，同时以数据为核心的深度学习系统也需要足够的灵活性来处理纷繁复杂的数据源，你有充分的自由决定何时需要（有时是必须）打破类型约定。因此，在你自定义某一或某几个模块（如 `val_evaluator` ）时，你需要确保它的输入与上游（如 `model` 的输出）兼容，同时输出可以被下游解析。MMEngine 将处理数据的灵活性交给了用户，因而也需要用户保证数据流的兼容性——当然，实际上手后会发现，这一点并不十分困难。
 
-数据一致性的考验一直存在于深度学习领域，MMEngine 也在尝试用自己的方式改进。如果你有兴趣，可以参考[数据集基类](../advanced_tutorials/basedataset.md)与[抽象数据接口](../advanced_tutorials/data_element.md)文档——但是请注意，它们主要面向进阶用户。
+数据一致性的考验一直存在于深度学习领域，MMEngine 也在尝试用自己的方式改进。如果你有兴趣，可以参考[数据集基类](../advanced_tutorials/basedataset.md)与[抽象数据接口](../advanced_tutorials/data_element.md)文档——但是**请注意，它们主要面向进阶用户**。
 
 </details>
 
@@ -394,6 +397,7 @@ runner.train()
 ```python
 # 训练过程
 for data_batch in train_dataloader:
+    data_batch = data_preprocessor(data_batch)
     if isinstance(data_batch, dict):
         losses = model.forward(**data_batch, mode='loss')
     elif isinstance(data_batch, (list, tuple)):
@@ -403,6 +407,7 @@ for data_batch in train_dataloader:
 
 # 验证过程
 for data_batch in val_dataloader:
+    data_batch = data_preprocessor(data_batch)
     if isinstance(data_batch, dict):
         outputs = model.forward(**data_batch, mode='predict')
     elif isinstance(data_batch, (list, tuple)):
@@ -415,7 +420,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 
 上述伪代码的关键点在于：
 
-- dataloader 的输出需要经过解包后传递给 model
+- data_preprocessor 的输出需要经过解包后传递给 model
 - evaluator 的 `data_samples` 参数接收模型的预测结果，而 `data_batch` 参数接收 dataloader 的原始数据
 
 </details>
