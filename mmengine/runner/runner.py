@@ -1577,6 +1577,29 @@ class Runner:
 
         return log_processor  # type: ignore
 
+    def get_hook_info(self) -> str:
+        # Get hooks info in each stage
+        stage_hook_map: Dict[str, list] = {stage: [] for stage in Hook.stages}
+        for hook in self.hooks:
+            try:
+                priority = Priority(hook.priority).name  # type: ignore
+            except ValueError:
+                priority = hook.priority  # type: ignore
+            classname = hook.__class__.__name__
+            hook_info = f'({priority:<12}) {classname:<35}'
+            for trigger_stage in hook.get_triggered_stages():
+                stage_hook_map[trigger_stage].append(hook_info)
+
+        stage_hook_infos = []
+        for stage in Hook.stages:
+            hook_infos = stage_hook_map[stage]
+            if len(hook_infos) > 0:
+                info = f'{stage}:\n'
+                info += '\n'.join(hook_infos)
+                info += '\n -------------------- '
+                stage_hook_infos.append(info)
+        return '\n'.join(stage_hook_infos)
+
     def load_or_resume(self) -> None:
         """load or resume checkpoint."""
         if self._has_loaded:

@@ -121,3 +121,4 @@ work_dirs/
 *.pth
 *.py~
 *.sh~
+/tests/test_runner/testrun_get_hooks_info.py
