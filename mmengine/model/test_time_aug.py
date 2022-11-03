@@ -72,8 +72,9 @@ class BaseTTAModel(BaseModel):
 
     Args:
         module (dict or nn.Module): Tested model.
-        data_preprocessor (:obj:`BaseDataPreprocessor`): If model does not
-            define ``data_preprocessor``, it will be default value for model.
+        data_preprocessor (optional, :obj:`BaseDataPreprocessor`): If model
+            does not define ``data_preprocessor``, it will be the default value
+            for model.
     """
 
     def __init__(
