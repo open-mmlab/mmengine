@@ -1062,8 +1062,8 @@ class Runner:
             OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
 
         .. _optimizer-docs:
-           https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
-        """
+           https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
+        """  # noqa: E501
         if isinstance(optim_wrapper, OptimWrapper):
             return optim_wrapper
         if isinstance(optim_wrapper, (dict, ConfigDict, Config)):

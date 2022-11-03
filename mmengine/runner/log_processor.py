@@ -264,6 +264,7 @@ class LogProcessor:
             if prefix_key.startswith(mode):
                 key = prefix_key.partition('/')[-1]
                 mode_history_scalars[key] = log_buffer
+
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
             if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
