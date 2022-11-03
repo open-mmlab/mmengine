@@ -2314,4 +2314,10 @@ class TestRunner(TestCase):
         cfg.runner_type = 'Runner'
         runner = RUNNERS.build(cfg)
         assert isinstance(runner, Runner)
-        assert '(VERY_HIGH   ) RuntimeInfoHook' in runner.get_hook_info()
+        target_str = ('after_train_iter:\n'
+                      '(VERY_HIGH   ) RuntimeInfoHook                    \n'
+                      '(NORMAL      ) IterTimerHook                      \n'
+                      '(BELOW_NORMAL) LoggerHook                         \n'
+                      '(LOW         ) ParamSchedulerHook                 \n'
+                      '(VERY_LOW    ) CheckpointHook                     \n')
+        assert target_str in runner.get_hook_info()
