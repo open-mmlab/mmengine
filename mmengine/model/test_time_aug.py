@@ -72,13 +72,21 @@ class BaseTTAModel(BaseModel):
 
     Args:
         module (dict or nn.Module): Tested model.
+        data_preprocessor (:obj:`BaseDataPreprocessor`): If model does not
+            define ``data_preprocessor``, it will be default value for model.
     """
 
-    def __init__(self, module: Union[dict, nn.Module], fsdp: bool = False):
+    def __init__(
+        self,
+        module: Union[dict, nn.Module],
+        data_preprocessor: Optional[Union[dict, nn.Module]] = None,
+    ):
         super().__init__()
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
+            if data_preprocessor is not None:
+                module.setdefault('data_preprocessor', data_preprocessor)
             self.module = MODELS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
