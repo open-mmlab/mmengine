@@ -413,6 +413,9 @@ class Runner:
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
+        # log hooks information
+        self.logger.info('Hooks will be executed in the following order:\n%s',
+                         self.get_hook_info())
 
         # dump `cfg` to `work_dir`
         self.dump_config()
