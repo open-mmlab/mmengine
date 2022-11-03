@@ -27,8 +27,8 @@ class PrepareTTAHook(Hook):
             runner (Runner): The runner of the testing process.
         """
         self.tta_cfg['module'] = runner.model  # type: ignore
-        model_wrapper = MODELS.build(self.tta_cfg)
-        runner.model = model_wrapper  # type: ignore
+        model = MODELS.build(self.tta_cfg)
+        runner.model = model  # type: ignore
 
 
 # Only used for FSDP TTA.

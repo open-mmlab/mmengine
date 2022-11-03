@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Union
 import torch
 import torch.nn as nn
 
-from mmengine.registry import MODEL_WRAPPERS, MODELS
+from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
 from .base_model import BaseModel
 
@@ -79,10 +79,7 @@ class BaseTTAModel(BaseModel):
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
-            if not fsdp:
-                self.module = MODELS.build(module)
-            else:
-                self.module = MODEL_WRAPPERS.build(module)
+            self.module = MODELS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
                             f'instance or a dict, but got {module}')
