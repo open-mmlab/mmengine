@@ -27,7 +27,7 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-在 Runner 的教程中，我们简单介绍了 model 和前后组件之间的数据流通关系，提到了 `data_preprocessor` 的概念，也算是对 model 初窥门径。然而在 Runner 实际运行的过程中，model 的功能和调用关系，其复杂程度远超上述伪代码。为了让你能够不感知 model 和外部组件的复杂关系，进而聚焦精力到算法本身，我们设计了 BaseModel。大多数情况下你只需要让 model 继承 BaseModel，并实现 `forward` 接口，就能完成训练、测试、验证的逻辑。
+在 Runner 的教程中，我们简单介绍了模型和前后组件之间的数据流通关系，提到了 `data_preprocessor` 的概念，也算是对 model 初窥门径。然而在 Runner 实际运行的过程中，模型的功能和调用关系，其复杂程度远超上述伪代码。为了让你能够不感知模型和外部组件的复杂关系，进而聚焦精力到算法本身，我们设计了 [BaseModel](mmengine.model.BaseModel)。大多数情况下你只需要让 model 继承 `BaseModel`，并按照要求实现 `forward` 接口，就能完成训练、测试、验证的逻辑。
 
 在正式阅读模型教程之前，我们在此抛出以下两个问题，希望你在阅读完 model 教程后能够找到相应的答案：
 
