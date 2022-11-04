@@ -13,15 +13,13 @@ class Hook:
     """
 
     priority = 'NORMAL'
-    stages = [
-        'before_run', 'after_load_checkpoint', 'before_train',
-        'before_train_epoch', 'before_train_iter', 'after_train_iter',
-        'after_train_epoch', 'before_val', 'before_val_epoch',
-        'before_val_iter', 'after_val_iter', 'after_val_epoch', 'after_val',
-        'before_save_checkpoint', 'after_train', 'before_test',
-        'before_test_epoch', 'before_test_iter', 'after_test_iter',
-        'after_test_epoch', 'after_test', 'after_run'
-    ]
+    stages = ('before_run', 'after_load_checkpoint', 'before_train',
+              'before_train_epoch', 'before_train_iter', 'after_train_iter',
+              'after_train_epoch', 'before_val', 'before_val_epoch',
+              'before_val_iter', 'after_val_iter', 'after_val_epoch',
+              'after_val', 'before_save_checkpoint', 'after_train',
+              'before_test', 'before_test_epoch', 'before_test_iter',
+              'after_test_iter', 'after_test_epoch', 'after_test', 'after_run')
 
     def before_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
