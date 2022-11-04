@@ -22,7 +22,7 @@ val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # 使用分类正确率评�
 test_evaluator = [
     # 目标检测指标
     dict(
-        type='COCOMetric',
+        type='CocoMetric',
         metric=['bbox', 'segm'],
         ann_file='annotations/instances_val2017.json',
     ),
