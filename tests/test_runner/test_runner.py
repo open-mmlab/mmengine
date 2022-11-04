@@ -2313,11 +2313,12 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_get_hooks_info_from_test_runner_py'
         cfg.runner_type = 'Runner'
         runner = RUNNERS.build(cfg)
-        assert isinstance(runner, Runner)
+        self.assertIsInstance(runner, Runner)
         target_str = ('after_train_iter:\n'
                       '(VERY_HIGH   ) RuntimeInfoHook                    \n'
                       '(NORMAL      ) IterTimerHook                      \n'
                       '(BELOW_NORMAL) LoggerHook                         \n'
                       '(LOW         ) ParamSchedulerHook                 \n'
                       '(VERY_LOW    ) CheckpointHook                     \n')
-        assert target_str in runner.get_hook_info()
+        self.assertIn(target_str, runner.get_hooks_info(),
+                      'target string is not in logged hooks information.')
