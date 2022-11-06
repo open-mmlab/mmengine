@@ -252,8 +252,10 @@ class CheckpointLoader:
 
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
-        print_log(f'{class_name[10:]} loads checkpoint from path: {filename}',
-                  logger)
+        print_log(
+            f'Loads checkpoint by {class_name[10:]} backend from path: '
+            f'{filename}',
+            logger='current')
         return checkpoint_loader(filename, map_location)
 
 
