@@ -18,6 +18,7 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
+from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
@@ -86,7 +87,9 @@ def add_args(parser: ArgumentParser,
             parser.add_argument(
                 '--' + prefix + k, type=type(next(iter(v))), nargs='+')
         else:
-            print(f'cannot parse key {prefix + k} of type {type(v)}')
+            print_log(
+                f'cannot parse key {prefix + k} of type {type(v)}',
+                logger='current')
     return parser
 
 
