@@ -174,8 +174,7 @@ class _ParamScheduler:
         """
         if is_verbose:
             print_log(
-                'Adjusting parameter value'
-                ' of group {} to {:.4e}.'.format(group, value),
+                f'Adjusting parameter value of group {group} to {value:.4e}.',
                 logger='current')
 
     def step(self):
