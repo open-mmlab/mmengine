@@ -25,6 +25,7 @@ PKG2PROJECT = {
     'mmhuman3d': 'mmhuman3d',
     'mmrotate': 'mmrotate',
     'mmselfsup': 'mmselfsup',
+    'mmyolo': 'mmyolo',
 }
 
 
