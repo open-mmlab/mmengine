@@ -408,7 +408,9 @@ class CheckpointHook(Hook):
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
 
-            if best_ckpt_path and self.file_client.isfile(best_ckpt_path):
+            if best_ckpt_path and \
+               self.file_client.isfile(best_ckpt_path) and \
+               is_main_process():
                 self.file_client.remove(best_ckpt_path)
                 runner.logger.info(
                     f'The previous best checkpoint {best_ckpt_path} '
