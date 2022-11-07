@@ -268,7 +268,7 @@ optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_c
 ```
 
 ```{note}
-如果你是第一次阅读 MMEngine 的教程文档，并且尚未了解 [配置类](../advanced_tutorials/config.md)、[注册器](../advanced_tutorials/registry.md) 等概念，建议可以先跳过以下进阶教程，先去阅读其他文档。当然了，如果你已经具备了这些储备知识，我们强烈建议阅读进阶教程，在进阶教程中，我们将学会：
+如果你是第一次阅读 MMEngine 的教程文档，并且尚未了解[配置类](../advanced_tutorials/config.md)、[注册器](../advanced_tutorials/registry.md) 等概念，建议可以先跳过以下进阶教程，先去阅读其他文档。当然了，如果你已经具备了这些储备知识，我们强烈建议阅读进阶教程，在进阶教程中，我们将学会：
 
 1. 如何在配置文件中定制化地在优化器中配置模型参数的学习率、衰减系数等。
 2. 如何自定义一个优化器构造策略，实现真正意义上的“优化器配置自由”。
