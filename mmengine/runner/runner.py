@@ -688,15 +688,18 @@ class Runner:
             diff_rank_seed=diff_rank_seed)
 
     def set_torch_cfg(self, torch_cfg: dict) -> None:
-        """_summary_
+        """Set torch variable to by config.
 
         Args:
-            torch_cfg (dict): _description_
+            torch_cfg (dict): Contains key-value pair which defines the names
+                of torch variables and corresponding values.
 
-        Raises:
-            ValueError: _description_
-            AttributeError: _description_
-        """
+        Examples:
+            >>> torch_cfg = dict(
+            >>>    backends.cuda.matmul.allow_tf32=True,
+            >>>    torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction=True
+            >>>    )
+        """  # noqa: E501
         for attributes, value in torch_cfg.items():
             assert isinstance(attributes, str)
             if attributes in [
@@ -709,7 +712,6 @@ class Runner:
             attributes_list = attributes.split('.')
             modules = attributes_list[:-1]
             attribute = attributes_list[-1]
-
             target_module = torch
             try:
                 for module in modules:

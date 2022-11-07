@@ -192,7 +192,6 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
         # qconfig exists in quantized models
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
-
     for name, child in module.named_children():
         # Some custom modules or 3rd party implemented modules may raise an
         # error when calling `add_module`. Therefore, try to catch the error
