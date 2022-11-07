@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from mmengine.logging import print_log
 from mmengine.utils.dl_utils import mmcv_full_available
 
 
@@ -192,7 +193,13 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
     for name, child in module.named_children():
-        module_output.add_module(name, revert_sync_batchnorm(child))
+        try:
+            module_output.add_module(name, revert_sync_batchnorm(child))
+        except Exception:
+            print_log(
+                F'Failed to convert {child} from SyncBN to BN!',
+                logger='current',
+                level=logging.ERROR)
     del module
     return module_output
 
@@ -239,7 +246,13 @@ def convert_sync_batchnorm(module: nn.Module,
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
     for name, child in module.named_children():
-        module_output.add_module(name,
-                                 convert_sync_batchnorm(child, implementation))
+        try:
+            module_output.add_module(
+                name, convert_sync_batchnorm(child, implementation))
+        except Exception:
+            print_log(
+                F'Failed to convert {child} from BN to SyncBN!',
+                logger='current',
+                level=logging.ERROR)
     del module
     return module_output

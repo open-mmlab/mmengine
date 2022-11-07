@@ -15,6 +15,16 @@ from mmengine.registry import MODEL_WRAPPERS, Registry
 from mmengine.utils import is_installed
 
 
+class ToyModule(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Linear(1, 1)
+
+    def add_module(self, name, module):
+        raise ValueError()
+
+
 @pytest.mark.skipif(
     torch.__version__ == 'parrots', reason='not supported in parrots now')
 def test_revert_syncbn():
@@ -27,6 +37,21 @@ def test_revert_syncbn():
     conv = revert_sync_batchnorm(conv)
     y = conv(x)
     assert y.shape == (1, 8, 9, 9)
+
+    class ToyModule(nn.Module):
+
+        def __init__(self):
+            super().__init__()
+            self.layer1 = nn.Linear(1, 1)
+
+        def add_module(self, name, module):
+            raise ValueError()
+
+    # TODO, capsys provide by `pytest` cannot capture the error log produced by
+    # MMLogger. Test the error log after refactoring the unit test with
+    # `unittest`
+    conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
+    revert_sync_batchnorm(conv)
 
 
 @pytest.mark.skipif(
@@ -50,6 +75,12 @@ def test_convert_syncbn():
     assert isinstance(converted_conv[1], torch.nn.SyncBatchNorm)
     with pytest.raises(ValueError):
         converted_conv(x)
+
+    # TODO, capsys provide by `pytest` cannot capture the error log produced by
+    # MMLogger. Test the error log after refactoring the unit test with
+    # `unittest`
+    conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
+    convert_sync_batchnorm(conv)
 
 
 def test_is_model_wrapper():
