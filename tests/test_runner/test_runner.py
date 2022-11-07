@@ -729,8 +729,31 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner, Runner)
 
     def test_setup_env(self):
-        # TODO
-        pass
+        # 1.Test torch_cfg.
+        # 1.1 Test valid torch_cfg
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        torch_cfg = {'backends.cuda.matmul.allow_tf32': True}
+        cfg.env_cfg.torch_cfg = torch_cfg
+        cfg.experiment_name = 'test_build_logger1'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(torch.backends.cuda.matmul.allow_tf32, True)
+
+        torch_cfg['backends.cuda.matmul.allow_tf32'] = False
+        runner.setup_env(cfg.env_cfg)
+        self.assertFalse(torch.backends.cuda.matmul.allow_tf32, True)
+
+        # Test invalid torch_cfg
+        with self.assertRaisesRegex(ValueError,
+                                    'torch.backends.cuda.matmul.allow_tf31'):
+            cfg.env_cfg.torch_cfg = {
+                'torch.backends.cuda.matmul.allow_tf31': True
+            }
+            runner.setup_env(cfg.env_cfg)
+
+        # Test set torch_cfg with randomness_cfg
+        with self.assertRaisesRegex(ValueError, 'backends.cudnn.benchmark'):
+            cfg.env_cfg.torch_cfg = {'backends.cudnn.benchmark': True}
+            runner.setup_env(cfg.env_cfg)
 
     def test_build_logger(self):
         self.epoch_based_cfg.experiment_name = 'test_build_logger1'

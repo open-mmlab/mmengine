@@ -637,7 +637,7 @@ class Runner:
 
         mp_cfg: dict = env_cfg.get('mp_cfg', {})
         set_multi_processing(**mp_cfg, distributed=self.distributed)
-
+        self.set_torch_cfg(env_cfg.get('torch_cfg', {}))
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
@@ -686,6 +686,39 @@ class Runner:
             seed=seed,
             deterministic=deterministic,
             diff_rank_seed=diff_rank_seed)
+
+    def set_torch_cfg(self, torch_cfg: dict) -> None:
+        """_summary_
+
+        Args:
+            torch_cfg (dict): _description_
+
+        Raises:
+            ValueError: _description_
+            AttributeError: _description_
+        """
+        for attributes, value in torch_cfg.items():
+            assert isinstance(attributes, str)
+            if attributes in [
+                    'backends.cudnn.benchmark', 'backends.cudnn.deterministic'
+            ]:
+                raise ValueError(
+                    'backends.cudnn.benchmark or backends.cudnn.deterministic '
+                    'should be set in `randomness_cfg`, rather than '
+                    '`torch_cfg`')
+            attributes_list = attributes.split('.')
+            modules = attributes_list[:-1]
+            attribute = attributes_list[-1]
+
+            target_module = torch
+            try:
+                for module in modules:
+                    target_module = getattr(target_module, module)
+                setattr(target_module, attribute, value)
+            except Exception:
+                raise ValueError(
+                    f'torch.{attributes} defined in `torch_cfg` does '
+                    'not exit!')
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
