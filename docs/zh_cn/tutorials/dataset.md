@@ -36,6 +36,10 @@ runner = Runner(
 在这种情况下，数据加载器会在实际被用到时、在执行器内部被构建。
 
 ```{note}
+关于 `DataLoader` 的更多可配置参数，你可以参考 [PyTorch API 文档](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader)
+```
+
+```{note}
 如果你对于构建的具体细节感兴趣，你可以参考 [API 文档](mmengine.runner.Runner.build_dataloader)
 ```
 
@@ -45,7 +49,7 @@ runner = Runner(
 
 与 15 分钟上手明显不同，例 1 中我们添加了 `sampler` 参数，这是由于在 MMEngine 中我们要求通过 `dict` 传入的数据加载器的配置**必须包含 `sampler` 参数**。同时，`shuffle` 参数也从 `DataLoader` 中移除，这是由于在 PyTorch 中 **`sampler` 与 `shuffle` 参数是互斥的**，见 [PyTorch API 文档](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader)。
 
-```{hint}
+```{note}
 事实上，在 PyTorch 的实现中，`shuffle` 只是一个便利记号。当设置为 `True` 时 `DataLoader` 会自动在内部使用 `RandomSampler`
 ```
 
@@ -53,13 +57,15 @@ runner = Runner(
 
 ```python
 from mmengine.dataset import DefaultSampler
+
 dataset = torchvision.datasets.CIFAR10(...)
 sampler = DefaultSampler(dataset, shuffle=True)
+
 runner = Runner(
     train_dataloader=DataLoader(
         batch_size=32,
         sampler=sampler,
-        dataset=torchvision.datasets.CIFAR10(...),
+        dataset=dataset,
         collate_fn=dict(type='default_collate')
     )
 )
@@ -79,7 +85,20 @@ runner = Runner(
 更多关于 `DefaultSampler` 的内容可以参考 [API 文档](mmengine.dataset.DefaultSampler)
 ```
 
-`DefaultSampler` 适用于绝大部分情况，并且我们保证在执行器中使用它时，随机数等容易出错的细节都被正确地处理，防止你陷入多进程训练的常见陷阱。如果你想要使用基于迭代次数(iteration-based)的训练流程，你也许会对 [InfiniteSampler](mmengine.) 感兴趣。如果你有更多的进阶需求，你可能会想要参考它们的代码，实现一个自己的 `sampler` 并注册到 `DATA_SAMPLERS` 根注册器中。
+`DefaultSampler` 适用于绝大部分情况，并且我们保证在执行器中使用它时，随机数等容易出错的细节都被正确地处理，防止你陷入多进程训练的常见陷阱。如果你想要使用基于迭代次数(iteration-based)的训练流程，你也许会对 [InfiniteSampler](mmengine.dataset.InfiniteSampler) 感兴趣。如果你有更多的进阶需求，你可能会想要参考上述两个内置 `sampler` 的代码，实现一个自定义的 `sampler` 并注册到 `DATA_SAMPLERS` 根注册器中。
+
+```python
+@DATA_SAMPLERS.register_module()
+class MySampler(Sampler):
+    pass
+
+runner = Runner(
+    train_dataloader=dict(
+        sampler=dict(type='MySampler'),
+        ...
+    )
+)
+```
 
 ### 不起眼的 collate_fn
 
@@ -92,7 +111,7 @@ MMEngine 中使用 `pseudo_collate` 作为默认值，主要是由于历史兼�
 MMengine 中提供了 2 种内置的 `collate_fn`：
 
 - `pseudo_collate`，缺省时的默认参数。它不会将数据沿着 `batch` 的维度合并。详细说明可以参考 [API 文档](mmengine.dataset.pseudo_collate)
-- `default_collate`，与 PyTorch 中的 `default_collate` 行为几乎完全一致，会将数据转化为 `Tensor` 并沿着 `batch` 维度合并
+- `default_collate`，与 PyTorch 中的 `default_collate` 行为几乎完全一致，会将数据转化为 `Tensor` 并沿着 `batch` 维度合并。一些细微不同和详细说明可以参考 [API 文档](mmengine.dataset.default_collate)
 
 如果你想要使用自定义的 `collate_fn`，你也可以将它注册到 `COLLATE_FUNCTIONS` 根注册器中来使用
 
@@ -117,13 +136,15 @@ runner = Runner(
 
 `torchvision` 中提供了丰富的公开数据集，它们都可以在 MMEngine 中直接使用，例如 [15 分钟上手](../get_started/15_minutes.md)中的示例代码就使用了其中的 `Cifar10` 数据集，并且使用了 `torchvision` 中内置的数据预处理模块。
 
-但是，当需要将上述示例转换为配置文件时，你需要对 `torchvision` 中的数据集进行额外的注册。如果你用到了 `torchvision` 中的数据预处理模块，那么你也需要额外地对它们编写代码进行注册和构建。下面我们将给出一个等效的例子来展示如何做到这一点
+但是，当需要将上述示例转换为配置文件时，你需要对 `torchvision` 中的数据集进行额外的注册。如果你同时用到了 `torchvision` 中的数据预处理模块，那么你也需要编写额外代码来对它们进行注册和构建。下面我们将给出一个等效的例子来展示如何做到这一点。
 
 ```python
 import torchvision.transforms as tvt
 from mmengine.registry import DATASETS, TRANSFORMS
 from mmengine.dataset.base_dataset import Compose
 
+# 注册 torchvision 的 CIFAR10 数据集
+# 数据预处理也需要在此一起构建
 @DATASETS.register_module(name='Cifar10', force=False)
 def build_torchvision_cifar10(transform=None, **kwargs):
     if isinstance(transform, dict):
@@ -132,11 +153,13 @@ def build_torchvision_cifar10(transform=None, **kwargs):
         transform = Compose(transform)
     return torchvision.datasets.CIFAR10(**kwargs, transform=transform)
 
+# 注册 torchvision 中用到的数据预处理模块
 DATA_TRANSFORMS.register_module('RandomCrop', module=tvt.RandomCrop)
 DATA_TRANSFORMS.register_module('RandomHorizontalFlip', module=tvt.RandomHorizontalFlip)
 DATA_TRANSFORMS.register_module('ToTensor', module=tvt.ToTensor)
 DATA_TRANSFORMS.register_module('Normalize', module=tvt.Normalize)
 
+# 在 Runner 中使用
 runner = Runner(
     train_dataloader=dict(
         batch_size=32,
@@ -157,7 +180,7 @@ runner = Runner(
 ```
 
 ```{note}
-上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需使用配置文件来训练 `torchvision` 数据集，你可以参考上述代码的实现。但我们更加推荐你有需要时在下游库（如 [mmdet](https://github.com/open-mmlab/mmdetection) 和 [mmcls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
+上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [mmdet](https://github.com/open-mmlab/mmdetection) 和 [mmcls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
 ```
 
 ### 自定义数据集
