@@ -4,6 +4,7 @@ import os.path as osp
 from typing import Optional
 
 from mmengine.fileio import dump
+from mmengine.logging import print_log
 from . import root
 from .registry import Registry
 
@@ -35,8 +36,10 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
                 else:
                     registry_info[folder] = [name]
             if verbose:
-                print(f"Find {num_modules} modules in {scope}'s "
-                      f"'{_registry.name}' registry ")
+                print_log(
+                    f"Find {num_modules} modules in {scope}'s "
+                    f"'{_registry.name}' registry ",
+                    logger='current')
             modules_info.append(registry_info)
         else:
             return
@@ -80,9 +83,10 @@ def count_registered_modules(save_path: Optional[str] = None,
         scan_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         registries=registries_info)
     if verbose:
-        print('Finish registry analysis, got: ', scan_data)
+        print_log(
+            f'Finish registry analysis, got: {scan_data}', logger='current')
     if save_path is not None:
         json_path = osp.join(save_path, 'modules_statistic_results.json')
         dump(scan_data, json_path, indent=2)
-        print(f'Result has been saved to {json_path}')
+        print_log(f'Result has been saved to {json_path}', logger='current')
     return scan_data

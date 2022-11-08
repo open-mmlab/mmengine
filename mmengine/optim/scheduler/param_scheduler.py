@@ -13,6 +13,7 @@ from typing import Callable, List, Optional, Sequence, Union
 
 from torch.optim import Optimizer
 
+from mmengine.logging import print_log
 from mmengine.optim import OptimWrapper
 from mmengine.registry import PARAM_SCHEDULERS
 
@@ -172,8 +173,9 @@ class _ParamScheduler:
             value (float): The parameter value.
         """
         if is_verbose:
-            print('Adjusting parameter value'
-                  ' of group {} to {:.4e}.'.format(group, value))
+            print_log(
+                f'Adjusting parameter value of group {group} to {value:.4e}.',
+                logger='current')
 
     def step(self):
         """Adjusts the parameter value of each parameter group based on the
