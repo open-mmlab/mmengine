@@ -58,11 +58,9 @@ Major features:
 
 ## What's New
 
-v0.3.0 was released in 2022-11-02.
+v0.3.1 was released in 2022-11-09.
 
-1. Support NPU backend.
-2. Support torch `ZeroRedundancyOptimizer`.
-3. Fix error calculation of `eta_min` in `CosineRestartParamScheduler`.
+**Fix error when saving best checkpoint in ddp-training**.
 
 Read [Changelog](./docs/en/notes/changelog.md#v0.3.0 "02/11/2022") for more details.
 
