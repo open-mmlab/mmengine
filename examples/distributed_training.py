@@ -41,14 +41,6 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 
 
-class IntToTensor:
-    def __call__(self, data):
-        return torch.tensor(data)
-
-    def __repr__(self):
-        return self.__class__.__name__ + '()'
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument(
@@ -74,27 +66,23 @@ def main():
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(**norm_cfg)
-        ]),
-        target_transform=IntToTensor())
+        ]))
     valid_set = torchvision.datasets.CIFAR10(
         'data/cifar10',
         train=False,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
-             transforms.Normalize(**norm_cfg)]),
-        target_transform=IntToTensor())
+             transforms.Normalize(**norm_cfg)]))
     train_dataloader = dict(
         batch_size=32,
-        shuffle=False,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=dict(type='default_collate'))
     val_dataloader = dict(
         batch_size=32,
-        shuffle=False,
         dataset=valid_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
+        sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
     runner = Runner(
         model=MMResNet50(),
