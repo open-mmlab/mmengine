@@ -1606,15 +1606,6 @@ class Runner:
             nn.Module: The model after training.
         """
 
-        # initialize the model weights
-        self._init_model_weights()
-        # make sure checkpoint-related hooks are triggered after `before_run`
-        self.load_or_resume()
-        # lazy wrap model
-        if not is_model_wrapper(self.model):
-            self.model = self.wrap_model(
-                self.cfg.get('model_wrapper_cfg'), self.model)
-
         if is_model_wrapper(self.model):
             ori_model = self.model.module
         else:
@@ -1638,8 +1629,27 @@ class Runner:
         self._train_loop = self.build_train_loop(
             self._train_loop)  # type: ignore
 
+        if self._val_loop is not None:
+            self._val_loop = self.build_val_loop(
+                self._val_loop)  # type: ignore
+
+        # TODO: add a contextmanager to avoid calling `before_run` many times
+        self.call_hook('before_run')
+
+        # initialize the model weights
+        self._init_model_weights()
+        # make sure checkpoint-related hooks are triggered after `before_run`
+        self.load_or_resume()
+        # lazy wrap model. This should be called after `load_or_resume` to be
+        # compatible with FSDP
+        if not is_model_wrapper(self.model):
+            self.model = self.wrap_model(
+                self.cfg.get('model_wrapper_cfg'), self.model)
+
         # `build_optimizer` should be called before `build_param_scheduler`
         #  because the latter depends on the former
+        # `build_optimizer` should be called after `wrap_model` because
+        #  the former depends on the latter in FSDP
         self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
@@ -1647,12 +1657,6 @@ class Runner:
         if self.param_schedulers is not None:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
-
-        if self._val_loop is not None:
-            self._val_loop = self.build_val_loop(
-                self._val_loop)  # type: ignore
-        # TODO: add a contextmanager to avoid calling `before_run` many times
-        self.call_hook('before_run')
 
         # Initiate inner count of `optim_wrapper`.
         self.optim_wrapper.initialize_count_status(
