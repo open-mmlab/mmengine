@@ -215,6 +215,28 @@ class Config:
         return cfg
 
     @staticmethod
+    def fromdict(cfg_dict, file_format='.py'):
+        """Build a Config instance from config dict.
+
+        Args:
+            cfg_dict (dict): A config dictionary.
+            file_format (str): Config file format corresponding to the
+               config str. Only py/yml/yaml/json type are supported now!
+
+        Returns:
+            Config: Config object generated from ``cfg_dict``.
+        """
+        if file_format not in ['.py', '.json', '.yaml', '.yml']:
+            raise OSError('Only py/yml/yaml/json type are supported now!')
+
+        cfg = Config(cfg_dict)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpcfg = f'{tmpdir}/tmp{file_format}'
+            cfg.dump(tmpcfg)
+            cfg = Config.fromfile(tmpcfg)
+        return cfg
+
+    @staticmethod
     def _validate_py_syntax(filename: str):
         """Validate syntax of python config.
 

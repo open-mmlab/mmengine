@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+import mmengine
 from mmengine import Config, ConfigDict, DictAction
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
@@ -86,6 +87,29 @@ class TestConfig:
         # error format
         with pytest.raises(IOError):
             Config.fromstring(cfg_str, '.xml')
+
+    @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
+    def test_fromdict(self, file_format):
+        filename = f'{file_format}_config/simple_config.{file_format}'
+        cfg_file = osp.join(self.data_path, 'config', filename)
+        file_format = osp.splitext(filename)[-1]
+        in_cfg = Config.fromfile(cfg_file)
+
+        json_filename = 'json_config/simple_config.json'
+        json_file = osp.join(self.data_path, 'config', json_filename)
+        cfg_dict = mmengine.load(json_file)
+        out_cfg = Config.fromdict(cfg_dict, file_format)
+        assert in_cfg._cfg_dict == out_cfg._cfg_dict
+
+        # test pretty_text only supports py file format
+        # in_cfg.pretty_text is .py format, cannot be parsed to .json
+        if file_format != '.py':
+            with pytest.raises(Exception):
+                Config.fromdict(in_cfg.pretty_text, file_format)
+
+        # error format
+        with pytest.raises(IOError):
+            Config.fromdict(cfg_dict, '.xml')
 
     def test_magic_methods(self):
         cfg_dict = dict(
