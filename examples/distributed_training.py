@@ -39,8 +39,8 @@ class Accuracy(BaseMetric):
         total_correct = sum(item['correct'] for item in results)
         total_size = sum(item['batch_size'] for item in results)
         return dict(accuracy=100 * total_correct / total_size)
-    
-    
+
+
 class IntToTensor:
     def __call__(self, data):
         return torch.tensor(data)
