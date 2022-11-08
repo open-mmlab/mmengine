@@ -85,4 +85,4 @@ class BaseMetric(metaclass=ABCMeta):
 
 在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测指标。如 MMDetection 中提供了 COCO 评测指标，MMClassification 中提供了 Accuracy、F1Score 等评测指标等。
 
-用户也可以增加自定义的评测指标。在实现自定义评测指标时，需要继承 MMEngine 中提供的评测指标基类 [BaseMetric](mmengine.evaluator.BaseMetric)，并实现对应的抽象方法。
+用户也可以增加自定义的评测指标。具体方法可以参考[教程文档](/docs/zh_cn/tutorials/evaluation.md#自定义评测指标)中给出的示例。
