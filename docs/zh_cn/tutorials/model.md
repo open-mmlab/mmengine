@@ -32,7 +32,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 在正式阅读模型教程之前，我们在此抛出以下两个问题，希望你在阅读完 model 教程后能够找到相应的答案：
 
 1. 我们在什么位置更新模型参数？如果我有一些非常复杂的参数更新逻辑，又该如何实现？
-2. 为什么要有 data_preprocessor 的概念？他的又可以实现哪些功能？
+2. 为什么要有 data_preprocessor 的概念？他又可以实现哪些功能？
 
 ## 接口约定
 
@@ -132,15 +132,15 @@ class MMResNet50(BaseModel):
 
 ## 数据预处理器（DataPreprocessor）
 
-如果你的电脑配有 GPU（或其他能够加速训练的硬件，如 mps、ipu 等），并且运行了 `15 分钟上手 MMEngine` 的代码示例，你会发现程序是在 GPU 上运行的，那么 `MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
+如果你的电脑配有 GPU（或其他能够加速训练的硬件，如 mps、ipu 等），并且运行了 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 的代码示例，你会发现程序是在 GPU 上运行的，那么 `MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
 
-事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在上一节提到的 `self.data_preprocessor` 这一行搬运到指定设备，进一步将处理好的数据传给模型。看到这里相比你会疑惑：
+事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在上一节提到的 `self.data_preprocessor` 这一行搬运到指定设备，进一步将处理好的数据传给模型。看到这里相信你会疑惑：
 
 1. `MMResNet50` 并没有配置 `data_preprocessor`，为什么却可以访问到`data_preprocessor`，并且把数据运动 GPU？
 
 2. 为什么不直接在模型里调用 `data.to(device)` 搬运数据，而需要有 `data_preprocessor` 这一层抽象？他又能实现哪些功能？
 
-首先回答第一个问题：`MMResNet50` 继承了 `BaseDataPreprocessor`。在执行 `super().__init__` 时，如果不传入任何参数，会构造一个默认的 `BaseDataPreprocessor`，其等效简易实现如下：
+首先回答第一个问题：`MMResNet50` 继承了 `BaseModel`。在执行 `super().__init__` 时，如果不传入任何参数，会构造一个默认的 `BaseDataPreprocessor`，其等效简易实现如下：
 
 ```python
 class BaseDataPreprocessor(nn.Module):
@@ -163,7 +163,7 @@ class BaseDataPreprocessor(nn.Module):
 
 2. 我们应该如何实现 MixUp、Mosaic 一类的数据增强？
 
-   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现。考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现他们的难度就会很大，因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 Dataloader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
+   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现，但是考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现他们的难度就会很大。这是因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 Dataloader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
 
    ```python
    class MixUpDataPreprocessor(nn.Module):
@@ -180,7 +180,7 @@ class BaseDataPreprocessor(nn.Module):
            batch_size = len(label)
            index = torch.randperm(batch_size)  # 计算用于叠加的图片数
            img, label = data
-           lam = np.random.beta(self.alpha, self.alpha)  # 融合银子
+           lam = np.random.beta(self.alpha, self.alpha)  # 融合因子
 
            # 原图和标签的 MixUp.
            img = lam * img + (1 - lam) * img[index, :]
