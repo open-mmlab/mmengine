@@ -9,6 +9,47 @@ import torch
 from mmengine.structures import BaseDataElement
 
 
+class DetDataSample(BaseDataElement):
+
+    @property
+    def proposals(self):
+        return self._proposals
+
+    @proposals.setter
+    def proposals(self, value):
+        self.set_field(value=value, name='_proposals', dtype=BaseDataElement)
+
+    @proposals.deleter
+    def proposals(self):
+        del self._proposals
+
+    @property
+    def gt_instances(self):
+        return self._gt_instances
+
+    @gt_instances.setter
+    def gt_instances(self, value):
+        self.set_field(
+            value=value, name='_gt_instances', dtype=BaseDataElement)
+
+    @gt_instances.deleter
+    def gt_instances(self):
+        del self._gt_instances
+
+    @property
+    def pred_instances(self):
+        return self._pred_instances
+
+    @pred_instances.setter
+    def pred_instances(self, value):
+        self.set_field(
+            value=value, name='_pred_instances', dtype=BaseDataElement)
+
+    @pred_instances.deleter
+    def pred_instances(self):
+        del self._pred_instances
+
+
 class TestBaseDataElement(TestCase):
 
     def setup_data(self):
@@ -331,47 +372,6 @@ class TestBaseDataElement(TestCase):
 
     def test_inheritance(self):
 
-        class DetDataSample(BaseDataElement):
-
-            @property
-            def proposals(self):
-                return self._proposals
-
-            @proposals.setter
-            def proposals(self, value):
-                self.set_field(
-                    value=value, name='_proposals', dtype=BaseDataElement)
-
-            @proposals.deleter
-            def proposals(self):
-                del self._proposals
-
-            @property
-            def gt_instances(self):
-                return self._gt_instances
-
-            @gt_instances.setter
-            def gt_instances(self, value):
-                self.set_field(
-                    value=value, name='_gt_instances', dtype=BaseDataElement)
-
-            @gt_instances.deleter
-            def gt_instances(self):
-                del self._gt_instances
-
-            @property
-            def pred_instances(self):
-                return self._pred_instances
-
-            @pred_instances.setter
-            def pred_instances(self, value):
-                self.set_field(
-                    value=value, name='_pred_instances', dtype=BaseDataElement)
-
-            @pred_instances.deleter
-            def pred_instances(self):
-                del self._pred_instances
-
         det_sample = DetDataSample()
 
         # test set
@@ -415,6 +415,11 @@ class TestBaseDataElement(TestCase):
         # test_keys
         assert len(instances.keys()) == len(data.keys())
 
+        det_sample = DetDataSample()
+        proposals = BaseDataElement(bboxes=torch.rand((5, 4)))
+        det_sample.proposals = proposals
+        assert '_proposals' not in det_sample.keys()
+
     def test_items(self):
         # test_metainfo_items
         metainfo, data = self.setup_data()
@@ -440,6 +445,13 @@ class TestBaseDataElement(TestCase):
         # sub data element should also be converted to dict
         assert isinstance(dict_instances['gt_instances'], dict)
         assert isinstance(dict_instances['pred_instances'], dict)
+
+        det_sample = DetDataSample()
+        proposals = BaseDataElement(bboxes=torch.rand((5, 4)))
+        det_sample.proposals = proposals
+        dict_sample = det_sample.to_dict()
+        assert '_proposals' not in dict_sample
+        assert 'proposals' in dict_sample
 
     def test_metainfo(self):
         # test metainfo property
