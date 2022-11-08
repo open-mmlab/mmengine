@@ -53,7 +53,7 @@ runner = Runner(
 事实上，在 PyTorch 的实现中，`shuffle` 只是一个便利记号。当设置为 `True` 时 `DataLoader` 会自动在内部使用 `RandomSampler`
 ```
 
-当考虑 `sampler` 时，例 1 代码基本可以认为等价于下面的代码块
+当考虑 `sampler` 时，例 1 代码**基本**可以认为等价于下面的代码块
 
 ```python
 from mmengine.dataset import DefaultSampler
@@ -62,13 +62,17 @@ dataset = torchvision.datasets.CIFAR10(...)
 sampler = DefaultSampler(dataset, shuffle=True)
 
 runner = Runner(
-    train_dataloader=DataLoader(
+    train_dataloader=dict(
         batch_size=32,
         sampler=sampler,
         dataset=dataset,
         collate_fn=dict(type='default_collate')
     )
 )
+```
+
+```{warning}
+上述代码的等价性只有在：1）使用单进程训练，以及 2）没有配置执行器的 `randomness` 参数时成立。这是由于使用 `dict` 传入 `sampler` 时，执行器会保证它在分布式训练环境设置完成后才被惰性构造，并接收到正确的随机种子。这两点在手动构造时需要额外工作且极易出错。因此，上述的写法只是一个示意而非推荐写法。我们**强烈建议 `sampler` 以 `dict` 的形式传入**，让执行器处理构造顺序，以避免出现问题。
 ```
 
 ### DefaultSampler
