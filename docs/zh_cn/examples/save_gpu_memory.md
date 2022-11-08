@@ -128,7 +128,7 @@ runner.train()
 PyTorch 1.12 引入的一些新特性，暂时还未在 MMEngine 中得到支持。以下特性将会在后续更新中逐渐支持：
 
 - Local/Shareded 模式的模型权重保存/加载方式（目前仅使用 Full 模式）
-- `sharding_strategy` `mixed_precision` 支持在配置文件中配置
+- 支持在配置文件中配置 `sharding_strategy` 和 `mixed_precision`
 ```
 
 ```{warning}
