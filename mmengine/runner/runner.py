@@ -356,7 +356,7 @@ class Runner:
             self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
-        self._log_dir = osp.join(self.work_dir, self.timestamp)
+        self._log_dir = osp.join(self.work_dir, self.experiment_name)
         mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
