@@ -33,7 +33,7 @@ runner = Runner(
 )
 ```
 
-在这种情况下，数据加载器会在实际被用到时、在执行器内部被构建。
+在这种情况下，数据加载器会在实际被用到时，在执行器内部被构建。
 
 ```{note}
 关于 `DataLoader` 的更多可配置参数，你可以参考 [PyTorch API 文档](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader)
@@ -85,7 +85,7 @@ runner = Runner(
 更多关于 `DefaultSampler` 的内容可以参考 [API 文档](mmengine.dataset.DefaultSampler)
 ```
 
-`DefaultSampler` 适用于绝大部分情况，并且我们保证在执行器中使用它时，随机数等容易出错的细节都被正确地处理，防止你陷入多进程训练的常见陷阱。如果你想要使用基于迭代次数(iteration-based)的训练流程，你也许会对 [InfiniteSampler](mmengine.dataset.InfiniteSampler) 感兴趣。如果你有更多的进阶需求，你可能会想要参考上述两个内置 `sampler` 的代码，实现一个自定义的 `sampler` 并注册到 `DATA_SAMPLERS` 根注册器中。
+`DefaultSampler` 适用于绝大部分情况，并且我们保证在执行器中使用它时，随机数等容易出错的细节都被正确地处理，防止你陷入多进程训练的常见陷阱。如果你想要使用基于迭代次数 (iteration-based) 的训练流程，你也许会对 [InfiniteSampler](mmengine.dataset.InfiniteSampler) 感兴趣。如果你有更多的进阶需求，你可能会想要参考上述两个内置 `sampler` 的代码，实现一个自定义的 `sampler` 并注册到 `DATA_SAMPLERS` 根注册器中。
 
 ```python
 @DATA_SAMPLERS.register_module()
@@ -102,7 +102,7 @@ runner = Runner(
 
 ### 不起眼的 collate_fn
 
-PyTorch 的 `DataLoader` 中，`collate_fn` 这一参数常常被使用者们忽略，但在 MMEngine 中你需要额外注意：当你传入 `dict` 来构造数据加载器时，MMEngine 会默认使用内置的 [pseudo_collate](mmengine.dataset.pseudo_collate)，这一点明显区别于 PyTorch 默认的 [default_collate](https://pytorch.org/docs/stable/data.html#torch.utils.data.default_collate)。因此，当你迁移 PyTorch 项目时，需要在配置文件中手动指明 `collate_fn` 以保持行为一致。
+PyTorch 的 `DataLoader` 中，`collate_fn` 这一参数常常被使用者忽略，但在 MMEngine 中你需要额外注意：当你传入 `dict` 来构造数据加载器时，MMEngine 会默认使用内置的 [pseudo_collate](mmengine.dataset.pseudo_collate)，这一点明显区别于 PyTorch 默认的 [default_collate](https://pytorch.org/docs/stable/data.html#torch.utils.data.default_collate)。因此，当你迁移 PyTorch 项目时，需要在配置文件中手动指明 `collate_fn` 以保持行为一致。
 
 ```{note}
 MMEngine 中使用 `pseudo_collate` 作为默认值，主要是由于历史兼容性原因，你可以不必过于深究，只需了解并避免错误使用即可。
