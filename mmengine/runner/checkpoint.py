@@ -236,15 +236,14 @@ class CheckpointLoader:
                 return cls._schemes[p]
 
     @classmethod
-    def load_checkpoint(cls, filename, map_location=None, logger=None):
+    def load_checkpoint(cls, filename, map_location=None, logger='current'):
         """load checkpoint through URL scheme path.
 
         Args:
             filename (str): checkpoint file name with given prefix
             map_location (str, optional): Same as :func:`torch.load`.
                 Default: None
-            logger (:mod:`logging.Logger`, optional): The logger for message.
-                Default: None
+            logger (str): The logger for message. Default to current.
 
         Returns:
             dict or OrderedDict: The loaded checkpoint.
@@ -255,7 +254,7 @@ class CheckpointLoader:
         print_log(
             f'Loads checkpoint by {class_name[10:]} backend from path: '
             f'{filename}',
-            logger='current')
+            logger=logger)
         return checkpoint_loader(filename, map_location)
 
 
