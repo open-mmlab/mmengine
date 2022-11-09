@@ -41,7 +41,7 @@ test_evaluator = [
 
 1. 在定义新的评测指标类时，需要继承基类 [`BaseMetric`](/mmengine/evaluator/metric.py)（关于该基类的介绍，可以参考[设计文档](/docs/zh_cn/design/evaluation.md)）。此外，评测指标类需要用注册器 `METRICS` 进行注册（关于注册器的说明请参考 [Registry 文档](/docs/zh_cn/tutorials/registry.md)）。
 
-2. 实现 `process()` 方法。该方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `predictions`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
+2. 实现 `process()` 方法。该方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `data_samples`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 
 3. 实现 `compute_metrics()` 方法。该方法有 1 个输入参数 `results`，里面存放了所有批次测试数据经过 `process()` 方法处理后得到的结果。从中取出样本类别标签和分类预测结果，即可计算得到分类正确率 `acc`。最终，将计算得到的评测指标以字典的形式返回。
 
