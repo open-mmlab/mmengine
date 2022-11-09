@@ -1,6 +1,6 @@
 # Config
 
-MMEngine implements an abstract configuration class (`Config`) to provide a unified configuration access interface for users. `Config` supports different type of configuration file, including `python`, `json` and `yaml`, and you can choose the type according to your preference. `Config` override some magic method, this could help you access the data stored in `Config` just like getting value from `dict`, or getting attribute from instance. Besides, `Config` also provides an inheritance mechanism, it could help us better organize and manage the configuration files.
+MMEngine implements an abstract configuration class (`Config`) to provide a unified configuration access interface for users. `Config` supports different type of configuration file, including `python`, `json` and `yaml`, and you can choose the type according to your preference. `Config` overrides some magic method, which could help you access the data stored in `Config` just like getting values from `dict`, or getting attributes from instances. Besides, `Config` also provides an inheritance mechanism, which could help you better organize and manage the configuration files.
 
 Before starting the tutorial, let's download the configuration files needed in the tutorial(it is recommended to execute them in a temporary directory to facilitate deleting these files latter.):
 
@@ -74,7 +74,7 @@ Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'te
 
 ## How to use `Config`
 
-After loading the configuration file, we can access the data stored in `Config` instance just like getting/writing value from `dict`, or getting/writing attribute from instance.
+After loading the configuration file, we can access the data stored in `Config` instance just like getting/setting values from `dict`, or getting/setting attributes from instances.
 
 ```python
 print(cfg.test_int)
@@ -100,7 +100,7 @@ print(cfg['test_list'])
 ```
 
 ```{note}
-The `dict` object parsed by `Config` will be converted to `ConfigDict`, and then we can access the value of the `dict` the same as accessing the attribute of a instance.
+The `dict` object parsed by `Config` will be converted to `ConfigDict`, and then we can access the value of the `dict` the same as accessing the attribute of an instance.
 ```
 
 We can use the `Config` combination with the [Registry](./registry.md) to build registered instance easily.
@@ -113,7 +113,7 @@ Here is an example of defining optimizers in a configuration file.
 optimizer = dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001)
 ```
 
-Suppose we have defined a registry `OPTIMIZERS`, which includes various optimizers, and then We can build the optimizer as below
+Suppose we have defined a registry `OPTIMIZERS`, which includes various optimizers. Then we can build the optimizer as below
 
 ```python
 from mmengine import Config, optim
@@ -144,9 +144,11 @@ Parameter Group 0
 
 ## Inheritance between configuration files
 
-Sometimes, the difference between two different configuration files is so small that only one field may be changed. However, we need to copy and paste everything, and only modify one line. It is not easy to locate the specific difference when we go back to this after a long time.
+Sometimes, the difference between two different configuration files is so small that only one field may be changed. Therefore, it's unwise to copy and paste everything only to modify one line, which makes it hard for us to locate the specific difference after a long time.
 
 In another case, multiple configuration files may have the same batch of fields, and we have to copy and paste them in different configuration files. It will also be hard to maintain these fields in a long time.
+
+We address these issues with inheritance mechanism, detailed as below.
 
 ### Overview of inheritance mechanism
 
@@ -191,7 +193,7 @@ _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
 model = dict(type='ResNet', depth=50)
 ```
 
-At this case, reading the `resnet50_runtime.py` will give you 3 fields `model`, `optimizer`, and `gpu_ids`.
+In this case, reading the `resnet50_runtime.py` will give you 3 fields `model`, `optimizer`, and `gpu_ids`.
 
 ```python
 cfg = Config.fromfile('resnet50_runtime.py')
@@ -202,7 +204,7 @@ print(cfg.optimizer)
 {'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
-In this way, we can disassemble the configuration file, define some general configuration files, and inherit them in the specific configuration file. This could avoid to define a lot duplicated contents in multiple configuration files.
+By this way, we can disassemble the configuration file, define some general configuration files, and inherit them in the specific configuration file. This could avoid defining a lot of duplicated contents in multiple configuration files.
 
 ### Modify the inherited fields
 
@@ -229,7 +231,7 @@ print(cfg.optimizer)
 {'type': 'SGD', 'lr': 0.01, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
-For non-dictionary fields, such as integers, strings, lists, etc., they can be completely overwritten by redefining them, for example, the code block blow will change the value of the `gpu_ids` to `[0]`.
+For non-dictionary fields, such as integers, strings, lists, etc., they can be completely overwritten by redefining them. For example, the code block below will change the value of the `gpu_ids` to `[0]`.
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -292,7 +294,7 @@ a = {{_base_.model}}
 a['type'] = 'MobileNet'
 ```
 
-The `Config` is not able to parse such a configuration file (it will raise an errors when parsing). The `Config` provides a more `pythonic` way to modify base variables for `python` configuration files.
+The `Config` is not able to parse such a configuration file (it will raise an error when parsing). The `Config` provides a more `pythonic` way to modify base variables for `python` configuration files.
 
 `modify_base_var.py`：
 
@@ -367,7 +369,7 @@ b=2
 
 # Advanced uses
 
-In this section, we'll introduce some advanced uses of the `Config`, and some tips could make it easier for users to develop and use downstream repositories.
+In this section, we'll introduce some advanced uses of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
 
 ## Predefined fields
 
@@ -475,7 +477,7 @@ The standard procedure only supports modifying String, Integer, Floating Point, 
 
 If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is “I don't know”, since I'm not sure the register process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
 
-For example, we customize a optimizer:
+For example, we customize an optimizer:
 
 ```python
 from mmengine.registry import OPTIMIZERS
@@ -519,7 +521,7 @@ print(custom_optim)
 
 ### Inherit configuration files across repository
 
-It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories, `Config` support inherit configuration file from other repositories. For example,based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
+It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example,based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
 
 `cross_repo.py`
 
