@@ -3,7 +3,7 @@
 Based on MMEngine's [Registry](registry.md) and [Config](config.md), users can build modules across libraries.
 For example, use [MMClassification](https://github.com/open-mmlab/mmclassification)'s backbones in [MMDetection](https://github.com/open-mmlab/mmdetection), or [MMDetection](https://github.com/open-mmlab/mmdetection)'s data transforms in [MMRotate](https://github.com/open-mmlab/mmrotate), or using [MMDetection](https://github.com/open-mmlab/mmdetection)'s detectors in [MMTracking](https://github.com/open-mmlab/mmtracking).
 
-Modules which registered in the same registry tree can be called across libraries by adding the **package name prefix** before the module's type in the config. Here are some common examples:
+Modules registered in the same registry tree can be called across libraries by adding the **package name prefix** before the module's type in the config. Here are some common examples:
 
 ## Use backbone across libraries:
 
