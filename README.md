@@ -62,7 +62,7 @@ v0.3.1 was released in 2022-11-09.
 
 **Fix error when saving best checkpoint in ddp-training**.
 
-Read [Changelog](./docs/en/notes/changelog.md#v0.3.0 "09/11/2022") for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022") for more details.
 
 ## Installation
 

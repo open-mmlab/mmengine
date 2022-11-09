@@ -16,6 +16,7 @@
 
 ### Docs
 
+- Refine Chinese tutorials @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/694
 - Add MMEval in README by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/669
 - Fix error URL in runner docstring by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/668
 - Fix error evaluator type name in `evaluator.md` by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/675
