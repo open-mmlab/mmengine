@@ -1,6 +1,6 @@
 # Logging
 
-[Runner](../tutorials/runner.md) will produce a lot of logs during the running process, such as loss, iteration time, learning rate, etc. MMEngine implements a flexible logging system that allows us to choose different types of log statistics when configuring the runner. It could help us set/get the recorded log at any location in the code.
+[Runner](../tutorials/runner.md) will produce a lot of logs during the running process, such as loss, iteration time, learning rate, etc. MMEngine implements a flexible logging system that allows us to choose different types of log statistical method when configuring the runner. It could help us set/get the recorded log at any location in the code.
 
 ## Flexible Logging System
 
@@ -54,7 +54,7 @@ runner.train()
 08/21 02:58:41 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0029  data_time: 0.0010  loss1: 0.1978  loss2: 0.4312  loss: 0.6290
 ```
 
-LogProcessor will output the log as the following statistic method:
+LogProcessor will output the log as the following format:
 
 - The prefix of the log:
   - epoch mode(`by_epoch=True`): `Epoch(train) [{current_epoch}/{current_iteration}]/{dataloader_length}`
@@ -78,9 +78,9 @@ Output the value of all custom logsthe at last iteration by default.
 log_processor output the epoch based log by default(`by_epoch=True`). To get a expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
 ```
 
-Based on the rules above, the sample code will statistic the average value of the `loss1` and `loss2` every 10 iterations.
+Based on the rules above, the code snippet will count the average value of the `loss1` and `loss2` every 10 iterations.
 
-If we want to statistic the global average value of `loss1`, we can set `custom_cfg` like this:
+If we want to count the global average value of `loss1`, we can set `custom_cfg` like this:
 
 ```python
 runner = Runner(
@@ -92,7 +92,7 @@ runner = Runner(
     log_processor=dict(
         custom_cfg=[
             dict(data_src='loss1',  # original loss name：loss1
-                 method_name='mean',  # statistic method：mean
+                 method_name='mean',  # statistical method：mean
                  window_size='global')])  # window_size：global
 )
 runner.train()
@@ -103,9 +103,9 @@ runner.train()
 08/21 02:58:49 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0030  data_time: 0.0012  loss1: 0.4521  loss2: 0.3939  loss: 0.5600
 ```
 
-`data_src` means the original loss name, `method_name` means the statistic method, `window_size` means the window size of the statistic method. Since we want to statistic the global average value of `loss1`, we set `window_size` to `global`.
+`data_src` means the original loss name, `method_name` means the statistic method, `window_size` means the window size of the statistic method. Since we want to count the global average value of `loss1`, we set `window_size` to `global`.
 
-Currently, MMEngine support the following statistic methods:
+Currently, MMEngine supports the following statistical methods:
 
 | statistic method | arguments   | function                                                       |
 | :--------------- | :---------- | :------------------------------------------------------------- |
@@ -253,7 +253,7 @@ runner.train()
 ...
 ```
 
-Besides, logs of different ranks will be save in `debug` mode. It you training your model with the shared storage. The heriarchy of the log is as follows:
+Besides, logs of different ranks will be saved in `debug` mode if you are training your model with the shared storage. The heriarchy of the log is as follows:
 
 ```text
 ./tmp
@@ -269,9 +269,7 @@ Besides, logs of different ranks will be save in `debug` mode. It you training y
 └── tmp_rank63.log
 ```
 
-The log of Multi-machine with independent storage:
-
-多机多卡，独立存储的情况：
+The log of Multiple machine with independent storage:
 
 ```text
 # device: 0：
