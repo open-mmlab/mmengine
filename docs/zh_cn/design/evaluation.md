@@ -26,7 +26,7 @@ class BaseMetric(metaclass=ABCMeta):
         ...
 ```
 
-`BaseMetric` 有一下 2 个重要的方法需要在子类中重写：
+`BaseMetric` 有以下 2 个重要的方法需要在子类中重写：
 
 - **`process()`** 用于处理每个批次的测试数据和模型预测结果。处理结果应存放在 `self.results` 列表中，用于在处理完所有测试数据后计算评测指标。该方法具有以下 2 个参数：
 
