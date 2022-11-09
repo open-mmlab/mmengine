@@ -108,7 +108,7 @@ The four features mentioned above are described below.
 
   In addition to the `save_best` parameter, other parameters related to saving the best checkpoint are `rule`, `greater_keys` and `less_keys`, which are used to imply whether its good to have large value or not. For example, if you specify `save_best='top-1'`, you can specify `rule='greater'` to imply that the larger the value, the better the checkpoint.
 
-  - Specify the path to save the checkpoints
+- Specify the path to save the checkpoints
 
   The checkpoints are saved in `work_dir` by default, but the path can be changed by setting `out_dir`.
 
