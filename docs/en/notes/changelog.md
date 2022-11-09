@@ -8,7 +8,7 @@
 
 ### New Features & Enhancements
 
-- Replace `print` with `print_log` for those function called by runner by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/686
+- Replace `print` with `print_log` for those functions called by runner by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/686
 
 ### Bug Fixes
 
