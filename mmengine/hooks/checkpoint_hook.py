@@ -86,7 +86,7 @@ class CheckpointHook(Hook):
             New in v0.2.0.
         save_begin (int): Start saving the number of epochs or
             epochs or iterations of model weights. Defaults to 1.
-            New in v0.3.0.
+            New in v0.4.0.
 
     Examples:
         >>> # Save best based on single metric
@@ -354,7 +354,6 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-
         if self.by_epoch:
             ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
         else:
