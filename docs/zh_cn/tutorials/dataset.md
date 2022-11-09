@@ -4,7 +4,7 @@
 如果你没有接触过 PyTorch 的数据集与数据加载器，我们推荐先浏览 [PyTorch 官方教程](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html)以了解一些基本概念
 ```
 
-数据集与数据加载器是 MMEngine 中训练流程的必要组件，它们的概念来源于 PyTorch，并且在含义上与 PyTorch 保持一致。通常来说，数据集定义了数据的总体数量、读取方式以及预处理，而数据加载器则在不同的设置下（如 `batch_size`、随机乱序、多进程）迭代地加载数据。两者共同构成了数据源。在本篇教程中，我们将按照从外（数据加载器）到内（数据集）的顺序，逐步介绍它们在 MMEngine 执行器中的用法，并给出一些常用示例。读完本篇教程，你将会：
+数据集与数据加载器是 MMEngine 中训练流程的必要组件，它们的概念来源于 PyTorch，并且在含义上与 PyTorch 保持一致。通常来说，数据集定义了数据的总体数量、读取方式以及预处理，而数据加载器则在不同的设置下迭代地加载数据，如批次大小（`batch_size`）、随机乱序（`shuffle`）、并行（`num_workers`）等。数据集经过数据加载器封装后构成了数据源。在本篇教程中，我们将按照从外（数据加载器）到内（数据集）的顺序，逐步介绍它们在 MMEngine 执行器中的用法，并给出一些常用示例。读完本篇教程，你将会：
 
 - 掌握如何在 MMEngine 的执行器中配置数据加载器
 - 学会在配置文件中使用已有（如 `torchvision`）数据集
@@ -18,7 +18,7 @@
 - `val_dataloader`：在 `Runner.val()` 中被使用，也会在 `Runner.train()` 中每间隔一段时间被使用，用于模型的验证评测
 - `test_dataloader`：在 `Runner.test()` 中被使用，用于模型的测试
 
-MMEngine 完全支持 PyTorch 的原生 `DataLoader`，因此上述 3 个参数均可以直接传入构建好的 `DataLoader`，如[15分钟上手](../get_started/15_minutes.md)中的例子所示。同时，借助 MMEngine 的[注册机制](../advanced_tutorials/registry.md)，以上参数也可以传入 `dict`，如下面代码（以下简称例 1）所示。
+MMEngine 完全支持 PyTorch 的原生 `DataLoader`，因此上述 3 个参数均可以直接传入构建好的 `DataLoader`，如[15分钟上手](../get_started/15_minutes.md)中的例子所示。同时，借助 MMEngine 的[注册机制](../advanced_tutorials/registry.md)，以上参数也可以传入 `dict`，如下面代码（以下简称例 1）所示。字典中的键值与 `DataLoader` 的构造参数一一对应。
 
 ```python
 runner = Runner(
@@ -62,11 +62,11 @@ dataset = torchvision.datasets.CIFAR10(...)
 sampler = DefaultSampler(dataset, shuffle=True)
 
 runner = Runner(
-    train_dataloader=dict(
+    train_dataloader=DataLoader(
         batch_size=32,
         sampler=sampler,
         dataset=dataset,
-        collate_fn=dict(type='default_collate')
+        collate_fn=default_collate
     )
 )
 ```
@@ -184,12 +184,12 @@ runner = Runner(
 ```
 
 ```{note}
-上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [mmdet](https://github.com/open-mmlab/mmdetection) 和 [mmcls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
+上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [MMDet](https://github.com/open-mmlab/mmdetection) 和 [MMCls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
 ```
 
 ### 自定义数据集
 
-你可以像使用 PyTorch 一样，自由地定义自己的数据集，或将之前 PyTorch 项目中的数据集拷贝过来。如果你想要了解如何自定义数据集，你可以参考 [PyTorch 官方教程](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files)
+你可以像使用 PyTorch 一样，自由地定义自己的数据集，或将之前 PyTorch 项目中的数据集拷贝过来。如果你想要了解如何自定义数据集，可以参考 [PyTorch 官方教程](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files)
 
 ### 使用 MMEngine 的数据集基类
 
