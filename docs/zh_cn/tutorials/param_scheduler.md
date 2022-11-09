@@ -33,7 +33,7 @@ for epoch in range(10):
 
 </details>
 
-在 `mmengine.optim.scheduler` 中，我们支持大部分 PyTorch 中的学习率调度器，例如 `ExponentialLR`，`LinearLR`，`StepLR`，`MultiStepLR` 等，使用方式也基本一致，所有支持的调度器见[调度器接口文档](../api/optim.html#scheduler))。同时增加了对动量的调整，在类名中将 `LR` 替换成 `Momentum` 即可，例如 `ExponentialMomentum`，`LinearMomentum`。更进一步地，我们实现了通用的参数调度器 ParamScheduler，用于调整优化器的中的其他参数，包括 weight_decay 等。这个特性可以很方便地配置一些新算法中复杂的调整策略。
+在 `mmengine.optim.scheduler` 中，我们支持大部分 PyTorch 中的学习率调度器，例如 `ExponentialLR`，`LinearLR`，`StepLR`，`MultiStepLR` 等，使用方式也基本一致，所有支持的调度器见[调度器接口文档](../api/optim.html#scheduler)。同时增加了对动量的调整，在类名中将 `LR` 替换成 `Momentum` 即可，例如 `ExponentialMomentum`，`LinearMomentum`。更进一步地，我们实现了通用的参数调度器 ParamScheduler，用于调整优化器的中的其他参数，包括 weight_decay 等。这个特性可以很方便地配置一些新算法中复杂的调整策略。
 
 和 PyTorch 文档中所给示例不同，MMEngine 中通常不需要手动来实现训练循环以及调用 `optimizer.step()`，而是在执行器（Runner）中对训练流程进行自动管理，同时通过 `ParamSchedulerHook` 来控制参数调度器的执行。
 
