@@ -154,4 +154,4 @@ class CustomRunner(Runner):
 
 上述例子实现了一个自定义的执行器，并重写了 `setup_env` 函数，然后添加进了 RUNNERS 注册器中，完成了这些步骤之后，便可以在配置文件中设置 `runner_type='CustomRunner'` 来构建自定义的执行器。
 
-你可能还想阅读[执行器的教程](../tutorials/runner.md)或者[执行器的 API 文档](../tutorials/runner.md)。
+你可能还想阅读[执行器的教程](../tutorials/runner.md)或者[执行器的 API 文档](mmengine.runner.Runner)。
