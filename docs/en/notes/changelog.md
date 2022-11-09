@@ -1,5 +1,27 @@
 # Changelog of v0.x
 
+## v0.3.1 (11/09/2022)
+
+### Highlights
+
+- Fix error when saving best checkpoint in ddp-training
+
+### New Features & Enhancements
+
+- Replace `print` with `print_log` for those functions called by runner by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/686
+
+### Bug Fixes
+
+- Fix error when saving best checkpoint in ddp-training by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/682
+
+### Docs
+
+- Refine Chinese tutorials by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/694
+- Add MMEval in README by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/669
+- Fix error URL in runner docstring by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/668
+- Fix error evaluator type name in `evaluator.md` by @sanbuphy in https://github.com/open-mmlab/mmengine/pull/675
+- Fix typo in `utils.md` @sanbuphy in https://github.com/open-mmlab/mmengine/pull/702
+
 ## v0.3.0 (11/02/2022)
 
 ### New Features & Enhancements
