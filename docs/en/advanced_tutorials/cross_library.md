@@ -57,7 +57,7 @@ train_pipeline=[
 
 ## Use detector across libraries:
 
-Using an algorithm across libraries is a little bit complex.
+Using an algorithm from another library is a little bit complex.
 
 An algorithm contains multiple submodules. Each submodule needs to add a prefix to its `type`. Take  using MMDetection's YOLOX in MMTracking as an example:
 
