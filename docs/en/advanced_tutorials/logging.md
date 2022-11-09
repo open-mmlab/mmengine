@@ -66,12 +66,6 @@ LogProcessor will output the log as the following statistic method:
   - `eta`: The estimated time of arrival to finish the training.
 - Loss: The averaged loss output by model of the last `window_size` iterations.
 
-默认情况下，`window_size=10`，日志处理器会统计最近 10 次迭代，损失、迭代时间、数据时间的均值。
-
-默认情况下，所有日志的有效位数（`num_digits` 参数）为 4。
-
-默认情况下，输出所有自定义日志最近一次迭代的值。
-
 ```{note}
 `window_size=10` by default.
 
