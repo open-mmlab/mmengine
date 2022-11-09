@@ -4,7 +4,7 @@ Usually, we'll customize our module based on [nn.Module](https://pytorch.org/doc
 
 ## Initialize the model from config
 
-The core function of `BaseModule` is that it could help us to initialize the model from config. Subclasses inherit from `BaseModule` could define the `init_cfg` in the `__init__` function, and we can choose the method of initialization by configuring `init_cfg`.
+The core function of `BaseModule` is that it could help us to initialize the model from config. Subclasses inherited from `BaseModule` could define the `init_cfg` in the `__init__` function, and we can choose the method of initialization by configuring `init_cfg`.
 
 Currently, we support the following initialization methods:
 
