@@ -31,12 +31,11 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **自定义钩子**
 
-|                名称                 |         用途          |    优先级    |
-| :---------------------------------: | :-------------------: | :----------: |
-|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50)  |
-|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50)  |
-| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50)  |
-|       NaiveVisualizationHook        |        可视化         | LOWEST (100) |
+|                名称                 |         用途          |   优先级    |
+| :---------------------------------: | :-------------------: | :---------: |
+|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50) |
+|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50) |
+| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -56,9 +55,7 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', interval=1),
 )
 
-custom_hooks = [
-    dict(type='NaiveVisualizationHook', priority='LOWEST'),
-]
+custom_hooks = [dict(type='EmptyCacheHook')]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.train()
