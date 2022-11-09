@@ -30,8 +30,8 @@ class BaseMetric(metaclass=ABCMeta):
 
 - **`process()`** 用于处理每个批次的测试数据和模型预测结果。处理结果应存放在 `self.results` 列表中，用于在处理完所有测试数据后计算评测指标。该方法具有以下 2 个参数：
 
-  - `data_batch`：一个批次的测试数据样本
-  - `predictions`：对应的模型预测结果
+  - `data_batch`：一个批次的测试数据样本，通常直接来自与数据加载器
+  - `data_samples`：对应的模型预测结果
     该方法没有返回值。函数接口定义如下：
 
   ```python

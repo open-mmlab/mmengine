@@ -76,14 +76,14 @@ class SimpleAccuracy(BaseMetric):
         Args:
             data_batch (Sequence[Tuple[Any, dict]]): A batch of data
                 from the dataloader.
-            predictions (Sequence[dict]): A batch of outputs from
+            data_samples (Sequence[dict]): A batch of outputs from
                 the model.
         """
 
         # 取出分类预测结果和类别标签
         result = {
-            'pred': predictions['pred_label'],
-            'gt': data_batch['data_sample']['gt_label']
+            'pred': data_samples['pred_label'],
+            'gt': data_samples['data_sample']['gt_label']
         }
 
         # 将当前 batch 的结果存进 self.results
@@ -127,10 +127,10 @@ data = load('test_data.pkl')
 
 # 从文件中读取模型预测结果。该结果由待评测算法在测试数据集上推理得到。
 # 数据格式需要参考具使用的 metric。
-predictions = load('prediction.pkl')
+data_samples = load('prediction.pkl')
 
 # 调用评测器离线评测接口，得到评测结果
 # chunk_size 表示每次处理的样本数量，可根据内存大小调整
-results = evaluator.offline_evaluate(data, predictions, chunk_size=128)
+results = evaluator.offline_evaluate(data, data_samples, chunk_size=128)
 
 ```
