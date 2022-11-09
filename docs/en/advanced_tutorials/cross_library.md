@@ -5,7 +5,7 @@ For example, use [MMClassification](https://github.com/open-mmlab/mmclassificati
 
 Modules registered in the same registry tree can be called across libraries by adding the **package name prefix** before the module's type in the config. Here are some common examples:
 
-## Use backbone across libraries:
+## Use backbone across libraries
 
 Taking the example of using MMClassification's ConvNeXt in MMDetection:
 
@@ -36,7 +36,7 @@ model = dict(
   rpn_head=dict(...))
 ```
 
-## Use data transform across libraries:
+## Use data transform across libraries
 
 As with the example of backbone above, cross-library calls can be simply achieved by adding custom_imports and prefix in the config:
 
@@ -55,7 +55,7 @@ train_pipeline=[
 ]
 ```
 
-## Use detector across libraries:
+## Use detector across libraries
 
 Using an algorithm from another library is a little bit complex.
 
