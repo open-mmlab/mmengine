@@ -1,7 +1,7 @@
 # Runner
 
 Deep learning algorithms usually share similar pipelines for training, validation and testing.
-Therefore, MMengine designed `Runner` to simplify the construction of this pipeline.
+Therefore, MMengine designed `Runner` to simplify the construction of these pipelines.
 In most cases, users can use our default `Runner` directly.
 If you find it not feasible to implement your ideas, you can also modify it or customize your own runner.
 
@@ -72,7 +72,7 @@ The execution order of `Runner` is as follows:
 
 A feature of `Runner` is that it will always lazily initialize modules managed by itself.
 To be specific, `Runner` won't build every module on initialization, and it won't build a module until it is needed in current `Loop`.
-Therefore, you only need to provide a limited set of configs/modules if you are running only one of `train`, `val` or `test` pipeline.
+Therefore, if you are running only one of the `train`, `val`, or `test` pipelines, you only need to provide the relevant configs/modules.
 
 ## Loop
 
@@ -90,7 +90,7 @@ The built-in runner and loops are capable of most deep learning tasks, but surel
 Some tasks need extra modifications and refactorizations.
 Therefore, we make it possible for users to customize their own pipelines for model training, validation and testing.
 
-You can write your own pipeline by subclassing [BaseLoop](mmengine.runner.BaseLoop), which needs 2 arguments for initialization: 1) `runner` the Runner instance, and 2) `loader` the dataloader used in this loop.
+You can write your own pipeline by subclassing [BaseLoop](mmengine.runner.BaseLoop), which needs 2 arguments for initialization: 1) `runner` the Runner instance, and 2) `dataloader` the dataloader used in this loop.
 You are free to add more arguments to your own loop subclass.
 After defining your own loop subclass, you should register it to LOOPS(mmengine.registry.LOOPS), and specify it in config files by `type` field in `train_cfg`, `val_cfg` and `test_cfg`.
 In fact, you can write any execution order, any hook position in your own loop.
