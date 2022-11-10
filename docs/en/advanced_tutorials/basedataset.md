@@ -376,7 +376,7 @@ MMEngine provides `ClassBalancedDataset` wrapper to repeatedly sample the corres
 
 **Notice:**
 
-The `ClassBalancedDataset` wrapper assumes that the wrapped dataset class supports the `get_cat_ids(idx)` method, which returns a list. The list contains the categories of  `data_info` given by 'idx'. The usuage is as follows:
+The `ClassBalancedDataset` wrapper assumes that the wrapped dataset class supports the `get_cat_ids(idx)` method, which returns a list. The list contains the categories of  `data_info` given by 'idx'. The usage is as follows:
 
 ```python
 from mmengine.dataset import BaseDataset, ClassBalancedDataset
@@ -435,7 +435,7 @@ class ExampleDatasetWrapper:
             raise TypeError(
                 'elements in datasets sequence should be config or '
                 f'`BaseDataset` instance, but got {type(dataset)}')
-        # Record the meta infomation of source dataset
+        # Record the meta information of source dataset
         self._metainfo = self.dataset.metainfo
 
         '''
