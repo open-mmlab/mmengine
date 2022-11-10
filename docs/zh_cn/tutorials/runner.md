@@ -213,7 +213,7 @@ runner.train()
 </details>
 
 <details>
-<summary>为什么有些传入参数是`dict`？</summary>
+<summary>为什么有些传入参数是 dict？</summary>
 
 是的，这与 MMEngine 的风格相关。在 MMEngine 中我们提供了两种不同风格的执行器构建方式：a）基于手动构建的，以及 b）基于注册机制的。如果你感到迷惑，下面的例子将给出一个对比：
 
@@ -221,6 +221,7 @@ runner.train()
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
 from mmengine.registry import MODELS # 模型根注册器，你的自定义模型需要注册到这个根注册器中
+
 @MODELS.register_module() # 用于注册的装饰器
 class MyAwesomeModel(BaseModel): # 你的自定义模型
     def __init__(self, layers=18, activation='silu'):
@@ -256,7 +257,7 @@ runner = Runner(
 <details>
 <summary>我应该去哪里找到 xxx 参数的可能配置选项？</summary>
 
-你可以在对应模块的教程中找到丰富的说明和示例，你也可以在 [API 文档](mmengine.runner.Runner) 中找到 `Runner` 的所有参数。如果上述两种方式都无法解决你的疑问，你随时可以在我们的 [讨论版](https://github.com/open-mmlab/mmengine/discussions) 中发起话题，帮助我们更好地改进文档。
+你可以在对应模块的教程中找到丰富的说明和示例，你也可以在 [API 文档](mmengine.runner.Runner) 中找到 `Runner` 的所有参数。如果上述两种方式都无法解决你的疑问，你随时可以在我们的[讨论区](https://github.com/open-mmlab/mmengine/discussions)中发起话题，帮助我们更好地改进文档。
 
 </details>
 
