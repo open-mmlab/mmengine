@@ -5,7 +5,7 @@ Therefore, MMengine designed `Runner` to simplify the construction of this pipel
 In most cases, users can use our default `Runner` directly.
 If you find it not feasible to implement your ideas, you can also modify it or customize your own runner.
 
-Before introducing the design of `Runner`, let's walk through some examples to better understand why should we use runner.
+Before introducing the design of `Runner`, let's walk through some examples to better understand why we should use runner.
 Below is a few lines of pseudo codes for training models in PyTorch:
 
 ```python
