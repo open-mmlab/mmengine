@@ -443,7 +443,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 </details>
 
 <details>
-<summary>如果我重载了`train_step`等方法，上图会完全失效吗？</summary>
+<summary>如果我重载了 train_step 等方法，上图会完全失效吗？</summary>
 
 默认的 `train_step`、`val_step`、`test_step` 的行为，覆盖了从数据进入 `data preprocessor` 到 `model` 输出 `loss`、`predict` 结果的这一段流程，不影响其余部分。
 
