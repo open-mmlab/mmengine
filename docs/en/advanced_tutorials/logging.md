@@ -10,10 +10,6 @@ Logging system is configured by passing a [LogProcessor](mmengine.logging.LogPro
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
 ```
 
-```python
-log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
-```
-
 The format of the output log is as follows:
 
 ```python
