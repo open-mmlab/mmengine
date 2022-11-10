@@ -81,7 +81,7 @@ If three sources have the same field, the source with the highest priority deter
 
 - `get subset` (optional) : Sample a subset of dataset based on a given index or integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
 
-- `serialize data` (optional) : Serialize all data samples to save memory. Please see [Save memory](#Save memory) for more details. we serialize the all data samples by default.
+- `serialize data` (optional) : Serialize all data samples to save memory. Please see \[Save memory\](#Save memory) for more details. we serialize the all data samples by default.
 
 The `parse_data_info()` method in the BaseDataset is used to process a raw data info in the annotation file into one or more training/test data samples. The user needs to implement the `parse_data_info()` method, if they want to customize dataset class.
 
@@ -264,7 +264,7 @@ toy_dataset = ToyDataset(
 
 When `lazy_init=True`, the initialization of ToyDataset's only performs steps 1, 2, and 3 of the BaseDataset initialization process. At this time, `toy_dataset` was not fully initialized, since `toy_dataset` will not read and parse the annotation file. The `toy_dataset` only set the meta information of the dataset (`metainfo`).
 
-Naturally, if you need to access specific data information later, you can manually call the `toy_dataset.full_init()` interface to perform the complete initialization process, during which the data annotation file will be read and parsed. Calling the ` get_data_info (independence idx) `, ` __len__ () `, ` __getitem__ (independence idx) `, ` get_subset_ (indices)` and `get_subset(indices)` interface will also automatically call the `full_init()` interface to perform the full initialization process (only on the first call, later calls will not call the `full_init()` interface repeatedly):
+Naturally, if you need to access specific data information later, you can manually call the `toy_dataset.full_init()` interface to perform the complete initialization process, during which the data annotation file will be read and parsed. Calling the `get_data_info (independence idx)`, `__len__ ()`, `__getitem__ (independence idx)`, ` get_subset_ (indices)` and `get_subset(indices)` interface will also automatically call the `full_init()` interface to perform the full initialization process (only on the first call, later calls will not call the `full_init()` interface repeatedly):
 
 ```python
 # Full initialization
