@@ -1,10 +1,10 @@
 # Logging
 
-[Runner](../tutorials/runner.md) will produce a lot of logs during the running process, such as loss, iteration time, learning rate, etc. MMEngine implements a flexible logging system that allows us to choose different types of log statistical method when configuring the runner. It could help us set/get the recorded log at any location in the code.
+[Runner](../tutorials/runner.md) will produce a lot of logs during the running process, such as loss, iteration time, learning rate, etc. MMEngine implements a flexible logging system that allows us to choose different types of log statistical methods when configuring the runner. It could help us set/get the recorded log at any location in the code.
 
 ## Flexible Logging System
 
-Logging systom is configured by passing a [LogProcessor](mmengine.logging.LogProcessor) to the runner. If no log processor is passed, the runner will use the default log processor, which is equivalent to:
+Logging system is configured by passing a [LogProcessor](mmengine.logging.LogProcessor) to the runner. If no log processor is passed, the runner will use the default log processor, which is equivalent to:
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
@@ -54,12 +54,12 @@ runner.train()
 08/21 02:58:41 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0029  data_time: 0.0010  loss1: 0.1978  loss2: 0.4312  loss: 0.6290
 ```
 
-LogProcessor will output the log as the following format:
+LogProcessor will output the log in the following format:
 
 - The prefix of the log:
   - epoch mode(`by_epoch=True`): `Epoch(train) [{current_epoch}/{current_iteration}]/{dataloader_length}`
   - iteration mode(`by_epoch=False`): `Iter(train) [{current_iteration}/{max_iteration}]`)
-- Learning rate(`lr`): The learing rate of the last iteration.
+- Learning rate (`lr`): The learning rate of the last iteration.
 - Time:
   - `time`: The averaged time for infernce of the last `window_size` iterations.
   - `data_time`: The averaged time for loading data of the last `window_size` iterations.
@@ -75,7 +75,7 @@ Output the value of all custom logsthe at last iteration by default.
 ```
 
 ```{warnning}
-log_processor output the epoch based log by default(`by_epoch=True`). To get a expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
+log_processor outputs the epoch based log by default(`by_epoch=True`). To get an expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
 ```
 
 Based on the rules above, the code snippet will count the average value of the `loss1` and `loss2` every 10 iterations.
@@ -174,9 +174,9 @@ runner.train()
 
 More examples can be found in [log_processor](mmengine.logging.LogProcessor).
 
-## Custom log
+## Customize log
 
-The logging system could not only log the `loss`, `lr`, .etc, but can also collect and output the the custom log. For example, if we want to statistic the intermediate `loss`:
+The logging system could not only log the `loss`, `lr`, .etc but also collect and output the custom log. For example, if we want to statistic the intermediate `loss`:
 
 ```python
 from mmengine.logging import MessageHub
@@ -253,7 +253,7 @@ runner.train()
 ...
 ```
 
-Besides, logs of different ranks will be saved in `debug` mode if you are training your model with the shared storage. The heriarchy of the log is as follows:
+Besides, logs of different ranks will be saved in `debug` mode if you are training your model with the shared storage. The hierarchy of the log is as follows:
 
 ```text
 ./tmp
