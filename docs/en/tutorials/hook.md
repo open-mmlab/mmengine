@@ -1,6 +1,6 @@
 # Hook
 
-Hook programming is a programming pattern in which a mount point is set in one or more locations of a program, and when the program runs to a mount point, all methods registered to the it at runtime are automatically called. Hook programming can increase the flexibility and extensibility of the program, and the user can register custom methods to the mount point to be called without modifying the code in the program.
+Hook programming is a programming pattern in which a mount point is set in one or more locations of a program. When the program runs to a mount point, all methods registered to it at runtime are automatically called. Hook programming can increase the flexibility and extensibility of the program, since users can register custom methods to the mount point to be called without modifying the code in the program.
 
 ## Built-in Hooks
 
@@ -60,7 +60,7 @@ runner.train()
 
 ### CheckpointHook
 
-[CheckpointHook](mmengine.hooks.CheckpointHook) saves the checkpoints at a given interval, or in the case of distributed training, only the master process will save the checkpoints. The main features of `CheckpointHook` is as follows.
+[CheckpointHook](mmengine.hooks.CheckpointHook) saves the checkpoints at a given interval. In the case of distributed training, only the master process will save the checkpoints. The main features of `CheckpointHook` is as follows.
 
 - Save checkpoints by interval, and support saving them by epoch or iteration
 - Save the most recent checkpoints
@@ -116,7 +116,7 @@ The four features mentioned above are described below.
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
   ```
 
-[LoggerHook](mmengine.hooks.LoggerHook) collect logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb .etc.
+[LoggerHook](mmengine.hooks.LoggerHook) collects logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb .etc.
 
 If we want to output (or save) the logs every 20 iterations, we can set the `interval` parameter and configure it as follows.
 
@@ -142,7 +142,7 @@ If you are interested in how MMEngine manages logging, you can refer to [logging
 
 [DistSamplerSeedHook](mmengine.hooks.DistSamplerSeedHook) calls the `step` method of the Sampler during distributed training to ensure that the shuffle operation takes effect.
 
-`DistSamplerSeedHook` is registered to the RUnner by default and has no configurable parameters, so there is no need to configure it.
+`DistSamplerSeedHook` is registered to the Runner by default and has no configurable parameters, so there is no need to configure it.
 
 ### RuntimeInfoHook
 
@@ -189,7 +189,7 @@ runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()
 ```
 
-## Custom Your Hooks
+## Customize Your Hooks
 
 If the built-in hooks provided by MMEngine do not cover your demands, you are encouraged to customize your own hooks by simply inheriting the base [hook](mmengine.hooks.Hook) class and overriding the corresponding mount point methods.
 
@@ -245,7 +245,7 @@ custom_hooks = dict(
 )
 ```
 
-It can also set priority when defining classes.
+You can also set priority when defining classes.
 
 ```python
 @HOOKS.register_module()
