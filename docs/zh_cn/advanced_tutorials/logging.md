@@ -218,7 +218,7 @@ runner.train()
 通过调用[消息枢纽](mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
-2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
+2. 调用 `update_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
 3. 配置日志处理器，以均值的方式统计 `loss_tmp`。如果不配置，日志里显示 `loss_tmp` 最近一次更新的值。
 
 ## 输出调试日志
