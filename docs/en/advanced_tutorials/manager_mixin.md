@@ -45,7 +45,7 @@ class CustomHook(Hook):
 
 `GlobalClass.get_instance({name})` will first check whether the instance with the name `{name}` has been built. If not, it will build a new instance with the name `{name}`, otherwise it will return the existing instance. As the above example shows, when we call `GlobalClass.get_instance('mmengine')` at the first time, it will build a new instance with the name `mmengine`. Then we call `GlobalClass.get_instance(runner.experiment_name)`, it will also build a new instance with a different name.
 
-Here we build two instances for easy of the latter introduction of `get_current_instance`.
+Here we build two instances for the convenience of subsequent introduction of `get_current_instance`.
 
 3. Accessing the instance anywhere
 
@@ -70,7 +70,7 @@ class CustomModule(nn.Module):
 We can get the instance with the specified name by `get_instance(name)`, or get the currently built instance by `get_current_instance` anywhere.
 
 ```warning
-If the instance with the specified name has not been built, `get_instance` will raise an error if it accept its construct parameters.
+If the instance with the specified name has already been built, `get_instance` will raise an error if it accept its construct parameters.
 ```
 
 ```
