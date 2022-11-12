@@ -79,7 +79,7 @@ If three sources have the same field, the source with the highest priority deter
 
 - `filter data` (optional) : Filters unnecessary data based on `filter_cfg`, such as data samples that do not contain annotations. By default, there is no filtering operation, and downstream subclasses can override it according to their own needs.
 
-- `get subset` (optional) : Sample a subset of dataset based on a given index or integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
+- `get subset` (optional) : Sample a subset of dataset based on a given index or an integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
 
 - `serialize data` (optional) : Serialize all data samples to save memory. Please see \[Save memory\](#Save memory) for more details. we serialize the all data samples by default.
 
