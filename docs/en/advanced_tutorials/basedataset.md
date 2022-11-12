@@ -99,7 +99,7 @@ Once the BaseDataset is initialized, it supports `__getitem__` method to index a
 
 - `get_subset_(indices)`: Modify the original dataset class **in inplace** according to `indices`. If `indices` is `int`, then the original dataset class contains only the first few data samples. If `indices` is `Sequence[int]`, the raw dataset class contains data samples specified according to `Sequence[int]`.
 
-- `get_subset(indices)`: Return a sub dataset class **in non-inplace** according to indices, i.e., re-copies a sub dataset. If `indices` is `int`, the returned sub dataset class contains only the first few data samples. If `indices` is `Sequence[int]`, the returned sub dataset class contains the data samples specified according to `Sequence[int]`.
+- `get_subset(indices)`: Return a **new** sub-dataset class according to indices, i.e., re-copies a sub-dataset. If `indices` is `int`, the returned sub-dataset object contains only the first few data samples. If `indices` is `Sequence[int]`, the returned sub-dataset object contains the data samples specified according to `Sequence[int]`.
 
 ## Customize dataset class based on BaseDataset
 
