@@ -237,7 +237,7 @@ For annotated files that do not meet the OpenMMLab 2.0 dataset format specificat
 
 1. Convert the annotation files that do not meet the specifications into the annotation files that do meet the specifications, and then use the BaseDataset in the above way.
 
-2. Implement a new dataset class that inherits from the BaseDataset and overloads the `load_data_list(self):` function of the BaseDataset to handle annotation files that don't meet the specification and guarantee a return value of `list[dict]`, where each `dict` represents a data sample.
+2. Implement a new dataset class that inherits from the `BaseDataset` and overloads the `load_data_list(self):` function of the `BaseDataset` to handle annotation files that don't meet the specification and guarantee a return value of `list[dict]`, where each `dict` represents a data sample.
 
 ## Other features of BaseDataset
 
