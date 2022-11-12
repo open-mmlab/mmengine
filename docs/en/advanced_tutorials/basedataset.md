@@ -314,7 +314,7 @@ The above example does not store the `data_list` serialization into memory in ad
 
 ## DatasetWrappers
 
-In addition to BaseDataset, MMEngine also provides several DatasetWrappers: `ConcatDataset`, `RepeatDataset`, `ClassBalancedDataset`. These DatasetWrappers also support lazy init and have memory-saving features.
+In addition to BaseDataset, MMEngine also provides several DatasetWrappers: `ConcatDataset`, `RepeatDataset`, `ClassBalancedDataset`. These dataset wrappers also support lazy init and have memory-saving features.
 
 ### ConcatDataset
 
