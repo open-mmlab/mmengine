@@ -233,7 +233,7 @@ The usage of `ToyVideoDataset` is similar to that of `ToyDataset`, which will no
 
 ### Annotation files that do not meet the OpenMMLab 2.0 dataset format specification
 
-For annotated files that do not meet the OpenMMLab 2.0 dataset format specification, there are two ways to use the BaseDataset:
+For annotated files that do not meet the OpenMMLab 2.0 dataset format specification, there are two ways to use:
 
 1. Convert the annotation files that do not meet the specifications into the annotation files that do meet the specifications, and then use the BaseDataset in the above way.
 
