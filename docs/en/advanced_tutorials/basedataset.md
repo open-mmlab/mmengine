@@ -285,7 +285,7 @@ toy_dataset[0]
 
 **Notice:**
 
-Performing full initialization by calling the `__getitem__()` interface directly carries some risks: If a dataset class is not fully initialized by setting `lazy_init=True` firstly, then it is directly sent to the dataloader. In the subsequent data reading process, different dataloader workers will read and parse the annotation file at the same time. Although this may work normally, it consumes a lot of time and memory. **Therefore, it is recommended to manually call the `full_init()` interface to perform the full initialization process before you need to access specific data.**
+Performing full initialization by calling the `__getitem__()` interface directly carries some risks: If a dataset object is not fully initialized by setting `lazy_init=True` firstly, then it is directly sent to the dataloader. Different dataloader workers will read and parse the annotation file at the same time in the subsequent data reading process. Although this may work normally, it consumes a lot of time and memory. **Therefore, it is recommended to manually call the `full_init()` interface to perform the full initialization process before you need to access specific data.**
 
 The above is not fully initialized by setting `lazy_init=True`, and then complete initialization according to the demand, called lazy init.
 
