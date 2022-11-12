@@ -61,7 +61,7 @@ The initialization process of the `BaseDataset` is shown as following:
 
 1. `load metainfo` : Obtain the meta information of the dataset. The meta information can be obtained from three sources with the priority from high to low:
 
-- The dict of `metainfo` passed by the user in the `__init__()` function. The priority is high, since the user can pass this argument when the BaseDataset is instantiated;
+- The dict of `metainfo` passed by the user in the `__init__()` function. The priority is high, since the user can pass this argument when the `BaseDataset` is instantiated;
 
 - The dict of `BaseDataset.METAINFO` in the class attributes of BaseDataset. The priority is medium, since the user can change the class attributes `BaseDataset.METAINFO` in the custom dataset class;
 
