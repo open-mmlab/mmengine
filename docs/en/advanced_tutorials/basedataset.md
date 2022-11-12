@@ -199,7 +199,7 @@ len(toy_dataset)
 # 1
 ```
 
-Following the above steps, we can see how a new dataset class can be customized based on the BaseDataset and how to use the customized dataset class.
+Following the above steps, we can see how to customize a dataset based on the BaseDataset and how to use the customized dataset.
 
 #### Customize dataset for videos
 
