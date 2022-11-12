@@ -293,7 +293,7 @@ The above is not fully initialized by setting `lazy_init=True`, and then complet
 
 In the specific process of reading data, the dataloader will usually prefetch data from multiple dataloader workers, and multiple workers have complete dataset object backup, so there will be multiple copies of the same `data_list` in the memory. In order to save this part of memory consumption, The `BaseDataset` can serialize `data_list` into memory in advance, so that multiple workers can share the same copy of `data_list`, so as to save memory.
 
-By default, the BaseDataset stores the serialization of `data_list` into memory. It is also possible to control whether the serialize_data is serialized into memory ahead of time by using the  `serialize_data` argument (default is `True`) :
+By default, the BaseDataset stores the serialization of `data_list` into memory. It is also possible to control whether the data will be serialized into memory ahead of time by using the  `serialize_data` argument (default is `True`) :
 
 ```python
 pipeline = [
