@@ -73,5 +73,3 @@ We can get the instance with the specified name by `get_instance(name)`, or get 
 If the instance with the specified name has already been built, `get_instance` will raise an error if it accepts its construct parameters.
 ```
 
-```
-```
