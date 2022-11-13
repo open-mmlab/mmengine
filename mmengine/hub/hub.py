@@ -21,9 +21,9 @@ def get_config(cfg_path: str, pretrained: bool = False) -> Config:
             by ``cfg.model_path``. Defaults to False.
 
     Examples:
-        >>> cfg = get_config('mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+        >>> cfg = get_config('mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
         >>> # Equivalent to
-        >>> # cfg = Config.fromfile('/path/to/faster_rcnn_r50_fpn_1x_coco.py')
+        >>> # cfg = Config.fromfile('/path/to/faster-rcnn_r50_fpn_1x_coco.py')
         >>> cfg.model_path
         https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 
@@ -80,4 +80,8 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
         model = MODELS.build(cfg.model, default_args=kwargs)
         if pretrained:
             load_checkpoint(model, cfg.model_path)
+            # Hack to use pretrained weights.
+            # If we do not set _is_init here, Runner will call
+            # `model.init_weights()` to overwrite the pretrained model.
+            model._is_init = True
         return model

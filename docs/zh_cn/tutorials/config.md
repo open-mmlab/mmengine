@@ -74,8 +74,7 @@ Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'te
 
 ## 配置文件的使用
 
-通过读取配置文件来初始化配置对象后，就可以像使用普通字典或者 Python 类一样来使用这个变量了。
-我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
+通过读取配置文件来初始化配置对象后，就可以像使用普通字典或者 Python 类一样来使用这个变量了。我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
 
 ```python
 print(cfg.test_int)
@@ -308,15 +307,13 @@ print(cfg.a)
 {'type': 'MobileNet', 'depth': 50}
 ```
 
-解析后发现，`a` 的 type 变成了 `MobileNet。`
+解析后发现，`a` 的 type 变成了 `MobileNet`。
 
 ## 配置文件的导出
 
-在启动训练脚本时，用户可能通过传参的方式来修改配置文件的部分字段，为此我们提供了 `dump`
-接口来导出更改后的配置文件。与读取配置文件类似，用户可以通过 `cfg.dump('config.xxx')` 来选择导出文件的格式。`dump`
-同样可以导出有继承关系的配置文件，导出的文件可以被独立使用，不再依赖于 `_base_` 中定义的文件。
+在启动训练脚本时，用户可能通过传参的方式来修改配置文件的部分字段，为此我们提供了 `dump` 接口来导出更改后的配置文件。与读取配置文件类似，用户可以通过 `cfg.dump('config.xxx')` 来选择导出文件的格式。`dump` 同样可以导出有继承关系的配置文件，导出的文件可以被独立使用，不再依赖于 `_base_` 中定义的文件。
 
-基于继承一节定义的 `resnet50.py`,我们将其加载后导出:
+基于继承一节定义的 `resnet50.py`，我们将其加载后导出：
 
 ```python
 cfg = Config.fromfile('resnet50.py')
@@ -394,14 +391,14 @@ print(cfg.work_dir)
 
 - `{{fileDirname}}` - 当前文件的目录名，例如 `/home/your-username/your-project/folder`
 - `{{fileBasename}}` - 当前文件的文件名，例如 `file.py`
-- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 file
+- `{{fileBasenameNoExtension}}` - 当前文件不包含扩展名的文件名，例如 `file`
 - `{{fileExtname}}` - 当前文件的扩展名，例如 `.py`
 
 ### 命令行修改配置
 
 有时候我们只希望修改部分配置，而不想修改配置文件本身，例如实验过程中想更换学习率，但是又不想重新写一个配置文件，常用的做法是在命令行传入参数来覆盖相关配置。考虑到我们想修改的配置通常是一些内层参数，如优化器的学习率、模型卷积层的通道数等，因此 MMEngine 提供了一套标准的流程，让我们能够在命令行里轻松修改配置文件中任意层级的参数。
 
-1. 使用 `argparser` 解析脚本运行的参数
+1. 使用 `argparse` 解析脚本运行的参数
 2. 使用 `argparse.ArgumentParser.add_argument` 方法时，让 `action` 参数的值为 [DictAction](mmengine.config.DictAction)，用它来进一步解析命令行参数中用于修改配置文件的参数
 3. 使用配置类的 `merge_from_dict` 方法来更新配置
 
@@ -500,8 +497,7 @@ class CustomOptim:
 optimizer = dict(type='CustomOptim')
 ```
 
-那么就需要在读取配置文件和构造优化器之前，增加一行 `import my_module` 来保证将自定义的类 `CustomOptim` 注册到 OPTIMIZERS 注册器中：
-为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
+那么就需要在读取配置文件和构造优化器之前，增加一行 `import my_module` 来保证将自定义的类 `CustomOptim` 注册到 OPTIMIZERS 注册器中：为了解决这个问题，我们给配置文件定义了一个保留字段 `custom_imports`，用于将需要提前导入的 Python 模块，直接写在配置文件中。对于上述例子，就可以将配置文件写成如下：
 
 `custom_imports.py`
 
@@ -527,18 +523,16 @@ print(custom_optim)
 
 ### 跨项目继承配置文件
 
-为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection
-开发新的算法库，需要使用以下 MMDetection 的配置文件：
+为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection 开发新的算法库，需要使用以下 MMDetection 的配置文件：
 
 ```text
 configs/_base_/schedules/schedule_1x.py
 configs/_base_/datasets.coco_instance.py
 configs/_base_/default_runtime.py
-configs/_base_/models/faster_rcnn_r50_fpn.py
+configs/_base_/models/faster-rcnn_r50_fpn.py
 ```
 
-如果没有配置文件跨项目继承的功能，我们就需要把 MMDetection 的配置文件拷贝到当前项目，而我们现在只需要安装 MMDetection
-（如使用 `mim install mmdet`），在新项目的配置文件中按照以下方式继承 MMDetection 的配置文件：
+如果没有配置文件跨项目继承的功能，我们就需要把 MMDetection 的配置文件拷贝到当前项目，而我们现在只需要安装 MMDetection（如使用 `mim install mmdet`），在新项目的配置文件中按照以下方式继承 MMDetection 的配置文件：
 
 `cross_repo.py`
 
@@ -547,7 +541,7 @@ _base_ = [
     'mmdet::_base_/schedules/schedule_1x.py',
     'mmdet::_base_/datasets/coco_instance.py',
     'mmdet::_base_/default_runtime.py',
-    'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
+    'mmdet::_base_/models/faster-rcnn_r50_fpn.py',
 ]
 ```
 
@@ -562,21 +556,19 @@ print(cfg.train_cfg)
 {'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
 ```
 
-通过指定 `mmdet::` ，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。
-实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
+通过指定 `mmdet::`，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
 
 ### 跨项目获取配置文件
 
 MMEngine 还提供了 `get_config` 和 `get_model` 两个接口，支持对符合 [MMEngine 安装规范](todo) 的算法库中的模型和配置文件做索引并进行 API 调用。通过 `get_model` 接口可以获得构建好的模型。通过 `get_config` 接口可以获得配置文件。
 
-`get_model` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可在 mmdet 包中检索对应的配置文件并构建和初始化相应模型。
-用户可以通过指定 `pretrained=True` 获得已经加载预训练权重的模型以进行训练或者推理。
+`get_model` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可在 mmdet 包中检索对应的配置文件并构建和初始化相应模型。用户可以通过指定 `pretrained=True` 获得已经加载预训练权重的模型以进行训练或者推理。
 
 ```python
 from mmengine.hub import get_model
 
 model = get_model(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+    'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
 print(type(model))
 ```
 
@@ -585,15 +577,13 @@ http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0
 <class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
 ```
 
-`get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。
-用户可以基于这样得到的配置文件进行推理修改并自定义自己的算法模型。
-同时，如果用户指定 `pretrained=True` ，得到的配置文件中会新增 `model_path` 字段，指定了对应模型预训练权重的路径。
+`get_config` 的使用样例如下所示，使用和跨项目继承配置文件相同的语法，指定 `mmdet::`，即可实现去 mmdet 包中检索并加载对应的配置文件。用户可以基于这样得到的配置文件进行推理修改并自定义自己的算法模型。同时，如果用户指定 `pretrained=True`，得到的配置文件中会新增 `model_path` 字段，指定了对应模型预训练权重的路径。
 
 ```python
 from mmengine.hub import get_config
 
 cfg = get_config(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+    'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py', pretrained=True)
 print(cfg.model_path)
 
 ```

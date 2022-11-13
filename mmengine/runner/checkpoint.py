@@ -18,8 +18,8 @@ from mmengine.dist import get_dist_info
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
-from mmengine.model import is_model_wrapper
-from mmengine.utils import mkdir_or_exist
+from mmengine.model import BaseTTAModel, is_model_wrapper
+from mmengine.utils import deprecated_function, mkdir_or_exist
 from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
@@ -73,7 +73,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
     def load(module, prefix=''):
         # recursively check parallel module in case that the model has a
         # complicated structure, e.g., nn.Module(nn.Module(DDP))
-        if is_model_wrapper(module):
+        if is_model_wrapper(module) or isinstance(module, BaseTTAModel):
             module = module.module
         local_metadata = {} if metadata is None else metadata.get(
             prefix[:-1], {})
@@ -574,6 +574,11 @@ def weights_to_cpu(state_dict):
     return state_dict_cpu
 
 
+@deprecated_function(
+    since='0.3.0',
+    removed_in='0.5.0',
+    instructions='`_save_to_state_dict` will be deprecated in the future, '
+    'please use `nn.Module._save_to_state_dict` directly.')
 def _save_to_state_dict(module, destination, prefix, keep_vars):
     """Saves module state to `destination` dictionary.
 
@@ -626,7 +631,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
         destination._metadata = OrderedDict()
     destination._metadata[prefix[:-1]] = local_metadata = dict(
         version=module._version)
-    _save_to_state_dict(module, destination, prefix, keep_vars)
+    module._save_to_state_dict(destination, prefix, keep_vars)
     for name, child in module._modules.items():
         if child is not None:
             get_state_dict(

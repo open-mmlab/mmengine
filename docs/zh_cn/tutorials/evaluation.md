@@ -2,9 +2,9 @@
 
 在模型验证和模型测试中，通常需要对模型精度做定量评测。在 MMEngine 中实现了评测指标（Metric）和评测器（Evaluator）模块来完成这一功能：
 
-- 评测指标： 用于根据测试数据和模型预测结果，完成模型特定精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMClassification](https://github.com/open-mmlab/mmclassification) 中提供了[分类正确率指标（Accuracy）](https://mmclassification.readthedocs.io/zh_CN/dev-1.x/generated/mmcls.evaluation.Accuracy.html) 用于计算分类模型的 Top-k 分类正确率。
+- 评测指标：用于根据测试数据和模型预测结果，完成模型特定精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMClassification](https://github.com/open-mmlab/mmclassification) 中提供了[分类正确率指标（Accuracy）](https://mmclassification.readthedocs.io/zh_CN/dev-1.x/generated/mmcls.evaluation.Accuracy.html)用于计算分类模型的 Top-k 分类正确率。
 
-- 评测器： 是评测指标的上层模块，用于在数据输入评测指标前完成必要的格式转换，并提供分布式支持。在模型训练和测试中，评测器由[执行器（Runner）](runner.md)自动构建。用户亦可根据需求手动创建评测器，进行离线评测。
+- 评测器：是评测指标的上层模块，用于在数据输入评测指标前完成必要的格式转换，并提供分布式支持。在模型训练和测试中，评测器由[执行器（Runner）](runner.md)自动构建。用户亦可根据需求手动创建评测器，进行离线评测。
 
 ## 在模型训练或测试中进行评测
 
@@ -22,7 +22,7 @@ val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # 使用分类正确率评�
 test_evaluator = [
     # 目标检测指标
     dict(
-        type='COCOMetric',
+        type='CocoMetric',
         metric=['bbox', 'segm'],
         ann_file='annotations/instances_val2017.json',
     ),

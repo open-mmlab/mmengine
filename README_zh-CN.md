@@ -58,6 +58,14 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
    - 对神经网络模型中各个层的优化配置进行细粒度调整
    - 混合精度训练的灵活控制
 
+## 最近进展
+
+最新版本 v0.3.1 在 2022.11.09 发布。
+
+**修复分布式训练时，保存最佳 checkpoint 报错问题**。
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022")
+
 ## 安装
 
 在安装 MMengine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
@@ -84,10 +92,7 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 <details>
 <summary>构建模型</summary>
 
-首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：
-
-- 对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
-- 对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
+首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
 
 ```python
 import torch.nn.functional as F
@@ -149,8 +154,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>构建评测指标</summary>
 
-为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，
-并实现 `process` 和 `compute_metrics` 方法。
+为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，并实现 `process` 和 `compute_metrics` 方法。
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -289,10 +293,12 @@ runner.train()
 
 - [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMLab 项目、算法、模型的统一入口
 - [MMCV](https://github.com/open-mmlab/mmcv/tree/dev-2.x): OpenMMLab 计算机视觉基础库
+- [MMEval](https://github.com/open-mmlab/mmeval): 统一开放的跨框架算法评测库
 - [MMClassification](https://github.com/open-mmlab/mmclassification/tree/dev-1.x): OpenMMLab 图像分类工具箱
 - [MMDetection](https://github.com/open-mmlab/mmdetection/tree/dev-3.x): OpenMMLab 目标检测工具箱
 - [MMDetection3D](https://github.com/open-mmlab/mmdetection3d/tree/dev-1.x): OpenMMLab 新一代通用 3D 目标检测平台
 - [MMRotate](https://github.com/open-mmlab/mmrotate/tree/dev-1.x): OpenMMLab 旋转框检测工具箱与测试基准
+- [MMYOLO](https://github.com/open-mmlab/mmyolo): OpenMMLab YOLO 系列工具箱与测试基准
 - [MMSegmentation](https://github.com/open-mmlab/mmsegmentation/tree/dev-1.x): OpenMMLab 语义分割工具箱
 - [MMOCR](https://github.com/open-mmlab/mmocr/tree/dev-1.x): OpenMMLab 全流程文字检测识别理解工具包
 - [MMPose](https://github.com/open-mmlab/mmpose/tree/dev-1.x): OpenMMLab 姿态估计工具箱

@@ -10,7 +10,7 @@ import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available
+from mmengine.device import is_mlu_available, is_npu_available
 
 from collections.abc import Iterable, Mapping
 
@@ -77,6 +77,14 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
         torch.mlu.set_device(rank)
         torch_dist.init_process_group(
             backend='cncl',
+            rank=rank,
+            world_size=int(os.environ['WORLD_SIZE']),
+            **kwargs)
+    elif is_npu_available():
+        import torch_npu  # noqa: F401
+        torch.npu.set_device(rank)
+        torch_dist.init_process_group(
+            backend='hccl',
             rank=rank,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
@@ -437,7 +445,10 @@ def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
         torch.device: The device of backend.
     """
     backend = get_backend(group)
-    if backend == torch_dist.Backend.NCCL:
+    if backend == 'hccl':
+        import torch_npu  # noqa: F401
+        return torch.device('npu', torch.npu.current_device())
+    elif backend == torch_dist.Backend.NCCL:
         return torch.device('cuda', torch.cuda.current_device())
     elif backend == 'cncl':
         import torch_mlu  # noqa: F401

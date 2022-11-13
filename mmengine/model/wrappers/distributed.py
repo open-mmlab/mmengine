@@ -134,8 +134,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             list: The predictions of given data.
         """
-        data = self.module.data_preprocessor(data, training=False)
-        return self._run_forward(data, mode='predict')
+        return self.module.val_step(data)
 
     def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
@@ -146,8 +145,7 @@ class MMDistributedDataParallel(DistributedDataParallel):
         Returns:
             list: The predictions of given data.
         """
-        data = self.module.data_preprocessor(data, training=False)
-        return self._run_forward(data, mode='predict')
+        return self.module.test_step(data)
 
     def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
         """Unpacks data for :meth:`forward`

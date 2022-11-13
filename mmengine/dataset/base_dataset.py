@@ -180,9 +180,9 @@ class BaseDataset(Dataset):
             image. Defaults to 1000.
 
     Note:
-        BaseDataset collects meta information from `annotation file` (the
-        lowest priority), ``BaseDataset.METAINFO``(medium) and `metainfo
-        parameter` (highest) passed to constructors. The lower priority meta
+        BaseDataset collects meta information from ``annotation file`` (the
+        lowest priority), ``BaseDataset.METAINFO``(medium) and ``metainfo
+        parameter`` (highest) passed to constructors. The lower priority meta
         information will be overwritten by higher one.
 
     Note:
@@ -192,7 +192,7 @@ class BaseDataset(Dataset):
         conflicts with original dataset.
 
     Examples:
-        Assume the annotation file is given above.
+        >>> # Assume the annotation file is given above.
         >>> class CustomDataset(BaseDataset):
         >>>     METAINFO: dict = dict(task_name='custom_task',
         >>>                           dataset_type='custom_type')

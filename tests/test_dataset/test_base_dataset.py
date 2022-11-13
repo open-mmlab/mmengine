@@ -640,6 +640,10 @@ class TestConcatDataset:
         with pytest.raises(TypeError):
             ConcatDataset(datasets=[0])
 
+        with pytest.raises(TypeError):
+            ConcatDataset(
+                datasets=[self.dataset_a, dataset_cfg_b], ignore_keys=1)
+
     def test_full_init(self):
         # test init with lazy_init=True
         self.cat_datasets.full_init()
@@ -654,14 +658,33 @@ class TestConcatDataset:
 
         with pytest.raises(NotImplementedError):
             self.cat_datasets.get_subset(1)
-        # Different meta information will raise error.
+
+        dataset_b = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            metainfo=dict(classes=('cat')))
+        # Regardless of order, different meta information without
+        # `ignore_keys` will raise error.
         with pytest.raises(ValueError):
-            dataset_b = BaseDataset(
-                data_root=osp.join(osp.dirname(__file__), '../data/'),
-                data_prefix=dict(img_path='imgs'),
-                ann_file='annotations/dummy_annotation.json',
-                metainfo=dict(classes=('cat')))
             ConcatDataset(datasets=[self.dataset_a, dataset_b])
+        with pytest.raises(ValueError):
+            ConcatDataset(datasets=[dataset_b, self.dataset_a])
+        # `ignore_keys` does not contain different meta information keys will
+        # raise error.
+        with pytest.raises(ValueError):
+            ConcatDataset(
+                datasets=[self.dataset_a, dataset_b], ignore_keys=['a'])
+        # Different meta information with `ignore_keys` will not raise error.
+        cat_datasets = ConcatDataset(
+            datasets=[self.dataset_a, dataset_b], ignore_keys='classes')
+        cat_datasets.full_init()
+        assert len(cat_datasets) == 6
+        cat_datasets.full_init()
+        cat_datasets._fully_initialized = False
+        cat_datasets[1]
+        assert len(cat_datasets.metainfo) == 3
+        assert len(cat_datasets) == 6
 
     def test_metainfo(self):
         assert self.cat_datasets.metainfo == self.dataset_a.metainfo

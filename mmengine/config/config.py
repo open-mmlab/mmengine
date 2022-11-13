@@ -18,6 +18,7 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
+from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
@@ -86,7 +87,9 @@ def add_args(parser: ArgumentParser,
             parser.add_argument(
                 '--' + prefix + k, type=type(next(iter(v))), nargs='+')
         else:
-            print(f'cannot parse key {prefix + k} of type {type(v)}')
+            print_log(
+                f'cannot parse key {prefix + k} of type {type(v)}',
+                logger='current')
     return parser
 
 
@@ -143,7 +146,7 @@ class Config:
         if cfg_text:
             text = cfg_text
         elif filename:
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 text = f.read()
         else:
             text = ''
@@ -418,7 +421,7 @@ class Config:
                 base_cfg_dict.update(_cfg_dict)
 
             if filename.endswith('.py'):
-                with open(temp_config_file.name) as f:
+                with open(temp_config_file.name, encoding='utf-8') as f:
                     codes = ast.parse(f.read())
                     codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
                 codeobj = compile(codes, '', mode='exec')
@@ -545,12 +548,12 @@ class Config:
             TypeError: Name of config file.
 
         Returns:
-            list: A list of base config
+            list: A list of base config.
         """
         file_format = filename.partition('.')[-1]
         if file_format == 'py':
             Config._validate_py_syntax(filename)
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 codes = ast.parse(f.read()).body
 
                 def is_base_line(c):
