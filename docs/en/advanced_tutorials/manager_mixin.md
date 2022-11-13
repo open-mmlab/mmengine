@@ -1,6 +1,6 @@
 # Global manager (ManagerMixin)
 
-During training process, it is inevitable that we need to access some variable globally. Here are some examples:
+During the training process, it is inevitable that we need to access some variables globally. Here are some examples:
 
 - Accessing the [logger](mmengine.logging.MMLogger) in model to print some initialization information
 - Accessing the [Visualizer](mmengine.config.Config) anywhere to visualize the predictions and feature maps.
@@ -28,7 +28,7 @@ class GlobalClass(ManagerMixin):
         self.value = value
 ```
 
-```note
+```{note}
 Subclasses of `ManagerMixin` must accept `name` argument in `__init__`. The `name` argument is used to identify the instance, and you can get the instance by `get_instance(name)`.
 ```
 
@@ -45,7 +45,7 @@ class CustomHook(Hook):
 
 `GlobalClass.get_instance({name})` will first check whether the instance with the name `{name}` has been built. If not, it will build a new instance with the name `{name}`, otherwise it will return the existing instance. As the above example shows, when we call `GlobalClass.get_instance('mmengine')` at the first time, it will build a new instance with the name `mmengine`. Then we call `GlobalClass.get_instance(runner.experiment_name)`, it will also build a new instance with a different name.
 
-Here we build two instances for the convenience of subsequent introduction of `get_current_instance`.
+Here we build two instances for the convenience of the subsequent introduction of `get_current_instance`.
 
 3. Accessing the instance anywhere
 
@@ -69,8 +69,8 @@ class CustomModule(nn.Module):
 
 We can get the instance with the specified name by `get_instance(name)`, or get the currently built instance by `get_current_instance` anywhere.
 
-```warning
-If the instance with the specified name has already been built, `get_instance` will raise an error if it accept its construct parameters.
+```{warning}
+If the instance with the specified name has already been built, `get_instance` will raise an error if it accepts its construct parameters.
 ```
 
 ```
