@@ -6,6 +6,7 @@ import os.path as osp
 import pickle
 import platform
 import time
+import socket
 import warnings
 from collections import OrderedDict
 from functools import partial
@@ -40,14 +41,14 @@ from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
-from .base_loop import BaseLoop
-from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
+from mmengine.runner.base_loop import BaseLoop
+from mmengine.runner.checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, get_state_dict,
                          save_checkpoint, weights_to_cpu)
-from .log_processor import LogProcessor
-from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
-from .priority import Priority, get_priority
-from .utils import set_random_seed
+from mmengine.runner.log_processor import LogProcessor
+from mmengine.runner.loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
+from mmengine.runner.priority import Priority, get_priority
+from mmengine.runner.utils import set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -2241,6 +2242,7 @@ class Runner:
         runtime_env['Distributed launcher'] = self._launcher
         runtime_env['Distributed training'] = self._distributed
         runtime_env['GPU number'] = self._world_size
+        runtime_env['Hostname'] = socket.gethostname()
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
                                             for k, v in env.items())
