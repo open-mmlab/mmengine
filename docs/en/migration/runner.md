@@ -604,7 +604,7 @@ def train_detector(model,
 </thead>
 </table>
 
-Table above show the difference between training script of MMEngine `Runner` and MMCV `Runner`. Repositories of OpenMMLab 1.x organize their own process to build `Runner`, which contributes to the large amount of redundant code. MMEngine unify and format the building process, such as setting random seed, initializing distributed environment, building DataLoader, building `Optimizer`, etc. This help the downstream repositories simplify the process to prepare the runner, and only need to configure the parameters of `Runner`.
+Table above shows the difference between training script of MMEngine `Runner` and MMCV `Runner`. Repositories of OpenMMLab 1.x organize their own process to build `Runner`, which contributes to the large amount of redundant code. MMEngine unify and format the building process, such as setting random seed, initializing distributed environment, building DataLoader, building `Optimizer`, etc. This help the downstream repositories simplify the process to prepare the runner, and only need to configure the parameters of `Runner`.
 
 For the downstream repositories, training script based on MMEngine Runner not only simplify the `tools/train.py`, but also can directly omit the `apis/train.py`. Similarly, we can also set random seed, initialize distributed environment by configuring the parameters of `Runner`, and do not need to implement the corresponding code.
 
