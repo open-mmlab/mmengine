@@ -264,7 +264,7 @@ test_evaluator = val_evaluator
 </table>
 
 MMEngine 中的执行器提供了更多可自定义的部分，包括训练、验证、测试过程和数据加载器的配置，因此配置文件和之前相比会长一些。
-为了方便用户的理解和阅读，我们遵循所见即所得的原则，重新调整了各个组件配置的层次，使得大部分一级字段都对应着执行器中关键属性的配置，例如数据加载器、评测器、流程配置、钩子配置等。
+为了方便用户的理解和阅读，我们遵循所见即所得的原则，重新调整了各个组件配置的层次，使得大部分一级字段都对应着执行器中关键属性的配置，例如数据加载器、评测器、钩子配置等。
 这些配置在 OpenMMLab 2.0 算法库中都有默认配置，因此用户很多时候无需关心其中的大部分参数。
 
 ### 启动脚本的迁移
@@ -615,17 +615,18 @@ OpenMMLab 1.x 中的算法库都实现了一套 runner 的构建和训练流程�
 本节主要介绍 MMCV 执行器和 MMEngine 执行器在训练、验证、测试流程上的区别。
 在使用 MMCV 执行器和 MMEngine 执行器训练、测试模型时，以下流程有着明显的不同：
 
-01. [准备logger](准备logger)
-02. [设置随机种子](设置随机种子)
-03. [初始化环境变量](初始化训练环境)
-04. [准备数据](准备数据)
-05. [准备模型](准备模型)
-06. [准备优化器](准备优化器)
-07. [准备钩子](准备训练钩子)
-08. [准备验证/测试模块](准备验证模块)
-09. [构建执行器](构建执行器)
-10. [开始训练](执行器训练流程)、[开始测试](执行器测试流程)
-11. [迁移自定义训练流程](迁移自定义执行流程)
+01. [准备logger](#准备logger)
+02. [设置随机种子](#设置随机种子)
+03. [初始化环境变量](#初始化训练环境)
+04. [准备数据](#准备数据)
+05. [准备模型](#准备模型)
+06. [准备优化器](#准备优化器)
+07. [准备钩子](#准备训练钩子)
+08. [准备验证/测试模块](#准备验证模块)
+09. [构建执行器](#构建执行器)
+10. [执行器加载检查点](#执行器加载检查点)
+11. [开始训练](#执行器训练流程)、[开始测试](#执行器测试流程)
+12. [迁移自定义训练流程](#迁移自定义执行流程)
 
 后续的教程中，我们会对每个流程的差异进行详细介绍。
 
@@ -679,7 +680,7 @@ set_random_seed(seed, deterministic=args.deterministic)
 
 **MMEngine 设计随机种子**
 
-配置执行器的 `randomness` 参数，配置规则详见[执行器 api 文档](mmengine.runner.Runner.set_randomness)
+配置执行器的 `randomness` 参数，配置规则详见[执行器 api 文档](mmengine.runner.Runner.set_randomnes1s)
 
 **OpenMMLab 系列算法库配置变更**
 
@@ -990,7 +991,7 @@ optimizer = dict(
         'decay_type': 'layer_wise',
         'num_layers': 6
     })
-# MMEngine 还需要配置 `optim_config`
+# MMCV 还需要配置 `optim_config`
 # 来构建优化器钩子，而 MMEngine 不需要
 optimizer_config = dict(grad_clip=None)
 ```
@@ -1077,12 +1078,12 @@ MMEngine 执行器将 MMCV 常用的训练钩子配置成默认钩子：
 
 对比上例中 MMCV 配置的训练钩子：
 
-- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./migrate_param_scheduler_from_mmcv.md)
+- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./param_scheduler.md)
 - MMEngine 在模型的 [train_step](mmengine.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
 - MMEngine 自带 `CheckPointHook`，可以使用默认配置
 - MMEngine 自带 `LoggerHook`，可以使用默认配置
 
-因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和配置 `lr_config` 一样的效果。
+因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和 MMCV 示例一样的效果。
 MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](../tutorials/runner.md#通过配置文件使用执行器) 和[迁移 `hook` 文档](./migrate_hook_from_mmcv.md)。
 
 <table class="docutils">
@@ -1165,7 +1166,7 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 
 ### 准备验证模块
 
-MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](../tutorials/runner.md#自定义执行流程) 和[评测器（Evaluator）](../tutorials/metric_and_evaluator.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
+MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](../tutorials/runner.md#自定义执行流程) 和[评测器（Evaluator）](../tutorials/evaluation.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
 
 ```python
 import torch
@@ -1243,7 +1244,7 @@ runner = EpochBasedRunner(
 
 `MMEngine` 执行器的作用域比 MMCV 更广，将设置随机种子、启动分布式训练等流程参数化。除了前几节提到的参数，上例中出现的`EpochBasedRunner`，`max_epochs`，`val_iterval` 现在由 `train_cfg` 配置：
 
-- `by_epoch`: `True` 时相当于 MMCV 的 `EpochBasedRunner`，False 时相当于 `IterBasedRunner`。
+- `by_epoch`: `True` 时相当于 MMCV 的 ``` EpochBasedRunner``，False ``` 时相当于 `IterBasedRunner`。
 - `max_epoch`/`max_iters`: 同 MMCV 执行器的配置
 - `val_iterval`: 同 `EvalHook` 的 `interval` 参数
 
@@ -1362,7 +1363,7 @@ runner.train()
 
 ### 执行器测试流程
 
-MMCV 的执行器没有测试功能，因此需要自行实现测试脚本。MMEngine 的执行器只需要在构建时配置 `test_dataloader`、`test_cfg` 和 `test_evaluator`，然后再调用 `runner.test()` 执行测试流程。
+MMCV 的执行器没有测试功能，因此需要自行实现测试脚本。MMEngine 的执行器只需要在构建时配置 `test_dataloader`、`test_cfg` 和 `test_evaluator`，然后再调用 `runner.test()` 就能完成测试流程。
 
 **`work_dir` 和训练时一致，无需手动加载 checkpoint:**
 
@@ -1409,7 +1410,7 @@ runner = Runner(
 runner.test()
 ```
 
-## 迁移自定义执行流程
+### 迁移自定义执行流程
 
 使用 MMCV 执行器时，我们可能会重载 `runner.train/runner.val` 或者 `runner.run_iter` 实现自定义的训练、测试流程。以重载 `runner.train` 为例，假设我们想对每个批次的图片训练两遍，我们可以这样重载 MMCV 的执行器：
 
