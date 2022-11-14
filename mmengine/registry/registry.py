@@ -298,8 +298,15 @@ class Registry:
             # Avoid circular import
             from ..logging import print_log
             for loc in self._locations:
-                import_module(loc)
-                print_log(f'auto imported: {loc}', level=logging.DEBUG)
+                try:
+                    import_module(loc)
+                    print_log(f'auto imported: {loc}', level=logging.DEBUG)
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    print_log(
+                        f'Failed to import {loc}, please check the '
+                        f'location of the registry {self._name} is '
+                        f'correct.',
+                        level=logging.WARNING)
             self._imported = True
 
     def get(self, key: str) -> Optional[Type]:
@@ -361,8 +368,15 @@ class Registry:
 
         if scope is not None:
             # import the registry to add the nodes into the registry tree
-            import_module(f'{scope}.registry')
-            print_log(f'auto imported: {scope}.registry', level=logging.DEBUG)
+            try:
+                import_module(f'{scope}.registry')
+                print_log(f'auto import {scope}.registry', level=logging.DEBUG)
+            except (ImportError, AttributeError, ModuleNotFoundError):
+                print_log(
+                    f'Cannot auto import {scope}.registry, please check '
+                    f'whether the package "{scope}" is installed correctly '
+                    f'or import the registry manually.',
+                    level=logging.DEBUG)
         # lazy import the modules to register them into the registry
         self.import_from_location()
 
@@ -370,10 +384,16 @@ class Registry:
             # get from self
             if real_key in self._module_dict:
                 obj_cls = self._module_dict[real_key]
-            # get from the root registry
             elif scope is None:
-                root = self._get_root_registry()
-                obj_cls = root.get(key)
+                # try to get the target from its parent or ancestors
+                parent = self.parent
+                while parent is not None:
+                    if real_key in parent._module_dict:
+                        obj_cls = parent._module_dict[real_key]
+                        registry_name = parent.name
+                        scope_name = parent.scope
+                        break
+                    parent = parent.parent
         else:
             try:
                 module = import_module(f'{scope}.utils')
