@@ -59,31 +59,31 @@ The initialization process of the `BaseDataset` is shown as follows:
 
 ![image](https://user-images.githubusercontent.com/26813582/164611564-af44e3f2-a50f-4ef1-a6db-eddd840e2f40.png)
 
-1. `load metainfo` : Obtain the meta information of the dataset. The meta information can be obtained from three sources with the priority from high to low:
+1. `load metainfo`: Obtain the meta information of the dataset. The meta information can be obtained from three sources with the priority from high to low:
 
-- The dict of `metainfo` passed by the user in the `__init__()` function. The priority is high, since the user can pass this argument when the `BaseDataset` is instantiated;
+- The dict of `metainfo` passed by the user in the `__init__()` function. The priority is high since the user can pass this argument when the `BaseDataset` is instantiated;
 
-- The dict of `BaseDataset.METAINFO` in the class attributes of BaseDataset. The priority is medium, since the user can change the class attributes `BaseDataset.METAINFO` in the custom dataset class;
+- The dict of `BaseDataset.METAINFO` in the class attributes of BaseDataset. The priority is medium since the user can change the class attributes `BaseDataset.METAINFO` in the custom dataset class;
 
-- The dict of `metainfo` included in the annotation file. The priority is low, since the annotation file is generally not changed.
+- The dict of `metainfo` included in the annotation file. The priority is low since the annotation file is generally not changed.
 
 If three sources have the same field, the source with the highest priority determines the value of the field. The priority comparison of these fields is: The fields in the `metainfo` dictionary passed by the user > The fields in the `BaseDataset.METAINFO` of BaseDataset > the fields in the `metainfo` of annotation file.
 
-2. `join path` : Process the path of datainfo and annotating files;
+2. `join path`: Process the path of datainfo and annotating files;
 
-3. `build pipeline` : Build data pipeline for the data preprocessing and data preparation;
+3. `build pipeline`: Build data pipeline for the data preprocessing and data preparation;
 
-4. `full init` : Fully initializes the BaseDataset. This step mainly includes the following operations:
+4. `full init`: Fully initializes the BaseDataset. This step mainly includes the following operations:
 
 - `load data list`: Read and parse the annotation files that meet the OpenMMLab 2.0 dataset format specification. In this step, the `parse_data_info()` method is called. This method is responsible for parsing each raw data info in the annotation file;
 
-- `filter data` (optional) : Filters unnecessary data based on `filter_cfg`, such as data samples that do not contain annotations. By default, there is no filtering operation, and downstream subclasses can override it according to their own needs.
+- `filter data` (optional): Filters unnecessary data based on `filter_cfg`, such as data samples that do not contain annotations. By default, there is no filtering operation, and downstream subclasses can override it according to their own needs.
 
-- `get subset` (optional) : Sample a subset of dataset based on a given index or an integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
+- `get subset` (optional): Sample a subset of dataset based on a given index or an integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
 
-- `serialize data` (optional) : Serialize all data samples to save memory. Please see \[Save memory\](#Save memory) for more details. we serialize the all data samples by default.
+- `serialize data` (optional): Serialize all data samples to save memory. Please see \[Save memory\](#Save memory) for more details. we serialize all data samples by default.
 
-The `parse_data_info()` method in the BaseDataset is used to process a raw data info in the annotation file into one or more training/test data samples. The user needs to implement the `parse_data_info()` method, if they want to customize dataset class.
+The `parse_data_info()` method in the BaseDataset is used to process a raw data info in the annotation file into one or more training/test data samples. The user needs to implement the `parse_data_info()` method if they want to customize dataset class.
 
 ### The interface of BaseDataset
 
