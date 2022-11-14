@@ -158,12 +158,12 @@ class BaseDataPreprocessor(nn.Module):
 
 1. 数据归一化操作应该在哪里进行，[transform](../advanced_tutorials/data_transform.md) 还是 model？
 
-   听上去好像都挺合理，放在 transform 里可以利用 Dataloader 的多进程加速，放在 model 里可以搬运到 GPU 上，利用GPU 资源加速归一化。然而在我们纠结 CPU 归一化快还是 GPU 归一化快的时候，CPU 到 GPU 的数据搬运耗时相较于前者，可算的上是“降维打击”。
+   听上去好像都挺合理，放在 transform 里可以利用 DataLoader 的多进程加速，放在 model 里可以搬运到 GPU 上，利用GPU 资源加速归一化。然而在我们纠结 CPU 归一化快还是 GPU 归一化快的时候，CPU 到 GPU 的数据搬运耗时相较于前者，可算的上是“降维打击”。
    事实上对于归一化这类计算量较低的操作，其耗时会远低于数据搬运，因此优化数据搬运的效率就显得更加重要。设想一下，如果我能够在数据仍处于 uint8 时、归一化之前将其搬运到指定设备上（归一化后的 float 型数据大小是 unit8 的 4 倍），就能降低带宽，大大提升数据搬运的效率。这种“滞后”归一化的行为，也是我们设计数据预处理器（data preprocessor） 的主要原因之一。数据预处理器会先搬运数据，再做归一化，提升数据搬运的效率。
 
 2. 我们应该如何实现 MixUp、Mosaic 一类的数据增强？
 
-   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现，但是考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现他们的难度就会很大。这是因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 Dataloader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
+   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现，但是考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现他们的难度就会很大。这是因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 DataLoader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
 
    ```python
    class MixUpDataPreprocessor(nn.Module):
@@ -191,7 +191,7 @@ class BaseDataPreprocessor(nn.Module):
 
    因此，除了数据搬运和归一化，`data_preprocessor` 另一大功能就是`BatchAugmentation`。数据预处理器的模块化也能帮助我们实现算法和数据增强之间的自由组合。
 
-3. 如果 Dataloader 的输出和模型的输入类型不匹配怎么办，是修改 Dataloader 还是修改模型接口？
+3. 如果 DataLoader 的输出和模型的输入类型不匹配怎么办，是修改 DataLoader 还是修改模型接口？
 
    答案是都不合适。理想的解决方案是我们能够在不破坏模型和数据已有接口的情况下完成适配。这个时候数据预处理器也能承担类型转换的工作，例如将传入的 data 从 `tuple` 转换成指定字段的 `dict`。
 
