@@ -318,7 +318,7 @@ In addition to BaseDataset, MMEngine also provides several DatasetWrappers: `Con
 
 ### ConcatDataset
 
-MMEngine provides a `ConcatDataset` wrapper to concate datasets in the following way:
+MMEngine provides a `ConcatDataset` wrapper to concatenate datasets in the following way:
 
 ```python
 from mmengine.dataset import ConcatDataset
