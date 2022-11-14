@@ -2,7 +2,7 @@
 
 ## Runner 与 model
 
-在 [Runner 教程的基本数据流](./runner.md#基本数据流)中我们提到，DataLoader、model、和 evaluator 之间的数据流通遵循了一些规则，我们不妨先来温习一下基本数据流的伪代码：
+在 [Runner 教程的基本数据流](./runner.md#基本数据流)中我们提到，DataLoader、model 和 evaluator 之间的数据流通遵循了一些规则，我们不妨先来回顾一下基本数据流的伪代码：
 
 ```python
 # 训练过程
@@ -27,31 +27,31 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-在 Runner 的教程中，我们简单介绍了模型和前后组件之间的数据流通关系，提到了 `data_preprocessor` 的概念，也算是对 model 初窥门径。然而在 Runner 实际运行的过程中，模型的功能和调用关系，其复杂程度远超上述伪代码。为了让你能够不感知模型和外部组件的复杂关系，进而聚焦精力到算法本身，我们设计了 [BaseModel](mmengine.model.BaseModel)。大多数情况下你只需要让 model 继承 `BaseModel`，并按照要求实现 `forward` 接口，就能完成训练、测试、验证的逻辑。
+在 Runner 的教程中，我们简单介绍了模型和前后组件之间的数据流通关系，提到了 `data_preprocessor` 的概念，对 model 有了一定的了解。然而在 Runner 实际运行的过程中，模型的功能和调用关系，其复杂程度远超上述伪代码。为了让你能够不感知模型和外部组件的复杂关系，进而聚焦精力到算法本身，我们设计了 [BaseModel](mmengine.model.BaseModel)。大多数情况下你只需要让 model 继承 `BaseModel`，并按照要求实现 `forward` 接口，就能完成训练、测试、验证的逻辑。
 
-在正式阅读模型教程之前，我们在此抛出以下两个问题，希望你在阅读完 model 教程后能够找到相应的答案：
+在继续阅读模型教程之前，我们先抛出两个问题，希望你在阅读完 model 教程后能够找到相应的答案：
 
 1. 我们在什么位置更新模型参数？如果我有一些非常复杂的参数更新逻辑，又该如何实现？
-2. 为什么要有 data_preprocessor 的概念？他又可以实现哪些功能？
+2. 为什么要有 data_preprocessor 的概念？它又可以实现哪些功能？
 
 ## 接口约定
 
-在训练深度学习任务时，我们通常需要定义一个模型来实现算法的主体。在基于 MMEngine 开发时，定义的模型由执行器管理，且需要实现 `train_step`，`val_step` 和 `test_step` 方法。
+在训练深度学习任务时，我们通常需要定义一个模型来实现算法的主体。在基于 MMEngine 开发时，定义的模型由执行器管理，且需要实现 `train_step`、`val_step` 和 `test_step` 方法。
 对于检测、识别、分割一类的深度学习任务，上述方法通常为标准的流程，例如在 `train_step` 里更新参数，返回损失；`val_step` 和 `test_step` 返回预测结果。因此 MMEngine 抽象出模型基类 [BaseModel](mmengine.model.BaseModel)，实现了上述接口的标准流程。
 
 得益于 `BaseModel` 我们只需要让模型继承自模型基类，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
 
 ```{note}
-模型基类继承自[模块基类](./initialize.md)，能够通过配置 `init_cfg` 灵活的选择初始化方式。
+模型基类继承自[模块基类](../advanced_tutorials/initialize.md)，能够通过配置 `init_cfg` 灵活地选择初始化方式。
 ```
 
-[**forward**](mmengine.model.BaseModel.forward): `forward` 的入参需通常要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据预处理器](#数据预处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：
+[**forward**](mmengine.model.BaseModel.forward): `forward` 的入参通常需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据预处理器](#数据预处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：
 
 - `mode='loss'`：`loss` 模式通常在训练阶段启用，并返回一个损失字典。损失字典的 key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数和记录日志。模型基类会在 `train_step` 方法中调用该模式的 `forward`。
 - `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](../advanced_tutorials/data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
 - `mode='tensor'`：`tensor` 和 `predict` 模式均返回模型的前向推理结果，区别在于 `tensor` 模式下，`forward` 会返回未经后处理的张量，例如返回未经非极大值抑制（nms）处理的检测结果，返回未经 `argmax` 处理的分类结果。我们可以基于 `tensor` 模式的结果进行自定义的后处理。
 
-[**train_step**](mmengine.model.BaseModel.train_step): 调用 `loss` 模式的 `forward` 接口，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。其等效伪代码如下：
+[**train_step**](mmengine.model.BaseModel.train_step): 执行 `forward` 方法的 `loss` 分支，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。其等效伪代码如下：
 
 ```python
 def train_step(self, data, optim_wrapper):
@@ -62,7 +62,7 @@ def train_step(self, data, optim_wrapper):
     return log_vars
 ```
 
-[**val_step**](mmengine.model.BaseModel.val_step): 调用 `predict` 模式的 `forward`，返回预测结果，预测结果会被进一步传给[评测器](./evaluation.md.md)的 [process](mmengine.evaluator.Evaluator.process)。其等效伪代码如下：
+[**val_step**](mmengine.model.BaseModel.val_step): 执行 `forward` 方法的 `predict` 分支，返回预测结果，预测结果会被进一步传给[评测器](./evaluation.md.md)的 [process](mmengine.evaluator.Evaluator.process) 方法。其等效伪代码如下：
 
 ```python
 def val_step(self, data, optim_wrapper):
@@ -105,7 +105,8 @@ class MMResNet50(BaseModel):
         elif mode == 'predict':
             return x, labels
 
-    # BaseModel 等效实现
+    # 下面的 3 个方法已在 BaseModel 实现，这里列出是为了
+    # 解释调用过程
     def train_step(self, data, optim_wrapper)：
         data = self.data_preprocessor(data)
         loss = self(*data, mode='loss')  # CIFAR10 返回 tuple，因此用 * 解包
@@ -113,13 +114,11 @@ class MMResNet50(BaseModel):
         optim_wrapper.update_params(parsed_losses)
         return log_vars
 
-    # BaseModel 等效实现
     def val_step(self, data, optim_wrapper):
         data = self.data_preprocessor(data)
         outputs = self(*data, mode='predict')
         return outputs
 
-        # BaseModel 等效实现
     def test_step(self, data, optim_wrapper):
         data = self.data_preprocessor(data)
         outputs = self(*data, mode='predict')
@@ -136,9 +135,9 @@ class MMResNet50(BaseModel):
 
 事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在上一节提到的 `self.data_preprocessor` 这一行搬运到指定设备，进一步将处理好的数据传给模型。看到这里相信你会疑惑：
 
-1. `MMResNet50` 并没有配置 `data_preprocessor`，为什么却可以访问到`data_preprocessor`，并且把数据运动 GPU？
+1. `MMResNet50` 并没有配置 `data_preprocessor`，为什么却可以访问到 `data_preprocessor`，并且把数据搬运到 GPU？
 
-2. 为什么不直接在模型里调用 `data.to(device)` 搬运数据，而需要有 `data_preprocessor` 这一层抽象？他又能实现哪些功能？
+2. 为什么不直接在模型里调用 `data.to(device)` 搬运数据，而需要有 `data_preprocessor` 这一层抽象？它又能实现哪些功能？
 
 首先回答第一个问题：`MMResNet50` 继承了 `BaseModel`。在执行 `super().__init__` 时，如果不传入任何参数，会构造一个默认的 `BaseDataPreprocessor`，其等效简易实现如下：
 
@@ -158,12 +157,12 @@ class BaseDataPreprocessor(nn.Module):
 
 1. 数据归一化操作应该在哪里进行，[transform](../advanced_tutorials/data_transform.md) 还是 model？
 
-   听上去好像都挺合理，放在 transform 里可以利用 Dataloader 的多进程加速，放在 model 里可以搬运到 GPU 上，利用GPU 资源加速归一化。然而在我们纠结 CPU 归一化快还是 GPU 归一化快的时候，CPU 到 GPU 的数据搬运耗时相较于前者，可算的上是“降维打击”。
+   听上去好像都挺合理，放在 transform 里可以利用 DataLoader 的多进程加速，放在 model 里可以搬运到 GPU 上，利用 GPU 资源加速归一化。然而在我们纠结 CPU 归一化快还是 GPU 归一化快的时候，CPU 到 GPU 的数据搬运耗时相较于前者，可算的上是“降维打击”。
    事实上对于归一化这类计算量较低的操作，其耗时会远低于数据搬运，因此优化数据搬运的效率就显得更加重要。设想一下，如果我能够在数据仍处于 uint8 时、归一化之前将其搬运到指定设备上（归一化后的 float 型数据大小是 unit8 的 4 倍），就能降低带宽，大大提升数据搬运的效率。这种“滞后”归一化的行为，也是我们设计数据预处理器（data preprocessor） 的主要原因之一。数据预处理器会先搬运数据，再做归一化，提升数据搬运的效率。
 
 2. 我们应该如何实现 MixUp、Mosaic 一类的数据增强？
 
-   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现，但是考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现他们的难度就会很大。这是因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 Dataloader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
+   尽管看上去 MixUp 和 Mosaic 只是一种特殊的数据变换，按理说应该在 transform 里实现，但是考虑到这两种增强会涉及到“将多张图片融合成一张图片”的操作，在 transform 里实现它们的难度就会很大。这是因为目前 transform 的范式是对一张图片做各种增强，我们很难在一个 transform 里去额外读取其他图片（transform 里无法访问到 dataset）。然而如果基于 DataLoader 采样得到的 `batch_data` 去实现 Mosaic 或者 Mixup，事情就会变得非常简单，因为这个时候我们能够同时访问多张图片，可以轻而易举的完成图片融合的操作：
 
    ```python
    class MixUpDataPreprocessor(nn.Module):
