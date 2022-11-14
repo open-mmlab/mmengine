@@ -55,7 +55,7 @@ data
 
 ### The initialization process of the BaseDataset
 
-The initialization process of the `BaseDataset` is shown as following:
+The initialization process of the `BaseDataset` is shown as follows:
 
 ![image](https://user-images.githubusercontent.com/26813582/164611564-af44e3f2-a50f-4ef1-a6db-eddd840e2f40.png)
 
