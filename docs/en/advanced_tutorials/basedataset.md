@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Dataset Class in the algorithm toolbox is responsible for providing input data for the model during the training/testing process. The Dataset Class in each algorithm toolbox under OpenMMLab projects have some common characteristics and requirements, such as the need for efficient internal data storage format, supporting for the concatenation of differrnt datasets, dataset repeated sampling and so on.
+The Dataset class in the algorithm toolbox is responsible for providing input data for the model during the training/testing process. The Dataset class in each algorithm toolbox under OpenMMLab projects has some common characteristics and requirements, such as the need for efficient internal data storage format, support for the concatenation of different datasets, dataset repeated sampling, and so on.
 
 Therefore, **MMEngine** implements [BaseDataset](mmengine.dataset.BaseDataset) which provides some basic interfaces, and implements some DatasetWrappers with the same interfaces. Most of the Dataset Classes in the OpenMMLab algorithm toolbox meet the interface defined by the `BaseDataset`, and use the same DatasetWrappers.
 
