@@ -57,7 +57,7 @@ data
 
 数据集基类的初始化流程如下图所示：
 
-![image](https://user-images.githubusercontent.com/26813582/164611564-af44e3f2-a50f-4ef1-a6db-eddd840e2f40.png)
+![image](https://user-images.githubusercontent.com/26813582/201585974-1360e2b5-f95f-4273-8cbf-6024e33204ab.png)
 
 1. `load metainfo`：获取数据集的元信息，元信息有三种来源，优先级从高到低为：
 
