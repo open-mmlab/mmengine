@@ -189,7 +189,7 @@ class BaseDataPreprocessor(nn.Module):
            return tuple(img, label)
    ```
 
-   因此，除了数据搬运和归一化，`data_preprocessor` 另一大功能就是`BatchAugmentation`。数据预处理器的模块化也能帮助我们实现算法和数据增强之间的自由组合。
+   因此，除了数据搬运和归一化，`data_preprocessor` 另一大功能就是数据批增强（BatchAugmentation）。数据预处理器的模块化也能帮助我们实现算法和数据增强之间的自由组合。
 
 3. 如果 DataLoader 的输出和模型的输入类型不匹配怎么办，是修改 DataLoader 还是修改模型接口？
 
