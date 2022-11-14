@@ -84,7 +84,7 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-        save_begin (int): Start saving the number of epochs or
+        save_begin (int): The number of iterations or epochs when starting to save the checkpoint
             epochs or iterations of model weights. Defaults to 1.
             New in v0.4.0.
 
