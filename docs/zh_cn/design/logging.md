@@ -20,7 +20,7 @@ MMEngine 实现了历史数据存储的抽象类历史缓冲区（HistoryBuffer�
 
 ### 历史缓冲区初始化
 
-历史缓冲区的初始化可以接受 `log_history` 和 `count_history` 两个参数。`log_history` 表示日志的历史轨迹，例如前三次迭代的 loss 为 0.3，0.2，0.1。我们就可以记 `log_history=[0.3, 0.2, 0.3]`。`count_history` 是一个比较抽象的概念，如果按照迭代次数来算，0.3，0.2，0.1 分别是三次迭代的结果，那么我们可以记 `count_history=[1, 1, 1]`，其中 “1” 表示一次迭代。如果按照 batch 来算，例如每次迭代的 `batch_size` 为 8，那么 `count_history=[8, 8, 8]`。`count_history` 只会在统计均值时用到，用于控制返回均值的粒度。就拿上面那个例子来说，`count_history=[1, 1, 1]` 时会统计每次迭代的平均 loss，而 `count_history=[8, 8, 8]` 则会统计每张图片的平均 loss。
+历史缓冲区的初始化可以接受 `log_history` 和 `count_history` 两个参数。`log_history` 表示日志的历史轨迹，例如前三次迭代的 loss 为 0.3，0.2，0.1。我们就可以记 `log_history=[0.3, 0.2, 0.1]`。`count_history` 是一个比较抽象的概念，如果按照迭代次数来算，0.3，0.2，0.1 分别是三次迭代的结果，那么我们可以记 `count_history=[1, 1, 1]`，其中 “1” 表示一次迭代。如果按照 batch 来算，例如每次迭代的 `batch_size` 为 8，那么 `count_history=[8, 8, 8]`。`count_history` 只会在统计均值时用到，用于控制返回均值的粒度。就拿上面那个例子来说，`count_history=[1, 1, 1]` 时会统计每次迭代的平均 loss，而 `count_history=[8, 8, 8]` 则会统计每张图片的平均 loss。
 
 ```python
 from mmengine.logging import HistoryBuffer
@@ -150,7 +150,7 @@ MMEngine 利用历史缓冲区的特性，结合消息枢纽，实现了训练�
 
 ## 消息枢纽（MessageHub）
 
-历史缓冲区（HistoryBuffer）可以十分简单地完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 MMEngine 使用消息枢纽（MessageHub）来实现组件与组件、执行器与执行器之间的数据共享。消息枢纽继承自全局管理器（ManageMixin），支持跨模块访问。
+历史缓冲区（HistoryBuffer）可以十分简单地完成单个日志的更新和统计，而在模型训练过程中，日志的种类繁多，并且来自于不同的组件，因此如何完成日志的分发和收集是需要考虑的问题。 MMEngine 使用消息枢纽（MessageHub）来实现组件与组件、执行器与执行器之间的数据共享。消息枢纽继承自全局管理器（ManagerMixin），支持跨模块访问。
 
 消息枢纽存储了两种含义的数据：
 
@@ -188,7 +188,9 @@ lr_buffer, loss_buffer, time_buffer, data_time_buffer = (
     log_dict['train/data_time'])
 ```
 
+```{note}
 损失、学习率、迭代时间等训练日志在执行器和钩子中自动更新，无需用户维护。
+```
 
 ```{note}
 消息枢纽的历史缓冲区字典对 key 没有特殊要求，但是 MMEngine 约定历史缓冲区字典的 key 要有 train/val/test 的前缀，只有带前缀的日志会被输出当终端。
@@ -208,7 +210,7 @@ message_hub.get_info('iter')  # 2 覆盖上一次结果
 
 ### 消息枢纽的跨组件通讯
 
-执行器运行过程中，各个组件会通过消息枢纽来分发、接受消息。[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会汇总其他组件更新的学习率、损失等信息，将其导出到用户指定的输出端（Tensorboard，Wandb 等）。由于上述流程较为复杂，这里用一个简单示例来模拟日志钩子和其他组件通讯的过程。
+执行器运行过程中，各个组件会通过消息枢纽来分发、接受消息。[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会汇总其他组件更新的学习率、损失等信息，将其导出到用户指定的输出端（Tensorboard，WandB 等）。由于上述流程较为复杂，这里用一个简单示例来模拟日志钩子和其他组件通讯的过程。
 
 ```python
 from mmengine import MessageHub
@@ -278,7 +280,7 @@ if __name__ == '__main__':
 
 ### 添加自定义日志
 
-我们可以在任意模块里更新消息枢纽的历史缓冲区字典，历史缓冲区字典中所有的字段经统计后最后显示到终端。
+我们可以在任意模块里更新消息枢纽的历史缓冲区字典，历史缓冲区字典中所有的合法字段经统计后最后显示到终端。
 
 ```{note}
 更新历史缓冲区字典时，需要保证更新的日志名带有 train，val，test 前缀，否则日志不会在终端显示。
