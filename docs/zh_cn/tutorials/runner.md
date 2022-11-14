@@ -170,7 +170,7 @@ runner = Runner(
         num_workers=2),
     # 验证相关配置，通常为空即可
     val_cfg=dict(),
-    # 验证指标与验证器封装，可自由实现与配置，也可缺省
+    # 验证指标与验证器封装，可自由实现与配置
     val_evaluator=dict(type=Accuracy),
 
     # 以下为其他进阶配置，无特殊需要时尽量缺省
