@@ -32,6 +32,8 @@ class Registry:
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
             Defaults to None.
+        locations (list): The locations to import the modules registered
+            in this registry. Defaults to [].
 
     Examples:
         >>> # define a registry
@@ -53,6 +55,15 @@ class Registry:
         >>> class FasterRCNN:
         >>>     pass
         >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
+
+        >>> # add locations to enable auto import
+        >>> DETECTORS = Registry('detectors', parent=MODELS,
+        >>>     scope='det', locations=['det.models.detectors'])
+        >>> # define this class in 'det.models.detectors'
+        >>> @DETECTORS.register_module()
+        >>> class MaskRCNN:
+        >>>     pass
+        >>> fasterrcnn = DETECTORS.build(dict(type='MaskRCNN'))
 
     More advanced usages can be found at
     https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
@@ -292,7 +303,7 @@ class Registry:
             root = root.parent
         return root
 
-    def import_from_location(self):
+    def import_from_location(self) -> None:
         """import modules from the pre-defined locations in self._location."""
         if not self._imported:
             # Avoid circular import
