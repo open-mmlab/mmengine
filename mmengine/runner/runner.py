@@ -34,8 +34,7 @@ from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope,
-                               count_registered_modules)
+                               VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -1675,11 +1674,6 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
-
-        # collect information of all modules registered in the registries
-        registries_info = count_registered_modules(
-            self.work_dir if self.rank == 0 else None, verbose=False)
-        self.logger.debug(registries_info)
 
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
