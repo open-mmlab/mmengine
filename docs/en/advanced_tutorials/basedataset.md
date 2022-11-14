@@ -57,7 +57,7 @@ data
 
 The initialization process of the `BaseDataset` is shown as follows:
 
-![image](https://user-images.githubusercontent.com/26813582/164611564-af44e3f2-a50f-4ef1-a6db-eddd840e2f40.png)
+![image](https://user-images.githubusercontent.com/26813582/201585525-cf7c4976-e6cb-4546-8b80-8b288837322e.png)
 
 1. `load metainfo`: Obtain the meta information of the dataset. The meta information can be obtained from three sources with the priority from high to low:
 
