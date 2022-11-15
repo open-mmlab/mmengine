@@ -5,7 +5,7 @@ Welcome to the tutorial of runner, the core of MMEngine's user interface!
 The runner, as an "integrator" in MMEngine, covers all aspects of the framework and shoulders the responsibility of organizing and scheduling nearly all modules. Therefore, the code and implementation logic in it have to take into account various situations, making it relatively hard to understand. But **don't worry**! In this tutorial, we will leave out some messy details and have a quick overview of commonly used APIs, functionalities and examples. Hopefully this should provide you with a clear and easy-to-understand user interface. After reading through this tutorial, you will be able to:
 
 - Master the common usage and configuration of the runner
-- Learn the best practice -- writing config files -- of the runner
+- Learn the best practice - writing config files - of the runner
 - Know about the basic dataflow and execution order
 - Feel by yourself the advantages of using runner, perhaps
 
@@ -202,7 +202,7 @@ runner.train()
 
 ### Explanations on example codes
 
-Really a long piece of code, isn't it! However, if you read through the above example, you may have already understood the training process in general even without knowing any implementation details, thanks to the compactness and readability of runner codes(probably). This is what MMEngine expects: a structured, modular and standardized training process that allows for more reliable reproductions and clearer comparisons.
+Really a long piece of code, isn't it! However, if you read through the above example, you may have already understood the training process in general even without knowing any implementation details, thanks to the compactness and readability of runner codes (probably). This is what MMEngine expects: a structured, modular and standardized training process that allows for more reliable reproductions and clearer comparisons.
 
 The above example may lead you to the following confusions:
 
@@ -216,12 +216,12 @@ Don't worry. As we mentioned before, **use runner as a memo**. The runner covers
 <details>
 <summary>Why are some arguments passed as dicts?</summary>
 
-Well, this is related to MMEngine's style. In MMEngine, we provide 2 different styles of runner construction: a) manual construction and b) construction via registry and configs. If this confuses you, the following example will give a good illustration:
+Well, this is related to MMEngine's style. In MMEngine, we provide 2 different styles of runner construction: a) manual construction and b) construction via registry. If you are confused, the following example will give a good illustration:
 
 ```python
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
-from mmengine.registry import MODELS # 模型根注册器，你的自定义模型需要注册到这个根注册器中
+from mmengine.registry import MODELS # root registry for your custom model
 
 @MODELS.register_module() # decorator for registration
 class MyAwesomeModel(BaseModel): # your custom model
@@ -237,7 +237,7 @@ runner = Runner(
     ...
 )
 
-# An example of construction via registry and configs
+# An example of construction via registry
 model = MyAwesomeModel(layers=18, activation='relu')
 runner = Runner(
     model=model,
@@ -245,4 +245,184 @@ runner = Runner(
 )
 ```
 
-Similar to the above example, most arguments in the runner accepts both 2 types of inputs. These 2 styles are conceptually equivalent. The difference is, in the former style, the module(passed in as a `dict`) will be built **in the runner when actually needed**, while in the latter style, the module has been built before passed to the runner.
+Similar to the above example, most arguments in the runner accepts both 2 types of inputs. They are conceptually equivalent. The difference is, in the former style, the module (passed in as a `dict`) will be built **in the runner when actually needed**, while in the latter style, the module has been built before passed to the runner. The following figure illustrates the core idea of registry: it maintains the mapping between a module's **build method** and its **registry name**. If you want to learn more about the full usage of registry, you are recommended to read [Registry](../advanced_tutorials/registry.md) tutorial.
+
+![Runner Registry Illustration](https://user-images.githubusercontent.com/112053249/199191651-44174d17-0fc5-4443-8d15-76f561ec0585.png)
+
+You might still be confused after the explanation. Why should we let the Runner build modules from dicts? What are the benefits? If you have such questions, then we are proud to answer: "Absolutely - no benefits!" In fact, module construction via registry only works to its best advantage when combined with a configuration file. It is still far from the best practice to write as the above example. We provide it here just to make sure you can read and get used to this writing style, which may facilitate your understanding of the actual best practice we will soon talk about - the configuration file. Stay tuned!
+
+If you as a beginner do not immediately understand, it doesn't matter too much, because **manual construction** is still a good choice especially for small scale development and trial-and-error due to its being IDE friendly. However, you are still expected to read and get used to the writing style via registry, so that you can avoid being unnecessarily confused and puzzled in subsequent tutorials.
+
+</details>
+
+<details>
+<summary>Where can I find the possible configuration options for the xxx argument?</summary>
+
+You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a top in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentations.
+
+</details>
+
+<details>
+<summary>I come from repos like MMDet/MMCls... Why does this example distinct from what I've been exposed to?</summary>
+
+Downstream repos in OpenMMLab has widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
+
+</details>
+
+## Best practice of the Runner - config files
+
+MMEngine provides a powerful config file system that supports Python syntax. You can **almost seamlessly** (which we will illustrate below) convert from the previous sample code to a config file. Here is an example:
+
+```python
+# Save the following codes in example_config.py
+# Almost copied from the above example, with some commas removed
+model = dict(type='MyAwesomeModel',
+    layers=2,
+    activation='relu')
+work_dir = 'exp/my_awesome_model'
+
+train_dataloader = dict(
+    dataset=dict(type='MyDataset',
+        is_train=True,
+        size=10000),
+    sampler=dict(
+        type='DefaultSampler',
+        shuffle=True),
+    collate_fn=dict(type='default_collate'),
+    batch_size=64,
+    pin_memory=True,
+    num_workers=2)
+train_cfg = dict(
+    by_epoch=True,
+    max_epochs=10,
+    val_begin=2,
+    val_interval=1)
+optim_wrapper = dict(
+    optimizer=dict(
+        type='Adam',
+        lr=0.001))
+param_scheduler = dict(
+    type='MultiStepLR',
+    by_epoch=True,
+    milestones=[4, 8],
+    gamma=0.1)
+
+val_dataloader = dict(
+    dataset=dict(type='MyDataset',
+        is_train=False,
+        size=1000),
+    sampler=dict(
+        type='DefaultSampler',
+        shuffle=False),
+    collate_fn=dict(type='default_collate'),
+    batch_size=1000,
+    pin_memory=True,
+    num_workers=2)
+val_cfg = dict()
+val_evaluator = dict(type='Accuracy')
+
+default_hooks = dict(
+    checkpoint=dict(type='CheckpointHook', interval=1))
+launcher = 'none'
+env_cfg = dict(
+    cudnn_benchmark=False,
+    backend='nccl',
+    mp_cfg=dict(mp_start_method='fork'))
+log_level = 'INFO'
+load_from = None
+resume = False
+```
+
+Given the above config file, we can simply load configurations and run the train pipeline in a few lines of codes as follows:
+
+```python
+from mmengine.config import Config
+from mmengine.runner import Runner
+config = Config.fromfile('example_config.py')
+runner = Runner.from_cfg(config)
+runner.train()
+```
+
+```{note}
+Although it supports Python syntax, a valid config file needs to meet the condition that all variables must be Python built-in types such as `str`, `dict` and `int`. Therefore, the config system is highly dependent on the registry mechanism to enable construction from built-in types to other types such as `nn.Module`.
+```
+
+```{note}
+When using config files, you typically don't need to manually register every module. For instance, all optimizers in `torch.optim` including `Adam` and `SGD` have already been registered in `mmengine.optim`. The rule of thumb is, try to directly access modules provided by PyTorch, and only register them manually when error occurs.
+```
+
+```{note}
+When using config files, the implementations of your custom modules may be stored in separate files and thus not registered properly, which will lead to errors in build process. You may find solutions in [Registry tutorial](./registry.md) by searching for `custom_imports`.
+```
+
+```{warnings}
+Although sharing nearly the same codes, `from_cfg` and `__init__` differs in some default values like `env_cfg`.
+```
+
+Writing config files of the runner has been widely adopted in downstream repos in OpenMMLab projects. It has been a de facto convention and best practice. The config files are far more featured than illustrated above. You can refer to [Config tutorial](../advanced_tutorials/config.md) for more advanced features including key words inheriting and overriding.
+
+## Basic dataflow
+
+```{hint}
+In this chapter, we'll dive deeper into the runner to illustrate dataflow and data format convention between modules managed by the runner. It may be relatively abstract and dry if you haven't built a training pipeline with MMEngine. Therefore, you are free to skip it for now and read it in conjunction with practice in the future when in need.
+```
+
+Now let's dive **slightly deeper** into the runner, and illustrate the dataflow and data format convention under the hood (or, under the engine)!
+
+![Basic Dataflow](https://user-images.githubusercontent.com/112053249/199228350-5f80699e-7fd2-4b4c-ac32-0b16b1922c2e.png)
+
+The diagram above illustrates the **basic** dataflow of the runner, where the dashed border, gray filled shapes represent different data formats, while solid boxes represent modules/methods. Due to the great flexibility and extensibility of MMEngine, you can always inherit some key base classes and override their methods, so the above diagram doesn't always hold. It only holds when you are not customizing your own `Runner` or `TrainLoop`, and you are not overriding `train_step`, `val_step` or `test_step` method in your custom model. Actually, this is common for most tasks like detection and segmentation, as referred to [Model tutorial](./model.md).
+
+<details>
+<summary>Can you state the exact type of data for each data item shown in the diagram?</summary>
+
+Unfortunately, this is not possible. Although we did heavy type annotations in MMEngine, Python is still a highly dynamic programming language, and deep learning as a data-centric system needs to be flexible enough to deal with a wide range of complex data source. You always have full freedom to decide when you need (and sometimes must) break type conventions. Therefore, when you are customizing your module (e.g. `val_evaluator`), you need to make sure its input is compatible with upstream (e.g. `model`) output and its output can be parsed by downstream. MMEngine puts the flexibility of handling data in the hands of the user, and thus also requires the user to ensure compatibility of dataflow, which, in fact, is not that difficult once you get started.
+
+The uniformity of data formats has always been a problem in deep learning. We are trying to improve it in MMEngine in our own way. If you are interested, you can refer to [BaseDataset](../advanced_tutorials/basedataset.md) and [BaseDataElement](../advanced_tutorials/data_element.md) - but please note that they are mainly geared towards advanced users.
+
+</details>
+
+<details>
+<summary>What's the data format convention between dataloader, model and evaluator?</summary>
+
+For the basic dataflow shown in the diagram above, the data transfer between the above three modules can be represented by the following pseudo-code:
+
+```python
+# training
+for data_batch in train_dataloader:
+    data_batch = data_preprocessor(data_batch)
+    if isinstance(data_batch, dict):
+        losses = model.forward(**data_batch, mode='loss')
+    elif isinstance(data_batch, (list, tuple)):
+        losses = model.forward(*data_batch, mode='loss')
+    else:
+        raise TypeError()
+
+# validation
+for data_batch in val_dataloader:
+    data_batch = data_preprocessor(data_batch)
+    if isinstance(data_batch, dict):
+        outputs = model.forward(**data_batch, mode='predict')
+    elif isinstance(data_batch, (list, tuple)):
+        outputs = model.forward(**data_batch, mode='predict')
+    else:
+        raise TypeError()
+    evaluator.process(data_samples=outputs, data_batch=data_batch)
+metrics = evaluator.evaluate(len(val_dataloader.dataset))
+```
+
+The key points of the above pseudo-code is:
+
+- Outputs of data_preprocessor are passed to model **after unpacking**
+- The `data_samples` argument of the evaluator receives the prediction results of the model, while the `data_batch` argument receives the raw data coming from dataloader
+
+</details>
+
+<details>
+<summary>What is data_preprocessor? Can I do image pre-processing such as crop and resize in it?</summary>
+
+Though drawn separately in the diagram, data_preprocessor is a part of the model and thus can be found in [Model tutorial](./model.md) in DataPreprocessor chapter.
+
+In most cases, data_preprocessor needs no special attention or manual configuration. The default data_preprocessor will only do data transfer between host and GPU devices. However, if your model has incompatible inputs format with dataloader's output, you can also customize you own data_preprocessor for data formatting.
+
+Image pre-processing such as crop and resize is more recommended in [data transforms module](../advanced_tutorials/data_transform.md),
