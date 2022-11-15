@@ -486,9 +486,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 <details>
 <summary>使用自己的数据集</summary>
 
-MMEngine 使用和 pytorch 一致的 `dataloader` ，请参考 pytorch 相关文档进行构建
-
-同时 MMEngine 提供了一个进阶的[数据集基类](../advanced_tutorials/basedataset.md)供下游库与用户使用，如有兴趣也可以阅读文档了解
+参考[数据集（Dataset）与数据加载器（DataLoader）](./dataset.md)
 
 </details>
 
