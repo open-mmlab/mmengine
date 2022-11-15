@@ -425,4 +425,99 @@ Though drawn separately in the diagram, data_preprocessor is a part of the model
 
 In most cases, data_preprocessor needs no special attention or manual configuration. The default data_preprocessor will only do data transfer between host and GPU devices. However, if your model has incompatible inputs format with dataloader's output, you can also customize you own data_preprocessor for data formatting.
 
-Image pre-processing such as crop and resize is more recommended in [data transforms module](../advanced_tutorials/data_transform.md),
+Image pre-processing such as crop and resize is more recommended in [data transforms module](../advanced_tutorials/data_transform.md), but for batch-related data transforms (e.g. batch-resize), it can be implemented here.
+
+</details>
+
+<details>
+<summary>Why does module produce 3 different outputs? What is the meaning of "loss", "predict" and "tensor"?</summary>
+
+As described in [get started in 15 minutes](../get_started/15_minutes.md), you need to implement 3 data paths in your custom model's `forward` function to suit different pipelines for training, validation and testing. This is further discussed in [Model tutorial](./model.md).
+
+</details>
+
+<details>
+<summary>I can see that the red line is for training process and the blue line for validation/testing, but what is the green line?</summary>
+
+Currently model outputs in "tensor" mode has not been officially used in runner. The "tensor" mode can output some intermediate results and thus facilitating debugging process.
+
+</details>
+
+<details>
+<summary>What if I override methods such as train_step? Will the diagram totally fail?</summary>
+
+The behavior of default `train_step`, `val_step` and `test_step` covers the dataflow from data_preprocessor to model outputs and optim_wrapper. The rest of the diagram will not be spoiled.
+
+</details>
+
+## Why use the runner? (Optional reading)
+
+```{hint}
+Contents in this chapter will not teach you how to use the runner and MMEngine. If you are being pushed by your employer/advisor/DDL to work out a result in a few hours, it may not help you and you can feel free to skip it. However, we highly recommend taking time to read through this chapter, since it will help you better understand the aim and style of MMEngine.
+```
+
+<details>
+<summary>Relax, time for some philosophy</summary>
+
+Congratulations for reading through the runner tutorial, a long, long but kind of interesting (hope so) tutorial! Please believe it that all of these are intended to **make things easier for you** - whether it's this tutorial, the runner, or MMEngine.
+
+The runner is the "manager" of all modules in MMEngine. In the runner, all the distinct modules - whether visible ones like model and dataset, or obscure ones like logging, distributed environment and random seed - are organized and scheduled. The runner deals with the complex relationship between different modules and provide you with a clear, easy-to-understand and configurable interface. The benefits of this design are:
+
+1. You can modify or add your codes without spoiling your whole codebase. For example, you may start with single gpu training and you can always add a few lines of configuration codes to enable multi gpu or even multi node training.
+2. You can continuously benefit from new features without worrying about backward compatibility. Mixed precision training, visualization, state of the art distributed training methods, various device backeds... We will continue to absorb the best suggestions and cutting-edge technologies from the community while ensuring backward compatibility, and provide them to you in a clear interface.
+3. You can focus on your own awesome ideas without being bothered by other annoying and irrelevant details. The default values will handle most cases.
+
+So, MMEngine and the runner will truly make thing easier for you. With only a little effort on migration, your code and experiments will evolve with MMEngine. With a little more effort, the config file system allows you to manage your data, model and experiments more efficiently. Convenience and reliability, these are the aims we strive for.
+
+The blue one, or the red one - are you prepared to use MMEngine?
+
+</details>
+
+## Suggestions on next steps
+
+If you want to:
+
+<details>
+<summary>Write your own model structure</summary>
+
+Refer to [Model tutorial](./model.md)
+
+</details>
+
+<details>
+<summary>Use your own datasets</summary>
+
+Refer to [Dataset and DataLoader tutorial](./dataset.md)
+
+</details>
+
+<details>
+<summary>Change evaluation metrics</summary>
+
+Refer to [Evaluation tutorial](./evaluation.md)
+
+</details>
+
+<details>
+<summary>Do something related to optimizers or mixed-precision training</summary>
+
+Refer to [OptimWrapper tutorial](./optim_wrapper.md)
+
+</details>
+
+<details>
+<summary>Schedule learning rates or other parameters during training</summary>
+
+Refer to [Parameter Scheduler tutorial](./param_scheduler.md)
+
+</details>
+
+<details>
+<summary>Something not mentioned above</summary>
+
+- "Example" section to the left contains more reference codes about common usage and new features
+- "Advanced Tutorials" to the left consists of more contents for experienced developers, such as logging, visualization and more techniques on configuring your training pipeline
+- [Hook](./hook.md) provides some flexible modifications on training pipeline.
+- If none of the above solves your problem, you are always welcome to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions)!
+
+</details>
