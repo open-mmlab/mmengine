@@ -5,7 +5,6 @@ import os
 import os.path as osp
 import pickle
 import platform
-import socket
 import time
 import warnings
 from collections import OrderedDict
@@ -2244,7 +2243,6 @@ class Runner:
         runtime_env['Distributed launcher'] = self._launcher
         runtime_env['Distributed training'] = self._distributed
         runtime_env['GPU number'] = self._world_size
-        runtime_env['Hostname'] = socket.gethostname()
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
                                             for k, v in env.items())

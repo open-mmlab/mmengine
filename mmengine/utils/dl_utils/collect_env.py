@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 """This file holding some environment constant for sharing by other files."""
 import os.path as osp
+import socket
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
@@ -11,7 +12,9 @@ import numpy as np
 import torch
 
 import mmengine
-from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
+from mmengine.utils.dl_utils.parrots_wrapper import (TORCH_VERSION,
+                                                     get_build_config,
+                                                     is_rocm_pytorch)
 
 
 def _get_cuda_home():
@@ -50,6 +53,7 @@ def collect_env():
     env_info = OrderedDict()
     env_info['sys.platform'] = sys.platform
     env_info['Python'] = sys.version.replace('\n', '')
+    env_info['Hostname'] = socket.getfqdn()
 
     cuda_available = torch.cuda.is_available()
     env_info['CUDA available'] = cuda_available
