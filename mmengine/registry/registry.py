@@ -63,7 +63,8 @@ class Registry:
         >>> @DETECTORS.register_module()
         >>> class MaskRCNN:
         >>>     pass
-        >>> fasterrcnn = DETECTORS.build(dict(type='MaskRCNN'))
+        >>> # The registry will auto import det.models.detectors.MaskRCNN
+        >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
 
     More advanced usages can be found at
     https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
@@ -311,12 +312,16 @@ class Registry:
             for loc in self._locations:
                 try:
                     import_module(loc)
-                    print_log(f'auto imported: {loc}', level=logging.DEBUG)
+                    print_log(
+                        f'auto imported: {loc}',
+                        logger='current',
+                        level=logging.DEBUG)
                 except (ImportError, AttributeError, ModuleNotFoundError):
                     print_log(
                         f'Failed to import {loc}, please check the '
                         f'location of the registry {self._name} is '
                         f'correct.',
+                        logger='current',
                         level=logging.WARNING)
             self._imported = True
 
@@ -381,12 +386,16 @@ class Registry:
             # import the registry to add the nodes into the registry tree
             try:
                 import_module(f'{scope}.registry')
-                print_log(f'auto import {scope}.registry', level=logging.DEBUG)
+                print_log(
+                    f'auto import {scope}.registry',
+                    logger='current',
+                    level=logging.DEBUG)
             except (ImportError, AttributeError, ModuleNotFoundError):
                 print_log(
                     f'Cannot auto import {scope}.registry, please check '
                     f'whether the package "{scope}" is installed correctly '
                     f'or import the registry manually.',
+                    logger='current',
                     level=logging.DEBUG)
         # lazy import the modules to register them into the registry
         self.import_from_location()

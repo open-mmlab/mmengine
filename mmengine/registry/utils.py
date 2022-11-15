@@ -95,7 +95,11 @@ def count_registered_modules(save_path: Optional[str] = None,
 
 
 def init_default_scope(scope: str) -> None:
-    """init default scope."""
+    """Initialize the given default scope.
+
+    Args:
+        scope (str): The name of the default scope.
+    """
     if init_default_scope:
         never_created = DefaultScope.get_current_instance() is None \
                         or not DefaultScope.check_instance_created(scope)
