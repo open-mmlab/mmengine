@@ -148,7 +148,7 @@ In MMEngine, users can customize their model based on `BaseModel`, which impleme
     <th>Model in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMCVToyModel(nn.Module):
@@ -175,8 +175,9 @@ class MMCVToyModel(nn.Module):
         return self(*data, return_loss=False)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMEngineToyModel(BaseModel):
@@ -209,6 +210,7 @@ class MMEngineToyModel(BaseModel):
 ```
 
 </td>
+</div>
 </tr>
 </thead>
 </table>
@@ -266,8 +268,6 @@ Referred to [training a GAN model](../examples/train_a_gan.md), If it is impleme
 
 Compared it with the model based on MMEngine
 
-对比 MMEngine 的实现：
-
 <table class="docutils">
 <thead>
   <tr>
@@ -275,7 +275,7 @@ Compared it with the model based on MMEngine
     <th>Training gan in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
     def train_discriminator(
@@ -311,7 +311,8 @@ Compared it with the model based on MMEngine
 ```
 
 </td>
-  <td valign="top">
+  </div>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
     def train_discriminator(
@@ -345,6 +346,7 @@ Compared it with the model based on MMEngine
 ```
 
 </td>
+  </div>
 </tr>
 </thead>
 </table>
@@ -385,7 +387,7 @@ MMCV will wrap the model with distributed wrapper before build the runner, and t
         <th>Distributed training in MMEngine</th>
     <tbody>
     <tr>
-    <td valign="top">
+    <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
    ```python
    model = MMDistributedDataParallel(
@@ -397,8 +399,9 @@ MMCV will wrap the model with distributed wrapper before build the runner, and t
    runner = Runner(model=model, ...)
    ```
 
-   </td>
-    <td valign="top">
+   </div>
+    </td>
+    <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
    ```python
    runner = Runner(
@@ -408,7 +411,8 @@ MMCV will wrap the model with distributed wrapper before build the runner, and t
    )
    ```
 
-   </td>
+   </div>
+    </td>
     </tr>
     </thead>
     </table>
