@@ -7,7 +7,7 @@ The runner, as an "integrator" in MMEngine, covers all aspects of the framework 
 - Master the common usage and configuration of the runner
 - Learn the best practice - writing config files - of the runner
 - Know about the basic dataflow and execution order
-- Feel by yourself the advantages of using runner, perhaps
+- Feel by yourself the advantages of using runner (perhaps)
 
 ## Example codes of the runner
 
@@ -18,7 +18,7 @@ To build your training pipeline with a runner, there are typically two ways to g
 
 Pros and cons lie in both approaches. For the former one, beginners may be lost in a vast number of configurable arguments. For the latter one, beginers may find it hard to get a good reference, since neither an over-simplified nor an over-detailed reference is conductive to them.
 
-We argue that the key to learn runner is using it as a memo. You should master its most commonly used arguments and only focus on those less used when in need, since default values usually work fine. In the following we will provide a beginer-friendly example to illustrate most commonly used arguments of the runner, along with advanced guidelines for those less used.
+We argue that the key to learn runner is using it as a memo. You should remember its most commonly used arguments and only focus on those less used when in need, since default values usually work fine. In the following we will provide a beginer-friendly example to illustrate most commonly used arguments of the runner, along with advanced guidelines for those less used.
 
 ### A beginer-friendly example
 
@@ -258,14 +258,14 @@ If you as a beginner do not immediately understand, it doesn't matter too much, 
 <details>
 <summary>Where can I find the possible configuration options for the xxx argument?</summary>
 
-You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a top in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentations.
+You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentations.
 
 </details>
 
 <details>
-<summary>I come from repos like MMDet/MMCls... Why does this example distinct from what I've been exposed to?</summary>
+<summary>I come from repos like MMDet/MMCls... Why does this example differ from what I've been exposed to?</summary>
 
-Downstream repos in OpenMMLab has widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
+Downstream repos in OpenMMLab have widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
 
 </details>
 
@@ -348,7 +348,7 @@ Although it supports Python syntax, a valid config file needs to meet the condit
 ```
 
 ```{note}
-When using config files, you typically don't need to manually register every module. For instance, all optimizers in `torch.optim` including `Adam` and `SGD` have already been registered in `mmengine.optim`. The rule of thumb is, try to directly access modules provided by PyTorch, and only register them manually when error occurs.
+When using config files, you typically don't need to manually register every module. For instance, all optimizers in `torch.optim` including `Adam` and `SGD` have already been registered in `mmengine.optim`. The rule of thumb is, try to directly access modules provided by PyTorch, and only start to register them manually after error occurs.
 ```
 
 ```{note}
@@ -364,7 +364,7 @@ Writing config files of the runner has been widely adopted in downstream repos i
 ## Basic dataflow
 
 ```{hint}
-In this chapter, we'll dive deeper into the runner to illustrate dataflow and data format convention between modules managed by the runner. It may be relatively abstract and dry if you haven't built a training pipeline with MMEngine. Therefore, you are free to skip it for now and read it in conjunction with practice in the future when in need.
+In this chapter, we'll dive deeper into the runner to illustrate dataflow and data format convention between modules managed by the runner. It may be relatively abstract and dry if you haven't built a training pipeline with MMEngine. Therefore, you are free to skip for now and read it in conjunction with practice in the future when in need.
 ```
 
 Now let's dive **slightly deeper** into the runner, and illustrate the dataflow and data format convention under the hood (or, under the engine)!
@@ -374,7 +374,7 @@ Now let's dive **slightly deeper** into the runner, and illustrate the dataflow 
 The diagram above illustrates the **basic** dataflow of the runner, where the dashed border, gray filled shapes represent different data formats, while solid boxes represent modules/methods. Due to the great flexibility and extensibility of MMEngine, you can always inherit some key base classes and override their methods, so the above diagram doesn't always hold. It only holds when you are not customizing your own `Runner` or `TrainLoop`, and you are not overriding `train_step`, `val_step` or `test_step` method in your custom model. Actually, this is common for most tasks like detection and segmentation, as referred to [Model tutorial](./model.md).
 
 <details>
-<summary>Can you state the exact type of data for each data item shown in the diagram?</summary>
+<summary>Can you state the exact type of each data item shown in the diagram?</summary>
 
 Unfortunately, this is not possible. Although we did heavy type annotations in MMEngine, Python is still a highly dynamic programming language, and deep learning as a data-centric system needs to be flexible enough to deal with a wide range of complex data source. You always have full freedom to decide when you need (and sometimes must) break type conventions. Therefore, when you are customizing your module (e.g. `val_evaluator`), you need to make sure its input is compatible with upstream (e.g. `model`) output and its output can be parsed by downstream. MMEngine puts the flexibility of handling data in the hands of the user, and thus also requires the user to ensure compatibility of dataflow, which, in fact, is not that difficult once you get started.
 
@@ -459,9 +459,9 @@ Contents in this chapter will not teach you how to use the runner and MMEngine. 
 <details>
 <summary>Relax, time for some philosophy</summary>
 
-Congratulations for reading through the runner tutorial, a long, long but kind of interesting (hope so) tutorial! Please believe it that all of these are intended to **make things easier for you** - whether it's this tutorial, the runner, or MMEngine.
+Congratulations for reading through the runner tutorial, a long, long but kind of interesting (hope so) tutorial! Please believe that all of these - this tutorial, the runner, MMEngine - are intended to **make things easier for you**.
 
-The runner is the "manager" of all modules in MMEngine. In the runner, all the distinct modules - whether visible ones like model and dataset, or obscure ones like logging, distributed environment and random seed - are organized and scheduled. The runner deals with the complex relationship between different modules and provide you with a clear, easy-to-understand and configurable interface. The benefits of this design are:
+The runner is the "manager" of all modules in MMEngine. In the runner, all the distinct modules - whether visible ones like model and dataset, or obscure ones like logging, distributed environment and random seed - are getting organized and scheduled. The runner deals with the complex relationship between different modules and provide you with a clear, easy-to-understand and configurable interface. The benefits of this design are:
 
 1. You can modify or add your codes without spoiling your whole codebase. For example, you may start with single gpu training and you can always add a few lines of configuration codes to enable multi gpu or even multi node training.
 2. You can continuously benefit from new features without worrying about backward compatibility. Mixed precision training, visualization, state of the art distributed training methods, various device backeds... We will continue to absorb the best suggestions and cutting-edge technologies from the community while ensuring backward compatibility, and provide them to you in a clear interface.
@@ -515,9 +515,9 @@ Refer to [Parameter Scheduler tutorial](./param_scheduler.md)
 <details>
 <summary>Something not mentioned above</summary>
 
-- "Example" section to the left contains more reference codes about common usage and new features
-- "Advanced Tutorials" to the left consists of more contents for experienced developers, such as logging, visualization and more techniques on configuring your training pipeline
-- [Hook](./hook.md) provides some flexible modifications on training pipeline.
+- "Common Usage" section to the left contains more example codes
+- "Advanced tutorials" to the left consists of more contents for experienced developers to make more flexible extensions to the training pipeline
+- [Hook](./hook.md) provides some flexible modifications without spoiling your codes
 - If none of the above solves your problem, you are always welcome to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions)!
 
 </details>
