@@ -147,7 +147,7 @@ MMEngine 实现了模型基类，模型基类在 `train_step` 里实现了 `Opti
     <th>MMEngine 模型</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMCVToyModel(nn.Module):
@@ -174,8 +174,9 @@ class MMCVToyModel(nn.Module):
         return self(*data, return_loss=False)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMEngineToyModel(BaseModel):
@@ -207,7 +208,8 @@ class MMEngineToyModel(BaseModel):
     #     return loss_dict
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -268,7 +270,7 @@ class MMEngineToyModel(BaseModel):
     <th>MMEngine 优化 GAN</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
     def train_discriminator(
@@ -303,8 +305,9 @@ class MMEngineToyModel(BaseModel):
         return log_vars
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
     def train_discriminator(
@@ -338,6 +341,7 @@ class MMEngineToyModel(BaseModel):
 ```
 
 </td>
+  </div>
 </tr>
 </thead>
 </table>
@@ -379,33 +383,36 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
         <th>MMEngine 分布式训练</th>
     <tbody>
     <tr>
-    <td valign="top">
 
-   ```python
-   model = MMDistributedDataParallel(
-       model,
-       device_ids=[int(os.environ['LOCAL_RANK'])],
-       broadcast_buffers=False,
-       find_unused_parameters=find_unused_parameters)
-   ...
-   runner = Runner(model=model, ...)
-   ```
+<td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
-   </td>
-    <td valign="top">
+```python
+model = MMDistributedDataParallel(
+    model,
+    device_ids=[int(os.environ['LOCAL_RANK'])],
+    broadcast_buffers=False,
+    find_unused_parameters=find_unused_parameters)
+...
+runner = Runner(model=model, ...)
+```
 
-   ```python
-   runner = Runner(
-       model=model,
-       launcher='pytorch', #开启分布式训练
-       ..., # 其他参数
-   )
-   ```
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
-   </td>
-    </tr>
-    </thead>
-    </table>
+```python
+runner = Runner(
+    model=model,
+    launcher='pytorch', #开启分布式训练
+    ..., # 其他参数
+)
+```
+
+</div>
+  </td>
+  </tr>
+</thead>
+</table>
 
 &#160;
 
