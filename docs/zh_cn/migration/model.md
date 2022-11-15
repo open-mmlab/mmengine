@@ -18,7 +18,7 @@ MMCV 早期支持的计算机视觉任务，例如目标检测、物体识别等
 
 ## 优化流程的迁移
 
-### 统一的参数更新流程
+### 常用的参数更新流程
 
 考虑到目标检测、物体识别一类的深度学习任务参数优化的流程基本一致，我们可以通过继承[模型基类](../tutorials/model.md)来完成迁移。
 
@@ -193,7 +193,6 @@ class MMEngineToyModel(BaseModel):
         elif mode == 'predict':
             return [_feat for _feat in feat]
         else:
-            # tensor 模式，功能详见模型教程文档： tutorials/model.md
             pass
 
     # 模型基类 `train_step` 等效代码
@@ -203,7 +202,7 @@ class MMEngineToyModel(BaseModel):
     #     loss_dict['loss1'] = loss_dict['loss1'].sum()
     #     loss_dict['loss2'] = loss_dict['loss2'].sum()
     #     loss = (loss_dict['loss1'] + loss_dict['loss2']).sum()
-    # 调用优化器封装更新模型参数
+    #     调用优化器封装更新模型参数
     #     optim_wrapper.update_params(loss)
     #     return loss_dict
 ```
@@ -220,7 +219,6 @@ class MMEngineToyModel(BaseModel):
 - `MMCVToyModel` 继承自 `nn.Module`，而 `MMEngineToyModel` 继承自 `BaseModel`
 - `MMCVToyModel` 必须实现 `train_step`，且必须返回损失字典，损失字典包含 `loss` 和 `log_vars` 和 `num_samples` 字段。`MMEngineToyModel` 继承自 `BaseModel`，只需要实现 `forward` 接口，并返回损失字典，损失字典的每一个值必须是可微的张量
 - `MMCVToyModel` 和 `MMEngineModel` 的 `forward` 的接口需要匹配 `train_step` 中的调用方式，由于 `MMEngineToyModel` 直接调用基类的 `train_step` 方法，因此 `forward` 需要接受参数 `mode`，具体规则详见[模型教程文档](../tutorials/model.md)
-- `MMEngineModel` 如果没有继承 `BaseModel`，必须实现 `train_step` 方法。
 
 ### 自定义的参数更新流程
 
@@ -372,7 +370,7 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
 
 1. **常用训练流程**
 
-   对于[简介](简介)中提到的常用优化流程的训练任务，即一次参数更新可以被拆解成梯度计算、参数优化、梯度清零的任务，使用 Runner 默认的 `MMDistributedDataParallel` 即可满足需求，无需为 runner 其他额外参数。
+   对于[简介](#简介)中提到的常用优化流程的训练任务，即一次参数更新可以被拆解成梯度计算、参数优化、梯度清零的任务，使用 Runner 默认的 `MMDistributedDataParallel` 即可满足需求，无需为 runner 其他额外参数。
 
    <table class="docutils">
     <thead>
@@ -411,25 +409,24 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
 
 &#160;
 
-2. **分模块优化的学习任务**
+2. **以自定义流程分模块优化模型的学习任务**
 
    同样以训练生成对抗网络为例，生成对抗网络有两个需要分别优化的子模块，即生成器和判别器。因此需要使用 `MMSeparateDistributedDataParallel` 对模型进行封装。我们需要在构建执行器时指定：
 
    ```python
-   cfg = dict(model_wrapper_cfg=dict(type='MMSeparateDistributedDataParallel'))
+   cfg = dict(model_wrapper_cfg='MMSeparateDistributedDataParallel')
    runner = Runner(
        model=model,
-       ..., # 其他配置
+       ...,
        launcher='pytorch',
-       cfg=cfg # 模型封装配置
-   )
+       cfg=cfg)
    ```
 
    即可进行分布式训练。
 
 &#160;
 
-3. **单模块优化、自定义流程的深度学习任务**
+3. **以自定义流程优化整个模型的深度学习任务**
 
    有时候我们需要用自定义的优化流程来优化单个模块，这时候我们就不能复用模型基类的 `train_step`，而需要重新实现，例如我们想用同一批图片对模型优化两次，第一次开启批数据增强，第二次关闭：
 
@@ -466,8 +463,8 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
    cfg = dict(model_wrapper_cfg=dict(type='CustomDistributedDataParallel'))
    runner = Runner(
        model=model,
-       ..., # 其他配置
+       ...,
        launcher='pytorch',
-       cfg=cfg # 模型封装配置
+       cfg=cfg
    )
    ```
