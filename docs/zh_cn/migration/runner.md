@@ -19,15 +19,14 @@ MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我�
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>基于 MMCV 执行器的配置文件概览 </th>
     <th>基于 MMEngine 执行器的配置文件概览</th>
 <tbody>
 <tr>
-  <td> default_runtime.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -51,10 +50,12 @@ mp_start_method = 'fork'
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 default_scope = 'mmdet'
 
 default_hooks = dict(
@@ -81,13 +82,15 @@ load_from = None
 resume = False
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> scheduler.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# schedule.py
+
 # optimizer
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
@@ -101,10 +104,13 @@ lr_config = dict(
 runner = dict(type='EpochBasedRunner', max_epochs=12)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# scheduler.py
+
 # training schedule for 1x
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=12, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -135,13 +141,15 @@ optim_wrapper = dict(
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-<td> coco_detection.py </td>
-<td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -193,11 +201,13 @@ data = dict(
 evaluation = dict(interval=1, metric='bbox')
 ```
 
-</td>
-
-<td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -257,7 +267,8 @@ val_evaluator = dict(
 test_evaluator = val_evaluator
 ```
 
-</td>
+</div>
+  </td>
 
 </tr>
 </thead>
@@ -274,15 +285,15 @@ MMEngine 中的执行器提供了更多可自定义的部分，包括训练、�
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>基于 MMCV 执行器的训练启动脚本 </th>
     <th>基于 MMEngine 执行器的训练启动脚本</th>
 <tbody>
 <tr>
-  <td> tools/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
+
 args = parse_args()
 
 cfg = Config.fromfile(args.config)
@@ -403,10 +414,13 @@ train_detector(
     meta=meta)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
+
 args = parse_args()
 
 # register all modules in mmdet into the registries
@@ -470,11 +484,11 @@ else:
 runner.train()
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> apis/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 def init_random_seed(...):
@@ -594,7 +608,8 @@ def train_detector(model,
     runner.run(data_loaders, cfg.workflow)
 ```
 
-</td>
+</div>
+  </td>
   <td valign="top">
 
 ```python
@@ -691,7 +706,7 @@ set_random_seed(seed, deterministic=args.deterministic)
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 seed = 1
@@ -699,8 +714,9 @@ deterministic=False
 diff_seed=False
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 randomness=dict(seed=1,
@@ -708,7 +724,8 @@ randomness=dict(seed=1,
                 diff_rank_seed=False)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -751,22 +768,24 @@ MMEngine 通过配置 `env_cfg` 来选择多进程启动方式和多进程通信
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'  # 开启分布式训练
 dist_params = dict(backend='nccl')  # 选择多进程通信后端
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'
 env_cfg = dict(dist_cfg=dict(backend='nccl'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -811,7 +830,7 @@ val_dataloader = DataLoader(
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 data = dict(
@@ -834,8 +853,9 @@ data = dict(
         pipeline=test_pipeline))
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 train_dataloader = dict(
@@ -872,7 +892,8 @@ val_dataloader = dict(
 test_dataloader = val_dataloader
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -977,7 +998,7 @@ optimizer = build_optimizer(model, optimizer_cfg)
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optimizer = dict(
@@ -996,8 +1017,9 @@ optimizer = dict(
 optimizer_config = dict(grad_clip=None)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optim_wrapper = dict(
@@ -1015,7 +1037,8 @@ optim_wrapper = dict(
     })
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1093,7 +1116,7 @@ MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](..
     <th>MMEngine 默认钩子</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # MMCV 零散的配置训练钩子
@@ -1120,8 +1143,9 @@ log_config = dict(  # LoggerHook
 checkpoint_config = dict(interval=1)  # CheckPointHook
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # 配置参数调度器
@@ -1147,7 +1171,8 @@ default_hooks = dict(
     visualization=dict(type='DetVisualizationHook'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1202,7 +1227,7 @@ val_cfg = dict(type='ValLoop')
     <th>MMEngine 配置验证流程</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 eval_cfg = cfg.get('evaluation', {})
@@ -1212,8 +1237,9 @@ runner.register_hook(
     eval_hook(val_dataloader, **eval_cfg), priority='LOW')  # 注册 EvalHook
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 val_dataloader = val_dataloader  # 配置验证数据
@@ -1221,7 +1247,8 @@ val_evaluator = dict(type='ToyAccuracyMetric')  # 配置评测器
 val_cfg = dict(type='ValLoop')  # 配置验证循环控制器
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1294,45 +1321,46 @@ runner = Runner(
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>MMCV 加载检查点配置</th>
     <th>MMEngine 加载检查点配置</th>
 <tbody>
 <tr>
-  <td> 加载检查点 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 resume = False
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> 恢复检查点 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 resume_from = 'path/to/ckpt'
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 resume = True
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
