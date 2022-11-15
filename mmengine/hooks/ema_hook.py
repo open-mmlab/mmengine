@@ -33,6 +33,8 @@ class EMAHook(Hook):
             Defaults to 0.
         begin_epoch (int): The number of epoch to enable ``EMAHook``.
             Defaults to 0.
+        validate_on_ema (bool): Whether to do validation on EMA model.
+            Defaults to True.
         **kwargs: Keyword arguments passed to subclasses of
             :obj:`BaseAveragedModel`
     """
@@ -44,6 +46,7 @@ class EMAHook(Hook):
                  strict_load: bool = False,
                  begin_iter: int = 0,
                  begin_epoch: int = 0,
+                 validate_on_ema: bool = True,
                  **kwargs):
         self.strict_load = strict_load
         self.ema_cfg = dict(type=ema_type, **kwargs)
@@ -58,6 +61,7 @@ class EMAHook(Hook):
         # If `begin_epoch` and `begin_iter` are not set, `EMAHook` will be
         # enabled at 0 iteration.
         self.enabled_by_epoch = self.begin_epoch > 0
+        self.validate_on_ema = validate_on_ema
 
     def before_run(self, runner) -> None:
         """Create an ema copy of the model.
@@ -116,7 +120,8 @@ class EMAHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        self._swap_ema_parameters()
+        if self.validate_on_ema:
+            self._swap_ema_parameters()
 
     def after_val_epoch(self,
                         runner,
@@ -129,7 +134,8 @@ class EMAHook(Hook):
                 metrics on validation dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
         """
-        self._swap_ema_parameters()
+        if self.validate_on_ema:
+            self._swap_ema_parameters()
 
     def before_test_epoch(self, runner) -> None:
         """We load parameter values from ema model to source model before test.

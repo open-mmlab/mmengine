@@ -2,8 +2,9 @@
 import logging
 import os.path as osp
 import tempfile
+from collections import OrderedDict
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import ANY, MagicMock, Mock
 
 import torch
 import torch.nn as nn
@@ -304,3 +305,90 @@ class TestEMAHook(TestCase):
         state_dict = torch.load(
             osp.join(self.temp_dir.name, 'iter_5.pth'), map_location='cpu')
         self.assertIn('ema_state_dict', state_dict)
+
+    def test_validate_on_ema(self):
+
+        class SimpleModel(BaseModel):
+
+            def __init__(self):
+                super().__init__()
+                self.para = nn.Parameter(torch.zeros(1))
+
+            def forward(self, *args, mode='tensor', **kwargs):
+                return self.para.clone() if mode == 'predict' else None
+
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        model = SimpleModel().to(device)
+
+        state_dict = OrderedDict(
+            meta={
+                'epoch': 0,
+                'iter': 0
+            },
+            state_dict={'para': torch.tensor([1.])},
+            ema_state_dict={'module.para': torch.tensor([2.])},
+            message_hub={
+                'log_scalars': {},
+                'runtime_info': {},
+                'resumed_keys': {}
+            },
+        )
+        torch.save(state_dict, osp.join(self.temp_dir.name, 'ema.pth'))
+
+        # Test validate_on_ema=True as default
+        evaluator = Evaluator([MagicMock()])
+        runner = Runner(
+            model=model,
+            train_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            val_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=False),
+                batch_size=3,
+                num_workers=0),
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
+            val_evaluator=evaluator,
+            train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+            val_cfg=dict(),
+            work_dir=self.temp_dir.name,
+            resume=True,
+            load_from=osp.join(self.temp_dir.name, 'ema.pth'),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook')],
+            experiment_name='test_validate_on_ema_true')
+        runner.val()
+        evaluator.metrics[0].process.assert_called_with(
+            ANY, [torch.tensor([1.]).to(device)])
+
+        # Test validate_on_ema=False
+        evaluator = Evaluator([MagicMock()])
+        runner = Runner(
+            model=model,
+            train_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            val_dataloader=dict(
+                dataset=dict(type='DummyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                batch_size=3,
+                num_workers=0),
+            optim_wrapper=OptimWrapper(
+                torch.optim.Adam(ToyModel().parameters())),
+            val_evaluator=evaluator,
+            train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+            val_cfg=dict(),
+            work_dir=self.temp_dir.name,
+            resume=True,
+            load_from=osp.join(self.temp_dir.name, 'ema.pth'),
+            default_hooks=dict(logger=None),
+            custom_hooks=[dict(type='EMAHook', validate_on_ema=False)],
+            experiment_name='test_validate_on_ema_false')
+        runner.val()
+        evaluator.metrics[0].process.assert_called_with(
+            ANY, [torch.tensor([2.]).to(device)])
