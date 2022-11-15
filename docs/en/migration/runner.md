@@ -17,24 +17,21 @@ Take MMDet as an example, the differences between training scripts in MMCV and M
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>Configuration file based on MMCV Runner </th>
     <th>Configuration file based on MMEngine Runner</th>
 <tbody>
 <tr>
-  <td> default_runtime.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 checkpoint_config = dict(interval=1)
-# yapf:disable
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
     ])
-# yapf:enable
 custom_hooks = [dict(type='NumClassCheckHook')]
 
 dist_params = dict(backend='nccl')
@@ -49,10 +46,12 @@ mp_start_method = 'fork'
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 default_scope = 'mmdet'
 
 default_hooks = dict(
@@ -79,13 +78,14 @@ load_from = None
 resume = False
 ```
 
-</td>
-</tr>
+</div>
+  </td>
+  </tr>
 <tr>
-  <td> scheduler.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# scheduler.py
 # optimizer
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
@@ -99,10 +99,12 @@ lr_config = dict(
 runner = dict(type='EpochBasedRunner', max_epochs=12)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# scheduler.py
 # training schedule for 1x
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=12, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -133,13 +135,15 @@ optim_wrapper = dict(
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-<td> coco_detection.py </td>
-<td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -191,11 +195,13 @@ data = dict(
 evaluation = dict(interval=1, metric='bbox')
 ```
 
-</td>
-
-<td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -255,7 +261,8 @@ val_evaluator = dict(
 test_evaluator = val_evaluator
 ```
 
-</td>
+</div>
+  </td>
 
 </tr>
 </thead>
@@ -272,15 +279,14 @@ Compared with the `Runner` in MMCV, `Runner` in MMEngine takes on more functions
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>Training script based on MMCV Runner</th>
     <th>Training script based on MMEngine Runner</th>
 <tbody>
 <tr>
-  <td> tools/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
 args = parse_args()
 
 cfg = Config.fromfile(args.config)
@@ -401,10 +407,12 @@ train_detector(
     meta=meta)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
 args = parse_args()
 
 # register all modules in mmdet into the registries
@@ -468,13 +476,14 @@ else:
 runner.train()
 ```
 
+</div>
 </td>
 </tr>
 <tr>
-  <td> apis/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# apis/train.py
 def init_random_seed(...):
     ...
 
@@ -592,7 +601,8 @@ def train_detector(model,
     runner.run(data_loaders, cfg.workflow)
 ```
 
-</td>
+</div>
+  </td>
   <td valign="top">
 
 ```python
@@ -689,7 +699,7 @@ Configure the `randomness` for `Runner`, see more information in [Runner.set_ran
     <th>Configuration of MMEngine</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 seed = 1
@@ -697,8 +707,9 @@ deterministic=False
 diff_seed=False
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 randomness=dict(seed=1,
@@ -706,7 +717,8 @@ randomness=dict(seed=1,
                 diff_rank_seed=False)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -739,22 +751,24 @@ As for MMEngine, you can setup launcher by configuring `launcher` of `Runner`, a
     <th>MMEngine configuration</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'  # enable distributed training
 dist_params = dict(backend='nccl')  # choose communication backend
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'
 env_cfg = dict(dist_cfg=dict(backend='nccl'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -799,7 +813,7 @@ val_dataloader = DataLoader(
     <th>Configuration of MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 data = dict(
@@ -822,8 +836,9 @@ data = dict(
         pipeline=test_pipeline))
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 train_dataloader = dict(
@@ -859,7 +874,8 @@ val_dataloader = dict(
 test_dataloader = val_dataloader
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -960,7 +976,7 @@ MMEngine needs to configure [optim_wrapper](mmengine.optim.OptimWrapper) for `Ru
     <th>Configuration in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optimizer = dict(
@@ -979,8 +995,9 @@ optimizer = dict(
 optimizer_config = dict(grad_clip=None)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optim_wrapper = dict(
@@ -998,7 +1015,8 @@ optim_wrapper = dict(
     })
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1055,7 +1073,7 @@ MMEngine `Runner` takes some commonly used hooks in MMCV as the default hooks.
 - [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook)
 - [IterTimerHook](mmengine.hooks.IterTimerHook)
 - [DistSamplerSeedHook](mmengine.hooks.DistSamplerSeedHook)
-- [LoggerHook](mmedge.hooks.LoggerHook)
+- [LoggerHook](mmengine.hooks.LoggerHook)
 - [CheckpointHook](mmengine.hooks.CheckpointHook)
 - [ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook)
 
@@ -1077,7 +1095,7 @@ We can also register custom hooks in MMEngine runner, find more details in [runn
     <th>Default hooks in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # Configure training hooks
@@ -1104,8 +1122,9 @@ log_config = dict(  # LoggerHook
 checkpoint_config = dict(interval=1)  # CheckPointHook
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # Configure parameter scheduler
@@ -1131,7 +1150,8 @@ default_hooks = dict(
     visualization=dict(type='DetVisualizationHook'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1147,10 +1167,6 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 ### Prepare testing/validation components
 
 MMCV implements the validation process by `EvalHook`, and we'll not talk too much about it here. Consider validation is a common process in training, MMEngine abstract validation as two independent modules: [Evaluator](../tutorials/evaluation.md) and [ValLoop](../tutorials/runner.md). We can customize the metric or the validation process by defining a new [loop](mmengine.runner.ValLoop) or a new [metric](mmengine.evaluator.BaseMetirc).
-
-````python
-
-### Build Runner
 
 ```python
 import torch
@@ -1170,7 +1186,7 @@ class ToyAccuracyMetric(BaseMetric):
             acc += (label == torch.stack(pred)).sum()
             num_sample += batch_size
         return dict(Accuracy=acc / num_sample)
-````
+```
 
 After defining the metric, we should also configure the evaluator and loop for `Runner`. The example used in this tutorial is as follows:
 
@@ -1182,11 +1198,11 @@ val_cfg = dict(type='ValLoop')
 <table class="docutils">
 <thead>
   <tr>
-    <th>Validation process in MMCV</th>
-    <th>Validation process in MMEngine</th>
+    <th>Configure validation in MMCV</th>
+    <th>Configure validation in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 eval_cfg = cfg.get('evaluation', {})
@@ -1196,8 +1212,9 @@ runner.register_hook(
     eval_hook(val_dataloader, **eval_cfg), priority='LOW')
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 val_dataloader = val_dataloader
@@ -1205,7 +1222,8 @@ val_evaluator = dict(type='ToyAccuracyMetric')
 val_cfg = dict(type='ValLoop')
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1274,38 +1292,47 @@ runner = Runner(
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>Configuration of loading checkpoint in MMCV</th>
     <th>Configuration of loading checkpoint in MMEngine</th>
 <tbody>
 <tr>
-  <td> Load checkpoint </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 ```
 
 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 resume = False
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> Resume checkpoint </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 resume_from = 'path/to/ckpt'
 ```
 
 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
+
+```python
+load_from = 'path/to/ckpt'
+resume = True
+```
+
+</div>
+  </td>
+  </tr>
+</thead>
+</table>
 
 ### Training process
 
