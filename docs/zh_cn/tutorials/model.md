@@ -125,7 +125,7 @@ class MMResNet50(BaseModel):
         return outputs
 ```
 
-看到这里，相信你对数据流有了更加深刻的理解，也能够回答 [Runner 与 model](#Runner-与-model) 里提到的第一个问题：
+看到这里，相信你对数据流有了更加深刻的理解，也能够回答 [Runner 与 model](#runner-与-model) 里提到的第一个问题：
 
 `BaseModel.train_step` 里实现了默认的参数更新逻辑，如果我们想实现自定义的参数更新流程，可以重写 `train_step` 方法。但是需要注意的是，我们需要保证 `train_step` 最后能够返回损失字典。
 
