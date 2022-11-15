@@ -243,7 +243,7 @@ class CheckpointLoader:
             filename (str): checkpoint file name with given prefix
             map_location (str, optional): Same as :func:`torch.load`.
                 Default: None
-            logger (str): The logger for message. Default to current.
+            logger (str): The logger for message. Defaults to 'current'.
 
         Returns:
             dict or OrderedDict: The loaded checkpoint.
