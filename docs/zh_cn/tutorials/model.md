@@ -62,7 +62,7 @@ def train_step(self, data, optim_wrapper):
     return log_vars
 ```
 
-[**val_step**](mmengine.model.BaseModel.val_step): 执行 `forward` 方法的 `predict` 分支，返回预测结果，预测结果会被进一步传给[评测器](./evaluation.md.md)的 [process](mmengine.evaluator.Evaluator.process) 方法。其等效伪代码如下：
+[**val_step**](mmengine.model.BaseModel.val_step): 执行 `forward` 方法的 `predict` 分支，返回预测结果，预测结果会被传给[评测器](./evaluation.md.md)的 [process](mmengine.evaluator.Evaluator.process) 方法。其等效伪代码如下：
 
 ```python
 def val_step(self, data, optim_wrapper):
@@ -71,7 +71,7 @@ def val_step(self, data, optim_wrapper):
     return outputs
 ```
 
-[**test_step**](mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被进一步传给 `after_test_iter` 接口。
+[**test_step**](mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被传给 `after_test_iter` 接口。
 
 看到这我们就可以给出一份 **基本数据流伪代码 plus**：
 
@@ -86,7 +86,7 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-没错，抛开 Hook 不谈，[loop](mmengine.runner.loop) 调用 model 过程和上述代码一模一样！看到这，我们再回过头去看 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 里的模型定义部分，就有一种看山不是山的感觉：
+没错，抛开 Hook 不谈，[loop](mmengine.runner.loop) 调用 model 的过程和上述代码一模一样！看到这，我们再回过头去看 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 里的模型定义部分，就有一种看山不是山的感觉：
 
 ```python
 import torch.nn.functional as F
@@ -107,7 +107,7 @@ class MMResNet50(BaseModel):
 
     # 下面的 3 个方法已在 BaseModel 实现，这里列出是为了
     # 解释调用过程
-    def train_step(self, data, optim_wrapper)：
+    def train_step(self, data, optim_wrapper):
         data = self.data_preprocessor(data)
         loss = self(*data, mode='loss')  # CIFAR10 返回 tuple，因此用 * 解包
         parsed_losses, log_vars = self.parse_losses()
@@ -194,4 +194,4 @@ class BaseDataPreprocessor(nn.Module):
 
    答案是都不合适。理想的解决方案是我们能够在不破坏模型和数据已有接口的情况下完成适配。这个时候数据预处理器也能承担类型转换的工作，例如将传入的 data 从 `tuple` 转换成指定字段的 `dict`。
 
-看到这里，相信你已经能够理解数据预处理器存在的合理性，并且也能够自信地回答教程最初提出的两个问题！但是你可能还会疑惑 `train_step` 接口中传入的 `optim_wrapper` 又是什么，`test_step` 和 `val_step` 返回的结果和 evaluator 又有怎样的关系，这些问题会在[模型精度评测教程](./evaluation.md) 和 [优化器封装](./optim_wrapper.md) 得到解答。
+看到这里，相信你已经能够理解数据预处理器存在的合理性，并且也能够自信地回答教程最初提出的两个问题！但是你可能还会疑惑 `train_step` 接口中传入的 `optim_wrapper` 又是什么，`test_step` 和 `val_step` 返回的结果和 evaluator 又有怎样的关系，这些问题会在[模型精度评测教程](./evaluation.md)和[优化器封装](./optim_wrapper.md)得到解答。
