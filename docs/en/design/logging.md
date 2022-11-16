@@ -10,7 +10,7 @@
 
 ![image](https://user-images.githubusercontent.com/57566630/163441489-47999f3a-3259-44ab-949c-77a8a599faa5.png)
 
-HistoryBuffer encapsules losses, learning rates and some other scalars during training. These HistoryBuffers along with some other runtime info are managed by MessageHub in key-value pairs. The data are then formatted by LogProcessor and exported to various visualization backends by [LoggerHook](mmengine.hook.LoggerHook). **In most cases, you don't need to care about data flow in this process. You can simply configure the LogProcessor to choose from statistical methods.**  Before diving into the design of logging system in MMEngine, you may want to read through [logging tutorial](../tutorials/logging.md) to familiarize yourself with some basic use cases.
+HistoryBuffer encapsulates losses, learning rates, and some other scalars during training. These HistoryBuffers along with some other runtime info are managed by MessageHub in key-value pairs. The data are then formatted by LogProcessor and exported to various visualization backends by [LoggerHook](mmengine.hook.LoggerHook). **In most cases, you don't need to care about data flow in this process. You can simply configure the LogProcessor to choose from statistical methods.**  Before diving into the design of logging system in MMEngine, you may want to read through [logging tutorial](../advanced_tutorials/logging.md) to familiarize yourself with some basic use cases.
 
 ## HistoryBuffer
 
@@ -208,7 +208,7 @@ message_hub.get_info('iter')  # 2, overwritten by the above command
 
 ### Share MessageHub across modules
 
-During the execution of a runner, different modules receive and post data through MessageHub. Then, [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) gathers data such as losses and learning rates before exporting them to user defined backends(Tensorboard, WandB, etc). Following is an example to show the communication between logger hook and other modules.
+During the execution of a runner, different modules receive and post data through MessageHub. Then, [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) gathers data such as losses and learning rates before exporting them to user defined backends (Tensorboard, WandB, etc). Following is an example to show the communication between logger hook and other modules.
 
 ```python
 from mmengine import MessageHub
@@ -316,7 +316,7 @@ In this configuration, losses and iteration time will be averaged in the latest 
 
 ### Custom statistical methods
 
-Users can configure the `custom_cfg` list to specify the statistical method. Each element in `custom_cfg` must be a dict consists of the following keys:
+Users can configure the `custom_cfg` list to specify the statistical method. Each element in `custom_cfg` must be a dict consisting of the following keys:
 
 - `data_src`: Required argument representing the data source of the log. A data source may have multiple statistical methods. Default sources, which are automatically added to logs, include all keys in loss dict(i.e. `loss`), learning rate(`lr`) and iteration time(`time` & `data_time`). Besides, all scalars updated by MessageHub's `update_scalar`/`update_scalars` methods with valid keys are configurable data sources, but be aware that the prefix('train/', 'val/', 'test/') should be removed.
 - `method_name`: Required argument representing the statistical method. It supports both built-in methods and custom methods.
