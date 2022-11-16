@@ -599,7 +599,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             ``lr``, ``momentum``.
         T_max (int, optional): Maximum number of iterations. If not specified,
             use ``end - begin``. Defaults to None.
-        eta_min (float): Minimum parameter value. Defaults to None.
+        eta_min (float, optional): Minimum parameter value. Defaults to None.
         eta_min_ratio (float, optional): The ratio of minimum parameter value
             to the base parameter value. Either `eta_min` or `eta_min_ratio`
             should be specified. Default: None.
@@ -1144,8 +1144,8 @@ class CosineRestartParamScheduler(_ParamScheduler):
         periods (list[int]): Periods for each cosine anneling cycle.
         restart_weights (list[float]): Restart weights at each
             restart iteration. Defaults to [1].
-        eta_min (float): Minimum parameter value at the end of scheduling.
-            Defaults to None.
+        eta_min (float, optional): Minimum parameter value at the end of
+            scheduling. Defaults to None.
         eta_min_ratio (float, optional): The ratio of minimum parameter value
             to the base parameter value. Either `eta_min` or `eta_min_ratio`
             should be specified. Default: None.
