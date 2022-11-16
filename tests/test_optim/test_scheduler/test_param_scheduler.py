@@ -364,18 +364,46 @@ class TestParameterScheduler(TestCase):
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_cos_anneal_scheduler(self):
+        with self.assertRaises(AssertionError):
+            CosineAnnealingParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                T_max=10,
+                eta_min=0,
+                eta_min_ratio=0.1)
         epochs = 12
         t = 10
-        eta_min = 1e-10
-        single_targets = [
+        eta_min = 5e-3
+        targets1 = [
             eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
             for x in range(epochs)
         ]
-        targets = [
-            single_targets, [x * self.layer2_mult for x in single_targets]
+        targets2 = [
+            eta_min + (0.5 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
         ]
+        targets = [targets1, targets2]
         scheduler = CosineAnnealingParamScheduler(
             self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
+        self._test_scheduler_value(scheduler, targets, epochs)
+
+        # Test `eta_min_ratio`
+        self.setUp()
+        eta_min_ratio = 1e-3
+        targets1 = [
+            0.05 * eta_min_ratio + (0.05 - 0.05 * eta_min_ratio) *
+            (1 + math.cos(math.pi * x / t)) / 2 for x in range(epochs)
+        ]
+        targets2 = [
+            0.5 * eta_min_ratio + (0.5 - 0.5 * eta_min_ratio) *
+            (1 + math.cos(math.pi * x / t)) / 2 for x in range(epochs)
+        ]
+        targets = [targets1, targets2]
+        scheduler = CosineAnnealingParamScheduler(
+            self.optimizer,
+            param_name='lr',
+            T_max=t,
+            eta_min_ratio=eta_min_ratio)
         self._test_scheduler_value(scheduler, targets, epochs)
 
         # Test default `T_max`
