@@ -49,6 +49,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
+        self.stop_training = False
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -86,7 +87,7 @@ class EpochBasedTrainLoop(BaseLoop):
         """Launch training."""
         self.runner.call_hook('before_train')
 
-        while self._epoch < self._max_epochs:
+        while self._epoch < self._max_epochs and not self.stop_training:
             self.run_epoch()
 
             self._decide_current_val_interval()
@@ -216,6 +217,7 @@ class IterBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
+        self.stop_training = False
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
@@ -257,7 +259,7 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        while self._iter < self._max_iters:
+        while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
             data_batch = next(self.dataloader_iterator)
