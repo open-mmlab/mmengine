@@ -4,7 +4,7 @@ Resuming training means continuing training from the state saved from some previ
 
 ## Automatically resume training
 
-Users can set the `resume` parameter of [Runner](mmengine.runner.Runner) to enable automatic training resumption. If the latest checkpoint exists in `work_dir` (e.g. the training was interrupted during the last training), the training will be resumed from that checkpoint. If there is a latest checkpoint in `work_dir` (e.g. the training was interrupted during the last training), the training will be resumed from that checkpoint, otherwise (e.g. the last training did not have time to save the checkpoint or a new training task is started) the training will start again. Here is an example of how to enable automatic training resumption.
+Users can set the `resume` parameter of [Runner](mmengine.runner.Runner) to enable automatic training resumption. When `resume` is set to `True`, the Runner will try to resume from the latest checkpoint in `work_dir` automatically. If there is a latest checkpoint in `work_dir` (e.g. the training was interrupted during the last training), the training will be resumed from that checkpoint, otherwise (e.g. the last training did not have time to save the checkpoint or a new training task is started) the training will restart. Here is an example of how to enable automatic training resumption.
 
 ```python
 runner = Runner(
