@@ -1,7 +1,7 @@
 # Dataset and DataLoader
 
 ```{hint}
-If you have never been exposed to PyTorch's dataset and dataloader, you are recommended to read through [PyTorch official tutorial](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) to get familiar with some basic concepts.
+If you have never been exposed to PyTorch's Dataset and DataLoader classes, you are recommended to read through [PyTorch official tutorial](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) to get familiar with some basic concepts.
 ```
 
 Datasets and DataLoaders are necessary components in MMEngine's training pipeline. They are conceptually derived from and consistent with PyTorch. Typically, a dataset defines the quantity, parsing and pre-processing of the data, while a dataloader iteratively load data according to settings such as `batch_size`, `shuffle`, `num_workers`, etc. Datasets are encapsulated with dataloaders and they together constitute the data source.
@@ -49,7 +49,7 @@ You may find example 1 differs from that in [getting started in 15 minutes](../g
 
 ### sampler and shuffle
 
-One obvious difference is that we add a `sampler` argument to the dict. This is because we **require `sampler` to be explicitly specified** when using dict as dataloader. Meanwhile, `shuflle` is also removed from `DataLoader` arguments, because it conflicts with `sampler` in PyTorch, as referred to [PyTorch DataLoader API docs](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
+One obvious difference is that we add a `sampler` argument to the dict. This is because we **require `sampler` to be explicitly specified** when using a dict as a dataloader. Meanwhile, `shuflle` is also removed from `DataLoader` arguments, because it conflicts with `sampler` in PyTorch, as referred to in [PyTorch DataLoader API documentation](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
 
 ```{note}
 In fact, `shuffle` is just a notation for convenience in PyTorch implementation. If `shuffle` is set to `True`, the dataloader will automatically switch to `RandomSampler`
