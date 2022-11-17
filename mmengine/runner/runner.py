@@ -414,8 +414,8 @@ class Runner:
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
         # log hooks information
-        self.logger.info('Hooks will be executed in the following order:\n%s',
-                         self.get_hooks_info())
+        self.logger.info(f'Hooks will be executed in the following '
+                         f'order:\n{self.get_hooks_info()}')
 
         # dump `cfg` to `work_dir`
         self.dump_config()
