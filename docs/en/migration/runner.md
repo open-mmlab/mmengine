@@ -6,7 +6,7 @@ As MMCV supports more and more deep learning tasks, and users' needs become much
 
 The `Runner` in MMEngine expands the scope and takes on more functions. we abstracted [training loop controller (EpochBasedTrainLoop/IterBasedTrainLoop)](mmengine.runner.EpochBasedLoop), [validation loop controller ( ValLoop)](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop) to make it more convenient for users to customize their training process.
 
-Firstly, we introduce how to migrated the entry point of training from MMCV to MMEngine, to simplify and unify the training script. Then, we'll introduce the difference of the instantiation of `Runner` between MMCV and MMEngine in detail.
+Firstly, we will introduce how to migrate the entry point of training from MMCV to MMEngine, to simplify and unify the training script. Then, we'll introduce the difference in the instantiation of `Runner` between MMCV and MMEngine in detail.
 
 ## Migrate the entry point
 
@@ -268,9 +268,9 @@ test_evaluator = val_evaluator
 </thead>
 </table>
 
-`Runner` in MMEngine provides with more customizable components, including training/validation/testing process and DataLoader. Therefore, the configuration file is a bit longer compared to MMCV.
+`Runner` in MMEngine provides more customizable components, including training/validation/testing process and DataLoader. Therefore, the configuration file is a bit longer compared to MMCV.
 
-`MMEngine` follows the WYSIWYG principle and reorganized the hierarchy of each component in configuration so that most of the first-level fields of configuration correspond the core components in the `Runner`, such as DataLoader, [Evaluator](../tutorials/evaluation.md), [Hook](../tutorials/hook.md), etc. The new format configuration file could help users to read and understand the core components in `Runner`, and ignore the relatively unimportant parts.
+`MMEngine` follows the WYSIWYG principle and reorganizes the hierarchy of each component in configuration so that most of the first-level fields of configuration correspond to the core components in the `Runner`, such as DataLoader, [Evaluator](../tutorials/evaluation.md), [Hook](../tutorials/hook.md), etc. The new format configuration file could help users to read and understand the core components in `Runner`, and ignore the relatively unimportant parts.
 
 ### Migrate the training script
 
@@ -614,14 +614,13 @@ def train_detector(model,
 </thead>
 </table>
 
-Table above shows the difference between training script of MMEngine `Runner` and MMCV `Runner`. Repositories of OpenMMLab 1.x organize their own process to build `Runner`, which contributes to the large amount of redundant code. MMEngine unify and format the building process, such as setting random seed, initializing distributed environment, building DataLoader, building `Optimizer`, etc. This help the downstream repositories simplify the process to prepare the runner, and only need to configure the parameters of `Runner`.
+Table above shows the differences between training script of MMEngine `Runner` and MMCV `Runner`. Repositories of OpenMMLab 1.x organize their own process to build `Runner`, which contributes to the large amount of redundant code. MMEngine unifies and formats the building process, such as setting random seed, initializing distributed environment, building DataLoader, building `Optimizer`, etc. This help the downstream repositories simplify the process to prepare the runner, and only need to configure the parameters of `Runner`.
 
 For the downstream repositories, training script based on MMEngine Runner not only simplify the `tools/train.py`, but also can directly omit the `apis/train.py`. Similarly, we can also set random seed, initialize distributed environment by configuring the parameters of `Runner`, and do not need to implement the corresponding code.
 
 ## Migrate Runner
 
-This section describes the differences in the training, validation, and testing processes between the MMCV Runner and the MMEngine Runner.
-The differences of training/validation/testing process between MMCV Runner and the MMEngine Runner are as follows:
+This section describes the differences in the training, validation, and testing processes between the MMCV Runner and the MMEngine Runner, as follows.
 
 01. [Prepare logger](#prepare-logger)
 02. [Set random seed](#set-random-seed)
@@ -740,7 +739,7 @@ model = MMDistributedDataParallel(
     find_unused_parameters=find_unused_parameters)
 ```
 
-As for MMEngine, you can setup launcher by configuring `launcher` of `Runner`, and configure other process mentioned above by configuring `env_cfg`. See more information in the table below:
+As for MMEngine, you can setup launcher by configuring `launcher` of `Runner`, and configure other items mentioned above in `env_cfg`. See more information in the table below:
 
 **Configuration changes**
 
@@ -1021,7 +1020,7 @@ optim_wrapper = dict(
 </thead>
 </table>
 
-```{note}:
+```{note}
 For the high-level tasks like detection and classification, MMCV needs to configure `optim_config` to build `OptimizerHook`, while not necessary for MMEngine.
 ```
 
@@ -1166,7 +1165,7 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 
 ### Prepare testing/validation components
 
-MMCV implements the validation process by `EvalHook`, and we'll not talk too much about it here. Consider validation is a common process in training, MMEngine abstract validation as two independent modules: [Evaluator](../tutorials/evaluation.md) and [ValLoop](../tutorials/runner.md). We can customize the metric or the validation process by defining a new [loop](mmengine.runner.ValLoop) or a new [metric](mmengine.evaluator.BaseMetirc).
+MMCV implements the validation process by `EvalHook`, and we'll not talk too much about it here. Given that validation is a common process in training, MMEngine abstract validation as two independent modules: [Evaluator](../tutorials/evaluation.md) and [ValLoop](../tutorials/runner.md). We can customize the metric or the validation process by defining a new [loop](mmengine.runner.ValLoop) or a new [metric](mmengine.evaluator.BaseMetirc).
 
 ```python
 import torch
@@ -1244,7 +1243,7 @@ runner = EpochBasedRunner(
 
 **Building Runner in MMEngine**
 
-Besides the arguments mentioned above, such as `env_cfg`, `optim_wrapper`, etc. The `EpochBasedRunner` and `max_epochs` appeared in the example of `MMCV` are configured in `train_cfg`:
+The `EpochBasedRunner` and `max_epochs` arguments in `MMCV` are moved to `train_cfg` in MMEngine. All parameters configurable in `train_cfg` are listed below:
 
 - by_epoch: `True` equivalent to `EpochBasedRunner`. `False` equivalent to `IterBasedRunner`
 - `max_epoch/max_iter`: Equivalent to `max_epochs` and `max_iters` in MMCV
@@ -1358,9 +1357,9 @@ runner.train()
 
 ### Testing process
 
-Since MMCV Runner does not integrate the test function, we need to implement the test scripts by our own.
+Since MMCV Runner does not integrate the test function, we need to implement the test scripts by ourselves.
 
-For MMEngine Runner, as long as we configure the `test_dataloader`, `test_cfg` and `test_evaluator` for the `Runner`, we can call `Runner.test` to start the testing process.
+For MMEngine Runner, as long as we have configured the `test_dataloader`, `test_cfg` and `test_evaluator` for the `Runner`, we can call `Runner.test` to start the testing process.
 
 **`work_dir` is the same for training**
 
@@ -1409,7 +1408,7 @@ runner.test()
 
 ### Customize training process
 
-If we want to customize a training/validation process, we need to override the `Runner.val` or `Runner.train` in a custom `Runner`. Take overriding `runner.train` as an example, suppose we need to training with the same batch twice for each iteration, we can override the `Runner.train` like this:
+If we want to customize a training/validation process, we need to override the `Runner.val` or `Runner.train` in a custom `Runner`. Take overriding `runner.train` as an example, suppose we need to train with the same batch twice for each iteration, we can override the `Runner.train` like this:
 
 ```python
 class CustomRunner(EpochBasedRunner):
