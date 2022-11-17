@@ -96,4 +96,3 @@ class EarlyStoppingHook(Hook):
                     'This training process will be stopped early.')
         else:
             self.count = 0
-        return
