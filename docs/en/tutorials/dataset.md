@@ -6,7 +6,7 @@ If you have never been exposed to PyTorch's dataset and dataloader, you are reco
 
 Datasets and DataLoaders are necessary components in MMEngine's training pipeline. They are conceptually derived from and consistent with PyTorch. Typically, a dataset defines the quantity, parsing and pre-processing of the data, while a dataloader iteratively load data according to settings such as `batch_size`, `shuffle`, `num_workers`, etc. Datasets are encapsulated with dataloaders and they together constitute the data source.
 
-In this tutorial, we will step through their usage in MMEngine runner from outside (dataloader) to inside (dataset) and give some practical examples. After reading through this tutorial, you will be able to:
+In this tutorial, we will step through their usage in MMEngine runner from the outside (dataloader) to the inside (dataset) and give some practical examples. After reading through this tutorial, you will be able to:
 
 - Master the configuration of dataloaders in MMEngine
 - Learn to use existing datasets (e.g. those from `torchvision`) from config files
