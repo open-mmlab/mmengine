@@ -449,4 +449,4 @@ class Hook:
             if is_method_overridden(method, Hook, self):
                 trigger_stages.update(map_stages)
 
-        return [stage for stage in Hook.stages if stage in trigger_stages]
+        return list(trigger_stages)
