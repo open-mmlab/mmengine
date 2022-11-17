@@ -639,7 +639,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     @classmethod
     def build_iter_from_epoch(cls,
                               *args,
-                              T_max,
+                              T_max=None,
                               begin=0,
                               end=INF,
                               by_epoch=True,
@@ -653,7 +653,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             f'`epoch_length` must be a positive integer, ' \
             f'but got {epoch_length}.'
         by_epoch = False
-        T_max = T_max * epoch_length
+        if T_max is not None:
+            T_max = T_max * epoch_length
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
