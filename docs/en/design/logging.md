@@ -2,15 +2,15 @@
 
 ## Overview
 
-[Runner](./runner.md) produces a great amount of logs during execution. These logs include but not limited to dataset information, model initialization, learning rates and losses. In order to make these logs easily accessed by users, we designed [MessageHub](mmengine.logging.MessageHub), [HistoryBuffer](mmengine.logging.HistoryBuffer), [LogProcessor](mmengine.runner.LogProcessor) and [MMLogger](mmengine.logging.MMLogger) in MMEngine, which enables:
+[Runner](./runner.md) produces amounts of logs during execution. These logs include dataset information, model initialization, learning rates, losses, etc. In order to make these logs easily accessed by users, MMEngine designs [MessageHub](mmengine.logging.MessageHub), [HistoryBuffer](mmengine.logging.HistoryBuffer), [LogProcessor](mmengine.runner.LogProcessor) and [MMLogger](mmengine.logging.MMLogger), which enable:
 
-- Configuring statistical methods in config files. For example, you can configure to count losses by averaging across the whole training process instead of by smoothing in a sliding window manner
-- Querying training states (iterations, epochs, etc.) anywhere in any module
-- Switching the log saving method between multi-process and master process only
+- Configure statistical methods in config files. For example, losses can be globally averaged or smoothed by a sliding window.
+- Query training states (iterations, epochs, etc.) in any module
+- Configure whether save the multi-process log or not during distributed training.
 
 ![image](https://user-images.githubusercontent.com/57566630/163441489-47999f3a-3259-44ab-949c-77a8a599faa5.png)
 
-HistoryBuffer encapsulates losses, learning rates, and some other scalars during training. These HistoryBuffers along with some other runtime info are managed by MessageHub in key-value pairs. The data are then formatted by LogProcessor and exported to various visualization backends by [LoggerHook](mmengine.hook.LoggerHook). **In most cases, you don't need to care about data flow in this process. You can simply configure the LogProcessor to choose from statistical methods.**  Before diving into the design of logging system in MMEngine, you may want to read through [logging tutorial](../advanced_tutorials/logging.md) to familiarize yourself with some basic use cases.
+Each scalar (losses, learning rates, etc.) during training is encapsulated by HistoryBuffer, managed by MessageHub in key-value pairs, formatted by LogProcessor and then exported to various visualization backends by [LoggerHook](mmengine.hook.LoggerHook). **In most cases, statistical methods of these scalars can be configured through the LogProcessor without understanding the data flow.**  Before diving into the design of the logging system, please read through [logging tutorial](../advanced_tutorials/logging.md) first for familiarizing basic use cases.
 
 ## HistoryBuffer
 
@@ -37,11 +37,10 @@ log_history, count_history = history_buffer.data
 # [2 3] [2 3]
 ```
 
-We can access the trajectory of the data through `history_buffer.data`. Besides, we can also set the maximum length of the HistoryBuffer. When the length of a HistoryBuffer exceeds its maximum length, the earliest few data items will be dropped.
 
-### Update HistoryBuffer
+### HistoryBuffer Update
 
-We can update the HistoryBuffer with `update` method. It accepts 2 arguments, where the first updates `log_history` while the second updates `count_history`.
+We can update the `log_history` and `count_history` through `HistoryBuffer.`update(log_history, count_history)`.
 
 ```python
 history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
@@ -53,7 +52,7 @@ log_history, count_history = history_buffer.data
 # [1, 2, 3, 4, 5] [1, 1, 1, 1, 2]
 ```
 
-### Basic statistical methods
+### Basic Statistical Methods
 
 HistoryBuffer provides some basic statistical methods:
 
@@ -86,11 +85,27 @@ history_buffer.current()
 # 4
 ```
 
-### Register statistical methods
+### Statistical Methods Invoking
 
-In order to make HistoryBuffer extensible, we provide `register_statistics` method for users to register their custom statistical methods.
+Statistical methods can be accessed through `HistoryBuffer.statistics` with method name and arguments. The `name` parameter should be a registered method name (i.e. built-in methods like `min` and `max`), while arguments should be the corresponding method's arguments.
 
-```python
+\```python
+history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
+history_buffer.statistics('mean')
+# 2, as global mean
+history_buffer.statistics('mean', 2)
+# 2.5, as the mean of [2, 3]
+history_buffer.statistics('mean', 2, 3)
+# Error! mismatch arguments given to `mean(window_size)`
+history_buffer.statistics('data')
+# Error! `data` method not registered
+\```
+
+### Statistical Methods Registration
+
+Custom statistical methods can be registered through `@HistoryBuffer.register_statistics`.
+
+\```python
 from mmengine.logging import HistoryBuffer
 import numpy as np
 
@@ -104,27 +119,10 @@ def weighted_mean(self, window_size, weight):
 
 history_buffer = HistoryBuffer([1, 2], [1, 1])
 history_buffer.statistics('weighted_mean', 2, [2, 1])  # get (2 * 1 + 1 * 2) / (1 + 1)
-```
+\```
 
-You can call `statistics` to use registered statistical method by providing method name and extra arguments, as explained below.
 
-### Entry point of statistical methods
-
-We provide a method, signatured as `statistics(name, *args, **kwargs)`, in HistoryBuffer to call any statistical method with any number of arguments for extensibility. The `name` parameter should be a registered method name (i.e. built-in methods like `min` and `max`), while `*args` and `**kwargs` should be corresponding method's arguments.
-
-```python
-history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
-history_buffer.statistics('mean')
-# 2, as global mean
-history_buffer.statistics('mean', 2)
-# 2.5, as the mean of [2, 3]
-history_buffer.statistics('mean', 2, 3)
-# Error! mismatch arguments given to `mean(window_size)`
-history_buffer.statistics('data')
-# Error! `data` method not registered
-```
-
-### Use cases
+### Use Cases
 
 ```Python
 logs = dict(lr=HistoryBuffer(), loss=HistoryBuffer())  # different keys for different logs
