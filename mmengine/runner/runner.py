@@ -281,8 +281,8 @@ class Runner:
         if not (all(item is None for item in training_related)
                 or all(item is not None for item in training_related)):
             raise ValueError(
-                'train_dataloader, train_cfg, and optimizer should be either '
-                'all None or not None, but got '
+                'train_dataloader, train_cfg, and optim_wrapper should be '
+                'either all None or not None, but got '
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optim_wrapper={optim_wrapper}.')
@@ -298,7 +298,7 @@ class Runner:
         # parameters of optimizer, param_scheduler can be None
         if param_scheduler is not None and self.optim_wrapper is None:
             raise ValueError(
-                'param_scheduler should be None when optimizer is None, '
+                'param_scheduler should be None when optim_wrapper is None, '
                 f'but got {param_scheduler}')
 
         # Parse `param_scheduler` to a list or a dict. If `optim_wrapper` is a
