@@ -12,7 +12,7 @@ The learning rate config in MMCV corresponds to the parameter scheduler config i
 
 ### Learning rate warm-up migration
 
-The learning rate warm-up can be achieved through the combination of schedulers by specifying the effective interval `begin` and `end`. There are 3 learning rate warm-up methods in MMCV, namely `'constant'`, `'linear'`, `'exp'`. The corresponding config in MMEngine should be modified as follows:
+The learning rate warm-up can be achieved through the combination of schedulers by specifying the effective range `begin` and `end`. There are 3 learning rate warm-up methods in MMCV, namely `'constant'`, `'linear'`, `'exp'`. The corresponding config in MMEngine should be modified as follows:
 
 #### Constant warm-up
 
@@ -521,9 +521,9 @@ param_scheduler = [
 
 ## Migrate parameter update frequency related config
 
-If you want to update the parameter rate based on iteration while using the epoch-based training loop and setting the effective interval (`begin`, `end`) or period (`T_max`) and other variables according to epoch in MMCV, you need to set `by_epoch` to False.
+If you want to update the parameter rate based on iteration while using the epoch-based training loop and setting the effective range (`begin`, `end`) or period (`T_max`) and other variables according to epoch in MMCV, you need to set `by_epoch` to False.
 
-However, in MMEngine, the `by_epoch` in the config still needs to be set to True. Instead, you need to add `convert_to_iter_based=True` in the config to build a parameter scheduler which updated by iteration, see [Parameter Scheduler Tutorial](../tutorials/param_scheduler.md) for more details.
+However, in MMEngine, the `by_epoch` in the config still needs to be set to True. Instead, you need to add `convert_to_iter_based=True` in the config to build a parameter scheduler which updates by iteration, see [Parameter Scheduler Tutorial](../tutorials/param_scheduler.md) for more details.
 
 Take the migration of CosineAnnealing as an example:
 
