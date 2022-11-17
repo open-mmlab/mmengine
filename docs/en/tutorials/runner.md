@@ -13,12 +13,12 @@ The runner, as an "integrator" in MMEngine, covers all aspects of the framework 
 
 To build your training pipeline with a runner, there are typically two ways to get started:
 
-- Refer to runner's [API documentations](mmengine.runner.Runner) for argument-by-argument configuration
-- Make your custom modifications based on some existing configurations, such as [Getting started in 15 minutes](../get_started/15_minutes.md) and downstream repos like [MMDet](https://github.com/open-mmlab/mmdetection)
+- Refer to runner's [API documentation](mmengine.runner.Runner) for argument-by-argument configuration
+- Make your custom modifications based on some existing configurations, such as [Getting started in 15 minutes](../get_started/15_minutes.md) and downstream repositories like [MMDet](https://github.com/open-mmlab/mmdetection)
 
-Pros and cons lie in both approaches. For the former one, beginners may be lost in a vast number of configurable arguments. For the latter one, beginers may find it hard to get a good reference, since neither an over-simplified nor an over-detailed reference is conductive to them.
+Pros and cons lie in both approaches. For the former one, beginners may be lost in a vast number of configurable arguments. For the latter one, beginners may find it hard to get a good reference, since neither an over-simplified nor an over-detailed reference is conducive to them.
 
-We argue that the key to learn runner is using it as a memo. You should remember its most commonly used arguments and only focus on those less used when in need, since default values usually work fine. In the following we will provide a beginer-friendly example to illustrate most commonly used arguments of the runner, along with advanced guidelines for those less used.
+We argue that the key to learning runner is using it as a memo. You should remember its most commonly used arguments and only focus on those less used when in need, since default values usually work fine. In the following, we will provide a beginner-friendly example to illustrate the most commonly used arguments of the runner, along with advanced guidelines for those less used.
 
 ### A beginer-friendly example
 
@@ -27,7 +27,7 @@ In this tutorial, we hope you can focus more on overall architecture instead of 
 ```
 
 <details>
-<summary>Before running the actual example below, you should first run this piece of code for preparation of model, dataset and metric. However, these implementations are not important in this tutorial and you can simply look through</summary>
+<summary>Before running the actual example below, you should first run this piece of code for the preparation of the model, dataset, and metric. However, these implementations are not important in this tutorial and you can simply look through</summary>
 
 ```python
 import torch
@@ -204,7 +204,7 @@ runner.train()
 
 Really a long piece of code, isn't it! However, if you read through the above example, you may have already understood the training process in general even without knowing any implementation details, thanks to the compactness and readability of runner codes (probably). This is what MMEngine expects: a structured, modular and standardized training process that allows for more reliable reproductions and clearer comparisons.
 
-The above example may lead you to the following confusions:
+The above example may lead you to the following confusion:
 
 <details>
 <summary>There are too many arguments!</summary>
@@ -245,13 +245,13 @@ runner = Runner(
 )
 ```
 
-Similar to the above example, most arguments in the runner accepts both 2 types of inputs. They are conceptually equivalent. The difference is, in the former style, the module (passed in as a `dict`) will be built **in the runner when actually needed**, while in the latter style, the module has been built before passed to the runner. The following figure illustrates the core idea of registry: it maintains the mapping between a module's **build method** and its **registry name**. If you want to learn more about the full usage of registry, you are recommended to read [Registry](../advanced_tutorials/registry.md) tutorial.
+Similar to the above example, most arguments in the runner accept both 2 types of inputs. They are conceptually equivalent. The difference is, in the former style, the module (passed in as a `dict`) will be built **in the runner when actually needed**, while in the latter style, the module has been built before being passed to the runner. The following figure illustrates the core idea of registry: it maintains the mapping between a module's **build method** and its **registry name**. If you want to learn more about the full usage of the registry, you are recommended to read [Registry](../advanced_tutorials/registry.md) tutorial.
 
 ![Runner Registry Illustration](https://user-images.githubusercontent.com/112053249/199191651-44174d17-0fc5-4443-8d15-76f561ec0585.png)
 
 You might still be confused after the explanation. Why should we let the Runner build modules from dicts? What are the benefits? If you have such questions, then we are proud to answer: "Absolutely - no benefits!" In fact, module construction via registry only works to its best advantage when combined with a configuration file. It is still far from the best practice to write as the above example. We provide it here just to make sure you can read and get used to this writing style, which may facilitate your understanding of the actual best practice we will soon talk about - the configuration file. Stay tuned!
 
-If you as a beginner do not immediately understand, it doesn't matter too much, because **manual construction** is still a good choice especially for small scale development and trial-and-error due to its being IDE friendly. However, you are still expected to read and get used to the writing style via registry, so that you can avoid being unnecessarily confused and puzzled in subsequent tutorials.
+If you as a beginner do not immediately understand, it doesn't matter too much, because **manual construction** is still a good choice, especially for small-scale development and trial-and-error due to its being IDE friendly. However, you are still expected to read and get used to the writing style via registry, so that you can avoid being unnecessarily confused and puzzled in subsequent tutorials.
 
 </details>
 
@@ -265,7 +265,7 @@ You will find extensive instructions and examples in those tutorials of the corr
 <details>
 <summary>I come from repos like MMDet/MMCls... Why does this example differ from what I've been exposed to?</summary>
 
-Downstream repos in OpenMMLab have widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
+Downstream repositories in OpenMMLab have widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
 
 </details>
 
@@ -333,7 +333,7 @@ load_from = None
 resume = False
 ```
 
-Given the above config file, we can simply load configurations and run the train pipeline in a few lines of codes as follows:
+Given the above config file, we can simply load configurations and run the training pipeline in a few lines of codes as follows:
 
 ```python
 from mmengine.config import Config
@@ -352,14 +352,14 @@ When using config files, you typically don't need to manually register every mod
 ```
 
 ```{note}
-When using config files, the implementations of your custom modules may be stored in separate files and thus not registered properly, which will lead to errors in build process. You may find solutions in [Registry tutorial](./registry.md) by searching for `custom_imports`.
+When using config files, the implementations of your custom modules may be stored in separate files and thus not registered properly, which will lead to errors in the build process. You may find solutions in [Registry tutorial](./registry.md) by searching for `custom_imports`.
 ```
 
 ```{warnings}
 Although sharing nearly the same codes, `from_cfg` and `__init__` differs in some default values like `env_cfg`.
 ```
 
-Writing config files of the runner has been widely adopted in downstream repos in OpenMMLab projects. It has been a de facto convention and best practice. The config files are far more featured than illustrated above. You can refer to [Config tutorial](../advanced_tutorials/config.md) for more advanced features including key words inheriting and overriding.
+Writing config files of the runner has been widely adopted in downstream repositories in OpenMMLab projects. It has been a de facto convention and best practice. The config files are far more featured than illustrated above. You can refer to [Config tutorial](../advanced_tutorials/config.md) for more advanced features including key words inheriting and overriding.
 
 ## Basic dataflow
 
@@ -461,13 +461,13 @@ Contents in this chapter will not teach you how to use the runner and MMEngine. 
 
 Congratulations for reading through the runner tutorial, a long, long but kind of interesting (hope so) tutorial! Please believe that all of these - this tutorial, the runner, MMEngine - are intended to **make things easier for you**.
 
-The runner is the "manager" of all modules in MMEngine. In the runner, all the distinct modules - whether visible ones like model and dataset, or obscure ones like logging, distributed environment and random seed - are getting organized and scheduled. The runner deals with the complex relationship between different modules and provide you with a clear, easy-to-understand and configurable interface. The benefits of this design are:
+The runner is the "manager" of all modules in MMEngine. In the runner, all the distinct modules - whether visible ones like model and dataset, or obscure ones like logging, distributed environment and random seed - are getting organized and scheduled. The runner deals with the complex relationship between different modules and provides you with a clear, easy-to-understand and configurable interface. The benefits of this design are:
 
-1. You can modify or add your codes without spoiling your whole codebase. For example, you may start with single gpu training and you can always add a few lines of configuration codes to enable multi gpu or even multi node training.
-2. You can continuously benefit from new features without worrying about backward compatibility. Mixed precision training, visualization, state of the art distributed training methods, various device backeds... We will continue to absorb the best suggestions and cutting-edge technologies from the community while ensuring backward compatibility, and provide them to you in a clear interface.
+1. You can modify or add your codes without spoiling your whole codebase. For example, you may start with single GPU training and you can always add a few lines of configuration codes to enable multi GPUs or even multi nodes training.
+2. You can continuously benefit from new features without worrying about backward compatibility. Mixed precision training, visualization, state of the art distributed training methods, various device backends... We will continue to absorb the best suggestions and cutting-edge technologies from the community while ensuring backward compatibility, and provide them to you in a clear interface.
 3. You can focus on your own awesome ideas without being bothered by other annoying and irrelevant details. The default values will handle most cases.
 
-So, MMEngine and the runner will truly make thing easier for you. With only a little effort on migration, your code and experiments will evolve with MMEngine. With a little more effort, the config file system allows you to manage your data, model and experiments more efficiently. Convenience and reliability, these are the aims we strive for.
+So, MMEngine and the runner will truly make things easier for you. With only a little effort on migration, your code and experiments will evolve with MMEngine. With a little more effort, the config file system allows you to manage your data, model and experiments more efficiently. Convenience and reliability, these are the aims we strive for.
 
 The blue one, or the red one - are you prepared to use MMEngine?
 
