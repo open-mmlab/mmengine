@@ -2,7 +2,7 @@
 
 Welcome to the tutorial of runner, the core of MMEngine's user interface!
 
-The runner, as an "integrator" in MMEngine, covers all aspects of the framework and shoulders the responsibility of organizing and scheduling nearly all modules. Therefore, the code and implementation logic in it have to take into account various situations, making it relatively hard to understand. But **don't worry**! In this tutorial, we will leave out some messy details and have a quick overview of commonly used APIs, functionalities and examples. Hopefully this should provide you with a clear and easy-to-understand user interface. After reading through this tutorial, you will be able to:
+The runner, as an "integrator" in MMEngine, covers all aspects of the framework and shoulders the responsibility of organizing and scheduling nearly all modules. Therefore, the code logic in it has to take into account various situations, making it relatively hard to understand. But **don't worry**! In this tutorial, we will leave out some messy details and have a quick overview of commonly used APIs, functionalities and examples. Hopefully this should provide you with a clear and easy-to-understand user interface. After reading through this tutorial, you will be able to:
 
 - Master the common usage and configuration of the runner
 - Learn the best practice - writing config files - of the runner
@@ -263,7 +263,7 @@ You will find extensive instructions and examples in those tutorials of the corr
 </details>
 
 <details>
-<summary>I come from repos like MMDet/MMCls... Why does this example differ from what I've been exposed to?</summary>
+<summary>I come from repositoried like MMDet/MMCls... Why does this example differ from what I've been exposed to?</summary>
 
 Downstream repositories in OpenMMLab have widely adopted the writing style of config files. In the following chapter, we will show the usage of config files, the best practice of the runner in MMEngine, based on the above example with a slight variation.
 
