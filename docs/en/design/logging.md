@@ -14,13 +14,19 @@ Each scalar (losses, learning rates, etc.) during training is encapsulated by Hi
 
 ## HistoryBuffer
 
-MMEngine provides HistoryBuffer class to record the trajectory of training. Scalars such as losses, learning rates and iteration time are saved to corresponding HistoryBuffer as an element in an array. In most cases, HistoryBuffer is used as an internal class. It works with [MessageHub](mmengine.logging.MessageHub), LoggerHook and [LogProcessor](mmengine.runner.LogProcessor) to make training log configurable.
+`HistoryBuffer` records the history of the corresponding scalar such as losses, learning rates, and iteration time in an array. As an internal class, it works with [MessageHub](mmengine.logging.MessageHub), LoggerHook and [LogProcessor](mmengine.runner.LogProcessor) to make training log configurable. Meanwhile, HistoryBuffer can also be used alone, which enables users to manage their training logs and do various statistics in an easy manner.
 
-However, HistoryBuffer can also be used alone, which enables users to manage their training logs and do various statistics in an easy manner. Therefore, we will first introduce the usage of HistoryBuffer in the following section. The association between HistoryBuffer and MessageHub will be introduced later in MessageHub section.
+We will first introduce the usage of HistoryBuffer in the following section. The association between HistoryBuffer and MessageHub will be introduced later in the MessageHub section.
 
-### Initialize HistoryBuffer
+### HistoryBuffer Initialization
 
-HistoryBuffer accepts 2 arguments, named `log_history` and `count_history`, for initialization. `log_history` records the trajectory of the training. For example, if the losses in the previous 3 iterations are 0.3, 0.2, 0.1 respectively, then we have `log_history=[0.3, 0.2, 0.1]`. `count_history` is more indirect. It controls the statistical granularity and is only applied when counting the average. Take the above example, if we count the average loss across iterations, then we have `count_history=[1, 1, 1]`. Instead, if we count the average loss across images with `batch_size=8`, then we have `count_history=[8, 8, 8]`.
+HistoryBuffer accepts `log_history`, `count_history` and `max_length` for initialization.
+
+- `log_history` records the history of the scaler. For example, if the loss in the previous 3 iterations is 0.3, 0.2, 0.1 respectively, there will be `log_history=[0.3, 0.2, 0.1]`.
+- `count_history` controls the statistical granularity and will be used when counting the average. Take the above example, if we count the average loss across iterations, we have `count_history=[1, 1, 1]`. Instead, if we count the average loss across images with `batch_size=8`, then we have `count_history=[8, 8, 8]`.
+- `max_length` controls the maximum length of the history. If the length of `log_history` and `count_history` exceeds `max_length`, the earliest elements will be removed.
+
+Besides, we can access the history of the data through `history_buffer.data`.
 
 ```python
 from mmengine.logging import HistoryBuffer
@@ -37,10 +43,9 @@ log_history, count_history = history_buffer.data
 # [2 3] [2 3]
 ```
 
-
 ### HistoryBuffer Update
 
-We can update the `log_history` and `count_history` through `HistoryBuffer.`update(log_history, count_history)`.
+We can update the `log_history` and `count_history` through `HistoryBuffer.update(log_history, count_history)`.
 
 ```python
 history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
@@ -89,7 +94,7 @@ history_buffer.current()
 
 Statistical methods can be accessed through `HistoryBuffer.statistics` with method name and arguments. The `name` parameter should be a registered method name (i.e. built-in methods like `min` and `max`), while arguments should be the corresponding method's arguments.
 
-\```python
+```python
 history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
 history_buffer.statistics('mean')
 # 2, as global mean
@@ -99,13 +104,13 @@ history_buffer.statistics('mean', 2, 3)
 # Error! mismatch arguments given to `mean(window_size)`
 history_buffer.statistics('data')
 # Error! `data` method not registered
-\```
+```
 
 ### Statistical Methods Registration
 
 Custom statistical methods can be registered through `@HistoryBuffer.register_statistics`.
 
-\```python
+```python
 from mmengine.logging import HistoryBuffer
 import numpy as np
 
@@ -119,8 +124,7 @@ def weighted_mean(self, window_size, weight):
 
 history_buffer = HistoryBuffer([1, 2], [1, 1])
 history_buffer.statistics('weighted_mean', 2, [2, 1])  # get (2 * 1 + 1 * 2) / (1 + 1)
-\```
-
+```
 
 ### Use Cases
 

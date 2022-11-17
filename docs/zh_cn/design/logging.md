@@ -86,6 +86,20 @@ history_buffer.current()
 # 4
 ```
 
+### 统计方法的统一入口
+
+要想支持在配置文件中通过配置 'max'，'min' 等字段来选择日志的统计方式，那么 HistoryBuffer 就需要一个接口来接受 'min'，'max' 等统计方法字符串和相应参数，进而找到对应的统计方法，最后输出统计结果。`statistics(name, *args, **kwargs)` 接口就起到了这个作用。其中 name 是已注册的方法名（已经注册 `min`，`max` 等基本统计方法），`*arg` 和 `**kwarg` 用于接受对应方法的参数。
+
+```python
+history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
+history_buffer.statistics('mean')
+# 2 返回全局均值
+history_buffer.statistics('mean', 2)
+# 2.5 返回 [2, 3] 的均值
+history_buffer.statistics('mean', 2, 3)  # 错误！传入了不匹配的参数
+history_buffer.statistics('data')  # 错误！ data 方法未被注册，无法被调用
+```
+
 ### 注册统计方法
 
 为了保证历史缓冲区的可扩展性，用户可以通过 `register_statistics` 接口注册自定义的统计函数
@@ -107,20 +121,6 @@ history_buffer.statistics('weighted_mean', 2, [2, 1])  # get (2 * 1 + 1 * 2) / (
 ```
 
 用户可以通过 `statistics` 接口，传入方法名和对应参数来调用被注册的函数。
-
-### 统计方法的统一入口
-
-要想支持在配置文件中通过配置 'max'，'min' 等字段来选择日志的统计方式，那么 HistoryBuffer 就需要一个接口来接受 'min'，'max' 等统计方法字符串和相应参数，进而找到对应的统计方法，最后输出统计结果。`statistics(name, *args, **kwargs)` 接口就起到了这个作用。其中 name 是已注册的方法名（已经注册 `min`，`max` 等基本统计方法），`*arg` 和 `**kwarg` 用于接受对应方法的参数。
-
-```python
-history_buffer = HistoryBuffer([1, 2, 3], [1, 1, 1])
-history_buffer.statistics('mean')
-# 2 返回全局均值
-history_buffer.statistics('mean', 2)
-# 2.5 返回 [2, 3] 的均值
-history_buffer.statistics('mean', 2, 3)  # 错误！传入了不匹配的参数
-history_buffer.statistics('data')  # 错误！ data 方法未被注册，无法被调用
-```
 
 ### 使用样例
 
