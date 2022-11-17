@@ -50,7 +50,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosectionlabel',
-    'sphinx_markdown_tables',
     'myst_parser',
     'sphinx_copybutton',
     'sphinx.ext.autodoc.typehints',
@@ -63,7 +62,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable', None),
     'torch': ('https://pytorch.org/docs/stable/', None),
-    'mmcv': ('https://mmcv.readthedocs.io/en/2.x/', None),
+    'mmcv': ('https://mmcv.readthedocs.io/zh_CN/2.x/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
