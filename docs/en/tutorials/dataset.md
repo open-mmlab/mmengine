@@ -4,7 +4,7 @@
 If you have never been exposed to PyTorch's dataset and dataloader, you are recommended to read through [PyTorch official tutorial](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) to get familiar with some basic concepts.
 ```
 
-Datasets and DataLoaders are necessary components in MMEngine's training pipeline. They are conceptually derived from and consistent with PyTorch. Typically, a dataset defines the quantity, parsing and pre-processing of the data, while a dataloader iteratively load data according to settings such as `batch_size`, `shuffle`, `num_workers`, etc. Datasets are encapsuled with dataloaders and they together constitute the data source.
+Datasets and DataLoaders are necessary components in MMEngine's training pipeline. They are conceptually derived from and consistent with PyTorch. Typically, a dataset defines the quantity, parsing and pre-processing of the data, while a dataloader iteratively load data according to settings such as `batch_size`, `shuffle`, `num_workers`, etc. Datasets are encapsulated with dataloaders and they together constitute the data source.
 
 In this tutorial, we will step through their usage in MMEngine runner from outside (dataloader) to inside (dataset) and give some practical examples. After reading through this tutorial, you will be able to:
 
@@ -20,7 +20,7 @@ Dataloaders can be configured in MMEngine's `Runner` with 3 arguments:
 - `val_dataloader`: Used in `Runner.val()` or in `Runner.train()` at regular intervals for model evaluation
 - `test_dataloader`: Used in `Runner.test()` for the final test
 
-MMEngine has full support for PyTorch native `DataLoader` objects. Therefore, you can simply pass your valid, already built dataloaders to the runner, as shown in [getting started in 15 minutes](../get_started/15_minutes.md). Meanwhile, thanks to the [Registry Mechanism](../advanced_tutorials/registry.md) of MMEngine, those arguments also accepts `dict`s as inputs, as illustrated in the following example (referred to as example 1). The keys in the dictionary correspond to arguments in DataLoader's init function.
+MMEngine has full support for PyTorch native `DataLoader` objects. Therefore, you can simply pass your valid, already built dataloaders to the runner, as shown in [getting started in 15 minutes](../get_started/15_minutes.md). Meanwhile, thanks to the [Registry Mechanism](../advanced_tutorials/registry.md) of MMEngine, those arguments also accept `dict`s as inputs, as illustrated in the following example (referred to as example 1). The keys in the dictionary correspond to arguments in DataLoader's init function.
 
 ```python
 runner = Runner(
@@ -45,11 +45,11 @@ For more configurable arguments of the `DataLoader`, please refer to [PyTorch AP
 If you are interested in the details of the building procedure, you may refer to [build_dataloader](mmengine.runner.Runner.build_dataloader)
 ```
 
-You may find example 1 differs from that in [getting started in 15 minutes](../get_started/15_minutes.md) in some arguments. Indeed, due to some obscure conventions in MMEngine, you can't seamlessly switch it to a dict by simply replace `DataLoader` with `dict`. We will discuss the differences between our convention and PyTorch's in the following sections, in case you run into trouble when using config files.
+You may find example 1 differs from that in [getting started in 15 minutes](../get_started/15_minutes.md) in some arguments. Indeed, due to some obscure conventions in MMEngine, you can't seamlessly switch it to a dict by simply replacing `DataLoader` with `dict`. We will discuss the differences between our convention and PyTorch's in the following sections, in case you run into trouble when using config files.
 
 ### sampler and shuffle
 
-One obvious difference is that we add a `sampler` argument to the dict. This is because we **require `sampler` be explicitly specified** when using dict as dataloader. Meanwhile, `shuflle` is also removed from `DataLoader` arguments, because it conflicts with `sampler` in PyTorch, as referred to [PyTorch DataLoader API docs](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
+One obvious difference is that we add a `sampler` argument to the dict. This is because we **require `sampler` to be explicitly specified** when using dict as dataloader. Meanwhile, `shuflle` is also removed from `DataLoader` arguments, because it conflicts with `sampler` in PyTorch, as referred to [PyTorch DataLoader API docs](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
 
 ```{note}
 In fact, `shuffle` is just a notation for convenience in PyTorch implementation. If `shuffle` is set to `True`, the dataloader will automatically switch to `RandomSampler`
@@ -74,7 +74,7 @@ runner = Runner(
 ```
 
 ```{warning}
-The equivalence of the above codes holds only if: 1) you are training with a single process, and 2) no `randomness` argument is passed to the runner. This is due to the fact that `sampler` should be built after distributed environment setup to be correct. The runner will guarantee the correct order and proper random seed by applying lazy initialization techniques, which is only possible for dict inputs. Instead, when building sampler manually, it requires extra work and is highly error-prone. Therefore, the code block above is just for illustration and definitely not recommended. We **strongly suggest passing `sampler` as a `dict`** to avoid potential problems.
+The equivalence of the above codes holds only if: 1) you are training with a single process, and 2) no `randomness` argument is passed to the runner. This is due to the fact that `sampler` should be built after distributed environment setup to be correct. The runner will guarantee the correct order and proper random seed by applying lazy initialization techniques, which is only possible for dict inputs. Instead, when building a sampler manually, it requires extra work and is highly error-prone. Therefore, the code block above is just for illustration and definitely not recommended. We **strongly suggest passing `sampler` as a `dict`** to avoid potential problems.
 ```
 
 ### DefaultSampler
@@ -108,7 +108,7 @@ runner = Runner(
 
 ### The obscure collate_fn
 
-Among the arguments of PyTorch `DataLoader`, `collate_fn` is often ignored by users, but in MMEngine you must pay special attention to it. When you pass the dataloader argument as a dict, MMEngine will use the built-in [pseudo_collate](mmengine.dataset.pseudo_collate) by default, which is significantly different from that, [default_collate](https://pytorch.org/docs/stable/data.html#torch.utils.data.default_collate), in PyTorch. Therefore, when doing migration from PyTorch, you have to explicitly specify the `collate_fn` in config files to be consistent in behavior.
+Among the arguments of PyTorch `DataLoader`, `collate_fn` is often ignored by users, but in MMEngine you must pay special attention to it. When you pass the dataloader argument as a dict, MMEngine will use the built-in [pseudo_collate](mmengine.dataset.pseudo_collate) by default, which is significantly different from that, [default_collate](https://pytorch.org/docs/stable/data.html#torch.utils.data.default_collate), in PyTorch. Therefore, when doing a migration from PyTorch, you have to explicitly specify the `collate_fn` in config files to be consistent in behavior.
 
 ```{note}
 MMEngine uses `pseudo_collate` as default value is mainly due to historical compatibility reasons. You don't have to look deeply into it. You can just know about it and avoid potential errors.
@@ -136,13 +136,13 @@ runner = Runner(
 
 ## Details on dataset
 
-Typically, datasets define the quantity, parsing and pre-processing of the data. It is encapsuled in dataloader, allowing the latter to load data in batches. Since we fully support PyTorch `DataLoader`, the dataset is also compatible. Meanwhile, thanks to the registry mechanism, when a dataloader is given as a dict, its `dataset` argument can also be given as a dict, which enables lazy initialization in the runner. This mechanism allows for writing config files.
+Typically, datasets define the quantity, parsing and pre-processing of the data. It is encapsulated in dataloader, allowing the latter to load data in batches. Since we fully support PyTorch `DataLoader`, the dataset is also compatible. Meanwhile, thanks to the registry mechanism, when a dataloader is given as a dict, its `dataset` argument can also be given as a dict, which enables lazy initialization in the runner. This mechanism allows for writing config files.
 
 ### Use torchvision datasets
 
 `torchvision` provides various open datasets. They can be directly used in MMEngine as shown in [getting started in 15 minutes](../get_started/15_minutes.md), where a `CIFAR10` dataset is used together with torchvision's built-in data transforms.
 
-However, if you want to use the dataset in config files, registration is needed. What's more, if you also requires data transforms in torchvision, some more registrations are required. The following example illustrates how to do it.
+However, if you want to use the dataset in config files, registration is needed. What's more, if you also require data transforms in torchvision, some more registrations are required. The following example illustrates how to do it.
 
 ```python
 import torchvision.transforms as tvt
@@ -186,7 +186,7 @@ runner = Runner(
 ```
 
 ```{note}
-The above example makes extensive use of the registry mechanism and borrows the [Compose](mmengine.dataset.Compose) module from MMEngine. If you urge to use torchvision dataset in your config files, you can refer to it and make some slight modifications. However, we recommend you to borrow datasets from downstream repos such as [MMDet](https://github.com/open-mmlab/mmdetection), [MMCls](https://github.com/open-mmlab/mmclassification), etc. This may give you better experience.
+The above example makes extensive use of the registry mechanism and borrows the [Compose](mmengine.dataset.Compose) module from MMEngine. If you urge to use torchvision dataset in your config files, you can refer to it and make some slight modifications. However, we recommend you borrow datasets from downstream repos such as [MMDet](https://github.com/open-mmlab/mmdetection), [MMCls](https://github.com/open-mmlab/mmclassification), etc. This may give you a better experience.
 ```
 
 ### Customize your dataset
@@ -195,6 +195,6 @@ You are free to customize your own datasets, as you would with PyTorch. You can 
 
 ### Use MMEngine BaseDataset
 
-Apart from directly using PyTorch native `Dataset` class, you can also use MMEngine's built-in class `BaseDataset` to customize your own one, as referred to [BaseDataset tutorial](../advanced_tutorials/basedataset.md). It make some conventions on the format of annotation files, which makes the data interface more unified and multi-task training more convenient. Meanwhile, `BaseDataset` can easily cooperate with built-in [data transforms](../advanced_tutorials/data_element.md) in MMEngine, which release you from writing one from scratch.
+Apart from directly using PyTorch native `Dataset` class, you can also use MMEngine's built-in class `BaseDataset` to customize your own one, as referred to [BaseDataset tutorial](../advanced_tutorials/basedataset.md). It makes some conventions on the format of annotation files, which makes the data interface more unified and multi-task training more convenient. Meanwhile, `BaseDataset` can easily cooperate with built-in [data transforms](../advanced_tutorials/data_element.md) in MMEngine, which releases you from writing one from scratch.
 
 Currently, `BaseDataset` has been widely used in downstream repos of OpenMMLab 2.0 projects.
