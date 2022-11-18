@@ -94,7 +94,7 @@ class TestEarlyStoppingHook:
 
     def test_before_run(self):
         runner = Mock()
-        runner.train_loop = Mock()
+        runner.train_loop = object()
 
         # `train_loop` must contain `stop_training` variable.
         with pytest.raises(AssertionError):
