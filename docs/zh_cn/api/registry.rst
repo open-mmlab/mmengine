@@ -24,3 +24,4 @@ mmengine.registry
    build_scheduler_from_cfg
    count_registered_modules
    traverse_registry_tree
+   init_default_scope

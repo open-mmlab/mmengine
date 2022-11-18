@@ -100,19 +100,18 @@ def init_default_scope(scope: str) -> None:
     Args:
         scope (str): The name of the default scope.
     """
-    if init_default_scope:
-        never_created = DefaultScope.get_current_instance() is None \
-                        or not DefaultScope.check_instance_created(scope)
-        if never_created:
-            DefaultScope.get_instance(scope, scope_name=scope)
-            return
-        current_scope = DefaultScope.get_current_instance()  # type: ignore
-        if current_scope.scope_name != scope:  # type: ignore
-            warnings.warn('The current default scope '  # type: ignore
-                          f'"{current_scope.scope_name}" is not "{scope}", '
-                          '`register_all_modules` will force the current'
-                          f'default scope to be "{scope}". If this is not '
-                          'expected, please set `init_default_scope=False`.')
-            # avoid name conflict
-            new_instance_name = f'{scope}-{datetime.datetime.now()}'
-            DefaultScope.get_instance(new_instance_name, scope_name=scope)
+    never_created = DefaultScope.get_current_instance(
+    ) is None or not DefaultScope.check_instance_created(scope)
+    if never_created:
+        DefaultScope.get_instance(scope, scope_name=scope)
+        return
+    current_scope = DefaultScope.get_current_instance()  # type: ignore
+    if current_scope.scope_name != scope:  # type: ignore
+        warnings.warn('The current default scope '  # type: ignore
+                      f'"{current_scope.scope_name}" is not "{scope}", '
+                      '`register_all_modules` will force the current'
+                      f'default scope to be "{scope}". If this is not '
+                      'expected, please set `init_default_scope=False`.')
+        # avoid name conflict
+        new_instance_name = f'{scope}-{datetime.datetime.now()}'
+        DefaultScope.get_instance(new_instance_name, scope_name=scope)
