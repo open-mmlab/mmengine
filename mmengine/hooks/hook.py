@@ -435,13 +435,13 @@ class Hook:
         # some methods will be triggered in multi stages
         # use this dict to map method to stages.
         method_stages_map = {
-            'before_epoch':
+            '_before_epoch':
             ['before_train_epoch', 'before_val_epoch', 'before_test_epoch'],
-            'after_epoch':
+            '_after_epoch':
             ['after_train_epoch', 'after_val_epoch', 'after_test_epoch'],
-            'before_iter':
+            '_before_iter':
             ['before_train_iter', 'before_val_iter', 'before_test_iter'],
-            'after_iter':
+            '_after_iter':
             ['after_train_iter', 'after_val_iter', 'after_test_iter'],
         }
 
