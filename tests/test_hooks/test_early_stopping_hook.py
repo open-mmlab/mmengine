@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os.path as osp
+import tempfile
+from unittest import TestCase
 from unittest.mock import Mock
 
 import pytest
@@ -9,7 +12,7 @@ from torch.utils.data import Dataset
 
 from mmengine.evaluator import BaseMetric
 from mmengine.hooks import EarlyStoppingHook
-from mmengine.logging import MessageHub
+from mmengine.logging import MMLogger
 from mmengine.model import BaseModel
 from mmengine.optim import OptimWrapper
 from mmengine.runner import Runner
@@ -75,11 +78,20 @@ def get_mock_runner():
     runner = Mock()
     runner.train_loop = Mock()
     runner.train_loop.stop_training = False
-    runner.message_hub = MessageHub.get_instance('test_after_val_epoch')
     return runner
 
 
-class TestEarlyStoppingHook:
+class TestEarlyStoppingHook(TestCase):
+
+    def setUp(self):
+        logging.shutdown()
+
+    def tearDown(self):
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        MMLogger._instance_dict.clear()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_dir.cleanup()
 
     def test_init(self):
 
@@ -101,7 +113,7 @@ class TestEarlyStoppingHook:
             hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
             hook.before_run(runner)
 
-    def test_after_val_epoch(self, tmp_path):
+    def test_after_val_epoch(self):
         runner = get_mock_runner()
 
         # if `monitor` does not match, skip the hook.
@@ -155,9 +167,9 @@ class TestEarlyStoppingHook:
             hook.after_val_epoch(runner, metric)
         assert not runner.train_loop.stop_training
 
-    def test_with_runner(self, tmp_path):
+    def test_with_runner(self):
         max_epoch = 10
-        work_dir = osp.join(str(tmp_path), 'runner_test')
+        work_dir = osp.join(self.temp_dir.name, 'runner_test')
         early_stop_cfg = dict(
             type='EarlyStoppingHook',
             monitor='test/acc',
@@ -183,6 +195,7 @@ class TestEarlyStoppingHook:
             train_cfg=dict(
                 by_epoch=True, max_epochs=max_epoch, val_interval=1),
             val_cfg=dict(),
-            default_hooks=dict(early_stop=early_stop_cfg))
+            custom_hooks=[early_stop_cfg],
+            experiment_name='earlystop_test')
         runner.train()
         assert runner.epoch == 7
