@@ -51,7 +51,7 @@ class DummyDataset(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-class TriangleMetric(BaseMetric):
+class DummyMetric(BaseMetric):
 
     default_prefix: str = 'test'
 
@@ -79,7 +79,7 @@ def get_mock_runner():
     return runner
 
 
-class TestCheckpointHook:
+class TestEarlyStoppingHook:
 
     def test_init(self):
 
@@ -91,6 +91,15 @@ class TestCheckpointHook:
 
         with pytest.raises(AssertionError):
             EarlyStoppingHook(metric='accuracy/top1', rule='the world')
+
+    def test_before_run(self):
+        runner = Mock()
+        runner.train_loop = Mock()
+
+        # `train_loop` must contain `stop_training` variable.
+        with pytest.raises(AssertionError):
+            hook = EarlyStoppingHook(metric='accuracy/top1', rule='greater')
+            hook.before_run(runner)
 
     def test_after_val_epoch(self, tmp_path):
         runner = get_mock_runner()
@@ -149,7 +158,7 @@ class TestCheckpointHook:
     def test_with_runner(self, tmp_path):
         max_epoch = 10
         work_dir = osp.join(str(tmp_path), 'runner_test')
-        checkpoint_cfg = dict(
+        early_stop_cfg = dict(
             type='EarlyStoppingHook',
             metric='test/acc',
             rule='greater',
@@ -168,12 +177,12 @@ class TestCheckpointHook:
                 sampler=dict(type='DefaultSampler', shuffle=False),
                 batch_size=3,
                 num_workers=0),
-            val_evaluator=dict(type=TriangleMetric, length=max_epoch),
+            val_evaluator=dict(type=DummyMetric, length=max_epoch),
             optim_wrapper=OptimWrapper(
                 torch.optim.Adam(ToyModel().parameters())),
             train_cfg=dict(
                 by_epoch=True, max_epochs=max_epoch, val_interval=1),
             val_cfg=dict(),
-            default_hooks=dict(checkpoint=checkpoint_cfg))
+            default_hooks=dict(early_stop=early_stop_cfg))
         runner.train()
         assert runner.epoch == 7

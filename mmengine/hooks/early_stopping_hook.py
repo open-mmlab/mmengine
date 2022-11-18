@@ -56,6 +56,16 @@ class EarlyStoppingHook(Hook):
 
         self.pool_values: List[float] = []
 
+    def before_run(self, runner) -> None:
+        """Check `stop_training` variable in `runner.train_loop`.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+
+        assert hasattr(runner.train_loop, 'stop_training'), \
+            '`train_loop` should contain `stop_training` variable.'
+
     def after_val_epoch(self, runner, metrics):
         """Decide whether to stop the training process.
 
