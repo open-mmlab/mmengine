@@ -358,7 +358,7 @@ class TestApexOptimWrapper(TestCase):
         self.model, self.optimizer = apex_amp.initialize(
             self.model, self.optimizer, opt_level='O1')
 
-        apex_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer)
         # Test load from optimizer
         optimizer = SGD(self.model.parameters(), lr=0.1)
         apex_optim_wrapper.load_state_dict(optimizer.state_dict())
@@ -366,8 +366,8 @@ class TestApexOptimWrapper(TestCase):
         self.assertDictEqual(optimizer.state_dict(),
                              apex_optim_wrapper.optimizer.state_dict())
         # Test load from optim_wrapper
-        apex_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
-        apex_optim_wrapper_ = AmpOptimWrapper(
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer)
+        apex_optim_wrapper_ = ApexOptimWrapper(
             optimizer=SGD(self.model.parameters(), lr=0.1))
         apex_optim_wrapper_.load_state_dict(apex_optim_wrapper.state_dict())
         self.assertDictEqual(apex_optim_wrapper.optimizer.state_dict(),
