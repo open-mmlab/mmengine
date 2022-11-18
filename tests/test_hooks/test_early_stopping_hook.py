@@ -83,14 +83,14 @@ class TestEarlyStoppingHook:
 
     def test_init(self):
 
-        hook = EarlyStoppingHook(metric='acc')
+        hook = EarlyStoppingHook(monitor='acc')
         assert hook.rule == 'greater'
 
-        hook = EarlyStoppingHook(metric='loss')
+        hook = EarlyStoppingHook(monitor='loss')
         assert hook.rule == 'less'
 
         with pytest.raises(AssertionError):
-            EarlyStoppingHook(metric='accuracy/top1', rule='the world')
+            EarlyStoppingHook(monitor='accuracy/top1', rule='the world')
 
     def test_before_run(self):
         runner = Mock()
@@ -98,23 +98,23 @@ class TestEarlyStoppingHook:
 
         # `train_loop` must contain `stop_training` variable.
         with pytest.raises(AssertionError):
-            hook = EarlyStoppingHook(metric='accuracy/top1', rule='greater')
+            hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
             hook.before_run(runner)
 
     def test_after_val_epoch(self, tmp_path):
         runner = get_mock_runner()
 
-        # if `metric` does not match, skip the hook.
+        # if `monitor` does not match, skip the hook.
         with pytest.warns(UserWarning) as record_warnings:
             metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
-            hook = EarlyStoppingHook(metric='acc', rule='greater')
+            hook = EarlyStoppingHook(monitor='acc', rule='greater')
             hook.after_val_epoch(runner, metrics)
 
         # Since there will be many warnings thrown, we just need to check
         # if the expected exceptions are thrown
         expected_message = (
             f'Skip early stopping process since the evaluation results '
-            f'({metrics.keys()}) do not include `metric` ({hook.metric}).')
+            f'({metrics.keys()}) do not include `monitor` ({hook.monitor}).')
         for warning in record_warnings:
             if str(warning.message) == expected_message:
                 break
@@ -124,7 +124,7 @@ class TestEarlyStoppingHook:
         # Check largest 5 values
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i / 10.} for i in range(8)]
-        hook = EarlyStoppingHook(metric='accuracy/top1', rule='greater')
+        hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert all([i / 10 in hook.pool_values for i in range(3, 8)])
@@ -132,7 +132,7 @@ class TestEarlyStoppingHook:
         # Check smalleast 3 values
         runner = get_mock_runner()
         metrics = [{'loss': i / 10.} for i in range(8)]
-        hook = EarlyStoppingHook(metric='loss', pool_size=3)
+        hook = EarlyStoppingHook(monitor='loss', pool_size=3)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert all([i / 10 in hook.pool_values for i in range(3)])
@@ -141,7 +141,7 @@ class TestEarlyStoppingHook:
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            metric='accuracy/top1', rule='greater', delta=1)
+            monitor='accuracy/top1', rule='greater', delta=1)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert runner.train_loop.stop_training
@@ -150,7 +150,7 @@ class TestEarlyStoppingHook:
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            metric='accuracy/top1', rule='greater', delta=1, patience=5)
+            monitor='accuracy/top1', rule='greater', delta=1, patience=5)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert not runner.train_loop.stop_training
@@ -160,7 +160,7 @@ class TestEarlyStoppingHook:
         work_dir = osp.join(str(tmp_path), 'runner_test')
         early_stop_cfg = dict(
             type='EarlyStoppingHook',
-            metric='test/acc',
+            monitor='test/acc',
             rule='greater',
             delta=0.4,
         )
