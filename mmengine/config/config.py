@@ -285,6 +285,12 @@ class Config:
             regexp = r'\{\{\s*' + str(key) + r'\s*\}\}'
             value = value.replace('\\', '/')
             config_file = re.sub(regexp, value, config_file)
+        # substitute environment variables
+        regexp = r'\{\{\s*\$(.+)\s*\:\s*(.*)\s*\}\}'
+        keys = re.findall(regexp, config_file)
+        for var_name, value in keys:
+            value = os.environ.get(var_name, default=value)
+            config_file = re.sub(regexp, value, config_file)
         with open(temp_config_name, 'w', encoding='utf-8') as tmp_config_file:
             tmp_config_file.write(config_file)
 
