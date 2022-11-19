@@ -1,6 +1,6 @@
 # 初始化
 
-基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。`MMEngine` 在此基础上抽象出基础模块（BaseModule）,让我们能够通过传参或配置文件来选择模型的初始化方式。此外，`MMEngine` 还提供了一系列模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
+基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。MMEngine 在此基础上抽象出基础模块（BaseModule）,让我们能够通过传参或配置文件来选择模型的初始化方式。此外，`MMEngine` 还提供了一系列模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
 
 ## 配置式初始化
 
@@ -60,7 +60,7 @@ toy_net.init_weights()
 和使用 `PretrainedInit` 初始化器类似，如果我们想对卷积做 `Kaiming` 初始化，需要令 `init_cfg=dict(type='Kaiming', layer='Conv2d')`。这样模型初始化时，就会以 `Kaiming` 初始化的方式来初始化类型为 `Conv2d` 的模块。
 
 有时候我们可能需要用不同的初始化方式去初始化不同类型的模块，例如对卷积使用 `Kaiming` 初始化，对线性层使用 `Xavier`
-初始化。此时我们可以使 `init_cfg` 成为一个列表，，其中的每一个元素都表示对某些层使用特定的初始化方式。
+初始化。此时我们可以使 `init_cfg` 成为一个列表，其中的每一个元素都表示对某些层使用特定的初始化方式。
 
 ```python
 import torch.nn as nn
@@ -129,7 +129,7 @@ conv.bias - torch.Size([1]):
 KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 ```
 
-#### 更细粒度的初始化
+### 更细粒度的初始化
 
 有时同一类型的不同模块有不同初始化方式，例如现在有 `conv1` 和 `conv2` 两个模块，他们的类型均为 `Conv2d`
 。我们需要对 conv1 进行 `Kaiming` 初始化，conv2 进行 `Xavier` 初始化，则可以通过配置 `override` 参数来满足这样的需求：
@@ -148,7 +148,7 @@ class ToyNet(BaseModule):
         self.conv2 = nn.Conv2d(1, 1, 1)
 
 
-# 对 conv1 做卷积初始化，对 从 conv2 做 Xavier 初始化
+# 对 conv1 做 Kaiming 初始化，对 从 conv2 做 Xavier 初始化
 toy_net = ToyNet(
     init_cfg=[
         dict(
@@ -190,7 +190,8 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 假设我们定义了以下模块：
 
 - 继承自 `nn.Module` 的 `ToyConv`，实现了 `init_weights` 方法，让 `custom_weight` 初始化为 1，`custom_bias` 初始化为 0
-- 继承自模块基类的模型 `ToyNet`，且含有 `ToyConv` 子模块。
+
+- 继承自模块基类的模型 `ToyNet`，且含有 `ToyConv` 子模块
 
 我们在调用 `ToyNet` 的 `init_weights` 方法时，会链式的调用的子模块 `ToyConv` 的 `init_weights` 方法，实现自定义模块的初始化。
 
