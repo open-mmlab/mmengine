@@ -84,13 +84,13 @@ def get_mock_runner():
 class TestEarlyStoppingHook(TestCase):
 
     def setUp(self):
-        logging.shutdown()
+        self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
+        logging.shutdown()
         MMLogger._instance_dict.clear()
-        self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_dir.cleanup()
 
     def test_init(self):
