@@ -135,7 +135,7 @@ KaimingInit: a=0, mode=fan_out, nonlinearity=relu, distribution =normal, bias=0
 
 ### More fine-grained initialization
 
-Sometimes we need to initialize the same type of module with different type of initialization. For example, we've defined `conv1` and `conv2` submodules, and we want to initialize the `conv1` with `Kaiming` initialization and initialize the `conv2` with `Xavier` initialization. We could configure the init_cfg with `override`:
+Sometimes we need to initialize the same type of module with different types of initialization. For example, we've defined `conv1` and `conv2` submodules, and we want to initialize the `conv1` with `Kaiming` initialization and `conv2` with `Xavier` initialization. We could configure the init_cfg with `override`:
 
 ```python
 import torch.nn as nn
