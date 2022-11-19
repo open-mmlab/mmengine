@@ -286,7 +286,7 @@ class Config:
             value = value.replace('\\', '/')
             config_file = re.sub(regexp, value, config_file)
         # substitute environment variables
-        regexp = r'\{\{\s*\$(.+)\s*\:\s*(.*)\s*\}\}'
+        regexp = r'\{\{\s*\$(\S+)\s*\:\s*(\S*)\s*\}\}'
         keys = re.findall(regexp, config_file)
         for var_name, value in keys:
             value = os.environ.get(var_name, default=value)

@@ -503,11 +503,17 @@ class TestConfig:
         assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
         assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
 
+        # test environment variable replacing function
+        assert Config._file2dict(cfg_file)[0]['item4'] == '/unit/test'
+        os.environ['MMENGINE'] = '/new/unit/test'
+        assert Config._file2dict(cfg_file)[0]['item4'] == '/new/unit/test'
+
         # test `use_predefined_variable=False`
         cfg_dict_ori = dict(
             item1='{{fileBasename}}',
             item2='{{ fileDirname}}',
-            item3='abc_{{ fileBasenameNoExtension }}')
+            item3='abc_{{ fileBasenameNoExtension }}',
+            item4='{{ $MMENGINE:/unit/test }}')
 
         assert Config._file2dict(cfg_file,
                                  False)[0]['item1'] == cfg_dict_ori['item1']
@@ -515,6 +521,8 @@ class TestConfig:
                                  False)[0]['item2'] == cfg_dict_ori['item2']
         assert Config._file2dict(cfg_file,
                                  False)[0]['item3'] == cfg_dict_ori['item3']
+        assert Config._file2dict(cfg_file,
+                                 False)[0]['item4'] == cfg_dict_ori['item4']
 
         # test test_predefined_var.yaml
         cfg_file = osp.join(self.data_path,
