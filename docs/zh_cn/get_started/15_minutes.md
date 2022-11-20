@@ -235,7 +235,7 @@ System environment:
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
 
-基于 PyTorch 训练流程和基于 MMEngine 的训练流程对比如下：
+基于 PyTorch 和基于 MMEngine 的训练流程对比如下：
 
 ![output](https://user-images.githubusercontent.com/57566630/202919267-4e2ffdfe-9163-4c3c-9c9b-c82c1b69f5bc.gif)
 
