@@ -238,4 +238,8 @@ System environment:
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
 
+The corresponding implementation of PyTorch and MMEngine:
+
+![mmengine_pytorch](https://user-images.githubusercontent.com/57566630/202918506-4819b256-8f67-49b1-92b8-b42db32b747f.gif)
+
 In addition to these basic components, you can also use **executor** to easily combine and configure various training techniques, such as enabling mixed-precision training and gradient accumulation (see [OptimWrapper](../tutorials/optim_wrapper.md)), configuring the learning rate decay curve (see [Metrics & Evaluator](../tutorials/evaluation.md)), and etc.
