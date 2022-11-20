@@ -240,6 +240,6 @@ System environment:
 
 The corresponding implementation of PyTorch and MMEngine:
 
-![mmengine_pytorch](https://user-images.githubusercontent.com/57566630/202918506-4819b256-8f67-49b1-92b8-b42db32b747f.gif)
+![output](https://user-images.githubusercontent.com/57566630/202919267-4e2ffdfe-9163-4c3c-9c9b-c82c1b69f5bc.gif)
 
 In addition to these basic components, you can also use **executor** to easily combine and configure various training techniques, such as enabling mixed-precision training and gradient accumulation (see [OptimWrapper](../tutorials/optim_wrapper.md)), configuring the learning rate decay curve (see [Metrics & Evaluator](../tutorials/evaluation.md)), and etc.
