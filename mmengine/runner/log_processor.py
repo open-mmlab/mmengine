@@ -141,11 +141,11 @@ class LogProcessor:
         #  val/test: Epoch [5/2000] ... (divided by length of dataloader)
         if self.by_epoch:
             # Align the iteration log:
-            # Epoch(train)  [9][010/270]
-            # ...               ||| |||
-            # Epoch(train)  [9][100/270]
-            max_dataloader_len = len(current_loop.dataloader)
-            max_str_len = len(str(max_dataloader_len))
+            # Epoch(train)  [  9][010/270]
+            # ...                 ||| |||
+            # Epoch(train)  [ 10][100/270]
+            dataloader_len = len(current_loop.dataloader)
+            max_str_len = len(str(dataloader_len))
             cur_iter_str = str(cur_iter).rjust(max_str_len)
 
             if mode in ['train', 'val']:
@@ -155,14 +155,16 @@ class LogProcessor:
                 # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
                 max_epochs = runner.max_epochs
+                # 3 means the three characters: "[", "]",  and " " occupied in
+                # " [{max_epochs}]"
                 max_str_len = len(str(max_epochs)) + 3
                 cur_epoch_str = str(f'[{cur_epoch}]').rjust(max_str_len, ' ')
                 tag['epoch'] = cur_epoch
                 log_str = (f'Epoch({mode}){cur_epoch_str}'
-                           f'[{cur_iter_str}/{max_dataloader_len}]  ')
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
             else:
                 log_str = (f'Epoch({mode}) '
-                           f'[{cur_iter_str}/{max_dataloader_len}]  ')
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
                 max_str_len = len(str(runner.max_iters))
@@ -170,8 +172,8 @@ class LogProcessor:
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter_str}/{runner.max_iters}]  ')
             else:
-                max_dataloader_len = len(current_loop.dataloader)
-                max_str_len = len(str(max_dataloader_len))
+                dataloader_len = len(current_loop.dataloader)
+                max_str_len = len(str(dataloader_len))
                 cur_iter_str = str(batch_idx + 1).rjust(max_str_len)
                 log_str = (f'Iter({mode}) [{cur_iter_str}'
                            f'/{len(current_loop.dataloader)}]  ')
