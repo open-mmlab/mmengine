@@ -84,9 +84,9 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-        save_begin (int): Start saving the number of epochs or
-            epochs or iterations of model weights. Defaults to 1.
-            New in v0.3.0.
+        save_begin (int): The number of iterations or epochs when starting to
+            save the checkpoint. Defaults to 1.
+            New in v0.4.0.
 
     Examples:
         >>> # Save best based on single metric
@@ -354,7 +354,6 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-
         if self.by_epoch:
             ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
         else:
