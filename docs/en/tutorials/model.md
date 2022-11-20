@@ -27,7 +27,7 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-In [runner tutorial](../tutorials/runner.md), we simply mentioned the relationship between DataLoader, model and evaluator, and introduced the concept of `data_preprocessor`, and you may have a certain understanding of the model. However, during the running of Runner, the complexity of the functions and relationships of model and is much more than the above pseudo-code.
+In [runner tutorial](../tutorials/runner.md), we simply mentioned the relationship between DataLoader, model and evaluator, and introduced the concept of `data_preprocessor`. You may have a certain understanding of the model. However, during the running of Runner, the situation is far more complex than the above pseudo-code.
 
 In order to focus your attention on the algorithm itself, and ignore the complex relationship between the model, DataLoader and evaluator, we designed [BaseModel](mmengine.model.BaseModel). In most cases, the only thing you need to do is to make your model inherit from `BaseModel`, and implement the `forward` as required to perform the training, testing, and validation process.
 
