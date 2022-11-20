@@ -532,31 +532,3 @@ class CheckpointHook(Hook):
             self.rules.append(rule)
 
         self.key_indicators = key_indicators
-
-    def every_n_train_iters(self, runner, n: int) -> bool:
-        """Test whether current training iteration can be evenly divided by n.
-
-        Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
-            n (int): Whether current iteration can be evenly divided by n.
-
-        Returns:
-            bool: Return True if the current iteration can be evenly divided
-            by n, otherwise False.
-        """
-        return (runner.iter + 1 - self.save_begin) % n == 0 if n > 0 else False
-
-    def every_n_epochs(self, runner, n: int) -> bool:
-        """Test whether current epoch can be evenly divided by n.
-
-        Args:
-            runner (Runner): The runner of the training, validation or testing
-                process.
-            n (int): Whether current epoch can be evenly divided by n.
-
-        Returns:
-            bool: Whether current epoch can be evenly divided by n.
-        """
-        return (runner.epoch + 1 -
-                self.save_begin) % n == 0 if n > 0 else False

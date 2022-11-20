@@ -357,7 +357,7 @@ class TestCheckpointHook:
         runner = Mock()
         work_dir = str(tmp_path)
         runner.work_dir = tmp_path
-        runner.epoch = 10
+        runner.epoch = 9
         runner.model = Mock()
         runner.message_hub = MessageHub.get_instance('test_after_train_epoch')
 
@@ -365,21 +365,21 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_epoch(runner)
-        assert (runner.epoch + 1 - checkpoint_hook.save_begin) % 2 == 0
+        assert (runner.epoch + 1) % 2 == 0
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
             runner.message_hub.get_info('last_ckpt') == \
-               osp.join(work_dir, 'epoch_11.pth')
+               osp.join(work_dir, 'epoch_10.pth')
         last_ckpt_path = osp.join(work_dir, 'last_checkpoint')
         assert osp.isfile(last_ckpt_path)
         with open(last_ckpt_path) as f:
             filepath = f.read()
-            assert filepath == osp.join(work_dir, 'epoch_11.pth')
+            assert filepath == osp.join(work_dir, 'epoch_10.pth')
 
         # epoch can not be evenly divided by 2
-        runner.epoch = 9
+        runner.epoch = 10
         checkpoint_hook.after_train_epoch(runner)
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') != \
+            runner.message_hub.get_info('last_ckpt') == \
                osp.join(work_dir, 'epoch_10.pth')
 
         # by epoch is False
@@ -391,21 +391,20 @@ class TestCheckpointHook:
         assert 'last_ckpt' not in runner.message_hub.runtime_info
 
         # # max_keep_ckpts > 0
-        runner.epoch = 10
         runner.work_dir = work_dir
-        os.system(f'touch {work_dir}/epoch_9.pth')
+        os.system(f'touch {work_dir}/epoch_8.pth')
         checkpoint_hook = CheckpointHook(
             interval=2, by_epoch=True, max_keep_ckpts=1)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_epoch(runner)
-        assert (runner.epoch + 1 - checkpoint_hook.save_begin) % 2 == 0
-        assert not os.path.exists(f'{work_dir}/epoch_9.pth')
+        assert (runner.epoch + 1) % 2 == 0
+        assert not os.path.exists(f'{work_dir}/epoch_8.pth')
 
         # save_checkpoint of runner should be called with expected arguments
         runner = Mock()
         work_dir = str(tmp_path)
         runner.work_dir = tmp_path
-        runner.epoch = 0
+        runner.epoch = 1
         runner.message_hub = MessageHub.get_instance('test_after_train_epoch2')
 
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=True)
@@ -414,7 +413,7 @@ class TestCheckpointHook:
 
         runner.save_checkpoint.assert_called_once_with(
             runner.work_dir,
-            'epoch_1.pth',
+            'epoch_2.pth',
             None,
             backend_args=None,
             by_epoch=True,
@@ -425,8 +424,8 @@ class TestCheckpointHook:
         work_dir = str(tmp_path)
         runner = Mock()
         runner.work_dir = str(work_dir)
-        runner.iter = 10
-        batch_idx = 10
+        runner.iter = 9
+        batch_idx = 9
         runner.model = Mock()
         runner.message_hub = MessageHub.get_instance('test_after_train_iter')
 
@@ -440,27 +439,27 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(interval=2, by_epoch=False)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=batch_idx)
-        assert (runner.iter + 1 - checkpoint_hook.save_last) % 2 == 0
+        assert (runner.iter + 1) % 2 == 0
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
             runner.message_hub.get_info('last_ckpt') == \
-               osp.join(work_dir, 'iter_11.pth')
+               osp.join(work_dir, 'iter_10.pth')
 
         # epoch can not be evenly divided by 2
-        runner.iter = 9
+        runner.iter = 10
         checkpoint_hook.after_train_iter(runner, batch_idx=runner.iter)
         assert 'last_ckpt' in runner.message_hub.runtime_info and \
-            runner.message_hub.get_info('last_ckpt') != \
+            runner.message_hub.get_info('last_ckpt') == \
                osp.join(work_dir, 'iter_10.pth')
 
         # max_keep_ckpts > 0
-        runner.iter = 10
+        runner.iter = 9
         runner.work_dir = work_dir
-        os.system(f'touch {osp.join(work_dir, "iter_9.pth")}')
+        os.system(f'touch {osp.join(work_dir, "iter_8.pth")}')
         checkpoint_hook = CheckpointHook(
             interval=2, by_epoch=False, max_keep_ckpts=1)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=runner.iter)
-        assert not os.path.exists(f'{work_dir}/iter_9.pth')
+        assert not os.path.exists(f'{work_dir}/iter_8.pth')
 
     def test_with_runner(self, tmp_path):
         max_epoch = 10
@@ -499,8 +498,8 @@ class TestCheckpointHook:
             path = osp.join(work_dir, tmpl.format(epoch))
             # save ckpt every 2 epoch since from epoch 5. Also save the
             # last ckpt
-            if epoch >= save_begin and ((epoch - save_begin) % save_interval
-                                        == 0 or epoch == max_epoch):
+            if epoch >= save_begin and (epoch % save_interval == 0
+                                        or epoch == max_epoch):
                 assert osp.exists(path)
             else:
                 assert not osp.isfile(path=path)
