@@ -154,7 +154,7 @@ class LogProcessor:
                 # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
                 max_epochs = runner.max_epochs
-                # 3 means the three characters: "[", "]",  and " " occupied in
+                # 3 means the three characters: "[", "]", and " " occupied in
                 # " [{max_epochs}]"
                 cur_epoch_str = f'[{cur_epoch}]'.rjust(
                     len(str(max_epochs)) + 3, ' ')
