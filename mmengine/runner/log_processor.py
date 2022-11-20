@@ -145,8 +145,7 @@ class LogProcessor:
             # ...                 ||| |||
             # Epoch(train)  [ 10][100/270]
             dataloader_len = len(current_loop.dataloader)
-            max_str_len = len(str(dataloader_len))
-            cur_iter_str = str(cur_iter).rjust(max_str_len)
+            cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
 
             if mode in ['train', 'val']:
                 # Right Align the epoch log:
@@ -157,8 +156,8 @@ class LogProcessor:
                 max_epochs = runner.max_epochs
                 # 3 means the three characters: "[", "]",  and " " occupied in
                 # " [{max_epochs}]"
-                max_str_len = len(str(max_epochs)) + 3
-                cur_epoch_str = str(f'[{cur_epoch}]').rjust(max_str_len, ' ')
+                cur_epoch_str = f'[{cur_epoch}]'.rjust(
+                    len(str(max_epochs)) + 3, ' ')
                 tag['epoch'] = cur_epoch
                 log_str = (f'Epoch({mode}){cur_epoch_str}'
                            f'[{cur_iter_str}/{dataloader_len}]  ')
@@ -167,14 +166,13 @@ class LogProcessor:
                            f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
-                max_str_len = len(str(runner.max_iters))
-                cur_iter_str = str(cur_iter).rjust(max_str_len)
+                cur_iter_str = str(cur_iter).rjust(len(str(runner.max_iters)))
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter_str}/{runner.max_iters}]  ')
             else:
                 dataloader_len = len(current_loop.dataloader)
-                max_str_len = len(str(dataloader_len))
-                cur_iter_str = str(batch_idx + 1).rjust(max_str_len)
+                cur_iter_str = str(batch_idx + 1).rjust(
+                    len(str(dataloader_len)))
                 log_str = (f'Iter({mode}) [{cur_iter_str}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
