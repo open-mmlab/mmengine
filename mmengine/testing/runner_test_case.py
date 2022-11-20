@@ -84,8 +84,8 @@ class RunnerTestCase(TestCase):
 
     `RunnerTestCase` will do the following things:
 
-    1. Registers a toy model, a toy metric, and a toy dataset, which can be used to
-       run the `Runner` successfully.
+    1. Registers a toy model, a toy metric, and a toy dataset, which can be
+       used to run the `Runner` successfully.
     2. Provides epoch based and iteration based cfg to build runner.
     3. Provides `build_runner` method to build runner easily.
     4. Clean the global variable used by the runner.
