@@ -15,7 +15,7 @@ import torch
 from torch.optim import SGD
 import torch.nn as nn
 import torch.nn.functional as F
-****
+
 inputs = [torch.zeros(10, 1, 1)] * 10
 targets = [torch.ones(10, 1, 1)] * 10
 model = nn.Linear(1, 1)
@@ -81,7 +81,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185606060-2fdebd90-c17a-4a8c-aaf1-540d47975c59.png)
 
-开合混合精度训练需要使用 `AmpOptimWrapper`，他的 optim_context 接口类似 `autocast`，会开启混合精度训练的上下文。除此之外他还能加速分布式训练时的梯度累加，这个我们会在下一个示例中介绍
+开启混合精度训练需要使用 `AmpOptimWrapper`，他的 optim_context 接口类似 `autocast`，会开启混合精度训练的上下文。除此之外他还能加速分布式训练时的梯度累加，这个我们会在下一个示例中介绍。
 
 **3.1 基于 Pytorch 的 SGD 优化器实现混合精度训练和梯度累加**
 
@@ -114,9 +114,9 @@ for input, target in zip(inputs, targets):
 
 优化器封装同样提供了更细粒度的接口，方便用户实现一些自定义的参数更新逻辑：
 
-- `backward`：传入损失，用于计算参数梯度，。
-- `step`： 同 `optimizer.step`，用于更新参数。
-- `zero_grad`： 同 `optimizer.zero_grad`，用于参数的梯度。
+- `backward`：传入损失，用于计算参数梯度。
+- `step`：同 `optimizer.step`，用于更新参数。
+- `zero_grad`：同 `optimizer.zero_grad`，用于参数的梯度。
 
 我们可以使用上述接口实现和 Pytorch 优化器相同的参数更新逻辑：
 
@@ -144,9 +144,9 @@ optim_wrapper = AmpOptimWrapper(
     optimizer=optimizer, clip_grad=dict(clip_value=0.2))
 ```
 
-### 获取学习率/动量：
+### 获取学习率/动量
 
-优化器封装提供了 `get_lr` 和 `get_momentum` 接口用于获取优化器的一个参数组的学习率
+优化器封装提供了 `get_lr` 和 `get_momentum` 接口用于获取优化器的一个参数组的学习率：
 
 ```python
 import torch.nn as nn
@@ -158,7 +158,7 @@ model = nn.Linear(1, 1)
 optimizer = SGD(model.parameters(), lr=0.01)
 optim_wrapper = OptimWrapper(optimizer)
 
-print(optimizer.param_groups[0]['lr'])  # -1.01
+print(optimizer.param_groups[0]['lr'])  # 0.01
 print(optimizer.param_groups[0]['momentum'])  # 0
 print(optim_wrapper.get_lr())  # {'lr': [0.01]}
 print(optim_wrapper.get_momentum())  # {'momentum': [0]}
@@ -183,21 +183,21 @@ from mmengine.optim import OptimWrapper, AmpOptimWrapper
 model = nn.Linear(1, 1)
 optimizer = SGD(model.parameters(), lr=0.01)
 
-optim_wapper = OptimWrapper(optimizer=optimizer)
-amp_optim_wapper = AmpOptimWrapper(optimizer=optimizer)
+optim_wrapper = OptimWrapper(optimizer=optimizer)
+amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
 
 # 导出状态字典
-optim_state_dict = optim_wapper.state_dict()
-amp_optim_state_dict = amp_optim_wapper.state_dict()
+optim_state_dict = optim_wrapper.state_dict()
+amp_optim_state_dict = amp_optim_wrapper.state_dict()
 
 print(optim_state_dict)
 print(amp_optim_state_dict)
-optim_wapper_new = OptimWrapper(optimizer=optimizer)
-amp_optim_wapper_new = AmpOptimWrapper(optimizer=optimizer)
+optim_wrapper_new = OptimWrapper(optimizer=optimizer)
+amp_optim_wrapper_new = AmpOptimWrapper(optimizer=optimizer)
 
 # 加载状态字典
-amp_optim_wapper_new.load_state_dict(amp_optim_state_dict)
-optim_wapper_new.load_state_dict(optim_state_dict)
+amp_optim_wrapper_new.load_state_dict(amp_optim_state_dict)
+optim_wrapper_new.load_state_dict(optim_state_dict)
 ```
 
 ```
@@ -211,7 +211,7 @@ optim_wapper_new.load_state_dict(optim_state_dict)
 
 与普通的优化器封装不同，`OptimWrapperDict` 没有实现 `update_params`、 `optim_context`, `backward`、`step` 等方法，无法被直接用于训练模型。我们建议直接访问 `OptimWrapperDict` 管理的优化器实例，来实现参数更新逻辑。
 
-你或许会好奇，既然 `OptimWrapperDict` 没有训练的功能，那为什么不直接使用 `dict` 来管理多个优化器。事实上，`OptimWrapperDict` 的核心功能是支持批量导出/加载所有优化器封装的状态字典；支持获取多个优化器封装的学习率、动量。如果没有 `OptimWrapperDict`，`MMEngine` 就需要在很多位置对优化器封装的类型做 `if else` 判断，以获取所有优化器封装的状态。
+你或许会好奇，既然 `OptimWrapperDict` 没有训练的功能，那为什么不直接使用 `dict` 来管理多个优化器？事实上，`OptimWrapperDict` 的核心功能是支持批量导出/加载所有优化器封装的状态字典；支持获取多个优化器封装的学习率、动量。如果没有 `OptimWrapperDict`，`MMEngine` 就需要在很多位置对优化器封装的类型做 `if else` 判断，以获取所有优化器封装的状态。
 
 ```python
 from torch.optim import SGD
@@ -243,8 +243,7 @@ print(optim_dict.get_momentum())  # {'gen.momentum': [0], 'disc.momentum': [0]}
 
 ### 简单配置
 
-优化器封装需要接受 `optimizer` 参数，因此我们首先需要为优化器封装配置 `optimizer`。
-MMEngine 会自动将 PyTorch 中的所有优化器都添加进 `OPTIMIZERS` 注册表中，用户可以用字典的形式来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。
+优化器封装需要接受 `optimizer` 参数，因此我们首先需要为优化器封装配置 `optimizer`。MMEngine 会自动将 PyTorch 中的所有优化器都添加进 `OPTIMIZERS` 注册表中，用户可以用字典的形式来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。
 
 以配置一个 SGD 优化器封装为例：
 
@@ -260,7 +259,7 @@ optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(optimizer=optimizer)
 ```
 
-要想开启混合精度训练和梯度累加，需要将 `type` 切换成 `AmpOptimWrapper`，并指定 `accumulative_counts` 参数
+要想开启混合精度训练和梯度累加，需要将 `type` 切换成 `AmpOptimWrapper`，并指定 `accumulative_counts` 参数：
 
 ```python
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
@@ -282,17 +281,15 @@ optimizer = SGD([{'params': model.backbone.parameters()},
     momentum=0.9)
 ```
 
-上面的例子中，模型的骨干部分使用了 0.01 学习率，而模型的头部则使用了 1e-3 学习率。
-用户可以将模型的不同部分参数和对应的超参组成一个字典的列表传给优化器，来实现对模型优化的细粒度调整。
+上面的例子中，模型的骨干部分使用了 0.01 学习率，而模型的头部则使用了 1e-3 学习率。用户可以将模型的不同部分参数和对应的超参组成一个字典的列表传给优化器，来实现对模型优化的细粒度调整。
 
 在 MMEngine 中，我们通过优化器封装构造器（optimizer wrapper constructor），让用户能够直接通过设置优化器封装配置文件中的 `paramwise_cfg` 字段而非修改代码来实现对模型的不同部分设置不同的超参。
 
 #### 为不同类型的参数设置不同的超参系数
 
-MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。
-例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0` ，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
+MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0`，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
-具体示例如下，我们将 `ToyModel` 中所有正则化层（`head.bn`）的的权重衰减系数设置为 0：
+具体示例如下，我们将 `ToyModel` 中所有正则化层（`head.bn`）的权重衰减系数设置为 0：
 
 ```python
 from mmengine.optim import build_optim_wrapper
@@ -348,7 +345,7 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 
 此外，与上文 PyTorch 的示例一样，在 MMEngine 中我们也同样可以对模型中的任意模块设置不同的超参，只需要在 `paramwise_cfg` 中设置 `custom_keys` 即可。
 
-例如我们想将 `backbone.layer0` 所有参数的学习率设置为 0，衰减系数设置为 0，`backbone` 其余子模块的学习率设置为 1；`head` 所欲参数的学习率设置为 0.01，可以这样配置：
+例如我们想将 `backbone.layer0` 所有参数的学习率设置为 0，衰减系数设置为 0，`backbone` 其余子模块的学习率设置为 0.01；`head` 所有参数的学习率设置为 0.001，可以这样配置：
 
 ```python
 optim_wrapper = dict(
@@ -411,14 +408,13 @@ head.bn.bias
 
 custom_keys 中每一个字段的含义如下：
 
-1. `'backbone': dict(lr_mult=1)`：将名字前缀为 `backbone` 的参数的学习率设置为 1
-2. `'backbone.layer0': dict(lr_mult=0, decay_mult=0)`：将名字前缀为 `backbone.layer0` 的参数学习率设置为 0，衰减系数设置为 0，该配置优先级比第一条高
-3. `'head': dict(lr_mult=0.1)`：将名字前缀为 `head` 的参数的学习率设置为 0.1
+1. `'backbone': dict(lr_mult=1)`：将名字前缀为 `backbone` 的参数的学习率系数设置为 1
+2. `'backbone.layer0': dict(lr_mult=0, decay_mult=0)`：将名字前缀为 `backbone.layer0` 的参数学习率系数设置为 0，衰减系数设置为 0，该配置优先级比第一条高
+3. `'head': dict(lr_mult=0.1)`：将名字前缀为 `head` 的参数的学习率系数设置为 0.1
 
 ### 自定义优化器构造策略
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](./param_scheduler.md)管理。
-我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](./param_scheduler.md)管理。我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
 
 例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，能够对模型不同深度的层自动设置递减的学习率：
 
@@ -492,5 +488,4 @@ class MultipleOptimiWrapperConstructor:
 
 ### 在训练过程中调整超参
 
-优化器中的超参数在构造时只能设置为一个定值，仅仅使用优化器封装，并不能在训练过程中调整学习率等参数。
-在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](./param_scheduler.md)
+优化器中的超参数在构造时只能设置为一个定值，仅仅使用优化器封装，并不能在训练过程中调整学习率等参数。在 MMEngine 中，我们实现了参数调度器（Parameter Scheduler），以便能够在训练过程中调整参数。关于参数调度器的用法请见[优化器参数调整策略](./param_scheduler.md)

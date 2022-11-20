@@ -11,7 +11,8 @@ from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
 from ..utils import stack_batch
 
-CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list]
+CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list, bytes, str,
+                 None]
 
 
 @MODELS.register_module()
@@ -48,17 +49,20 @@ class BaseDataPreprocessor(nn.Module):
         """
         if isinstance(data, Mapping):
             return {key: self.cast_data(data[key]) for key in data}
+        elif isinstance(data, (str, bytes)) or data is None:
+            return data
         elif isinstance(data, tuple) and hasattr(data, '_fields'):
             # namedtuple
-            return type(data)(*(self.cast_data(sample)for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
+            return type(data)(*(self.cast_data(sample) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
-            return [self.cast_data(sample) for sample in data]
-        elif isinstance(data, torch.Tensor):
-            return data.to(self.device, non_blocking=self._non_blocking)
-        elif isinstance(data, BaseDataElement):
+            return type(data)(self.cast_data(sample) for sample in data)  # type: ignore  # noqa: E501  # yapf:disable
+        elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
-            return data
+            raise TypeError(
+                '`BaseDataPreprocessor.cast_data`: batch data must contain '
+                'tensors, numpy arrays, numbers, dicts or lists, but '
+                f'found {type(data)}')
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.

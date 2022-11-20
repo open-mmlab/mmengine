@@ -247,7 +247,7 @@ class TestEvaluator(TestCase):
         all_data = [dict() for _ in range(9)]
         with self.assertRaisesRegex(
                 AssertionError,
-                'outputs and data should have the same length'):
+                'data_samples and data should have the same length'):
             evaluator.offline_evaluate(all_predictions, all_data)
 
     @unittest.skipUnless(torch.cuda.is_available(), 'can only run with gpu')

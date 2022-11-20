@@ -19,7 +19,7 @@ from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import BaseTTAModel, is_model_wrapper
-from mmengine.utils import mkdir_or_exist
+from mmengine.utils import deprecated_function, mkdir_or_exist
 from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
@@ -236,15 +236,14 @@ class CheckpointLoader:
                 return cls._schemes[p]
 
     @classmethod
-    def load_checkpoint(cls, filename, map_location=None, logger=None):
+    def load_checkpoint(cls, filename, map_location=None, logger='current'):
         """load checkpoint through URL scheme path.
 
         Args:
             filename (str): checkpoint file name with given prefix
             map_location (str, optional): Same as :func:`torch.load`.
                 Default: None
-            logger (:mod:`logging.Logger`, optional): The logger for message.
-                Default: None
+            logger (str): The logger for message. Defaults to 'current'.
 
         Returns:
             dict or OrderedDict: The loaded checkpoint.
@@ -252,8 +251,10 @@ class CheckpointLoader:
 
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
-        print_log(f'{class_name[10:]} loads checkpoint from path: {filename}',
-                  logger)
+        print_log(
+            f'Loads checkpoint by {class_name[10:]} backend from path: '
+            f'{filename}',
+            logger=logger)
         return checkpoint_loader(filename, map_location)
 
 
@@ -574,6 +575,11 @@ def weights_to_cpu(state_dict):
     return state_dict_cpu
 
 
+@deprecated_function(
+    since='0.3.0',
+    removed_in='0.5.0',
+    instructions='`_save_to_state_dict` will be deprecated in the future, '
+    'please use `nn.Module._save_to_state_dict` directly.')
 def _save_to_state_dict(module, destination, prefix, keep_vars):
     """Saves module state to `destination` dictionary.
 
@@ -626,7 +632,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
         destination._metadata = OrderedDict()
     destination._metadata[prefix[:-1]] = local_metadata = dict(
         version=module._version)
-    _save_to_state_dict(module, destination, prefix, keep_vars)
+    module._save_to_state_dict(destination, prefix, keep_vars)
     for name, child in module._modules.items():
         if child is not None:
             get_state_dict(

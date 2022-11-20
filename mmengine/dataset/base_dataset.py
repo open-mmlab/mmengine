@@ -174,15 +174,15 @@ class BaseDataset(Dataset):
             instantiation. In some cases, such as visualization, only the meta
             information of the dataset is needed, which is not necessary to
             load annotation file. ``Basedataset`` can skip load annotations to
-            save time by set ``lazy_init=False``. Defaults to False.
+            save time by set ``lazy_init=True``. Defaults to False.
         max_refetch (int, optional): If ``Basedataset.prepare_data`` get a
             None img. The maximum extra number of cycles to get a valid
             image. Defaults to 1000.
 
     Note:
-        BaseDataset collects meta information from `annotation file` (the
-        lowest priority), ``BaseDataset.METAINFO``(medium) and `metainfo
-        parameter` (highest) passed to constructors. The lower priority meta
+        BaseDataset collects meta information from ``annotation file`` (the
+        lowest priority), ``BaseDataset.METAINFO``(medium) and ``metainfo
+        parameter`` (highest) passed to constructors. The lower priority meta
         information will be overwritten by higher one.
 
     Note:
@@ -192,7 +192,7 @@ class BaseDataset(Dataset):
         conflicts with original dataset.
 
     Examples:
-        Assume the annotation file is given above.
+        >>> # Assume the annotation file is given above.
         >>> class CustomDataset(BaseDataset):
         >>>     METAINFO: dict = dict(task_name='custom_task',
         >>>                           dataset_type='custom_type')

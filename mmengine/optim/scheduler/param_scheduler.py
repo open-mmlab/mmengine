@@ -13,6 +13,7 @@ from typing import Callable, List, Optional, Sequence, Union
 
 from torch.optim import Optimizer
 
+from mmengine.logging import print_log
 from mmengine.optim import OptimWrapper
 from mmengine.registry import PARAM_SCHEDULERS
 
@@ -172,8 +173,9 @@ class _ParamScheduler:
             value (float): The parameter value.
         """
         if is_verbose:
-            print('Adjusting parameter value'
-                  ' of group {} to {:.4e}.'.format(group, value))
+            print_log(
+                f'Adjusting parameter value of group {group} to {value:.4e}.',
+                logger='current')
 
     def step(self):
         """Adjusts the parameter value of each parameter group based on the
@@ -637,7 +639,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     @classmethod
     def build_iter_from_epoch(cls,
                               *args,
-                              T_max,
+                              T_max=None,
                               begin=0,
                               end=INF,
                               by_epoch=True,
@@ -651,7 +653,8 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             f'`epoch_length` must be a positive integer, ' \
             f'but got {epoch_length}.'
         by_epoch = False
-        T_max = T_max * epoch_length
+        if T_max is not None:
+            T_max = T_max * epoch_length
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
@@ -1224,16 +1227,11 @@ class CosineRestartParamScheduler(_ParamScheduler):
                                      self.optimizer.param_groups):
             eta_max = base_value * current_weight
             if self.eta_min_ratio is None:
-                eta_min = self.eta_min * (1 - current_weight)
+                eta_min = self.eta_min
             else:
-                eta_min = base_value * self.eta_min_ratio * (1 -
-                                                             current_weight)
+                eta_min = base_value * self.eta_min_ratio
             if step == 0:
                 values.append(eta_max)
-
-            elif (step - 1 - current_periods) % (2 * current_periods) == 0:
-                values.append(group[self.param_name] + (eta_max - eta_min) *
-                              (1 - math.cos(math.pi / current_periods)) / 2)
             else:
                 values.append(
                     (1 + math.cos(math.pi * step / current_periods)) /

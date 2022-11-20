@@ -1,6 +1,6 @@
 # 执行器（Runner）
 
-深度学习算法的训练、验证和测试通常都拥有相似的流程，因此 MMEngine 提供了执行器以帮助用户简化这些任务的实现流程。 用户只需要准备好模型训练、验证、测试所需要的模块构建执行器，便能够通过简单调用执行器的接口来完成这些任务。用户如果需要使用这几项功能中的某一项，只需要准备好对应功能所依赖的模块即可。
+深度学习算法的训练、验证和测试通常都拥有相似的流程，因此 MMEngine 提供了执行器以帮助用户简化这些任务的实现流程。用户只需要准备好模型训练、验证、测试所需要的模块构建执行器，便能够通过简单调用执行器的接口来完成这些任务。用户如果需要使用这几项功能中的某一项，只需要准备好对应功能所依赖的模块即可。
 
 用户可以手动构建这些模块的实例，也可以通过编写[配置文件](./config.md)，由执行器自动从[注册器](./registry.md)中构建所需要的模块，我们推荐使用后一种方式。
 
@@ -8,8 +8,7 @@
 
 ### 手动构建模块进行训练
 
-如上文所说，使用执行器的某一项功能时需要准备好对应功能所依赖的模块。以使用执行器的训练功能为例，用户需要准备[模型](TODO) 、[优化器](./optim_wrapper.md) 、
-[参数调度器](./param_scheduler.md) 还有训练[数据集](../advanced_tutorials/basedataset.md) 。
+如上文所说，使用执行器的某一项功能时需要准备好对应功能所依赖的模块。以使用执行器的训练功能为例，用户需要准备[模型](./model.md)、[优化器](./optim_wrapper.md)、[参数调度器](./param_scheduler.md)还有训练[数据集](../advanced_tutorials/basedataset.md)。
 
 ```python
 # 准备训练任务所需要的模块
@@ -56,7 +55,7 @@ train_dataloader = DataLoader(dataset=train_dataset, batch_size=10, num_workers=
 from mmengine.runner import Runner
 
 
-# 训练相关参数设置，按轮次训练，训练3轮
+# 训练相关参数设置，按轮次训练，训练 3 轮
 train_cfg = dict(by_epoch=True, max_epochs=3)
 
 # 初始化执行器
@@ -70,18 +69,18 @@ runner = Runner(model,
 runner.train()
 ```
 
-上面的例子中，我们手动构建了一个多层感知机网络和手写数字识别 (MNIST) 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，并且设置了训练配置 `train_cfg`，让执行器将模型训练3个轮次，最后通过调用执行器的 `train` 方法进行模型训练。
+上面的例子中，我们手动构建了一个多层感知机网络和手写数字识别 (MNIST) 数据集，以及训练所需要的优化器和学习率调度器，使用这些模块初始化了执行器，并且设置了训练配置 `train_cfg`，让执行器将模型训练 3 个轮次，最后通过调用执行器的 `train` 方法进行模型训练。
 
 用户也可以修改 `train_cfg` 使执行器按迭代次数控制训练：
 
 ```python
-# 训练相关参数设置，按迭代次数训练，训练9000次迭代
+# 训练相关参数设置，按迭代次数训练，训练 9000 次迭代
 train_cfg = dict(by_epoch=False, max_iters=9000)
 ```
 
 ### 手动构建模块进行测试
 
-再举一个模型测试的例子，模型的测试需要用户准备模型和训练好的权重路径、测试数据集以及[评测器](./evaluation.md) ：
+再举一个模型测试的例子，模型的测试需要用户准备模型和训练好的权重路径、测试数据集以及[评测器](./evaluation.md)：
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -109,11 +108,11 @@ runner = Runner(model=model, test_dataloader=test_dataloader, test_evaluator=tes
 runner.test()
 ```
 
-这个例子中我们重新手动构建了一个多层感知机网络，以及测试用的手写数字识别数据集和使用 (Accuracy) 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
+这个例子中我们重新手动构建了一个多层感知机网络，以及测试用的手写数字识别数据集和使用 Accuracy 指标的评测器，并使用这些模块初始化执行器，最后通过调用执行器的 `test` 函数进行模型测试。
 
 ### 手动构建模块在训练过程中进行验证
 
-在模型训练过程中，通常会按一定的间隔在验证集上对模型进行验证。在使用 MMEngine 时，只需要构建训练和验证的模块，并在训练配置中设置验证间隔即可
+在模型训练过程中，通常会按一定的间隔在验证集上对模型进行验证。在使用 MMEngine 时，只需要构建训练和验证的模块，并在训练配置中设置验证间隔即可：
 
 ```python
 # 准备训练任务所需要的模块
@@ -128,12 +127,11 @@ val_dataloader = Dataloader(dataset=val_dataset)
 metric = MnistAccuracy()
 val_evaluator = Evaluator(metric)
 
-
 # 训练相关参数设置
 train_cfg = dict(by_epoch=True,  # 按轮次训练
-                 max_epochs=5,  # 训练5轮
+                 max_epochs=5,  # 训练 5 轮
                  val_begin=2,  # 从第 2 个 epoch 开始验证
-                 val_interval=1)  # 每隔1轮进行1次验证
+                 val_interval=1)  # 每隔1轮进行 1 次验证
 
 # 初始化执行器
 runner = Runner(model=model, optim_wrapper=dict(optimizer=optimzier), param_scheduler=lr_scheduler,
@@ -145,8 +143,7 @@ runner.train()
 
 ## 通过配置文件使用执行器
 
-OpenMMLab 的开源项目普遍使用注册器 + 配置文件的方式来管理和构建模块，MMEngine 中的执行器也推荐使用配置文件进行构建。
-下面是一个通过配置文件使用执行器的例子：
+OpenMMLab 的开源项目普遍使用注册器 + 配置文件的方式来管理和构建模块，MMEngine 中的执行器也推荐使用配置文件进行构建。下面是一个通过配置文件使用执行器的例子：
 
 ```python
 from mmengine import Config
@@ -193,7 +190,7 @@ optim_wrapper = dict(
 # 参数调度器配置
 param_scheduler = dict(
     type='MultiStepLR', by_epoch=True, milestones=[30, 60, 90], gamma=0.1)
-#验证和测试的评测器配置
+# 验证和测试的评测器配置
 val_evaluator = dict(type='Accuracy')
 test_evaluator = dict(type='Accuracy')
 
@@ -207,10 +204,10 @@ train_cfg = dict(
 val_cfg = dict()
 test_cfg = dict()
 
-# 自定义钩子 (可选)
+# 自定义钩子（可选）
 custom_hooks = [...]
 
-# 默认钩子 (可选，未在配置文件中写明时将使用默认配置)
+# 默认钩子（可选，未在配置文件中写明时将使用默认配置）
 default_hooks = dict(
     runtime_info=dict(type='RuntimeInfoHook'),  # 运行时信息钩子
     timer=dict(type='IterTimerHook'),  # 计时器钩子
@@ -220,25 +217,24 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', interval=1),  # 模型保存钩子
 )
 
-# 环境配置 (可选，未在配置文件中写明时将使用默认配置)
+# 环境配置（可选，未在配置文件中写明时将使用默认配置）
 env_cfg = dict(
     cudnn_benchmark=False,  # 是否使用 cudnn_benchmark
     dist_cfg=dict(backend='nccl'),  # 分布式通信后端
     mp_cfg=dict(mp_start_method='fork')  # 多进程设置
 )
-# 日志处理器 (可选，未在配置文件中写明时将使用默认配置)
+# 日志处理器（可选，未在配置文件中写明时将使用默认配置）
 log_processor = dict(type='LogProcessor', window_size=50, by_epoch=True)
 # 日志等级配置
 log_level = 'INFO'
 
-# 加载权重的路径 (None 表示不加载)
+# 加载权重的路径（None 表示不加载）
 load_from = None
 # 从加载的权重文件中恢复训练
 resume = False
 ```
 
-一个完整的配置文件主要由模型、数据、优化器、参数调度器、评测器等模块的配置，训练、验证、测试等流程的配置，还有执行流程过程中的各种钩子模块的配置，以及环境和日志等其他配置的字段组成。
-通过配置文件构建的执行器采用了懒初始化 (lazy initialization)，只有当调用到训练或测试等执行函数时，才会根据配置文件去完整初始化所需要的模块。
+一个完整的配置文件主要由模型、数据、优化器、参数调度器、评测器等模块的配置，训练、验证、测试等流程的配置，还有执行流程过程中的各种钩子模块的配置，以及环境和日志等其他配置的字段组成。通过配置文件构建的执行器采用了懒初始化 (lazy initialization)，只有当调用到训练或测试等执行函数时，才会根据配置文件去完整初始化所需要的模块。
 
 关于配置文件的更详细的使用方式，请参考[配置文件教程](./config.md)
 

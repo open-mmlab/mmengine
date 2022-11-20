@@ -58,14 +58,11 @@ Major features:
 
 ## What's New
 
-v0.2.0 was released in 2022-10-11.
+v0.3.1 was released in 2022-11-09.
 
-1. Refactor FileIO to provide a more unified interface without BC breaking.
-2. Add the base model for test time augmentation.
-3. Support converting `BN` to `SyncBN` during distributed data-parallel training.
-4. Add SMDDP backend and support running on AWS.
+**Fix error when saving best checkpoint in ddp-training**.
 
-Read [Changelog](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022") for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022") for more details.
 
 ## Installation
 
@@ -225,6 +222,7 @@ This project is released under the [Apache 2.0 license](LICENSE).
 
 - [MIM](https://github.com/open-mmlab/mim): MIM installs OpenMMLab packages.
 - [MMCV](https://github.com/open-mmlab/mmcv): OpenMMLab foundational library for computer vision.
+- [MMEval](https://github.com/open-mmlab/mmeval): A unified evaluation library for multiple machine learning libraries.
 - [MMClassification](https://github.com/open-mmlab/mmclassification): OpenMMLab image classification toolbox and benchmark.
 - [MMDetection](https://github.com/open-mmlab/mmdetection): OpenMMLab detection toolbox and benchmark.
 - [MMDetection3D](https://github.com/open-mmlab/mmdetection3d): OpenMMLab's next-generation platform for general 3D object detection.
