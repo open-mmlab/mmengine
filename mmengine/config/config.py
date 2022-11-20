@@ -155,7 +155,8 @@ class Config:
     @staticmethod
     def fromfile(filename: Union[str, Path],
                  use_predefined_variables: bool = True,
-                 import_custom_modules: bool = True) -> 'Config':
+                 import_custom_modules: bool = True,
+                 use_environment_variables: bool = True) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
@@ -170,7 +171,8 @@ class Config:
         """
         filename = str(filename) if isinstance(filename, Path) else filename
         cfg_dict, cfg_text = Config._file2dict(filename,
-                                               use_predefined_variables)
+                                               use_predefined_variables,
+                                               use_environment_variables)
         if import_custom_modules and cfg_dict.get('custom_imports', None):
             try:
                 import_modules_from_strings(**cfg_dict['custom_imports'])
@@ -285,12 +287,29 @@ class Config:
             regexp = r'\{\{\s*' + str(key) + r'\s*\}\}'
             value = value.replace('\\', '/')
             config_file = re.sub(regexp, value, config_file)
-        # substitute environment variables
-        regexp = r'\{\{\s*\$(\S+)\s*\:\s*(\S*)\s*\}\}'
+        with open(temp_config_name, 'w', encoding='utf-8') as tmp_config_file:
+            tmp_config_file.write(config_file)
+
+    @staticmethod
+    def _substitute_environment_vars(filename: str, temp_config_name: str):
+        """Substitute environment variables in config with actual values.
+
+        Args:
+            filename (str): Filename of config.
+            temp_config_name (str): Temporary filename to save substituted
+                config.
+        """
+        with open(filename, encoding='utf-8') as f:
+            config_file = f.read()
+        regexp = r'\{\{[\'\"]?\s*\$(\w+)\s*\:?\s*(\S*?)\s*[\'\"]?\}\}'
         keys = re.findall(regexp, config_file)
         for var_name, value in keys:
-            value = os.environ.get(var_name, default=value)
-            config_file = re.sub(regexp, value, config_file)
+            if var_name not in os.environ and not value:
+                raise KeyError(f'Env `${var_name}` is not set.')
+            regexp_ = r'\{\{[\'\"]?\s*\$' + var_name + r'\s*\:?\s*' \
+                + value + r'\s*[\'\"]?\}\}'
+            value_ = os.environ.get(var_name, default=value)
+            config_file = re.sub(regexp_, value_, config_file)
         with open(temp_config_name, 'w', encoding='utf-8') as tmp_config_file:
             tmp_config_file.write(config_file)
 
@@ -368,7 +387,8 @@ class Config:
 
     @staticmethod
     def _file2dict(filename: str,
-                   use_predefined_variables: bool = True) -> Tuple[dict, str]:
+                   use_predefined_variables: bool = True,
+                   use_environment_variables: bool = True) -> Tuple[dict, str]:
         """Transform file to variables dictionary.
 
         Args:
@@ -397,6 +417,10 @@ class Config:
                                                    temp_config_file.name)
             else:
                 shutil.copyfile(filename, temp_config_file.name)
+            # Substitute environment variables
+            if use_environment_variables:
+                Config._substitute_environment_vars(temp_config_file.name,
+                                                    temp_config_file.name)
             # Substitute base variables from placeholders to strings
             base_var_dict = Config._pre_substitute_base_vars(
                 temp_config_file.name, temp_config_file.name)
