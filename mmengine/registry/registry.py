@@ -381,21 +381,6 @@ class Registry:
         registry_name = self.name
         scope_name = self.scope
 
-        if scope is not None:
-            # import the registry to add the nodes into the registry tree
-            try:
-                import_module(f'{scope}.registry')
-                print_log(
-                    f'auto import {scope}.registry',
-                    logger='current',
-                    level=logging.DEBUG)
-            except (ImportError, AttributeError, ModuleNotFoundError):
-                print_log(
-                    f'Cannot auto import {scope}.registry, please check '
-                    f'whether the package "{scope}" is installed correctly '
-                    f'or import the registry manually.',
-                    logger='current',
-                    level=logging.DEBUG)
         # lazy import the modules to register them into the registry
         self.import_from_location()
 
@@ -414,6 +399,20 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            # import the registry to add the nodes into the registry tree
+            try:
+                import_module(f'{scope}.registry')
+                print_log(
+                    f'auto import {scope}.registry',
+                    logger='current',
+                    level=logging.DEBUG)
+            except (ImportError, AttributeError, ModuleNotFoundError):
+                print_log(
+                    f'Cannot auto import {scope}.registry, please check '
+                    f'whether the package "{scope}" is installed correctly '
+                    f'or import the registry manually.',
+                    logger='current',
+                    level=logging.DEBUG)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
