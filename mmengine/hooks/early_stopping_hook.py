@@ -20,8 +20,8 @@ class EarlyStoppingHook(Hook):
             Defaults to 0.01.
         pool_size (int, optional): The number of experiments to consider.
             Defaults to 5.
-        patience (int, optional): the number of epochs to wait for a change in
-            the top models. Defaults to 0.
+        patience (int, optional): The times of validation with no improvement
+            after which training will be stopped. Defaults to 0.
     """
     priority = 'LOWEST'
 
