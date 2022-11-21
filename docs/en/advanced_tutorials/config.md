@@ -374,16 +374,20 @@ In this section, we'll introduce some advanced usage of the `Config`, and some t
 ### Predefined fields
 
 Sometimes we need some fields in the configuration file, which are related to the path to the workspace. For example, we define a working directory in the configuration file that holds the models and logs for this set of experimental configurations. We expect to have different working directories for different configuration files. A common choice is to use the configuration file name directly as part of the working directory name.
-Taking `predefined_var.py` as an example, the expected working directory is `. /work_dir/predefined_var`.
+Taking `predefined_var.py` as an example, its directory is:
 
-This can be achieved easily using predefined fields:
+```Python
+work_dir = './work_dir/{{fileBasenameNoExtension}}'
+```
+
+Here `{{fileBasenameNoExtension}}` means the filename without suffix `.py` of the config file, and the variable in `{{}}` will be interpreted as `predefined_var`
 
 ```python
 cfg = Config.fromfile('./predefined_var.py')
 print(cfg.work_dir)
 ```
 
-```
+```shell
 ./work_dir/predefined_var
 ```
 
