@@ -140,20 +140,40 @@ class LogProcessor:
         #  train: Epoch [5/10000] ... (divided by `max_iter`)
         #  val/test: Epoch [5/2000] ... (divided by length of dataloader)
         if self.by_epoch:
+            # Align the iteration log:
+            # Epoch(train)  [  9][010/270]
+            # ...                 ||| |||
+            # Epoch(train)  [ 10][100/270]
+            dataloader_len = len(current_loop.dataloader)
+            cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
+
             if mode in ['train', 'val']:
+                # Right Align the epoch log:
+                # Epoch(train)   [9][100/270]
+                # ...             ||
+                # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
+                max_epochs = runner.max_epochs
+                # 3 means the three characters: "[", "]", and " " occupied in
+                # " [{max_epochs}]"
+                cur_epoch_str = f'[{cur_epoch}]'.rjust(
+                    len(str(max_epochs)) + 3, ' ')
                 tag['epoch'] = cur_epoch
-                log_str = (f'Epoch({mode}) [{cur_epoch}]'
-                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
+                log_str = (f'Epoch({mode}){cur_epoch_str}'
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
             else:
                 log_str = (f'Epoch({mode}) '
-                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
+                cur_iter_str = str(cur_iter).rjust(len(str(runner.max_iters)))
                 log_str = (f'Iter({mode}) '
-                           f'[{cur_iter}/{runner.max_iters}]  ')
+                           f'[{cur_iter_str}/{runner.max_iters}]  ')
             else:
-                log_str = (f'Iter({mode}) [{batch_idx + 1}'
+                dataloader_len = len(current_loop.dataloader)
+                cur_iter_str = str(batch_idx + 1).rjust(
+                    len(str(dataloader_len)))
+                log_str = (f'Iter({mode}) [{cur_iter_str}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
