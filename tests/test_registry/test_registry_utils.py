@@ -66,7 +66,7 @@ class TestUtils(TestCase):
                 osp.join(temp_dir.name, 'modules_statistic_results.json')))
 
     @skipIf(not is_installed('torch'), 'tests requires torch')
-    def test_register_all_modules(self):
+    def test_init_default_scope(self):
         # init default scope
         init_default_scope('mmdet')
         self.assertEqual(DefaultScope.get_current_instance().scope_name,
