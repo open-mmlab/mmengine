@@ -2,7 +2,7 @@
 
 MMEngine implements an abstract configuration class (`Config`) to provide a unified configuration access interface for users. `Config` supports different type of configuration file, including `python`, `json` and `yaml`, and you can choose the type according to your preference. `Config` overrides some magic method, which could help you access the data stored in `Config` just like getting values from `dict`, or getting attributes from instances. Besides, `Config` also provides an inheritance mechanism, which could help you better organize and manage the configuration files.
 
-Before starting the tutorial, let's download the configuration files needed in the tutorial(it is recommended to execute them in a temporary directory to facilitate deleting these files latter.):
+Before starting the tutorial, let's download the configuration files needed in the tutorial (it is recommended to execute them in a temporary directory to facilitate deleting these files latter.):
 
 ```bash
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/config_sgd.py
@@ -23,11 +23,11 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
 ```
 
-## Read the configuration file.
+## Read the configuration file
 
 `Config` provides a uniform interface `Config.fromfile()` to read and parse configuration files.
 
-A legitimate configuration file should define a set of key-value pairs, and here are a few examples:
+A valid configuration file should define a set of key-value pairs, and here are a few examples:
 
 Python：
 
@@ -178,7 +178,7 @@ print(cfg.optimizer)
 {'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
-`_base_` is a reserved field for the configuration file. It specifies the inherited(base) files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there is no repeated fields defined in all base files.
+`_base_` is a reserved field for the configuration file. It specifies the inherited base) files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there are no repeated fields defined in all base files.
 
 `runtime_cfg.py`：
 
@@ -315,7 +315,7 @@ print(cfg.a)
 
 ## Dump the configuration file
 
-The user may pass some parameters to modify some fields of the configuration file at the entry point of the training script.Therefore, we provide the `dump` method to export the changed configuration file.
+The user may pass some parameters to modify some fields of the configuration file at the entry point of the training script. Therefore, we provide the `dump` method to export the changed configuration file.
 
 Similar to reading the configuration file, the user can choose the format of the dumped file by using `cfg.dump('config.xxx')`. `dump` can also export configuration files with inheritance relationships, and the dumped files can be used independently without the files defined in `_base_`.
 
@@ -367,11 +367,11 @@ a=1
 b=2
 ```
 
-# Advanced uses
+## Advanced usage
 
-In this section, we'll introduce some advanced uses of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
+In this section, we'll introduce some advanced usage of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
 
-## Predefined fields
+### Predefined fields
 
 Sometimes we need some fields in the configuration file, which are related to the path to the workspace. For example, we define a working directory in the configuration file that holds the models and logs for this set of experimental configurations. We expect to have different working directories for different configuration files. A common choice is to use the configuration file name directly as part of the working directory name.
 Taking `predefined_var.py` as an example, the expected working directory is `. /work_dir/predefined_var`.
@@ -475,7 +475,7 @@ The standard procedure only supports modifying String, Integer, Floating Point, 
 
 ### import the custom module
 
-If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is “I don't know”, since I'm not sure the register process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
+If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is "I don't know" since I'm not sure the registration process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
 
 For example, we customize an optimizer:
 
