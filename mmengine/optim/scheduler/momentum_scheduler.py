@@ -101,7 +101,7 @@ class CosineAnnealingMomentum(MomentumSchedulerMixin,
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         T_max (int): Maximum number of iterations.
-        eta_min (float): Minimum momentum value. Defaults to 0.
+        eta_min (float): Minimum momentum value. Defaults to None.
         begin (int): Step at which to start updating the momentum.
             Defaults to 0.
         end (int): Step at which to stop updating the momentum.
@@ -112,6 +112,10 @@ class CosineAnnealingMomentum(MomentumSchedulerMixin,
             epochs. Defaults to True.
         verbose (bool): Whether to print the momentum for each update.
             Defaults to False.
+        eta_min_ratio (float, optional): The ratio of the minimum parameter
+            value to the base parameter value. Either `eta_min` or
+            `eta_min_ratio` should be specified. Defaults to None.
+            New in version 0.3.2.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983

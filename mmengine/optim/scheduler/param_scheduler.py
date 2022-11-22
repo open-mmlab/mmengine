@@ -599,7 +599,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             ``lr``, ``momentum``.
         T_max (int, optional): Maximum number of iterations. If not specified,
             use ``end - begin``. Defaults to None.
-        eta_min (float): Minimum parameter value. Defaults to 0.
+        eta_min (float, optional): Minimum parameter value. Defaults to None.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
         end (int): Step at which to stop updating the parameters.
@@ -610,6 +610,10 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
+        eta_min_ratio (float, optional): The ratio of the minimum parameter
+            value to the base parameter value. Either `eta_min` or
+            `eta_min_ratio` should be specified. Defaults to None.
+            New in version 0.3.2.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983
@@ -619,14 +623,21 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
                  optimizer: Union[Optimizer, OptimWrapper],
                  param_name: str,
                  T_max: Optional[int] = None,
-                 eta_min: float = 0.,
+                 eta_min: Optional[float] = None,
                  begin: int = 0,
                  end: int = INF,
                  last_step: int = -1,
                  by_epoch: bool = True,
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 eta_min_ratio: Optional[float] = None):
+        # To preserve backwards compatibility
+        if eta_min is None and eta_min_ratio is None:
+            eta_min = 0.
+        assert (eta_min is None) ^ (eta_min_ratio is None), \
+            'Either `eta_min` or `eta_min_ratio should be specified'
         self.T_max = T_max or (end - begin)
         self.eta_min = eta_min
+        self.eta_min_ratio = eta_min_ratio
         super().__init__(
             optimizer,
             param_name=param_name,
@@ -666,23 +677,31 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
             by_epoch=by_epoch,
             **kwargs)
 
-    def _get_value(self):
+    def _get_value(self) -> list:
         """Compute value using chainable form of the scheduler."""
+
+        def _get_eta_min(base_value):
+            if self.eta_min_ratio is None:
+                return self.eta_min
+            return base_value * self.eta_min_ratio
+
         if self.last_step == 0:
             return [
                 group[self.param_name] for group in self.optimizer.param_groups
             ]
         elif (self.last_step - 1 - self.T_max) % (2 * self.T_max) == 0:
             return [
-                group[self.param_name] + (base_value - self.eta_min) *
+                group[self.param_name] +
+                (base_value - _get_eta_min(base_value)) *
                 (1 - math.cos(math.pi / self.T_max)) / 2
                 for base_value, group in zip(self.base_values,
                                              self.optimizer.param_groups)
             ]
         return [(1 + math.cos(math.pi * self.last_step / self.T_max)) /
                 (1 + math.cos(math.pi * (self.last_step - 1) / self.T_max)) *
-                (group[self.param_name] - self.eta_min) + self.eta_min
-                for group in self.optimizer.param_groups]
+                (group[self.param_name] - _get_eta_min(base_value)) +
+                _get_eta_min(base_value) for base_value, group in zip(
+                    self.base_values, self.optimizer.param_groups)]
 
 
 @PARAM_SCHEDULERS.register_module()
@@ -1131,11 +1150,11 @@ class CosineRestartParamScheduler(_ParamScheduler):
         periods (list[int]): Periods for each cosine anneling cycle.
         restart_weights (list[float]): Restart weights at each
             restart iteration. Defaults to [1].
-        eta_min (float): Minimum parameter value at the end of scheduling.
-            Defaults to None.
+        eta_min (float, optional): Minimum parameter value at the end of
+            scheduling. Defaults to None.
         eta_min_ratio (float, optional): The ratio of minimum parameter value
-            to the base parameter value. Either `min_lr` or `min_lr_ratio`
-            should be specified. Default: None.
+            to the base parameter value. Either `eta_min` or `eta_min_ratio`
+            should be specified. Defaults to None.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
         end (int): Step at which to stop updating the parameters.
