@@ -49,6 +49,14 @@ class NaiveVisualizationHook(Hook):
         unpad_image = input[:unpad_height, :unpad_width]
         return unpad_image
 
+    def before_train(self, runner) -> None:
+        """Call add_graph method of visualizer.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        runner.visualizer.add_graph(runner.model, None)
+
     def after_test_iter(self,
                         runner,
                         batch_idx: int,

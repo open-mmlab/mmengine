@@ -5,8 +5,8 @@
 MMEngine 提供了 `Visualizer` 可视化器用以可视化和存储模型训练和测试过程中的状态以及中间结果，具备如下功能：
 
 - 支持基础绘图接口以及特征图可视化
-- 支持本地， TensorBoard 以及 WandB 等多种后端，可以将训练状态例如 loss 、lr 或者性能评估指标以及可视化的结果写入指定的单一或多个后端
-- 允许在代码库任意位置调用，对任意位置的特征，图像，状态等进行可视化和存储。
+- 支持本地、TensorBoard 以及 WandB 等多种后端，可以将训练状态例如 loss 、lr 或者性能评估指标以及可视化的结果写入指定的单一或多个后端
+- 允许在代码库任意位置调用，对任意位置的特征、图像和状态等进行可视化和存储。
 
 ## 基础绘制接口
 
@@ -324,7 +324,7 @@ VISUALIZERS.build(visualizer_cfg)
 visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')],
                         save_dir='temp_dir')
 
-# 获取 wandb 对象
+# 获取 WandB 对象
 wandb = visualizer.get_backend('WandbVisBackend').experiment
 # 追加表格数据
 table = wandb.Table(columns=["step", "mAP"])

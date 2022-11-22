@@ -60,14 +60,11 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 
 ## 最近进展
 
-最新版本 v0.2.0 在 2022.10.11 发布。
+最新版本 v0.3.1 在 2022.11.09 发布。
 
-1. 重构 FileIO 以提供更加易用的接口并保持向下兼容。
-2. 新增 Test time augmentation 模型基类。
-3. 分布式训练时，支持将 BN 自动转化为 SyncBN。
-4. 新增了 SMDDP 后端并支持在 AWS 进行分布式训练。
+**修复分布式训练时，保存最佳 checkpoint 报错问题**。
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.2.0 "11/10/2022")
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022")
 
 ## 安装
 
@@ -296,6 +293,7 @@ runner.train()
 
 - [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMLab 项目、算法、模型的统一入口
 - [MMCV](https://github.com/open-mmlab/mmcv/tree/dev-2.x): OpenMMLab 计算机视觉基础库
+- [MMEval](https://github.com/open-mmlab/mmeval): 统一开放的跨框架算法评测库
 - [MMClassification](https://github.com/open-mmlab/mmclassification/tree/dev-1.x): OpenMMLab 图像分类工具箱
 - [MMDetection](https://github.com/open-mmlab/mmdetection/tree/dev-3.x): OpenMMLab 目标检测工具箱
 - [MMDetection3D](https://github.com/open-mmlab/mmdetection3d/tree/dev-1.x): OpenMMLab 新一代通用 3D 目标检测平台

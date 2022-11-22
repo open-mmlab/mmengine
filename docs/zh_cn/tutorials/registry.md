@@ -1,15 +1,12 @@
 # 注册器（Registry）
 
-OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。
-为了管理这些功能相似的模块，MMEngine 实现了 [注册器](mmengine.registry.Registry)。
-OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification) 和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
+OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。为了管理这些功能相似的模块，MMEngine 实现了 [注册器](mmengine.registry.Registry)。OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification) 和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
 
 ## 什么是注册器
 
-MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。
-MMEngine 中的注册器默认使用 [build_from_cfg](mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
+MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映射表和模块构建方法（build function）的组合。映射表维护了一个字符串到**类或者函数的映射**，使得用户可以借助字符串查找到相应的类或函数，例如维护字符串 `"ResNet"` 到 `ResNet` 类或函数的映射，使得用户可以通过 `"ResNet"` 找到 `ResNet` 类；而模块构建方法则定义了如何根据字符串查找到对应的类或函数以及如何实例化这个类或者调用这个函数，例如，通过字符串 `"bn"` 找到 `nn.BatchNorm2d` 并实例化 `BatchNorm2d` 模块；又或者通过字符串 `"build_batchnorm2d"` 找到 `build_batchnorm2d` 函数并返回该函数的调用结果。MMEngine 中的注册器默认使用 [build_from_cfg](mmengine.registry.build_from_cfg) 函数来查找并实例化字符串对应的类或者函数。
 
-一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `MODELS` 可以被视作所有模型的抽象，管理了 `ResNet`， `SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
+一个注册器管理的类或函数通常有相似的接口和功能，因此该注册器可以被视作这些类或函数的抽象。例如注册器 `MODELS` 可以被视作所有模型的抽象，管理了 `ResNet`，`SEResNet` 和 `RegNetX` 等分类网络的类以及 `build_ResNet`,  `build_SEResNet` 和 `build_RegNetX` 等分类网络的构建函数。
 
 ## 入门用法
 
@@ -84,6 +81,7 @@ print(ACTIVATION.module_dict)
 
 ```python
 import torch
+
 input = torch.randn(2)
 
 act_cfg = dict(type='Sigmoid')
@@ -99,7 +97,7 @@ print(output)
 act_cfg = dict(type='ReLU', inplace=True)
 activation = ACTIVATION.build(act_cfg)
 output = activation(input)
-# call Sigmoid.forward
+# call ReLU.forward
 print(output)
 ```
 
@@ -207,6 +205,7 @@ class RReLU(nn.Module):
 
 ```python
 from mmengine import Registry, MODELS as MMENGINE_MODELS
+
 MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
 ```
 
@@ -220,6 +219,7 @@ MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
 
 ```python
 from mmengine.registry import count_registered_modules
+
 count_registered_modules()
 ```
 
@@ -254,6 +254,7 @@ model = MODELS.build(cfg=dict(type='mmengine.RReLU'))
 
 ```python
 import torch
+
 input = torch.randn(2)
 output = model(input)
 # call RReLU.forward
@@ -268,6 +269,7 @@ print(output)
 
 ```python
 from mmengine import Registry, MODELS as MMENGINE_MODELS
+
 MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmbeta')
 ```
 
