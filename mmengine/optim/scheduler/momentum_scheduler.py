@@ -115,7 +115,7 @@ class CosineAnnealingMomentum(MomentumSchedulerMixin,
         eta_min_ratio (float, optional): The ratio of the minimum parameter
             value to the base parameter value. Either `eta_min` or
             `eta_min_ratio` should be specified. Defaults to None.
-            New in version 0.4.0.
+            New in version 0.3.2.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983
