@@ -415,6 +415,9 @@ class Runner:
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
+        # log hooks information
+        self.logger.info(f'Hooks will be executed in the following '
+                         f'order:\n{self.get_hooks_info()}')
 
         # dump `cfg` to `work_dir`
         self.dump_config()
@@ -1575,6 +1578,29 @@ class Runner:
             log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
 
         return log_processor  # type: ignore
+
+    def get_hooks_info(self) -> str:
+        # Get hooks info in each stage
+        stage_hook_map: Dict[str, list] = {stage: [] for stage in Hook.stages}
+        for hook in self.hooks:
+            try:
+                priority = Priority(hook.priority).name  # type: ignore
+            except ValueError:
+                priority = hook.priority  # type: ignore
+            classname = hook.__class__.__name__
+            hook_info = f'({priority:<12}) {classname:<35}'
+            for trigger_stage in hook.get_triggered_stages():
+                stage_hook_map[trigger_stage].append(hook_info)
+
+        stage_hook_infos = []
+        for stage in Hook.stages:
+            hook_infos = stage_hook_map[stage]
+            if len(hook_infos) > 0:
+                info = f'{stage}:\n'
+                info += '\n'.join(hook_infos)
+                info += '\n -------------------- '
+                stage_hook_infos.append(info)
+        return '\n'.join(stage_hook_infos)
 
     def load_or_resume(self) -> None:
         """load or resume checkpoint."""
