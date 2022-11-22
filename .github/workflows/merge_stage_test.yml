@@ -180,6 +180,20 @@ jobs:
           coverage xml
           coverage report -m
 
+  build_macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+        torch: [1.6.0, 1.8.1, 1.13.0]
+        include:
+          - torch: 1.6.0
+            torchvision: 0.7.0
+          - torch: 1.8.1
+            torchvision: 0.9.1
+          - torch: 1.13.0
+            torchvision: 0.14.0
+
   build_windows:
     runs-on: ${{ matrix.os }}
     strategy:
