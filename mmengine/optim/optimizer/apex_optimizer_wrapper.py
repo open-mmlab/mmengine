@@ -10,7 +10,7 @@ from .optimizer_wrapper import OptimWrapper
 try:
     import apex.amp as apex_amp
 except ImportError:
-    pass
+    apex_amp = None
 
 
 @OPTIM_WRAPPERS.register_module()
@@ -37,6 +37,9 @@ class ApexOptimWrapper(OptimWrapper):
     """
 
     def __init__(self, opt_level='O1', loss_scale='dynamic', **kwargs):
+        assert apex_amp is not None, \
+            'Apex is not installed. Please check ' \
+            'https://github.com/NVIDIA/apex#linux.'
         super().__init__(**kwargs)
         self.opt_level = opt_level
         self.loss_scale = loss_scale
