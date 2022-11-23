@@ -38,8 +38,8 @@ def test_revert_syncbn():
     y = conv(x)
     assert y.shape == (1, 8, 9, 9)
 
-    # TODO, capsys provide by `pytest` cannot capture the error log produced by
-    # MMLogger. Test the error log after refactoring the unit test with
+    # TODO, capsys provided by `pytest` cannot capture the error log produced
+    # by MMLogger. Test the error log after refactoring the unit test with
     # `unittest`
     conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
     revert_sync_batchnorm(conv)
@@ -66,13 +66,6 @@ def test_convert_syncbn():
     assert isinstance(converted_conv[1], torch.nn.SyncBatchNorm)
     with pytest.raises(ValueError):
         converted_conv(x)
-
-    # TODO, capsys provide by `pytest` cannot capture the error log produced by
-    # MMLogger. Test the error log after refactoring the unit test with
-    # `unittest`
-    with pytest.raises(ValueError):
-        conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
-        convert_sync_batchnorm(conv)
 
 
 def test_is_model_wrapper():
