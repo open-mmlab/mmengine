@@ -38,15 +38,6 @@ def test_revert_syncbn():
     y = conv(x)
     assert y.shape == (1, 8, 9, 9)
 
-    class ToyModule(nn.Module):
-
-        def __init__(self):
-            super().__init__()
-            self.layer1 = nn.Linear(1, 1)
-
-        def add_module(self, name, module):
-            raise ValueError()
-
     # TODO, capsys provide by `pytest` cannot capture the error log produced by
     # MMLogger. Test the error log after refactoring the unit test with
     # `unittest`
