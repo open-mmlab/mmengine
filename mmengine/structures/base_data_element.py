@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import inspect
 import sys
 from typing import Any, Iterator, Optional, Tuple, Type, Union
 
@@ -463,10 +462,8 @@ class BaseDataElement:
             # The name only added to `data_fields`` when it is not the
             # attribute related to property(methods decorated by @property).
             if not isinstance(
-                    getattr(
-                        type(self),
-                        inspect.getframeinfo(sys._getframe(1)).function, None),
-                    property):
+                    getattr(type(self),
+                            sys._getframe(1).f_code.co_name, None), property):
                 self._data_fields.add(name)
         super().__setattr__(name, value)
 
