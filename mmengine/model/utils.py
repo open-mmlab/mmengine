@@ -249,19 +249,8 @@ def convert_sync_batchnorm(module: nn.Module,
         module_output.num_batches_tracked = module.num_batches_tracked
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
-
-        # Some custom modules or 3rd party implemented modules may raise an
-        # error when calling `add_module`. Therefore, try to catch the error
-        # and do not raise it. See https://github.com/open-mmlab/mmengine/issues/638 # noqa: E501
-        # for more details.
     for name, child in module.named_children():
-        try:
-            module_output.add_module(
-                name, convert_sync_batchnorm(child, implementation))
-        except Exception:
-            print_log(
-                F'Failed to convert {child} from BN to SyncBN!',
-                logger='current',
-                level=logging.WARNING)
+        module_output.add_module(name,
+                                 convert_sync_batchnorm(child, implementation))
     del module
     return module_output

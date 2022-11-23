@@ -57,9 +57,8 @@ def test_convert_syncbn():
     # Test convert to mmcv SyncBatchNorm
     if is_installed('mmcv'):
         # MMCV SyncBatchNorm is only supported on distributed training.
-        # TODO catch the error log with unittest.TestCase
-        # TODO pytest could not catch the log from MMLogger)
-        convert_sync_batchnorm(conv, implementation='mmcv')
+        with pytest.raises(RuntimeError):
+            convert_sync_batchnorm(conv, implementation='mmcv')
 
     # Test convert to Pytorch SyncBatchNorm
     # Expect a ValueError prompting that SyncBN is not supported on CPU
@@ -71,8 +70,9 @@ def test_convert_syncbn():
     # TODO, capsys provide by `pytest` cannot capture the error log produced by
     # MMLogger. Test the error log after refactoring the unit test with
     # `unittest`
-    conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
-    convert_sync_batchnorm(conv)
+    with pytest.raises(ValueError):
+        conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
+        convert_sync_batchnorm(conv)
 
 
 def test_is_model_wrapper():
