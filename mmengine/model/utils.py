@@ -193,6 +193,9 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
     for name, child in module.named_children():
+        # Some custom module or 3rd party implemented module could raise an
+        # error when calling `add_module` https://github.com/open-mmlab/mmengine/issues/638 # noqa: E501
+        # Therefore we need to revert the model with try...catch
         try:
             module_output.add_module(name, revert_sync_batchnorm(child))
         except Exception:
@@ -245,6 +248,10 @@ def convert_sync_batchnorm(module: nn.Module,
         module_output.num_batches_tracked = module.num_batches_tracked
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
+
+    # Some custom module or 3rd party implemented module could raise an
+    # error when calling `add_module` https://github.com/open-mmlab/mmengine/issues/638 # noqa: E501
+    # Therefore we need to convert the model with try...catch
     for name, child in module.named_children():
         try:
             module_output.add_module(
