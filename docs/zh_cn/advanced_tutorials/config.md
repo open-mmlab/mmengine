@@ -477,6 +477,19 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 上述流程只支持在命令行里修改字符串、整型、浮点型、布尔型、None、列表、元组类型的配置项。对于列表、元组类型的配置，里面每个元素的类型也必须为上述七种类型之一。
 ```
 
+:::{note}
+`DictAction` 的行为与 `"extend"` 相似，支持多次传递，并保存在同一个列表中。如
+
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.type="Adam" --cfg-options model.in_channels="[1, 1, 1]"
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'Adam', 'lr': 0.01}}
+```
+
+:::
+
 ### 导入自定义 Python 模块
 
 将配置与注册器结合起来使用时，如果我们往注册器中注册了一些自定义的类，就可能会遇到一些问题。因为读取配置文件的时候，这部分代码可能还没有被执行到，所以并未完成注册过程，从而导致构建自定义类的时候报错。

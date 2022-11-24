@@ -477,6 +477,19 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 The standard procedure only supports modifying String, Integer, Floating Point, Boolean, None, List, and Tuple fields from the command line. For the elements of list and tuple instance, each of them must be one of the above seven types.
 ```
 
+:::{note}
+The behavior of `DictAction` is similar with `"extend"`. It stores a list, and extends each argument value to the list, like:
+
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.type="Adam" --cfg-options model.in_channels="[1, 1, 1]"
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'Adam', 'lr': 0.01}}
+```
+
+:::
+
 ### import the custom module
 
 If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is "I don't know" since I'm not sure the registration process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
