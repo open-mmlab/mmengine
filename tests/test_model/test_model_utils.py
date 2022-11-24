@@ -57,7 +57,9 @@ def test_convert_syncbn():
     # Test convert to mmcv SyncBatchNorm
     if is_installed('mmcv'):
         # MMCV SyncBatchNorm is only supported on distributed training.
-        with pytest.raises(RuntimeError):
+        # torch 1.6 will throw an AssertionError, and higher version will
+        # throw an RunTimeError
+        with pytest.raises((RuntimeError, AssertionError)):
             convert_sync_batchnorm(conv, implementation='mmcv')
 
     # Test convert BN to Pytorch SyncBatchNorm
