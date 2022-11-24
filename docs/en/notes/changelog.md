@@ -2,8 +2,6 @@
 
 ## v0.3.2 (11/24/2022)
 
-### Highlights
-
 ### New Features & Enhancements
 
 - Send git errors to subprocess.PIPE by @austinmw in https://github.com/open-mmlab/mmengine/pull/717
