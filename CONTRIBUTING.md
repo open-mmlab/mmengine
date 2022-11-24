@@ -125,7 +125,7 @@ We could push the local commits to remote after passing through the check of uni
 git push -u origin {branch_name}
 ```
 
-This will allow you to use the `git push` command to push code directly next time, without having to specify a branch or the remote repository.
+This will allow you to use the `git push` command to push code directly next time without specifying a branch or the remote repository.
 
 #### 6. Create a Pull Request
 
