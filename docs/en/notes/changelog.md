@@ -9,8 +9,8 @@
 - Send git errors to subprocess.PIPE by @austinmw in https://github.com/open-mmlab/mmengine/pull/717
 - Add runner test case. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/631
 - Right align the log by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/436
-- Add test of get_hooks_info() by @songyuc in https://github.com/open-mmlab/mmengine/pull/672
-- Support setting `eta_min_ratio` in CosineAnnealingParamScheduler by @cir7 in https://github.com/open-mmlab/mmengine/pull/725
+- Log information about hooks in Runner by @songyuc in https://github.com/open-mmlab/mmengine/pull/672
+- Support setting `eta_min_ratio` in `CosineAnnealingParamScheduler` by @cir7 in https://github.com/open-mmlab/mmengine/pull/725
 - Enhance compatibility of `revert_sync_batchnorm` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/695
 
 ### Bug Fixes
