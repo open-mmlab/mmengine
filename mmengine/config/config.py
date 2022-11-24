@@ -561,11 +561,19 @@ class Config:
                             and isinstance(c.targets[0], ast.Name)
                             and c.targets[0].id == BASE_KEY)
 
-                base_code = next((c for c in codes if is_base_line(c)), None)
-                if base_code is not None:
-                    base_code = ast.Expression(  # type: ignore
-                        body=base_code.value)  # type: ignore
-                    base_files = eval(compile(base_code, '', mode='eval'))
+                base_code = []
+                for c in codes:
+                    base_code.append(c)
+                    if is_base_line(c):
+                        break
+
+                variable_dict: dict = {}
+                if base_code:
+                    code = ast.Module(body=base_code, type_ignores=[])
+                    exec(
+                        compile(code, '', mode='exec'), variable_dict,
+                        variable_dict)
+                    base_files = variable_dict['_base_']
                 else:
                     base_files = []
         elif file_format in ('yml', 'yaml', 'json'):
