@@ -60,7 +60,7 @@ def test_convert_syncbn():
         with pytest.raises(RuntimeError):
             convert_sync_batchnorm(conv, implementation='mmcv')
 
-    # Test convert to Pytorch SyncBatchNorm
+    # Test convert BN to Pytorch SyncBatchNorm
     # Expect a ValueError prompting that SyncBN is not supported on CPU
     converted_conv = convert_sync_batchnorm(conv)
     assert isinstance(converted_conv[1], torch.nn.SyncBatchNorm)
