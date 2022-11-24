@@ -568,14 +568,12 @@ class Config:
                         break
 
                 variable_dict: dict = {}
-                if base_code:
-                    code = ast.Module(body=base_code, type_ignores=[])
-                    exec(
-                        compile(code, '', mode='exec'), variable_dict,
-                        variable_dict)
-                    base_files = variable_dict['_base_']
-                else:
-                    base_files = []
+                code = ast.Module(body=base_code, type_ignores=[])
+                exec(
+                    compile(code, '', mode='exec'), variable_dict,
+                    variable_dict)
+                base_files = variable_dict.get('_base_', [])
+
         elif file_format in ('yml', 'yaml', 'json'):
             import mmengine
             cfg_dict = mmengine.load(filename)
