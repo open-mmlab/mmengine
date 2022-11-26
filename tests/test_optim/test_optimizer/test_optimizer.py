@@ -726,8 +726,13 @@ class TestBuilder(TestCase):
             for group, settings in zip(groups, group_settings):
                 if name in group:
                     for setting in settings:
-                        assert param_groups[i][setting] == settings[
-                            setting], f'{name} {setting}'
+                        if setting == 'requires_grad':
+                            assert param_groups[i][setting] == settings[
+                                setting] == param_groups[i]['params'][
+                                    0].requires_grad, f'{name} {setting}'
+                        else:
+                            assert param_groups[i][setting] == settings[
+                                setting], f'{name} {setting}'
 
 
 @unittest.skipIf(
