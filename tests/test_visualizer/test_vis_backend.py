@@ -11,8 +11,8 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (LocalVisBackend, TensorboardVisBackend,
-                                    WandbVisBackend)
+from mmengine.visualization import (LocalVisBackend, MLFlowVisBackend,
+                                    TensorboardVisBackend, WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -240,4 +240,39 @@ class TestWandbVisBackend:
         wandb_vis_backend = WandbVisBackend('temp_dir')
         wandb_vis_backend._init_env()
         wandb_vis_backend.close()
+        shutil.rmtree('temp_dir')
+
+
+class TestMLFlowVisBackend:
+    sys.modules['mlflow'] = MagicMock()
+    sys.modules['mlflow_pytorch'] = MagicMock()
+
+    def test_init(self):
+        MLFlowVisBackend('temp_dir')
+        VISBACKENDS.build(dict(type='MLFlowVisBackend', save_dir='temp_dir'))
+
+    def test_experiment(self):
+        mlflow_vis_backend = MLFlowVisBackend('temp_dir')
+        assert mlflow_vis_backend.experiment == mlflow_vis_backend._mlflow
+        shutil.rmtree('temp_dir')
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        mlflow_vis_backend = MLFlowVisBackend('temp_dir')
+        mlflow_vis_backend.add_config(cfg)
+        shutil.rmtree('temp_dir')
+
+    def test_add_image(self):
+        pass
+
+    def test_add_scalar(self):
+        pass
+
+    def test_add_scalars(self):
+        pass
+
+    def test_close(self):
+        mlflow_vis_backend = MLFlowVisBackend('temp_dir')
+        mlflow_vis_backend._init_env()
+        mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
