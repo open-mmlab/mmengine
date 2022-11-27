@@ -98,17 +98,20 @@ class DefaultOptimWrapperConstructor:
         >>> optim_wrapper = optim_wrapper_builder(model)
 
     Example 2:
-        >>> # assume model have attribute model.backbone and model.cls_head
+        >>> # assume model have attribute model.backbone, model.backbone.stem
+        >>> # and model.cls_head
         >>> optim_wrapper_cfg = dict(type='OptimWrapper', optimizer=dict(
         >>>     type='SGD', lr=0.01, weight_decay=0.95))
         >>> paramwise_cfg = dict(custom_keys={
-        >>>     'backbone': dict(lr_mult=0.1, decay_mult=0.9)})
+        >>>     'backbone': dict(lr_mult=0.1, decay_mult=0.9),
+        >>>     'backbone.stem': dict(requires_grad=False)})
         >>> optim_wrapper_builder = DefaultOptimWrapperConstructor(
         >>>     optim_wrapper_cfg, paramwise_cfg)
         >>> optim_wrapper = optim_wrapper_builder(model)
         >>> # Then the `lr` and `weight_decay` for model.backbone is
         >>> # (0.01 * 0.1, 0.95 * 0.9). `lr` and `weight_decay` for
-        >>> # model.cls_head is (0.01, 0.95).
+        >>> # model.cls_head is (0.01, 0.95). the `grad` is invalid
+        >>> # for model.backbone.stem.
     """
 
     def __init__(self,
