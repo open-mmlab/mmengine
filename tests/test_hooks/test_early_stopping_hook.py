@@ -148,7 +148,7 @@ class TestEarlyStoppingHook(TestCase):
         hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert hook.best_value == 8 / 9
+        assert hook.best_score == 8 / 9
 
         # Check smalleast value
         runner = get_mock_runner()
@@ -156,7 +156,7 @@ class TestEarlyStoppingHook(TestCase):
         hook = EarlyStoppingHook(monitor='loss')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert hook.best_value == 1 / 9
+        assert hook.best_score == 1 / 9
 
         # Check stop training
         runner = get_mock_runner()
@@ -183,7 +183,7 @@ class TestEarlyStoppingHook(TestCase):
             type='EarlyStoppingHook',
             monitor='test/acc',
             rule='greater',
-            delta=0.4,
+            min_delta=0.4,
         )
         runner = Runner(
             model=ToyModel(),
