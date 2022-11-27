@@ -200,12 +200,15 @@ class TestEarlyStoppingHook(TestCase):
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', stopping_threshold=98.5, patience=0)
+            monitor='accuracy/top1',
+            rule='greater',
+            stopping_threshold=98.5,
+            patience=0)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
                 break
-        self.assertAlmostEqual(hook.best_score.item(), 98 + 4/7, places=5)
+        self.assertAlmostEqual(hook.best_score.item(), 98 + 4 / 7, places=5)
 
     def test_with_runner(self):
         max_epoch = 10
