@@ -81,6 +81,7 @@ class EarlyStoppingHook(Hook):
         elif self.stopping_threshold is not None and compare(
                 current_score, self.stopping_threshold):
             stop_training = True
+            self.best_score = current_score
             self.reason_message = (
                 f'Stopping threshold reached: '
                 f'`{self.monitor}` = {current_score} is '
