@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import List, Optional, Union
+from math import inf, isfinite
+from typing import Optional, Union
 
 from mmengine.registry import HOOKS
 from .hook import Hook
@@ -16,12 +17,16 @@ class EarlyStoppingHook(Hook):
         monitor (str): The monitored metric key to decide early stopping.
         rule (str, optional): Comparison rule. Options are 'greater',
             'less'. Defaults to None.
-        delta(float, optional): Minimum difference to continue the training.
-            Defaults to 0.01.
-        pool_size (int, optional): The number of experiments to consider.
-            Defaults to 5.
+        min_delta(float, optional): Minimum difference to continue the
+            training. Defaults to 0.01.
+        strict (bool, optional): Whether to crash the training when `monitor`
+            is not found in the `metrics`. Defaults to False.
+        check_finite: Whether to stop training when the monitor becomes NaN or
+            infinite. Defaults to True.
         patience (int, optional): The times of validation with no improvement
-            after which training will be stopped. Defaults to 0.
+            after which training will be stopped. Defaults to 5.
+        stopping_threshold (float, optional): Stop training immediately once
+            the monitored quantity reaches this threshold. Defaults to None.
     """
     priority = 'LOWEST'
 
@@ -36,9 +41,11 @@ class EarlyStoppingHook(Hook):
         self,
         monitor: str,
         rule: str = None,
-        delta: float = 0.1,
-        pool_size: int = 5,
-        patience: int = 0,
+        min_delta: float = 0.1,
+        strict: bool = False,
+        check_finite: bool = True,
+        patience: int = 5,
+        stopping_threshold: Optional[float] = None,
     ):
 
         self.monitor = monitor
@@ -49,12 +56,50 @@ class EarlyStoppingHook(Hook):
         assert rule in ['greater', 'less'], \
             '`rule` should be either \'greater\' or \'less\'.'
         self.rule = rule
-        self.delta = delta
-        self.pool_size = pool_size
+        self.min_delta = min_delta
+        self.strict = strict
+        self.check_finite = check_finite
         self.patience = patience
-        self.count = 0
+        self.stopping_threshold = stopping_threshold
 
-        self.pool_values: List[float] = []
+        self.wait_count = 0
+        self.best_score = -inf if rule == 'greater' else inf
+        self.reason_message = ''
+        self.default_end_message = ' This training process stops early.'
+
+    def _check_stop_condition(self, current_score):
+        compare = self.rule_map[self.rule]
+        stop_training = False
+
+        if self.check_finite and not isfinite(current_score):
+            stop_training = True
+            self.reason_message = (f'Monitored metric {self.monitor} = '
+                                   f'{current_score} is not finite. '
+                                   f'Previous best value was '
+                                   f'{self.best_score:.3f}.')
+
+        elif self.stopping_threshold is not None and compare(
+                current_score, self.stopping_threshold):
+            stop_training = True
+            self.reason_message = (
+                f'Stopping threshold reached: '
+                f'`{self.monitor}` = {current_score} is '
+                f'{self.rule} than {self.stopping_threshold}.')
+        elif compare(self.best_score + self.min_delta, current_score):
+
+            self.wait_count += 1
+
+            if self.wait_count >= self.patience:
+                self.reason_message = (
+                    f'the monitored metric did not improve '
+                    f'in the last {self.wait_count} records. '
+                    f'best score: {self.best_score:.3f}. ')
+                stop_training = True
+        else:
+            self.best_score = current_score
+            self.wait_count = 0
+
+        return stop_training
 
     def before_run(self, runner) -> None:
         """Check `stop_training` variable in `runner.train_loop`.
@@ -75,34 +120,20 @@ class EarlyStoppingHook(Hook):
         """
 
         if self.monitor not in metrics:
+            if self.strict:
+                raise RuntimeError(
+                    f'Early stopping conditioned on metric '
+                    f'`{self.monitor} is not available. Please check available'
+                    f' metrics {metrics}, or set `strict=False` in '
+                    f'`EarlyStoppingHook`.')
             warnings.warn(
                 f'Skip early stopping process since the evaluation '
                 f'results ({metrics.keys()}) do not include `monitor` '
                 f'({self.monitor}).')
             return
 
-        latest_value = metrics[self.monitor]
-        compare = self.rule_map[self.rule]
+        current_score = metrics[self.monitor]
 
-        self.pool_values.append(latest_value)
-
-        if self.rule == 'greater':
-            # maintain largest values
-            self.pool_values = sorted(self.pool_values)[-self.pool_size:]
-        else:
-            # maintain smalleast values
-            self.pool_values = sorted(self.pool_values)[:self.pool_size]
-
-        if len(self.pool_values) == self.pool_size and compare(
-                sum(self.pool_values) / self.pool_size + self.delta,
-                latest_value):
-
-            self.count += 1
-
-            if self.count >= self.patience:
-                runner.train_loop.stop_training = True
-                runner.logger.info(
-                    'The monitored metric reached a plateau. '
-                    'This training process will be stopped early.')
-        else:
-            self.count = 0
+        if self._check_stop_condition(current_score):
+            runner.train_loop.stop_training = True
+            runner.logger.info(self.reason_message + self.default_end_message)

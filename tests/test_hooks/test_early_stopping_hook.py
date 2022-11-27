@@ -97,9 +97,11 @@ class TestEarlyStoppingHook(TestCase):
 
         hook = EarlyStoppingHook(monitor='acc')
         assert hook.rule == 'greater'
+        assert hook.best_score < 0
 
         hook = EarlyStoppingHook(monitor='loss')
         assert hook.rule == 'less'
+        assert hook.best_score > 0
 
         with pytest.raises(AssertionError):
             EarlyStoppingHook(monitor='accuracy/top1', rule='the world')
@@ -133,27 +135,34 @@ class TestEarlyStoppingHook(TestCase):
         else:
             assert False
 
-        # Check largest 5 values
+        # if `monitor` does not match and strict=True, crash the training.
+        with pytest.raises(RuntimeError):
+            metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
+            hook = EarlyStoppingHook(
+                monitor='acc', rule='greater', strict=True)
+            hook.after_val_epoch(runner, metrics)
+
+        # Check largest value
         runner = get_mock_runner()
-        metrics = [{'accuracy/top1': i / 10.} for i in range(8)]
+        metrics = [{'accuracy/top1': i / 9.} for i in range(8)]
         hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert all([i / 10 in hook.pool_values for i in range(3, 8)])
+        assert hook.best_value == 8 / 9
 
-        # Check smalleast 3 values
+        # Check smalleast value
         runner = get_mock_runner()
-        metrics = [{'loss': i / 10.} for i in range(8)]
-        hook = EarlyStoppingHook(monitor='loss', pool_size=3)
+        metrics = [{'loss': i / 9.} for i in range(8, 0, -1)]
+        hook = EarlyStoppingHook(monitor='loss')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert all([i / 10 in hook.pool_values for i in range(3)])
+        assert hook.best_value == 1 / 9
 
         # Check stop training
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', delta=1)
+            monitor='accuracy/top1', rule='greater', min_delta=1)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert runner.train_loop.stop_training
@@ -162,7 +171,7 @@ class TestEarlyStoppingHook(TestCase):
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', delta=1, patience=5)
+            monitor='accuracy/top1', rule='greater', min_delta=1, patience=5)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
         assert not runner.train_loop.stop_training
