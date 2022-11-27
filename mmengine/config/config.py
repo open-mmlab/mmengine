@@ -301,6 +301,33 @@ class Config:
     def _substitute_environment_vars(filename: str, temp_config_name: str):
         """Substitute environment variables in config with actual values.
 
+        Sometimes, we want to change some items in the config with environment
+        variables. For examples, we expect to change dataset root by setting
+        ``DATASET_ROOT=/dataset/root/path`` in the command line. This can be
+        easily achieved by writing lines in the config as follows
+
+        .. code-block:: python
+
+           data_root = '{{$DATASET_ROOT:/default/dataset}}/images'
+
+
+        Here, ``{{$DATASET_ROOT:/default/dataset}}`` indicates using the
+        environment variable ``DATASET_ROOT`` to replace the part between
+        ``{{}}``. If the ``DATASET_ROOT`` is not set, the default value
+        ``/default/dataset`` will be used.
+
+        Environment variables not only can replace items in the string, they
+        can also substitute other types of data in config. In this situation,
+        we can write the config as below
+
+        .. code-block:: python
+
+           model = dict(
+               bbox_head = dict(num_classes={{'$NUM_CLASSES:80'}}))
+
+
+        For details, Please refer to docs/zh_cn/tutorials/config.md .
+
         Args:
             filename (str): Filename of config.
             temp_config_name (str): Temporary filename to save substituted
