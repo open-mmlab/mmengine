@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import math
 import os.path as osp
 import tempfile
 from unittest import TestCase
@@ -63,7 +64,7 @@ class DummyMetric(BaseMetric):
         self.length = length
         self.best_idx = length // 2
         self.cur_idx = 0
-        self.vals = [90, 91, 92, 93, 94, 93] * 2
+        self.vals = [90, 91, 92, 88, 89, 90] * 2
 
     def process(self, *args, **kwargs):
         self.results.append(0)
@@ -148,7 +149,9 @@ class TestEarlyStoppingHook(TestCase):
         hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert hook.best_score == 8 / 9
+            if runner.train_loop.stop_training:
+                break
+        self.assertAlmostEqual(hook.best_score, 7 / 9)
 
         # Check smalleast value
         runner = get_mock_runner()
@@ -156,7 +159,9 @@ class TestEarlyStoppingHook(TestCase):
         hook = EarlyStoppingHook(monitor='loss')
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
-        assert hook.best_score == 1 / 9
+            if runner.train_loop.stop_training:
+                break
+        self.assertAlmostEqual(hook.best_score, 1 / 9)
 
         # Check stop training
         runner = get_mock_runner()
@@ -165,15 +170,30 @@ class TestEarlyStoppingHook(TestCase):
             monitor='accuracy/top1', rule='greater', min_delta=1)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
+            if runner.train_loop.stop_training:
+                break
+        assert runner.train_loop.stop_training
+
+        # Check finite
+        runner = get_mock_runner()
+        metrics = [{'accuracy/top1': math.inf} for i in range(5)]
+        hook = EarlyStoppingHook(
+            monitor='accuracy/top1', rule='greater', min_delta=1)
+        for metric in metrics:
+            hook.after_val_epoch(runner, metric)
+            if runner.train_loop.stop_training:
+                break
         assert runner.train_loop.stop_training
 
         # Check patience
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
         hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', min_delta=1, patience=5)
+            monitor='accuracy/top1', rule='greater', min_delta=1, patience=10)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
+            if runner.train_loop.stop_training:
+                break
         assert not runner.train_loop.stop_training
 
     def test_with_runner(self):
@@ -183,7 +203,8 @@ class TestEarlyStoppingHook(TestCase):
             type='EarlyStoppingHook',
             monitor='test/acc',
             rule='greater',
-            min_delta=0.4,
+            min_delta=1,
+            patience=3,
         )
         runner = Runner(
             model=ToyModel(),
@@ -207,4 +228,4 @@ class TestEarlyStoppingHook(TestCase):
             custom_hooks=[early_stop_cfg],
             experiment_name='earlystop_test')
         runner.train()
-        assert runner.epoch == 7
+        assert runner.epoch == 6
