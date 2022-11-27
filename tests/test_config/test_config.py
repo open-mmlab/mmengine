@@ -514,9 +514,10 @@ class TestConfig:
                 filename = f'{file_format}_config/{name}.{file_format}'
 
                 cfg_file = osp.join(self.data_path, 'config', filename)
-                cfg_dict, cfg_text = Config._file2dict(cfg_file)
+                cfg_dict, cfg_text, env_variables = Config._file2dict(cfg_file)
                 assert isinstance(cfg_text, str)
                 assert isinstance(cfg_dict, dict)
+                assert isinstance(env_variables, dict)
 
     def _get_file_path(self, file_path):
         if platform.system() == 'Windows':
