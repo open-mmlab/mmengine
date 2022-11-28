@@ -46,7 +46,7 @@ data = load('s3://bucket-name/test.pkl')
 dump(data, 's3://bucket-name/out.pkl')
 ```
 
-It is also very convenient to extend the api to support more file formats. All you need to do is to write a file handler inherited from `BaseFileHandler` and register it with one or several file formats.
+It is also very convenient to extend the API to support more file formats. All you need to do is to write a file handler inherited from `BaseFileHandler` and register it with one or several file formats.
 
 ```python
 from mmengine import register_handler, BaseFileHandler
