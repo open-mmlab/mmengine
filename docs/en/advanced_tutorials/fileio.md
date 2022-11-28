@@ -6,7 +6,7 @@ The `fileio` module also supports reading and writing files from a variety of fi
 
 ## Load and dump data
 
-`MMEngine` provides a universal api for loading and dumping data, currently supported formats are `json`, `yaml` and `pickle`.
+`MMEngine` provides a universal API for loading and dumping data, currently supported formats are `json`, `yaml`, and `pickle`.
 
 ### Load from disk or dump to disk
 
