@@ -55,9 +55,6 @@ class ProfilerHook(Hook):
         >>> # tensorboard trace
         >>> trace_config = dict(type='tb_trace', dir_name='work_dir')
         >>> profiler_hook_cfg = dict(on_trace_ready=trace_config)
-
-        # >>> runner.register_profiler_hook(profiler_hook_cfg)
-        # >>> runner.run(data_loaders=[trainloader], workflow=[('train', 1)])
     """
 
     def __init__(self,
