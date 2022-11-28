@@ -59,10 +59,7 @@ class BaseDataPreprocessor(nn.Module):
         elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
-            raise TypeError(
-                '`BaseDataPreprocessor.cast_data`: batch data must contain '
-                'tensors, numpy arrays, numbers, dicts or lists, but '
-                f'found {type(data)}')
+            return data
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
