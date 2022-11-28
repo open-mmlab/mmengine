@@ -109,9 +109,8 @@ def init_default_scope(scope: str) -> None:
     if current_scope.scope_name != scope:  # type: ignore
         warnings.warn('The current default scope '  # type: ignore
                       f'"{current_scope.scope_name}" is not "{scope}", '
-                      '`register_all_modules` will force the current'
-                      f'default scope to be "{scope}". If this is not '
-                      'expected, please set `init_default_scope=False`.')
+                      '`init_default_scope` will force set the current'
+                      f'default scope to "{scope}".')
         # avoid name conflict
         new_instance_name = f'{scope}-{datetime.datetime.now()}'
         DefaultScope.get_instance(new_instance_name, scope_name=scope)
