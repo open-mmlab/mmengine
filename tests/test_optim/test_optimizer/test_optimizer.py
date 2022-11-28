@@ -172,8 +172,7 @@ class TestBuilder(TestCase):
         # sub.conv1.bias
         sub_conv1_bias = param_groups[8]
         assert sub_conv1_bias['lr'] == self.base_lr * bias_lr_mult
-        assert sub_conv1_bias[
-            'weight_decay'] == self.base_wd * dwconv_decay_mult
+        assert sub_conv1_bias['weight_decay'] == self.base_wd * bias_decay_mult
         # sub.gn.weight
         sub_gn_weight = param_groups[9]
         assert sub_gn_weight['lr'] == self.base_lr

@@ -239,15 +239,15 @@ class DefaultOptimWrapperConstructor:
                     if is_norm:
                         param_group[
                             'weight_decay'] = self.base_wd * norm_decay_mult
-                    # depth-wise conv
-                    elif is_dwconv:
-                        param_group[
-                            'weight_decay'] = self.base_wd * dwconv_decay_mult
                     # bias lr and decay
                     elif name == 'bias' and not is_dcn_module:
                         # TODO: current bias_decay_mult will have affect on DCN
                         param_group[
                             'weight_decay'] = self.base_wd * bias_decay_mult
+                    # depth-wise conv
+                    elif is_dwconv:
+                        param_group[
+                            'weight_decay'] = self.base_wd * dwconv_decay_mult
             params.append(param_group)
             for key, value in param_group.items():
                 if key == 'params':
