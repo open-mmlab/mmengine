@@ -24,5 +24,5 @@ __all__ = [
     'NaiveVisualizationHook',
     'EMAHook',
     'RuntimeInfoHook',
-    'EarlyStoppingHook',
+    'EarlyStoppingHook'
 ]

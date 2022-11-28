@@ -54,7 +54,7 @@ class EarlyStoppingHook(Hook):
         elif monitor in self._default_less_keys:
             rule = 'less'
         assert rule in ['greater', 'less'], \
-            '`rule` should be either \'greater\' or \'less\'.'
+            "`rule` should be either 'greater' or 'less'."
         self.rule = rule
         self.min_delta = min_delta
         self.strict = strict
@@ -74,7 +74,7 @@ class EarlyStoppingHook(Hook):
         if self.check_finite and not isfinite(current_score):
             stop_training = True
             self.reason_message = (f'Monitored metric {self.monitor} = '
-                                   f'{current_score} is not finite. '
+                                   f'{current_score} is infinite. '
                                    f'Previous best value was '
                                    f'{self.best_score:.3f}.')
 
@@ -123,12 +123,12 @@ class EarlyStoppingHook(Hook):
         if self.monitor not in metrics:
             if self.strict:
                 raise RuntimeError(
-                    f'Early stopping conditioned on metric '
+                    'Early stopping conditioned on metric '
                     f'`{self.monitor} is not available. Please check available'
                     f' metrics {metrics}, or set `strict=False` in '
-                    f'`EarlyStoppingHook`.')
+                    '`EarlyStoppingHook`.')
             warnings.warn(
-                f'Skip early stopping process since the evaluation '
+                'Skip early stopping process since the evaluation '
                 f'results ({metrics.keys()}) do not include `monitor` '
                 f'({self.monitor}).')
             return
