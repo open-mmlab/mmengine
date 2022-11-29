@@ -169,188 +169,6 @@ class BaseInferencer(metaclass=InferencerMeta):
         self.collate_fn = self._init_collate(cfg)
         self.visualizer = self._init_visualizer(cfg)
 
-    def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:
-        """Load config and weights from metafile.
-
-        Args:
-            model (str): model name defined in metafile.
-
-        Returns:
-            Tuple[Config, str]: Loaded Config and weights path defined in
-                metafile.
-        """
-        scope = DefaultScope.get_current_instance().scope_name  # type: ignore
-        assert scope is not None, ('scope should be initialized if you want '
-                                   'to load config from metafile.')
-        project = PKG2PROJECT[scope]
-        package_path = get_installed_path(project)
-        meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
-        for meta_path in meta_indexes['Import']:
-            # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
-            meta_path = osp.join(package_path, '.mim', meta_path)
-            metainfo = load(meta_path)
-            for model_cfg in metainfo['Models']:
-                if model_cfg['Name'] == model or model in model_cfg.get(
-                        'Alias', []):
-                    cfg = Config.fromfile(
-                        osp.join(package_path, '.mim', model_cfg['Config']))
-                    weights = model_cfg['Weights']
-                    return cfg, weights
-        raise ValueError(f'Cannot find model: {model} in {project}')
-
-    def _init_model(
-        self,
-        cfg: ConfigType,
-        weights: str,
-        device: str = 'cpu',
-    ) -> nn.Module:
-        """Initialize the model with the given config and checkpoint on the
-        specific device.
-
-        Args:
-            cfg (ConfigType): Config contained the model information.
-            weights (str): Path to the checkpoint.
-            device (str, optional): Device to run inference. Defaults to 'cpu'.
-
-        Returns:
-            nn.Module: Model loaded with checkpoint.
-        """
-        model = MODELS.build(cfg.model)
-        load_checkpoint(model, weights, map_location='cpu')
-        model.cfg = cfg.model
-        model.to(device)
-        model.eval()
-        return model
-
-    def _init_collate(self, cfg: ConfigType) -> Callable:
-        """Initialize the ``collate_fn`` with the given config.
-
-        The returned ``collate_fn`` will be used to collate the batch data.
-        If will be used in :meth:`preprocess` like this
-
-        .. code-block:: python
-            def preprocess(self, inputs, batch_size, **kwargs):
-                ...
-                dataloader = map(self.collate_fn, dataloader)
-                yield from dataloader
-
-        Args:
-            cfg (ConfigType): Config which could contained the `collate_fn`
-                information. If `collate_fn` is not defined in config, it will
-                be :func:`pseudo_collate`.
-
-        Returns:
-            Callable: Collate function.
-        """
-        try:
-            collate_fn = COLLATE_FUNCTIONS.get(cfg.test_dataloader.collate_fn)
-        except AttributeError:
-            collate_fn = pseudo_collate
-        return collate_fn  # type: ignore
-
-    @abstractmethod
-    def _init_pipeline(self, cfg: ConfigType) -> Callable:
-        """Initialize the test pipeline.
-
-        Return a pipeline to handle varies of input data, such as str,
-        np.ndarray. It is an abstract method in BaseInferencer, and should be
-        implemented in subclasses
-
-        The returned pipeline will be used to process a single data.
-        It will be used in :meth:`preprocess` like this:
-
-        .. code-block:: python
-            def preprocess(self, inputs, batch_size, **kwargs):
-                ...
-                dataset = map(self.pipeline, dataset)
-                ...
-        """
-        raise NotImplementedError('_init_pipeline is not implemented!')
-
-    def _get_chunk_data(self, dataset: Iterable, chunk_size: int):
-        """Get batch data from dataset.
-
-        Args:
-            dataset (Iterable): An iterable dataset.
-            chunk_size (int): Equivalent to batch size.
-
-        Yields:
-            list: batch data.
-        """
-        dataset_iter = iter(dataset)
-        while True:
-            try:
-                chunk_data = []
-                for _ in range(chunk_size):
-                    processed_data = next(dataset_iter)
-                    chunk_data.append(processed_data)
-                yield chunk_data
-            except StopIteration:
-                if chunk_data:
-                    yield chunk_data
-                break
-
-    def _init_visualizer(self, cfg: ConfigType) -> Optional[Visualizer]:
-        """Initialize visualizers.
-
-        Args:
-            cfg (ConfigType): Config contained the visualizer information.
-
-        Returns:
-            Visualizer or None: Visualizer initialized with config.
-        """
-        if 'visualizer' not in cfg:
-            return None
-        timestamp = str(datetime.timestamp(datetime.now()))
-        cfg.visualizer['name'] = f'inferencer-{timestamp}'
-        return VISUALIZERS.build(cfg.visualizer)
-
-    def _dispatch_kwargs(self, **kwargs) -> Tuple[Dict, Dict, Dict, Dict]:
-        """Dispatch kwargs to preprocess(), forward(), visualize() and
-        postprocess() according to the actual demands.
-
-        Returns:
-            Tuple[Dict, Dict, Dict, Dict]: kwargs passed to preprocess,
-            forward, visualize and postprocess respectively.
-        """
-        # Ensure each argument only matches one function
-        for key in kwargs.keys():
-            method_kwargs = [
-                self.preprocess_kwargs,
-                self.forward_kwargs,
-                self.visualize_kwargs,
-                self.postprocess_kwargs,
-            ]
-            matches = tuple(kwarg for kwarg in method_kwargs if key in kwarg)
-            if len(matches) == 0:
-                raise ValueError(
-                    f'unknown argument {key} for `preprocess`, `forward`, '
-                    '`visualize` and `postprocess`')
-            if len(matches) > 1:
-                raise ValueError(f'Ambiguous argument {key} for {matches}')
-
-        preprocess_kwargs = {}
-        forward_kwargs = {}
-        visualize_kwargs = {}
-        postprocess_kwargs = {}
-
-        for key, value in kwargs.items():
-            if key in self.preprocess_kwargs:
-                preprocess_kwargs[key] = value
-            elif key in self.forward_kwargs:
-                forward_kwargs[key] = value
-            elif key in self.visualize_kwargs:
-                visualize_kwargs[key] = value
-            else:
-                postprocess_kwargs[key] = value
-
-        return (
-            preprocess_kwargs,
-            forward_kwargs,
-            visualize_kwargs,
-            postprocess_kwargs,
-        )
-
     def __call__(
         self,
         inputs: InputsType,
@@ -468,3 +286,185 @@ class BaseInferencer(metaclass=InferencerMeta):
                   processed in :meth:`postprocess`
         """
         raise NotImplementedError('postprocess is not implemented!')
+
+    def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:
+        """Load config and weights from metafile.
+
+        Args:
+            model (str): model name defined in metafile.
+
+        Returns:
+            Tuple[Config, str]: Loaded Config and weights path defined in
+                metafile.
+        """
+        scope = DefaultScope.get_current_instance().scope_name  # type: ignore
+        assert scope is not None, ('scope should be initialized if you want '
+                                   'to load config from metafile.')
+        project = PKG2PROJECT[scope]
+        package_path = get_installed_path(project)
+        meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
+        for meta_path in meta_indexes['Import']:
+            # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
+            meta_path = osp.join(package_path, '.mim', meta_path)
+            metainfo = load(meta_path)
+            for model_cfg in metainfo['Models']:
+                if model_cfg['Name'] == model or model in model_cfg.get(
+                        'Alias', []):
+                    cfg = Config.fromfile(
+                        osp.join(package_path, '.mim', model_cfg['Config']))
+                    weights = model_cfg['Weights']
+                    return cfg, weights
+        raise ValueError(f'Cannot find model: {model} in {project}')
+
+    def _init_model(
+        self,
+        cfg: ConfigType,
+        weights: str,
+        device: str = 'cpu',
+    ) -> nn.Module:
+        """Initialize the model with the given config and checkpoint on the
+        specific device.
+
+        Args:
+            cfg (ConfigType): Config contained the model information.
+            weights (str): Path to the checkpoint.
+            device (str, optional): Device to run inference. Defaults to 'cpu'.
+
+        Returns:
+            nn.Module: Model loaded with checkpoint.
+        """
+        model = MODELS.build(cfg.model)
+        load_checkpoint(model, weights, map_location='cpu')
+        model.cfg = cfg.model
+        model.to(device)
+        model.eval()
+        return model
+
+    def _init_collate(self, cfg: ConfigType) -> Callable:
+        """Initialize the ``collate_fn`` with the given config.
+
+        The returned ``collate_fn`` will be used to collate the batch data.
+        If will be used in :meth:`preprocess` like this
+
+        .. code-block:: python
+            def preprocess(self, inputs, batch_size, **kwargs):
+                ...
+                dataloader = map(self.collate_fn, dataloader)
+                yield from dataloader
+
+        Args:
+            cfg (ConfigType): Config which could contained the `collate_fn`
+                information. If `collate_fn` is not defined in config, it will
+                be :func:`pseudo_collate`.
+
+        Returns:
+            Callable: Collate function.
+        """
+        try:
+            collate_fn = COLLATE_FUNCTIONS.get(cfg.test_dataloader.collate_fn)
+        except AttributeError:
+            collate_fn = pseudo_collate
+        return collate_fn  # type: ignore
+
+    @abstractmethod
+    def _init_pipeline(self, cfg: ConfigType) -> Callable:
+        """Initialize the test pipeline.
+
+        Return a pipeline to handle varies of input data, such as str,
+        np.ndarray. It is an abstract method in BaseInferencer, and should be
+        implemented in subclasses
+
+        The returned pipeline will be used to process a single data.
+        It will be used in :meth:`preprocess` like this:
+
+        .. code-block:: python
+            def preprocess(self, inputs, batch_size, **kwargs):
+                ...
+                dataset = map(self.pipeline, dataset)
+                ...
+        """
+        raise NotImplementedError('_init_pipeline is not implemented!')
+
+    def _init_visualizer(self, cfg: ConfigType) -> Optional[Visualizer]:
+        """Initialize visualizers.
+
+        Args:
+            cfg (ConfigType): Config contained the visualizer information.
+
+        Returns:
+            Visualizer or None: Visualizer initialized with config.
+        """
+        if 'visualizer' not in cfg:
+            return None
+        timestamp = str(datetime.timestamp(datetime.now()))
+        cfg.visualizer['name'] = f'inferencer-{timestamp}'
+        return VISUALIZERS.build(cfg.visualizer)
+
+    def _get_chunk_data(self, dataset: Iterable, chunk_size: int):
+        """Get batch data from dataset.
+
+        Args:
+            dataset (Iterable): An iterable dataset.
+            chunk_size (int): Equivalent to batch size.
+
+        Yields:
+            list: batch data.
+        """
+        dataset_iter = iter(dataset)
+        while True:
+            try:
+                chunk_data = []
+                for _ in range(chunk_size):
+                    processed_data = next(dataset_iter)
+                    chunk_data.append(processed_data)
+                yield chunk_data
+            except StopIteration:
+                if chunk_data:
+                    yield chunk_data
+                break
+
+    def _dispatch_kwargs(self, **kwargs) -> Tuple[Dict, Dict, Dict, Dict]:
+        """Dispatch kwargs to preprocess(), forward(), visualize() and
+        postprocess() according to the actual demands.
+
+        Returns:
+            Tuple[Dict, Dict, Dict, Dict]: kwargs passed to preprocess,
+            forward, visualize and postprocess respectively.
+        """
+        # Ensure each argument only matches one function
+        for key in kwargs.keys():
+            method_kwargs = [
+                self.preprocess_kwargs,
+                self.forward_kwargs,
+                self.visualize_kwargs,
+                self.postprocess_kwargs,
+            ]
+            matches = tuple(kwarg for kwarg in method_kwargs if key in kwarg)
+            if len(matches) == 0:
+                raise ValueError(
+                    f'unknown argument {key} for `preprocess`, `forward`, '
+                    '`visualize` and `postprocess`')
+            if len(matches) > 1:
+                raise ValueError(f'Ambiguous argument {key} for {matches}')
+
+        preprocess_kwargs = {}
+        forward_kwargs = {}
+        visualize_kwargs = {}
+        postprocess_kwargs = {}
+
+        for key, value in kwargs.items():
+            if key in self.preprocess_kwargs:
+                preprocess_kwargs[key] = value
+            elif key in self.forward_kwargs:
+                forward_kwargs[key] = value
+            elif key in self.visualize_kwargs:
+                visualize_kwargs[key] = value
+            else:
+                postprocess_kwargs[key] = value
+
+        return (
+            preprocess_kwargs,
+            forward_kwargs,
+            visualize_kwargs,
+            postprocess_kwargs,
+        )
