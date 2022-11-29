@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import itertools
 import os
 import os.path as osp
 from abc import ABCMeta, abstractmethod
@@ -36,9 +35,8 @@ ModelType = Tuple[Union[dict, ConfigType], str]
 class InferencerMeta(ABCMeta):
     """Check the legality of the inferencer.
 
-    All Inferencer should not define duplicated keys for
-    ``preprocess_kwargs``,``forward_kwargs``, ``visualize_kwargs`` and
-    ``postprocess_kwargs``.
+    All Inferencer should not define duplicated keys for ``preprocess_kwargs``,
+    ``forward_kwargs``, ``visualize_kwargs`` and ``postprocess_kwargs``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -48,27 +46,23 @@ class InferencerMeta(ABCMeta):
         assert isinstance(self.visualize_kwargs, set)
         assert isinstance(self.postprocess_kwargs, set)
 
-        combinations = itertools.combinations(
-            [
-                self.preprocess_kwargs,
-                self.forward_kwargs,
-                self.visualize_kwargs,
-                self.postprocess_kwargs,
-            ],
-            2,
-        )
+        all_kwargs = (
+            self.preprocess_kwargs | self.forward_kwargs
+            | self.visualize_kwargs | self.postprocess_kwargs)
 
-        assert all((not x & y) for x, y in combinations), (
-            f'Class define error! {self.__name__} should not '
-            'define duplicated keys for `preprocess_kwargs`, '
-            '`forward_kwargs`, `visualize_kwargs` and '
-            '`postprocess_kwargs` are not allowed.')
+        assert len(all_kwargs) == (
+            len(self.preprocess_kwargs) + len(self.forward_kwargs) +
+            len(self.visualize_kwargs) + len(self.postprocess_kwargs)), (
+                f'Class define error! {self.__name__} should not '
+                'define duplicated keys for `preprocess_kwargs`, '
+                '`forward_kwargs`, `visualize_kwargs` and '
+                '`postprocess_kwargs` are not allowed.')
 
 
 class BaseInferencer(metaclass=InferencerMeta):
     """Base inferencer for downstream tasks.
 
-    The BaseInferencer provide the standard workflow for inference as follows:
+    The BaseInferencer provides the standard workflow for inference as follows:
 
     1. Preprocess the input data by :meth:`preprocess`.
     2. Forward the data to the model by :meth:`forward`. ``BaseInferencer``
@@ -77,7 +71,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     3. Visualize the results by :meth:`visualize`.
     4. Postprocess and return the results by :meth:`postprocess`.
 
-    When we call the subclasses inherited from BaseInferencer(not override the
+    When we call the subclasses inherited from BaseInferencer (not overriding
     ``__call__``), the workflow will be executed in order.
 
     All subclasses of BaseInferencer could define the following class
@@ -92,7 +86,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     - ``postprocess_kwargs``: The keys of the kwargs that will be passed to
       :meth:`postprocess`
 
-    All attributes mentioned above should be a ``set`` of keys(strings),
+    All attributes mentioned above should be a ``set`` of keys (strings),
     and each key should not be duplicated. Actually, :meth:`__call__` will
     dispatch all the arguments to the corresponding methods according to the
     ``xxx_kwargs`` mentioned above, therefore, the key in sets should
@@ -123,8 +117,8 @@ class BaseInferencer(metaclass=InferencerMeta):
             device will be automatically used. Defaults to None.
 
     Note:
-        Since `Inferencer` could be used to inference batch data, therefore
-        `collate_fn` should be defined. `collate_fn` is not defined in config
+        Since `Inferencer` could be used to inference batch data,
+        `collate_fn` should be defined. If `collate_fn` is not defined in config
         file, the `collate_fn` will be `pseudo_collate` by default.
     """  # noqa: E501
 
@@ -145,8 +139,8 @@ class BaseInferencer(metaclass=InferencerMeta):
             if osp.isfile(model):
                 cfg = Config.fromfile(model)
             else:
-                # Load config and weights from metafile. If `weights` is given
-                # weights defined in metafile will be ignored.
+                # Load config and weights from metafile. If `weights` is
+                # assigned, the weights defined in metafile will be ignored.
                 cfg, _weights = self._load_model_from_metafile(model)
                 if weights is not None:
                     weights = _weights
@@ -209,7 +203,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
         """Process the inputs into a model-feedable format.
 
-        Customize your preprocess by overriding this methods. Preprocess should
+        Customize your preprocess by overriding this method. Preprocess should
         return an iterable object, of which each item will be used as the
         input of ``model.test_step``.
 
@@ -218,10 +212,10 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         .. code-block:: python
 
-        def __call__(self, inputs, batch_size=1, **kwargs):
-            dataloader = self.preprocess(inputs, batch_size, **kwargs)
-            for batch in dataloader:
-                preds = self.forward(batch, **kwargs)
+            def __call__(self, inputs, batch_size=1, **kwargs):
+                dataloader = self.preprocess(inputs, batch_size, **kwargs)
+                for batch in dataloader:
+                    preds = self.forward(batch, **kwargs)
 
         Args:
             inputs (InputsType): Inputs given by user.
@@ -275,7 +269,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     ) -> dict:
         """Postprocess predictions.
 
-        Customize your postprocess by overriding this methods. postprocess
+        Customize your postprocess by overriding this method. postprocess
         should return a dict with visualization results and inference results.
 
         Args:
@@ -378,7 +372,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Return a pipeline to handle varies of input data, such as str,
         np.ndarray. It is an abstract method in BaseInferencer, and should be
-        implemented in subclasses
+        implemented in subclasses.
 
         The returned pipeline will be used to process a single data.
         It will be used in :meth:`preprocess` like this:

@@ -4,7 +4,7 @@
 mmengine.hub
 ===================================
 
-.. currentmodule:: mmengine.inferencer
+.. currentmodule:: mmengine.infer
 
 .. autosummary::
    :toctree: generated
