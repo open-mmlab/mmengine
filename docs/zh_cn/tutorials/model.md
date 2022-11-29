@@ -2,7 +2,7 @@
 
 ## Runner 与 model
 
-在 [Runner 教程的基本数据流](./runner.md#基本数据流)中我们提到，DataLoader、model 和 evaluator 之间的数据流通遵循了一些规则，我们不妨先来回顾一下基本数据流的伪代码：
+在 [Runner 教程的基本数据流](./runner.md#基本数据流)中我们提到，DataLoader、model 和 evaluator 之间的数据流通遵循了一些规则，我们先来回顾一下基本数据流的伪代码：
 
 ```python
 # 训练过程
@@ -48,7 +48,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 [**forward**](mmengine.model.BaseModel.forward): `forward` 的入参需通常需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据预处理器](#数据预处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：
 
 - `mode='loss'`：`loss` 模式通常在训练阶段启用，并返回一个损失字典。损失字典的 key-value 分别为损失名和可微的 `torch.Tensor`。字典中记录的损失会被用于更新参数和记录日志。模型基类会在 `train_step` 方法中调用该模式的 `forward`。
-- `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](../advanced_tutorials/data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
+- `mode='predict'`： `predict` 模式通常在验证、测试阶段启用，并返回列表/元组形式的预测结果，预测结果需要和 [process](mmengine.evaluator.Evaluator.process) 接口的参数相匹配。OpenMMLab 系列算法对 `predict` 模式的输出有着更加严格的约定，需要输出列表形式的[数据元素](../advanced_tutorials/data_element.md)。模型基类会在 `val_step`，`test_step` 方法中调用该模式的 `forward`。
 - `mode='tensor'`：`tensor` 和 `predict` 模式均返回模型的前向推理结果，区别在于 `tensor` 模式下，`forward` 会返回未经后处理的张量，例如返回未经非极大值抑制（nms）处理的检测结果，返回未经 `argmax` 处理的分类结果。我们可以基于 `tensor` 模式的结果进行自定义的后处理。
 
 [**train_step**](mmengine.model.BaseModel.train_step): 执行 `forward` 方法的 `loss` 分支，得到损失字典。模型基类基于[优化器封装](./optim_wrapper.md) 实现了标准的梯度计算、参数更新、梯度清零流程。其等效伪代码如下：
@@ -62,7 +62,7 @@ def train_step(self, data, optim_wrapper):
     return log_vars
 ```
 
-[**val_step**](mmengine.model.BaseModel.val_step): 执行 `forward` 方法的 `predict` 分支，返回预测结果，预测结果会被传给[评测器](./evaluation.md.md)的 [process](mmengine.evaluator.Evaluator.process) 方法。其等效伪代码如下：
+[**val_step**](mmengine.model.BaseModel.val_step): 执行 `forward` 方法的 `predict` 分支，返回预测结果：
 
 ```python
 def val_step(self, data, optim_wrapper):
@@ -71,7 +71,7 @@ def val_step(self, data, optim_wrapper):
     return outputs
 ```
 
-[**test_step**](mmengine.model.BaseModel.test_step): 同 `val_step`，预测结果会被传给 `after_test_iter` 接口。
+[**test_step**](mmengine.model.BaseModel.test_step): 同 `val_step`
 
 看到这我们就可以给出一份 **基本数据流伪代码 plus**：
 
@@ -131,7 +131,7 @@ class MMResNet50(BaseModel):
 
 ## 数据预处理器（DataPreprocessor）
 
-如果你的电脑配有 GPU（或其他能够加速训练的硬件，如 mps、ipu 等），并且运行了 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 的代码示例，你会发现程序是在 GPU 上运行的，那么 `MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
+如果你的电脑配有 GPU（或其他能够加速训练的硬件，如 MPS、IPU 等），并且运行了 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 的代码示例，你会发现程序是在 GPU 上运行的，那么 `MMEngine` 是在何时把数据和模型从 CPU 搬运到 GPU 的呢？
 
 事实上，执行器会在构造阶段将模型搬运到指定设备，而数据则会在上一节提到的 `self.data_preprocessor` 这一行搬运到指定设备，进一步将处理好的数据传给模型。看到这里相信你会疑惑：
 
@@ -143,7 +143,7 @@ class MMResNet50(BaseModel):
 
 ```python
 class BaseDataPreprocessor(nn.Module):
-    def forward(self, data, training=True):  # 先忽略 ignore 参数
+    def forward(self, data, training=True):  # 先忽略 training 参数
         # 假设 data 是 CIFAR10 返回的 tuple 类型数据，事实上
         # BaseDataPreprocessor 可以处理任意类型的数
         # BaseDataPreprocessor 同样可以把数据搬运到多种设备，这边方便
@@ -184,7 +184,7 @@ class BaseDataPreprocessor(nn.Module):
            # 原图和标签的 MixUp.
            img = lam * img + (1 - lam) * img[index, :]
            label = lam * batch_scores + (1 - lam) * batch_scores[index, :]
-           # 由于此时返回的是 onehot 编码的 label，model 的 loss 也需要做相应调整
+           # 由于此时返回的是 onehot 编码的 label，model 的 forward 也需要做相应调整
            return tuple(img, label)
    ```
 
