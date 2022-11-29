@@ -170,7 +170,7 @@ runner = Runner(
         num_workers=2),
     # 验证相关配置，通常为空即可
     val_cfg=dict(),
-    # 验证指标与验证器封装，可自由实现与配置，也可缺省
+    # 验证指标与验证器封装，可自由实现与配置
     val_evaluator=dict(type=Accuracy),
 
     # 以下为其他进阶配置，无特殊需要时尽量缺省
@@ -418,13 +418,13 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 </details>
 
 <details>
-<summary>什么是 data preprocessor？我可以用它做裁减缩放等图像预处理吗？</summary>
+<summary>什么是 data_preprocessor？我可以用它做裁减缩放等图像预处理吗？</summary>
 
 虽然图中的 data preprocessor 与 model 是分离的，但在实际中前者是后者的一部分，因此可以在[模型](./model.md)文档中的数据处理器章节找到。
 
 通常来说，数据处理器不需要额外关注和指定，默认的数据处理器只会自动将数据搬运到 GPU 中。但是，如果你的模型与数据加载器的数据格式不匹配，你也可以自定义一个数据处理器来进行格式转换。
 
-裁减缩放等图像预处理更推荐在[数据变换](./data_transform.md)中进行，但如果是 batch 相关的数据处理（如 batch-resize 等），可以在这里实现。
+裁减缩放等图像预处理更推荐在[数据变换](../advanced_tutorials/data_transform.md)中进行，但如果是 batch 相关的数据处理（如 batch-resize 等），可以在这里实现。
 
 </details>
 
@@ -486,9 +486,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 <details>
 <summary>使用自己的数据集</summary>
 
-MMEngine 使用和 pytorch 一致的 `dataloader` ，请参考 pytorch 相关文档进行构建
-
-同时 MMEngine 提供了一个进阶的[数据集基类](../advanced_tutorials/basedataset.md)供下游库与用户使用，如有兴趣也可以阅读文档了解
+参考[数据集（Dataset）与数据加载器（DataLoader）](./dataset.md)
 
 </details>
 
