@@ -260,7 +260,7 @@ Referred to [training a GAN model](../examples/train_a_gan.md), The differences 
         optimizer.zero_grad()
         return log_vars
 
-    def train_generator(self, inputs, optimizer_wrapper):
+    def train_generator(self, inputs, optimizer):
         real_imgs = inputs['inputs']
         z = torch.randn(inputs['inputs'].shape[0], self.noise_size).type_as(
             real_imgs)
