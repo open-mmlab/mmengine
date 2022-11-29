@@ -41,7 +41,7 @@ class PetrelBackend(BaseStorageBackend):
     def __init__(self,
                  path_mapping: Optional[dict] = None,
                  enable_mc: bool = True,
-                 conf_path: str = None):
+                 conf_path: Optional[str] = None):
         try:
             from petrel_client import client
         except ImportError:
