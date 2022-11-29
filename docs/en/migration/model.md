@@ -9,11 +9,11 @@ The early computer vision tasks supported by MMCV, such as detection and classif
 3. Update the model parameters
 4. Clean the gradients of the last iteration
 
-For most of high-level tasks, "where" and "when" to perform the above processes is commonly fixed, therefore it seems reasonable to use [Hook](../design/hook.md) to implement it. MMCV implements series of hooks, such as `OptimizerHook`, `Fp16OptimizerHook` and `GradientCumulativeFp16OptimizerHook` to provide varies of optimization strategy.
+For most of the high-level tasks, "where" and "when" to perform the above processes is commonly fixed, therefore it seems reasonable to use [Hook](../design/hook.md) to implement it. MMCV implements series of hooks, such as `OptimizerHook`, `Fp16OptimizerHook` and `GradientCumulativeFp16OptimizerHook` to provide varies of optimization strategies.
 
-On the other hand, tasks like GAN(Generative adversarial network) and Self-supervision require more flexible training processes, which does not meet the characteristics mentioned above, and it could be hard to use hooks to implement them. To meet the needs of these of tasks, MMCV will pass `optimizer` to `train_step` and users can customize the optimization process as they want. Although it works, it cannot utilize varies of `OptimizerHook` implemented in MMCV, and downstream repositories have to implement mix-precision training, gradient accumulative by their own.
+On the other hand, tasks like GAN (Generative adversarial network) and Self-supervision require more flexible training processes, which do not meet the characteristics mentioned above, and it could be hard to use hooks to implement them. To meet the needs of these tasks, MMCV will pass `optimizer` to `train_step` and users can customize the optimization process as they want. Although it works, it cannot utilize various `OptimizerHook` implemented in MMCV, and downstream repositories have to implement mix-precision training, and gradient accumulation on their own.
 
-To unify the training process of varies of deep learning tasks, MMEngine design the [OptimWrapper](mmengine.optim.OptimWrapper), which integrates the mixed-precision training, gradient accumulative and other optimization strategies into a unified interface.
+To unify the training process of various deep learning tasks, MMEngine designed the [OptimWrapper](mmengine.optim.OptimWrapper), which integrates the mixed-precision training, gradient accumulation and other optimization strategies into a unified interface.
 
 ## Migrate optimization process
 
@@ -21,7 +21,7 @@ Since MMEngine designs the `OptimWrapper` and deprecates series of `OptimizerHoo
 
 ### Commonly used optimization process
 
-Consider task like detection and classification, the optimization process is usually the same, so `BaseModel` integrate the process into `train_step`.
+Considering tasks like detection and classification, the optimization process is usually the same, so `BaseModel` integrates the process into `train_step`.
 
 **Model based on MMCV**
 
@@ -87,11 +87,11 @@ runner.register_training_hooks(
 runner.run([train_dataloader], [('train', 1)])
 ```
 
-Model based on MMCV must implement `train_step`, and return a `dict` contains these keys:
+Model based on MMCV must implement `train_step`, and return a `dict` which contains the following keys:
 
 - `loss`: Passed to `OptimizerHook` to calculate gradient.
 - num_samples: Passed to `LogBuffer` to count the averaged loss
-- log_vars: Passed to `LogBUffer` to count the averaged loss
+- log_vars: Passed to `LogBuffer` to count the averaged loss
 
 **Model based on MMEngine**
 
@@ -139,7 +139,7 @@ runner = Runner(
 runner.train()
 ```
 
-In MMEngine, users can customize their model based on `BaseModel`, which implements the same logic as `OptimizerHook` in `train_step`. For high-level tasks, `train_step` will be called [train loop](mmengine.runner.loop) with the fixed arguments, and users do not need to care about the optimization process. For low-level tasks, users can override the `train_step` to customize the optimization process.
+In MMEngine, users can customize their model based on `BaseModel`, which implements the same logic as `OptimizerHook` in `train_step`. For high-level tasks, `train_step` will be called in [train loop](mmengine.runner.loop) with specific arguments, and users do not need to care about the optimization process. For low-level tasks, users can override the `train_step` to customize the optimization process.
 
 <table class="docutils">
 <thead>
@@ -223,15 +223,15 @@ The main differences of model in MMCV and MMEngine can be summarized as follows:
 
 - `MMCVToyModel` inherits from `nn.Module`, and `MMEngineToyModel` inherits from `BaseModel`
 
-- `MMCVToyModel` must implement `train_step` methods and return a `dict` with keys `loss`, `log_vars`, and `num_samples`. `MMEngineToyModel` only needs to implement `forward` method for high level tasks, and return a differentiable loss `dict`.
+- `MMCVToyModel` must implement `train_step` method and return a `dict` with keys `loss`, `log_vars`, and `num_samples`. `MMEngineToyModel` only needs to implement `forward` method for high level tasks, and return a `dict` with differentiable losses.
 
-- `MMCVToyModel.forward` and `MMEngineToyModel.forward` must match with `train_step` which will call it. Since `MMEngineToyModel`does not override the `train_step` will `BaseModel.train_step` will be directly called, which requires that forward must accept `mode` parameter. Find more details in [tutorials of model](../tutorials/model.md)
+- `MMCVToyModel.forward` and `MMEngineToyModel.forward` must match with `train_step` which will call it. Since `MMEngineToyModel` does not override the `train_step`, `BaseModel.train_step` will be directly called, which requires that forward must accept `mode` parameter. Find more details in [tutorials of model](../tutorials/model.md)
 
 ### Custom optimization process
 
-Takes training a GAN model as an example, generator and discriminator need to be optimized in turn and the optimization strategy could change with the training iteration grows. Therefore it could be hard to use `OptimizerHook` to meet such requirement in MMCV. GAN model based on MMCV will accept optimizer in `train_step` and update parameters in it. Actually, MMEngine borrows this way and simplify it by passing an [optim_wrapper](../tutorials/optim_wrapper.md) rath than an optimizer.
+Takes training a GAN model as an example, generator and discriminator need to be optimized in turn and the optimization strategy could change as the training iteration grows. Therefore it could be hard to use `OptimizerHook` to meet such requirements in MMCV. GAN model based on MMCV will accept an optimizer in `train_step` and update parameters in it. Actually, MMEngine borrows this way and simplifies it by passing an [optim_wrapper](../tutorials/optim_wrapper.md) rather than an optimizer.
 
-Referred to [training a GAN model](../examples/train_a_gan.md), If it is implemented based on MMCV, the interface of model will be as follows:
+Referred to [training a GAN model](../examples/train_a_gan.md). If it is implemented based on MMCV, the interface of model will be as follows:
 
 ```python
     def train_discriminator(
@@ -266,7 +266,7 @@ Referred to [training a GAN model](../examples/train_a_gan.md), If it is impleme
         return log_vars
 ```
 
-Compared it with the model based on MMEngine
+Compare it with the model based on MMEngine
 
 <table class="docutils">
 <thead>
@@ -351,11 +351,11 @@ Compared it with the model based on MMEngine
 </thead>
 </table>
 
-Besides the difference mention in the previous section, the main difference of the optimization process in MMCV and MMEngine is that the latter can use `optim_wrapper` in a more simple way. The convenience of `optim_wrapper` would be more obvious if gradient accumulative and mix-precision training are applied.
+Apart from the differences mentioned in the previous section, the main difference in the optimization process in MMCV and MMEngine is that the latter can use `optim_wrapper` in a more simple way. The convenience of `optim_wrapper` would be more obvious if gradient accumulation and mix-precision training are applied.
 
 ## Migrate validation/testing process
 
-Model based on MMCV usually does not need to provide `test_step` or `val_step` for testing/validation. However, MMEngine perform the testing/validation by [ValLoop](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop), which will call `runner.model.val_step` and `runner.model.test_step`. Therefore model based on MMEngine needs to implement `val_step` and `test_step`, of which input data and output predictions should be compatible with DataLoader and [Evaluator.process](mmengine.evaluator.Evaluator.process). You can find more details in the [model tutorial](../tutorials/model.md). Therefore, `MMEngineToyModel.forward` will slice the feat and return the predictions as a list.
+Model based on MMCV usually does not need to provide `test_step` or `val_step` for testing/validation. However, MMEngine performs the testing/validation by [ValLoop](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop), which will call `runner.model.val_step` and `runner.model.test_step`. Therefore model based on MMEngine needs to implement `val_step` and `test_step`, of which input data and output predictions should be compatible with DataLoader and [Evaluator.process](mmengine.evaluator.Evaluator.process) respectively. You can find more details in the [model tutorial](../tutorials/model.md). Therefore, `MMEngineToyModel.forward` will slice the feat and return the predictions as a list.
 
 ```python
 
@@ -374,7 +374,7 @@ class MMEngineToyModel(BaseModel):
 
 ## Migrate the distributed training
 
-MMCV will wrap the model with distributed wrapper before build the runner, and the runner in MMEngine will wrap the model in Runner. Therefore, we need to configure the `launcher` and `model_wrapper_cfg` for Runner. [Migrate Runner from MMCV to MMEngine](./runner.md) will introduce it in detail.
+MMCV will wrap the model with distributed wrapper before building the runner, while MMEngine will wrap the model in Runner. Therefore, we need to configure the `launcher` and `model_wrapper_cfg` for Runner. [Migrate Runner from MMCV to MMEngine](./runner.md) will introduce it in detail.
 
 1. **Commonly used training process**
 
@@ -450,7 +450,7 @@ class CustomModel(BaseModel):
         optim_wrapper.update_params(loss)
 ```
 
-In this case, we need to customize a model wrapper which overrides the `train_step` and perform the same process as `CustomModel.train_step`. Then we can specify the customized model wrapper when building the runner.
+In this case, we need to customize a model wrapper that overrides the `train_step` and performs the same process as `CustomModel.train_step`.
 
 ```python
    class CustomDistributedDataParallel(MMSeparateDistributedDataParallel):
@@ -464,7 +464,7 @@ In this case, we need to customize a model wrapper which overrides the `train_st
            optim_wrapper.update_params(loss)
 ```
 
-Then the specify it when building Runner:
+Then we can specify it when building Runner:
 
 ```python
 cfg = dict(model_wrapper_cfg=dict(type='CustomDistributedDataParallel'))
