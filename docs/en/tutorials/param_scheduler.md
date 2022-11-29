@@ -10,7 +10,7 @@ It can adjust optimization hyperparameters such as learning rate and momentum. I
 We first introduce how to use PyTorch's `torch.optim.lr_scheduler` to adjust learning rate.
 
 <details>
-<summary>如何使用 PyTorch 内置的学习率调度器调整学习率</summary>
+<summary>How to use PyTorch's builtin learning rate scheduler?</summary>
 Here is an example which refers from [PyTorch official documentation](https://pytorch.org/docs/stable/optim.html):
 
 Initialize an ExponentialLR object, and call the `step` method after each training epoch.
@@ -37,7 +37,7 @@ for epoch in range(10):
 
 </details>
 
-`mmengine.optim.scheduler` supports most of PyTorch's learning rate schedulers such as `ExponentialLR`，`LinearLR`，`StepLR`，`MultiStepLR`, etc. All of the supported schedulers please refer to [parameter scheduler API documentation](https://mmengine.readthedocs.io/en/latest/api/optim.html#scheduler).
+`mmengine.optim.scheduler` supports most of PyTorch's learning rate schedulers such as `ExponentialLR`, `LinearLR`, `StepLR`, `MultiStepLR`, etc. Please refer to [parameter scheduler API documentation](https://mmengine.readthedocs.io/en/latest/api/optim.html#scheduler) for all of the supported schedulers.
 
 MMEngine also supports adjust momentum with parameter schedulers. To use momentum schedulers, replace `LR` in the class name to `Momentum`, such as `ExponentialMomentum`，`LinearMomentum`. Further, we implement the general parameter scheduler ParamScheduler, which is used to adjust the specified hyperparameters in the optimizer, such as weight_decay, etc. This feature makes it easier to practice some complex hyperparameter tuning strategies.
 
@@ -74,9 +74,9 @@ If using the runner with the registry and config file, we can specify the schedu
 param_scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
 ```
 
-Note that the parameter `by_epoch` is added here, which controls the frequency of learning rate adjustment. When set to True, it means adjusting by epoch. When set to False, it means adjusting by iteration.  The default value is True.
+Note that the parameter `by_epoch` is added here, which controls the frequency of learning rate adjustment. When set to True, it means adjusting by epoch. When set to False, it means adjusting by iteration. The default value is True.
 
-In the above example, it means to adjust according to epochs. At this time, the unit of the parameters is epoch. For example, \[8, 11\] in `milestones` means that the learning rate will be multiplied bt 0.1 times at the end of the 8 and 11 epoch.
+In the above example, it means to adjust according to epochs. At this time, the unit of the parameters is epoch. For example, \[8, 11\] in `milestones` means that the learning rate will be multiplied by 0.1 at the end of the 8 and 11 epoch.
 
 When the frequency is modified, the meaning of the count-related settings of the scheduler will be changed accordingly. When `by_epoch=True`, the numbers in milestones indicate at which epoch the learning rate decay is performed, and when `by_epoch=False` it indicates at which iteration the learning rate decay is performed.
 
@@ -121,7 +121,7 @@ param_scheduler = dict(type='CosineAnnealingLR', by_epoch=True, T_max=12, conver
 
 In the training process of some algorithms, the learning rate is not adjusted according to a certain scheduling strategy from beginning to end. The most common example is learning rate warm-up.
 
-For example, in the first few iterations, a linear strategy is used to increase the learning rate from a small value to normal, and then adjusted by another strategy.
+For example, in the first few iterations, a linear strategy is used to increase the learning rate from a small value to normal, and then another strategy is applied.
 
 MMEngine supports combining multiple schedulers together. Just modify the `param_scheduler` field in the config file to a list of scheduler config, and the ParamSchedulerHook can automatically process the scheduler list. The following example implements learning rate warm-up.
 
