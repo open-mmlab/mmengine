@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import itertools
 import os.path as osp
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
@@ -44,14 +45,22 @@ class InferencerMeta(ABCMeta):
         assert isinstance(self.forward_kwargs, set)
         assert isinstance(self.visualize_kwargs, set)
         assert isinstance(self.postprocess_kwargs, set)
-        assert not (self.preprocess_kwargs
-                    & self.forward_kwargs
-                    & self.visualize_kwargs
-                    & self.postprocess_kwargs), (
-                        f'Class define error! {self.__name__} should not '
-                        'define duplicated keys for `preprocess_kwargs`, '
-                        '`forward_kwargs`, `visualize_kwargs` and '
-                        '`postprocess_kwargs` are not allowed.')
+
+        combinations = itertools.combinations(
+            [
+                self.preprocess_kwargs,
+                self.forward_kwargs,
+                self.visualize_kwargs,
+                self.postprocess_kwargs,
+            ],
+            2,
+        )
+
+        assert all((not x & y) for x, y in combinations), (
+            f'Class define error! {self.__name__} should not '
+            'define duplicated keys for `preprocess_kwargs`, '
+            '`forward_kwargs`, `visualize_kwargs` and '
+            '`postprocess_kwargs` are not allowed.')
 
 
 class BaseInferencer(metaclass=InferencerMeta):
@@ -365,8 +374,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         """
         dataloader = self._get_chunk_data(
             map(self.pipeline, inputs), batch_size)
-        for data in dataloader:
-            yield self.collate_fn(data)
+        yield from map(self.collate_fn, dataloader)
 
     @torch.no_grad()
     def forward(self, inputs: InputsType, **kwargs) -> Any:

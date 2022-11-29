@@ -17,10 +17,15 @@ class ToyInferencer(BaseInferencer):
     visualize_kwargs = {'vis_arg'}
     postprocess_kwargs = {'pos_arg'}
 
-    def visualize(self, inputs, preds, vis_arg, **kwargs):
+    def visualize(self, inputs, preds, vis_arg=None, **kwargs):
         return inputs
 
-    def postprocess(self, preds, imgs, return_datasamples, pos_arg, **kwargs):
+    def postprocess(self,
+                    preds,
+                    imgs,
+                    return_datasamples,
+                    pos_arg=None,
+                    **kwargs):
         return imgs, preds
 
     def _init_pipeline(self, cfg):
@@ -28,6 +33,7 @@ class ToyInferencer(BaseInferencer):
         def pipeline(img):
             if isinstance(img, str):
                 img = np.load(img, allow_pickle=True)
+                img = torch.from_numpy(img).float()
             elif isinstance(img, np.ndarray):
                 img = torch.from_numpy(img).float()
             else:
