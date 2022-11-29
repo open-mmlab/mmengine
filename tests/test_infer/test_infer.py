@@ -10,7 +10,7 @@ import torch
 from mmengine.infer import BaseInferencer
 from mmengine.registry import VISUALIZERS
 from mmengine.testing import RunnerTestCase
-from mmengine.utils import is_installed
+from mmengine.utils import is_installed, is_list_of
 from mmengine.visualization import Visualizer
 
 
@@ -194,4 +194,7 @@ class TestBaseInferencer(RunnerTestCase):
             img = np.array(1)
             img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
         # Test with directory inputs
-        inferencer.preprocess(osp.join(self.temp_dir.name, 'imgs'))
+        dataloader = inferencer.preprocess(
+            osp.join(self.temp_dir.name, 'imgs'))
+        for data in dataloader:
+            self.assertTrue(is_list_of(data, torch.Tensor))

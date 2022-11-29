@@ -231,7 +231,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
         if isinstance(inputs, str) and osp.isdir(inputs):
-            inputs = os.listdir(inputs)
+            inputs = [osp.join(inputs, file) for file in os.listdir(inputs)]
 
         if not isinstance(inputs, list):
             inputs = [inputs]
