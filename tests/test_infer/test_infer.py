@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
 
 import numpy as np
@@ -165,7 +166,7 @@ class TestBaseInferencer(RunnerTestCase):
 
     def test_preprocess(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
-        data = torch.arange(1, 11)
+        data = list(range(1, 11))
         pre_data = inferencer.preprocess(data, batch_size=3)
         target_data = [
             [torch.tensor(1),
@@ -180,3 +181,9 @@ class TestBaseInferencer(RunnerTestCase):
             [torch.tensor(10)],
         ]
         self.assertEqual(list(pre_data), target_data)
+        os.mkdir(osp.join(self.temp_dir.name, 'imgs'))
+        for i in range(1, 11):
+            img = np.array(1)
+            img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
+        # Test with directory inputs
+        inferencer.preprocess(osp.join(self.temp_dir.name, 'imgs'))

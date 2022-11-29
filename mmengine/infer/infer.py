@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import itertools
+import os
 import os.path as osp
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
@@ -193,8 +194,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             visualize_kwargs,
             postprocess_kwargs,
         ) = self._dispatch_kwargs(**kwargs)
-        if not isinstance(inputs, list):
-            inputs = [inputs]
+
         inputs = self.preprocess(
             inputs, batch_size=batch_size, **preprocess_kwargs)
         preds = []
@@ -230,6 +230,12 @@ class BaseInferencer(metaclass=InferencerMeta):
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
+        if isinstance(inputs, str) and osp.isdir(inputs):
+            inputs = os.listdir(inputs)
+
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+
         dataloader = self._get_chunk_data(
             map(self.pipeline, inputs), batch_size)
         yield from map(self.collate_fn, dataloader)
