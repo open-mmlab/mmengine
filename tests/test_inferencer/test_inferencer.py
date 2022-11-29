@@ -70,9 +70,25 @@ class TestBaseInferencer(RunnerTestCase):
         return super().tearDown()
 
     def test_init(self):
-        ToyInferencer(self.epoch_based_cfg, self.ckpt_path)
+        # Pass model as Config
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        ToyInferencer(cfg, self.ckpt_path)
+        # Pass model as ConfigDict
+        ToyInferencer(cfg._cfg_dict, self.ckpt_path)
+        # Pass model as normal dict
+        ToyInferencer(dict(cfg._cfg_dict), self.ckpt_path)
+        # Pass model as string point to path of config
         ToyInferencer(self.cfg_path, self.ckpt_path)
 
+        cfg.model.pretrained = 'fake_path'
+        inferencer = ToyInferencer(cfg, self.ckpt_path)
+        self.assertNotIn('pretrained', inferencer.cfg.model)
+
+        # Pass invalid model
+        with self.assertRaisesRegex(TypeError, 'config must'):
+            ToyInferencer([self.epoch_based_cfg], self.ckpt_path)
+
+        # Pass model as model name defined in metafile
         if is_installed('mmdet'):
             from mmdet.utils import register_all_modules
 
