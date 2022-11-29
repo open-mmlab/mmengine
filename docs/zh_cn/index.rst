@@ -94,6 +94,8 @@
    :caption: 说明
 
    notes/changelog.md
+   notes/contributing.md
+   notes/code_style.md
 
 .. toctree::
    :caption: 语言切换

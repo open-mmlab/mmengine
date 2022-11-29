@@ -94,6 +94,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :caption: Notes
 
    notes/changelog.md
+   notes/contributing.md
 
 .. toctree::
    :caption: Switch Language
