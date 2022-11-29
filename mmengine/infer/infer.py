@@ -281,9 +281,9 @@ class BaseInferencer(metaclass=InferencerMeta):
             dict: Inference and visualization results with key ``predictions``
             and ``visualization``
 
-                - ``visualization``: Returned by :meth:`visualize`
-                - ``predictions``: Returned by :meth:`postprocess` and
-                  processed in :meth:`postprocess`
+            - ``visualization``: Returned by :meth:`visualize`
+            - ``predictions``: Returned by :meth:`postprocess` and
+                processed in :meth:`postprocess`
         """
         raise NotImplementedError('postprocess is not implemented!')
 
