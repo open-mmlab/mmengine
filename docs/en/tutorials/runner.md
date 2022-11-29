@@ -2,7 +2,7 @@
 
 Welcome to the tutorial of runner, the core of MMEngine's user interface!
 
-The runner, as an "integrator" in MMEngine, covers all aspects of the framework and shoulders the responsibility of organizing and scheduling nearly all modules. Therefore, the code logic in it has to take into account various situations, making it relatively hard to understand. But **don't worry**! In this tutorial, we will leave out some messy details and have a quick overview of commonly used APIs, functionalities and examples. Hopefully this should provide you with a clear and easy-to-understand user interface. After reading through this tutorial, you will be able to:
+The runner, as an "integrator" in MMEngine, covers all aspects of the framework and shoulders the responsibility of organizing and scheduling nearly all modules. Therefore, the code logic in it has to take into account various situations, making it relatively hard to understand. But **don't worry**! In this tutorial, we will leave out some messy details and have a quick overview of commonly used APIs, functionalities, and examples. Hopefully, this should provide you with a clear and easy-to-understand user interface. After reading through this tutorial, you will be able to:
 
 - Master the common usage and configuration of the runner
 - Learn the best practice - writing config files - of the runner
@@ -23,7 +23,7 @@ We argue that the key to learning runner is using it as a memo. You should remem
 ### A beginer-friendly example
 
 ```{hint}
-In this tutorial, we hope you can focus more on overall architecture instead of implementation details. This "top-down" way of thinking is exactly what we advocate. Don't worry, you will definitely have plenty of opportunities and guidance afterwards to focus on modules you want to improve.
+In this tutorial, we hope you can focus more on overall architecture instead of implementation details. This "top-down" way of thinking is exactly what we advocate. Don't worry, you will definitely have plenty of opportunities and guidance afterward to focus on modules you want to improve.
 ```
 
 <details>
@@ -202,14 +202,14 @@ runner.train()
 
 ### Explanations on example codes
 
-Really a long piece of code, isn't it! However, if you read through the above example, you may have already understood the training process in general even without knowing any implementation details, thanks to the compactness and readability of runner codes (probably). This is what MMEngine expects: a structured, modular and standardized training process that allows for more reliable reproductions and clearer comparisons.
+Really a long piece of code, isn't it! However, if you read through the above example, you may have already understood the training process in general even without knowing any implementation details, thanks to the compactness and readability of runner codes (probably). This is what MMEngine expects: a structured, modular, and standardized training process that allows for more reliable reproductions and clearer comparisons.
 
 The above example may lead you to the following confusion:
 
 <details>
 <summary>There are too many arguments!</summary>
 
-Don't worry. As we mentioned before, **use runner as a memo**. The runner covers all aspects just to ensure you won't miss something important. You don't actually need to configure everything. The simple example in [15 minutes](../get_started/15_minutes.md) still works fine, and it can be even more simplified by removing `val_evaluator`, `val_dataloader` and `val_cfg` without breaking down. All configurable arguments are driven by your demands. Those not in your focus usually works fine by default.
+Don't worry. As we mentioned before, **use runner as a memo**. The runner covers all aspects just to ensure you won't miss something important. You don't actually need to configure everything. The simple example in [15 minutes](../get_started/15_minutes.md) still works fine, and it can be even more simplified by removing `val_evaluator`, `val_dataloader`, and `val_cfg` without breaking down. All configurable arguments are driven by your demands. Those not in your focus usually work fine by default.
 
 </details>
 
@@ -359,7 +359,7 @@ When using config files, the implementations of your custom modules may be store
 Although sharing nearly the same codes, `from_cfg` and `__init__` differs in some default values like `env_cfg`.
 ```
 
-Writing config files of the runner has been widely adopted in downstream repositories in OpenMMLab projects. It has been a de facto convention and best practice. The config files are far more featured than illustrated above. You can refer to [Config tutorial](../advanced_tutorials/config.md) for more advanced features including key words inheriting and overriding.
+Writing config files of the runner has been widely adopted in downstream repositories in OpenMMLab projects. It has been a de facto convention and best practice. The config files are far more featured than illustrated above. You can refer to [Config tutorial](../advanced_tutorials/config.md) for more advanced features including keywords inheriting and overriding.
 
 ## Basic dataflow
 
@@ -376,7 +376,7 @@ The diagram above illustrates the **basic** dataflow of the runner, where the da
 <details>
 <summary>Can you state the exact type of each data item shown in the diagram?</summary>
 
-Unfortunately, this is not possible. Although we did heavy type annotations in MMEngine, Python is still a highly dynamic programming language, and deep learning as a data-centric system needs to be flexible enough to deal with a wide range of complex data source. You always have full freedom to decide when you need (and sometimes must) break type conventions. Therefore, when you are customizing your module (e.g. `val_evaluator`), you need to make sure its input is compatible with upstream (e.g. `model`) output and its output can be parsed by downstream. MMEngine puts the flexibility of handling data in the hands of the user, and thus also requires the user to ensure compatibility of dataflow, which, in fact, is not that difficult once you get started.
+Unfortunately, this is not possible. Although we did heavy type annotations in MMEngine, Python is still a highly dynamic programming language, and deep learning as a data-centric system needs to be flexible enough to deal with a wide range of complex data sources. You always have full freedom to decide when you need (and sometimes must) break type conventions. Therefore, when you are customizing your module (e.g. `val_evaluator`), you need to make sure its input is compatible with upstream (e.g. `model`) output and its output can be parsed by downstream. MMEngine puts the flexibility of handling data in the hands of the user, and thus also requires the user to ensure compatibility of dataflow, which, in fact, is not that difficult once you get started.
 
 The uniformity of data formats has always been a problem in deep learning. We are trying to improve it in MMEngine in our own way. If you are interested, you can refer to [BaseDataset](../advanced_tutorials/basedataset.md) and [BaseDataElement](../advanced_tutorials/data_element.md) - but please note that they are mainly geared towards advanced users.
 
@@ -467,7 +467,7 @@ The runner is the "manager" of all modules in MMEngine. In the runner, all the d
 2. You can continuously benefit from new features without worrying about backward compatibility. Mixed precision training, visualization, state of the art distributed training methods, various device backends... We will continue to absorb the best suggestions and cutting-edge technologies from the community while ensuring backward compatibility, and provide them to you in a clear interface.
 3. You can focus on your own awesome ideas without being bothered by other annoying and irrelevant details. The default values will handle most cases.
 
-So, MMEngine and the runner will truly make things easier for you. With only a little effort on migration, your code and experiments will evolve with MMEngine. With a little more effort, the config file system allows you to manage your data, model and experiments more efficiently. Convenience and reliability, these are the aims we strive for.
+So, MMEngine and the runner will truly make things easier for you. With only a little effort on migration, your code and experiments will evolve with MMEngine. With a little more effort, the config file system allows you to manage your data, model, and experiments more efficiently. Convenience and reliability are the aims we strive for.
 
 The blue one, or the red one - are you prepared to use MMEngine?
 
