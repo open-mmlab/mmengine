@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmengine.inferencer.inferencer import BaseInferencer
+from mmengine.infer import BaseInferencer
 from mmengine.registry import VISUALIZERS
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed
