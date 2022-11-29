@@ -33,14 +33,14 @@ In order to focus your attention on the algorithm itself, and ignore the complex
 
 Before continuing reading the model tutorial, let's throw out two questions that we hope you will find the answers after reading the model tutorial:
 
-1. When we update the parameters of model? and how to update the parameters by a custom optimization process?
+1. When do we update the parameters of model? and how to update the parameters by a custom optimization process?
 2. Why is the concept of data_preprocessor necessary? What functions can it perform?
 
 ## Interface introduction
 
-Usually, we should define a model to implement the body of the algorithm. In MMEngine, model will be managed by Runner, and need to implement some interfaces, such as `train_step`, `val_step`, and `test_step`. For the high-level tasks like detection, classification, and segmentation, the interfaces mentioned above commonly implement a standard workflow. For example, `train_step` will calculate the loss and update the parameters of the model, and `val_step`/`test_step` will calculate the metrics and return the predictions. Therefore, MMEnine abstract the [BaseModel](mmengine.model.BaseModel) to implement the common workflow.
+Usually, we should define a model to implement the body of the algorithm. In MMEngine, model will be managed by Runner, and need to implement some interfaces, such as `train_step`, `val_step`, and `test_step`. For high-level tasks like detection, classification, and segmentation, the interfaces mentioned above commonly implement a standard workflow. For example, `train_step` will calculate the loss and update the parameters of the model, and `val_step`/`test_step` will calculate the metrics and return the predictions. Therefore, MMEnine abstracts the [BaseModel](mmengine.model.BaseModel) to implement the common workflow.
 
-Benefits from the `BaseModel`, we only to make the model inherit from `BaseModel`, and implement the `forward` function to perform the training, testing, and validation process.
+Benefits from the `BaseModel`, we only need to make the model inherit from `BaseModel`, and implement the `forward` function to perform the training, testing, and validation process.
 
 ```{note}
 BaseModel inherits from [BaseModule](../advanced_tutorials/initialize.md)，which can be used to initialize the model parameters dynamically.
@@ -48,13 +48,13 @@ BaseModel inherits from [BaseModule](../advanced_tutorials/initialize.md)，whic
 
 [**forward**](mmengine.model.BaseModel.forward): The arguments of `forward` need to match with the data given by [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html). If the DataLoader samples a tuple `data`, `forward` needs to accept the value of unpacked `*data`. If DataLoader returns a dict `data`, `forward` needs to accept the key-value of unpacked `**data`. `forward` also accepts `mode` parameter, which is used to control the running branch:
 
-- `mode='loss'`: `loss` mode is enabled in training process, and `forward` return a differentiable loss `dict`. Each key-value pairl in loss `dict` will be used to log the training status and optimize the parameters of model. This branch will be called by `train_step`
+- `mode='loss'`: `loss` mode is enabled in training process, and `forward` returns a differentiable loss `dict`. Each key-value pair in loss `dict` will be used to log the training status and optimize the parameters of model. This branch will be called by `train_step`
 
 - `mode='predict'`: `predict` mode is enabled in validation/testing process, and `forward` will return predictions, which matches with arguments of [process](mmengine.evaluator.Evaluator.process). Repositories of OpenMMLab have a more strict rules. The predictions must be a list and each element of it must be a [BaseDataElement](../advanced_tutorials/data_element.md). This branch will be called by `val_step`
 
-- `mode='tensor'`: In `tensor` and `predict` modes, `forward` will return the predictions. The difference is that `forward` will return a `tensor` or a container or `tensor` which has not been processed by series of post-process methods, such as non-maximum suppression(NMS). You can customize your post-process method after getting the result of `tensor` mode.
+- `mode='tensor'`: In `tensor` and `predict` modes, `forward` will return the predictions. The difference is that `forward` will return a `tensor` or a container or `tensor` which has not been processed by a series of post-process methods, such as non-maximum suppression (NMS). You can customize your post-process method after getting the result of `tensor` mode.
 
-[**train_step**](mmengine.model.BaseModel.train_step): Get the loss `dict` by calling `forward` with `loss` mode. `BaseModel` implement standard optimization process as follows:
+[**train_step**](mmengine.model.BaseModel.train_step): Get the loss `dict` by calling `forward` with `loss` mode. `BaseModel` implements a standard optimization process as follows:
 
 ```python
 def train_step(self, data, optim_wrapper):
@@ -94,8 +94,7 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-Great!, ignoring `Hook`, the pseudo-code above almost implements the main logic
-in [loop](mmengine.runner.EpochBasedTrainLoop)! Let's go back to [15 minutes to get started with MMEngine](../get_started/15_minutes.md), we may truly understand what `MMResNet` have done:
+Great!, ignoring `Hook`, the pseudo-code above almost implements the main logic in [loop](mmengine.runner.EpochBasedTrainLoop)! Let's go back to [15 minutes to get started with MMEngine](../get_started/15_minutes.md), we may truly understand what `MMResNet` has done:
 
 ```python
 import torch.nn.functional as F
@@ -136,14 +135,13 @@ class MMResNet50(BaseModel):
 
 Now, you may have a deeper understanding of dataflow, and can answer the first question in [Runner and model](#runner-and-model).
 
-`BaseModel.train_step` implements the standard optimization standard, and if we want to customize a new optimization process, we can override it in the subclass.
-However, it is important to note that we need to make sure that `train_step` returns the a loss dict.
+`BaseModel.train_step` implements the standard optimization standard, and if we want to customize a new optimization process, we can override it in the subclass. However, it is important to note that we need to make sure that `train_step` returns a loss dict.
 
 ## DataPreprocessor
 
 If your computer is equipped with a GPU (or other hardware that can accelerate training, such as MPS, IPU, etc.), when you run the [15 minutes tutorial](../get_started/15_minutes.md), you will see that the program is running on the GPU, but, when does `MMEngine` move the data and model from the CPU to the GPU?
 
-In fact, the Runner will move the model to the specified device during the construction, while the data will be moved to the specified device at the `self.data_preprocessor(data)` mentioned in the code snippet of previous section. The moved data will be further pass to the model.
+In fact, the Runner will move the model to the specified device during the construction, while the data will be moved to the specified device at the `self.data_preprocessor(data)` mentioned in the code snippet of the previous section. The moved data will be further passed to the model.
 
 Makes sense but it's weird, isn't it? At this point you may be wondering:
 
@@ -151,7 +149,7 @@ Makes sense but it's weird, isn't it? At this point you may be wondering:
 
 2. Why `BaseModel` does not move data by `data = data.to(device)`, but needs the `DataPreprocessor` to move data?
 
-The answer of the first question is that: `MMResNet50` inherit from `BaseModel`, and `super().__init__` will build a default `data_preprocessor` for it. The equivalent implementation of the default one like this:
+The answer to the first question is that: `MMResNet50` inherit from `BaseModel`, and `super().__init__` will build a default `data_preprocessor` for it. The equivalent implementation of the default one is like this:
 
 ```python
 class BaseDataPreprocessor(nn.Module):
@@ -168,13 +166,13 @@ Before answering the second question, let's think about a few more questions
 
 1. Where should we perform normalization? [transform](../advanced_tutorials/data_transform.md) or `Model`?
 
-   It sounds reasonable to put it in transform to take advantage of Dataloader's multi-process acceleration, and in model to move it to GPU to use GPU resources to accelerate normalization. However, while we are debating whether CPU normalization is faster than GPU normalization, the time of data moving from CPU to GPU is much more longer than the former.
+   It sounds reasonable to put it in transform to take advantage of Dataloader's multi-process acceleration, and in the model to move it to GPU to use GPU resources to accelerate normalization. However, while we are debating whether CPU normalization is faster than GPU normalization, the time of data moving from CPU to GPU is much longer than the former.
 
    In fact, for less computationally intensive operations like normalization, it takes much less time than data transferring, which has a higher priority for being optimized. If I could move the data to the specified device while it is still in `uint8` and before it is normalized (the size of normalized `float` data is 4 times larger than that of unit8), it would reduce the bandwidth and greatly improve the efficiency of data transferring. This "lagged" normalization behavior is one of the main reasons why we designed the `DataPreprocessor`. The data preprocessor moves the data first and then normalizes it.
 
 2. How we implement the data augmentation like MixUp and Mosaic?
 
-   Although it seems that MixUp and Mosaic are just special data transformations that should be implemented in transform. However, consider that these two transformation involve **fusing multiple images into one**, it would be very difficult to implement them in transform since the current paradigm of transform is to do various enhancements on **one** image. It would be hard to read additional image from dataset because the dataset is not accessible in the transform. However, if we implement Mosaic or Mixup based on the `batch_data` sampled from Dataloader, everything becomes easy. We can access multiple images at the same time, and we can easily perform the image fusion operation.
+   Although it seems that MixUp and Mosaic are just special data transformations that should be implemented in transform. However, considering that these two transformations involve **fusing multiple images into one**, it would be very difficult to implement them in transform since the current paradigm of transform is to do various enhancements on **one** image. It would be hard to read additional images from dataset because the dataset is not accessible in the transform. However, if we implement Mosaic or Mixup based on the `batch_data` sampled from Dataloader, everything becomes easy. We can access multiple images at the same time, and we can easily perform the image fusion operation.
 
    ```python
    class MixUpDataPreprocessor(nn.Module):
@@ -203,7 +201,7 @@ Before answering the second question, let's think about a few more questions
 
    Therefore, besides data transferring and normalization, another major function of `data_preprocessor` is BatchAugmentation. The modularity of the data preprocessor also helps us to achieve a free combination between algorithms and data augmentation.
 
-3. What should we do if the data sampled from the DataLoader does not match with the model input, should I modify the DataLoader or the model interface?
+3. What should we do if the data sampled from the DataLoader does not match the model input, should I modify the DataLoader or the model interface?
 
    The answer is: neither is appropriate. The ideal solution is to do the adaptation without breaking the existing interface between the model and the DataLoader. `DataPreprocessor` could also handle this, you can customize your `DataPreprocessor` to convert the incoming to the target type.
 
