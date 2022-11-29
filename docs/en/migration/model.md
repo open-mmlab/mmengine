@@ -231,42 +231,7 @@ The main differences of model in MMCV and MMEngine can be summarized as follows:
 
 Takes training a GAN model as an example, generator and discriminator need to be optimized in turn and the optimization strategy could change with the training iteration grows. Therefore it could be hard to use `OptimizerHook` to meet such requirement in MMCV. GAN model based on MMCV will accept optimizer in `train_step` and update parameters in it. Actually, MMEngine borrows this way and simplify it by passing an [optim_wrapper](../tutorials/optim_wrapper.md) rath than an optimizer.
 
-Referred to [training a GAN model](../examples/train_a_gan.md), If it is implemented based on MMCV, the interface of model will be as follows:
-
-```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
-        real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
-        with torch.no_grad():
-            fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        disc_pred_real = self.discriminator(real_imgs)
-
-        parsed_losses, log_vars = self.disc_loss(disc_pred_fake,
-                                                 disc_pred_real)
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
-
-        fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        parsed_loss, log_vars = self.gen_loss(disc_pred_fake)
-
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-```
-
-Compared it with the model based on MMEngine
+Referred to [training a GAN model](../examples/train_a_gan.md), The differences of MMCV and MMEngine are as follows:
 
 <table class="docutils">
 <thead>
@@ -278,11 +243,10 @@ Compared it with the model based on MMEngine
   <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
+    def train_discriminator(self, inputs, optimizer):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -296,8 +260,10 @@ Compared it with the model based on MMEngine
         optimizer.zero_grad()
         return log_vars
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(inputs['inputs'].shape[0], self.noise_size).type_as(
+            real_imgs)
 
         fake_imgs = self.generator(z)
 
@@ -315,11 +281,10 @@ Compared it with the model based on MMEngine
   <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer_wrapper):
+    def train_discriminator(self, inputs, optimizer_wrapper):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -333,8 +298,9 @@ Compared it with the model based on MMEngine
 
 
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(real_imgs.shape[0], self.noise_size).type_as(real_imgs)
 
         fake_imgs = self.generator(z)
 

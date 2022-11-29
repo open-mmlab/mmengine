@@ -226,58 +226,22 @@ class MMEngineToyModel(BaseModel):
 
 以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单地优化模型。
 
-参考[训练生成对抗网络](../examples/train_a_gan.md)，如果用 MMCV 进行训练，`GAN` 的模型优化接口如下：
-
-```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
-        real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
-        with torch.no_grad():
-            fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        disc_pred_real = self.discriminator(real_imgs)
-
-        parsed_losses, log_vars = self.disc_loss(disc_pred_fake,
-                                                 disc_pred_real)
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
-
-        fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        parsed_loss, log_vars = self.gen_loss(disc_pred_fake)
-
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-```
-
-对比 MMEngine 的实现：
+参考[训练生成对抗网络](../examples/train_a_gan.md)，MMCV 和 MMEngine 的对比实现如下：
 
 <table class="docutils">
 <thead>
   <tr>
-    <th>MMCV 优化 GAN</th>
-    <th>MMEngine 优化 GAN</th>
+    <th>Training gan in MMCV</th>
+    <th>Training gan in MMEngine</th>
 <tbody>
   <tr>
   <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
+    def train_discriminator(self, inputs, optimizer):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -291,8 +255,10 @@ class MMEngineToyModel(BaseModel):
         optimizer.zero_grad()
         return log_vars
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(inputs['inputs'].shape[0], self.noise_size).type_as(
+            real_imgs)
 
         fake_imgs = self.generator(z)
 
@@ -305,16 +271,15 @@ class MMEngineToyModel(BaseModel):
         return log_vars
 ```
 
-</div>
-  </td>
+</td>
+  </div>
   <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer_wrapper):
+    def train_discriminator(self, inputs, optimizer_wrapper):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -328,8 +293,9 @@ class MMEngineToyModel(BaseModel):
 
 
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(real_imgs.shape[0], self.noise_size).type_as(real_imgs)
 
         fake_imgs = self.generator(z)
 
