@@ -15,8 +15,16 @@ from mmengine.visualization import Visualizer
 
 
 class ToyInferencer(BaseInferencer):
+    preprocess_kwargs = {'pre_arg'}
+    forward_kwargs = {'for_arg'}
     visualize_kwargs = {'vis_arg'}
     postprocess_kwargs = {'pos_arg'}
+
+    def preprocess(self, inputs, batch_size=1, pre_arg=None, **kwargs):
+        return super().preprocess(inputs, batch_size, **kwargs)
+
+    def forward(self, inputs, for_arg=None, **kwargs):
+        return super().forward(inputs, **kwargs)
 
     def visualize(self, inputs, preds, vis_arg=None, **kwargs):
         return inputs
@@ -148,19 +156,19 @@ class TestBaseInferencer(RunnerTestCase):
 
     def test_dispatch_kwargs(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
-        kwargs = dict(pos_arg=dict(a=1), vis_arg=[])
+        kwargs = dict(
+            pre_arg=dict(a=1),
+            for_arg=dict(c=2),
+            vis_arg=dict(b=3),
+            pos_arg=dict(d=4))
         pre_arg, for_arg, vis_arg, pos_arg = inferencer._dispatch_kwargs(
             **kwargs)
-        self.assertEqual(pre_arg, dict())
-        self.assertEqual(for_arg, dict())
-        self.assertEqual(vis_arg, dict(vis_arg=[]))
-        self.assertEqual(pos_arg, dict(pos_arg=dict(a=1)))
+        self.assertEqual(pre_arg, dict(pre_arg=dict(a=1)))
+        self.assertEqual(for_arg, dict(for_arg=dict(c=2)))
+        self.assertEqual(vis_arg, dict(vis_arg=dict(b=3)))
+        self.assertEqual(pos_arg, dict(pos_arg=dict(d=4)))
         # Test unknown arg.
         kwargs = dict(return_datasample=dict())
-        with self.assertRaisesRegex(ValueError, 'unknown'):
-            inferencer._dispatch_kwargs(**kwargs)
-        # Test duplicated matched kwarg.
-        kwargs = dict(preds=dict())
         with self.assertRaisesRegex(ValueError, 'unknown'):
             inferencer._dispatch_kwargs(**kwargs)
 

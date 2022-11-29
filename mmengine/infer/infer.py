@@ -450,8 +450,6 @@ class BaseInferencer(metaclass=InferencerMeta):
                 raise ValueError(
                     f'unknown argument {key} for `preprocess`, `forward`, '
                     '`visualize` and `postprocess`')
-            if len(matches) > 1:
-                raise ValueError(f'Ambiguous argument {key} for {matches}')
 
         preprocess_kwargs = {}
         forward_kwargs = {}
