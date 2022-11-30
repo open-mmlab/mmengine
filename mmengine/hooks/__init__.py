@@ -13,16 +13,7 @@ from .sampler_seed_hook import DistSamplerSeedHook
 from .sync_buffer_hook import SyncBuffersHook
 
 __all__ = [
-    'Hook',
-    'IterTimerHook',
-    'DistSamplerSeedHook',
-    'ParamSchedulerHook',
-    'SyncBuffersHook',
-    'EmptyCacheHook',
-    'CheckpointHook',
-    'LoggerHook',
-    'NaiveVisualizationHook',
-    'EMAHook',
-    'RuntimeInfoHook',
-    'EarlyStoppingHook'
+    'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
+    'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
+    'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'EarlyStoppingHook'
 ]
