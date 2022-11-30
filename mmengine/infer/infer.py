@@ -133,8 +133,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         weights: Optional[str] = None,
         device: Optional[str] = None,
     ) -> None:
-        self.scope = DefaultScope.get_current_instance(
-        ).scope_name  # type: ignore
+        self.scope = \
+            DefaultScope.get_current_instance().scope_name  # type: ignore
         # Load config to cfg
         cfg: ConfigType
         if isinstance(model, str):
