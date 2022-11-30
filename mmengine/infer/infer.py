@@ -234,7 +234,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         """
         if isinstance(inputs, str):
             file_client = FileClient.infer_client(uri=inputs)
-            if file_client.isdir(inputs):
+            if hasattr(file_client.client,
+                       'isdir') and file_client.isdir(inputs):
                 filename_list = file_client.list_dir_or_file(
                     inputs, list_dir=False)
                 inputs = [
@@ -242,9 +243,6 @@ class BaseInferencer(metaclass=InferencerMeta):
                     for filename in filename_list
                 ]
             else:
-                assert file_client.isfile(inputs), (
-                    'If inputs is a str, it should be a directory or a file '
-                    'path!')
                 inputs = [inputs]
 
         if not isinstance(inputs, list):
