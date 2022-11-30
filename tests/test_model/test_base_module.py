@@ -7,6 +7,7 @@ from unittest import TestCase
 
 import torch
 from torch import nn
+from torch.nn.init import constant_
 
 from mmengine.logging.logger import MMLogger
 from mmengine.model import BaseModule, ModuleDict, ModuleList, Sequential
@@ -183,6 +184,17 @@ class TestBaseModule(TestCase):
                            torch.full(self.model.reg.bias.shape, 2.0))
 
         # Test build model from Pretrained weights
+
+        class CustomLinear(BaseModule):
+
+            def __init__(self, init_cfg=None):
+                super().__init__(init_cfg)
+                self.linear = nn.Linear(1, 1)
+
+            def init_weights(self):
+                constant_(self.linear.weight, 1)
+                constant_(self.linear.bias, 2)
+
         @FOOMODELS.register_module()
         class PratrainedModel(FooModel):
 
@@ -194,14 +206,14 @@ class TestBaseModule(TestCase):
                          init_cfg=None) -> None:
                 super().__init__(component1, component2, component3,
                                  component4, init_cfg)
-                self.linear = FooLinear()
+                self.linear = CustomLinear()
 
         checkpoint_path = osp.join(self.temp_dir.name, 'test.pth')
         torch.save(self.model.state_dict(), checkpoint_path)
         model_cfg = copy.deepcopy(self.model_cfg)
         model_cfg['type'] = 'PratrainedModel'
-        model_cfg['init_cfg'].append(
-            dict(type='Pretrained', checkpoint=checkpoint_path))
+        model_cfg['init_cfg'] = dict(
+            type='Pretrained', checkpoint=checkpoint_path)
         model = FOOMODELS.build(model_cfg)
         ori_layer_weight = model.linear.linear.weight.clone()
         ori_layer_bias = model.linear.linear.bias.clone()

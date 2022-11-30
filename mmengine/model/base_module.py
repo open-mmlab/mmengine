@@ -105,6 +105,10 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 if isinstance(self.init_cfg, dict):
                     init_cfgs = [self.init_cfg]
 
+                # PretrainedInit have higher priority than any other init_cfg.
+                # Therefore we call initialize PretrainedInit last to overwrite
+                # the previous initialized weights.
+                # See details in https://github.com/open-mmlab/mmengine/issues/691 # noqa E501
                 other_cfgs = []
                 pretrained_cfg = []
                 for init_cfg in init_cfgs:
@@ -115,13 +119,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         other_cfgs.append(init_cfg)
 
                 initialize(self, other_cfgs)
-                if isinstance(self.init_cfg, dict):
-                    # prevent the parameters of
-                    # the pre-trained model
-                    # from being overwritten by
-                    # the `init_weights`
-                    if self.init_cfg['type'] == 'Pretrained':
-                        return
 
             for m in self.children():
                 if hasattr(m, 'init_weights'):
