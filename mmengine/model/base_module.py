@@ -100,7 +100,21 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                     f'initialize {module_name} with init_cfg {self.init_cfg}',
                     logger=logger_name,
                     level=logging.DEBUG)
-                initialize(self, self.init_cfg)
+
+                init_cfgs = self.init_cfg
+                if isinstance(self.init_cfg, dict):
+                    init_cfgs = [self.init_cfg]
+
+                other_cfgs = []
+                pretrained_cfg = []
+                for init_cfg in init_cfgs:
+                    assert isinstance(init_cfg, dict)
+                    if init_cfg.get('type') == 'Pretrained':
+                        pretrained_cfg.append(init_cfg)
+                    else:
+                        other_cfgs.append(init_cfg)
+
+                initialize(self, other_cfgs)
                 if isinstance(self.init_cfg, dict):
                     # prevent the parameters of
                     # the pre-trained model
@@ -118,7 +132,8 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         init_info=f'Initialized by '
                         f'user-defined `init_weights`'
                         f' in {m.__class__.__name__} ')
-
+            if self.init_cfg:
+                initialize(self, pretrained_cfg)
             self._is_init = True
         else:
             warnings.warn(f'init_weights of {self.__class__.__name__} has '
