@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+base1 = 'base1'
 _base_ = [
-    './base1.py', '../yaml_config/base2.yaml', '../json_config/base3.json',
+    f'./{base1}.py', '../yaml_config/base2.yaml', '../json_config/base3.json',
     './base4.py'
 ]
 
