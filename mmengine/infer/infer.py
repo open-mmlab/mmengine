@@ -133,6 +133,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         weights: Optional[str] = None,
         device: Optional[str] = None,
     ) -> None:
+        self.scope = DefaultScope.get_current_instance(
+        ).scope_name  # type: ignore
         # Load config to cfg
         cfg: ConfigType
         if isinstance(model, str):
@@ -319,10 +321,10 @@ class BaseInferencer(metaclass=InferencerMeta):
             Tuple[Config, str]: Loaded Config and weights path defined in
             metafile.
         """
-        scope = DefaultScope.get_current_instance().scope_name  # type: ignore
-        assert scope is not None, ('scope should be initialized if you want '
-                                   'to load config from metafile.')
-        project = PKG2PROJECT[scope]
+        assert self.scope is not None, (
+            'scope should be initialized if you want '
+            'to load config from metafile.')
+        project = PKG2PROJECT[self.scope]
         package_path = get_installed_path(project)
         meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
         for meta_path in meta_indexes['Import']:
@@ -335,6 +337,8 @@ class BaseInferencer(metaclass=InferencerMeta):
                     cfg = Config.fromfile(
                         osp.join(package_path, '.mim', model_cfg['Config']))
                     weights = model_cfg['Weights']
+                    weights = weights[0] if isinstance(weights,
+                                                       list) else weights
                     return cfg, weights
         raise ValueError(f'Cannot find model: {model} in {project}')
 
@@ -383,7 +387,9 @@ class BaseInferencer(metaclass=InferencerMeta):
             Callable: Collate function.
         """
         try:
-            collate_fn = COLLATE_FUNCTIONS.get(cfg.test_dataloader.collate_fn)
+            with COLLATE_FUNCTIONS.switch_scope_and_registry(
+                    self.scope) as registry:
+                collate_fn = registry.get(cfg.test_dataloader.collate_fn)
         except AttributeError:
             collate_fn = pseudo_collate
         return collate_fn  # type: ignore
@@ -454,18 +460,15 @@ class BaseInferencer(metaclass=InferencerMeta):
             forward, visualize and postprocess respectively.
         """
         # Ensure each argument only matches one function
-        for key in kwargs.keys():
-            method_kwargs = [
-                self.preprocess_kwargs,
-                self.forward_kwargs,
-                self.visualize_kwargs,
-                self.postprocess_kwargs,
-            ]
-            matches = tuple(kwarg for kwarg in method_kwargs if key in kwarg)
-            if len(matches) == 0:
-                raise ValueError(
-                    f'unknown argument {key} for `preprocess`, `forward`, '
-                    '`visualize` and `postprocess`')
+        method_kwargs = self.preprocess_kwargs | self.forward_kwargs | \
+            self.visualize_kwargs | self.postprocess_kwargs
+
+        union_kwargs = method_kwargs | set(kwargs.keys())
+        if union_kwargs != method_kwargs:
+            unknown_kwargs = union_kwargs - method_kwargs
+            raise ValueError(
+                f'unknown argument {unknown_kwargs} for `preprocess`, '
+                '`forward`, `visualize` and `postprocess`')
 
         preprocess_kwargs = {}
         forward_kwargs = {}
