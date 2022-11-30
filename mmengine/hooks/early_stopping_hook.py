@@ -40,7 +40,7 @@ class EarlyStoppingHook(Hook):
     def __init__(
         self,
         monitor: str,
-        rule: str = None,
+        rule: Optional[str] = None,
         min_delta: float = 0.1,
         strict: bool = False,
         check_finite: bool = True,
@@ -54,7 +54,7 @@ class EarlyStoppingHook(Hook):
         elif monitor in self._default_less_keys:
             rule = 'less'
         assert rule in ['greater', 'less'], \
-            "`rule` should be either 'greater' or 'less'."
+            '`rule` should be either "greater" or "less".'
         self.rule = rule
         self.min_delta = min_delta
         self.strict = strict
