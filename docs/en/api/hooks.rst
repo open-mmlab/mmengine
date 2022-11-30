@@ -22,3 +22,4 @@ mmengine.hooks
    IterTimerHook
    SyncBuffersHook
    EmptyCacheHook
+   EarlyStoppingHook
