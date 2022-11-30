@@ -335,18 +335,20 @@ class Config:
         """
         with open(filename, encoding='utf-8') as f:
             config_file = f.read()
-        regexp = r'\{\{[\'\"]?\s*\$(\w+)\s*\:?\s*(\S*?)\s*[\'\"]?\}\}'
+        regexp = r'\{\{[\'\"]?\s*\$(\w+)\s*\:\s*(\S*?)\s*[\'\"]?\}\}'
         keys = re.findall(regexp, config_file)
         env_variables = dict()
         for var_name, value in keys:
-            regexp = r'\{\{[\'\"]?\s*\$' + var_name + r'\s*\:?\s*' \
+            regexp = r'\{\{[\'\"]?\s*\$' + var_name + r'\s*\:\s*' \
                 + value + r'\s*[\'\"]?\}\}'
             if var_name in os.environ:
                 value = os.environ[var_name]
                 env_variables[var_name] = value
-                print_log(f'Using env variable `{var_name}` with value of '
-                          f'{value} to replace item in config.')
-            elif not value:
+                print_log(
+                    f'Using env variable `{var_name}` with value of '
+                    f'{value} to replace item in config.',
+                    logger='current')
+            if not value:
                 raise KeyError(f'`{var_name}` cannot be found in `os.environ`.'
                                f' Please set `{var_name}` in environment or '
                                'give a default value.')

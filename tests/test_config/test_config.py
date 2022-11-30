@@ -380,7 +380,7 @@ class TestConfig:
         cfg = tmp_path / 'tmp_cfg1.py'
         substituted_cfg = tmp_path / 'tmp_cfg2.py'
 
-        cfg_text = 'a={{$A}}\n'
+        cfg_text = 'a={{$A:}}\n'
         with open(cfg, 'w') as f:
             f.write(cfg_text)
         with pytest.raises(KeyError):
