@@ -15,11 +15,12 @@ from mmengine.config import Config, ConfigDict
 from mmengine.config.utils import PKG2PROJECT
 from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
-from mmengine.fileio import FileClient, load
+from mmengine.fileio import (get_file_backend, isdir, join_path,
+                             list_dir_or_file, load)
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner import load_checkpoint
 from mmengine.structures import InstanceData
-from mmengine.utils import get_installed_path
+from mmengine.utils import get_installed_path, is_installed
 from mmengine.visualization import Visualizer
 
 InstanceList = List[InstanceData]
@@ -181,7 +182,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             return_datasamples (bool): Whether to return results as
                 :obj:`BaseDataElement`. Defaults to False.
             batch_size (int): Batch size. Defaults to 1.
-            **kwargs: Other arguments passes to :meth:`preprocess`,
+            **kwargs: Key words arguments passed to :meth:`preprocess`,
                 :meth:`forward`, :meth:`visualize` and :meth:`postprocess`.
                 Each key in kwargs should be in the corresponding set of
                 ``preprocess_kwargs``, ``forward_kwargs``, ``visualize_kwargs``
@@ -233,14 +234,14 @@ class BaseInferencer(metaclass=InferencerMeta):
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
         if isinstance(inputs, str):
-            file_client = FileClient.infer_client(uri=inputs)
-            if hasattr(file_client.client,
-                       'isdir') and file_client.isdir(inputs):
-                filename_list = file_client.list_dir_or_file(
-                    inputs, list_dir=False)
+            backend = get_file_backend(inputs)
+            # Backends like HttpsBackend do not implement `isdir`, so only
+            # those backends that implement `isdir` could accept the inputs
+            # as a directory
+            if hasattr(backend, 'isdir') and isdir(inputs):
+                filename_list = list_dir_or_file(inputs, list_dir=False)
                 inputs = [
-                    file_client.join_path(inputs, filename)
-                    for filename in filename_list
+                    join_path(inputs, filename) for filename in filename_list
                 ]
             else:
                 inputs = [inputs]
@@ -278,7 +279,6 @@ class BaseInferencer(metaclass=InferencerMeta):
         Returns:
             List[np.ndarray]: Visualization results.
         """
-        raise NotImplementedError('visualize is not implemented!')
 
     @abstractmethod
     def postprocess(
@@ -307,7 +307,6 @@ class BaseInferencer(metaclass=InferencerMeta):
             - ``predictions``: Returned by :meth:`forward` and
                 processed in :meth:`postprocess`
         """
-        raise NotImplementedError('postprocess is not implemented!')
 
     def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:
         """Load config and weights from metafile.
@@ -323,6 +322,8 @@ class BaseInferencer(metaclass=InferencerMeta):
             'scope should be initialized if you want '
             'to load config from metafile.')
         project = PKG2PROJECT[self.scope]
+        assert is_installed(project), (
+            f'Cannot get {model} from {project}! Please install {project}')
         package_path = get_installed_path(project)
         meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
         for meta_path in meta_indexes['Import']:
@@ -409,7 +410,6 @@ class BaseInferencer(metaclass=InferencerMeta):
                 dataset = map(self.pipeline, dataset)
                 ...
         """
-        raise NotImplementedError('_init_pipeline is not implemented!')
 
     def _init_visualizer(self, cfg: ConfigType) -> Optional[Visualizer]:
         """Initialize visualizers.
