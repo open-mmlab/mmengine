@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 from math import inf, isfinite
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from mmengine.registry import HOOKS
 from .hook import Hook
@@ -64,43 +64,41 @@ class EarlyStoppingHook(Hook):
 
         self.wait_count = 0
         self.best_score = -inf if rule == 'greater' else inf
-        self.reason_message = ''
         self.default_end_message = ' This training process stops early.'
 
-    def _check_stop_condition(self, current_score):
+    def _check_stop_condition(self, current_score: float) -> Tuple[bool, str]:
         compare = self.rule_map[self.rule]
         stop_training = False
+        reason_message = ''
 
         if self.check_finite and not isfinite(current_score):
             stop_training = True
-            self.reason_message = (f'Monitored metric {self.monitor} = '
-                                   f'{current_score} is infinite. '
-                                   f'Previous best value was '
-                                   f'{self.best_score:.3f}.')
+            reason_message = (f'Monitored metric {self.monitor} = '
+                              f'{current_score} is infinite. '
+                              f'Previous best value was '
+                              f'{self.best_score:.3f}.')
 
         elif self.stopping_threshold is not None and compare(
                 current_score, self.stopping_threshold):
             stop_training = True
             self.best_score = current_score
-            self.reason_message = (
-                f'Stopping threshold reached: '
-                f'`{self.monitor}` = {current_score} is '
-                f'{self.rule} than {self.stopping_threshold}.')
+            reason_message = (f'Stopping threshold reached: '
+                              f'`{self.monitor}` = {current_score} is '
+                              f'{self.rule} than {self.stopping_threshold}.')
         elif compare(self.best_score + self.min_delta, current_score):
 
             self.wait_count += 1
 
             if self.wait_count >= self.patience:
-                self.reason_message = (
-                    f'the monitored metric did not improve '
-                    f'in the last {self.wait_count} records. '
-                    f'best score: {self.best_score:.3f}. ')
+                reason_message = (f'the monitored metric did not improve '
+                                  f'in the last {self.wait_count} records. '
+                                  f'best score: {self.best_score:.3f}. ')
                 stop_training = True
         else:
             self.best_score = current_score
             self.wait_count = 0
 
-        return stop_training
+        return stop_training, reason_message
 
     def before_run(self, runner) -> None:
         """Check `stop_training` variable in `runner.train_loop`.
@@ -135,6 +133,7 @@ class EarlyStoppingHook(Hook):
 
         current_score = metrics[self.monitor]
 
-        if self._check_stop_condition(current_score):
+        stop_training, message = self._check_stop_condition(current_score)
+        if stop_training:
             runner.train_loop.stop_training = True
-            runner.logger.info(self.reason_message + self.default_end_message)
+            runner.logger.info(message + self.default_end_message)
