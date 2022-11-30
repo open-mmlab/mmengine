@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import os
 import os.path as osp
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
@@ -16,7 +15,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.config.utils import PKG2PROJECT
 from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
-from mmengine.fileio import load
+from mmengine.fileio import FileClient, load
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner import load_checkpoint
 from mmengine.structures import InstanceData
@@ -35,8 +34,9 @@ ModelType = Tuple[Union[dict, ConfigType], str]
 class InferencerMeta(ABCMeta):
     """Check the legality of the inferencer.
 
-    All Inferencer should not define duplicated keys for ``preprocess_kwargs``,
-    ``forward_kwargs``, ``visualize_kwargs`` and ``postprocess_kwargs``.
+    All Inferencers should not define duplicated keys for
+    ``preprocess_kwargs``,``forward_kwargs``, ``visualize_kwargs`` and
+    ``postprocess_kwargs``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -110,14 +110,14 @@ class BaseInferencer(metaclass=InferencerMeta):
             defined in metafile. Take the `mmdet metafile <https://github.com/open-mmlab/mmdetection/blob/master/configs/retinanet/metafile.yml>`_
             as an example, the `model` could be `retinanet_r18_fpn_1x_coco` or
             its alias.
-        weights: Path to the checkpoint. If it is not specified and model is a
-            model name of metafile, the weights will be loaded from metafile.
-            Defaults to None
-        device (str, optional): Device to run inference. If None, the best
+        weights (str, optional): Path to the checkpoint. If it is not specified
+            and model is a model name of metafile, the weights will be loaded
+            from metafile. Defaults to None.
+        device (str, optional): Device to run inference. If None, the available
             device will be automatically used. Defaults to None.
 
     Note:
-        Since `Inferencer` could be used to inference batch data,
+        Since ``Inferencer`` could be used to infer batch data,
         `collate_fn` should be defined. If `collate_fn` is not defined in config
         file, the `collate_fn` will be `pseudo_collate` by default.
     """  # noqa: E501
@@ -149,9 +149,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         elif isinstance(model, dict):
             cfg = copy.deepcopy(ConfigDict(model))
         else:
-            raise TypeError('config must be a filename or any ConfigType'
+            raise TypeError('config must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
-
+        # We need to delete pretrained field prevents model from loading the
+        # pretrained weights unnecessarily.
         if cfg.model.get('pretrained') is not None:
             del cfg.model.pretrained
 
@@ -176,8 +177,13 @@ class BaseInferencer(metaclass=InferencerMeta):
         Args:
             inputs (InputsType): Inputs for the inferencer.
             return_datasamples (bool): Whether to return results as
-                datasamples. Defaults to False.
+                :obj:`BaseDataElement`. Defaults to False.
             batch_size (int): Batch size. Defaults to 1.
+            **kwargs: Other arguments passes to :meth:`preprocess`,
+                :meth:`forward`, :meth:`visualize` and :meth:`postprocess`.
+                Each key in kwargs should be in the corresponding set of
+                ``preprocess_kwargs``, ``forward_kwargs``, ``visualize_kwargs``
+                and ``postprocess_kwargs``.
 
         Returns:
             dict: Inference and visualization results.
@@ -207,14 +213,14 @@ class BaseInferencer(metaclass=InferencerMeta):
         return an iterable object, of which each item will be used as the
         input of ``model.test_step``.
 
-        ``BaseInferencer.preprocess`` will return an iterable dataloader, which
-        will be used in __call__ like this:
+        ``BaseInferencer.preprocess`` will return an iterable chunked data,
+        which will be used in __call__ like this:
 
         .. code-block:: python
 
             def __call__(self, inputs, batch_size=1, **kwargs):
-                dataloader = self.preprocess(inputs, batch_size, **kwargs)
-                for batch in dataloader:
+                chunked_data = self.preprocess(inputs, batch_size, **kwargs)
+                for batch in chunked_data:
                     preds = self.forward(batch, **kwargs)
 
         Args:
@@ -224,19 +230,31 @@ class BaseInferencer(metaclass=InferencerMeta):
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
-        if isinstance(inputs, str) and osp.isdir(inputs):
-            inputs = [osp.join(inputs, file) for file in os.listdir(inputs)]
+        if isinstance(inputs, str):
+            file_client = FileClient.infer_client(uri=inputs)
+            if file_client.isdir(inputs):
+                filename_list = file_client.list_dir_or_file(
+                    inputs, list_dir=False)
+                inputs = [
+                    file_client.join_path(inputs, filename)
+                    for filename in filename_list
+                ]
+            else:
+                assert file_client.isfile(inputs), (
+                    'If inputs is a str, it should be a directory or a file '
+                    'path!')
+                inputs = [inputs]
 
         if not isinstance(inputs, list):
             inputs = [inputs]
 
-        dataloader = self._get_chunk_data(
+        chunked_data = self._get_chunk_data(
             map(self.pipeline, inputs), batch_size)
-        yield from map(self.collate_fn, dataloader)
+        yield from map(self.collate_fn, chunked_data)
 
     @torch.no_grad()
     def forward(self, inputs: Union[dict, tuple], **kwargs) -> Any:
-        """Forward the inputs to the model."""
+        """Feed the inputs to the model."""
         return self.model.test_step(inputs)
 
     @abstractmethod
@@ -247,15 +265,18 @@ class BaseInferencer(metaclass=InferencerMeta):
                   **kwargs) -> List[np.ndarray]:
         """Visualize predictions.
 
-        Customize your visualize by overriding this methods. visualize should
-        return a visualization result, it could be np.ndarray or any other
-        objects
+        Customize your visualization by overriding this method. visualize
+        should return a visualization result, which could be np.ndarray or any
+        other objects
 
         Args:
             inputs (list): Inputs preprocessed by :meth:`preprocess`.
             preds (Any): Predictions of the model.
             show (bool): Whether to display the image in a popup window.
                 Defaults to False.
+
+        Returns:
+            List[np.ndarray]: Visualization results.
         """
         raise NotImplementedError('visualize is not implemented!')
 
@@ -276,13 +297,14 @@ class BaseInferencer(metaclass=InferencerMeta):
             preds (List[Dict]): Predictions of the model.
             visualization (np.ndarray): Visualized predictions.
             return_datasample (bool): Whether to return results as datasamples.
+                        Defaults to False.
 
         Returns:
             dict: Inference and visualization results with key ``predictions``
             and ``visualization``
 
             - ``visualization``: Returned by :meth:`visualize`
-            - ``predictions``: Returned by :meth:`postprocess` and
+            - ``predictions``: Returned by :meth:`forward` and
                 processed in :meth:`postprocess`
         """
         raise NotImplementedError('postprocess is not implemented!')
@@ -295,7 +317,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Returns:
             Tuple[Config, str]: Loaded Config and weights path defined in
-                metafile.
+            metafile.
         """
         scope = DefaultScope.get_current_instance().scope_name  # type: ignore
         assert scope is not None, ('scope should be initialized if you want '
@@ -400,22 +422,22 @@ class BaseInferencer(metaclass=InferencerMeta):
         cfg.visualizer['name'] = f'inferencer-{timestamp}'
         return VISUALIZERS.build(cfg.visualizer)
 
-    def _get_chunk_data(self, dataset: Iterable, chunk_size: int):
+    def _get_chunk_data(self, inputs: Iterable, chunk_size: int):
         """Get batch data from dataset.
 
         Args:
-            dataset (Iterable): An iterable dataset.
+            inputs (Iterable): An iterable dataset.
             chunk_size (int): Equivalent to batch size.
 
         Yields:
             list: batch data.
         """
-        dataset_iter = iter(dataset)
+        inputs_iter = iter(inputs)
         while True:
             try:
                 chunk_data = []
                 for _ in range(chunk_size):
-                    processed_data = next(dataset_iter)
+                    processed_data = next(inputs_iter)
                     chunk_data.append(processed_data)
                 yield chunk_data
             except StopIteration:
