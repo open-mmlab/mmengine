@@ -153,8 +153,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         else:
             raise TypeError('config must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
-        # We need to delete pretrained field prevents model from loading the
-        # pretrained weights unnecessarily.
+        # Delete the `pretrained` field to prevent model from loading the
+        # the pretrained weights unnecessarily.
         if cfg.model.get('pretrained') is not None:
             del cfg.model.pretrained
 
