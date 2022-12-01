@@ -214,11 +214,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                                    **postprocess_kwargs)
         return results
 
-    def preprocess(self,
-                   inputs: InputsType,
-                   batch_size: int = 1,
-                   backend_args: Optional[dict] = None,
-                   **kwargs):
+    def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
         """Process the inputs into a model-feedable format.
 
         Customize your preprocess by overriding this method. Preprocess should
@@ -238,14 +234,12 @@ class BaseInferencer(metaclass=InferencerMeta):
         Args:
             inputs (InputsType): Inputs given by user.
             batch_size (int): batch size. Defaults to 1.
-            backend_args (dict, optional): Arguments to instantiate the
-                corresponding backend. Defaults to None.
 
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
         if isinstance(inputs, str):
-            backend = get_file_backend(inputs, backend_args=backend_args)
+            backend = get_file_backend(inputs)
             # Backends like HttpsBackend do not implement `isdir`, so only
             # those backends that implement `isdir` could accept the inputs
             # as a directory
