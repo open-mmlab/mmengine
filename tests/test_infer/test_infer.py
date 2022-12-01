@@ -8,7 +8,7 @@ import pytest
 import torch
 
 from mmengine.infer import BaseInferencer
-from mmengine.registry import VISUALIZERS
+from mmengine.registry import VISUALIZERS, DefaultScope
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed, is_list_of
 from mmengine.visualization import Visualizer
@@ -198,3 +198,14 @@ class TestBaseInferencer(RunnerTestCase):
             osp.join(self.temp_dir.name, 'imgs'))
         for data in dataloader:
             self.assertTrue(is_list_of(data, torch.Tensor))
+
+    @pytest.mark.skipif(
+        not is_installed('mmdet'), reason='mmdet is not installed')
+    def test_list_models(self):
+        model_list = BaseInferencer.list_models('mmdet')
+        self.assertTrue(len(model_list) > 0)
+        DefaultScope._instance_dict.clear()
+        with self.assertRaisesRegex(AssertionError, 'scope should be'):
+            BaseInferencer.list_models()
+        with self.assertRaisesRegex(AssertionError, 'unknown not in'):
+            BaseInferencer.list_models('unknown')

@@ -138,7 +138,8 @@ class BaseInferencer(metaclass=InferencerMeta):
                  scope: Optional[str] = None) -> None:
         if scope is None:
             default_scope = DefaultScope.get_current_instance()
-            scope = default_scope.scope_name  # type: ignore
+            if default_scope is not None:
+                scope = default_scope.scope_name
         self.scope = scope
         # Load config to cfg
         cfg: ConfigType
@@ -344,7 +345,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         assert self.scope is not None, (
             'scope should be initialized if you want '
             'to load config from metafile.')
-
+        assert self.scope in PKG2PROJECT, (
+            f'{self.scope} not in {PKG2PROJECT}!,'
+            'please make pass a valid scope.')
         project = PKG2PROJECT[self.scope]
         assert is_installed(project), (f'Please install {project}')
         package_path = get_installed_path(project)
@@ -545,10 +548,11 @@ class BaseInferencer(metaclass=InferencerMeta):
         matched_models = []
         if scope is None:
             default_scope = DefaultScope.get_current_instance()
-            scope = default_scope.scope_name  # type:ignore
-        assert scope is not None, ('scope should be initialized if you want '
-                                   'to load config from metafile.')
-
+            assert default_scope is not None, (
+                'scope should be initialized if you want '
+                'to load config from metafile.')
+        assert scope in PKG2PROJECT, (
+            f'{scope} not in {PKG2PROJECT}!, please make pass a valid scope.')
         project = PKG2PROJECT[scope]
         assert is_installed(project), (f'Please install {project}')
         package_path = get_installed_path(project)
