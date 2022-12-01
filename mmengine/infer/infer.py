@@ -267,7 +267,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         """Visualize predictions.
 
         Customize your visualization by overriding this method. visualize
-        should return a visualization result, which could be np.ndarray or any
+        should return visualization results, which could be np.ndarray or any
         other objects
 
         Args:
@@ -288,24 +288,35 @@ class BaseInferencer(metaclass=InferencerMeta):
         return_datasample=False,
         **kwargs,
     ) -> dict:
-        """Postprocess predictions.
+        """Summary the predictions and visualization results from ``forward``
+        and ``visualize``.
 
-        Customize your postprocess by overriding this method. postprocess
-        should return a dict with visualization results and inference results.
+        This method should be responsible for the following tasks:
+
+        1. Convert datasamples into a json-serializable dict if needed.
+        2. Pack the predictions and visualization results and return them.
+        3. Dump or log the predictions.
+
+        Customize your postprocess by overriding this method. Make sure
+        ``postprocess`` will return a dict with visualization results and
+        inference results.
 
         Args:
             preds (List[Dict]): Predictions of the model.
             visualization (np.ndarray): Visualized predictions.
             return_datasample (bool): Whether to return results as datasamples.
-                        Defaults to False.
+                Defaults to False.
 
         Returns:
             dict: Inference and visualization results with key ``predictions``
             and ``visualization``
 
-            - ``visualization``: Returned by :meth:`visualize`
-            - ``predictions``: Returned by :meth:`forward` and
-                processed in :meth:`postprocess`
+            - ``visualization (Any)``: Returned by :meth:`visualize`
+            - ``predictions`` (dict or DataSample): Returned by
+                :meth:`forward` and processed in :meth:`postprocess`.
+                If ``return_datasample=False``, it usually should be a
+                json-serializable dict containing only basic data elements such
+                as strings and numbers.
         """
 
     def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:
