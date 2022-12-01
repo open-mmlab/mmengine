@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import os.path as osp
+import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from typing import (Any, Callable, Dict, Iterable, List, Optional, Sequence,
@@ -17,6 +18,7 @@ from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
 from mmengine.fileio import (get_file_backend, isdir, join_path,
                              list_dir_or_file, load)
+from mmengine.logging import print_log
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner import load_checkpoint
 from mmengine.structures import InstanceData
@@ -116,6 +118,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             from metafile. Defaults to None.
         device (str, optional): Device to run inference. If None, the available
             device will be automatically used. Defaults to None.
+        scope (str, optional): The scope of the model. Defaults to None.
 
     Note:
         Since ``Inferencer`` could be used to infer batch data,
@@ -128,14 +131,15 @@ class BaseInferencer(metaclass=InferencerMeta):
     visualize_kwargs: set = set()
     postprocess_kwargs: set = set()
 
-    def __init__(
-        self,
-        model: Union[ModelType, str],
-        weights: Optional[str] = None,
-        device: Optional[str] = None,
-    ) -> None:
-        self.scope = \
-            DefaultScope.get_current_instance().scope_name  # type: ignore
+    def __init__(self,
+                 model: Union[ModelType, str],
+                 weights: Optional[str] = None,
+                 device: Optional[str] = None,
+                 scope: Optional[str] = None) -> None:
+        if scope is None:
+            default_scope = DefaultScope.get_current_instance()
+            scope = default_scope.scope_name  # type: ignore
+        self.scope = scope
         # Load config to cfg
         cfg: ConfigType
         if isinstance(model, str):
@@ -209,7 +213,11 @@ class BaseInferencer(metaclass=InferencerMeta):
                                    **postprocess_kwargs)
         return results
 
-    def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
+    def preprocess(self,
+                   inputs: InputsType,
+                   batch_size: int = 1,
+                   backend_args: Optional[dict] = None,
+                   **kwargs):
         """Process the inputs into a model-feedable format.
 
         Customize your preprocess by overriding this method. Preprocess should
@@ -229,12 +237,14 @@ class BaseInferencer(metaclass=InferencerMeta):
         Args:
             inputs (InputsType): Inputs given by user.
             batch_size (int): batch size. Defaults to 1.
+            backend_args (dict, optional): Arguments to instantiate the
+                corresponding backend. Defaults to None.
 
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
         if isinstance(inputs, str):
-            backend = get_file_backend(inputs)
+            backend = get_file_backend(inputs, backend_args=backend_args)
             # Backends like HttpsBackend do not implement `isdir`, so only
             # those backends that implement `isdir` could accept the inputs
             # as a directory
@@ -268,7 +278,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Customize your visualization by overriding this method. visualize
         should return visualization results, which could be np.ndarray or any
-        other objects
+        other objects.
 
         Args:
             inputs (list): Inputs preprocessed by :meth:`preprocess`.
@@ -288,7 +298,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         return_datasample=False,
         **kwargs,
     ) -> dict:
-        """Summary the predictions and visualization results from ``forward``
+        """Process the predictions and visualization results from ``forward``
         and ``visualize``.
 
         This method should be responsible for the following tasks:
@@ -329,27 +339,26 @@ class BaseInferencer(metaclass=InferencerMeta):
             Tuple[Config, str]: Loaded Config and weights path defined in
             metafile.
         """
+        model = model.lower()
+
         assert self.scope is not None, (
             'scope should be initialized if you want '
             'to load config from metafile.')
+
         project = PKG2PROJECT[self.scope]
-        assert is_installed(project), (
-            f'Cannot get {model} from {project}! Please install {project}')
+        assert is_installed(project), (f'Please install {project}')
         package_path = get_installed_path(project)
-        meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
-        for meta_path in meta_indexes['Import']:
-            # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
-            meta_path = osp.join(package_path, '.mim', meta_path)
-            metainfo = load(meta_path)
-            for model_cfg in metainfo['Models']:
-                if model_cfg['Name'] == model or model in model_cfg.get(
-                        'Alias', []):
-                    cfg = Config.fromfile(
-                        osp.join(package_path, '.mim', model_cfg['Config']))
-                    weights = model_cfg['Weights']
-                    weights = weights[0] if isinstance(weights,
-                                                       list) else weights
-                    return cfg, weights
+        for model_cfg in BaseInferencer._get_models_from_package(package_path):
+            model_name = model_cfg['Name'].lower()
+            model_alias_list = [
+                alias.lower for alias in model_cfg.get('Alias', [])
+            ]
+            if (model_name == model or model in model_alias_list):
+                cfg = Config.fromfile(
+                    osp.join(package_path, '.mim', model_cfg['Config']))
+                weights = model_cfg['Weights']
+                weights = weights[0] if isinstance(weights, list) else weights
+                return cfg, weights
         raise ValueError(f'Cannot find model: {model} in {project}')
 
     def _init_model(
@@ -362,7 +371,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         specific device.
 
         Args:
-            cfg (ConfigType): Config contained the model information.
+            cfg (ConfigType): Config containing the model information.
             weights (str): Path to the checkpoint.
             device (str, optional): Device to run inference. Defaults to 'cpu'.
 
@@ -408,9 +417,9 @@ class BaseInferencer(metaclass=InferencerMeta):
     def _init_pipeline(self, cfg: ConfigType) -> Callable:
         """Initialize the test pipeline.
 
-        Return a pipeline to handle varies of input data, such as str,
-        np.ndarray. It is an abstract method in BaseInferencer, and should be
-        implemented in subclasses.
+        Return a pipeline to handle various input data, such as ``str``,
+        ``np.ndarray``. It is an abstract method in BaseInferencer, and should
+        be implemented in subclasses.
 
         The returned pipeline will be used to process a single data.
         It will be used in :meth:`preprocess` like this:
@@ -426,7 +435,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         """Initialize visualizers.
 
         Args:
-            cfg (ConfigType): Config contained the visualizer information.
+            cfg (ConfigType): Config containing the visualizer information.
 
         Returns:
             Visualizer or None: Visualizer initialized with config.
@@ -500,3 +509,58 @@ class BaseInferencer(metaclass=InferencerMeta):
             visualize_kwargs,
             postprocess_kwargs,
         )
+
+    @staticmethod
+    def _get_models_from_package(package_path: str):
+        """Load model config defined in metafile from package path.
+
+        Args:
+            package_path (str): Path to the package.
+
+        Yields:
+            dict: Model config defined in metafile.
+        """
+        meta_indexes = load(osp.join(package_path, '.mim', 'model-index.yml'))
+        for meta_path in meta_indexes['Import']:
+            # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
+            meta_path = osp.join(package_path, '.mim', meta_path)
+            metainfo = load(meta_path)
+            yield from metainfo['Models']
+
+    @staticmethod
+    def list_models(scope: Optional[str] = None, patterns: str = r'.*'):
+        """List models defined in metafile of corresponding packages.
+
+        Args:
+            scope (str, optional): The scope to which the model belongs.
+                Defaults to None.
+            patterns (str, optional): Regular expressions for the searched
+                models. Once matched with ``Alias`` or ``Name`` filed in
+                metafile, corresponding model will be added to the return list.
+                Defaults to '.*'.
+
+        Returns:
+            dict: Model dict with model name and its alias.
+        """
+        matched_models = []
+        if scope is None:
+            default_scope = DefaultScope.get_current_instance()
+            scope = default_scope.scope_name  # type:ignore
+        assert scope is not None, ('scope should be initialized if you want '
+                                   'to load config from metafile.')
+
+        project = PKG2PROJECT[scope]
+        assert is_installed(project), (f'Please install {project}')
+        package_path = get_installed_path(project)
+
+        for model_cfg in BaseInferencer._get_models_from_package(package_path):
+            model_name = [model_cfg['Name']]
+            model_name.extend(model_cfg.get('Alias', []))
+            for name in model_name:
+                if re.match(patterns, name) is not None:
+                    matched_models.append(name)
+        output_str = ''
+        for name in matched_models:
+            output_str += f'model_name: {name}\n'
+        print_log(output_str, logger='current')
+        return matched_models
