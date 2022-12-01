@@ -3,7 +3,6 @@
 # Modified from
 # https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/jit_analysis.py
 
-
 import logging
 import typing
 import warnings
@@ -130,6 +129,7 @@ def _get_scoped_trace_graph(
 ) -> torch._C.Graph:
     """Traces the provided module using torch.jit._get_trace_graph, but adds
     submodule scope information to each graph node.
+
     The resulting graph
     is in-lined and has all model parameters treated as inputs. The input
     model has the scope name '', while its descendants have names of the
@@ -197,6 +197,7 @@ def _get_scoped_trace_graph(
 class JitModelAnalysis:
     """Provides access to per-submodule model statistics obtained by tracing a
     model with pytorch's jit tracing functionality.
+
     Calculates a statistic on a per-operator basis using the provided set of
     functions that acts on the inputs and outputs to the operator, then
     aggregates this over modules in the model. Can return the aggregate
@@ -248,6 +249,7 @@ class JitModelAnalysis:
     def total(self, module_name: str = '') -> int:
         """Returns the total aggregated statistic across all operators for the
         requested module.
+
         Args:
             module_name (str) : The submodule to get data for. Defaults to
                 the entire model.
@@ -262,6 +264,7 @@ class JitModelAnalysis:
     def by_operator(self, module_name: str = '') -> typing.Counter[str]:
         """Returns the statistics for a requested module, grouped by operator
         type.
+
         The operator handle determines the name associated with each
         operator type.
         Args:
@@ -277,6 +280,7 @@ class JitModelAnalysis:
     def by_module_and_operator(self) -> Dict[str, typing.Counter[str]]:
         """Returns the statistics for all submodules, separated out by operator
         type for each submodule.
+
         The operator handle determines
         the name associated with each operator type.
         Returns:
@@ -290,6 +294,7 @@ class JitModelAnalysis:
     def by_module(self) -> typing.Counter[str]:
         """Returns the statistics for all submodules, aggregated over all
         operators.
+
         Returns:
             Counter(str): statistics counter grouped by submodule names
         """
@@ -302,6 +307,7 @@ class JitModelAnalysis:
     def unsupported_ops(self, module_name: str = '') -> typing.Counter[str]:
         """Lists the number of operators that were encountered but unsupported
         because no operator handle is available for them.
+
         Does not include
         operators that are explicitly ignored.
         Args:
@@ -319,6 +325,7 @@ class JitModelAnalysis:
     def uncalled_modules(self) -> Set[str]:
         """Returns a set of submodules that were never called during the trace
         of the graph.
+
         This may be because they were unused, or
         because they were accessed via direct calls .forward() or with
         other python methods. In the latter case, statistics will not be
@@ -375,6 +382,7 @@ class JitModelAnalysis:
     def canonical_module_name(self, name: str) -> str:
         """Returns the canonical module name of the given ``name``, which might
         be different from the given ``name`` if the module is shared.
+
         This is the name that will be used as a key when statistics are
         output using .by_module() and .by_module_and_operator().
         Args:
@@ -397,6 +405,7 @@ class JitModelAnalysis:
     ) -> 'JitModelAnalysis':
         """Returns a copy of the :class:`JitModelAnalysis` object, keeping all
         settings, but on a new model or new inputs.
+
         Args:
             new_model (nn.Module or None) : a new model for the new
                 JitModelAnalysis. If None, uses the original model.
@@ -418,6 +427,7 @@ class JitModelAnalysis:
         """Sets which warnings to print when tracing the graph to calculate
         statistics. There are three modes. Defaults to 'no_tracer_warning'.
         Allowed values are:
+
         * 'all' : keeps all warnings raised while tracing
         * 'no_tracer_warning' : suppress torch.jit.TracerWarning only
         * 'none' : suppress all warnings raised while tracing
@@ -432,6 +442,7 @@ class JitModelAnalysis:
     def ancestor_mode(self: T, mode: str) -> T:
         """Sets how to determine the ancestor modules of an operator. Must be
         one of "owner" or "caller".
+
         * "caller": an operator belongs to all modules that is currently
             executing `forward()` at the time the operator is called.
         * "owner": an operator belongs to the last module that's executing
@@ -450,6 +461,7 @@ class JitModelAnalysis:
 
     def unsupported_ops_warnings(self: T, enabled: bool) -> T:
         """Sets if warnings for unsupported operators are shown.
+
         Defaults
         to True. Counts of unsupported operators may be obtained from
         :meth:`unsupported_ops` regardless of this setting.
@@ -462,6 +474,7 @@ class JitModelAnalysis:
 
     def uncalled_modules_warnings(self: T, enabled: bool) -> T:
         """Sets if warnings from uncalled submodules are shown.
+
         Defaults to true.
         A submodule is considered "uncalled" if it is never called during
         tracing. This may be because it is actually unused, or because it is
@@ -514,6 +527,7 @@ class JitModelAnalysis:
 
     def _get_all_ancestors(self, module_name: str) -> Set[str]:
         """Get all ancestors of the given module, defined by ownership.
+
         If the given module has multiple owners, use its canonical name.
         """
         parts = self.canonical_module_name(module_name).split('.')

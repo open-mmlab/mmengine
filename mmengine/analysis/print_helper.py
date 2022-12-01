@@ -9,11 +9,14 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import tabulate
 import torch
 from torch import nn
-from .complexity_analysis import (FlopAnalyzer, ActivationAnalyzer, parameter_count)
+
+from .complexity_analysis import (ActivationAnalyzer, FlopAnalyzer,
+                                  parameter_count)
 
 
 def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
     """Formats an integer for printing in a table or model representation.
+
     Expresses the number in terms of 'kilo', 'mega', etc., using
     'K', 'M', etc. as a suffix.
     Args:
@@ -43,10 +46,12 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
         return fmt(x / 1e3) + 'K'
     return str(x)
 
+
 def _pretty_statistics(statistics: Dict[str, Dict[str, int]],
                        sig_figs: int = 3,
                        hide_zero: bool = False) -> Dict[str, Dict[str, str]]:
     """Converts numeric statistics to strings with kilo/mega/giga/etc.
+
     labels.
     Args:
         statistics (dict(str, dict(str, int))) : the statistics to
@@ -71,6 +76,7 @@ def _group_by_module(
         statistics: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     """Converts statistics organized first by statistic type and then by module
     to statistics organized first by module and then by statistic type.
+
     Args:
         statistics (dict(str, dict(str, any))) : the statistics to convert
     Returns:
@@ -91,6 +97,7 @@ def _indicate_uncalled_modules(
 ) -> Dict[str, Dict[str, str]]:
     """If a module is in the set of uncalled modules, replace its statistics
     with the specified indicator, instead of using the existing string.
+
     Assumes the statistic is already formatting in string form.
     Args:
         statistics (dict(str, dict(str, str))) : the statistics to
@@ -120,6 +127,7 @@ def _remove_zero_statistics(
 ) -> Dict[str, Dict[str, int]]:
     """Any module that has zero for all available statistics is removed from
     the set of statistics.
+
     This can help declutter the reporting of statistics
     if many submodules have zero statistics. Assumes the statistics have
     a model hierarchy starting with a root that has name ''.
@@ -163,6 +171,7 @@ def _fill_missing_statistics(
         statistics: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, int]]:
     """If, for a given submodule name in the model, a statistic is missing from
     statistics, fills it in with zero.
+
     This visually uniformizes
     the reporting of statistics.
     Args:
@@ -190,6 +199,7 @@ def _model_stats_str(model: nn.Module,
     """This produces a representation of the model much like 'str(model)'
     would, except the provided statistics are written out as additional
     information for each submodule.
+
     Args:
         model (nn.Module) : the model to form a representation of.
         statistics (dict(str, dict(str, str))) : the statistics to
@@ -258,6 +268,7 @@ def _model_stats_str(model: nn.Module,
 
 def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # type: ignore
     """Gets the sizes of all torch tensors in an iterable.
+
     If an element of the iterable is a non-torch tensor iterable, it recurses
     into that iterable to continue calculating sizes. Any non-iterable is given
     a size of None. The output consists of nested lists with the same nesting
@@ -281,6 +292,7 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # type: ignore
 def _get_single_child(name: str,
                       statistics: Dict[str, Dict[str, str]]) -> Optional[str]:
     """If the given module has only a single child in statistics, return it.
+
     Otherwise, return None.
     """
     prefix = name + ('.' if name else '')
@@ -299,6 +311,7 @@ def _get_single_child(name: str,
 def _try_combine(stats1: Dict[str, str],
                  stats2: Dict[str, str]) -> Optional[Dict[str, str]]:
     """Try combine two statistics dict to display in one row.
+
     If they conflict, returns None.
     """
     ret = {}
@@ -317,6 +330,7 @@ def _fastforward(
         statistics: Dict[str, Dict[str, str]]) -> Tuple[str, Dict[str, str]]:
     """If the given module has only a single child and matches statistics with
     that child, merge statistics and their names into one row.
+
     Then repeat until the condition isn't met.
     Returns:
         str: the new name
@@ -338,6 +352,7 @@ def _stats_table_format(
     stat_columns: Optional[List[str]] = None,
 ) -> str:
     """Formats the statistics obtained from a model in a nice table.
+
     Args:
         statistics (dict(str, dict(str, str))) : The statistics to print.
             Organized as a dictionary over modules, then as a dictionary
@@ -632,12 +647,13 @@ def complexity_stats_table(
     )
 
 
-def get_model_complexity_info(model: nn.Module, 
-                              input_shape: tuple,
-                              show_table: bool = True,
-                              show_str: bool = True,):
-    """
-    Interface to get the complexity of a model.
+def get_model_complexity_info(
+    model: nn.Module,
+    input_shape: tuple,
+    show_table: bool = True,
+    show_str: bool = True,
+):
+    """Interface to get the complexity of a model.
 
     Args:
         model (nn.Module): The model to analyze.
@@ -655,20 +671,21 @@ def get_model_complexity_info(model: nn.Module,
 
     if show_table:
         complexity_table = complexity_stats_table(
-                    flops=flop_handler,
-                    activations=activation_handler,
-                    show_param_shapes=True,)
+            flops=flop_handler,
+            activations=activation_handler,
+            show_param_shapes=True,
+        )
         complexity_table = '\n' + complexity_table
     else:
-        complexity_table = None
+        complexity_table = ''
 
     if show_str:
         complexity_str = complexity_stats_str(
-                    flops=flop_handler,
-                    activations=activation_handler,
+            flops=flop_handler,
+            activations=activation_handler,
         )
         complexity_str = '\n' + complexity_str
     else:
-        complexity_str = None
+        complexity_str = ''
 
     return flops, activations, params, complexity_table, complexity_str

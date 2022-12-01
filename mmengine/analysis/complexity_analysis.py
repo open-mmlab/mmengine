@@ -1,19 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 import typing
-import tabulate
 from collections import defaultdict
 from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
+import tabulate
 import torch.nn as nn
 from torch import Tensor
 
 from .jit_analysis import JitModelAnalysis
-from .jit_handles import (Handle, generic_activation_jit, 
-                          addmm_flop_jit, batchnorm_flop_jit,
+from .jit_handles import (Handle, addmm_flop_jit, batchnorm_flop_jit,
                           bmm_flop_jit, conv_flop_jit, einsum_flop_jit,
-                          elementwise_flop_counter, linear_flop_jit,
-                          matmul_flop_jit, norm_flop_counter)
+                          elementwise_flop_counter, generic_activation_jit,
+                          linear_flop_jit, matmul_flop_jit, norm_flop_counter)
 
 # A dictionary that maps supported operations to their flop count jit handles.
 _DEFAULT_SUPPORTED_FLOP_OPS: Dict[str, Handle] = {
@@ -123,6 +122,7 @@ class ActivationAnalyzer(JitModelAnalysis):
     operators. Handles for additional operators may be added, or the default
     ones overwritten, using the ``.set_op_handle(name, func)`` method. See the
     method documentation for details. Activation counts can be obtained as:
+
     * ``.total(module_name="")``: total activation count for a module
     * ``.by_operator(module_name="")``: activation counts for the module, as a
         Counter over different operator types
@@ -205,8 +205,7 @@ def flop_count(
     """
     if supported_ops is None:
         supported_ops = {}
-    flop_counter = FlopAnalyzer(model,
-                                     inputs).set_op_handle(**supported_ops)
+    flop_counter = FlopAnalyzer(model, inputs).set_op_handle(**supported_ops)
     giga_flops = defaultdict(float)
     for op, flop in flop_counter.by_operator().items():
         giga_flops[op] = flop / 1e9
@@ -239,8 +238,8 @@ def activation_count(
     """
     if supported_ops is None:
         supported_ops = {}
-    act_counter = ActivationAnalyzer(
-        model, inputs).set_op_handle(**supported_ops)
+    act_counter = ActivationAnalyzer(model,
+                                     inputs).set_op_handle(**supported_ops)
     mega_acts = defaultdict(float)
     for op, act in act_counter.by_operator().items():
         mega_acts[op] = act / 1e6
@@ -249,10 +248,10 @@ def activation_count(
 
 def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
     """Count parameters of a model and its submodules.
-    
+
     Adopted from
     https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/parameter_count.py
-    
+
     Args:
         model: a torch module
     Returns:
@@ -272,9 +271,9 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
 
 
 def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
-    """
-    Format the parameter count of the model (and its submodules or parameters)
-    
+    """Format the parameter count of the model (and its submodules or
+    parameters)
+
     Adopted from
     https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/parameter_count.py
 
@@ -360,4 +359,3 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
         table, headers=['name', '#elements or shape'], tablefmt='pipe')
     tabulate.PRESERVE_WHITESPACE = old_ws
     return tab
-

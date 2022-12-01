@@ -19,6 +19,7 @@ Handle = Callable[[List[Any], List[Any]], Union[typing.Counter[str], int]]
 
 def get_shape(val: Any) -> Optional[List[int]]:
     """Get the shapes from a jit value object.
+
     Args:
         val (torch._C.Value): jit value object.
     Returns:
@@ -47,6 +48,7 @@ Returns:
 def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
     """This method return a handle that counts the number of activation from
     the output shape for the specified operation.
+
     Args:
         op_name (str): The name of the operation. If given, the handle will
             return a counter using this name.
@@ -116,6 +118,7 @@ def conv_flop_count(
     """Count flops for convolution. Note only multiplication is counted.
     Computation for addition and bias is ignored. Flops for a transposed
     convolution are calculated as.
+
     flops = (x_shape[2:] * prod(w_shape) * batch_size).
     Args:
         x_shape (list(int)): The input shape before convolution.
@@ -245,6 +248,7 @@ def batchnorm_flop_jit(inputs: List[Any],
 def elementwise_flop_counter(input_scale: float = 1,
                              output_scale: float = 0) -> Handle:
     """Count flops by.
+
         input_tensor.numel() * input_scale +
         output_tensor.numel() * output_scale
     Args:
@@ -263,4 +267,4 @@ def elementwise_flop_counter(input_scale: float = 1,
             ret += output_scale * prod(shape)  # type: ignore
         return ret
 
-    return 
+    return elementwise_flop
