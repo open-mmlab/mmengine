@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import copy
+import logging
 import os
 import os.path as osp
 import platform
@@ -723,7 +724,16 @@ class Config:
             if isinstance(v, str):
                 v_str = repr(v)
             else:
-                v_str = str(v)
+                try:
+                    ast.parse(str(v))
+                except SyntaxError:
+                    v_str = repr(str(v))
+                    print_log(
+                        f'Cannot parse the value: {v} of key "{k}"',
+                        logger='current',
+                        level=logging.WARNING)
+                else:
+                    v_str = str(v)
 
             if use_mapping:
                 k_str = f"'{k}'" if isinstance(k, str) else str(k)

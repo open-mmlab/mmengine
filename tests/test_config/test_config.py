@@ -274,6 +274,14 @@ class TestConfig:
         text_cfg = Config.fromfile(text_cfg_filename)
         assert text_cfg._cfg_dict == cfg._cfg_dict
 
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_custom_class.py')
+        cfg = Config.fromfile(cfg_file)
+        with open(text_cfg_filename, 'w') as f:
+            f.write(cfg.pretty_text)
+        text_cfg = Config.fromfile(text_cfg_filename)
+        assert text_cfg.item_a.a == ("<class 'A'>")
+
     def test_repr(self, tmp_path):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/simple_config.py')
