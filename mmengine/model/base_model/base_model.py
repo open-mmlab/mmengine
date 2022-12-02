@@ -184,15 +184,7 @@ class BaseModel(BaseModule):
         Returns:
             nn.Module: The model itself.
         """
-        if 'device' in kwargs:
-            device = kwargs['device']
-        elif args:
-            try:
-                device = torch.device(args[0])
-            except TypeError:
-                device = None
-        else:
-            device = None
+        device = torch._C._nn._parse_to(*args, **kwargs)[0]
         if device is not None:
             self._set_device(torch.device(device))
         return super().to(*args, **kwargs)
