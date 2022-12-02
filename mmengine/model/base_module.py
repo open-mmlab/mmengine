@@ -4,7 +4,6 @@ import logging
 import warnings
 from abc import ABCMeta
 from collections import defaultdict
-from logging import FileHandler
 from typing import Iterable, Optional
 
 import torch.nn as nn
@@ -141,25 +140,12 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         """
 
         logger = MMLogger.get_current_instance()
-        logger_name = logger.instance_name
-        with_file_handler = False
-        # dump the information to the logger file if there is a `FileHandler`
-        for handler in logger.handlers:
-            if isinstance(handler, FileHandler):
-                handler.stream.write(
-                    'Name of parameter - Initialization information\n')
-                for name, param in self.named_parameters():
-                    handler.stream.write(
-                        f'\n{name} - {param.shape}: '
-                        f"\n{self._params_init_info[param]['init_info']} \n")
-                handler.stream.flush()
-                with_file_handler = True
-        if not with_file_handler:
-            for name, param in self.named_parameters():
-                print_log(
-                    f'\n{name} - {param.shape}: '
-                    f"\n{self._params_init_info[param]['init_info']} \n ",
-                    logger=logger_name)
+
+        init_info = ['Name of parameter - Initialization information']
+        for name, param in self.named_parameters():
+            init_info.append(f'\n{name} - {param.shape}: '
+                             f"\n{self._params_init_info[param]['init_info']}")
+        logger.debug('\n'.join(init_info))
 
     def __repr__(self):
         s = super().__repr__()

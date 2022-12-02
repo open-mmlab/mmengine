@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import warnings
 from typing import List, Optional, Union
 
@@ -255,7 +256,8 @@ class DefaultOptimWrapperConstructor:
                 full_name = f'{prefix}.{name}' if prefix else name
                 print_log(
                     f'paramwise_options -- {full_name}:{key}={value}',
-                    logger='current')
+                    logger='current',
+                    level=logging.DEBUG)
 
         if mmcv_full_available():
             from mmcv.ops import DeformConv2d, ModulatedDeformConv2d
