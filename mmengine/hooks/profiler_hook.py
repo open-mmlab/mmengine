@@ -129,7 +129,7 @@ class ProfilerHook(Hook):
             with_stack=self.with_stack,
             with_flops=self.with_flops)
 
-        self.profiler.start()
+        self.profiler.__enter__()
         runner.logger.info('profiler is profiling...')
 
     def _parse_on_trace_ready(self, runner):
@@ -198,6 +198,6 @@ class ProfilerHook(Hook):
 
     def _export_chrome_trace(self, runner):
         runner.logger.info('profiler may take a few minutes...')
-        self.profiler.stop()
+        self.profiler.__exit__(None, None, None)
         if self.json_trace_path is not None:
             self.profiler.export_chrome_trace(self.json_trace_path)
