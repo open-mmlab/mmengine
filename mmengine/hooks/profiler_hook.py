@@ -21,13 +21,11 @@ class ProfilerHook(Hook):
     Args:
         by_epoch (bool): Profile performance by epoch or by iteration.
             Default: True.
-        profile_iters (int): The period (epoch/iter) recorded by the profiler.
+        profile_times (int): The period (epoch/iter) recorded by the profiler.
             Eg: profile_iters=10 and by_epoch=False, record 0-10 iteration.
             Default: 1.
-        activities (list[str], optional): List of activity groups (CPU, CUDA)
-            to use in profiling.
-            Eg: (enumerate) ['cpu'],['cuda'],['cpu', 'cuda']
-            Default: None, mean ['cpu', 'cuda'].
+        activity_with_cpu (bool): Activities to be used in the analysis (CPU)
+        activity_with_cuda (bool): Activities to be used in the analysis (CUDA)
         schedule (dict, optional): Config of generating the callable schedule.
             The dict can include wait、warmup、active、repeat、skip_first.
             Default: None, mean not add step markers
