@@ -341,9 +341,9 @@ class BaseInferencer(metaclass=InferencerMeta):
             'to load config from metafile.')
         assert self.scope in PKG2PROJECT, (
             f'{self.scope} not in {PKG2PROJECT}!,'
-            'please make pass a valid scope.')
+            'please pass a valid scope.')
         project = PKG2PROJECT[self.scope]
-        assert is_installed(project), (f'Please install {project}')
+        assert is_installed(project), f'Please install {project}'
         package_path = get_installed_path(project)
         for model_cfg in BaseInferencer._get_models_from_package(package_path):
             model_name = model_cfg['Name'].lower()
