@@ -195,7 +195,7 @@ class Registry:
         return self._get_root_registry()
 
     @contextmanager
-    def switch_scope_and_registry(self, scope: str) -> Generator:
+    def switch_scope_and_registry(self, scope: Optional[str]) -> Generator:
         """Temporarily switch default scope to the target scope, and get the
         corresponding registry.
 
@@ -203,7 +203,7 @@ class Registry:
         registry, otherwise yield the current itself.
 
         Args:
-            scope (str): The target scope.
+            scope (str, optional): The target scope.
 
         Examples:
             >>> from mmengine.registry import Registry, DefaultScope, MODELS
