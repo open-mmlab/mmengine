@@ -177,23 +177,25 @@ class BaseModel(BaseModule):
 
         return loss, log_vars  # type: ignore
 
-    def to(self,
-           device: Optional[Union[int, str, torch.device]] = None,
-           *args,
-           **kwargs) -> nn.Module:
+    def to(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.to`
         additionally.
-
-        Args:
-            device (int, str or torch.device, optional): the desired device
-                of the parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
+        if 'device' in kwargs:
+            device = kwargs['device']
+        elif args:
+            try:
+                device = torch.device(args[0])
+            except TypeError:
+                device = None
+        else:
+            device = None
         if device is not None:
             self._set_device(torch.device(device))
-        return super().to(device)
+        return super().to(*args, **kwargs)
 
     def cuda(
         self,
