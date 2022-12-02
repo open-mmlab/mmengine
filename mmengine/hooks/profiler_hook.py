@@ -120,7 +120,8 @@ class ProfilerHook(Hook):
 
         _on_trace_ready = self._parse_on_trace_ready(runner)
 
-        self.profiler = torch.profiler.profile(  # noqa
+        # self.profiler = torch.profiler.profile(  # noqa
+        self.profiler = torch.autograd.profiler.profile(  # noqa
             activities=self.activities,
             schedule=self.schedule,
             on_trace_ready=_on_trace_ready,
