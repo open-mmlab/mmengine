@@ -1,68 +1,180 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import pytest
+
+import unittest
+
 import torch
 
-from mmengine import digit_version
 from mmengine.hooks import ProfilerHook  # noqa
 from mmengine.testing import RunnerTestCase
+from mmengine.utils import digit_version, is_installed
 
 
+@unittest.skipIf(
+    not digit_version(torch.__version__)[1] >= 8,
+    reason='torch required to 1.8')
 class TestProfilerHook(RunnerTestCase):
 
-    @pytest.mark.skipif(
-        digit_version(torch.__version__)[1] < 8,
-        reason='torch required to 1.8')
-    def test_setup(self):
-        self.setUp()
+    def test_default(self):
         self.epoch_based_cfg['custom_hooks'] = [
             dict(type='ProfilerHook', priority='NORMAL')
         ]
-        self._run()
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
         pass
 
-    def test_print_log(self):
-        self.setUp()
+    def test_activity(self):
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
                 type='ProfilerHook',
                 priority='NORMAL',
-                on_trace_ready=dict(type='log_trace'),
-            )
+                activity_with_cpu=False)
         ]
-        self._run()
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
         pass
 
-    def test_json(self):
-        self.setUp()
+    def test_iter(self):
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(type='ProfilerHook', priority='NORMAL', by_epoch=False)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
+        pass
+
+    def test_multiple_epoch(self):
+        with self.assertWarns(Warning):
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(
+                    type='ProfilerHook',
+                    priority='NORMAL',
+                    by_epoch=True,
+                    profile_times=2)
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
+        pass
+
+    def test_multiple_iter(self):
+        with self.assertRaises(ValueError):
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(
+                    type='ProfilerHook',
+                    priority='NORMAL',
+                    by_epoch=False,
+                    profile_times=20000)
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
+        pass
+
+    def test_profile_times(self):
+        with self.assertRaises(ValueError):
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(type='ProfilerHook', priority='NORMAL', profile_times=0)
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
+        pass
+
+    @unittest.skipIf(
+        not torch.cuda.is_available(), reason='required tensorboard')
+    def test_cuda(self):
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
                 type='ProfilerHook',
                 priority='NORMAL',
-                json_trace_path='/mnt/d/Experiment/mmengine/001.json')
+                activity_with_cuda=True)
         ]
-        self._run()
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
         pass
 
-    def test_tensorboard(self):
-        self.setUp()
+    def test_schedule(self):
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                priority='NORMAL',
+                schedule=dict(
+                    wait=1, warmup=1, active=3, repeat=1, skip_first=0))
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
+        pass
+
+    def test_table(self):
+        # torch.autograd.profiler_util.EventList -> table
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
                 type='ProfilerHook',
                 priority='NORMAL',
                 on_trace_ready=dict(
-                    type='tb_trace', dir_name='/mnt/d/Experiment/mmengine/tb'))
+                    type='log_trace',
+                    sort_by='self_cpu_time_total',
+                    row_limit=10))
         ]
-        self._run()
-        pass
-
-    def _run(self):
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        runner.val()
-        runner.test()
+        pass
 
-        runner = self.build_runner(self.iter_based_cfg)
+    def test_json(self):
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                priority='NORMAL',
+                json_trace_path=f'{self.temp_dir}/demo.json')
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        runner.val()
-        runner.test()
+        pass
+
+    @unittest.skipIf(
+        not is_installed('tensorboard'), reason='required tensorboard')
+    def test_tensorboard(self):
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                priority='NORMAL',
+                on_trace_ready=dict(
+                    type='tb_trace', dir_name=f'{self.temp_dir}/tb'),
+                json_trace_path='will warning')
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
+
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                priority='NORMAL',
+                on_trace_ready=dict(type='tb_trace'))
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
+
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                priority='NORMAL',
+                on_trace_ready=dict(type='tb_trace', dir_name='/tmp/tmp_tb'))
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
+        pass
+
+    def test_on_trace_ready(self):
+        with self.assertRaises(ValueError):
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(type='ProfilerHook', priority='NORMAL', on_trace_ready=0)
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
+
+        with self.assertRaises(ValueError):
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(
+                    type='ProfilerHook',
+                    priority='NORMAL',
+                    on_trace_ready=dict(type='unknown'))
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
         pass

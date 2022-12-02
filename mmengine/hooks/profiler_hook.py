@@ -69,10 +69,9 @@ class ProfilerHook(Hook):
                  json_trace_path: Optional[str] = None) -> None:
 
         try:
-            from torch import profiler  # torch version >= 1.8.1
+            from torch import profiler
         except ImportError:
-            raise ImportError('profiler is the new feature of torch1.8.1, '
-                              f'but your version is {torch.__version__}')
+            raise ImportError('please upgrade torch above 1.8.1')
 
         assert isinstance(by_epoch, bool), '``by_epoch`` should be a boolean.'
         self.by_epoch = by_epoch
@@ -80,6 +79,14 @@ class ProfilerHook(Hook):
         if profile_times < 1:
             raise ValueError('profile_iters should be greater than 0, '
                              f'but got {profile_times}')
+        if by_epoch and profile_times > 1:
+            warnings.warn(
+                f'Profiler will profile 0-{profile_times} epochs.\n'
+                'Since profiler will slow down the training, it is recommended'
+                ' to train 1 epoch with ProfilerHook and adjust your setting '
+                'according to the profiler summary.\n'
+                'During normal training(epoch > 1), '
+                'you may disable the ProfilerHook.')
         self.profile_times = profile_times
 
         self.activities = []
@@ -89,7 +96,7 @@ class ProfilerHook(Hook):
             self.activities.append(profiler.ProfilerActivity.CUDA)
 
         if schedule is not None:
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, dict), '``schedule`` should be a dict.'
             self.schedule = profiler.schedule(**schedule)
         else:
             self.schedule = None
@@ -99,28 +106,19 @@ class ProfilerHook(Hook):
         self.profile_memory = profile_memory
         self.with_stack = with_stack
         self.with_flops = with_flops
+
         self.json_trace_path = json_trace_path
+        pass
 
     @master_only
     def before_run(self, runner):
         """Initialize the profiler."""
-        if self.by_epoch and runner.max_epochs < self.profile_times:
-            raise ValueError('self.profile_iters should not be greater than '
-                             f'{runner.max_epochs}')
-        if not self.by_epoch and runner.max_iters < self.profile_times:
-            raise ValueError('self.profile_iters should not be greater than '
-                             f'{runner.max_iters}')
+        _max_times = runner.max_epochs if self.by_epoch else runner.max_iters
+        if _max_times < self.profile_times:
+            raise ValueError(
+                f'``profile_iters`` should not be greater than {_max_times}')
 
         _on_trace_ready = self._parse_on_trace_ready(runner)
-
-        if self.by_epoch and self.profile_times > 1:
-            warnings.warn(
-                f'Profiler will profile 0-{self.profile_times} epochs.\n'
-                'Since profiler will slow down the training, it is recommended'
-                ' to train 1 epoch with ProfilerHook and adjust your setting '
-                'according to the profiler summary.\n'
-                'During normal training(epoch > 1), '
-                'you may disable the ProfilerHook.')
 
         self.profiler = torch.profiler.profile(  # noqa
             activities=self.activities,
@@ -136,14 +134,16 @@ class ProfilerHook(Hook):
 
     def _parse_on_trace_ready(self, runner):
         """Used to parse the parameter 'on_trace_ready'."""
-        if callable(self.on_trace_ready):
+        if self.on_trace_ready is None:
+            _on_trace_ready = None
+        elif callable(self.on_trace_ready):
             _on_trace_ready = self.on_trace_ready
-
         elif isinstance(self.on_trace_ready, dict):
             trace_cfg = self.on_trace_ready.copy()
             trace_type = trace_cfg.pop('type')
 
-            if trace_type == 'log_trace':  # log_trace handler
+            # Build a log printing handle
+            if trace_type == 'log_trace':
 
                 def _log_handler(prof):
                     print(prof.key_averages().table(**trace_cfg))
@@ -155,46 +155,49 @@ class ProfilerHook(Hook):
                     import torch_tb_profiler  # noqa: F401
                 except ImportError:
                     raise ImportError(
-                        'please run "pip install torch-tb-profiler"')
+                        'please run ``pip install torch-tb-profiler``')
+
                 if 'dir_name' not in trace_cfg:
                     trace_cfg['dir_name'] = osp.join(runner.work_dir,
                                                      'tf_tracing_logs')
                 elif not osp.isabs(trace_cfg['dir_name']):
                     trace_cfg['dir_name'] = osp.join(runner.work_dir,
                                                      trace_cfg['dir_name'])
+
                 runner.logger.info(
                     'tracing files of ProfilerHook will be saved to '
                     f"{trace_cfg['dir_name']}.")
+
                 if self.json_trace_path is not None:
-                    raise ImportError('json path conflicts, please set '
-                                      'json_trace_path to none when using '
-                                      'tb_trace')
+                    self.json_trace_path = None
+                    warnings.warn(
+                        'json path conflicts, please set ``json_trace_path`` '
+                        'to none when using ``tb_trace``')
                 _on_trace_ready = torch.profiler.tensorboard_trace_handler(
                     **trace_cfg)
             else:
                 raise ValueError('trace_type should be "log_trace" or '
                                  f'"tb_trace", but got {trace_type}')
-        elif self.on_trace_ready is None:
-            _on_trace_ready = None
-
         else:
-            raise ValueError('on_trace_ready should be handler, dict or None, '
-                             f'but got {type(self.on_trace_ready)}')
+            raise ValueError(
+                f'``on_trace_ready`` should be handler|dict|None, '
+                f'but got {self.on_trace_ready}')
         return _on_trace_ready
 
     @master_only
     def after_train_epoch(self, runner):
         if self.by_epoch and runner.epoch == self.profile_times - 1:
-            runner.logger.info('profiler may take a few minutes...')
-            self.profiler.stop()
-            if self.json_trace_path is not None:
-                self.profiler.export_chrome_trace(self.json_trace_path)
+            self._export_chrome_trace(runner)
 
     @master_only
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
-        self.profiler.step()
+        if self.schedule is None:
+            self.profiler.step()
         if not self.by_epoch and runner.iter == self.profile_times - 1:
-            runner.logger.info('profiler may take a few minutes...')
-            self.profiler.stop()
-            if self.json_trace_path is not None:
-                self.profiler.export_chrome_trace(self.json_trace_path)
+            self._export_chrome_trace(runner)
+
+    def _export_chrome_trace(self, runner):
+        runner.logger.info('profiler may take a few minutes...')
+        self.profiler.stop()
+        if self.json_trace_path is not None:
+            self.profiler.export_chrome_trace(self.json_trace_path)
