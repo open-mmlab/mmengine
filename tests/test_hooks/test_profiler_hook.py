@@ -10,8 +10,8 @@ from mmengine.utils import digit_version, is_installed
 
 
 @unittest.skipIf(
-    not digit_version(torch.__version__)[1] >= 8,
-    reason='torch required to 1.8')
+    not digit_version(torch.__version__)[1] >= 9,
+    reason='torch required to 1.9')
 class TestProfilerHook(RunnerTestCase):
 
     def test_default(self):
