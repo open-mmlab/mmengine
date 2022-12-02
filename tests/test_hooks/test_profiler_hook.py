@@ -94,8 +94,7 @@ class TestProfilerHook(RunnerTestCase):
             dict(
                 type='ProfilerHook',
                 priority='NORMAL',
-                schedule=dict(
-                    wait=1, warmup=1, active=3, repeat=1, skip_first=0))
+                schedule=dict(wait=1, warmup=1, active=3, repeat=1))
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
