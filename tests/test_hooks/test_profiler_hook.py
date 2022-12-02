@@ -1,10 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import pytest
+import torch
+
+from mmengine import digit_version
 from mmengine.hooks import ProfilerHook  # noqa
 from mmengine.testing import RunnerTestCase
 
 
 class TestProfilerHook(RunnerTestCase):
 
+    @pytest.mark.skipif(
+        digit_version(torch.__version__)[1] < 8,
+        reason='torch required to 1.8')
     def test_setup(self):
         self.setUp()
         self.epoch_based_cfg['custom_hooks'] = [

@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import warnings
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 
@@ -59,10 +59,11 @@ class ProfilerHook(Hook):
 
     def __init__(self,
                  by_epoch: bool = True,
-                 profile_iters: int = 1,
-                 activities: Optional[List[str]] = None,
+                 profile_times: int = 1,
+                 activity_with_cpu: bool = True,
+                 activity_with_cuda: bool = False,
                  schedule: Optional[dict] = None,
-                 on_trace_ready: Optional[Union[Callable, dict]] = None,
+                 on_trace_ready: Union[Callable, dict, None] = None,
                  record_shapes: bool = False,
                  profile_memory: bool = False,
                  with_stack: bool = False,
@@ -78,28 +79,19 @@ class ProfilerHook(Hook):
         assert isinstance(by_epoch, bool), '``by_epoch`` should be a boolean.'
         self.by_epoch = by_epoch
 
-        if profile_iters < 1:
-            raise ValueError('profile_iters should be greater than 0, but got '
-                             f'{profile_iters}')
-        self.profile_iters = profile_iters
+        if profile_times < 1:
+            raise ValueError('profile_iters should be greater than 0, '
+                             f'but got {profile_times}')
+        self.profile_times = profile_times
 
-        if activities is None:
-            activities = ['cpu', 'cuda']
-        if not isinstance(activities, list):
-            raise ValueError(
-                f'activities should be list, but got {type(activities)}')
         self.activities = []
-        for activity in activities:
-            activity = activity.lower()
-            if activity == 'cpu':
-                self.activities.append(profiler.ProfilerActivity.CPU)
-            elif activity == 'cuda':
-                self.activities.append(profiler.ProfilerActivity.CUDA)
-            else:
-                raise ValueError(
-                    f'activity should be "cpu" or "cuda", but got {activity}')
+        if activity_with_cpu:
+            self.activities.append(profiler.ProfilerActivity.CPU)
+        if activity_with_cuda:
+            self.activities.append(profiler.ProfilerActivity.CUDA)
 
         if schedule is not None:
+            assert isinstance(schedule, dict)
             self.schedule = profiler.schedule(**schedule)
         else:
             self.schedule = None
@@ -114,18 +106,18 @@ class ProfilerHook(Hook):
     @master_only
     def before_run(self, runner):
         """Initialize the profiler."""
-        if self.by_epoch and runner.max_epochs < self.profile_iters:
+        if self.by_epoch and runner.max_epochs < self.profile_times:
             raise ValueError('self.profile_iters should not be greater than '
                              f'{runner.max_epochs}')
-        if not self.by_epoch and runner.max_iters < self.profile_iters:
+        if not self.by_epoch and runner.max_iters < self.profile_times:
             raise ValueError('self.profile_iters should not be greater than '
                              f'{runner.max_iters}')
 
         _on_trace_ready = self._parse_on_trace_ready(runner)
 
-        if self.by_epoch and self.profile_iters > 1:
+        if self.by_epoch and self.profile_times > 1:
             warnings.warn(
-                f'Profiler will profile 0-{self.profile_iters} epochs.\n'
+                f'Profiler will profile 0-{self.profile_times} epochs.\n'
                 'Since profiler will slow down the training, it is recommended'
                 ' to train 1 epoch with ProfilerHook and adjust your setting '
                 'according to the profiler summary.\n'
@@ -141,7 +133,7 @@ class ProfilerHook(Hook):
             with_stack=self.with_stack,
             with_flops=self.with_flops)
 
-        self.profiler.__enter__()
+        self.profiler.start()
         runner.logger.info('profiler is profiling...')
 
     def _parse_on_trace_ready(self, runner):
@@ -194,17 +186,17 @@ class ProfilerHook(Hook):
 
     @master_only
     def after_train_epoch(self, runner):
-        if self.by_epoch and runner.epoch == self.profile_iters - 1:
+        if self.by_epoch and runner.epoch == self.profile_times - 1:
             runner.logger.info('profiler may take a few minutes...')
-            self.profiler.__exit__(None, None, None)
+            self.profiler.stop()
             if self.json_trace_path is not None:
                 self.profiler.export_chrome_trace(self.json_trace_path)
 
     @master_only
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
         self.profiler.step()
-        if not self.by_epoch and runner.iter == self.profile_iters - 1:
+        if not self.by_epoch and runner.iter == self.profile_times - 1:
             runner.logger.info('profiler may take a few minutes...')
-            self.profiler.__exit__(None, None, None)
+            self.profiler.stop()
             if self.json_trace_path is not None:
                 self.profiler.export_chrome_trace(self.json_trace_path)
