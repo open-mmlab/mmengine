@@ -12,7 +12,8 @@ from mmengine.utils import is_installed
 
 @unittest.skipIf(
     not mmengine.hooks.profiler_hook.check_kineto(),
-    reason='please make sure PyTorch is built with USE_KINETO=1')
+    reason='Due to Kineto support issues, '
+    'please upgrade pytorch above 1.8.1 (windows users above 1.9.1)')
 class TestProfilerHook(RunnerTestCase):
 
     def test_default(self):

@@ -83,8 +83,8 @@ class ProfilerHook(Hook):
         except ImportError:
             raise ImportError('please upgrade torch above 1.8.1')
         if not check_kineto():
-            raise ImportError(
-                'please make sure PyTorch is built with USE_KINETO=1')
+            raise ImportError('Due to Kineto support issues, please upgrade '
+                              'pytorch above 1.8.1(windows users above 1.9.1)')
 
         assert isinstance(by_epoch, bool), '``by_epoch`` should be a boolean.'
         self.by_epoch = by_epoch
