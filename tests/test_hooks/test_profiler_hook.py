@@ -6,12 +6,12 @@ import torch
 
 from mmengine.hooks import ProfilerHook  # noqa
 from mmengine.testing import RunnerTestCase
-from mmengine.utils import digit_version, is_installed
+from mmengine.utils import is_installed
 
 
 @unittest.skipIf(
-    not digit_version(torch.__version__)[1] >= 9,
-    reason='torch required to 1.9')
+    not torch.autograd.kineto_available(),
+    reason='please make sure PyTorch is built with USE_KINETO=1')
 class TestProfilerHook(RunnerTestCase):
 
     def test_default(self):
