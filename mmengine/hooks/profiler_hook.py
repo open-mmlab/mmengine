@@ -10,6 +10,17 @@ from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 
 
+def check_kineto() -> bool:
+    kineto_exist = False
+    try:
+        if torch.autograd.kineto_available():
+            kineto_exist = True
+    except AttributeError:
+        raise AttributeError(
+            'please make sure PyTorch is built with USE_KINETO=1')
+    return kineto_exist
+
+
 @HOOKS.register_module()
 class ProfilerHook(Hook):
     """ProfilerHook to analyze performance during training.
@@ -72,6 +83,7 @@ class ProfilerHook(Hook):
             from torch import profiler
         except ImportError:
             raise ImportError('please upgrade torch above 1.8.1')
+        check_kineto()
 
         assert isinstance(by_epoch, bool), '``by_epoch`` should be a boolean.'
         self.by_epoch = by_epoch

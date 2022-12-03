@@ -4,13 +4,14 @@ import unittest
 
 import torch
 
+import mmengine.hooks
 from mmengine.hooks import ProfilerHook  # noqa
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed
 
 
 @unittest.skipIf(
-    not torch.autograd.kineto_available(),
+    not mmengine.hooks.profiler_hook.check_kineto(),
     reason='please make sure PyTorch is built with USE_KINETO=1')
 class TestProfilerHook(RunnerTestCase):
 
