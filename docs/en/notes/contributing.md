@@ -52,7 +52,9 @@ upstream	git@github.com:open-mmlab/mmengine (fetch)
 upstream	git@github.com:open-mmlab/mmengine (push)
 ```
 
-> Here's a brief introduction to origin and upstream. When we use "git clone", we create an "origin" remote by default, which points to the repository cloned from. As for "upstream", we add it ourselves to point to the target repository. Of course, if you don't like the name "upstream", you could name it as you wish. Usually, we'll push the code to "origin". If the pushed code conflicts with the latest code in official("upstream"), we should pull the latest code from upstream to resolve the conflicts, and then push to "origin" again. The posted Pull Request will be updated automatically.
+```{note}
+Here's a brief introduction to origin and upstream. When we use "git clone", we create an "origin" remote by default, which points to the repository cloned from. As for "upstream", we add it ourselves to point to the target repository. Of course, if you don't like the name "upstream", you could name it as you wish. Usually, we'll push the code to "origin". If the pushed code conflicts with the latest code in official("upstream"), we should pull the latest code from upstream to resolve the conflicts, and then push to "origin" again. The posted Pull Request will be updated automatically.
+```
 
 #### 2. Configure pre-commit
 
@@ -125,7 +127,7 @@ We could push the local commits to remote after passing through the check of uni
 git push -u origin {branch_name}
 ```
 
-This will allow you to use the `git push` command to push code directly next time without specifying a branch or the remote repository.
+This will allow you to use the `git push` command to push code directly next time, without having to specify a branch or the remote repository.
 
 #### 6. Create a Pull Request
 
