@@ -1,3 +1,3 @@
-# Save memory on GPU
+# Save Memory on GPU
 
 Coming soon. Please refer to [chinese documentation](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html).

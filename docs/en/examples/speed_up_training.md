@@ -1,4 +1,4 @@
-# Speed up training
+# Speed up Training
 
 ## Distributed Training
 

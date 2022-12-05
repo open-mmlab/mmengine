@@ -1,4 +1,4 @@
-# Distribution communication
+# Distribution Communication
 
 In distributed training, different processes sometimes need to apply different logics depending on their ranks, local_ranks, etc.
 They also need to communicate with each other and do synchronizations on data.
