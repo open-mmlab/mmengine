@@ -72,6 +72,27 @@ print(cfg)
 Config (path: learn_read_config.py): {'test_int': 1, 'test_list': [1, 2, 3], 'test_dict': {'key1': 'value1', 'key2': 0.1}}
 ```
 
+尽管配置类能够解析不同格式的配置文件，但是 `python`，`yaml`，`json` 格式的配置文件支持的功能有所不同。
+
+- `python` 和 `yaml` 格式的配置文件支持解析元组（tuple）与集合（set），而 `json`
+  格式的配置文件只能解析列表（list），或将元组与集合解析成列表。
+
+  ```python
+  from mmengine import Config
+
+  cfg_python = Config(dict(a=tuple((1, 2, 3))))
+  cfg_python.dump('a.yaml')
+  cfg_yaml = cfg_python.fromfile('a.yaml')
+  cfg_yaml._cfg_dict == cfg_python._cfg_dict  # True
+
+  cfg_python.dump('a.json')
+  cfg_json = cfg_python.fromfile('a.json')
+  cfg_json._cfg_dict == cfg_python._cfg_dict  # False, a of cfg_json is a list
+  ```
+
+- `python` 格式的配置文件支持修改 _base_ 文件中的变量，如 `_base_.a=1`，而 `yaml` 和 `json`
+  格式的配置文件不支持
+
 ## 配置文件的使用
 
 通过读取配置文件来初始化配置对象后，就可以像使用普通字典或者 Python 类一样来使用这个变量了。我们提供了两种访问接口，即类似字典的接口 `cfg['key']` 或者类似 Python 对象属性的接口 `cfg.key`。这两种接口都支持读写。
