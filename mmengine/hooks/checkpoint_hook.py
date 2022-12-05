@@ -301,6 +301,7 @@ class CheckpointHook(Hook):
         eval_res = OrderedDict()
         if metrics is not None:
             for key, value in metrics.items():
+                # Strip `test/` and `val/` prefix
                 eval_res[key.partition('/')[-1]] = value
         if len(eval_res) == 0:
             warnings.warn(
@@ -418,6 +419,7 @@ class CheckpointHook(Hook):
                     'is removed')
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
+            # Replace illegal characters for filename with `_`
             best_ckpt_name = re.sub(r'(\W)', '_', best_ckpt_name)
             if len(self.key_indicators) == 1:
                 self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
