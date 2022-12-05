@@ -224,31 +224,39 @@ runner.train()
 - [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)
 - [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
+- [数据集与数据加载器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/dataset.html)
 - [模型](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/model.html)
 - [评测指标和评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluation.html)
 - [优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html)
 - [优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
 - [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
+- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
 
 </details>
 
 <details>
 <summary>进阶教程</summary>
 
+- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
+- [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [数据集基类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/basedataset.html)
 - [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
 - [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
+- [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
 - [初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
+- [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
+- [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
 - [分布式通信原语](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/distributed.html)
 - [记录日志](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/logging.html)
 - [文件读写](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/fileio.html)
 - [辅助类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/utils.html)
+- [全局管理器](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/manager_mixin.html)
+- [跨库调用模块](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/cross_library.html)
 
 </details>
 
 <details>
 <summary>示例</summary>
-
 - [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
 - [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
 - [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
@@ -256,27 +264,21 @@ runner.train()
 - [训练生成对抗网络](https://mmengine.readthedocs.io/zh_CN/latest/examples/train_a_gan.html)
 
 </details>
-
 <details>
 <summary>架构设计</summary>
-
 - [钩子的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
 - [执行器的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
 - [模型精度评测的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/evaluation.html)
 - [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
 - [日志系统的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)
-
 </details>
-
 <details>
 <summary>迁移指南</summary>
-
 - [迁移 MMCV 执行器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/runner.html)
 - [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/hook.html)
 - [迁移 MMCV 模型到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/model.html)
 - [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/param_scheduler.html)
 - [数据变换类的迁移](https://mmengine.readthedocs.io/zh_CN/latest/migration/transform.html)
-
 </details>
 
 ## 贡献指南

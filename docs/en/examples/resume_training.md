@@ -1,4 +1,4 @@
-# Resume training
+# Resume Training
 
 Resuming training means continuing training from the state saved from some previous training, where the state includes the model's weights, the state of the optimizer and the state of parameter scheduler.
 
