@@ -1,7 +1,7 @@
 .. role:: hidden
     :class: hidden-section
 
-mmengine.hub
+mmengine.infer
 ===================================
 
 .. currentmodule:: mmengine.infer

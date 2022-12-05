@@ -31,7 +31,7 @@ InputsType = Union[InputType, Sequence[InputType]]
 ImgType = Union[np.ndarray, Sequence[np.ndarray]]
 ResType = Union[Dict, List[Dict]]
 ConfigType = Union[Config, ConfigDict]
-ModelType = Tuple[Union[dict, ConfigType], str]
+ModelType = Union[dict, ConfigType, str]
 
 
 class InferencerMeta(ABCMeta):
