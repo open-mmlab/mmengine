@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+import re
 import warnings
 from collections import OrderedDict
 from math import inf
@@ -299,8 +300,8 @@ class CheckpointHook(Hook):
     def _get_metric_score(self, metrics, key_indicator):
         eval_res = OrderedDict()
         if metrics is not None:
-            eval_res.update(metrics)
-
+            for key, value in metrics.items():
+                eval_res[key.partition('/')[-1]] = value
         if len(eval_res) == 0:
             warnings.warn(
                 'Since `eval_res` is an empty dict, the behavior to save '
@@ -417,6 +418,7 @@ class CheckpointHook(Hook):
                     'is removed')
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
+            best_ckpt_name = re.sub(r'(\W)', '_', best_ckpt_name)
             if len(self.key_indicators) == 1:
                 self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
                     self.out_dir, best_ckpt_name)
