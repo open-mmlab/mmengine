@@ -155,9 +155,9 @@ class BaseModel(BaseModule):
 
         Returns:
             tuple[Tensor, dict]: There are two elements. The first is the
-            loss tensor passed to optim_wrapper which may be a weighted sum of
-            all losses, and the second is log_vars which will be sent to the
-            logger.
+                loss tensor passed to optim_wrapper which may be a weighted sum
+                of all losses, and the second is log_vars which will be sent to
+                the logger.
         """
         log_vars = []
         for loss_name, loss_value in losses.items():
@@ -238,7 +238,7 @@ class BaseModel(BaseModule):
 
         Args:
             device (torch.device): the desired device of the parameters and
-                    buffers in this module.
+                buffers in this module.
         """
 
         def apply_fn(module):
