@@ -88,8 +88,8 @@ class TestCheckpointHook(RunnerTestCase):
 
         hook = CheckpointHook(
             interval=2, by_epoch=False, save_best=['acc', 'mIoU'])
-        self.assertEqual(hook.greater_keys, ('acc', 'mIoU'))
-        self.assertEqual(hook.rule, ('greater', 'greater'))
+        self.assertEqual(hook.key_indicators, ['acc', 'mIoU'])
+        self.assertEqual(hook.rules, ['greater', 'greater'])
 
         # Test less keys
         hook = CheckpointHook(less_keys='loss_cls')
@@ -457,10 +457,10 @@ class TestCheckpointHook(RunnerTestCase):
         self.assertTrue(osp.isfile(osp.join(cfg.work_dir, 'test_10.pth')))
 
         # Test save_best
-        cfg.default_hooks.checkpoint.save_best = 'acc'
+        cfg.default_hooks.checkpoint.save_best = 'test/acc'
         cfg.val_evaluator = dict(type='TriangleMetric', length=11)
         cfg.train_cfg.val_interval = 1
         runner = self.build_runner(cfg)
         runner.train()
         self.assertTrue(
-            osp.isfile(osp.join(cfg.work_dir, 'best_acc_test_5_pth')))
+            osp.isfile(osp.join(cfg.work_dir, 'best_test_acc_test_5.pth')))
