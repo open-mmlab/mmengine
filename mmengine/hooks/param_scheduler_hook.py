@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
+from mmengine.optim import ReduceOnPlateauParamScheduler
 from mmengine.registry import HOOKS
 from .hook import Hook
 
@@ -64,6 +65,33 @@ class ParamSchedulerHook(Hook):
             for scheduler in param_schedulers:
                 if scheduler.by_epoch:
                     scheduler.step()
+
+        if runner.param_schedulers is None:
+            return
+
+        if isinstance(runner.param_schedulers, list):
+            step(runner.param_schedulers)
+        elif isinstance(runner.param_schedulers, dict):
+            for param_schedulers in runner.param_schedulers.values():
+                step(param_schedulers)
+        else:
+            raise TypeError(
+                'runner.param_schedulers should be list of ParamScheduler or '
+                'a dict containing list of ParamScheduler, '
+                f'but got {runner.param_schedulers}')
+
+    def after_val_epoch(self,
+                        runner,
+                        metrics: Optional[Dict[str, float]] = None) -> None:
+
+        def step(param_schedulers):
+            assert isinstance(param_schedulers, list)
+            for scheduler in param_schedulers:
+                if isinstance(scheduler, ReduceOnPlateauParamScheduler):
+                    if scheduler.by_epoch and (scheduler.monitor_stage
+                                               == 'val'):
+                        scheduler.metric = metrics[scheduler.monitor_key]
+                        scheduler.step()
 
         if runner.param_schedulers is None:
             return
