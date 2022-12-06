@@ -481,7 +481,7 @@ class PretrainedInit:
         from mmengine.runner.checkpoint import (_load_checkpoint_with_prefix,
                                                 load_checkpoint,
                                                 load_state_dict)
-        logger = MMLogger.get_instance('mmengine')
+        logger = MMLogger.get_current_instance()
         if self.prefix is None:
             print_log(f'load model from: {self.checkpoint}', logger=logger)
             load_checkpoint(
