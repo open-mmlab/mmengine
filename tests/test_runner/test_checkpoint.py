@@ -14,7 +14,8 @@ from torch.nn.parallel import DataParallel
 
 from mmengine.fileio.file_client import PetrelBackend
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.runner.checkpoint import (_load_checkpoint_with_prefix,
+from mmengine.runner.checkpoint import (CheckpointLoader,
+                                        _load_checkpoint_with_prefix,
                                         get_state_dict, load_checkpoint,
                                         load_from_local, load_from_pavi,
                                         save_checkpoint)
@@ -296,18 +297,6 @@ def test_load_checkpoint_metadata():
 
 
 def test_checkpoint_loader():
-    import os
-    import tempfile
-
-    from mmcv.runner import CheckpointLoader, _load_checkpoint, save_checkpoint
-    checkpoint_path = os.path.join(tempfile.gettempdir(), 'checkpoint.pth')
-    model = Model()
-    save_checkpoint(model, checkpoint_path)
-    checkpoint = _load_checkpoint(checkpoint_path)
-    assert 'meta' in checkpoint and 'CLASSES' not in checkpoint['meta']
-    # remove the temp file
-    os.remove(checkpoint_path)
-
     filenames = [
         'http://xx.xx/xx.pth', 'https://xx.xx/xx.pth',
         'modelzoo://xx.xx/xx.pth', 'torchvision://xx.xx/xx.pth',
