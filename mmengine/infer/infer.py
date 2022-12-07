@@ -296,7 +296,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         other objects.
 
         Args:
-            inputs (list): Inputs preprocessed by :meth:`preprocess`.
+            inputs (list): Inputs preprocessed by :meth:`_inputs_to_list`.
             preds (Any): Predictions of the model.
             show (bool): Whether to display the image in a popup window.
                 Defaults to False.

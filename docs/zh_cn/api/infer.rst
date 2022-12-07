@@ -1,7 +1,7 @@
 .. role:: hidden
     :class: hidden-section
 
-mmengine.hub
+mmengine.infer
 ===================================
 
 .. currentmodule:: mmengine.infer
@@ -9,5 +9,6 @@ mmengine.hub
 .. autosummary::
    :toctree: generated
    :nosignatures:
+   :template: classtemplate.rst
 
    BaseInferencer
