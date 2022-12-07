@@ -97,12 +97,35 @@ log_processor 默认输出 `by_epoch=True` 格式的日志。日志格式需要�
 
 其中 `data_src` 为原日志名，`mean` 为统计方法，`global` 为统计方法的参数。这样的话，日志中统计的 `loss1` 就是全局均值。我们可以在日志处理器中配置以下统计方法：
 
-| 统计方法 | 参数        | 功能                   |
-| :------- | :---------- | :--------------------- |
-| mean     | window_size | 统计窗口内日志的均值   |
-| min      | window_size | 统计窗口内日志的最小值 |
-| max      | window_size | 统计窗口内日志的最大值 |
-| current  | /           | 返回最近一次更新的日志 |
+<table class="docutils">
+<thead>
+<tr>
+    <th>统计方法</th>
+    <th>参数</th>
+    <th>功能</th>
+</tr>
+<tr>
+    <td>mean</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的均值</td>
+</tr>
+<tr>
+    <td>min</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最小值</td>
+</tr>
+<tr>
+    <td>max</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最大值</td>
+</tr>
+<tr>
+    <td>current</td>
+    <td>/</td>
+    <td>返回最近一次更新的日志</td>
+</tr>
+</thead>
+</table>
 
 其中 `window_size` 的值可以是：
 
