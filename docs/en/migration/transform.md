@@ -14,7 +14,7 @@ transform classes by calling.
 A tutorial to implement a data transform class can be found in the [Data Transform](../advanced_tutorials/data_element.md).
 
 In addition, we move some common data transform classes from every repositories to MMCV, and in this document,
-we will compare the functionalities, usages and implementations between the original data transform classes (in [MMClassification v0.23.2](https://github.com/open-mmlab/mmclassification/tree/v0.23.2), [MMDetection v2.25.1](https://github.com/open-mmlab/mmdetection/tree/v2.25.1)) and the new data transform classes (in [MMCV v2.0.0rc1](https://github.com/open-mmlab/mmcv/tree/dev-2.x))
+we will compare the functionalities, usages and implementations between the original data transform classes (in [MMClassification v0.23.2](https://github.com/open-mmlab/mmclassification/tree/v0.23.2), [MMDetection v2.25.1](https://github.com/open-mmlab/mmdetection/tree/v2.25.1)) and the new data transform classes (in [MMCV v2.0.0rc1](https://github.com/open-mmlab/mmcv/tree/2.x))
 
 ## Functionality Differences
 
