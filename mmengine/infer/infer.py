@@ -216,7 +216,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                                    **postprocess_kwargs)
         return results
 
-    def preprocess_inputs(self, inputs: InputsType):
+    def preprocess_inputs(self, inputs: InputsType) -> list:
         """Preprocess the inputs to a list.
 
         Preprocess inputs to a list according to its type:
@@ -225,6 +225,12 @@ class BaseInferencer(metaclass=InferencerMeta):
             - str:
                 - Directory path: return all files in the directory
                 - normal string: return a list containing the string
+
+        Args:
+            inputs (InputsType): Inputs for the inferencer.
+
+        Returns:
+            list: List of input for the :meth:`preprocess`.
         """
         if isinstance(inputs, str):
             backend = get_file_backend(inputs)
@@ -237,10 +243,10 @@ class BaseInferencer(metaclass=InferencerMeta):
                     join_path(inputs, filename) for filename in filename_list
                 ]
 
-        if not isinstance(inputs, list):
+        if not isinstance(inputs, (list, tuple)):
             inputs = [inputs]
 
-        return inputs
+        return list(inputs)
 
     def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
         """Process the inputs into a model-feedable format.
