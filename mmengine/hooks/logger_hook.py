@@ -13,7 +13,7 @@ from mmengine.fileio import FileClient, dump
 from mmengine.fileio.io import get_file_backend
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.utils import is_tuple_of, scandir
+from mmengine.utils import is_seq_of, scandir
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
 SUFFIX_TYPE = Union[Sequence[str], str]
@@ -83,9 +83,24 @@ class LoggerHook(Hook):
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True,
                  backend_args: Optional[dict] = None):
+
+        assert isinstance(interval, int) and interval > 0, (
+            'interval must be greater than 0, ')
         self.interval = interval
+
+        assert isinstance(ignore_last, bool), ('ignore_last must be a boolean')
         self.ignore_last = ignore_last
+
+        assert isinstance(interval_exp_name, int) and interval_exp_name > 0, (
+            'interval_exp_name must be greater than 0, ')
         self.interval_exp_name = interval_exp_name
+
+        if out_dir is not None:
+            assert isinstance(
+                out_dir, (str, Path)), ('out_dir must be a str or Path object')
+        assert is_seq_of(out_suffix,
+                         str), ('out_suffix should be a sequence of str')
+        assert isinstance(keep_local, bool), ('keep_local must be a boolean')
 
         if out_dir is None and file_client_args is not None:
             raise ValueError(
@@ -103,7 +118,7 @@ class LoggerHook(Hook):
                     'at the same time.')
 
         if not (out_dir is None or isinstance(out_dir, str)
-                or is_tuple_of(out_dir, str)):
+                or is_seq_of(out_dir, str)):
             raise TypeError('out_dir should be None or string or tuple of '
                             f'string, but got {type(out_dir)}')
         self.out_suffix = out_suffix

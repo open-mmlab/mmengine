@@ -9,28 +9,35 @@ import pytest
 import torch
 
 from mmengine.fileio import load
-from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import mkdir_or_exist, scandir
 
 
-class TestLoggerHook:
+class TestLoggerHook(RunnerTestCase):
 
     def test_init(self):
-        logger_hook = LoggerHook(out_dir='tmp.txt')
-        assert logger_hook.interval == 10
-        assert logger_hook.ignore_last
-        assert logger_hook.interval_exp_name == 1000
-        assert logger_hook.out_suffix == ('.json', '.log', '.py', 'yaml')
-        assert logger_hook.keep_local
-        assert logger_hook.file_client_args is None
-        assert isinstance(logger_hook.file_client.client, HardDiskBackend)
+        # Test build logger hook.
+        LoggerHook()
+        LoggerHook(interval=100, ignore_last=False, interval_exp_name=100)
+
+        with self.assertRaisesRegex(AssertionError, 'interval must be'):
+            LoggerHook(interval='100')
+
+        with self.assertRaisesRegex(AssertionError, 'ignore_last must be'):
+            LoggerHook(ignore_last='False')
+
+        with self.assertRaisesRegex(AssertionError, 'interval_exp_name'):
+            LoggerHook(interval_exp_name='100')
+
+        with self.assertRaisesRegex(AssertionError, 'out_suffix'):
+            LoggerHook(out_suffix=[100])
+
         # out_dir should be None or string or tuple of string.
-        with pytest.raises(TypeError):
+        with self.assertRaisesRegex(AssertionError, 'out_dir must be'):
             LoggerHook(out_dir=1)
 
-        with pytest.raises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'file_client_args'):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
         with self.assertWarnsRegex(Warning,
