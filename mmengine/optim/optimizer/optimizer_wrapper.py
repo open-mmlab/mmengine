@@ -161,20 +161,29 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
-    def update_params(self, loss: torch.Tensor) -> None:
+    def update_params(self,
+                      loss: torch.Tensor,
+                      step_kwargs: Optional[Dict] = None,
+                      zero_kwargs: Optional[Dict] = None) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:
             loss (torch.Tensor): A tensor for back propagation.
+            step_kwargs (dict): arguments for optimizer.step
+            zero_kwargs (dict): arguments for optimizer.zero_grad
         """
+        if step_kwargs is None:
+            step_kwargs = {}
+        if zero_kwargs is None:
+            zero_kwargs = {}
         loss = self.scale_loss(loss)
         self.backward(loss)
         # Update parameters only if `self._inner_count` is divisible by
         # `self._accumulative_counts` or `self._inner_count` equals to
         # `self._max_counts`
         if self.should_update():
-            self.step()
-            self.zero_grad()
+            self.step(**step_kwargs)
+            self.zero_grad(**zero_kwargs)
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation.
