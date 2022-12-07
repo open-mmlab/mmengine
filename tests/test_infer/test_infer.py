@@ -194,8 +194,9 @@ class TestBaseInferencer(RunnerTestCase):
             img = np.array(1)
             img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
         # Test with directory inputs
-        dataloader = inferencer.preprocess(
+        inputs = inferencer.preprocess_inputs(
             osp.join(self.temp_dir.name, 'imgs'))
+        dataloader = inferencer.preprocess(inputs, batch_size=3)
         for data in dataloader:
             self.assertTrue(is_list_of(data, torch.Tensor))
 
