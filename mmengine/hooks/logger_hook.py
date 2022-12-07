@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os
 import os.path as osp
 import warnings
@@ -320,6 +321,10 @@ class LoggerHook(Hook):
                 f'{out_filepath}.')
 
             if not self.keep_local:
-                os.remove(local_filepath)
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`')
+                # Close file handler to avoid PermissionError on Windows.
+                for handler in runner.logger.handlers:
+                    if isinstance(handler, logging.FileHandler):
+                        handler.close()
+                os.remove(local_filepath)
