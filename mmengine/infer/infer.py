@@ -150,7 +150,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                 # Load config and weights from metafile. If `weights` is
                 # assigned, the weights defined in metafile will be ignored.
                 cfg, _weights = self._load_model_from_metafile(model)
-                if weights is not None:
+                if weights is None:
                     weights = _weights
         elif isinstance(model, (Config, ConfigDict)):
             cfg = copy.deepcopy(model)
@@ -203,16 +203,52 @@ class BaseInferencer(metaclass=InferencerMeta):
             postprocess_kwargs,
         ) = self._dispatch_kwargs(**kwargs)
 
+        ori_inputs = self._inputs_to_list(inputs)
         inputs = self.preprocess(
-            inputs, batch_size=batch_size, **preprocess_kwargs)
+            ori_inputs, batch_size=batch_size, **preprocess_kwargs)
         preds = []
         for data in track(inputs, description='Inference'):
             preds.extend(self.forward(data, **forward_kwargs))
         visualization = self.visualize(
-            inputs, preds, **visualize_kwargs)  # type: ignore  # noqa: E501
+            ori_inputs, preds,
+            **visualize_kwargs)  # type: ignore  # noqa: E501
         results = self.postprocess(preds, visualization, return_datasamples,
                                    **postprocess_kwargs)
         return results
+
+    def _inputs_to_list(self, inputs: InputsType) -> list:
+        """Preprocess the inputs to a list.
+
+        Preprocess inputs to a list according to its type:
+
+        - list or tuple: return inputs
+        - str:
+            - Directory path: return all files in the directory
+            - other cases: return a list containing the string. The string
+              could be a path to file, a url or other types of string according
+              to the task.
+
+        Args:
+            inputs (InputsType): Inputs for the inferencer.
+
+        Returns:
+            list: List of input for the :meth:`preprocess`.
+        """
+        if isinstance(inputs, str):
+            backend = get_file_backend(inputs)
+            if hasattr(backend, 'isdir') and isdir(inputs):
+                # Backends like HttpsBackend do not implement `isdir`, so only
+                # those backends that implement `isdir` could accept the inputs
+                # as a directory
+                filename_list = list_dir_or_file(inputs, list_dir=False)
+                inputs = [
+                    join_path(inputs, filename) for filename in filename_list
+                ]
+
+        if not isinstance(inputs, (list, tuple)):
+            inputs = [inputs]
+
+        return list(inputs)
 
     def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
         """Process the inputs into a model-feedable format.
@@ -238,22 +274,6 @@ class BaseInferencer(metaclass=InferencerMeta):
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
-        if isinstance(inputs, str):
-            backend = get_file_backend(inputs)
-            # Backends like HttpsBackend do not implement `isdir`, so only
-            # those backends that implement `isdir` could accept the inputs
-            # as a directory
-            if hasattr(backend, 'isdir') and isdir(inputs):
-                filename_list = list_dir_or_file(inputs, list_dir=False)
-                inputs = [
-                    join_path(inputs, filename) for filename in filename_list
-                ]
-            else:
-                inputs = [inputs]
-
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-
         chunked_data = self._get_chunk_data(
             map(self.pipeline, inputs), batch_size)
         yield from map(self.collate_fn, chunked_data)
@@ -276,7 +296,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         other objects.
 
         Args:
-            inputs (list): Inputs preprocessed by :meth:`preprocess`.
+            inputs (list): Inputs preprocessed by :meth:`_inputs_to_list`.
             preds (Any): Predictions of the model.
             show (bool): Whether to display the image in a popup window.
                 Defaults to False.
@@ -318,10 +338,10 @@ class BaseInferencer(metaclass=InferencerMeta):
 
             - ``visualization (Any)``: Returned by :meth:`visualize`
             - ``predictions`` (dict or DataSample): Returned by
-                :meth:`forward` and processed in :meth:`postprocess`.
-                If ``return_datasample=False``, it usually should be a
-                json-serializable dict containing only basic data elements such
-                as strings and numbers.
+              :meth:`forward` and processed in :meth:`postprocess`.
+              If ``return_datasample=False``, it usually should be a
+              json-serializable dict containing only basic data elements such
+              as strings and numbers.
         """
 
     def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:

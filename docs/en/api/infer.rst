@@ -9,5 +9,6 @@ mmengine.infer
 .. autosummary::
    :toctree: generated
    :nosignatures:
+   :template: classtemplate.rst
 
    BaseInferencer
