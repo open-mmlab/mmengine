@@ -221,7 +221,8 @@ class TestLoggerHook(RunnerTestCase):
         runner = self.build_runner(cfg)
         runner.train()
         filename_list = scandir(runner._log_dir, recursive=True)
-        self.assertFalse(
-            any(
-                filename.endswith(('.log', '.json', '.py', '.yaml'))
-                for filename in filename_list))
+
+        for filename in filename_list:
+            self.assertFalse(
+                filename.endswith(('.log', '.json', '.py', '.yaml')),
+                f'{filename} should not be kept.')
