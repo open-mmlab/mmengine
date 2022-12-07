@@ -110,10 +110,10 @@ class Visualizer(ManagerMixin):
         >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
         >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
         >>>                  radius=np.array[1, 2], colors=['g', 'r'])
-        >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
+        >>> vis.draw_polygons(np.array([[0, 0], [100, 0], [100, 100], [0, 100]]),
         >>>                    edge_colors='g')
-        >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
-        >>>                        np.array([2, 2, 3, 2, 3, 3, 2, 3]],
+        >>> vis.draw_polygons(polygons=[np.array([[0, 0], [1, 0], [1, 1], [0, 1]]),
+        >>>                             np.array([[20, 20], [20, 100], [100, 100], [100, 20]])],
         >>>                   edge_colors=['g', 'r'])
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
         >>> heatmap = vis.draw_featmap(featmap, img,
