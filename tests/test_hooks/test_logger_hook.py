@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
+import os
 import os.path as osp
+import shutil
 from unittest.mock import ANY, MagicMock
 
 import pytest
@@ -8,6 +11,8 @@ import torch
 from mmengine.fileio import load
 from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
+from mmengine.testing import RunnerTestCase
+from mmengine.utils import mkdir_or_exist, scandir
 
 
 class TestLoggerHook:
@@ -28,61 +33,19 @@ class TestLoggerHook:
         with pytest.raises(ValueError):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
-        # test `file_client_args` and `backend_args`
-        with pytest.warns(
-                DeprecationWarning,
-                match='"file_client_args" will be deprecated in future'):
-            logger_hook = LoggerHook(
-                out_dir='tmp.txt', file_client_args={'backend': 'disk'})
+        with self.assertWarnsRegex(Warning,
+                                   '"file_client_args" will be deprecated'):
+            LoggerHook(
+                out_dir=self.temp_dir.name,
+                file_client_args=dict(backend='disk'))
 
-        with pytest.raises(
+        with self.assertRaisesRegex(
                 ValueError,
-                match='"file_client_args" and "backend_args" cannot be '
-                'set at the same time'):
-            logger_hook = LoggerHook(
-                out_dir='tmp.txt',
-                file_client_args={'backend': 'disk'},
-                backend_args={'backend': 'local'})
-
-    def test_before_run(self):
-        runner = MagicMock()
-        runner.iter = 10
-        runner.timestamp = '20220429'
-        runner._log_dir = f'work_dir/{runner.timestamp}'
-        runner.work_dir = 'work_dir'
-        runner.logger = MagicMock()
-        logger_hook = LoggerHook(out_dir='out_dir')
-        logger_hook.before_run(runner)
-        assert logger_hook.out_dir == osp.join('out_dir', 'work_dir')
-        assert logger_hook.json_log_path == f'{runner.timestamp}.json'
-
-    def test_after_run(self, tmp_path):
-        # Test
-        timestamp = '20220429'
-        out_dir = tmp_path / 'out_dir'
-        out_dir.mkdir()
-        work_dir = tmp_path / 'work_dir'
-        work_dir.mkdir()
-        log_dir = work_dir / timestamp
-        log_dir.mkdir()
-        log_dir_json = log_dir / 'tmp.log.json'
-        runner = MagicMock()
-        runner._log_dir = str(log_dir)
-        runner.timestamp = timestamp
-        runner.work_dir = str(work_dir)
-        # Test without out_dir.
-        logger_hook = LoggerHook()
-        logger_hook.after_run(runner)
-        # Test with out_dir and make sure json file has been moved to out_dir.
-        json_f = open(log_dir_json, 'w')
-        json_f.close()
-        logger_hook = LoggerHook(out_dir=str(out_dir), keep_local=False)
-        logger_hook.out_dir = str(out_dir)
-        logger_hook.before_run(runner)
-        logger_hook.after_run(runner)
-        # Verify that the file has been moved to `out_dir`.
-        assert not osp.exists(str(log_dir_json))
-        assert osp.exists(str(out_dir / 'work_dir' / 'tmp.log.json'))
+                '"file_client_args" and "backend_args" cannot be '):
+            LoggerHook(
+                out_dir=self.temp_dir.name,
+                file_client_args=dict(enable_mc=True),
+                backend_args=dict(enable_mc=True))
 
     def test_after_train_iter(self):
         # Test LoggerHook by iter.
@@ -174,10 +137,10 @@ class TestLoggerHook:
         with pytest.raises(AssertionError):
             runner.visualizer.add_scalars.assert_any_call({'acc': 0.5}, **args)
 
-    def test_after_test_epoch(self, tmp_path):
+    def test_after_test_epoch(self):
         logger_hook = LoggerHook()
         runner = MagicMock()
-        runner.log_dir = tmp_path
+        runner.log_dir = self.temp_dir.name
         runner.timestamp = 'test_after_test_epoch'
         runner.log_processor.get_log_after_epoch = MagicMock(
             return_value=(
@@ -213,3 +176,45 @@ class TestLoggerHook:
         runner.log_processor.get_log_after_iter.assert_not_called()
         logger_hook.after_test_iter(runner, 9)
         runner.log_processor.get_log_after_iter.assert_called()
+
+    def test_with_runner(self):
+        # Test dumped the json exits
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.default_hooks.logger = dict(type='LoggerHook')
+        cfg.train_cfg.max_epochs = 10
+        runner = self.build_runner(cfg)
+        runner.train()
+        json_path = osp.join(runner._log_dir, 'vis_data',
+                             f'{runner.timestamp}.json')
+        self.assertTrue(osp.isfile(json_path))
+
+        # Test out_dir
+        out_dir = osp.join(cfg.work_dir, 'test')
+        mkdir_or_exist(out_dir)
+        cfg.default_hooks.logger = dict(type='LoggerHook', out_dir=out_dir)
+        runner = self.build_runner(cfg)
+        runner.train()
+        self.assertTrue(os.listdir(out_dir) != 0)
+        # clean the out_dir
+        for filename in os.listdir(out_dir):
+            shutil.rmtree(osp.join(out_dir, filename))
+
+        # Test out suffix
+        cfg.default_hooks.logger = dict(
+            type='LoggerHook', out_dir=out_dir, out_suffix='.log')
+        runner = self.build_runner(cfg)
+        runner.train()
+        filename_list = scandir(out_dir, recursive=True)
+        self.assertTrue(
+            all(filename.endswith('.log') for filename in filename_list))
+
+        # Test keeplocal=False
+        cfg.default_hooks.logger = dict(
+            type='LoggerHook', out_dir=out_dir, keep_local=False)
+        runner = self.build_runner(cfg)
+        runner.train()
+        filename_list = scandir(runner._log_dir, recursive=True)
+        self.assertFalse(
+            any(
+                filename.endswith(('.log', '.json', '.py', '.yaml'))
+                for filename in filename_list))
