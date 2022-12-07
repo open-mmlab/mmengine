@@ -322,6 +322,14 @@ class TestConfig:
         assert cfg.item2 == dict(a=1, b=0.1, c='x')
         assert cfg.item3 is False
 
+        # test multiple options
+        args = parser.parse_args([
+            '--options', 'item1.a=1', 'item2.a=2', '--options', 'item2.a=1',
+            'item3=false'
+        ])
+        out_dict = {'item1.a': 1, 'item2.a': 1, 'item3': False}
+        assert args.options == out_dict
+
     def test_validate_py_syntax(self, tmp_path):
         tmp_cfg = tmp_path / 'tmp_config.py'
         with open(tmp_cfg, 'w') as f:
