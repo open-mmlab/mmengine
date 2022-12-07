@@ -151,7 +151,7 @@ class Visualizer(ManagerMixin):
         >>>                           wait_time: int = 0,
         >>>                           step: int = 0) -> None:
         >>>           pass
-    """  # noqa: E501
+    """
 
     def __init__(
         self,
