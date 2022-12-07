@@ -338,10 +338,10 @@ class BaseInferencer(metaclass=InferencerMeta):
 
             - ``visualization (Any)``: Returned by :meth:`visualize`
             - ``predictions`` (dict or DataSample): Returned by
-                :meth:`forward` and processed in :meth:`postprocess`.
-                If ``return_datasample=False``, it usually should be a
-                json-serializable dict containing only basic data elements such
-                as strings and numbers.
+              :meth:`forward` and processed in :meth:`postprocess`.
+              If ``return_datasample=False``, it usually should be a
+              json-serializable dict containing only basic data elements such
+              as strings and numbers.
         """
 
     def _load_model_from_metafile(self, model: str) -> Tuple[Config, str]:
