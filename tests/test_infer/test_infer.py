@@ -194,7 +194,7 @@ class TestBaseInferencer(RunnerTestCase):
             img = np.array(1)
             img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
         # Test with directory inputs
-        inputs = inferencer.preprocess_inputs(
+        inputs = inferencer._inputs_to_list(
             osp.join(self.temp_dir.name, 'imgs'))
         dataloader = inferencer.preprocess(inputs, batch_size=3)
         for data in dataloader:

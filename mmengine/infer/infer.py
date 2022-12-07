@@ -203,7 +203,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             postprocess_kwargs,
         ) = self._dispatch_kwargs(**kwargs)
 
-        ori_inputs = self.preprocess_inputs(inputs)
+        ori_inputs = self._inputs_to_list(inputs)
         inputs = self.preprocess(
             ori_inputs, batch_size=batch_size, **preprocess_kwargs)
         preds = []
@@ -216,15 +216,17 @@ class BaseInferencer(metaclass=InferencerMeta):
                                    **postprocess_kwargs)
         return results
 
-    def preprocess_inputs(self, inputs: InputsType) -> list:
+    def _inputs_to_list(self, inputs: InputsType) -> list:
         """Preprocess the inputs to a list.
 
         Preprocess inputs to a list according to its type:
 
-            - list or tuple: return inputs
-            - str:
-                - Directory path: return all files in the directory
-                - normal string: return a list containing the string
+        - list or tuple: return inputs
+        - str:
+            - Directory path: return all files in the directory
+            - other cases: return a list containing the string. The string
+              could be a path to file, a url or other types of string according
+              to the task.
 
         Args:
             inputs (InputsType): Inputs for the inferencer.
