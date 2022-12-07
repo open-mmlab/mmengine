@@ -103,12 +103,35 @@ runner.train()
 
 Currently, MMEngine supports the following statistical methods:
 
-| statistic method | arguments   | function                                                       |
-| :--------------- | :---------- | :------------------------------------------------------------- |
-| mean             | window_size | statistic the average log of the last `window_size` iterations |
-| min              | window_size | statistic the minimum log of the last `window_size` iterations |
-| max              | window_size | statistic the maximum log of the last `window_size` iterations |
-| current          | /           | statistic the latest log                                       |
+<table class="docutils">
+<thead>
+<tr>
+    <th>statistic method</th>
+    <th>arguments</th>
+    <th>function</th>
+</tr>
+<tr>
+    <td>mean</td>
+    <td>window_size</td>
+    <td>statistic the average log of the last `window_size`</td>
+</tr>
+<tr>
+    <td>min</td>
+    <td>window_size</td>
+    <td>statistic the minimum log of the last `window_size`</td>
+</tr>
+<tr>
+    <td>max</td>
+    <td>window_size</td>
+    <td>statistic the maximum log of the last `window_size`</td>
+</tr>
+<tr>
+    <td>current</td>
+    <td>/</td>
+    <td>statistic the latest</td>
+</tr>
+</thead>
+</table>
 
 `window_size` mentioned above could be:
 
