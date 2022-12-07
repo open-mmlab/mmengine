@@ -326,5 +326,8 @@ class LoggerHook(Hook):
                 # Close file handler to avoid PermissionError on Windows.
                 for handler in runner.logger.handlers:
                     if isinstance(handler, logging.FileHandler):
+                        if handler.stream is not None:
+                            handler.stream.close()
                         handler.close()
+
                 os.remove(local_filepath)
