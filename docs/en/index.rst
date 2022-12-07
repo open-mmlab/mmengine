@@ -80,6 +80,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.evaluator <api/evaluator>
    mmengine.structures <api/structures>
    mmengine.dataset <api/dataset>
+   mmengine.infer <api/infer>
    mmengine.device <api/device>
    mmengine.hub <api/hub>
    mmengine.logging <api/logging>
