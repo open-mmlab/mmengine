@@ -48,7 +48,7 @@ each sample, the basic information stored in the dataset is a dictionary as show
 figure, after which, every blue block represents a data transform, and in every data transform, we add some new fields (marked in green) or update some existing fields (marked in orange) in the data dictionary.
 
 <div align=center>
-<img src="https://user-images.githubusercontent.com/26739999/187157681-ac4dcac8-3543-4bfe-ab30-9aa9e56d4900.jpg" width="90%"/>
+<img src="https://user-images.githubusercontent.com/26739999/206081993-d5351151-466c-4b13-bf6d-9441c0c896c8.png" width="90%" style="background-color: white;padding: 10px;"/>
 </div>
 
 If want to use the above data pipeline in our config file, use the below settings:
