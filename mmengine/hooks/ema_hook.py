@@ -50,9 +50,9 @@ class EMAHook(Hook):
         assert not (begin_iter != 0 and begin_epoch != 0), (
             '`begin_iter` and `begin_epoch` should not be both set.')
         assert begin_iter >= 0, (
-            f'begin_iter must larger than 0, but got begin: {begin_iter}')
+            f'`begin_iter` must larger than 0, but got begin: {begin_iter}')
         assert begin_epoch >= 0, (
-            f'begin_epoch must larger than 0, but got begin: {begin_epoch}')
+            f'`begin_epoch` must larger than 0, but got begin: {begin_epoch}')
         self.begin_iter = begin_iter
         self.begin_epoch = begin_epoch
         # If `begin_epoch` and `begin_iter` are not set, `EMAHook` will be
