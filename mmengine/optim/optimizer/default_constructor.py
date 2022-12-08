@@ -252,8 +252,9 @@ class DefaultOptimWrapperConstructor:
                     elif is_dwconv and dwconv_decay_mult is not None:
                         param_group[
                             'weight_decay'] = self.base_wd * dwconv_decay_mult
-                    # flatten parameters
-                    elif param.ndim == 1 and flat_decay_mult is not None:
+                    # flatten parameters except dcn offset
+                    elif (param.ndim == 1 and not is_dcn_module
+                          and flat_decay_mult is not None):
                         param_group[
                             'weight_decay'] = self.base_wd * flat_decay_mult
             params.append(param_group)
