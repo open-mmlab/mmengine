@@ -169,8 +169,8 @@ class OptimWrapper:
 
         Args:
             loss (torch.Tensor): A tensor for back propagation.
-            step_kwargs (dict): arguments for optimizer.step
-            zero_kwargs (dict): arguments for optimizer.zero_grad
+            step_kwargs (dict): Arguments for optimizer.step
+            zero_kwargs (dict): Arguments for optimizer.zero_grad
         """
         if step_kwargs is None:
             step_kwargs = {}
