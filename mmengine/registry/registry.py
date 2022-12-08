@@ -34,6 +34,7 @@ class Registry:
             Defaults to None.
         locations (list): The locations to import the modules registered
             in this registry. Defaults to [].
+            New in version 0.4.0.
 
     Examples:
         >>> # define a registry
@@ -308,18 +309,50 @@ class Registry:
         if not self._imported:
             # Avoid circular import
             from ..logging import print_log
+
+            # avoid BC breaking
+            if len(self._locations) == 0 and self.scope in PKG2PROJECT:
+                print_log(
+                    f'The "{self.name}" registry in {self.scope} did not '
+                    'set import location. Fallback to call '
+                    f'`{self.scope}.utils.register_all_modules` '
+                    'instead.',
+                    logger='current',
+                    level=logging.WARNING)
+                try:
+                    module = import_module(f'{self.scope}.utils')
+                    module.register_all_modules(False)  # type: ignore
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    if self.scope in PKG2PROJECT:
+                        print_log(
+                            f'{self.scope} is not installed and its '
+                            'modules will not be registered. If you '
+                            'want to use modules defined in '
+                            f'{self.scope}, Please install {self.scope} by '
+                            f'`pip install {PKG2PROJECT[self.scope]}.',
+                            logger='current',
+                            level=logging.WARNING)
+                    else:
+                        print_log(
+                            f'Failed to import {self.scope} and register '
+                            'its modules, please make sure you '
+                            'have registered the module manually.',
+                            logger='current',
+                            level=logging.WARNING)
+
             for loc in self._locations:
                 try:
                     import_module(loc)
                     print_log(
-                        f'auto imported: {loc}',
+                        f"Modules of {self.scope}'s {self.name} registry have "
+                        f'been automatically imported from {loc}',
                         logger='current',
                         level=logging.DEBUG)
                 except (ImportError, AttributeError, ModuleNotFoundError):
                     print_log(
                         f'Failed to import {loc}, please check the '
-                        f'location of the registry {self._name} is '
-                        f'correct.',
+                        f'location of the registry {self.name} is '
+                        'correct.',
                         logger='current',
                         level=logging.WARNING)
             self._imported = True
@@ -403,14 +436,15 @@ class Registry:
             try:
                 import_module(f'{scope}.registry')
                 print_log(
-                    f'auto import {scope}.registry',
+                    f'Registry node of {scope} has been automatically '
+                    'imported.',
                     logger='current',
                     level=logging.DEBUG)
             except (ImportError, AttributeError, ModuleNotFoundError):
                 print_log(
                     f'Cannot auto import {scope}.registry, please check '
                     f'whether the package "{scope}" is installed correctly '
-                    f'or import the registry manually.',
+                    'or import the registry manually.',
                     logger='current',
                     level=logging.DEBUG)
             # get from self._children
