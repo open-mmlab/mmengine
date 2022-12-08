@@ -61,7 +61,6 @@ class TestEMAHook(RunnerTestCase):
 
     def test_init(self):
         EMAHook()
-        EMAHook(begin_iter=1)
 
         with self.assertRaisesRegex(AssertionError, '`begin_iter` must'):
             EMAHook(begin_iter=-1)
