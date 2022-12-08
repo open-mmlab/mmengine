@@ -1,6 +1,6 @@
 # Save Memory on GPU
 
-Memory capacity is critical in deep leanring training and inference, and it determines whether the model can run successfully. Common memory saving approaches include:
+Memory capacity is critical in deep learning training and inference and determines whether the model can run successfully. Common memory saving approaches include:
 
 - Gradient Accumulation
 
