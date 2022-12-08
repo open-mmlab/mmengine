@@ -310,6 +310,16 @@ class LoggerHook(Hook):
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
             return
+
+        # Close file handler to avoid PermissionError on Windows.
+        if not self.keep_local:
+            for handler in runner.logger.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    stream = handler.stream
+                    if stream is not None and stream.closed:
+                        handler.stream.close()
+                    handler.close()
+
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
             out_filepath = self.file_backend.join_path(self.out_dir, filename)
@@ -323,11 +333,4 @@ class LoggerHook(Hook):
             if not self.keep_local:
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`')
-                # Close file handler to avoid PermissionError on Windows.
-                for handler in runner.logger.handlers:
-                    if isinstance(handler, logging.FileHandler):
-                        if handler.stream is not None:
-                            handler.stream.close()
-                        handler.close()
-
                 os.remove(local_filepath)
