@@ -4,7 +4,7 @@ Memory capacity is critical in deep learning training and inference and determin
 
 - Gradient Accumulation
 
-Gradient accumulation is the mechanism that runs at a configured number of steps accumulating the gradients instead of being updated of those steps, and then the network parameters are updated and the gradients are cleared. With this technique of delayed parameter update, the result is similar to those scnarios using a large batch size and the graphics memory can be saved. However, it should be noted that if the model contains a batch normalization layer, using gradient accumulation will have a certain impact on performance.
+  Gradient accumulation is the mechanism that runs at a configured number of steps accumulating the gradients instead of being updated on those steps, and then the network parameters are updated and the gradients are cleared. With this technique of delayed parameter update, the result is similar to those scenarios using a large batch size and the graphics memory can be saved. However, it should be noted that if the model contains a batch normalization layer, using gradient accumulation will impact performance.
 
 - Gradient Checkpointing
 
