@@ -315,10 +315,8 @@ class LoggerHook(Hook):
         if not self.keep_local:
             for handler in runner.logger.handlers:
                 if isinstance(handler, logging.FileHandler):
-                    stream = handler.stream
-                    if stream is not None and not stream.closed:
-                        handler.stream.close()
                     handler.close()
+                    runner.logger.removeHandler(handler)
 
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
