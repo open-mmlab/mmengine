@@ -316,7 +316,7 @@ class LoggerHook(Hook):
             for handler in runner.logger.handlers:
                 if isinstance(handler, logging.FileHandler):
                     stream = handler.stream
-                    if stream is not None and stream.closed:
+                    if stream is not None and not stream.closed:
                         handler.stream.close()
                     handler.close()
 
