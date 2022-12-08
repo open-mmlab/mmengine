@@ -138,19 +138,19 @@ class Visualizer(ManagerMixin):
 
         >>> # inherit
         >>> class DetLocalVisualizer(Visualizer):
-        >>>        def add_datasample(self,
-        >>>                           name,
-        >>>                           image: np.ndarray,
-        >>>                           gt_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           pred_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           draw_gt: bool = True,
-        >>>                           draw_pred: bool = True,
-        >>>                           show: bool = False,
-        >>>                           wait_time: int = 0,
-        >>>                           step: int = 0) -> None:
-        >>>           pass
+        >>>      def add_datasample(self,
+        >>>                         name,
+        >>>                         image: np.ndarray,
+        >>>                         gt_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         pred_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         draw_gt: bool = True,
+        >>>                         draw_pred: bool = True,
+        >>>                         show: bool = False,
+        >>>                         wait_time: int = 0,
+        >>>                         step: int = 0) -> None:
+        >>>         pass
     """
 
     def __init__(
@@ -375,9 +375,9 @@ class Visualizer(ManagerMixin):
                 for more details. Defaults to 'g.
             marker (str, optional): The marker style.
                 See :mod:`matplotlib.markers` for more information about
-                marker styles. Default to None.
+                marker styles. Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
-                Default to None.
+                Defaults to None.
         """
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
@@ -443,7 +443,7 @@ class Visualizer(ManagerMixin):
                 just single value. If ``font_families`` is single value, all
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                 or 'monospace'.  Defaults to 'sans-serif'.
+                or 'monospace'.  Defaults to 'sans-serif'.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -689,7 +689,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
         """
@@ -734,7 +734,7 @@ class Visualizer(ManagerMixin):
         """Draw single or multiple bboxes.
 
         Args:
-            polygons (Union[Union[np.ndarray, torch.Tensor],
+            polygons (Union[Union[np.ndarray, torch.Tensor],\
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
@@ -756,7 +756,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
@@ -871,28 +871,28 @@ class Visualizer(ManagerMixin):
         """Draw featmap.
 
         - If `overlaid_image` is not None, the final output image will be the
-        weighted sum of img and featmap.
+          weighted sum of img and featmap.
 
         - If `resize_shape` is specified, `featmap` and `overlaid_image`
-        are interpolated.
+          are interpolated.
 
         - If `resize_shape` is None and `overlaid_image` is not None,
-        the feature map will be interpolated to the spatial size of the image
-        in the case where the spatial dimensions of `overlaid_image` and
-        `featmap` are different.
+          the feature map will be interpolated to the spatial size of the image
+          in the case where the spatial dimensions of `overlaid_image` and
+          `featmap` are different.
 
         - If `channel_reduction` is "squeeze_mean" and "select_max",
-        it will compress featmap to single channel image and weighted
-        sum to `overlaid_image`.
+          it will compress featmap to single channel image and weighted
+          sum to `overlaid_image`.
 
         -  if `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
-          channel and treated as image and will be weighted sum
-          to ``overlaid_image``.
+            channel and treated as image and will be weighted sum
+            to ``overlaid_image``.
           - If topk > 0, it will select topk channel to show by the sum of
-          each channel. At the same time, you can specify the `arrangement`
-          to set the window layout.
+            each channel. At the same time, you can specify the `arrangement`
+            to set the window layout.
 
         Args:
             featmap (torch.Tensor): The featmap to draw which format is
