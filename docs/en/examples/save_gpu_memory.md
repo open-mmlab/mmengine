@@ -12,7 +12,7 @@ Gradient checkpointing is a time-for-space method that compresses the model by r
 
 - Large Model Training Techniques
 
-Recent research has shown that large model training would be helpful to improve model behaviour, but training a model at such a scale requires huge resources, and it is hard to store the entire model for the memory of a single graphics card. Therefore large model training techniques, typically such as [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview) and the Fully Shared Data Parallel ([FSDP](https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/)) technique introduced in FairScale are introduced. These techniques allow slicing the parameters, gradients, and optimizer states among the parallel processes, while still maintaining the simplicity of the data parallelism.
+  Recent research has shown that training a large model would be helpful to improve performance, but training a model at such a scale requires huge resources, and it is hard to store the entire model for the memory of a single graphics card. Therefore large model training techniques, typically such as [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview) and the Fully Shared Data Parallel ([FSDP](https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/)) technique introduced in FairScale are introduced. These techniques allow slicing the parameters, gradients, and optimizer states among the parallel processes, while still maintaining the simplicity of the data parallelism.
 
 MMEngine now supports gradient accumulation and large model training FSDP techniques, and the usages are described as follows.
 
