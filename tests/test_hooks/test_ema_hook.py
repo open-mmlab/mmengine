@@ -187,24 +187,36 @@ class TestEMAHook(RunnerTestCase):
         ema_hook = EMAHook()
         ema_hook.before_run(runner)
         ema_hook.before_train(runner)
-
         ema_hook.after_load_checkpoint(runner, checkpoint)
 
         for key in checkpoint['state_dict'].keys():
             assert_allclose(
                 checkpoint['state_dict'][key].cpu(),
                 ema_hook.ema_model.state_dict()[f'module.{key}'].cpu())
+
+        # Test a warning should be raise when resuming from a checkpoint
+        # without `ema_state_dict`
+        runner._resume = True
+        ema_hook.after_load_checkpoint(runner, checkpoint)
+        with self.assertLogs(runner.logger, level='WARNING') as cm:
+            ema_hook.after_load_checkpoint(runner, checkpoint)
+            self.assertRegex(cm.records[0].msg, 'There is no `ema_state_dict`')
 
         # Check the weight of state_dict and ema_state_dict have been swapped.
+        # when runner._resume is False
+        runner._resume = True
         checkpoint = dict(
             state_dict=ToyModel().state_dict(),
-            ema_state_dict=ToyModel().state_dict())
-
+            ema_state_dict=ExponentialMovingAverage(ToyModel()).state_dict())
+        ori_checkpoint = copy.deepcopy(checkpoint)
         ema_hook.after_load_checkpoint(runner, checkpoint)
-        for key in checkpoint['state_dict'].keys():
+        for key in ori_checkpoint['state_dict'].keys():
             assert_allclose(
-                checkpoint['state_dict'][key].cpu(),
+                ori_checkpoint['state_dict'][key].cpu(),
                 ema_hook.ema_model.state_dict()[f'module.{key}'].cpu())
+
+        runner._resume = False
+        ema_hook.after_load_checkpoint(runner, checkpoint)
 
     def test_with_runner(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
