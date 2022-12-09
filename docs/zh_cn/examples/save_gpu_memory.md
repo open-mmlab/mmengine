@@ -8,7 +8,7 @@
 
 - 梯度检查点
 
-  梯度检查点是一种以时间换空间的方法，通过减少保存的激活值来压缩模型占用空间，但是在计算梯度时必须重新计算没有存储的激活值。在 torch.utils.checkpoint 包中已经实现了对应功能。简要实现过程是：在前向阶段传递到 checkpoint 中的 forward 函数会以 `torch.no_grad` 模式运行，并且仅仅保存输入参数和 forward 函数，在反向阶段重新计算其 forward 输出值。
+  梯度检查点是一种以时间换空间的方法，通过减少保存的激活值来压缩模型占用空间，但是在计算梯度时必须重新计算没有存储的激活值。在 torch.utils.checkpoint 包中已经实现了对应功能。简要实现过程是：在前向阶段传递到 checkpoint 中的 forward 函数会以 `torch.no_grad` 模式运行，并且仅仅保存 forward 函数的输入和输出，然后在反向阶段重新计算其中间状态激活值 （intermediate activations）输出值。
 
 - 大模型训练技术
 
