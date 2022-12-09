@@ -2,9 +2,10 @@
 from unittest.mock import Mock
 
 from mmengine.hooks import Hook
+from mmengine.testing import RunnerTestCase
 
 
-class TestHook:
+class TestHook(RunnerTestCase):
 
     def test_before_run(self):
         hook = Hook()
@@ -192,3 +193,35 @@ class TestHook:
         runner.max_iters = 2
         return_val = hook.is_last_train_iter(runner)
         assert return_val
+
+    def test_get_triggered_stages(self):
+
+        class CustomHook(Hook):
+
+            def after_train(self, runner):
+                return super().after_train(runner)
+
+        hook = CustomHook()
+        triggered_stages = hook.get_triggered_stages()
+        self.assertListEqual(triggered_stages, ['after_train'])
+
+        class CustomHook(Hook):
+
+            def _before_iter(self, runner):
+                ...
+
+        hook = CustomHook()
+        triggered_stages = hook.get_triggered_stages()
+        self.assertEqual(len(triggered_stages), 3)
+        self.assertSetEqual(
+            set(triggered_stages),
+            {'before_train_iter', 'before_val_iter', 'before_test_iter'})
+
+        class CustomHook(Hook):
+
+            def is_last_train_epoch(self, runner):
+                ...
+
+        hook = CustomHook()
+        triggered_stages = hook.get_triggered_stages()
+        self.assertEqual(len(triggered_stages), 0)
