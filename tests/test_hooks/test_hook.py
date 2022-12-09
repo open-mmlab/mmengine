@@ -212,9 +212,10 @@ class TestHook(RunnerTestCase):
 
         hook = CustomHook()
         triggered_stages = hook.get_triggered_stages()
-        self.assertListEqual(
-            triggered_stages,
-            ['before_train_iter', 'before_val_iter', 'before_test_iter'])
+        self.assertEqual(len(triggered_stages), 3)
+        self.assertSetEqual(
+            set(triggered_stages),
+            {'before_train_iter', 'before_val_iter', 'before_test_iter'})
 
         class CustomHook(Hook):
 
