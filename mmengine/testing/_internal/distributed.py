@@ -169,7 +169,7 @@ class MultiProcessTestCase(TestCase):
     def _run(cls, rank: int, test_name: str, file_name: str,
              parent_pipe) -> None:
         self = cls(test_name)
-
+        super(MultiProcessTestCase, self).setUp(self)
         self.rank = rank
         self.file_name = file_name
         self.run_test(test_name, parent_pipe)
