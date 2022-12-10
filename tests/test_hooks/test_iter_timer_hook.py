@@ -42,9 +42,9 @@ class TestIterTimerHook(RunnerTestCase):
         # 4 iteration per epoch, totally 2 epochs
         # Under pathced_time, before_iter will cost "1s" and after_iter will
         # cost "1s", so the total time for each iteration is 2s.
-        for _ in range(10):
-            hook.before_train_iter(runner, 1)
-            hook.after_train_iter(runner, 1)
+        for i in range(10):
+            hook.before_train_iter(runner, i)
+            hook.after_train_iter(runner, i)
             runner.train_loop._iter += 1
 
         # Left 90 iterations, so the ETA should be 90 * 2s
@@ -52,23 +52,23 @@ class TestIterTimerHook(RunnerTestCase):
         hook.after_train_epoch(runner)
 
         for i in range(2):
-            hook.before_val_iter(runner, 1)
+            hook.before_val_iter(runner, i)
             hook.after_val_iter(runner, batch_idx=i)
         self.assertEqual(runner.message_hub.get_info('eta'), 4)
 
         for i in range(2, 4):
-            hook.before_val_iter(runner, 1)
+            hook.before_val_iter(runner, i)
             hook.after_val_iter(runner, batch_idx=i)
         hook.after_val_epoch(runner)
         self.assertEqual(runner.message_hub.get_info('eta'), 0)
 
         for i in range(2):
-            hook.before_test_iter(runner, 1)
+            hook.before_test_iter(runner, i)
             hook.after_test_iter(runner, batch_idx=i)
         self.assertEqual(runner.message_hub.get_info('eta'), 4)
 
         for i in range(2, 4):
-            hook.before_test_iter(runner, 1)
+            hook.before_test_iter(runner, i)
             hook.after_test_iter(runner, batch_idx=i)
         hook.after_test_epoch(runner)
         self.assertEqual(runner.message_hub.get_info('eta'), 0)
