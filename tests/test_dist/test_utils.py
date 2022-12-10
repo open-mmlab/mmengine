@@ -222,7 +222,7 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
             backend='gloo', rank=rank, world_size=world_size)
         dist.init_local_group(0, world_size)
 
-    def setUp(self):
+    def setUp(self, spawn_process=True):
         super().setUp()
         self._spawn_processes()
 
@@ -353,7 +353,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
             backend='nccl', rank=rank, world_size=world_size)
         dist.init_local_group(0, world_size)
 
-    def setUp(self):
+    def setUp(self, spawn_process=True):
         super().setUp()
         self._spawn_processes()
 

@@ -75,7 +75,7 @@ class ComplexModel(BaseModel):
 
 class TestDistributedDataParallel(MultiProcessTestCase):
 
-    def setUp(self) -> None:
+    def setUp(self, spawn_process=True):
         super().setUp()
         self._spawn_processes()
 
@@ -234,7 +234,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         torch_dist.init_process_group(
             backend='nccl', rank=rank, world_size=world_size)
 
-    def setUp(self) -> None:
+    def setUp(self, spawn_process=True) -> None:
         super().setUp()
         self._spawn_processes()
 

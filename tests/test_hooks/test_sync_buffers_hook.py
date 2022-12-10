@@ -8,7 +8,6 @@ import torch.nn as nn
 
 from mmengine.dist import all_gather
 from mmengine.hooks import SyncBuffersHook
-from mmengine.model.weight_init import constant_init
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.testing.runner_test_case import RunnerTestCase, ToyModel
 
