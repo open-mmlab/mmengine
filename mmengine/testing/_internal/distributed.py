@@ -95,14 +95,15 @@ class MultiProcessTestCase(TestCase):
         fn = getattr(self, method_name)
         setattr(self, method_name, self.join_or_run(fn))
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.skip_return_code_checks = []  # type: ignore[var-annotated]
-        self.processes = []  # type: ignore[var-annotated]
-        self.rank = self.MAIN_PROCESS_RANK
-        self.file_name = tempfile.NamedTemporaryFile(delete=False).name
-        # pid to pipe consisting of error message from process.
-        self.pid_to_pipe = {}  # type: ignore[var-annotated]
+    def setUp(self, spawn_process=True) -> None:
+        if spawn_process:
+            super().setUp()
+            self.skip_return_code_checks = []  # type: ignore[var-annotated]
+            self.processes = []  # type: ignore[var-annotated]
+            self.rank = self.MAIN_PROCESS_RANK
+            self.file_name = tempfile.NamedTemporaryFile(delete=False).name
+            # pid to pipe consisting of error message from process.
+            self.pid_to_pipe = {}  # type: ignore[var-annotated]
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -169,7 +170,7 @@ class MultiProcessTestCase(TestCase):
     def _run(cls, rank: int, test_name: str, file_name: str,
              parent_pipe) -> None:
         self = cls(test_name)
-        super(MultiProcessTestCase, self).setUp(self)
+        self.setUp(spawn_process=False)
         self.rank = rank
         self.file_name = file_name
         self.run_test(test_name, parent_pipe)
