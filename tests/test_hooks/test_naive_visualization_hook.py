@@ -54,7 +54,7 @@ class TestNaiveVisualizationHook(RunnerTestCase):
         NaiveVisualizationHook()
 
         with self.assertRaisesRegex(AssertionError, '`interval` must'):
-            NaiveVisualizationHook(interval=1)
+            NaiveVisualizationHook(interval=-1)
 
         with self.assertRaisesRegex(AssertionError, '`draw_gt` must be'):
             NaiveVisualizationHook(draw_gt=1)
