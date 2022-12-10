@@ -57,7 +57,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     # Test `OptimWrapper.optim_context` will block the gradient
     # synchronization when using gradient accumulation strategy in distributed
     # data parallel training.
-    def setUp(self, spawn_process=True) -> None:
+    def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
 

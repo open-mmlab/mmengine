@@ -28,12 +28,12 @@ class ToyModuleWithNorm(ToyModel):
 
 class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
 
-    def setUp(self, spawn_process=True) -> None:
-        if spawn_process:
-            super().setUp()
-            self._spawn_processes()
-        else:
-            super(MultiProcessTestCase, self).setUp()
+    def setUp(self) -> None:
+        super().setUp()
+        self._spawn_processes()
+
+    def prepare_subprocess(self):
+        super(MultiProcessTestCase, self).setUp()
 
     def test_sync_buffers_hook(self):
         self.setup_dist_env()
