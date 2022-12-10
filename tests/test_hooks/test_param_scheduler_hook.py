@@ -104,7 +104,7 @@ class TestParamSchedulerHook(RunnerTestCase):
         train_lr = list(runner.message_hub.get_scalar('train/lr')._log_history)
         target_lr = [init_lr * 0.5] * 4 + \
                     [init_lr * 0.5 * 0.5] * 4 + \
-                    [0.1] * 4
+                    [init_lr] * 4
         self.assertListEqual(train_lr, target_lr)
 
         cfg = copy.deepcopy(self.iter_based_cfg)
@@ -132,5 +132,5 @@ class TestParamSchedulerHook(RunnerTestCase):
         train_lr = list(runner.message_hub.get_scalar('train/lr')._log_history)
         target_lr = [init_lr * 0.5] * 4 + \
                     [init_lr * 0.5 * 0.5] * 7 + \
-                    [0.1]
+                    [init_lr]
         self.assertListEqual(train_lr, target_lr)
