@@ -11,7 +11,7 @@ class DefaultScope(ManagerMixin):
     """Scope of current task used to reset the current registry, which can be
     accessed globally.
 
-    Consider the case of resetting the current ``Resgitry`` by
+    Consider the case of resetting the current ``Registry`` by
     ``default_scope`` in the internal module which cannot access runner
     directly, it is difficult to get the ``default_scope`` defined in
     ``Runner``. However, if ``Runner`` created ``DefaultScope`` instance
