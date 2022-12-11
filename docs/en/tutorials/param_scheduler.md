@@ -13,7 +13,6 @@ We first introduce how to use PyTorch's `torch.optim.lr_scheduler` to adjust lea
 <summary>How to use PyTorch's builtin learning rate scheduler?</summary>
     
 Here is an example which refers from [PyTorch official documentation](https://pytorch.org/docs/stable/optim.html):
-
 Initialize an ExponentialLR object, and call the `step` method after each training epoch.
 
 ```python
