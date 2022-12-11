@@ -71,7 +71,7 @@ class SimpleAccuracy(BaseMetric):
     def process(self, data_batch: Sequence[dict], data_samples: Sequence[dict]):
         """Process one batch of data and predictions. The processed
         Results should be stored in `self.results`, which will be used
-        to computed the metrics when all batches have been processed.
+        to compute the metrics when all batches have been processed.
 
         Args:
             data_batch (Sequence[Tuple[Any, dict]]): A batch of data
