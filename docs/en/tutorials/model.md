@@ -135,7 +135,7 @@ class MMResNet50(BaseModel):
 
 Now, you may have a deeper understanding of dataflow, and can answer the first question in [Runner and model](#runner-and-model).
 
-`BaseModel.train_step` implements the standard optimization standard, and if we want to customize a new optimization process, we can override it in the subclass. However, it is important to note that we need to make sure that `train_step` returns a loss dict.
+`BaseModel.train_step` implements the standard optimization, and if we want to customize a new optimization process, we can override it in the subclass. However, it is important to note that we need to make sure that `train_step` returns a loss dict.
 
 ## DataPreprocessor
 
