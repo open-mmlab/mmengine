@@ -155,7 +155,7 @@ The answer to the first question is that: `MMResNet50` inherit from `BaseModel`,
 class BaseDataPreprocessor(nn.Module):
     def forward(self, data, training=True):  # ignore the training parameter here
         # suppose data given by CIFAR10 is a tuple. Actually
-        # BaseDataPreprocessor could move varies type of data
+        # BaseDataPreprocessor could move various type of data
         # to target device.
         return tuple(_data.cuda() for _data in data)
 ```
