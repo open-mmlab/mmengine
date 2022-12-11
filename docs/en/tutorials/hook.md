@@ -73,7 +73,7 @@ The four features mentioned above are described below.
 
 - Save checkpoints by interval, and support saving them by epoch or iteration
 
-  Suppose we train a total of 20 epochs and want to save the checkpoints every 5 epochs, the following configuration will help us to achieve this requirement.
+  Suppose we train a total of 20 epochs and want to save the checkpoints every 5 epochs, the following configuration will help us achieve this requirement.
 
   ```python
   # the default value of by_epoch is True
