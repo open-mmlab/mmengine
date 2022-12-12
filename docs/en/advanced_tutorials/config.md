@@ -178,7 +178,7 @@ print(cfg.optimizer)
 {'type': 'SGD', 'lr': 0.02, 'momentum': 0.9, 'weight_decay': 0.0001}
 ```
 
-`_base_` is a reserved field for the configuration file. It specifies the inherited base) files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there are no repeated fields defined in all base files.
+`_base_` is a reserved field for the configuration file. It specifies the inherited base files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there are no repeated fields defined in all base files.
 
 `runtime_cfg.py`：
 
@@ -538,7 +538,7 @@ print(custom_optim)
 
 ### Inherit configuration files across repository
 
-It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example,based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
+It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example, based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
 
 `cross_repo.py`
 
