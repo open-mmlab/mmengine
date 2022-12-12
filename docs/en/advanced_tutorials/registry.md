@@ -158,7 +158,7 @@ func_res = FUNCTION.build(func_cfg)
 
 ## Advanced usage
 
-The registry in MMEngine supports hierarchical registration, which enables cross-project calls, meaning that modules from another project can be used in another project. Though there are other ways to implement this, the registry provides a much easier solution.
+The registry in MMEngine supports hierarchical registration, which enables cross-project calls, meaning that modules from one project can be used in another project. Though there are other ways to implement this, the registry provides a much easier solution.
 
 To easily make cross-library calls, MMEngine provides twenty root registries, including:
 
