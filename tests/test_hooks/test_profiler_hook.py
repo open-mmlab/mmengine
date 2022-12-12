@@ -93,31 +93,22 @@ class TestProfilerHook(RunnerTestCase):
     @unittest.skipIf(
         not is_installed('tensorboard'), reason='required tensorboard')
     def test_tensorboard(self):
-        self.epoch_based_cfg['custom_hooks'] = [
+        configs: dict = {
+            'multiple_epoch':
             dict(
                 type='ProfilerHook',
-                priority='NORMAL',
                 on_trace_ready=dict(
                     type='tb_trace', dir_name=f'{self.temp_dir}/tb'),
-                json_trace_path='will warning')
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)  # noqa
-        runner.train()
-
-        self.epoch_based_cfg['custom_hooks'] = [
+                json_trace_path='will warning'),
+            'much_iter':
+            dict(type='ProfilerHook', on_trace_ready=dict(type='tb_trace')),
+            'zero':
             dict(
                 type='ProfilerHook',
-                priority='NORMAL',
-                on_trace_ready=dict(type='tb_trace'))
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)  # noqa
-        runner.train()
-
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                priority='NORMAL',
                 on_trace_ready=dict(type='tb_trace', dir_name='/tmp/tmp_tb'))
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)  # noqa
-        runner.train()
+        }
+        for name_config, custom_hooks in configs.items():
+            self.epoch_based_cfg['custom_hooks'] = [custom_hooks]
+            runner = self.build_runner(self.epoch_based_cfg)
+            runner.train()
+            del runner
