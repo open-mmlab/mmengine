@@ -72,7 +72,7 @@ class DefaultOptimWrapperConstructor:
             - ``type``: class name of the OptimizerWrapper
             - ``optimizer``: The configuration of optimizer.
 
-            Optional fields are
+            Optional fields of ``optim_wrapper_cfg`` are
 
             - any arguments of the corresponding optimizer wrapper type,
               e.g., accumulative_counts, clip_grad, etc.
@@ -81,7 +81,7 @@ class DefaultOptimWrapperConstructor:
 
             - `type`: class name of the optimizer.
 
-            Optional fields are
+            Optional fields of ``optimizer`` are
 
             - any arguments of the corresponding optimizer type, e.g.,
               lr, weight_decay, momentum, etc.
