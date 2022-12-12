@@ -75,7 +75,7 @@ print(ACTIVATION.module_dict)
 ```
 
 ```{note}
-The registry mechanism will only be triggered when the corresponded module file is imported, so we need to import the file somewhere or dynamically import the module using the ``custom_imports`` field to trigger the mechanism. Please refer to [Importing custom Python modules](config.md) for more details.
+The registry mechanism will only be triggered when the corresponded module file is imported, so we need to import the file somewhere or dynamically import the module using the ``custom_imports`` field to trigger the mechanism. Please refer to [Importing custom Python modules](config.md#import-the-custom-module) for more details.
 ```
 
 Once the implemented module is successfully registered, we can use the activation module in the configuration file.
