@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from mmengine.logging import MMLogger, print_log
+from mmengine.logging import print_log
 from mmengine.registry import WEIGHT_INITIALIZERS, build_from_cfg
 
 
@@ -481,22 +481,21 @@ class PretrainedInit:
         from mmengine.runner.checkpoint import (_load_checkpoint_with_prefix,
                                                 load_checkpoint,
                                                 load_state_dict)
-        logger = MMLogger.get_instance('mmengine')
         if self.prefix is None:
-            print_log(f'load model from: {self.checkpoint}', logger=logger)
+            print_log(f'load model from: {self.checkpoint}', logger='current')
             load_checkpoint(
                 module,
                 self.checkpoint,
                 map_location=self.map_location,
                 strict=False,
-                logger=logger)
+                logger='current')
         else:
             print_log(
                 f'load {self.prefix} in model from: {self.checkpoint}',
-                logger=logger)
+                logger='current')
             state_dict = _load_checkpoint_with_prefix(
                 self.prefix, self.checkpoint, map_location=self.map_location)
-            load_state_dict(module, state_dict, strict=False, logger=logger)
+            load_state_dict(module, state_dict, strict=False, logger='current')
 
         if hasattr(module, '_params_init_info'):
             update_init_info(module, init_info=self._get_init_info())
