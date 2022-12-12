@@ -1,13 +1,15 @@
 # 测试时增强（Test time augmentation）
 
-测试时增强（Test time augmentation，后文简称 TTA） 是一种测试阶段的数据增强策略，旨在测试过程中，对同一张图片做翻转、缩放之类的数据增强，将增强后每张图片预测的结果还原到原始尺寸后做融合，以获得更加准确的预测结果。为了让用户更加方便地使用 TTA，MMEngine 提供了 [BaseTTAModel](mmengine.model.BaseTTAModel) 类，用户只需按照任务需求，继承 BaseTTAModel 类，实现不同的 TTA 策略即可。
+测试时增强（Test time augmentation，后文简称 TTA）是一种测试阶段的数据增强策略，旨在测试过程中，对同一张图片做翻转、缩放等各种数据增强，将增强后每张图片预测的结果还原到原始尺寸并做融合，以获得更加准确的预测结果。为了让用户更加方便地使用 TTA，MMEngine 提供了 [BaseTTAModel](mmengine.model.BaseTTAModel) 类，用户只需按照任务需求，继承 BaseTTAModel 类，实现不同的 TTA 策略即可。
 
 TTA 的核心实现通常分为两个部分：
 
 1. 测试时的数据增强：测试时数据增强主要在 MMCV 中实现，可以参考 [TestTimeAug 的 API 文档](mmcv.transform.TestTimeAug)，本文档不再赘述。
-2. 模型推移以及结果融合：`BaseTTAModel` 的主要功能就是实现这一部分，`BaseTTAModel.test_step` 会对测试时增强后数据解析，推理。用户继承 `BaseTTAModel` 后只需实现相应的融合策略即可。
+2. 模型推理以及结果融合：`BaseTTAModel` 的主要功能就是实现这一部分，`BaseTTAModel.test_step` 会解析测试时增强后的数据并进行推理。用户继承 `BaseTTAModel` 后只需实现相应的融合策略即可。
 
 ## 快速上手
+
+一个简单的支持 TTA 的示例可以参考 [example/test_time_augmentation.md](https://github.com/open-mmlab/mmengine/blob/main/examples/test_timeaugmentation.py)
 
 ### 准备 TTA 数据增强
 
@@ -36,13 +38,11 @@ tta_pipeline = [
 ```python
 # data_{i}_{j} 表示对第 i 张图片做第 j 种增强后的结果，例如 batch_size=3，那么 i 的# 取值范围为 0，1，2，增强方式有 2 种（翻转），那么 j 的取值范围为 0，1
 
-def test_step(...)
-    demo_results = [
-        [data_0_0, data_0_1],
-        [data_1_0, data_1_1],
-        [data_2_0, data_2_1],
-    ]
-    return self.merge_preds(demo_results)
+demo_results = [
+    [data_0_0, data_0_1],
+    [data_1_0, data_1_1],
+    [data_2_0, data_2_1],
+]
 ```
 
 merge_preds 需要将 demo_results 融合成整个 batch 的推理结果。以融合分类结果为例：
