@@ -66,7 +66,8 @@ class DefaultOptimWrapperConstructor:
 
     Args:
         optim_wrapper_cfg (dict): The config dict of the optimizer wrapper.
-            Required fields are
+
+            Required fields of ``optim_wrapper_cfg`` are
 
             - ``type``: class name of the OptimizerWrapper
             - ``optimizer``: The configuration of optimizer.

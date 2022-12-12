@@ -499,7 +499,7 @@ class TensorboardVisBackend(BaseVisBackend):
         >>> from mmengine.visualization import TensorboardVisBackend
         >>> import numpy as np
         >>> vis_backend = TensorboardVisBackend(save_dir='temp_dir')
-        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> vis_backend.add_image('img', img)
         >>> vis_backend.add_scaler('mAP', 0.6)
         >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
