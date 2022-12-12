@@ -83,7 +83,7 @@ If three sources have the same field, the source with the highest priority deter
 
 - `get subset` (optional): Sample a subset of dataset based on a given index or an integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
 
-- `serialize data` (optional): Serialize all data samples to save memory. Please see [Save memory](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html#save-memory) for more details. we serialize all data samples by default.
+- `serialize data` (optional): Serialize all data samples to save memory. Please see [Save memory](#save-memory) for more details. we serialize all data samples by default.
 
 The `parse_data_info()` method in the BaseDataset is used to process a raw data info in the annotation file into one or more training/test data samples. The user needs to implement the `parse_data_info()` method if they want to customize dataset class.
 
