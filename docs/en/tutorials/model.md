@@ -113,7 +113,7 @@ class MMResNet50(BaseModel):
         elif mode == 'predict':
             return x, labels
 
-    # train_step, val_step and test_step have been implemented in BaseModel. we
+    # train_step, val_step and test_step have been implemented in BaseModel.
     # We list the equivalent code here for better understanding
     def train_step(self, data, optim_wrapper):
         data = self.data_preprocessor(data)
@@ -135,7 +135,7 @@ class MMResNet50(BaseModel):
 
 Now, you may have a deeper understanding of dataflow, and can answer the first question in [Runner and model](#runner-and-model).
 
-`BaseModel.train_step` implements the standard optimization standard, and if we want to customize a new optimization process, we can override it in the subclass. However, it is important to note that we need to make sure that `train_step` returns a loss dict.
+`BaseModel.train_step` implements the standard optimization, and if we want to customize a new optimization process, we can override it in the subclass. However, it is important to note that we need to make sure that `train_step` returns a loss dict.
 
 ## DataPreprocessor
 
@@ -155,7 +155,7 @@ The answer to the first question is that: `MMResNet50` inherit from `BaseModel`,
 class BaseDataPreprocessor(nn.Module):
     def forward(self, data, training=True):  # ignore the training parameter here
         # suppose data given by CIFAR10 is a tuple. Actually
-        # BaseDataPreprocessor could move varies type of data
+        # BaseDataPreprocessor could move various type of data
         # to target device.
         return tuple(_data.cuda() for _data in data)
 ```

@@ -56,6 +56,7 @@ extensions = [
 ]  # yapf: disable
 autodoc_typehints = 'description'
 myst_heading_anchors = 4
+myst_enable_extensions = ['colon_fence']
 
 # Configuration for intersphinx
 intersphinx_mapping = {
