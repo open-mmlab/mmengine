@@ -9,7 +9,7 @@ TTA 的核心实现通常分为两个部分：
 
 ## 快速上手
 
-一个简单的支持 TTA 的示例可以参考 [example/test_time_augmentation.md](https://github.com/open-mmlab/mmengine/blob/main/examples/test_timeaugmentation.py)
+一个简单的支持 TTA 的示例可以参考 [example/test_time_augmentation.py](https://github.com/open-mmlab/mmengine/blob/main/examples/test_time_augmentation.py)
 
 ### 准备 TTA 数据增强
 
@@ -36,7 +36,9 @@ tta_pipeline = [
 `BaseTTAModel` 需要对翻转前后的图片进行推理，并将结果融合。`merge_preds` 方法接受一列表，列表中每一个元素表示 batch 中的某个数据反复增强后的结果。例如 batch_size=3，我们对 batch 中的每张图片做翻转增强，`merge_preds` 接受的参数为：
 
 ```python
-# data_{i}_{j} 表示对第 i 张图片做第 j 种增强后的结果，例如 batch_size=3，那么 i 的# 取值范围为 0，1，2，增强方式有 2 种（翻转），那么 j 的取值范围为 0，1
+# data_{i}_{j} 表示对第 i 张图片做第 j 种增强后的结果，
+# 例如 batch_size=3，那么 i 的 取值范围为 0，1，2，
+# 增强方式有 2 种（翻转），那么 j 的取值范围为 0，1
 
 demo_results = [
     [data_0_0, data_0_1],
@@ -73,8 +75,8 @@ tta_model = dict(type='AverageClsScoreTTA')
 ### 改写测试脚本
 
 ```python
-    cfg.model = ConfigDict(**cfg.tta_model, module=cfg.model)
-    cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
+cfg.model = ConfigDict(**cfg.tta_model, module=cfg.model)
+cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
 ```
 
 ## 进阶使用
@@ -83,7 +85,7 @@ tta_model = dict(type='AverageClsScoreTTA')
 
 ### BaseTTAModel 和各组件的关系
 
-`BaseTTAModel` 是 `DDPWrapper` 和 `Model` 的中间层。在执行 `Runner.test()` 的过程中，会先执行 `DDPWrapper.test_step()`，然后执行 `TTAModel.test_step()`，最后在执行 `model.test_step()`：
+`BaseTTAModel` 是 `DDPWrapper` 和 `Model` 的中间层。在执行 `Runner.test()` 的过程中，会先执行 `DDPWrapper.test_step()`，然后执行 `TTAModel.test_step()`，最后再执行 `model.test_step()`：
 
 <div align=center><img src=https://user-images.githubusercontent.com/57566630/206969103-43ef8cb9-b649-4b38-a441-f489a41269b3.png></div>
 
