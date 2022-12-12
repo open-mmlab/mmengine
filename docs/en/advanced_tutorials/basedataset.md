@@ -83,13 +83,13 @@ If three sources have the same field, the source with the highest priority deter
 
 - `get subset` (optional): Sample a subset of dataset based on a given index or an integer value, such as only the first 10 samples for training/testing. By default, all data samples are used.
 
-- `serialize data` (optional): Serialize all data samples to save memory. Please see \[Save memory\](#Save memory) for more details. we serialize all data samples by default.
+- `serialize data` (optional): Serialize all data samples to save memory. Please see [Save memory](#save-memory) for more details. we serialize all data samples by default.
 
 The `parse_data_info()` method in the BaseDataset is used to process a raw data info in the annotation file into one or more training/test data samples. The user needs to implement the `parse_data_info()` method if they want to customize dataset class.
 
 ### The interface of BaseDataset
 
-Once the BaseDataset is initialized, it supports `__getitem__` method to index a data info and `__len__` method to get the length of dataset, just like 'torch.utils.data.Dataset'. The Basedataset provides the following interfaces:
+Once the BaseDataset is initialized, it supports `__getitem__` method to index a data info and `__len__` method to get the length of dataset, just like `torch.utils.data.Dataset`. The Basedataset provides the following interfaces:
 
 - `metainfo`: Return the meta information with a dictionary value.
 
@@ -107,9 +107,9 @@ Once the BaseDataset is initialized, it supports `__getitem__` method to index a
 
 We can customize the dataset class based on BaseDataset, after we understand the initialization process of BaseDataset and the provided interfaces of BaseDataset.
 
-### Annotation files that meet the OpenMMLab 2.0 data set format specification
+### Annotation files that meet the OpenMMLab 2.0 dataset format specification
 
-As mentioned above, users can overload `parse_data_info()` to load annotation files that meet the OpenMMLab 2.0 data set format specification. Here is an example of using BaseDataset to implement a specific dataset.
+As mentioned above, users can overload `parse_data_info()` to load annotation files that meet the OpenMMLab 2.0 dataset format specification. Here is an example of using BaseDataset to implement a specific dataset.
 
 ```python
 import os.path as osp
@@ -312,7 +312,7 @@ toy_dataset = ToyDataset(
     serialize_data=False)
 ```
 
-The above example does not store the `data_list` serialization into memory in advance, so it is not recommended to instantiate the dataset class, when using the data loader to open multiple dataloader workers to load the data.
+The above example does not store the `data_list` serialization into memory in advance, so it is not recommended to instantiate the dataset class, when using the dataloader to open multiple dataloader workers to load the data.
 
 ## DatasetWrappers
 
