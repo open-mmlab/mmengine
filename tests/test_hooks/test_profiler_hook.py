@@ -37,7 +37,6 @@ class TestProfilerHook(RunnerTestCase):
             'save_json':
             dict(
                 type='ProfilerHook',
-                priority='NORMAL',
                 json_trace_path=f'{self.temp_dir}/demo.json')
         }
         for name_config, custom_hooks in configs.items():
@@ -67,25 +66,19 @@ class TestProfilerHook(RunnerTestCase):
             'type':
             dict(type='ProfilerHook', on_trace_ready=0),
             'type_dict':
-            dict(
-                type='ProfilerHook',
-                priority='NORMAL',
-                on_trace_ready=dict(type='unknown')),
+            dict(type='ProfilerHook', on_trace_ready=dict(type='unknown')),
         }
         for name_config, custom_hooks in configs.items():
             with self.assertRaises(ValueError):
                 self.epoch_based_cfg['custom_hooks'] = [custom_hooks]
-            runner = self.build_runner(self.epoch_based_cfg)
-            runner.train()
-            del runner
+                runner = self.build_runner(self.epoch_based_cfg)
+                runner.train()
+                del runner
 
     @unittest.skipIf(not torch.cuda.is_available(), reason='required cuda')
     def test_cuda(self):
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                priority='NORMAL',
-                activity_with_cuda=True)
+            dict(type='ProfilerHook', activity_with_cuda=True)
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
