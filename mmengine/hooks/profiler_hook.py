@@ -96,7 +96,7 @@ class ProfilerHook(Hook):
             raise ValueError('profile_iters should be greater than 0, '
                              f'but got {profile_times}')
         if by_epoch and profile_times > 1:
-            warnings.warn(
+            raise ValueError(
                 f'Profiler will profile 0-{profile_times} epochs.\n'
                 'Since profiler will slow down the training, it is recommended'
                 ' to train 1 epoch with ProfilerHook and adjust your setting '
