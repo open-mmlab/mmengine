@@ -84,19 +84,16 @@ class BaseDataPreprocessor(nn.Module):
     def device(self):
         return self._device
 
-    def to(self, device: Optional[Union[int, torch.device]], *args,
-           **kwargs) -> nn.Module:
+    def to(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
-
-        Args:
-            device (int or torch.device, optional): The desired device of the
-                parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
-        self._device = torch.device(device)
-        return super().to(device)
+        device = torch._C._nn._parse_to(*args, **kwargs)[0]
+        if device is not None:
+            self._device = torch.device(device)
+        return super().to(*args, **kwargs)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`

@@ -235,4 +235,8 @@ System environment:
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
 
+基于 PyTorch 和基于 MMEngine 的训练流程对比如下：
+
+![output](https://user-images.githubusercontent.com/57566630/203142869-cfe5f855-f391-4fd4-a80c-beecf1bd111f.gif)
+
 除了以上基础组件，你还可以利用**执行器**轻松地组合配置各种训练技巧，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/evaluation.md)）等。

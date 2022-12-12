@@ -4,18 +4,18 @@ Welcome to the MMEngine community, we are committed to building a cutting-edge c
 
 **Fix bug**
 
-You can directly post a Pull Request to fix typo in code or documents
+You can directly post a Pull Request to fix typos in code or documents
 
 The steps to fix the bug of code implementation are as follows.
 
-1. If the modification involve significant changes, you should create an issue first and describe the error information and how to trigger the bug. Other developers will discuss with you and propose an proper solution.
+1. If the modification involves significant changes, you should create an issue first and describe the error information and how to trigger the bug. Other developers will discuss it with you and propose a proper solution.
 
-2. Posting a pull request after fixing the bug and adding corresponding unit test.
+2. Posting a pull request after fixing the bug and adding the corresponding unit test.
 
 **New Feature or Enhancement**
 
-1. If the modification involve significant changes, you should create an issue to discuss with our developers to propose an proper design.
-2. Post a Pull Request after implementing the new feature or enhancement and add corresponding unit test.
+1. If the modification involves significant changes, you should create an issue to discuss with our developers to propose a proper design.
+2. Post a Pull Request after implementing the new feature or enhancement and add the corresponding unit test.
 
 **Document**
 
@@ -23,7 +23,7 @@ You can directly post a pull request to fix documents. If you want to add a docu
 
 ### Pull Request Workflow
 
-If you're not familiar with Pull Request, don't worry! The following guidance will tell you how to create a Pull Request step by step. If you want to dive into the develop mode of Pull Request, you can refer to the [official documents](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-requests)
+If you're not familiar with Pull Request, don't worry! The following guidance will tell you how to create a Pull Request step by step. If you want to dive into the development mode of Pull Request, you can refer to the [official documents](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-requests).
 
 #### 1. Fork and clone
 
@@ -37,13 +37,13 @@ Then, you can clone the repositories to local:
 git clone git@github.com:{username}/mmengine.git
 ```
 
-After that, you should ddd official repository as the upstream repository
+After that, you should add the official repository as the upstream repository.
 
 ```bash
 git remote add upstream git@github.com:open-mmlab/mmengine
 ```
 
-Check whether remote repository has been added successfully by `git remote -v`
+Check whether the remote repository has been added successfully by `git remote -v`.
 
 ```bash
 origin	git@github.com:{username}/mmengine.git (fetch)
@@ -52,7 +52,9 @@ upstream	git@github.com:open-mmlab/mmengine (fetch)
 upstream	git@github.com:open-mmlab/mmengine (push)
 ```
 
-> Here's a brief introduction to origin and upstream. When we use "git clone", we create an "origin" remote by default, which points to the repository cloned from. As for "upstream", we add it ourselves to point to the target repository. Of course, if you don't like the name "upstream", you could name it as you wish. Usually, we'll push the code to "origin". If the pushed code conflicts with the latest code in official("upstream"), we should pull the latest code from upstream to resolve the conflicts, and then push to "origin" again. The posted Pull Request will be updated automatically.
+```{note}
+Here's a brief introduction to origin and upstream. When we use "git clone", we create an "origin" remote by default, which points to the repository cloned from. As for "upstream", we add it ourselves to point to the target repository. Of course, if you don't like the name "upstream", you could name it as you wish. Usually, we'll push the code to "origin". If the pushed code conflicts with the latest code in official("upstream"), we should pull the latest code from upstream to resolve the conflicts, and then push to "origin" again. The posted Pull Request will be updated automatically.
+```
 
 #### 2. Configure pre-commit
 
@@ -79,7 +81,7 @@ If the code does not conform to the code style specification, pre-commit will ra
 
 <img src="https://user-images.githubusercontent.com/57566630/202369176-67642454-0025-4023-a095-263529107aa3.png" width="1200">
 
-If we want to commit our code bypassing the pre-commit hook, we can use the `--no-verify` option(**only for temporarily commit**).
+If we want to commit our code bypassing the pre-commit hook, we can use the `--no-verify` option(**only for temporary committing**).
 
 ```shell
 git commit -m "xxx" --no-verify
@@ -125,7 +127,7 @@ We could push the local commits to remote after passing through the check of uni
 git push -u origin {branch_name}
 ```
 
-This will allow you to use the `git push` command to push code directly next time without specifying a branch or the remote repository.
+This will allow you to use the `git push` command to push code directly next time, without having to specify a branch or the remote repository.
 
 #### 6. Create a Pull Request
 

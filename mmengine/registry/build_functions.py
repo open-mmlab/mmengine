@@ -102,7 +102,7 @@ def build_from_cfg(
                     f'Please check whether the value of `{obj_type}` is '
                     'correct or it was registered as expected. More details '
                     'can be found at '
-                    'https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+                    'https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module'  # noqa: E501
                 )
         elif inspect.isclass(obj_type) or inspect.isfunction(obj_type):
             obj_cls = obj_type

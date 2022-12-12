@@ -1,19 +1,16 @@
-# 辅助类
+# 全局管理器（ManagerMixin）
 
-## 全局管理器（ManagerMixin）
-
-Runner 在训练过程中，难免会使用全局变量来共享信息，例如我们会在 model 中获取全局的 [logger](mmengine.logging.MMLogger) 来打印初始化信息；在 model 中获取全局的 [Visualizer](./visualization.md) 来可视化预测结果、特征图；在 [Registry](../tutorials/registry.md) 中获取全局的 [DefaultScope](mmengine.registry.DefaultScope) 来确定注册域。为了管理这些功能相似的模块，MMEngine 实现了管理器（ManagerMix）来统一全局变量的创建和获取方式。
+Runner 在训练过程中，难免会使用全局变量来共享信息，例如我们会在 model 中获取全局的 [logger](mmengine.logging.MMLogger) 来打印初始化信息；在 model 中获取全局的 [Visualizer](./visualization.md) 来可视化预测结果、特征图；在 [Registry](../tutorials/registry.md) 中获取全局的 [DefaultScope](mmengine.registry.DefaultScope) 来确定注册域。为了管理这些功能相似的模块，MMEngine 设计了管理器 [ManagerMix](mmengine.utils.ManagerMixin) 来统一全局变量的创建和获取方式。
 
 ![ManagerMixin](https://user-images.githubusercontent.com/57566630/163429552-3c901fc3-9cc1-4b71-82b6-d051f452a538.png)
 
-### 接口介绍
+## 接口介绍
 
-- \_instance_name：被创建的全局实例名
 - get_instance(name='', \*\*kwargs)：创建或者返回对应名字的的实例。
 - get_current_instance()：返回最近被创建的实例。
-- instance_name:：获取对应实例的 name。
+- instance_name：获取对应实例的 name。
 
-### 使用方法
+## 使用方法
 
 1. 定义有全局访问需求的类
 

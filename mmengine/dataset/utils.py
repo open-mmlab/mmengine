@@ -44,14 +44,15 @@ def pseudo_collate(data_batch: Sequence) -> Any:
     tensors.
 
     This code is referenced from:
-    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.  # noqa: E501
+    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.
+
     Args:
         data_batch (Sequence): Batch of data from dataloader.
 
     Returns:
         Any: Transversed Data in the same format as the data_itement of
         ``data_batch``.
-    """
+    """  # noqa: E501
     data_item = data_batch[0]
     data_item_type = type(data_item)
     if isinstance(data_item, (str, bytes)):
@@ -104,7 +105,7 @@ def default_collate(data_batch: Sequence) -> Any:
     not process ``BaseDataElement``.
 
     This code is referenced from:
-    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.  # noqa: E501
+    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.
 
     Note:
         ``default_collate`` only accept input tensor with the same shape.
@@ -116,7 +117,7 @@ def default_collate(data_batch: Sequence) -> Any:
         Any: Data in the same format as the data_itement of ``data_batch``, of which
         tensors have been stacked, and ndarray, int, float have been
         converted to tensors.
-    """
+    """  # noqa: E501
     data_item = data_batch[0]
     data_item_type = type(data_item)
 
