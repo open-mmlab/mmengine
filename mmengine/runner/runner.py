@@ -1674,6 +1674,34 @@ class Runner:
             self.model,
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
+        
+        # Use torch.compile to compile the wrapped model/function. Enable it by
+        # installing pytorch-nightly and changing the config file as follows:
+        #
+        # compile = dict(
+        #     target='train_step',  # (train_step, forward, model)
+        #     verbose=False,
+        #     backend='inductor',
+        #     mode='default',
+        #     # And more torch.compile arguments
+        # )
+        #
+        # WARN: This is just a temporary and experimental feature for debuging
+        # purposes and for users to have a try. APIs will change in the future.
+        # Errors may occur when enabled.
+        compile_cfg = self.cfg.get('compile', None)
+        if compile_cfg is not None:
+            target = compile_cfg.pop('target', 'train_step')
+            assert target in ('train_step', 'forward', 'model')
+            verbose = compile_cfg.pop('verbose', False)
+            import torch
+            import torch._dynamo.config
+            torch._dynamo.config.verbose = verbose
+            if target == 'model':
+                self.model = torch.compile(self.model, **compile_cfg)
+            else:
+                func = getattr(self.model, target)
+                setattr(self.model, target, torch.compile(func, **compile_cfg))
 
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
