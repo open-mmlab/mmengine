@@ -66,21 +66,22 @@ class DefaultOptimWrapperConstructor:
 
     Args:
         optim_wrapper_cfg (dict): The config dict of the optimizer wrapper.
-            Positional fields are
 
-                - ``type``: class name of the OptimizerWrapper
-                - ``optimizer``: The configuration of optimizer.
+            Required fields of ``optim_wrapper_cfg`` are
 
-            Optional fields are
+            - ``type``: class name of the OptimizerWrapper
+            - ``optimizer``: The configuration of optimizer.
 
-                - any arguments of the corresponding optimizer wrapper type,
-                  e.g., accumulative_counts, clip_grad, etc.
+            Optional fields of ``optim_wrapper_cfg`` are
 
-        The positional fields of ``optimizer`` are
+            - any arguments of the corresponding optimizer wrapper type,
+              e.g., accumulative_counts, clip_grad, etc.
+
+            Required fields of ``optimizer`` are
 
             - `type`: class name of the optimizer.
 
-        Optional fields are
+            Optional fields of ``optimizer`` are
 
             - any arguments of the corresponding optimizer type, e.g.,
               lr, weight_decay, momentum, etc.
