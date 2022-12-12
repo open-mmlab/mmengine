@@ -4,7 +4,7 @@ Memory capacity is critical in deep learning training and inference and determin
 
 - Gradient Accumulation
 
-  Gradient accumulation is the mechanism that runs at a configured number of steps accumulating the gradients instead of being updated on those steps, and then the network parameters are updated and the gradients are cleared. With this technique of delayed parameter update, the result is similar to those scenarios using a large batch size and the graphics memory can be saved. However, it should be noted that if the model contains a batch normalization layer, using gradient accumulation will impact performance.
+  Gradient accumulation is the mechanism that runs at a configured number of steps accumulating the gradients instead of updating parameters, after which the network parameters are updated and the gradients are cleared. With this technique of delayed parameter update, the result is similar to those scenarios using a large batch size, while the memory of activation can be saved. However, it should be noted that if the model contains a batch normalization layer, using gradient accumulation will impact performance.
 
 - Gradient Checkpointing
 
@@ -12,7 +12,7 @@ Memory capacity is critical in deep learning training and inference and determin
 
 - Large Model Training Techniques
 
-  Recent research has shown that training a large model would be helpful to improve performance, but training a model at such a scale requires huge resources, and it is hard to store the entire model for the memory of a single graphics card. Therefore large model training techniques, typically such as [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview) and the Fully Shared Data Parallel ([FSDP](https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/)) technique introduced in FairScale are introduced. These techniques allow slicing the parameters, gradients, and optimizer states among the parallel processes, while still maintaining the simplicity of the data parallelism.
+  Recent research has shown that training a large model would be helpful to improve performance, but training a model at such a scale requires huge resources, and it is hard to store the entire model in the memory of a single graphics card. Therefore large model training techniques, typically such as [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview) and the Fully Shared Data Parallel ([FSDP](https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/)) technique introduced in FairScale are introduced. These techniques allow slicing the parameters, gradients, and optimizer states among the parallel processes, while still maintaining the simplicity of the data parallelism.
 
 MMEngine now supports gradient accumulation and large model training FSDP techniques, and the usages are described as follows.
 
