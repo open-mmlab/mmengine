@@ -8,6 +8,7 @@ from mmengine.hooks import Hook
 from mmengine.registry import HOOKS, MODELS, RUNNERS
 
 
+# Only used for FSDP TTA.
 @HOOKS.register_module()
 class PrepareTTAHook(Hook):
     """Wraps `runner.model` with subclass of :class:`BaseTTAModel` in
@@ -33,7 +34,7 @@ class PrepareTTAHook(Hook):
 
 # Only used for FSDP TTA.
 def build_runner_with_tta(cfg: dict) -> 'Runner':
-    """Builds runner with tta(test time augmentation) transformation and
+    """Builds runner with tta (test time augmentation) transformation and
     TTAModel.
 
     Note:
@@ -47,10 +48,9 @@ def build_runner_with_tta(cfg: dict) -> 'Runner':
     """
     assert hasattr(
         cfg,
-        'tta_model'), ('make please sure your config define the tta_model')
+        'tta_model'), ('please make sure tta_model is defined in your config.')
     assert hasattr(cfg, 'tta_pipeline'), (
-        'make please sure your config define the tta_pipeline')
-    from mmengine.hooks import PrepareTTAHook
+        'please make sure tta_pipeline is defined in your config.')
     cfg['test_dataloader']['dataset']['pipeline'] = cfg['tta_pipeline']
 
     if 'runner_type' in cfg:

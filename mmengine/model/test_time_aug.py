@@ -70,9 +70,13 @@ class BaseTTAModel(BaseModel):
         :meth:`merge_preds` is an abstract method, all subclasses should
         implement it.
 
+    Warning:
+        If ``data_preprocessor`` is not None, it will overwrites the model's
+        ``data_preprocessor``.
+
     Args:
         module (dict or nn.Module): Tested model.
-        data_preprocessor (optional, :obj:`BaseDataPreprocessor`): If model
+        data_preprocessor (:obj:`BaseDataPreprocessor`, optional): If model
             does not define ``data_preprocessor``, it will be the default value
             for model.
     """
@@ -80,14 +84,14 @@ class BaseTTAModel(BaseModel):
     def __init__(
         self,
         module: Union[dict, nn.Module],
-        data_preprocessor: Optional[Union[dict, nn.Module]] = None,
+        data_preprocessor: Union[dict, nn.Module, None] = None,
     ):
         super().__init__()
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
             if data_preprocessor is not None:
-                module.setdefault('data_preprocessor', data_preprocessor)
+                module['data_preprocessor'] = data_preprocessor
             self.module = MODELS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
@@ -141,5 +145,7 @@ class BaseTTAModel(BaseModel):
                 data_samples: Optional[list] = None,
                 mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
         """``BaseTTAModel.forward`` should not be called."""
-        raise NotImplementedError('`BaseTTAModel.forward` should not '
-                                  'be called')
+        raise NotImplementedError(
+            '`BaseTTAModel.forward` will not be called during training or'
+            'testing, please call `test_step` instead. If you want to use'
+            '`BaseTTAModel.forward`, please implement this method')
