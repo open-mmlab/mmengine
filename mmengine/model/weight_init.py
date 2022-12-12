@@ -487,14 +487,15 @@ class PretrainedInit:
                 module,
                 self.checkpoint,
                 map_location=self.map_location,
-                strict=False)
+                strict=False,
+                logger='current')
         else:
             print_log(
                 f'load {self.prefix} in model from: {self.checkpoint}',
                 logger='current')
             state_dict = _load_checkpoint_with_prefix(
                 self.prefix, self.checkpoint, map_location=self.map_location)
-            load_state_dict(module, state_dict, strict=False)
+            load_state_dict(module, state_dict, strict=False, logger='current')
 
         if hasattr(module, '_params_init_info'):
             update_init_info(module, init_info=self._get_init_info())

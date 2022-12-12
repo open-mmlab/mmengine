@@ -107,10 +107,8 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         err_msg = '\n'.join(err_msg)
         if strict:
             raise RuntimeError(err_msg)
-        elif logger is not None:
-            logger.warning(err_msg)
         else:
-            print_log(err_msg, logger='current', level=logging.WARNING)
+            print_log(err_msg, logger=logger, level=logging.WARNING)
 
 
 def get_torchvision_models():
