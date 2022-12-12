@@ -36,6 +36,7 @@
    advanced_tutorials/logging.md
    advanced_tutorials/fileio.md
    advanced_tutorials/utils.md
+   advanced_tutorials/test_time_augmentation.md
 
 .. toctree::
    :maxdepth: 1
