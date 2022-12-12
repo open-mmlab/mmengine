@@ -41,7 +41,7 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
 
     Warnings:
         ``ZeroRedundancyOptimizer`` requires PyTorch >= 1.12 to enable param
-        param groups.
+        groups.
 
     Args:
         params (``Iterable``): an ``Iterable`` of :class:`torch.Tensor` s
