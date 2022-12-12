@@ -4,7 +4,7 @@ Hook programming is a programming pattern in which a mount point is set in one o
 
 ## Examples
 
-Here is an example of hook how works.
+Here is an example of how it works.
 
 ```python
 pre_hooks = [(print, 'hello')]
@@ -172,9 +172,9 @@ def main():
     call_hooks('after_run', hooks)
 ```
 
-In MMEngine, we encapsulates the training process into an executor (`Runner`). Besides initializing the environment, another function of the `Runner` is to call hooks at specific mount points to complete the customization logic. For more information about `Runner`, please read the [Runner documentation](../tutorials/runner.md).
+In MMEngine, we encapsulates the training process into an executor (`Runner`). The `Runner` calls hooks at specific mount points to complete the customization logic. For more information about `Runner`, please read the [Runner documentation](../tutorials/runner.md).
 
-To facilitate management, MMEngine defines mount points as methods and integrates them into [Base Hook](mmengine.hooks.Hook), we just need to inherit the base hook and implement custom logic at specific loci according to our needs, then register the hooks to the `Runner`. Those hooks will be called automatically.
+To facilitate management, MMEngine defines mount points as methods and integrates them into [Base Hook](mmengine.hooks.Hook). We just need to inherit the base hook and implement custom logic at specific location according to our needs, then register the hooks to the `Runner`. Those hooks will be called automatically.
 
 There are 22 mount points in the [Base Hook](mmengine.hooks.Hook).
 
