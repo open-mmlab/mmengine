@@ -22,48 +22,51 @@ def check_kineto() -> bool:
 
 @HOOKS.register_module()
 class ProfilerHook(Hook):
-    """ProfilerHook to analyze performance during training.
+    """A hook to analyze performance during training and inference.
 
     PyTorch Profiler is a tool that allows the collection of the performance
     metrics during the training. More details on Profiler can be found at
-    https://pytorch.org/docs/1.13.1/profiler.html#torch.profiler.profile
+    `official docs
+    <https://pytorch.org/docs/1.13.1/profiler.html#torch.profiler.profile>`_
 
     Args:
         by_epoch (bool): Profile performance by epoch or by iteration.
-            Default: True.
+            Default to True.
         profile_times (int): The period (epoch/iter) recorded by the profiler.
             Eg: profile_iters=10 and by_epoch=False, record 0-10 iteration.
-            Default: 1.
+            Default to 1.
         activity_with_cpu (bool): Activities to be used in the analysis (CPU)
         activity_with_cuda (bool): Activities to be used in the analysis (CUDA)
-        schedule (dict, optional): Config of generating the callable schedule.
-            The dict can include wait、warmup、active、repeat、skip_first.
-            Default: None, mean not add step markers
+        schedule (dict, optional): Key-word arguments passed to
+            `torch.profile.schedule
+    <https://pytorch.org/docs/stable/profiler.html#torch.profiler.schedule>`_.
+            Defaults to None, which means profiling without a schedule
         on_trace_ready (callable, dict, optional): Either a handler or a dict
             of generate handler.
             [Terminal] dict(type='log_trace')
             [Tensorboard] dict(type='tb_trace', **trace_cfg)
                 trace_cfg include dir_name、worker_name、use_gzip
                 dir_name default to "{work_dir}/tf_tracing_logs".
-            Default: None, mean
+            Default to None, which mean profiling without a on_trace_ready.
         record_shapes (bool): Save information about operator's input shapes.
-            Default: False.
+            Default to False.
         profile_memory (bool): Track tensor memory allocation/deallocation.
-            Default: False.
+            Default to False.
         with_stack (bool): Record source information (file and line number)
             for the ops.
-            Default: False.
+            Default to False.
         with_flops (bool): Use formula to estimate the FLOPS of specific
             operators (matrix multiplication and 2D convolution).
-            Default: False.
+            Default to False.
         json_trace_path (str, optional): Exports the collected trace in Chrome
             JSON format. Chrome use 'chrome://tracing' view json file.
-            Default: None, mean don't save json.
+            Default to None, which mean profiling does not store json files.
     Examples:
         >>> # tensorboard trace
         >>> trace_config = dict(type='tb_trace', dir_name='work_dir')
         >>> profiler_hook_cfg = dict(on_trace_ready=trace_config)
     """
+    priority = 'VERY_LOW'
 
     def __init__(self,
                  by_epoch: bool = True,
@@ -121,22 +124,21 @@ class ProfilerHook(Hook):
         self.with_flops = with_flops
 
         self.json_trace_path = json_trace_path
-        pass
 
     @master_only
     def before_run(self, runner):
         """Initialize the profiler."""
-        _max_times = runner.max_epochs if self.by_epoch else runner.max_iters
-        if _max_times < self.profile_times:
+        max_times = runner.max_epochs if self.by_epoch else runner.max_iters
+        if max_times < self.profile_times:
             raise ValueError(
-                f'``profile_iters`` should not be greater than {_max_times}')
+                f'``profile_times`` should not be greater than {max_times}')
 
-        _on_trace_ready = self._parse_on_trace_ready(runner)
+        on_trace_ready = self._parse_on_trace_ready(runner)
 
         self.profiler = torch.profiler.profile(  # noqa
             activities=self.activities,
             schedule=self.schedule,
-            on_trace_ready=_on_trace_ready,
+            on_trace_ready=on_trace_ready,
             record_shapes=self.record_shapes,
             profile_memory=self.profile_memory,
             with_stack=self.with_stack,
@@ -183,7 +185,7 @@ class ProfilerHook(Hook):
 
                 if self.json_trace_path is not None:
                     self.json_trace_path = None
-                    warnings.warn(
+                    runner.logger.warn(
                         'json path conflicts, please set ``json_trace_path`` '
                         'to none when using ``tb_trace``')
                 _on_trace_ready = torch.profiler.tensorboard_trace_handler(

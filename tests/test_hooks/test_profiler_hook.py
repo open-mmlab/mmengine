@@ -5,7 +5,6 @@ import unittest
 import torch
 
 import mmengine.hooks
-from mmengine.hooks import ProfilerHook  # noqa
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed
 
@@ -22,7 +21,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_activity(self):
         self.epoch_based_cfg['custom_hooks'] = [
@@ -33,7 +31,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_iter(self):
         self.epoch_based_cfg['custom_hooks'] = [
@@ -41,7 +38,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_multiple_epoch(self):
         with self.assertWarns(Warning):
@@ -54,7 +50,6 @@ class TestProfilerHook(RunnerTestCase):
             ]
             runner = self.build_runner(self.epoch_based_cfg)  # noqa
             runner.train()
-        pass
 
     def test_multiple_iter(self):
         with self.assertRaises(ValueError):
@@ -67,7 +62,6 @@ class TestProfilerHook(RunnerTestCase):
             ]
             runner = self.build_runner(self.epoch_based_cfg)  # noqa
             runner.train()
-        pass
 
     def test_profile_times(self):
         with self.assertRaises(ValueError):
@@ -76,10 +70,8 @@ class TestProfilerHook(RunnerTestCase):
             ]
             runner = self.build_runner(self.epoch_based_cfg)  # noqa
             runner.train()
-        pass
 
-    @unittest.skipIf(
-        not torch.cuda.is_available(), reason='required tensorboard')
+    @unittest.skipIf(not torch.cuda.is_available(), reason='required cuda')
     def test_cuda(self):
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
@@ -89,7 +81,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_schedule(self):
         self.epoch_based_cfg['custom_hooks'] = [
@@ -100,7 +91,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_table(self):
         # torch.autograd.profiler_util.EventList -> table
@@ -115,7 +105,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_json(self):
         self.epoch_based_cfg['custom_hooks'] = [
@@ -126,7 +115,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     @unittest.skipIf(
         not is_installed('tensorboard'), reason='required tensorboard')
@@ -159,7 +147,6 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)  # noqa
         runner.train()
-        pass
 
     def test_on_trace_ready(self):
         with self.assertRaises(ValueError):
@@ -178,4 +165,3 @@ class TestProfilerHook(RunnerTestCase):
             ]
             runner = self.build_runner(self.epoch_based_cfg)  # noqa
             runner.train()
-        pass
