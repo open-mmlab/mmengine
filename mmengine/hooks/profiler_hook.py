@@ -10,7 +10,7 @@ from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
 
 
-def check_kineto() -> bool:
+def check_kineto() -> bool:  # noqa
     kineto_exist = False
     try:
         if torch.autograd.kineto_available():
@@ -43,7 +43,9 @@ class ProfilerHook(Hook):
             Defaults to None, which means profiling without a schedule
         on_trace_ready (callable, dict, optional): Either a handler or a dict
             of generate handler.
-            [Terminal] dict(type='log_trace')
+            [callable] A function that handles torch.autograd.profiler.profile
+            [Terminal] dict(type='log_trace') Key-word arguments passed to
+                torch.autograd.profiler_util.py EventList.table()
             [Tensorboard] dict(type='tb_trace', **trace_cfg)
                 trace_cfg include dir_name、worker_name、use_gzip
                 dir_name default to "{work_dir}/tf_tracing_logs".
@@ -69,6 +71,7 @@ class ProfilerHook(Hook):
     priority = 'VERY_LOW'
 
     def __init__(self,
+                 *,
                  by_epoch: bool = True,
                  profile_times: int = 1,
                  activity_with_cpu: bool = True,
@@ -105,6 +108,10 @@ class ProfilerHook(Hook):
                 'you may disable the ProfilerHook.')
         self.profile_times = profile_times
 
+        assert isinstance(activity_with_cpu, bool), \
+            '``activity_with_cpu`` should be a boolean.'
+        assert isinstance(activity_with_cuda, bool), \
+            '``activity_with_cuda`` should be a boolean.'
         self.activities = []
         if activity_with_cpu:
             self.activities.append(profiler.ProfilerActivity.CPU)
@@ -133,7 +140,7 @@ class ProfilerHook(Hook):
             raise ValueError(
                 f'``profile_times`` should not be greater than {max_times}')
 
-        on_trace_ready = self._parse_on_trace_ready(runner)
+        on_trace_ready = self._parse_trace_config(runner)
 
         self.profiler = torch.profiler.profile(  # noqa
             activities=self.activities,
@@ -147,7 +154,7 @@ class ProfilerHook(Hook):
         self.profiler.__enter__()
         runner.logger.info('profiler is profiling...')
 
-    def _parse_on_trace_ready(self, runner):
+    def _parse_trace_config(self, runner):
         """Used to parse the parameter 'on_trace_ready'."""
         if self.on_trace_ready is None:
             _on_trace_ready = None
@@ -160,8 +167,8 @@ class ProfilerHook(Hook):
             # Build a log printing handle
             if trace_type == 'log_trace':
 
-                def _log_handler(prof):
-                    print(prof.key_averages().table(**trace_cfg))
+                def _log_handler(_profile):
+                    print(_profile.key_averages().table(**trace_cfg))
 
                 _on_trace_ready = _log_handler
 
@@ -178,16 +185,14 @@ class ProfilerHook(Hook):
                 elif not osp.isabs(trace_cfg['dir_name']):
                     trace_cfg['dir_name'] = osp.join(runner.work_dir,
                                                      trace_cfg['dir_name'])
-
-                runner.logger.info(
-                    'tracing files of ProfilerHook will be saved to '
-                    f"{trace_cfg['dir_name']}.")
+                runner.logger.info('trace_files of ProfilerHook will be '
+                                   f'saved to {trace_cfg["dir_name"]}.')
 
                 if self.json_trace_path is not None:
-                    self.json_trace_path = None
                     runner.logger.warn(
-                        'json path conflicts, please set ``json_trace_path`` '
-                        'to none when using ``tb_trace``')
+                        'When using tensorboard_trace, it is recommended to '
+                        'save json files by setting ``worker_name`` instead of'
+                        ' setting ``json_trace_path``')
                 _on_trace_ready = torch.profiler.tensorboard_trace_handler(
                     **trace_cfg)
             else:
