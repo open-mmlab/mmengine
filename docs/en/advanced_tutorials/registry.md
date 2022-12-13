@@ -263,7 +263,7 @@ print(output)
 
 ### Use the module of a sibling node
 
-In addition to using the module of the parent node, users can also call the module of a sibling node.
+In addition to using the module of the parent nodes, users can also call the module of a sibling node.
 
 Suppose there is another project called `MMBeta`, which, like `MMAlpha`, defines `MODELS` and set its parent node to `MMEngine`.
 
