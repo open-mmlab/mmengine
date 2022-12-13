@@ -250,7 +250,7 @@ model = MODELS.build(cfg=dict(type='RReLU', lower=0.2))
 model = MODELS.build(cfg=dict(type='mmengine.RReLU'))
 ```
 
-If no prefix is added, the `build` method will first find out if the module exists in the current node and return it if there is one. Otherwise it will continue to look up the parent node or even the ancestor node until it finds the module. If the same module exists in both the current node and the parent node, we need to specify the `scope` prefix to indicate that we want to use the module of the parent node.
+If no prefix is added, the `build` method will first find out if the module exists in the current node and return it if there is one. Otherwise, it will continue to look up the parent nodes or even the ancestor node until it finds the module. If the same module exists in both the current node and the parent nodes, we need to specify the `scope` prefix to indicate that we want to use the module of the parent nodes.
 
 ```python
 import torch
