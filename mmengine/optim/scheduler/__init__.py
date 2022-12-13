@@ -18,7 +18,6 @@ from .param_scheduler import (ConstantParamScheduler,
                               StepParamScheduler, _ParamScheduler)
 
 # yapf: enable
-
 __all__ = [
     'ConstantLR',
     'CosineAnnealingLR',

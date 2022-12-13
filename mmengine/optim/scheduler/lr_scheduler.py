@@ -1,10 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.registry import PARAM_SCHEDULERS
-from .param_scheduler import (
-    ConstantParamScheduler, CosineAnnealingParamScheduler,
-    CosineRestartParamScheduler, ExponentialParamScheduler,
-    LinearParamScheduler, MultiStepParamScheduler, OneCycleParamScheduler,
-    PolyParamScheduler, ReduceOnPlateauParamScheduler, StepParamScheduler)
+# yapf: disable
+from .param_scheduler import (ConstantParamScheduler,
+                              CosineAnnealingParamScheduler,
+                              CosineRestartParamScheduler,
+                              ExponentialParamScheduler, LinearParamScheduler,
+                              MultiStepParamScheduler, OneCycleParamScheduler,
+                              PolyParamScheduler,
+                              ReduceOnPlateauParamScheduler,
+                              StepParamScheduler)
+
+# yapf: enable
 
 
 class LRSchedulerMixin:

@@ -1448,7 +1448,6 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         return self.cooldown_counter > 0
 
     def is_better(self, a, best):
-        # TODO maybe to add map instead of if else to judge
         if self.rule == 'min' and self.threshold_rule == 'rel':
             rel_epsilon = 1. - self.threshold
             return a < best * rel_epsilon
