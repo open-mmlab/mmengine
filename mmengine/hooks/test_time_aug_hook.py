@@ -43,6 +43,10 @@ def build_runner_with_tta(cfg: dict) -> 'Runner':
     Args:
         cfg (dict): cfg with ``tta_pipeline`` and ``tta_model``
 
+    Notes:
+        This is only a temporary solution. We could refactor the code in the
+        future.
+
     Returns:
         Runner: Runner with tta transformation and TTAModel
     """
