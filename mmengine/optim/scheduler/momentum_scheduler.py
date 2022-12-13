@@ -1,11 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.registry import PARAM_SCHEDULERS
-from .param_scheduler import (ConstantParamScheduler,
-                              CosineAnnealingParamScheduler,
-                              CosineRestartParamScheduler,
-                              ExponentialParamScheduler, LinearParamScheduler,
-                              MultiStepParamScheduler, PolyParamScheduler,
-                              StepParamScheduler, ReduceOnPlateauParamScheduler)
+from .param_scheduler import (
+    ConstantParamScheduler, CosineAnnealingParamScheduler,
+    CosineRestartParamScheduler, ExponentialParamScheduler,
+    LinearParamScheduler, MultiStepParamScheduler, PolyParamScheduler,
+    ReduceOnPlateauParamScheduler, StepParamScheduler)
 
 
 class MomentumSchedulerMixin:
@@ -284,5 +283,6 @@ class CosineRestartMomentum(MomentumSchedulerMixin,
 
 
 @PARAM_SCHEDULERS.register_module()
-class ReduceOnPlateauMomentum(MomentumSchedulerMixin, ReduceOnPlateauParamScheduler):
+class ReduceOnPlateauMomentum(MomentumSchedulerMixin,
+                              ReduceOnPlateauParamScheduler):
     """"""

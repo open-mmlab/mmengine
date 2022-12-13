@@ -11,10 +11,9 @@ from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         MultiStepLR, MultiStepMomentum,
                         MultiStepParamScheduler, OneCycleLR,
                         OneCycleParamScheduler, PolyLR, PolyMomentum,
-                        PolyParamScheduler, StepLR, StepMomentum,
-                        StepParamScheduler,
-                        ReduceOnPlateauLR, ReduceOnPlateauMomentum,
-                        ReduceOnPlateauParamScheduler,
+                        PolyParamScheduler, ReduceOnPlateauLR,
+                        ReduceOnPlateauMomentum, ReduceOnPlateauParamScheduler,
+                        StepLR, StepMomentum, StepParamScheduler,
                         _ParamScheduler)
 
 # yapf: enable

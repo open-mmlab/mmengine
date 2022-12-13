@@ -2,21 +2,20 @@
 # yapf: disable
 from .lr_scheduler import (ConstantLR, CosineAnnealingLR, CosineRestartLR,
                            ExponentialLR, LinearLR, MultiStepLR, OneCycleLR,
-                           PolyLR, StepLR, ReduceOnPlateauLR)
+                           PolyLR, ReduceOnPlateauLR, StepLR)
 from .momentum_scheduler import (ConstantMomentum, CosineAnnealingMomentum,
                                  CosineRestartMomentum, ExponentialMomentum,
                                  LinearMomentum, MultiStepMomentum,
-                                 PolyMomentum, StepMomentum,
-                                 ReduceOnPlateauMomentum)
+                                 PolyMomentum, ReduceOnPlateauMomentum,
+                                 StepMomentum)
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, OneCycleParamScheduler,
                               PolyParamScheduler,
-                              StepParamScheduler,
                               ReduceOnPlateauParamScheduler,
-                              _ParamScheduler)
+                              StepParamScheduler, _ParamScheduler)
 
 # yapf: enable
 
