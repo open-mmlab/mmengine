@@ -786,7 +786,11 @@ class TestZeroOptimizer(MultiProcessTestCase):
         self.base_wd = 0.9
 
         # test build function
-        paramwise_cfg = dict(conv1_lr_mult=1)
+        paramwise_cfg = dict(
+            custom_keys={
+                'conv1': dict(lr_mult=0.0, decay_mult=0.0),
+                'conv2': dict(lr_mult=1.0, decay_mult=2.0)
+            })
         optim_wrapper_cfg = dict(
             optimizer=dict(
                 type='ZeroRedundancyOptimizer',
