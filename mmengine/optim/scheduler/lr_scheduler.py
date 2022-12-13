@@ -317,4 +317,4 @@ class CosineRestartLR(LRSchedulerMixin, CosineRestartParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class ReduceOnPlateauLR(LRSchedulerMixin, ReduceOnPlateauParamScheduler):
-    """"""
+    """ReduceOnPlateauLR."""

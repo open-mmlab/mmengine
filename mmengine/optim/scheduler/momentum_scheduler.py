@@ -285,4 +285,4 @@ class CosineRestartMomentum(MomentumSchedulerMixin,
 @PARAM_SCHEDULERS.register_module()
 class ReduceOnPlateauMomentum(MomentumSchedulerMixin,
                               ReduceOnPlateauParamScheduler):
-    """"""
+    """ReduceOnPlateauMomentum."""

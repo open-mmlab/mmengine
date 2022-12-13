@@ -223,6 +223,7 @@ class _ParamScheduler:
 
 @PARAM_SCHEDULERS.register_module()
 class ReduceOnPlateauParamScheduler(_ParamScheduler):
+    """ReduceOnPlateauParamScheduler."""
     _default_monitor_stages = ['val']
 
     def __init__(
