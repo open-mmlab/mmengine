@@ -12,8 +12,6 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
