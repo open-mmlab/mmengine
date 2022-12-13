@@ -743,10 +743,16 @@ class TestZeroOptimizer(MultiProcessTestCase):
         self.assertTrue(
             all(param in params_set for param_group in param_groups
                 for param in param_group['params']))
+        state_dict = optimizer.state_dict()
+        if torch.distributed.get_rank() == 0:
+            self.assertEqual(
+                sum(len(pg['params']) for pg in state_dict['param_groups']),
+                len(params_set))
+        else:
+            self.assertEqual(state_dict, {})
 
-    def test_build_zero_redundancy_optimizer(self):
+    def test_zero_redundancy_optimizer(self):
         self._init_dist_env(self.rank, self.world_size)
-        from mmengine.optim.optimizer import ZeroRedundancyOptimizer
         model = ExampleModel()
         self.base_lr = 0.01
         self.momentum = 0.0001
@@ -761,7 +767,6 @@ class TestZeroOptimizer(MultiProcessTestCase):
                 weight_decay=self.base_wd,
                 momentum=self.momentum))
         optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
-        self.assertIsInstance(optim_wrapper.optimizer, ZeroRedundancyOptimizer)
         self._check_default_optimizer(optim_wrapper.optimizer, model)
 
         # test build optimizer without ``optimizer_type``
@@ -777,9 +782,8 @@ class TestZeroOptimizer(MultiProcessTestCase):
     @unittest.skipIf(
         digit_version(TORCH_VERSION) < digit_version('1.12.0'),
         reason='ZeRO started to support param groups since pytorch 1.12.0')
-    def test_build_zero_redundancy_optimizer_with_paramwise_cfg(self):
+    def test_zero_redundancy_optimizer_with_paramwise_cfg(self):
         self._init_dist_env(self.rank, self.world_size)
-        from mmengine.optim.optimizer import ZeroRedundancyOptimizer
         model = ExampleModel()
         self.base_lr = 0.01
         self.momentum = 0.0001
@@ -800,7 +804,6 @@ class TestZeroOptimizer(MultiProcessTestCase):
                 momentum=self.momentum),
             paramwise_cfg=paramwise_cfg)
         optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
-        self.assertIsInstance(optim_wrapper.optimizer, ZeroRedundancyOptimizer)
         self._check_default_optimizer(optim_wrapper.optimizer, model)
 
     def _init_dist_env(self, rank, world_size):
