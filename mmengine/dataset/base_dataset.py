@@ -420,7 +420,7 @@ class BaseDataset(Dataset):
         """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
-        <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
+        <https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html>`_ .
         The subclass must override this method for load annotations. The meta
         information of annotation file will be overwritten :attr:`METAINFO`
         and ``metainfo`` argument of constructor.

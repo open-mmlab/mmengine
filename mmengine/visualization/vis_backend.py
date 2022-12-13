@@ -498,14 +498,13 @@ class TensorboardVisBackend(BaseVisBackend):
     Examples:
         >>> from mmengine.visualization import TensorboardVisBackend
         >>> import numpy as np
-        >>> tensorboard_vis_backend = \
-        >>>     TensorboardVisBackend(save_dir='temp_dir')
-        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
-        >>> tensorboard_vis_backend.add_image('img', img)
-        >>> tensorboard_vis_backend.add_scaler('mAP', 0.6)
-        >>> tensorboard_vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> vis_backend = TensorboardVisBackend(save_dir='temp_dir')
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
+        >>> vis_backend.add_image('img', img)
+        >>> vis_backend.add_scaler('mAP', 0.6)
+        >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        >>> tensorboard_vis_backend.add_config(cfg)
+        >>> vis_backend.add_config(cfg)
 
     Args:
         save_dir (str): The root directory to save the files

@@ -51,8 +51,8 @@ MMEngine 将训练过程中涉及的组件和它们的关系进行了抽象，�
 
 MMEngine 中还实现了各种算法模型执行过程中需要用到的公共基础模块，包括
 
-- [配置类（Config）](../tutorials/config.md)：在 OpenMMLab 算法库中，用户可以通过编写 config 来配置训练、测试过程以及相关的组件。
-- [注册器（Registry）](../tutorials/registry.md)：负责管理算法库中具有相同功能的模块。MMEngine 根据对算法库模块的抽象，定义了一套根注册器，算法库中的注册器可以继承自这套根注册器，实现模块的跨算法库调用。
+- [配置类（Config）](../advanced_tutorials/config.md)：在 OpenMMLab 算法库中，用户可以通过编写 config 来配置训练、测试过程以及相关的组件。
+- [注册器（Registry）](../advanced_tutorials/registry.md)：负责管理算法库中具有相同功能的模块。MMEngine 根据对算法库模块的抽象，定义了一套根注册器，算法库中的注册器可以继承自这套根注册器，实现模块的跨算法库调用。
 - [文件读写（File I/O）](../tutorials/fileio.md)：为各个模块的文件读写提供了统一的接口，以统一的形式支持了多种文件读写后端和多种文件格式，并具备扩展性。
 - [分布式通信原语（Distributed Communication Primitives）](../tutorials/distributed.md)：负责在程序分布式运行过程中不同进程间的通信。这套接口屏蔽了分布式和非分布式环境的区别，同时也自动处理了数据的设备和通信后端。
 - [其他工具（Utils）](../tutorials/utils.md)：还有一些工具性的模块，如 ManagerMixin，它实现了一种全局变量的创建和获取方式，执行器内很多全局可见对象的基类就是 ManagerMixin。

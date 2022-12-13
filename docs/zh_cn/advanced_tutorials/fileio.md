@@ -189,7 +189,7 @@ torch.save(checkpoint, filepath1)
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
-在 `mmengine` 中，得益于多文件存储后端的支持，不同存储形式的权重文件读写可以通过
+在 `MMEngine` 中，得益于多文件存储后端的支持，不同存储形式的权重文件读写可以通过
 `load_checkpoint` 和 `save_checkpoint` 来统一实现。
 
 ```python
