@@ -5,7 +5,8 @@ from .param_scheduler import (ConstantParamScheduler,
                               CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, OneCycleParamScheduler,
-                              PolyParamScheduler, StepParamScheduler)
+                              PolyParamScheduler, StepParamScheduler,
+                              ReduceOnPlateauParamScheduler)
 
 
 class LRSchedulerMixin:
@@ -314,3 +315,8 @@ class CosineRestartLR(LRSchedulerMixin, CosineRestartParamScheduler):
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """
+
+
+@PARAM_SCHEDULERS.register_module()
+class ReduceOnPlateauLR(LRSchedulerMixin, ReduceOnPlateauParamScheduler):
+    """"""

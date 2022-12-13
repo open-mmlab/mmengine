@@ -5,7 +5,7 @@ from .param_scheduler import (ConstantParamScheduler,
                               CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, PolyParamScheduler,
-                              StepParamScheduler)
+                              StepParamScheduler, ReduceOnPlateauParamScheduler)
 
 
 class MomentumSchedulerMixin:
@@ -281,3 +281,8 @@ class CosineRestartMomentum(MomentumSchedulerMixin,
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
     """
+
+
+@PARAM_SCHEDULERS.register_module()
+class ReduceOnPlateauMomentum(MomentumSchedulerMixin, ReduceOnPlateauParamScheduler):
+    """"""
