@@ -47,7 +47,7 @@ __all__ = [
     'CosineRestartParamScheduler',
     'CosineRestartLR',
     'CosineRestartMomentum',
+    'ReduceOnPlateauParamScheduler',
     'ReduceOnPlateauLR',
     'ReduceOnPlateauMomentum',
-    'ReduceOnPlateauParamScheduler',
 ]
