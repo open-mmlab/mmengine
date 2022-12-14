@@ -151,10 +151,11 @@ class ProfilerHook(Hook):
             with_stack=self.with_stack,
             with_flops=self.with_flops)
 
-        try:
-            self.profiler.__enter__()
-        except RuntimeError:
-            runner.logger.info('Profiler is already enabled on this thread')
+        self.profiler.__enter__()
+        # try:
+        #     self.profiler.__enter__()
+        # except RuntimeError:
+        #     runner.logger.info('Profiler is already enabled on this thread')
         runner.logger.info('profiler is profiling...')
 
     def _parse_trace_config(self, runner):
