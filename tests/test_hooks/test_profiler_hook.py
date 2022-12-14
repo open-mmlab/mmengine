@@ -86,14 +86,17 @@ class TestProfilerHook(RunnerTestCase):
 
         hook = ProfilerHook()
         hook.before_run(runner)
+        hook.profiler.__exit__(None, None, None)
 
         with self.assertRaises(ValueError):
             hook = ProfilerHook(by_epoch=False, profile_times=10001)
             hook.before_run(runner)
+            hook.profiler.__exit__(None, None, None)
 
         with self.assertRaises(ValueError):
             hook = ProfilerHook(by_epoch=True, profile_times=1001)
             hook.before_run(runner)
+            hook.profiler.__exit__(None, None, None)
 
     def test_export_chrome_trace(self):
         runner = MagicMock()
