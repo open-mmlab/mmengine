@@ -4,13 +4,12 @@ import logging
 import unittest
 from unittest.mock import MagicMock
 
+import torch
+
 import mmengine.hooks
 from mmengine.hooks import ProfilerHook
 from mmengine.testing import RunnerTestCase
-
-# import torch
-
-# from mmengine.utils import is_installed
+from mmengine.utils import is_installed
 
 
 @unittest.skipIf(
@@ -54,30 +53,30 @@ class TestProfilerHook(RunnerTestCase):
             type='log_trace', sort_by='self_cpu_time_total', row_limit=10)
         hook._parse_trace_config(runner)
 
-    # @unittest.skipIf(
-    #     not is_installed('torch-tb-profiler'),
-    #     reason='required torch-tb-profiler')
-    # def test_parse_trace_config_tensorboard(self):
-    #     # Test on_trace_ready_args
-    #     runner = MagicMock()
-    #     runner.work_dir = '/tmp/tb'
-    #     runner.logger = logging
-    #     hook = ProfilerHook(on_trace_ready=None)
-    #
-    #     hook.on_trace_ready = dict(type='tb_trace')
-    #     hook._parse_trace_config(runner)
-    #
-    #     hook.on_trace_ready['dir_name'] = 'tb'
-    #     hook._parse_trace_config(runner)
-    #
-    #     hook.on_trace_ready['dir_name'] = '/tmp/tb'
-    #     hook._parse_trace_config(runner)
-    #
-    #     # with self.assertWarns(DeprecationWarning):
-    #     hook = ProfilerHook(
-    #         on_trace_ready=dict(type='tb_trace'),
-    #         json_trace_path=f'{self.temp_dir}/demo.json')
-    #     hook._parse_trace_config(runner)
+    @unittest.skipIf(
+        not is_installed('torch-tb-profiler'),
+        reason='required torch-tb-profiler')
+    def test_parse_trace_config_tensorboard(self):
+        # Test on_trace_ready_args
+        runner = MagicMock()
+        runner.work_dir = '/tmp/tb'
+        runner.logger = logging
+        hook = ProfilerHook(on_trace_ready=None)
+
+        hook.on_trace_ready = dict(type='tb_trace')
+        hook._parse_trace_config(runner)
+
+        hook.on_trace_ready['dir_name'] = 'tb'
+        hook._parse_trace_config(runner)
+
+        hook.on_trace_ready['dir_name'] = '/tmp/tb'
+        hook._parse_trace_config(runner)
+
+        # with self.assertWarns(DeprecationWarning):
+        hook = ProfilerHook(
+            on_trace_ready=dict(type='tb_trace'),
+            json_trace_path=f'{self.temp_dir}/demo.json')
+        hook._parse_trace_config(runner)
 
     def test_before_run(self):
         runner = MagicMock()
@@ -174,10 +173,10 @@ class TestProfilerHook(RunnerTestCase):
             runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
 
-    # @unittest.skipIf(not torch.cuda.is_available(), reason='required cuda')
-    # def test_with_runner_cuda(self):
-    #     self.epoch_based_cfg['custom_hooks'] = [
-    #         dict(type='ProfilerHook', activity_with_cuda=True)
-    #     ]
-    #     runner = self.build_runner(self.epoch_based_cfg)  # noqa
-    #     runner.train()
+    @unittest.skipIf(not torch.cuda.is_available(), reason='required cuda')
+    def test_with_runner_cuda(self):
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(type='ProfilerHook', activity_with_cuda=True)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)  # noqa
+        runner.train()
