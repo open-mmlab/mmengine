@@ -36,7 +36,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
                                VISUALIZERS, DefaultScope,
                                count_registered_modules)
-from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils import (deprecated_function, digit_version, get_git_hash,
+                            is_seq_of)
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
@@ -1607,23 +1608,24 @@ class Runner:
         if self._has_loaded:
             return None
 
-        # decide to load from checkpoint or resume from checkpoint
-        resume_from = None
-        if self._resume and self._load_from is None:
-            # auto resume from the latest checkpoint
-            resume_from = find_latest_checkpoint(self.work_dir)
+        if self._load_from is None:
+            # checkpoint path is auto inferred
+            ckpt_path = find_latest_checkpoint(self.work_dir)
             self.logger.info(
-                f'Auto resumed from the latest checkpoint {resume_from}.')
-        elif self._resume and self._load_from is not None:
-            # resume from the specified checkpoint
-            resume_from = self._load_from
+                f'Auto resumed from the latest checkpoint {ckpt_path}.')
+        else:
+            # checkpoint path is given by load_from
+            ckpt_path = self._load_from
 
-        if resume_from is not None:
-            self.resume(resume_from)
-            self._has_loaded = True
-        elif self._load_from is not None:
-            self.load_checkpoint(self._load_from)
-            self._has_loaded = True
+        # no checkpoint to load
+        if ckpt_path is None:
+            return None
+
+        resume_related = ['meta', 'optimizer', 'param_scheduler']
+        # whether these states should be loaded
+        kwargs = {f'resume_{k}': self._resume for k in resume_related}
+        self.resume(ckpt_path, resume_model=True, **kwargs)  # type: ignore
+        self._has_loaded = True
 
     def train(self) -> nn.Module:
         """Launch training.
@@ -1903,29 +1905,79 @@ class Runner:
 
     def resume(self,
                filename: str,
+               resume_meta: bool = True,
+               resume_model: bool = True,
                resume_optimizer: bool = True,
                resume_param_scheduler: bool = True,
-               map_location: Union[str, Callable] = 'default') -> None:
-        """Resume model from checkpoint.
+               map_location: Union[str, Callable] = 'default',
+               strict: bool = False,
+               revise_keys: list = [(r'^module.', '')],
+               custom_callbacks: List[Callable] = []) -> None:
+        """Resume everything from checkpoint once specified.
 
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+            resume_meta (bool): Whether to resume meta infos, currently
+                including 'meta' and 'message_hub'.
+                Defaults to True.
+            resume_model (bool): Whether to resume model state.
+                Defaults to True.
             resume_optimizer (bool): Whether to resume optimizer state.
                 Defaults to True.
             resume_param_scheduler (bool): Whether to resume param scheduler
-                state. Defaults to True.
-            map_location (str or callable):A string or a callable function to
+                state.
+                Defaults to True.
+            map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'default'.
+            strict (bool): whether to strictly enforce that the keys in
+                checkpoint's state_dict match the keys of the model. Only
+                take effect when ``resume_model=True``.
+                Default to False.
+            revise_keys (list, optional): A list of (pattrn, repl) pairs of
+                regex replacement to be applied to checkpoint's state_dict
+                before loaded to the model. Only take effect when
+                ``resume_model=True``.
+                Defaults to [(r'^module.', '')].
+            custom_callbacks (list): A list of callable as callback functions.
+                Each callback function will receive runner and checkpoint as
+                its arguments, i.e. invoked as func(runner, checkpoint)
+                Defaults to []
         """
-        if map_location == 'default':
-            device = get_device()
-            checkpoint = self.load_checkpoint(filename, map_location=device)
-        else:
-            checkpoint = self.load_checkpoint(
-                filename, map_location=map_location)
+        device = get_device() if map_location == 'default' else map_location
+        checkpoint = _load_checkpoint(filename, map_location=device)
+        self.logger.info(f'Load checkpoint from {filename}')
+        self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
+        # resume meta infos, i.e. messages stored by MMEngine like messagehub
+        if resume_meta:
+            self.resume_meta(checkpoint)
+
+        if resume_model:
+            self.resume_model(
+                checkpoint, strict=strict, revise_keys=revise_keys)
+
+        if resume_optimizer:
+            self.resume_optimizer(checkpoint)
+
+        if resume_param_scheduler:
+            self.resume_param_scheduler(checkpoint)
+
+        for callback in custom_callbacks:
+            callback(self, checkpoint)
+
+        self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
+        self._has_loaded = True
+
+    def resume_meta(self, checkpoint: dict):
+        """Resume meta infos, i.e. 'meta' and 'message_hub' from checkpoint.
+
+        Args:
+            checkpoint (dict): Loaded checkpoint.
+        """
+        assert 'meta' in checkpoint
+        assert 'message_hub' in checkpoint
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
 
@@ -1976,76 +2028,77 @@ class Runner:
 
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
-        # resume optimizer
-        if 'optimizer' in checkpoint and resume_optimizer:
-            self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
-            self.optim_wrapper.load_state_dict(  # type: ignore
-                checkpoint['optimizer'])
+    def resume_optimizer(self, checkpoint: dict):
+        """Resume optimizer state from checkpoint.
 
-        # resume param scheduler
-        if resume_param_scheduler and self.param_schedulers is None:
+        Args:
+            checkpoint (dict): Loaded checkpoint.
+        """
+        assert 'optimizer' in checkpoint
+        self.optim_wrapper = self.build_optim_wrapper(self.optim_wrapper)
+        self.optim_wrapper.load_state_dict(checkpoint['optimizer'])
+
+    def resume_param_scheduler(self, checkpoint: dict):
+        """Resume param scheduler state from checkpoint.
+
+        Args:
+            checkpoint (dict): Loaded checkpoint.
+        """
+        if self.param_schedulers is None:
             print_log(
                 '`resume_param_scheduler` is True but `self.param_schedulers` '
                 'is None, so skip resuming parameter schedulers',
                 logger='current',
                 level=logging.WARNING)
-            resume_param_scheduler = False
-        if 'param_schedulers' in checkpoint and resume_param_scheduler:
-            self.param_schedulers = self.build_param_scheduler(  # type: ignore
-                self.param_schedulers)  # type: ignore
-            if isinstance(self.param_schedulers, dict):
-                for name, schedulers in self.param_schedulers.items():
-                    for scheduler, ckpt_scheduler in zip(
-                            schedulers, checkpoint['param_schedulers'][name]):
-                        scheduler.load_state_dict(ckpt_scheduler)
-            else:
+            return
+
+        assert 'param_schedulers' in checkpoint
+        self.param_schedulers = self.build_param_scheduler(  # type: ignore
+            self.param_schedulers)  # type: ignore
+        if isinstance(self.param_schedulers, dict):
+            for name, schedulers in self.param_schedulers.items():
                 for scheduler, ckpt_scheduler in zip(
-                        self.param_schedulers,  # type: ignore
-                        checkpoint['param_schedulers']):
+                        schedulers, checkpoint['param_schedulers'][name]):
                     scheduler.load_state_dict(ckpt_scheduler)
+        else:
+            for scheduler, ckpt_scheduler in zip(
+                    self.param_schedulers, checkpoint['param_schedulers']):
+                scheduler.load_state_dict(ckpt_scheduler)
 
-        self._has_loaded = True
-
-        self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
-
-    def load_checkpoint(self,
-                        filename: str,
-                        map_location: Union[str, Callable] = 'cpu',
-                        strict: bool = False,
-                        revise_keys: list = [(r'^module.', '')]):
-        """Load checkpoint from given ``filename``.
+    def resume_model(self,
+                     checkpoint: dict,
+                     strict: bool = False,
+                     revise_keys: list = [(r'^module.', '')]):
+        """Resume model state from checkpoint.
 
         Args:
-            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
-                ``open-mmlab://xxx``.
-            map_location (str or callable): A string or a callable function to
-                specifying how to remap storage locations.
-                Defaults to 'cpu'.
-            strict (bool): strict (bool): Whether to allow different params for
-                the model and checkpoint.
-            revise_keys (list): A list of customized keywords to modify the
-                state_dict in checkpoint. Each item is a (pattern, replacement)
-                pair of the regular expression operations. Default: strip
-                the prefix 'module.' by [(r'^module\\.', '')].
+            checkpoint (dict): Loaded checkpoint.
+            strict (bool): whether to strictly enforce that the keys in
+                checkpoint's state_dict match the keys of the model.
+                Default to False.
+            revise_keys (list, optional): A list of (pattrn, repl) pairs of
+                regex replacement to be applied to checkpoint's state_dict
+                before loaded to the model.
+                Defaults to [(r'^module.', '')].
         """
-        checkpoint = _load_checkpoint(filename, map_location=map_location)
-
-        # Add comments to describe the usage of `after_load_ckpt`
-        self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
-
         if is_model_wrapper(self.model):
             model = self.model.module
         else:
             model = self.model
+        _load_checkpoint_to_model(
+            model, checkpoint, strict=strict, revise_keys=revise_keys)
 
-        checkpoint = _load_checkpoint_to_model(
-            model, checkpoint, strict, revise_keys=revise_keys)
-
-        self._has_loaded = True
-
-        self.logger.info(f'Load checkpoint from {filename}')
-
-        return checkpoint
+    @deprecated_function(
+        since='0.4.0',
+        removed_in='0.6.0',
+        instructions='`Runner.load_checkpoint` will be deprecated in the '
+        'future, please use `Runner.resume` without enabling resume from '
+        'meta, optimizer and param_scheduler.')
+    def load_checkpoint(self, filename: str, **kwargs):
+        resume_related = ['meta', 'optimizer', 'param_scheduler']
+        # whether these states should be loaded
+        kwargs.update({f'resume_{k}': False for k in resume_related})
+        return self.resume(filename, resume_model=True, **kwargs)
 
     @master_only
     def save_checkpoint(
