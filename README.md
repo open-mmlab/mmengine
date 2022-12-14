@@ -157,6 +157,7 @@ To validate and test the model, we need to define a **Metric** called accuracy t
 from mmengine.evaluator import BaseMetric
 
 class Accuracy(BaseMetric):
+    default_prefix = 'ACC'
     def process(self, data_batch, data_samples):
         score, gt = data_samples
         # Save the results of a batch to `self.results`
