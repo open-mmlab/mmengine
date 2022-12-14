@@ -117,6 +117,7 @@ class TestProfilerHook(RunnerTestCase):
 
         hook = ProfilerHook()
         hook.before_run(runner)
+        hook.profiler.__exit__(None, None, None)
 
         hook.profiler = MagicMock()
         hook.after_train_epoch(runner)
@@ -131,6 +132,7 @@ class TestProfilerHook(RunnerTestCase):
 
         hook = ProfilerHook(by_epoch=False, profile_times=10, schedule=None)
         hook.before_run(runner)
+        hook.profiler.__exit__(None, None, None)
 
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
@@ -141,6 +143,7 @@ class TestProfilerHook(RunnerTestCase):
             by_epoch=False,
             schedule=dict(wait=1, warmup=1, active=3, repeat=1))
         hook.before_run(runner)
+        hook.profiler.__exit__(None, None, None)
 
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
