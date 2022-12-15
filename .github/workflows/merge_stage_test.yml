@@ -93,7 +93,7 @@ jobs:
       - name: Run unittests and generate coverage report
         run: |
           if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
-            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
+            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
           else
             coverage run --branch --source mmengine -m pytest tests/
           fi
@@ -180,7 +180,7 @@ jobs:
       # Pytorch 1.13 sometimes raise an error when using TestDistWithGLOOBackend.
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/
           coverage xml
           coverage report -m
 
@@ -218,7 +218,7 @@ jobs:
       - name: Run unittests and generate coverage report
         run: |
           if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
-            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
+            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/
           else
             coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
           fi
