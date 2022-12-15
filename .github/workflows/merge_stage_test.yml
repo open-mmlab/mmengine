@@ -96,6 +96,7 @@ jobs:
             coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
           else
             coverage run --branch --source mmengine -m pytest tests/
+          fi
       # Only upload coverage report for python3.7 && pytorch1.8.1 cpu
       - name: Upload coverage to Codecov
         if: ${{matrix.torch == '1.8.1' && matrix.python-version == '3.7'}}
@@ -220,6 +221,7 @@ jobs:
             coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
           else
             coverage run --branch --source mmengine -m pytest tests/
+          fi
           coverage xml
           coverage report -m
 
