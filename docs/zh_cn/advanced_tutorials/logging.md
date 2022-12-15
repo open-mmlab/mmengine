@@ -97,12 +97,35 @@ log_processor 默认输出 `by_epoch=True` 格式的日志。日志格式需要�
 
 其中 `data_src` 为原日志名，`mean` 为统计方法，`global` 为统计方法的参数。这样的话，日志中统计的 `loss1` 就是全局均值。我们可以在日志处理器中配置以下统计方法：
 
-| 统计方法 | 参数        | 功能                   |
-| :------- | :---------- | :--------------------- |
-| mean     | window_size | 统计窗口内日志的均值   |
-| min      | window_size | 统计窗口内日志的最小值 |
-| max      | window_size | 统计窗口内日志的最大值 |
-| current  | /           | 返回最近一次更新的日志 |
+<table class="docutils">
+<thead>
+<tr>
+    <th>统计方法</th>
+    <th>参数</th>
+    <th>功能</th>
+</tr>
+<tr>
+    <td>mean</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的均值</td>
+</tr>
+<tr>
+    <td>min</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最小值</td>
+</tr>
+<tr>
+    <td>max</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最大值</td>
+</tr>
+<tr>
+    <td>current</td>
+    <td>/</td>
+    <td>返回最近一次更新的日志</td>
+</tr>
+</thead>
+</table>
 
 其中 `window_size` 的值可以是：
 
@@ -218,7 +241,7 @@ runner.train()
 通过调用[消息枢纽](mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
-2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
+2. 调用 `update_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
 3. 配置日志处理器，以均值的方式统计 `loss_tmp`。如果不配置，日志里显示 `loss_tmp` 最近一次更新的值。
 
 ## 输出调试日志
