@@ -180,10 +180,10 @@ class ProfilerHook(Hook):
                         'please run ``pip install torch-tb-profiler``')
 
                 if 'dir_name' not in trace_cfg:
-                    trace_cfg['dir_name'] = osp.join(runner.work_dir,
+                    trace_cfg['dir_name'] = osp.join(runner.log_dir,
                                                      'tf_tracing_logs')
                 elif not osp.isabs(trace_cfg['dir_name']):
-                    trace_cfg['dir_name'] = osp.join(runner.work_dir,
+                    trace_cfg['dir_name'] = osp.join(runner.log_dir,
                                                      trace_cfg['dir_name'])
                 runner.logger.info('trace_files of ProfilerHook will be '
                                    f'saved to {trace_cfg["dir_name"]}.')

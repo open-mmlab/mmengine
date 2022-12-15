@@ -60,7 +60,7 @@ class TestProfilerHook(RunnerTestCase):
     def test_parse_trace_config_tensorboard(self):
         # Test on_trace_ready_args
         runner = MagicMock()
-        runner.work_dir = self.temp_dir.name
+        runner.log_dir = self.temp_dir.name
         runner.logger = MMLogger.get_instance('test_profiler')
         hook = ProfilerHook(on_trace_ready=None)
 
