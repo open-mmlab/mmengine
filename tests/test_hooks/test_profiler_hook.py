@@ -79,6 +79,15 @@ class TestProfilerHook(RunnerTestCase):
             json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
         hook._parse_trace_config(runner)
 
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                on_trace_ready=dict(
+                    type='tb_trace', dir_name='/home/baymax/RunTime/tb'))
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
     def test_before_run(self):
         runner = MagicMock()
         runner.max_epochs = 1000
@@ -175,15 +184,6 @@ class TestProfilerHook(RunnerTestCase):
                     type='log_trace',
                     sort_by='self_cpu_time_total',
                     row_limit=10))
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)
-        runner.train()
-
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                on_trace_ready=dict(
-                    type='tb_trace', dir_name='/home/baymax/RunTime/tb'))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
