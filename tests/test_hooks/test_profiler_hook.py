@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-import logging
+import os.path as ops
 import unittest
 from unittest.mock import MagicMock
 
@@ -8,6 +8,7 @@ import torch
 
 import mmengine.hooks
 from mmengine.hooks import ProfilerHook
+from mmengine.logging import MMLogger
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed
 
@@ -59,8 +60,8 @@ class TestProfilerHook(RunnerTestCase):
     def test_parse_trace_config_tensorboard(self):
         # Test on_trace_ready_args
         runner = MagicMock()
-        runner.work_dir = '/tmp/tb'
-        runner.logger = logging
+        runner.work_dir = self.temp_dir.name
+        runner.logger = MMLogger.get_instance('test_profiler')
         hook = ProfilerHook(on_trace_ready=None)
 
         hook.on_trace_ready = dict(type='tb_trace')
@@ -69,20 +70,20 @@ class TestProfilerHook(RunnerTestCase):
         hook.on_trace_ready['dir_name'] = 'tb'
         hook._parse_trace_config(runner)
 
-        hook.on_trace_ready['dir_name'] = '/tmp/tb'
+        hook.on_trace_ready['dir_name'] = ops.join(self.temp_dir.name, 'tb')
         hook._parse_trace_config(runner)
 
         # with self.assertWarns(DeprecationWarning):
         hook = ProfilerHook(
             on_trace_ready=dict(type='tb_trace'),
-            json_trace_path=f'{self.temp_dir}/demo.json')
+            json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
         hook._parse_trace_config(runner)
 
     def test_before_run(self):
         runner = MagicMock()
         runner.max_epochs = 1000
         runner.max_iters = 10000
-        runner.logger = logging
+        runner.logger = MMLogger.get_instance('test_profiler')
 
         hook = ProfilerHook()
         hook.before_run(runner)
@@ -101,16 +102,17 @@ class TestProfilerHook(RunnerTestCase):
     def test_export_chrome_trace(self):
         runner = MagicMock()
         runner.max_epochs = 1000
-        runner.logger = logging
+        runner.logger = MMLogger.get_instance('test_profiler')
 
-        hook = ProfilerHook(json_trace_path=f'{self.temp_dir}/demo.json')
+        hook = ProfilerHook(
+            json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
         hook.before_run(runner)
         hook._export_chrome_trace(runner)
 
     def test_after_train_epoch(self):
         runner = MagicMock()
         runner.max_epochs = 1000
-        runner.logger = logging
+        runner.logger = MMLogger.get_instance('test_profiler')
 
         runner.epoch = 0
 
@@ -125,7 +127,7 @@ class TestProfilerHook(RunnerTestCase):
     def test_after_train_iter(self):
         runner = MagicMock()
         runner.max_iters = 10000
-        runner.logger = logging
+        runner.logger = MMLogger.get_instance('test_profiler')
 
         runner.iter = 9
 
@@ -149,22 +151,22 @@ class TestProfilerHook(RunnerTestCase):
         hook.profiler.step.assert_not_called()
 
     def test_with_runner(self):
-        configs: dict = {
-            'activity':
+        self.epoch_based_cfg['custom_hooks'] = [
             dict(
                 type='ProfilerHook',
                 activity_with_cpu=False,
-                activity_with_cuda=False),
-            'save_json':
-            dict(
-                type='ProfilerHook',
-                json_trace_path=f'{self.temp_dir}/demo.json')
-        }
-        for name_config, custom_hooks in configs.items():
-            self.epoch_based_cfg['custom_hooks'] = [custom_hooks]
-            runner = self.build_runner(self.epoch_based_cfg)
-            runner.train()
-            del runner
+                activity_with_cuda=False)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
+        json_path = ops.join(self.temp_dir.name, 'demo.json')
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(type='ProfilerHook', json_trace_path=json_path)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+        assert ops.exists(json_path), 'ERROR::json file is not generated!'
 
         with self.assertRaises(ValueError):
             self.epoch_based_cfg['custom_hooks'] = [
@@ -173,10 +175,9 @@ class TestProfilerHook(RunnerTestCase):
             runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
 
-    @unittest.skipIf(not torch.cuda.is_available(), reason='required cuda')
-    def test_with_runner_cuda(self):
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(type='ProfilerHook', activity_with_cuda=True)
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)  # noqa
-        runner.train()
+        if torch.cuda.is_available():
+            self.epoch_based_cfg['custom_hooks'] = [
+                dict(type='ProfilerHook', activity_with_cuda=True)
+            ]
+            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner.train()
