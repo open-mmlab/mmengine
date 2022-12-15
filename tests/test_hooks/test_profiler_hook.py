@@ -190,5 +190,5 @@ class TestProfilerHook(RunnerTestCase):
             self.epoch_based_cfg['custom_hooks'] = [
                 dict(type='ProfilerHook', activity_with_cuda=True)
             ]
-            runner = self.build_runner(self.epoch_based_cfg)  # noqa
+            runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
