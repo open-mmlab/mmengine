@@ -179,6 +179,15 @@ class TestProfilerHook(RunnerTestCase):
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='ProfilerHook',
+                on_trace_ready=dict(
+                    type='tb_trace', dir_name='/home/baymax/RunTime/tb'))
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
         with self.assertRaises(ValueError):
             self.epoch_based_cfg['custom_hooks'] = [
                 dict(type='ProfilerHook', on_trace_ready=0)
