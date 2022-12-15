@@ -175,9 +175,10 @@ jobs:
           mim install 'mmcv>=2.0.0rc1'
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
+      # Pytorch 1.13 sometimes raise an error when using TestDistWithGLOOBackend.
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
           coverage xml
           coverage report -m
 
@@ -211,9 +212,13 @@ jobs:
           pip install -r requirements/tests.txt
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
+        # Need to skip unit test for timer and progressbar because consumed time cannot be calculated accurately on MacOS
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/
+          if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
+            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
+          else
+            coverage run --branch --source mmengine -m pytest tests/
           coverage xml
           coverage report -m
 
