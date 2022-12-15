@@ -2100,7 +2100,8 @@ class Runner:
         kwargs.update({f'resume_{k}': False for k in resume_related})
         return self.resume(filename, resume_model=True, **kwargs)
 
-    @master_only
+    # ZeRO-like parallel methods require collecting states from all ranks, so
+    # this function should not be `master_only`
     def save_checkpoint(
         self,
         out_dir: str,
@@ -2136,21 +2137,6 @@ class Runner:
                 preifx of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
         """
-        if meta is None:
-            meta = {}
-        elif not isinstance(meta, dict):
-            raise TypeError(
-                f'meta should be a dict or None, but got {type(meta)}')
-
-        if by_epoch:
-            # self.epoch increments 1 after
-            # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
-            # called by `after_train_epoch`` method of `CheckpointHook` so
-            # `epoch` should be `self.epoch + 1`
-            meta.update(epoch=self.epoch + 1, iter=self.iter)
-        else:
-            meta.update(epoch=self.epoch, iter=self.iter + 1)
-
         if file_client_args is not None:
             warnings.warn(
                 '"file_client_args" will be deprecated in future. '
@@ -2166,6 +2152,45 @@ class Runner:
             filepath = join_path(  # type: ignore
                 out_dir, filename, backend_args=backend_args)
 
+        checkpoint = {}
+        checkpoint.update(self.collect_meta_checkpoint(meta, by_epoch))
+        checkpoint.update(self.collect_model_checkpoint())
+        if save_optimizer:
+            checkpoint.update(self.collect_optimizer_checkpoint())
+        if save_param_scheduler:
+            checkpoint.update(self.collect_param_scheduler_checkpoint())
+
+        self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
+        self.save_checkpoint_to_file(checkpoint, filepath)
+
+    def collect_meta_checkpoint(self, meta: Optional[Dict],
+                                by_epoch: bool) -> Dict:
+        """Collect meta information and return a partial checkpoint.
+
+        Args:
+            meta (dict, optional): The meta information to be saved in the
+                checkpoint. Defaults to None.
+            by_epoch (bool): Whether the scheduled momentum is updated by
+                epochs. Defaults to True.
+
+        Returns:
+            Dict: A partial checkpoint containing meta and message_hub.
+        """
+        if meta is None:
+            meta = {}
+        elif not isinstance(meta, dict):
+            raise TypeError(
+                f'meta should be a dict or None, but got {type(meta)}')
+
+        if by_epoch:
+            # self.epoch increments 1 after
+            # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
+            # called by `after_train_epoch`` method of `CheckpointHook` so
+            # `epoch` should be `self.epoch + 1`
+            meta.update(epoch=self.epoch + 1, iter=self.iter)
+        else:
+            meta.update(epoch=self.epoch, iter=self.iter + 1)
+
         meta.update(
             cfg=self.cfg.pretty_text,
             seed=self.seed,
@@ -2176,50 +2201,74 @@ class Runner:
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
 
+        return {'meta': meta, 'message_hub': self.message_hub.state_dict()}
+
+    def collect_model_checkpoint(self) -> Dict:
+        """Collect model states and return a partial checkpoint.
+
+        Returns:
+            Dict: A partial checkpoint containing model states.
+        """
         if is_model_wrapper(self.model):
             model = self.model.module
         else:
             model = self.model
+        state_dict = get_state_dict(model)
+        return {'state_dict': weights_to_cpu(state_dict)}
 
-        checkpoint = {
-            'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model)),
-            'message_hub': self.message_hub.state_dict()
-        }
-        # save optimizer state dict to checkpoint
-        if save_optimizer:
-            if isinstance(self.optim_wrapper, OptimWrapper):
-                checkpoint['optimizer'] = self.optim_wrapper.state_dict()
-            else:
-                raise TypeError(
-                    'self.optim_wrapper should be an `OptimWrapper` '
-                    'or `OptimWrapperDict` instance, but got '
-                    f'{self.optim_wrapper}')
+    def collect_optimizer_checkpoint(self) -> Dict:
+        """Collect optimizer states and return a partial checkpoint.
 
-        # save param scheduler state dict
-        if save_param_scheduler and self.param_schedulers is None:
+        Returns:
+            Dict: A partial checkpoint containing optimizer states.
+        """
+        if not isinstance(self.optim_wrapper, OptimWrapper):
+            raise TypeError('self.optim_wrapper should be an `OptimWrapper` '
+                            'or `OptimWrapperDict` instance, but got '
+                            f'{self.optim_wrapper}')
+        state_dict = self.optim_wrapper.state_dict()
+        return {'optimizer': state_dict}
+
+    def collect_param_scheduler_checkpoint(self) -> Dict:
+        """Collect param schedulers states and return a partial checkpoint.
+
+        Returns:
+            Dict: A partial checkpoint containing param schedulers states.
+        """
+        if self.param_schedulers is None:
             print_log(
                 '`save_param_scheduler` is True but `self.param_schedulers` '
                 'is None, so skip saving parameter schedulers',
                 logger='current',
                 level=logging.WARNING)
-            save_param_scheduler = False
-        if save_param_scheduler:
-            if isinstance(self.param_schedulers, dict):
-                checkpoint['param_schedulers'] = dict()
-                for name, schedulers in self.param_schedulers.items():
-                    checkpoint['param_schedulers'][name] = []
-                    for scheduler in schedulers:
-                        state_dict = scheduler.state_dict()
-                        checkpoint['param_schedulers'][name].append(state_dict)
-            else:
-                checkpoint['param_schedulers'] = []
-                for scheduler in self.param_schedulers:  # type: ignore
-                    state_dict = scheduler.state_dict()  # type: ignore
-                    checkpoint['param_schedulers'].append(state_dict)
+            return {}
 
-        self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
-        save_checkpoint(checkpoint, filepath)
+        checkpoint: Dict = {}
+        if isinstance(self.param_schedulers, dict):
+            checkpoint['param_schedulers'] = dict()
+            for name, schedulers in self.param_schedulers.items():
+                checkpoint['param_schedulers'][name] = []
+                for scheduler in schedulers:
+                    state_dict = scheduler.state_dict()
+                    checkpoint['param_schedulers'][name].append(state_dict)
+        else:
+            checkpoint['param_schedulers'] = []
+            for scheduler in self.param_schedulers:  # type: ignore
+                state_dict = scheduler.state_dict()  # type: ignore
+                checkpoint['param_schedulers'].append(state_dict)
+        return checkpoint
+
+    def save_checkpoint_to_file(self, checkpoint: Dict, filepath: str):
+        """Save the given checkpoint according to the given path. The path may
+        contain prefixes to save to different backends, e.g. https://
+
+        Args:
+            checkpoint (Dict): A dictionary containing training states.
+            filepath (str): Path to save. It may starts with prefixes to
+                indicate different backends, e.g. https://
+        """
+        # Avoid multiple processes saving the checkpoint at the same time
+        master_only(save_checkpoint)(checkpoint, filepath)
 
     @master_only
     def dump_config(self) -> None:
