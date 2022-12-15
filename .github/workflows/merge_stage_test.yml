@@ -93,7 +93,7 @@ jobs:
       - name: Run unittests and generate coverage report
         run: |
           if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
-            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
+            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
           else
             coverage run --branch --source mmengine -m pytest tests/
           fi
@@ -218,9 +218,9 @@ jobs:
       - name: Run unittests and generate coverage report
         run: |
           if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
-            coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
+            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/test_dist.py::TestDistWithGLOOBackend
           else
-            coverage run --branch --source mmengine -m pytest tests/
+            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py
           fi
           coverage xml
           coverage report -m
