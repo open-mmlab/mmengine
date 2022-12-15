@@ -42,6 +42,8 @@ class DefaultOptimWrapperConstructor:
     - ``norm_decay_mult`` (float): It will be multiplied to the weight
       decay for all weight and bias parameters of normalization
       layers.
+    - ``flat_decay_mult`` (float): It will be multiplied to the weight
+      decay for all one-dimensional parameters
     - ``dwconv_decay_mult`` (float): It will be multiplied to the weight
       decay for all weight and bias parameters of depthwise conv
       layers.
