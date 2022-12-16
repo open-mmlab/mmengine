@@ -7,6 +7,7 @@ from .http_backend import HTTPBackend
 from .lmdb_backend import LmdbBackend
 from .local_backend import LocalBackend
 from .memcached_backend import MemcachedBackend
+from .OSS_backend import OSSBackend
 from .petrel_backend import PetrelBackend
 
 backends: dict = {}
@@ -115,3 +116,4 @@ register_backend('lmdb', LmdbBackend)
 # prefix for PetrelBackend
 register_backend('petrel', PetrelBackend, prefixes=['petrel', 's3'])
 register_backend('http', HTTPBackend, prefixes=['http', 'https'])
+register_backend('oss', OSSBackend, prefixes=['oss'])
