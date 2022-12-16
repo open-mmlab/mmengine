@@ -1911,8 +1911,7 @@ class Runner:
                resume_param_scheduler: bool = True,
                map_location: Union[str, Callable] = 'default',
                strict: bool = False,
-               revise_keys: list = [(r'^module.', '')],
-               custom_callbacks: List[Callable] = []) -> None:
+               revise_keys: list = [(r'^module.', '')]) -> None:
         """Resume everything from checkpoint once specified.
 
         Args:
@@ -1940,10 +1939,6 @@ class Runner:
                 before loaded to the model. Only take effect when
                 ``resume_model=True``.
                 Defaults to [(r'^module.', '')].
-            custom_callbacks (list): A list of callable as callback functions.
-                Each callback function will receive runner and checkpoint as
-                its arguments, i.e. invoked as func(runner, checkpoint)
-                Defaults to []
         """
         device = get_device() if map_location == 'default' else map_location
         checkpoint = _load_checkpoint(filename, map_location=device)
@@ -1963,9 +1958,6 @@ class Runner:
 
         if resume_param_scheduler:
             self.resume_param_scheduler(checkpoint)
-
-        for callback in custom_callbacks:
-            callback(self, checkpoint)
 
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
         self._has_loaded = True
