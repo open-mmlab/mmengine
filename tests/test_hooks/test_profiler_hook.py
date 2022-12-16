@@ -175,7 +175,8 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
-        assert ops.exists(json_path), 'ERROR::json file is not generated!'
+        self.assertTrue(
+            ops.exists(json_path), 'ERROR::json file is not generated!')
 
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
