@@ -123,6 +123,7 @@ class TestBuilder(TestCase):
                              norm_decay_mult=1,
                              dwconv_decay_mult=1,
                              dcn_offset_lr_mult=1,
+                             flat_decay_mult=1,
                              bypass_duplicate=False):
         param_groups = optimizer.param_groups
         assert isinstance(optimizer, torch.optim.SGD)
@@ -139,7 +140,7 @@ class TestBuilder(TestCase):
         # param1
         param1 = param_groups[0]
         assert param1['lr'] == self.base_lr
-        assert param1['weight_decay'] == self.base_wd
+        assert param1['weight_decay'] == self.base_wd * flat_decay_mult
         # conv1.weight
         conv1_weight = param_groups[1]
         assert conv1_weight['lr'] == self.base_lr
@@ -163,7 +164,7 @@ class TestBuilder(TestCase):
         # sub.param1
         sub_param1 = param_groups[6]
         assert sub_param1['lr'] == self.base_lr
-        assert sub_param1['weight_decay'] == self.base_wd
+        assert sub_param1['weight_decay'] == self.base_wd * flat_decay_mult
         # sub.conv1.weight
         sub_conv1_weight = param_groups[7]
         assert sub_conv1_weight['lr'] == self.base_lr
@@ -172,8 +173,7 @@ class TestBuilder(TestCase):
         # sub.conv1.bias
         sub_conv1_bias = param_groups[8]
         assert sub_conv1_bias['lr'] == self.base_lr * bias_lr_mult
-        assert sub_conv1_bias[
-            'weight_decay'] == self.base_wd * dwconv_decay_mult
+        assert sub_conv1_bias['weight_decay'] == self.base_wd * bias_decay_mult
         # sub.gn.weight
         sub_gn_weight = param_groups[9]
         assert sub_gn_weight['lr'] == self.base_lr
@@ -258,7 +258,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor_cfg = dict(
             type='DefaultOptimWrapperConstructor',
             optim_wrapper_cfg=optim_wrapper,
@@ -390,7 +391,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(model)
@@ -429,7 +431,8 @@ class TestBuilder(TestCase):
                 bias_decay_mult=0.5,
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
-                dcn_offset_lr_mult=0.1)
+                dcn_offset_lr_mult=0.1,
+                flat_decay_mult=0.3)
             optim_constructor = DefaultOptimWrapperConstructor(
                 optim_wrapper_cfg, paramwise_cfg)
             optim_wrapper = optim_constructor(model)
@@ -484,7 +487,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(self.model)
@@ -554,6 +558,7 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3,
             bypass_duplicate=True)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
