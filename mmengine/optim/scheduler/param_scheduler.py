@@ -1302,7 +1302,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             threshold: float = 1e-4,
             threshold_rule: str = 'rel',
             cooldown: int = 0,
-            min_value: float = 0,
+            min_value: float = 0.,
             eps: float = 1e-8,
             begin: int = 0,
             end: int = INF,
@@ -1351,7 +1351,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             raise ValueError('Factor should be < 1.0.')
         self.factor = factor
 
-        if isinstance(min_value, list) or isinstance(min_value, tuple):
+        if isinstance(min_value, (list, tuple)) :
             if len(min_value) != len(optimizer.param_groups):
                 raise ValueError('expected {} min_lrs, got {}'.format(
                     len(optimizer.param_groups), len(min_value)))
