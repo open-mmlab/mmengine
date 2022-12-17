@@ -95,7 +95,8 @@ class ParamSchedulerHook(Hook):
         def step(param_schedulers):
             assert isinstance(param_schedulers, list)
             for scheduler in param_schedulers:
-                if scheduler.by_epoch and scheduler.need_step_args:
+                if scheduler.by_epoch and \
+                        getattr(scheduler, 'need_step_args', False):
                     scheduler.step(metrics)
 
         if isinstance(runner.param_schedulers, list):
