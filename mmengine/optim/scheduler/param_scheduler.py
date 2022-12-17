@@ -1288,27 +1288,26 @@ class CosineRestartParamScheduler(_ParamScheduler):
 @PARAM_SCHEDULERS.register_module()
 class ReduceOnPlateauParamScheduler(_ParamScheduler):
     """ReduceOnPlateauParamScheduler."""
-    _default_monitor_stages = ['val']
 
-    def __init__(
-            self,
-            optimizer: OptimizerType,
-            param_name: str,
-            monitor: str = 'val.loss',  # monitor_stage.monitor_key
-            monitor_stages: Optional[Sequence[str]] = None,
-            rule: str = 'min',
-            factor: float = 0.1,
-            patience: int = 10,
-            threshold: float = 1e-4,
-            threshold_rule: str = 'rel',
-            cooldown: int = 0,
-            min_value: float = 0.,
-            eps: float = 1e-8,
-            begin: int = 0,
-            end: int = INF,
-            last_step: int = -1,
-            by_epoch: bool = True,
-            verbose: bool = False):
+    need_step_args = True
+
+    def __init__(self,
+                 optimizer: OptimizerType,
+                 param_name: str,
+                 monitor: str = 'loss',
+                 rule: str = 'less',
+                 factor: float = 0.1,
+                 patience: int = 10,
+                 threshold: float = 1e-4,
+                 threshold_rule: str = 'rel',
+                 cooldown: int = 0,
+                 min_value: float = 0.,
+                 eps: float = 1e-8,
+                 begin: int = 0,
+                 end: int = INF,
+                 last_step: int = -1,
+                 by_epoch: bool = True,
+                 verbose: bool = False):
 
         # Attach optimizer
         if not isinstance(optimizer, (Optimizer, OptimWrapper)):
@@ -1344,14 +1343,14 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
 
         self.last_step = last_step
 
-        self._global_step = -1
+        self._global_step = 0
         self.verbose = verbose
 
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
         self.factor = factor
 
-        if isinstance(min_value, (list, tuple)) :
+        if isinstance(min_value, (list, tuple)):
             if len(min_value) != len(optimizer.param_groups):
                 raise ValueError('expected {} min_lrs, got {}'.format(
                     len(optimizer.param_groups), len(min_value)))
@@ -1364,26 +1363,22 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         self.cooldown = cooldown
         self.cooldown_counter = 0
         self.rule = rule
+        self.rule_worse = None  # the worse value for the chosen mode
         self.threshold = threshold
         self.threshold_rule = threshold_rule
         self.best = None
-        self.num_bad_epochs = None
-        self.rule_worse = None  # the worse value for the chosen mode
+        self.num_bad_epochs = 0
         self.eps = eps
 
-        if monitor_stages is None:
-            self.monitor_stages = self._default_monitor_stages
-
         self.monitor = monitor
-        self.monitor_stage, self.monitor_key = monitor.split('.')
-        assert self.monitor_stage in self.monitor_stages
-
-        self.metric = 0.0
-
         self._init_is_better(
             rule=rule, threshold=threshold, threshold_rule=threshold_rule)
         self._reset()
-        self.step()
+
+        # remove call self.step() and init self._global_step = 0
+        self._last_value = [
+            group[self.param_name] for group in self.optimizer.param_groups
+        ]
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
@@ -1392,37 +1387,41 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             threshold=self.threshold,
             threshold_rule=self.threshold_rule)
 
-    def step(self):
+    def step(self, metrics):
         self._global_step += 1
 
         # Compute parameter value per param group in the effective range
         if self.begin <= self._global_step < self.end:
-            # convert `metric` to float, in case it's a zero-dim Tensor
-            self.metric = float(self.metric)
-
             self.last_step += 1
 
-            if self.is_better(self.metric, self.best):
-                self.best = self.metric
-                self.num_bad_epochs = 0
+            # convert `metric` to float, in case it's a zero-dim Tensor
+            metric = metrics.get(self.monitor, None)
+            if metric is not None:
+                if self._is_better(metric, self.best):
+                    self.best = metric
+                    self.num_bad_epochs = 0
+                else:
+                    self.num_bad_epochs += 1
+
+                if self._in_cooldown():
+                    self.cooldown_counter -= 1
+                    self.num_bad_epochs = 0  # ignore bad epochs in cooldown
+
+                if self.num_bad_epochs > self.patience:
+                    values = self._get_value()
+
+                    for i, data in enumerate(
+                            zip(self.optimizer.param_groups, values)):
+                        param_group, value = data
+                        if param_group[self.param_name] - value > self.eps:
+                            param_group[self.param_name] = value
+                            self.print_value(self.verbose, i, value)
+                    self.cooldown_counter = self.cooldown
+                    self.num_bad_epochs = 0
+
             else:
-                self.num_bad_epochs += 1
-
-            if self.in_cooldown:
-                self.cooldown_counter -= 1
-                self.num_bad_epochs = 0  # ignore any bad epochs in cooldown
-
-            if self.num_bad_epochs > self.patience:
-                values = self._get_value()
-
-                for i, data in enumerate(
-                        zip(self.optimizer.param_groups, values)):
-                    param_group, value = data
-                    if param_group[self.param_name] - value > self.eps:
-                        param_group[self.param_name] = value
-                        self.print_value(self.verbose, i, value)
-                self.cooldown_counter = self.cooldown
-                self.num_bad_epochs = 0
+                raise KeyError(f'Excepted key in {list(metrics.keys())},'
+                               f' but got key {self.monitor} is not in dict')
 
         self._last_value = [
             group[self.param_name] for group in self.optimizer.param_groups
@@ -1443,43 +1442,42 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         ]
         return [max(v, min_v) for v, min_v in zip(values, self.min_value)]
 
-    @property
-    def in_cooldown(self):
+    def _in_cooldown(self):
         return self.cooldown_counter > 0
 
-    def is_better(self, a, best):
-        if self.rule == 'min' and self.threshold_rule == 'rel':
+    def _is_better(self, a, best):
+        if self.rule == 'less' and self.threshold_rule == 'rel':
             rel_epsilon = 1. - self.threshold
             return a < best * rel_epsilon
 
-        elif self.rule == 'min' and self.threshold_rule == 'abs':
+        elif self.rule == 'less' and self.threshold_rule == 'abs':
             return a < best - self.threshold
 
-        elif self.rule == 'max' and self.threshold_rule == 'rel':
+        elif self.rule == 'greater' and self.threshold_rule == 'rel':
             rel_epsilon = self.threshold + 1.
             return a > best * rel_epsilon
 
-        else:  # rule == 'max' and epsilon_mode == 'abs':
+        else:  # rule == 'greater' and epsilon_mode == 'abs':
             return a > best + self.threshold
+
+    def _init_is_better(self, rule, threshold, threshold_rule):
+        if rule not in {'less', 'greater'}:
+            raise ValueError('mode ' + rule + ' is unknown!')
+        if threshold_rule not in {'rel', 'abs'}:
+            raise ValueError('threshold mode ' + threshold_rule +
+                             ' is unknown!')
+
+        if rule == 'less':
+            self.rule_worse = INF
+        else:  # rule == 'greater':
+            self.rule_worse = -INF
+
+        self.rule = rule
+        self.threshold = threshold
+        self.threshold_rule = threshold_rule
 
     def _reset(self):
         """Resets num_bad_epochs counter and cooldown counter."""
         self.best = self.rule_worse
         self.cooldown_counter = 0
         self.num_bad_epochs = 0
-
-    def _init_is_better(self, rule, threshold, threshold_rule):
-        if rule not in {'min', 'max'}:
-            raise ValueError('mode ' + rule + ' is unknown!')
-        if threshold_rule not in {'rel', 'abs'}:
-            raise ValueError('threshold mode ' + threshold_rule +
-                             ' is unknown!')
-
-        if rule == 'min':
-            self.rule_worse = INF
-        else:  # rule == 'max':
-            self.rule_worse = -INF
-
-        self.rule = rule
-        self.threshold = threshold
-        self.threshold_rule = threshold_rule
