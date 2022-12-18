@@ -77,7 +77,7 @@ class FileClient:
         'petrel': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
-        'oss': OSSBackend
+        'oss': OSSBackend,
     }
 
     _instances: dict = {}

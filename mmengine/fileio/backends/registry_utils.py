@@ -7,7 +7,7 @@ from .http_backend import HTTPBackend
 from .lmdb_backend import LmdbBackend
 from .local_backend import LocalBackend
 from .memcached_backend import MemcachedBackend
-from .OSS_backend import OSSBackend
+from .oss_backend import OSSBackend
 from .petrel_backend import PetrelBackend
 
 backends: dict = {}

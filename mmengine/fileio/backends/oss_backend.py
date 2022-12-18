@@ -11,14 +11,16 @@ from .base import BaseStorageBackend
 
 
 class OSSBackend(BaseStorageBackend):
-    """OSS storage backend (for internal usage). OSSBackend supports reading
-    and writing data to multiple bucket from Endpoint. If the file path
-    contains the bucket name, OSSBackend will read data from specified bucket
-    or write data to it. Otherwise, OSSBackend will occur error.
+    """OSS storage backend for reading (writing) from (to) OSS.
+
+    OSSBackend supports reading and writing data to multiple buckets
+    from Endpoint. If the file path contains the bucket name,
+    OSSBackend will read data from the specified buckets
+    or write data to them. Otherwise, OSSBackend will occur an error.
 
     Args:
         path_mapping (dict, optional): Path mapping dict from local path to
-            Petrel path. When ``path_mapping={'src': 'dst'}``, ``src`` in
+            oss path. When ``path_mapping={'src': 'dst'}``, ``src`` in
             ``filepath`` will be replaced by ``dst``. Defaults to None.
 
     Examples:
