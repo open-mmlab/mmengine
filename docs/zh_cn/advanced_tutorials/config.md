@@ -492,13 +492,13 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 
 :::
 
-### 替换环境变量
+### 使用环境变量替换配置
 
-当要修改的变量嵌套很深时，我们在命令行中也需要加上很长的前缀来表示这个变量的位置。为了更方便地在命令行中修改配置文件，MMEngine 提供了一套通过环境变量来替换固定片段的方法。
+当要修改的配置嵌套很深时，我们在命令行中需要加上很长的前缀来进行定位。为了更方便地在命令行中修改配置，MMEngine 提供了一套通过环境变量来替换配置的方法。
 
-在解析配置文件之前，MMEngine 会搜索所有的 `{{$ENV_VAR:DEF_VAL}}` 字段，并使用字段指定的环境变量来替换这一部分。这里 `ENV_VAR` 为这一字段指定的环境变量，`DEF_VAL` 表示没有设置环境变量时的默认值。
+在解析配置文件之前，MMEngine 会搜索所有的 `{{$ENV_VAR:DEF_VAL}}` 字段，并使用特定的环境变量来替换这一部分。这里 `ENV_VAR` 为替换这一部分所用的环境变量，`DEF_VAL` 为没有设置环境变量时的默认值。
 
-例如，当我们想在命令行中修改数据集的路径时，我们可以在配置文件 `replace_data_root.py` 中这样写：
+例如，当我们想在命令行中修改数据集路径时，我们可以在配置文件 `replace_data_root.py` 中这样写：
 
 ```python
 dataset_type = 'CocoDataset'
@@ -516,7 +516,7 @@ python demo_train.py replace_data_root.py
 Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/data/coco/', 'dataset': {'ann_file': '/data/coco/train.json'}}
 ```
 
-这里因为没有设置环境变量 `DATASET`, 程序直接使用默认值 `/data/coco/` 作为这一部分的值。如果在命令行前设置设置环境变量则会有如下结果：
+这里没有设置环境变量 `DATASET`, 程序直接使用默认值 `/data/coco/` 来替换 `{{$DATASET:/data/coco/}}`。如果在命令行前设置设置环境变量则会有如下结果：
 
 ```bash
 DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
@@ -526,15 +526,15 @@ DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
 Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
 ```
 
-`data_root` 被替换成了新的路径 `/new/dataset/path/`
+`data_root` 被替换成了环境变量 `DATASET` 的值 `/new/dataset/path/`。
 
 ```note
-环境变量的替换发生在配置文件解析之前。如果该变量还参与到其他变量的定义时，环境变量替换也会影响到其他变量。在上例中 dataset.ann_file 等于 data_root + 'train.json', 因此当 data_root 被替换时，dataset.ann_file 也会发生变化。而 --cfg-options 是在配置文件解析后去替换特定变量。--cfg-options data_root='/new/dataset/path/' 不会影响到 dataset.ann_file
+环境变量的替换发生在配置文件解析之前。如果该配置还参与到其他配置的定义时，环境变量替换也会影响到其他配置。在上例中 dataset.ann_file 等于 data_root + 'train.json', 因此当 data_root 被替换时，dataset.ann_file 也会发生变化。而 --cfg-options 是在配置文件解析后去替换特定配置。--cfg-options data_root='/new/dataset/path/' 不会影响到 dataset.ann_file
 ```
 
-环境变量也可以用来替换字符串以外的字段，这时可以使用 `{{'$ENV_VAR:DEF_VAL'}}` 或者 `{{"$ENV_VAR:DEF_VAL"}}`。`''` 与 `""` 保证配置文件合乎 python 语法。
+环境变量也可以用来替换字符串以外的配置，这时可以使用 `{{'$ENV_VAR:DEF_VAL'}}` 或者 `{{"$ENV_VAR:DEF_VAL"}}` 格式。`''` 与 `""` 用来保证配置文件合乎 python 语法。
 
-例如当我们想替换模型预测的类别数时，可以在配置文件 `replace_num_classes.py` 中这样写：
+例如，当我们想替换模型预测的类别数时，可以在配置文件 `replace_num_classes.py` 中这样写：
 
 ```
 model=dict(

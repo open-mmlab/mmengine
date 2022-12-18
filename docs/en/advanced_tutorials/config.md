@@ -14,6 +14,8 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/my_module.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/optimizer_cfg.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_data_root.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_num_classes.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/refer_base_var.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_delete_key.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_lr0.01.py
@@ -489,6 +491,76 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 ```
 
 :::
+
+### Replace fields with environment variables
+
+When a field is deeply nested, we need to add a long prefix at the command line to locate it. To alleviate this problem, MMEngine allows users to substitute fields in configuration with environment variables.
+
+Before parsing the configuration file, the program will search all `{{$ENV_VAR:DEF_VAL}}` fields and substitute those sections with environment variables. Here, `ENV_VAR` is the name of the environment variable used to replace this section, `DEF_VAL` is the default value if `ENV_VAR` is not set.
+
+When we want to modify the dataset path at the command line, we can take `replace_data_root.py` as an example:
+
+```python
+dataset_type = 'CocoDataset'
+data_root = '{{$DATASET:/data/coco/}}'
+dataset=dict(ann_file= data_root + 'train.json')
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/data/coco/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+Here, we don't set the environment variable `DATASET`. Thus, the program directly replaces `{{$DATASET:/data/coco/}}` with the default value `/data/coco/`. If we set `DATASET` at the command line:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
+
+```note
+Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields. In the above example, dataset.ann_file = data_root + 'train.json', so when data_root is replaced, dataset.ann_file will also be changed. Meanwhile, --cfg-options replace a field after the configuration file is parsed. --cfg-options data_root='/new/dataset/path/' does not affect dataset.ann_file
+```
+
+Environment variables can also be used to replace other types of fields. We can use `{{'$ENV_VAR:DEF_VAL'}}` or `{{"$ENV_VAR:DEF_VAL"}}` format to ensure the configuration file conforms to python syntax.
+
+We can task `replace_num_classes.py` as an example:
+
+```
+model=dict(
+    bbox_head=dict(
+        num_classes={{'$NUM_CLASSES:80'}}))
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 80}}}
+```
+
+Let us set the environment variable `NUM_CLASSES`
+
+```bash
+NUM_CLASSES=20 python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 20}}}
+```
 
 ### import the custom module
 
