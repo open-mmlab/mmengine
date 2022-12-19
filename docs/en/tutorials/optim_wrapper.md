@@ -112,7 +112,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185608932-91a082d4-1bf4-4329-b283-98fbbc20b5f7.png)
 
-We only need to configure the `accumulative_counts` parameter and call the `update_params` interface to achieve the gradient accumulation function. Besides, in the distributed training scenario, if we configure the gradient accumulation with `optim_wrapper` context enabled, we can avoid unnecessary gradient synchronization during the gradient accumulation step.
+We only need to configure the `accumulative_counts` parameter and call the `update_params` interface to achieve the gradient accumulation function. Besides, in the distributed training scenario, if we configure the gradient accumulation with `optim_context` context enabled, we can avoid unnecessary gradient synchronization during the gradient accumulation step.
 
 The OptimWrapper also provides a more fine-grained interface for users to customize with their own parameter update logics.
 
