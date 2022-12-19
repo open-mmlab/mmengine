@@ -293,7 +293,7 @@ optimizer = SGD([{'params': model.backbone.parameters()},
 
 In the above example, we set a learning rate of 0.01 for the backbone, while another learning rate of 1e-3 for the head. Users can pass a list of dictionaries containing the different parts of the model's parameters and their corresponding hyperparameters to the optimizer, allowing for fine-grained adjustment of the model optimization. 
 
-In MMEngine, the optimizer wrapper constructor allows users to set hyperparameters in different parts of the model directly by setting the `paramwise_cfg` in the configuration file rather than by modifying the code.
+In MMEngine, the optimizer wrapper constructor allows users to set hyperparameters in different parts of the model directly by setting the `paramwise_cfg` in the configuration file rather than by modifying the code of building the optimizer.
 
 ### Set different hyperparamters for different types of parameters
 
