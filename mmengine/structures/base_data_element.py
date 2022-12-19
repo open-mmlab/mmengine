@@ -245,7 +245,7 @@ class BaseDataElement:
                 model predictions.
         """
         assert isinstance(data,
-                          dict), f'meta should be a `dict` but got {data}'
+                          dict), f'data should be a `dict` but got {data}'
         for k, v in data.items():
             # Use `setattr()` rather than `self.set_field` to allow `set_data`
             # to set property method.
@@ -282,7 +282,7 @@ class BaseDataElement:
                 model predictions.
 
         Returns:
-            BaseDataElement: a new data element with same type.
+            BaseDataElement: A new data element with same type.
         """
         new_data = self.__class__()
 
@@ -300,7 +300,7 @@ class BaseDataElement:
         """Deep copy the current data element.
 
         Returns:
-            BaseDataElement: the copy of current data element.
+            BaseDataElement: The copy of current data element.
         """
         clone_data = self.__class__()
         clone_data.set_metainfo(dict(self.metainfo_items()))
@@ -388,7 +388,7 @@ class BaseDataElement:
                 super().__setattr__(name, value)
             else:
                 raise AttributeError(f'{name} has been used as a '
-                                     'private attribute, which is immutable. ')
+                                     'private attribute, which is immutable.')
         else:
             self.set_field(
                 name=name, value=value, field_type='data', dtype=None)
@@ -401,7 +401,7 @@ class BaseDataElement:
         """
         if item in ('_metainfo_fields', '_data_fields'):
             raise AttributeError(f'{item} has been used as a '
-                                 'private attribute, which is immutable. ')
+                                 'private attribute, which is immutable.')
         super().__delattr__(item)
         if item in self._metainfo_fields:
             self._metainfo_fields.remove(item)
@@ -469,7 +469,7 @@ class BaseDataElement:
                 raise AttributeError(
                     f'Cannot set {name} to be a field of data '
                     f'because {name} is already a metainfo field')
-            # The name only added to `data_fields`` when it is not the
+            # The name only added to `data_fields` when it is not the
             # attribute related to property(methods decorated by @property).
             if not isinstance(
                     getattr(type(self),
@@ -523,7 +523,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def numpy(self) -> 'BaseDataElement':
-        """Convert all tensor to np.narray in data."""
+        """Convert all tensors to np.ndarray in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):
@@ -533,7 +533,7 @@ class BaseDataElement:
         return new_data
 
     def to_tensor(self) -> 'BaseDataElement':
-        """Convert all np.narray to tensor in data."""
+        """Convert all np.ndarray to tensor in data."""
         new_data = self.new()
         for k, v in self.items():
             data = {}
@@ -585,7 +585,7 @@ class BaseDataElement:
                 obj (Any): The obj to represent.
 
             Returns:
-                str: The represented str .
+                str: The represented str.
             """
             _repr = ''
             if isinstance(obj, dict):
