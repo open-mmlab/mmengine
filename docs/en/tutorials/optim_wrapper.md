@@ -211,7 +211,7 @@ optim_wrapper_new.load_state_dict(optim_state_dict)
 
 Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, MMEngine provides a container class called `OptimWrapperDict` to manage them. `OptimWrapperDict` stores the sub-OptimWrapper in the form of `dict`,  and can be accessed and traversed just like a `dict`.
 
-Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as `update_prarms`, `optim_context`, `backward`, `step`, etc. therefore, it cannot be used directly to train models. We suggest implementing the logic of parameter updating by accessing the sub-OptimWarpper in `OptimWrapperDict` directly. 
+Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as `update_prarms`, `optim_context`, `backward`, `step`, etc. therefore, it cannot be used directly to train models. We suggest implementing the logic of parameter updating by accessing the sub-OptimWarpper in `OptimWrapperDict` directly.
 
 Users may wonder why not just use `dict` to manage multiple optimizers since `OptimWrapperDict` does not have training capabilities. Actually, the core function of `OptimWrapperDict` is to support exporting or loading the state dictionary of all sub-OptimWrapper and to support getting learning rates and momentums as well. Without `OptimWrapperDict`, MMEngine needs to do a lot of `if-else` in OptimWrapper to get the states of the `OptimWrappers`.
 
@@ -291,7 +291,7 @@ optimizer = SGD([{'params': model.backbone.parameters()},
     momentum=0.9)
 ```
 
-In the above example, we set a learning rate of 0.01 for the backbone, while another learning rate of 1e-3 for the head. Users can pass a list of dictionaries containing the different parts of the model's parameters and their corresponding hyperparameters to the optimizer, allowing for fine-grained adjustment of the model optimization. 
+In the above example, we set a learning rate of 0.01 for the backbone, while another learning rate of 1e-3 for the head. Users can pass a list of dictionaries containing the different parts of the model's parameters and their corresponding hyperparameters to the optimizer, allowing for fine-grained adjustment of the model optimization.
 
 In MMEngine, the optimizer wrapper constructor allows users to set hyperparameters in different parts of the model directly by setting the `paramwise_cfg` in the configuration file rather than by modifying the code of building the optimizer.
 
@@ -486,7 +486,7 @@ optimizer = build_optim_wrapper(model, optim_wrapper)
 08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
 ```
 
-When `add_params` is called for the first time, the `params` argument is an empty `list` and the `module` is the `ToyModel` instance. Refer to the [Optimizer Wrapper Constructor Documentation](mmengine.optim.DefaultOptimWrapperConstructor) for detailed overloading explanations.
+When `add_params` is called for the first time, the `params` argument is an empty `list` and the `module` is the `ToyModel` instance. Please refer to the [Optimizer Wrapper Constructor Documentation](mmengine.optim.DefaultOptimWrapperConstructor) for detailed explanations on overloading.
 
 Similarly, if we want to construct multiple optimizers, we also need to implement a custom constructor.
 
