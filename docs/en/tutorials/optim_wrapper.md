@@ -213,7 +213,7 @@ Considering that algorithms like GANs usually need to use multiple optimizers to
 
 Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as `update_prarms`, `optim_context`, `backward`, `step`, etc. therefore, it cannot be used directly to train models. We suggest implementing the logic of parameter updating by accessing the sub-OptimWarpper in `OptimWrapperDict` directly. 
 
-Users may wonder why not just use `dict` to manage multiple optimizers if `OptimWrapperDict` does not have training capabilities. Actually, the core function of `OptimWrapperDict` is to support batch exporting and loading of state dicts of all OptimWrappers, and to support getting learning rates and momentums as well. Without `OptimWrapperDict`, MMEngine needs to do a lot `if-else` in OptimWrapper to get all the states of the OptimWrappers.
+Users may wonder why not just use `dict` to manage multiple optimizers since `OptimWrapperDict` does not have training capabilities. Actually, the core function of `OptimWrapperDict` is to support exporting or loading the state dictionary of all sub-OptimWrapper and to support getting learning rates and momentums as well. Without `OptimWrapperDict`, MMEngine needs to do a lot of `if-else` in OptimWrapper to get the states of the `OptimWrappers`.
 
 ```python
 from torch.optim import SGD
