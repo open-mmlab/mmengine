@@ -267,12 +267,13 @@ optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_c
 ```
 
 ```{note}
-If this is your first tutorial document of MMEngine and you are not familiar with concepts like [configs](../advanced_tutorials/config.md), and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced usage instructuions and finish other documents first. Of course, if you have already familiar with these parts, we highly recommend the advanced part which covers:
+If you are new to reading the MMEngine tutorial and are not familiar with concepts such as[configs](../advanced_tutorials/config.md) and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced tutorials for now and read other documents first. Of course, if you already have a good understanding of this prerequisite knowledge, we highly recommend reading the advanced part which covers::
 
-1. how to customize the learning rate, decay coefficient, and other model parameters of the optimizer in the configuration.
+1. How to customize the learning rate, decay coefficient, and other parameters of the model parameters in the configuration of OptimWrapper.
+
 2. how to customize the construction policy of the optimizer.
 
-Apart from the pre-requisite knowledge of the configs and the registries, we also recommend to start the advanced section with a thorough understanding of the parameter in Pytorch's native optimizer construction.
+Apart from the pre-requisite knowledge of the configs and the registries, it is recommended to have a thorough understanding of the native construction of PyTorch optimizer before starting the advanced tutorials.
 ```
 
 ## Advanced usages
