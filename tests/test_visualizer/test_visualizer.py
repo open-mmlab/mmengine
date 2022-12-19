@@ -495,7 +495,7 @@ class TestVisualizer(TestCase):
 
     def test_chain_call(self):
         visualizer = Visualizer(image=self.image)
-        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
         visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2])). \
             draw_texts('test', torch.tensor([5, 5])). \
             draw_lines(x_datas=torch.tensor([1, 5]),
