@@ -252,7 +252,7 @@ optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer)
 ```
 
-Here we configured a OptimWrapper with the type of SGD, and other parameters such as learning rate, momentum, etc. Considerting that OptimWrapper is standard single-precision training, we can skip the `type` as follows.
+Here we have set up an OptimWrapper with a SGD optimizer with the learning rate and momentum parameters as specified. Since OptimWrapper is designed for standard single precision training, we can also omit the `type` field in the configuration:
 
 ```python
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
