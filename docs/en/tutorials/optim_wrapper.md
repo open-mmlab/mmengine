@@ -134,7 +134,7 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
         optim_wrapper.zero_grad()
 ```
 
-We can also configure a gradient reduction strategy for the OptimWrapper.
+We can also configure a gradient clipping strategy for the OptimWrapper.
 
 ```python
 # based on torch.nn.utils.clip_grad_norm_ method
