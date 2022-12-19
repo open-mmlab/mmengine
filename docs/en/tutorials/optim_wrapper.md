@@ -116,9 +116,9 @@ We only need to configure the `accumulative_counts` parameter and call the `upda
 
 The OptimWrapper also provides a more fine-grained interface for users to customize with their own parameter update logics.
 
-- `backward`: pass in the loss, used for computing the parameter gradient.
-- `step`: same as `optimizer.step`, used for updating parameters.
-- `zero_grad`: same as `optimizer.zero_grad`, for the parameter gradient.
+- `backward`: Accept a `loss` dictionary, and compute the gradient of parameters.
+- `step`: Same as `optimizer.step`, and update the parameters.
+- `zero_grad`: Same as `optimizer.zero_grad`, and zero the gradient of parameters
 
 We can use the above interface to implement the same parameter update logic as the Pytorch optimizer.
 
