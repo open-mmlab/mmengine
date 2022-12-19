@@ -297,7 +297,7 @@ In MMEngine, the optimizer wrapper constructor allows users to set hyperparamete
 
 ### Set different hyperparamters for different types of parameters
 
-The default optimizer wrapper constructor in MMEngine supports setting different hyperparameters for different types of parameters in the model. For example, we can add `norm_decay_mult=0` in `paramwise_cfg` to set the weight decay factor to 0 for the weight and bias of the normalization layer to implement the trick of not decaying the weight of the normalization layer as mentioned in the [Bag of Tricks](https://arxiv.org/abs/1812.01187).
+The default optimizer wrapper constructor in MMEngine supports setting different hyperparameters for different types of parameters in the model. For example, we can set `norm_decay_mult=0` for `paramwise_cfg` to set the weight decay factor to 0 for the weight and bias of the normalization layer to implement the trick of not decaying the weight of the normalization layer as mentioned in the [Bag of Tricks](https://arxiv.org/abs/1812.01187).
 
 Here, we set the weight decay coefficient in all normalization layers (`head.bn`) in `ToyModel` to 0 as follows.
 
