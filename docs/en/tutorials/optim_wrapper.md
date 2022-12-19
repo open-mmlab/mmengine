@@ -334,21 +334,21 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 
 In addition to configuring the weight decay, `paramwise_cfg` of MMEngine's default optimizer wrapper constructor supports the following hyperparameters as well.
 
-`lr_mult`: learning rate for all parameters.
+`lr_mult`: Learning rate for all parameters.
 
-`decay_mult`: decay coefficient for all parameters.
+`decay_mult`: Decay coefficient for all parameters.
 
-`bias_lr_mult`: learning rate coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
+`bias_lr_mult`: Learning rate coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
 
-`bias_decay_mult`: weight decay coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
+`bias_decay_mult`: Weight decay coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
 
-`norm_decay_mult`: weight decay coefficient for weights and bias of the normalization layer, default to 1.
+`norm_decay_mult`: Weight decay coefficient for weights and bias of the normalization layer, default to 1.
 
-`dwconv_decay_mult`: decay coefficient of the depth-wise convolution, default to 1.
+`dwconv_decay_mult`: Decay coefficient of the depth-wise convolution, default to 1.
 
-`bypass_duplicate`: whether to skip duplicate parameters, default to `False`.
+`bypass_duplicate`: Whether to skip duplicate parameters, default to `False`.
 
-`dcn_offset_lr_mult`: learning rate of the deformable convolution, default to 1.
+`dcn_offset_lr_mult`: Learning rate of the deformable convolution, default to 1.
 
 ### Set different hyperparamters for different model modules
 
