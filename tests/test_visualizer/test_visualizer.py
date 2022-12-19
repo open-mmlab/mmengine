@@ -364,21 +364,21 @@ class TestVisualizer(TestCase):
             visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [16, 4]]))
 
     def test_draw_binary_masks(self):
-        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
         visualizer = Visualizer(image=self.image)
         visualizer.draw_binary_masks(binary_mask)
         visualizer.draw_binary_masks(torch.from_numpy(binary_mask))
         # multi binary
-        binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(bool)
         visualizer = Visualizer(image=self.image)
         visualizer.draw_binary_masks(binary_mask, colors=['r', (0, 255, 0)])
         # test the error that the size of mask and image are different.
         with pytest.raises(AssertionError):
-            binary_mask = np.random.randint(0, 2, size=(8, 10)).astype(np.bool)
+            binary_mask = np.random.randint(0, 2, size=(8, 10)).astype(bool)
             visualizer.draw_binary_masks(binary_mask)
 
         # test non binary mask error
-        binary_mask = np.random.randint(0, 2, size=(10, 10, 3)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10, 3)).astype(bool)
         with pytest.raises(AssertionError):
             visualizer.draw_binary_masks(binary_mask)
 
