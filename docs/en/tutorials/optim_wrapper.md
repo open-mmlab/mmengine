@@ -417,9 +417,9 @@ head.bn.bias
 
 Each field in `custom_keys` is defined as follows.
 
-1. `'backbone': dict(lr_mult=1)`: set the learning rate of the parameter whose name is prefixed with `backbone` to 1.
-2. `'backbone.layer0': dict(lr_mult=0, decay_mult=0)`: set the learning rate of the parameter with the prefix `backbone.layer0` to 0 and the decay coefficient to 0. This configuration has a higher priority than the first one.
-3. `'head': dict(lr_mult=0.1)`: set the learning rate of the parameter whose name is prefixed with `head` to 0.1.
+1. `'backbone': dict(lr_mult=1)`: Set the learning rate of the parameter whose name is prefixed with `backbone` to 1.
+2. `'backbone.layer0': dict(lr_mult=0, decay_mult=0)`: Set the learning rate of the parameter with the prefix `backbone.layer0` to 0 and the decay coefficient to 0. This configuration has a higher priority than the first one.
+3. `'head': dict(lr_mult=0.1)`: Set the learning rate of the parameter whose name is prefixed with `head` to 0.1.
 
 ### Customize optimizer construction policies
 
