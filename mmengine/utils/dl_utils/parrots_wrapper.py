@@ -103,7 +103,6 @@ def _get_norm() -> tuple:
 
 _ConvNd, _ConvTransposeMixin = _get_conv()
 DataLoader, PoolDataLoader = _get_dataloader()
-BuildExtension, CppExtension, CUDAExtension = _get_extension()
 _BatchNorm, _InstanceNorm, SyncBatchNorm_ = _get_norm()
 _AdaptiveAvgPoolNd, _AdaptiveMaxPoolNd, _AvgPoolNd, _MaxPoolNd = _get_pool()
 
