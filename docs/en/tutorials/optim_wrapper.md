@@ -239,7 +239,7 @@ print(optim_dict.get_momentum())  # {'gen.momentum': [0], 'disc.momentum': [0]}
 {'gen.momentum': [0], 'disc.momentum': [0]}
 ```
 
-As shown in the above example, `OptimWrapperDict` exports learning rates and momentums for all OptimWrappers easily, and OptimWrappers can export and load all the state dicts in a similar way.
+As shown in the above example, `OptimWrapperDict` exports learning rates and momentums for all OptimWrappers easily, and `OptimWrapperDict` can export and load all the state dicts in a similar way.
 
 ### Configure the OptimWapper in [Runner](runner.md)
 
