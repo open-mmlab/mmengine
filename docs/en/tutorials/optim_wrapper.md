@@ -2,7 +2,7 @@
 
 In previous tutorials of [runner](./runner.md) and [model](./model.md), we have more or less mentioned the concept of `OptimWrapper`, but we have not introduced why we need it and what are the advantages of `OptimWrapper` compared to Pytorch's native optimizer. In this tutorial, we will help you understand the advantages and demonstrate how to use the wrapper.
 
-As its name suggests, `OptimWrapper` is a high-level abstraction of Pytorch's native optimizer, which provides a unified set of interfaces while adding more functionality. OptimWrapper supports different training strategies, including mixed precision training, gradient accumulation, and gradient norm clips. We can choose the appropriate training strategy according to our needs. OptimWrapper also defines a standard parameter update process, based on which users can switch between different training strategies for the same set of code.
+As its name suggests, `OptimWrapper` is a high-level abstraction of PyTorch's native optimizer, which provides a unified set of interfaces while adding more functionality. `OptimWrapper` supports different training strategies, including mixed precision training, gradient accumulation, and gradient clipping. We can choose the appropriate training strategy according to our needs. `OptimWrapper` also defines a standard process for parameter updating based on which users can switch between different training strategies for the same set of code.
 
 ## OptimWrapper vs Optimizer
 
