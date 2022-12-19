@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.distributed.rpc import is_available
 
+from mmengine.dist import get_rank
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
@@ -744,7 +745,7 @@ class TestZeroOptimizer(MultiProcessTestCase):
             all(param in params_set for param_group in param_groups
                 for param in param_group['params']))
         state_dict = optimizer.state_dict()
-        if torch.distributed.get_rank() == 0:
+        if get_rank() == 0:
             self.assertEqual(
                 sum(len(pg['params']) for pg in state_dict['param_groups']),
                 len(params_set))
