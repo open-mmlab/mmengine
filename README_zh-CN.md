@@ -118,7 +118,7 @@ class MMResNet50(BaseModel):
 <details>
 <summary>构建数据集</summary>
 
-其次，我们需要构建训练和验证所需要的**数据集（Dataset）**和**数据加载器（DataLoader）**。对于基础的训练和验证功能，我们可以直接使用符合 PyTorch 标准的数据集加载器和数据集。
+其次，我们需要构建训练和验证所需要的**数据集（Dataset）**和**数据加载器（DataLoader）**。对于基础的训练和验证功能，我们可以直接使用符合 PyTorch 标准的数据加载器和数据集。
 
 ```python
 import torchvision.transforms as transforms
