@@ -397,7 +397,7 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:lr_mult=0.1
 ```
 
-The state dict of the above model can be printed as this:
+The state dictionary of the above model can be printed as this:
 
 ```python
 for name, val in ToyModel().named_parameters():
