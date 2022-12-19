@@ -485,7 +485,7 @@ optimizer = build_optim_wrapper(model, optim_wrapper)
 08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
 ```
 
-When `add_params` is called for the first time, the `params` parameter is an empty `list` and the `module` is a `model`. Refer to the [Optimizer Wrapper Constructor Documentation](mmengine.optim.DefaultOptimWrapperConstructor) for detailed overloading explanations.
+When `add_params` is called for the first time, the `params` argument is an empty `list` and the `module` is the `ToyModel` instance. Refer to the [Optimizer Wrapper Constructor Documentation](mmengine.optim.DefaultOptimWrapperConstructor) for detailed overloading explanations.
 
 Similarly, if we want to construct multiple optimizers, we also need to implement a custom constructor.
 
