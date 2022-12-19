@@ -148,7 +148,7 @@ optim_wrapper = AmpOptimWrapper(
 
 ### Get learning rate/momentum
 
-The OptimWrapper provides the `get_lr` and `get_momentum` for gettiing the learning rate of a parameter group of the optimizer.
+The OptimWrapper provides the `get_lr` and `get_momentum` for the convenience of getting the learning rate and momentum of the first parameter group in the optimizer.
 
 ```python
 import torch.nn as nn
