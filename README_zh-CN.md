@@ -154,7 +154,7 @@ val_dataloader = DataLoader(batch_size=32,
 <details>
 <summary>构建评测指标</summary>
 
-为了进行验证和测试，我们需要定义模型推理结果的**评测指标** 。我们约定这一评测指标需要继承 `BaseMetric`，并实现 `process` 和 `compute_metrics` 方法。
+为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，并实现 `process` 和 `compute_metrics` 方法。
 
 ```python
 from mmengine.evaluator import BaseMetric
