@@ -83,7 +83,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185606060-2fdebd90-c17a-4a8c-aaf1-540d47975c59.png)
 
-To enable hybrid precision training, users need to use `AmpOptimWrapper` whose optim_context interface is similar to the `autocast` and it will enable the context for hybrid precision training. In addition, it can accelerate the gradient accumulation during the distributed training, which we will introduce in the next example.
+To enable hybrid precision training, users need to use `AmpOptimWrapper.optim_context ` which is similar to the `autocast` for enabling the context for hybrid precision training. In addition, `AmpOptimWrapper.optim_context `can accelerate the gradient accumulation during the distributed training, which will be introduced in the next example.
 
 **3.1 Mixed-precision training and gradient accumulation with SGD in PyTorch**
 
