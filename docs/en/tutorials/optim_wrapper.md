@@ -209,7 +209,7 @@ optim_wrapper_new.load_state_dict(optim_state_dict)
 
 ### Use multiple optimizers
 
-Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, OptimWrapper provides a container class called `OptimWrapperDict` to manage. `OptimWrapperDict` stores the wrappers in the form of dicts and allows users to access and traverse the elements just like a dict.
+Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, MMEngine provides a container class called `OptimWrapperDict` to manage them. `OptimWrapperDict` stores the sub-OptimWrapper in the form of `dict`,  and can be accessed and traversed just like a `dict`.
 
 Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as `update_prarms`, `optim_context`, `backward`, `step`, etc. Plus, it cannot be used directly for training models. We suggest to access the elements in `OptimWrapperDict` directly to implement the parameter update logic.
 
