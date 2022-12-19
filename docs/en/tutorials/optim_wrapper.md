@@ -278,7 +278,7 @@ Apart from the pre-requisite knowledge of the configs and the registries, it is 
 
 ## Advanced usages
 
-PyTorch's optimizer allows different hyperparameters to be set for each parameter in the model, such as using different learning rates for the backbone and head of a classification model.
+PyTorch's optimizer allows different hyperparameters to be set for each parameter in the model, such as using different learning rates for the backbone and head for a classification model.
 
 ```python
 from torch.optim import SGD
