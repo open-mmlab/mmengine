@@ -22,9 +22,11 @@ Let's create a regitry first.
 
 ```python
 from mmengine import Registry
-# scope represents the domain of the registry. If not set, the default value is the package name.
+# `scope` represents the domain of the registry. If not set, the default value is the package name.
 # e.g. in mmdetection, the scope is mmdet
-ACTIVATION = Registry('activation', scope='mmengine')
+# `locations` indicates the location where the modules in this register are defined.
+# And the Registry will automatically import the modules when building them according to these predefined locations.
+ACTIVATION = Registry('activation', scope='mmengine', locations=['mmengine.models.activations'])
 ```
 
 Then we can implement different activation modules, such as `Sigmoid`, `ReLU`, and `Softmax`.
@@ -75,7 +77,7 @@ print(ACTIVATION.module_dict)
 ```
 
 ```{note}
-The registry mechanism will only be triggered when the corresponded module file is imported, so we need to import the file somewhere or dynamically import the module using the ``custom_imports`` field to trigger the mechanism. Please refer to [Importing custom Python modules](config.md#import-the-custom-module) for more details.
+The registry mechanism will only be triggered when the corresponded module file is imported, so we need to make the registry automatically import the module through the predefined `locations`, or import the file somewhere manually, or dynamically import the module using the ``custom_imports`` field to trigger the mechanism. Please refer to [Importing custom Python modules](config.md#import-the-custom-module) for more details.
 ```
 
 Once the implemented module is successfully registered, we can use the activation module in the configuration file.
@@ -119,7 +121,7 @@ def build_activation(cfg, registry, *args, **kwargs):
 Pass the `buid_activation` to `build_func`.
 
 ```python
-ACTIVATION = Registry('activation', build_func=build_activation, scope='mmengine')
+ACTIVATION = Registry('activation', build_func=build_activation, scope='mmengine', locations=['mmengine.models.activations'])
 
 @ACTIVATION.register_module()
 class Tanh(nn.Module):
@@ -206,7 +208,7 @@ Now suppose there is a project called `MMAlpha`, which also defines a `MODELS` a
 ```python
 from mmengine import Registry, MODELS as MMENGINE_MODELS
 
-MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
+MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha', locations=['mmalpha.models'])
 ```
 
 The following figure shows the hierarchy of `MMEngine` and `MMAlpha`.
