@@ -120,7 +120,7 @@ The OptimWrapper also provides a more fine-grained interface for users to custom
 - `step`: Same as `optimizer.step`, and update the parameters.
 - `zero_grad`: Same as `optimizer.zero_grad`, and zero the gradient of parameters
 
-We can use the above interface to implement the same parameter update logic as the Pytorch optimizer.
+We can use the above interface to implement the same logic of parameters updating as the Pytorch optimizer.
 
 ```python
 for idx, (input, target) in enumerate(zip(inputs, targets)):
