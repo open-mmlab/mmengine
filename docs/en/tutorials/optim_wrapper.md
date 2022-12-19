@@ -6,7 +6,7 @@ As its name suggests, `OptimWrapper` is a high-level abstraction of PyTorch's na
 
 ## OptimWrapper vs Optimizer
 
-Now we use both the built-in optimizer of PyTorch and the OptimWrapper in MMEngine to perform single-precision training, mixed-precision training and gradient accumulation to demonstrate the difference in each implementation.
+Now we use both the native optimizer of PyTorch and the OptimWrapper in MMEngine to perform single-precision training, mixed-precision training, and gradient accumulation to show the difference in implementations.
 
 ### Model training
 
