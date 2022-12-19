@@ -47,7 +47,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185605436-17f08083-b219-4b38-b714-eb891f7a8e56.png)
 
-The `update_params` in OptimWrapper achieves the standard gradient computation, parameter update and gradient zeroing process which can be used to update the model parameters directly.
+The `OptimWrapper.update_params` achieves the standard process for gradient computation, parameter updating, and gradient zeroing, which can be used to update the model parameters directly.
 
 **2.1 Mixed-precision training with SGD in PyTorch**
 
