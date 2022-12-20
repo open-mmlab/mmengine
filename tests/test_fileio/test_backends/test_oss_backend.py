@@ -71,9 +71,7 @@ class TestOSSBackend(TestCase):  # type: ignore
         cls.oss_dir = 'oss://oss-cn-hangzhou.aliyuncs.com/mmengine/data'
 
     def setUp(self):
-        self.backend = OSSBackend(
-            access_key_id='LTAI5tKK5NUfQ43nEuozd2Ty',
-            access_key_secret='ehdX9rhZ8Eqv3OwxWLgmh5ZpFe9d4q')
+        self.backend = OSSBackend(access_key_id='xxx', access_key_secret='xxx')
         self.backend.rmtree(self.oss_dir)
         with build_temporary_directory() as tmp_dir:
             self.backend.copytree_from_local(tmp_dir, self.oss_dir)
