@@ -52,7 +52,7 @@ class BaseDataElement:
           modified by dict-like or object-like operations, such as
           ``.`` (for data access and modification), ``in``, ``del``,
           ``pop(str)``, ``get(str)``, ``metainfo_keys()``,
-          ``metainfo_values()``, ``metainfo_items()``, ``set_metainfo()``(for
+          ``metainfo_values()``, ``metainfo_items()``, ``set_metainfo()`` (for
           set or change key-value pairs in metainfo).
 
         - ``data``: Annotations or model predictions are
