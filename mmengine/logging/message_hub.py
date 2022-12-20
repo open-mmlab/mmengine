@@ -208,7 +208,6 @@ class MessageHub(ManagerMixin):
                 could be resumed.
         """
         self._set_resumed_keys(key, resumed)
-        self._resumed_keys[key] = resumed
         self._runtime_info[key] = value
 
     def update_info_dict(self, info_dict: dict, resumed: bool = True) -> None:
