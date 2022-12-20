@@ -92,6 +92,9 @@ def main():
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
+        custom_hooks=[
+            dict(type='ProfilerHook', on_trace_ready=dict(type='tb_trace'))
+        ],
         launcher=args.launcher,
     )
     runner.train()
