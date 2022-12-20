@@ -1380,13 +1380,6 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             group[self.param_name] for group in self.optimizer.param_groups
         ]
 
-    def load_state_dict(self, state_dict):
-        self.__dict__.update(state_dict)
-        self._init_is_better(
-            rule=self.rule,
-            threshold=self.threshold,
-            threshold_rule=self.threshold_rule)
-
     def step(self, metrics):
         self._global_step += 1
 
