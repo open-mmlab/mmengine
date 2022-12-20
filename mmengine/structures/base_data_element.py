@@ -154,16 +154,12 @@ class BaseDataElement:
         ...                          gt_instances=gt_instances)
         >>> print(sample)
         <BaseDataElement(
-
             META INFORMATION
             img_shape: (800, 1196, 3)
-
             DATA FIELDS
             gt_instances: <BaseDataElement(
-
                     META INFORMATION
                     img_shape: (800, 1196, 3)
-
                     DATA FIELDS
                     det_labels: tensor([0, 1, 2, 3])
                 ) at 0x7f0ec5eadc70>
