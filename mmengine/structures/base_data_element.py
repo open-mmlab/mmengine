@@ -50,7 +50,7 @@ class BaseDataElement:
           information about the image such as filename,
           image_shape, pad_shape, etc. The attributes can be accessed or
           modified by dict-like or object-like operations, such as
-          ``.``(for data access and modification), ``in``, ``del``,
+          ``.`` (for data access and modification), ``in``, ``del``,
           ``pop(str)``, ``get(str)``, ``metainfo_keys()``,
           ``metainfo_values()``, ``metainfo_items()``, ``set_metainfo()``(for
           set or change key-value pairs in metainfo).
@@ -60,7 +60,7 @@ class BaseDataElement:
           dict-like or object-like operations, such as
           ``.``, ``in``, ``del``, ``pop(str)``, ``get(str)``, ``keys()``,
           ``values()``, ``items()``. Users can also apply tensor-like
-          methods to all :obj:``torch.Tensor`` in the ``data_fields``,
+          methods to all :obj:`torch.Tensor` in the ``data_fields``,
           such as ``.cuda()``, ``.cpu()``, ``.numpy()``, ``.to()``,
           ``to_tensor()``, ``.detach()``.
 
