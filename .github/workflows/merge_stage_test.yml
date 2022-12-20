@@ -216,14 +216,9 @@ jobs:
           mim install 'mmcv>=2.0.0rc1'
         # Skip unit test for timer and progressbar because consumed time cannot be calculated accurately on macOS.
         # Skip testing setup_env since it does not work in the current CI environment # TODO
-        # Skip testing dist for PyTorch 1.13 since it sometimes failed in the CI environment # TODO
       - name: Run unittests and generate coverage report
         run: |
-          if [[ ${{ matrix.torch }} == "1.13.0" ]]; then
-            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/ --ignore tests/test_utils/test_dl_utils/test_setup_env.py
-          else
-            coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_utils/test_dl_utils/test_setup_env.py
-          fi
+          coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/
           coverage xml
           coverage report -m
 
