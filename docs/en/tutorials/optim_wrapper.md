@@ -345,7 +345,7 @@ In addition to configuring the weight decay, `paramwise_cfg` of MMEngine's defau
 
 `norm_decay_mult`: Weight decay coefficient for weights and bias of the normalization layer, default to 1.
 
-`flat_decay_mult`: xxx.
+`flat_decay_mult`: Weight decay coefficient of the one-dimension parameters.
 
 `dwconv_decay_mult`: Decay coefficient of the depth-wise convolution, default to 1.
 
