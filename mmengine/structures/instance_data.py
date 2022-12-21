@@ -54,6 +54,7 @@ class InstanceData(BaseDataElement):
         ...         return str(self.tmp)
         >>> from mmengine.structures import InstanceData
         >>> import numpy as np
+        >>> import torch
         >>> img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
         >>> instance_data = InstanceData(metainfo=img_meta)
         >>> 'img_shape' in instance_data
@@ -70,11 +71,11 @@ class InstanceData(BaseDataElement):
             img_shape: (800, 1196, 3)
             pad_shape: (800, 1216, 3)
             DATA FIELDS
-            det_scores: tensor([0.8000, 0.7000])
             det_labels: tensor([2, 3])
-            polygons: [[1, 2, 3, 4], [5, 6, 7, 8]]
+            det_scores: tensor([0.8000, 0.7000])
             bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188],
                         [0.8101, 0.3105, 0.5123, 0.6263]])
+            polygons: [[1, 2, 3, 4], [5, 6, 7, 8]]
         ) at 0x7fb492de6280>
         >>> sorted_results = instance_data[instance_data.det_scores.sort().indices]
         >>> sorted_results.det_scores
@@ -85,10 +86,10 @@ class InstanceData(BaseDataElement):
             img_shape: (800, 1196, 3)
             pad_shape: (800, 1216, 3)
             DATA FIELDS
-            bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188]])
-            det_scores: tensor([0.8000])
-            polygons: [[1, 2, 3, 4]]
             det_labels: tensor([2])
+            det_scores: tensor([0.8000])
+            bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188]])
+            polygons: [[1, 2, 3, 4]]
         ) at 0x7f64ecf0ec40>
         >>> print(instance_data[instance_data.det_scores > 1])
         <InstanceData(
@@ -96,10 +97,10 @@ class InstanceData(BaseDataElement):
             img_shape: (800, 1196, 3)
             pad_shape: (800, 1216, 3)
             DATA FIELDS
-            bboxes: tensor([], size=(0, 4))
-            det_scores: tensor([])
-            polygons: []
             det_labels: tensor([], dtype=torch.int64)
+            det_scores: tensor([])
+            bboxes: tensor([], size=(0, 4))
+            polygons: []
         ) at 0x7f660a6a7f70>
         >>> print(instance_data.cat([instance_data, instance_data]))
         <InstanceData(
@@ -107,13 +108,13 @@ class InstanceData(BaseDataElement):
             img_shape: (800, 1196, 3)
             pad_shape: (800, 1216, 3)
             DATA FIELDS
+            det_labels: tensor([2, 3, 2, 3])
+            det_scores: tensor([0.8000, 0.7000, 0.8000, 0.7000])
             bboxes: tensor([[0.4997, 0.7707, 0.0595, 0.4188],
                         [0.8101, 0.3105, 0.5123, 0.6263],
                         [0.4997, 0.7707, 0.0595, 0.4188],
                         [0.8101, 0.3105, 0.5123, 0.6263]])
-            det_scores: tensor([0.8000, 0.7000, 0.8000, 0.7000])
             polygons: [[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4], [5, 6, 7, 8]]
-            det_labels: tensor([2, 3, 2, 3])
         ) at 0x7f203542feb0>
     """
 
