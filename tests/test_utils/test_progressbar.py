@@ -3,9 +3,8 @@ import os
 import platform
 import time
 from io import StringIO
+from unittest import skipIf
 from unittest.mock import patch
-
-import pytest
 
 import mmengine
 
@@ -42,7 +41,7 @@ class TestProgressBar:
         prog_bar.start()
         assert out.getvalue() == f'[{" " * bar_width}] 0/10, elapsed: 0s, ETA:'
 
-    @pytest.mark.skipIf(
+    @skipIf(
         platform.system() != 'Linux',
         reason='Only test `TestProgressBar.test_update` in Linux')
     def test_update(self):
@@ -63,7 +62,7 @@ class TestProgressBar:
         assert out.getvalue() == f'\r[{">" * 2 + " " * 18}] 1/10, 1.0 ' \
                                  'task/s, elapsed: 1s, ETA:     9s'
 
-    @pytest.mark.skipIf(
+    @skipIf(
         platform.system() != 'Linux',
         reason='Only test `TestProgressBar.test_adaptive_length` in Linux')
     def test_adaptive_length(self):
@@ -92,7 +91,7 @@ def sleep_1s(num):
     return num
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_progress_list` in Linux')
 def test_track_progress_list():
@@ -106,7 +105,7 @@ def test_track_progress_list():
     assert ret == [1, 2, 3]
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_progress_iterator` in Linux')
 def test_track_progress_iterator():
@@ -121,7 +120,7 @@ def test_track_progress_iterator():
     assert ret == [1, 2, 3]
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_iter_progress` in Linux')
 def test_track_iter_progress():
@@ -137,7 +136,7 @@ def test_track_iter_progress():
     assert ret == [1, 2, 3]
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_enum_progress` in Linux')
 def test_track_enum_progress():
@@ -157,7 +156,7 @@ def test_track_enum_progress():
     assert count == [0, 1, 2]
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_parallel_progress_list` in Linux')
 def test_track_parallel_progress_list():
@@ -174,7 +173,7 @@ def test_track_parallel_progress_list():
     assert results == [1, 2, 3, 4]
 
 
-@pytest.mark.skipIf(
+@skipIf(
     platform.system() != 'Linux',
     reason='Only test `test_track_parallel_progress_iterator` in Linux')
 def test_track_parallel_progress_iterator():

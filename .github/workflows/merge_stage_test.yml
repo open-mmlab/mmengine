@@ -1,7 +1,7 @@
 name: merge_stage_test
 
 on:
-  pull_request:
+  push:
     paths-ignore:
       - ".github/**.md"
       - "docker/**"
@@ -12,8 +12,8 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
-    # branches:
-    #   - main
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -214,14 +214,11 @@ jobs:
           pip install -r requirements/tests.txt
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-      # Pytorch 1.13 sometimes raise an error when using TestDistWithGLOOBackend.
-        # Skip unit test for timer and progressbar because consumed time cannot be calculated accurately on macOS.
-        # Skip testing setup_env since it does not work in the current CI environment # TODO
+      # Distributed related unit test could failed in macOS
+      # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_utils/test_timer.py --ignore tests/test_utils/test_progressbar.py --ignore tests/test_dist/ --ignore tests/test_utils/test_dl_utils/test_setup_env.py
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/ --ignore tests/test_utils/test_dl_utils/test_setup_env.py
           coverage xml
           coverage report -m
 
