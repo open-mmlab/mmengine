@@ -7,7 +7,7 @@ from mmengine.testing import RunnerTestCase
 
 class TestDistSamplerSeedHook(RunnerTestCase):
 
-    def test_before_epoch(self):
+    def test_before_train_epoch(self):
 
         hook = DistSamplerSeedHook()
         # Test dataset sampler
