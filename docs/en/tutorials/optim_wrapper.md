@@ -83,7 +83,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185606060-2fdebd90-c17a-4a8c-aaf1-540d47975c59.png)
 
-To enable mixed precision training, users need to use `AmpOptimWrapper.optim_context ` which is similar to the `autocast` for enabling the context for mixed precision training. In addition, `AmpOptimWrapper.optim_context` can accelerate the gradient accumulation during the distributed training, which will be introduced in the next example.
+To enable mixed precision training, users need to use `AmpOptimWrapper.optim_context` which is similar to the `autocast` for enabling the context for mixed precision training. In addition, `AmpOptimWrapper.optim_context` can accelerate the gradient accumulation during the distributed training, which will be introduced in the next example.
 
 **3.1 Mixed-precision training and gradient accumulation with SGD in PyTorch**
 
@@ -267,7 +267,7 @@ optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_c
 ```
 
 ```{note}
-If you are new to reading the MMEngine tutorial and are not familiar with concepts such as [configs](../advanced_tutorials/config.md) and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced tutorials for now and read other documents first. Of course, if you already have a good understanding of this prerequisite knowledge, we highly recommend reading the advanced part which covers::
+If you are new to reading the MMEngine tutorial and are not familiar with concepts such as [configs](../advanced_tutorials/config.md) and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced tutorials for now and read other documents first. Of course, if you already have a good understanding of this prerequisite knowledge, we highly recommend reading the advanced part which covers:
 
 1. How to customize the learning rate, decay coefficient, and other parameters of the model parameters in the configuration of OptimWrapper.
 
