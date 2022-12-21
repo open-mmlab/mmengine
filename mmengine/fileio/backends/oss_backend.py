@@ -5,8 +5,6 @@ import re
 from pathlib import Path
 from typing import Iterator, Optional, Tuple, Union
 
-import oss2  # todo delete?
-
 from .base import BaseStorageBackend
 
 
@@ -35,16 +33,17 @@ class OSSBackend(BaseStorageBackend):
                  path_mapping: Optional[dict] = None):
         try:
             import oss2
+            self.oss2 = oss2
         except ImportError:
-            raise ImportError('Please install petrel_client to enable '
-                              'PetrelBackend.')
-        self._client = oss2.Auth(
+            raise ImportError('Please install OSS_client to enable '
+                              'OSSBackend.')
+        self._client = self.oss2.Auth(
             access_key_id=access_key_id, access_key_secret=access_key_secret)
 
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
         # Use to parse bucket and obj_name
-        self.parse_bucket = re.compile('oss://(.+?)/(.+?)/(.+)')
+        self.parse_bucket = re.compile('oss://(.+?)/(.+?)/(.*)')
 
     def _map_path(self, filepath: Union[str, Path]) -> str:
         """Map ``filepath`` to a string path whose prefix will be replaced by
@@ -60,7 +59,7 @@ class OSSBackend(BaseStorageBackend):
         return filepath
 
     def _format_path(self, filepath: str) -> str:
-        """Convert a ``filepath`` to standard format of petrel oss.
+        """Convert a ``filepath`` to standard format of OSS oss.
 
         If the ``filepath`` is concatenated by ``os.path.join``, in a Windows
         environment, the ``filepath`` will be the format of
@@ -87,7 +86,8 @@ class OSSBackend(BaseStorageBackend):
         parse_res = self.parse_bucket.findall(filepath)
         if not parse_res:
             raise ValueError(
-                f"The input path '{filepath}' format is incorrect.")
+                f"The input path '{filepath}' format is incorrect. \
+                A example: oss://oss-cn-hangzhou.aliyuncs.com/mmengine/.*")
         endpoint, bucket, obj_name = parse_res[0]
         return endpoint, bucket, obj_name
 
@@ -100,7 +100,8 @@ class OSSBackend(BaseStorageBackend):
         Returns:
             endpoint (Bucket): a instance of OSS
         """
-        bucket = oss2.Bucket(self._client, endpoint, bucket_name)
+
+        bucket = self.oss2.Bucket(self._client, endpoint, bucket_name)
         return bucket
 
     def get(self, filepath: Union[str, Path]) -> bytes:
@@ -155,7 +156,7 @@ class OSSBackend(BaseStorageBackend):
             filepath (str or Path): Path to write data.
 
         Examples:
-            >>> backend = PetrelBackend()
+            >>> backend = OSSBackend()
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.put(b'hello world', filepath)
         """
@@ -223,7 +224,7 @@ class OSSBackend(BaseStorageBackend):
         """
         endpoint, bucket_name, obj_name = self._parse_path(dir_path)
         bucket = self._bucket_instance(endpoint, bucket_name)
-        for obj in oss2.ObjectIterator(bucket, prefix=obj_name):
+        for obj in self.oss2.ObjectIterator(bucket, prefix=obj_name):
             bucket.delete_object(obj.key)
 
     def list_dir_or_file(
@@ -236,7 +237,7 @@ class OSSBackend(BaseStorageBackend):
         arbitrary order.
 
         Note:
-            Petrel has no concept of directories but it simulates the directory
+            OSS has no concept of directories but it simulates the directory
             hierarchy in the filesystem through public prefixes. In addition,
             if the returned path ends with '/', it means the path is a public
             prefix which is a logical directory.
@@ -257,7 +258,7 @@ class OSSBackend(BaseStorageBackend):
             Iterable[str]: A relative path to ``dir_path``.
 
         Examples:
-            >>> backend = PetrelBackend()
+            >>> backend = OSSBackend()
             >>> dir_path = 'oss://endpoint/bucket/file'
             >>> # list those files and directories in current directory
             >>> for file_path in backend.list_dir_or_file(dir_path):
@@ -278,7 +279,8 @@ class OSSBackend(BaseStorageBackend):
 
         endpoint, bucket_name, obj_name = self._parse_path(dir_path)
         bucket = self._bucket_instance(endpoint, bucket_name)
-        for obj in oss2.ObjectIterator(bucket, prefix=obj_name, delimiter='/'):
+        for obj in self.oss2.ObjectIterator(
+                bucket, prefix=obj_name, delimiter='/'):
             # judge if directory or not by function is_prefix
             filename = str(obj.key)
             if obj.is_prefix():  # is dir
@@ -315,23 +317,24 @@ class OSSBackend(BaseStorageBackend):
             using the base filename from src.
 
         Examples:
-            >>> backend = PetrelBackend()
+            >>> backend = OSSBackend()
             >>> # dst is a file
             >>> src = 'path/of/your/file'
-            >>> dst = 'petrel://path/of/file1'
+            >>> dst = 'oss://endpoint/bucket/file1'
             >>> backend.copyfile_from_local(src, dst)
-            'petrel://path/of/file1'
+            'oss://endpoint/bucket/file1'
 
             >>> # dst is a directory
-            >>> dst = 'petrel://path/of/dir'
+            >>> dst = 'oss://endpoint/bucket/dir/'
             >>> backend.copyfile_from_local(src, dst)
-            'petrel://path/of/dir/file'
+            'oss://endpoint/bucket/dir/file'
         """
-        dst = self._format_path(self._map_path(dst))
-
+        dst = self._format_path(self._map_path(self._map_path(dst)))
+        src = self._map_path(src)
+        if dst.endswith('/'):
+            dst = os.path.join(dst, src.split('/')[-1])
         with open(src, 'rb') as f:
             self.put(f.read(), dst)
-
         return dst
 
     def copytree_from_local(
@@ -354,11 +357,11 @@ class OSSBackend(BaseStorageBackend):
                 be raised.
 
         Examples:
-            >>> backend = PetrelBackend()
+            >>> backend = OSSBackend()
             >>> src = 'path/of/your/dir'
-            >>> dst = 'petrel://path/of/dir1'
+            >>> dst = 'oss://endpoint/bucket/dir1'
             >>> backend.copytree_from_local(src, dst)
-            'petrel://path/of/dir1'
+            'oss://endpoint/bucket/dir1'
         """
         dst = self._format_path(self._map_path(dst))
         if self.exists(dst):
@@ -394,9 +397,9 @@ class OSSBackend(BaseStorageBackend):
             using the base filename from src.
 
         Examples:
-            >>> backend = PetrelBackend()
+            >>> backend = OSSBackend()
             >>> # dst is a file
-            >>> src = 'petrel://path/of/file'
+            >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'path/of/your/file'
             >>> backend.copyfile_to_local(src, dst)
             'path/of/your/file'
@@ -436,12 +439,10 @@ class OSSBackend(BaseStorageBackend):
             str: The result after concatenation.
 
         Examples:
-            >>> backend = PetrelBackend()
-            >>> filepath = 'petrel://path/of/file'
+            >>> backend = OSSBackend()
+            >>> filepath = 'oss://endpoint/bucket/dir'
             >>> backend.join_path(filepath, 'another/path')
-            'petrel://path/of/file/another/path'
-            >>> backend.join_path(filepath, '/another/path')
-            'petrel://path/of/file/another/path'
+            'oss://endpoint/bucket/dir/another/path'
         """
         filepath = self._format_path(self._map_path(filepath))
         if filepath.endswith('/'):

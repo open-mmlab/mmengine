@@ -1,5 +1,4 @@
 coverage
 lmdb
-oss2
 parameterized
 pytest
