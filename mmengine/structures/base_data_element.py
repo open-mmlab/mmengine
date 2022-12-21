@@ -72,6 +72,7 @@ class BaseDataElement:
             model predictions. Defaults to None.
 
     Examples:
+        >>> import torch
         >>> from mmengine.structures import BaseDataElement
         >>> gt_instances = BaseDataElement()
         >>> bboxes = torch.rand((5, 4))
