@@ -83,7 +83,7 @@ for input, target in zip(inputs, targets):
 
 ![image](https://user-images.githubusercontent.com/57566630/185606060-2fdebd90-c17a-4a8c-aaf1-540d47975c59.png)
 
-To enable hybrid precision training, users need to use `AmpOptimWrapper.optim_context ` which is similar to the `autocast` for enabling the context for hybrid precision training. In addition, `AmpOptimWrapper.optim_context `can accelerate the gradient accumulation during the distributed training, which will be introduced in the next example.
+To enable mixed precision training, users need to use `AmpOptimWrapper.optim_context ` which is similar to the `autocast` for enabling the context for mixed precision training. In addition, `AmpOptimWrapper.optim_context` can accelerate the gradient accumulation during the distributed training, which will be introduced in the next example.
 
 **3.1 Mixed-precision training and gradient accumulation with SGD in PyTorch**
 
@@ -209,7 +209,7 @@ optim_wrapper_new.load_state_dict(optim_state_dict)
 
 ### Use multiple optimizers
 
-Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, MMEngine provides a container class called `OptimWrapperDict` to manage them. `OptimWrapperDict` stores the sub-OptimWrapper in the form of `dict`,  and can be accessed and traversed just like a `dict`.
+Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, MMEngine provides a container class called `OptimWrapperDict` to manage them. `OptimWrapperDict` stores the sub-OptimWrapper in the form of `dict`, and can be accessed and traversed just like a `dict`.
 
 Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as `update_prarms`, `optim_context`, `backward`, `step`, etc. therefore, it cannot be used directly to train models. We suggest implementing the logic of parameter updating by accessing the sub-OptimWarpper in `OptimWrapperDict` directly.
 
@@ -267,7 +267,7 @@ optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_c
 ```
 
 ```{note}
-If you are new to reading the MMEngine tutorial and are not familiar with concepts such as[configs](../advanced_tutorials/config.md) and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced tutorials for now and read other documents first. Of course, if you already have a good understanding of this prerequisite knowledge, we highly recommend reading the advanced part which covers::
+If you are new to reading the MMEngine tutorial and are not familiar with concepts such as [configs](../advanced_tutorials/config.md) and [registries](../advanced_tutorials/registry.md), it is recommended to skip the following advanced tutorials for now and read other documents first. Of course, if you already have a good understanding of this prerequisite knowledge, we highly recommend reading the advanced part which covers::
 
 1. How to customize the learning rate, decay coefficient, and other parameters of the model parameters in the configuration of OptimWrapper.
 
@@ -498,4 +498,4 @@ class MultipleOptimiWrapperConstructor:
 
 ### Adjust hyperparameters during training
 
-The hyperparameters in the optimizer can only be set to a fixed value at the time it is constructed, and you cannot adjust parameters such as the learning rate during training by just using the optimizer wrapper. In MMEngine, we have implemented a parameter scheduler which allows tuning of parameters during training. For the usage of the parameter scheduler, please refer to the [Optimizer Parameter Tuning Strategy](./param_scheduler.md)
+The hyperparameters in the optimizer can only be set to a fixed value at the time it is constructed, and you cannot adjust parameters such as the learning rate during training by just using the optimizer wrapper. In MMEngine, we have implemented a parameter scheduler that allows the tuning of parameters during training. For the usage of the parameter scheduler, please refer to the [Parameter Scheduler](./param_scheduler.md)
