@@ -22,7 +22,7 @@ class ParamSchedulerHook(Hook):
                          batch_idx: int,
                          data_batch: DATA_BATCH = None,
                          outputs: Optional[dict] = None) -> None:
-        """Call step function for each scheduler after each iteration.
+        """Call step function for each scheduler after each training iteration.
 
         Args:
             runner (Runner): The runner of the training process.
@@ -38,9 +38,9 @@ class ParamSchedulerHook(Hook):
         if runner.param_schedulers is None:
             return
 
-        def step(param_schedulers):
-            assert isinstance(param_schedulers, list)
-            for scheduler in param_schedulers:
+        def step(_param_schedulers):
+            assert isinstance(_param_schedulers, list)
+            for scheduler in _param_schedulers:
                 if not scheduler.by_epoch:
                     scheduler.step()
 
@@ -56,7 +56,7 @@ class ParamSchedulerHook(Hook):
                 f'but got {runner.param_schedulers}')
 
     def after_train_epoch(self, runner) -> None:
-        """Call step function for each scheduler after each epoch.
+        """Call step function for each scheduler after each training epoch.
 
         Args:
             runner (Runner): The runner of the training process.
@@ -65,9 +65,9 @@ class ParamSchedulerHook(Hook):
         if runner.param_schedulers is None:
             return
 
-        def step(param_schedulers):
-            assert isinstance(param_schedulers, list)
-            for scheduler in param_schedulers:
+        def step(_param_schedulers):
+            assert isinstance(_param_schedulers, list)
+            for scheduler in _param_schedulers:
                 if scheduler.by_epoch:
                     scheduler.step()
 
@@ -85,6 +85,19 @@ class ParamSchedulerHook(Hook):
     def after_val_epoch(self,
                         runner,
                         metrics: Optional[Dict[str, float]] = None) -> None:
+        """Call step function for each scheduler which has attribute
+        ``need_step_args`` after each validation epoch.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+            metrics (Dict[str, float], optional): Evaluation results of all
+                metrics on validation dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
+
+        Note:
+            if ``runner._train_loop`` or ``runner.param_schedulers``
+            is not built before, the hook ``after_val_epoch`` will be skipped.
+        """
 
         if runner.param_schedulers is None:
             return
@@ -92,11 +105,11 @@ class ParamSchedulerHook(Hook):
         if not self._should_after_val_epoch(runner):
             return
 
-        def step(param_schedulers):
-            assert isinstance(param_schedulers, list)
-            for scheduler in param_schedulers:
-                if scheduler.by_epoch and \
-                        getattr(scheduler, 'need_step_args', False):
+        def step(_param_schedulers):
+            assert isinstance(_param_schedulers, list)
+            for scheduler in _param_schedulers:
+                if (scheduler.by_epoch
+                        and getattr(scheduler, 'need_step_args', False)):
                     scheduler.step(metrics)
 
         if isinstance(runner.param_schedulers, list):
@@ -111,7 +124,11 @@ class ParamSchedulerHook(Hook):
                 f'but got {runner.param_schedulers}')
 
     def _should_after_val_epoch(self, runner) -> bool:
-        """Check whether train_loop and param_schedulers is built."""
+        """Check whether train_loop and param_schedulers are built before.
+
+        Args:
+            runner (Runner): The runner of the validation process.
+        """
         self._should: bool
         if hasattr(self, '_should'):
             # to save check time
