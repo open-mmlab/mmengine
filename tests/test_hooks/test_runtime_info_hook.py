@@ -36,9 +36,6 @@ class TestRuntimeInfoHook(RunnerTestCase):
         class DatasetWithMetainfo(DatasetWithoutMetainfo):
             metainfo = dict()
 
-            def __len__(self):
-                return 12
-
         cfg.train_dataloader.dataset.type = DatasetWithMetainfo
         runner = self.build_runner(cfg)
         hook.before_train(runner)
@@ -57,7 +54,9 @@ class TestRuntimeInfoHook(RunnerTestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         lr = cfg.optim_wrapper.optimizer.lr
         runner = self.build_runner(cfg)
-        runner.train_loop._iter = 9  # set iter and build optimizer
+        # set iter
+        runner.train_loop._iter = 9
+        # build optim wrapper
         runner.optim_wrapper = runner.build_optim_wrapper(runner.optim_wrapper)
         hook = self._get_runtime_info_hook(runner)
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
@@ -72,9 +71,13 @@ class TestRuntimeInfoHook(RunnerTestCase):
             hook.before_train_iter(runner, batch_idx=2, data_batch=None)
 
         # multiple optimizers
-        model = nn.Linear(1, 1)
-        optim1 = SGD(model.parameters(), lr=0.01)
-        optim2 = SGD(model.parameters(), lr=0.02)
+        model = nn.ModuleDict(
+            dict(
+                layer1=nn.Linear(1, 1),
+                layer2=nn.Linear(1, 1),
+            ))
+        optim1 = SGD(model.layer1.parameters(), lr=0.01)
+        optim2 = SGD(model.layer2.parameters(), lr=0.02)
         optim_wrapper1 = OptimWrapper(optim1)
         optim_wrapper2 = OptimWrapper(optim2)
         optim_wrapper_dict = OptimWrapperDict(
