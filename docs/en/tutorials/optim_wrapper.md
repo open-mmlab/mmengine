@@ -339,19 +339,19 @@ In addition to configuring the weight decay, `paramwise_cfg` of MMEngine's defau
 
 `decay_mult`: Decay coefficient for all parameters.
 
-`bias_lr_mult`: Learning rate coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
+`bias_lr_mult`: Learning rate coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution).
 
-`bias_decay_mult`: Weight decay coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution), default to 1.
+`bias_decay_mult`: Weight decay coefficient of the bias (excluding bias of normalization layer and offset of the deformable convolution).
 
-`norm_decay_mult`: Weight decay coefficient for weights and bias of the normalization layer, default to 1.
+`norm_decay_mult`: Weight decay coefficient for weights and bias of the normalization layer.
 
 `flat_decay_mult`: Weight decay coefficient of the one-dimension parameters.
 
-`dwconv_decay_mult`: Decay coefficient of the depth-wise convolution, default to 1.
+`dwconv_decay_mult`: Decay coefficient of the depth-wise convolution.
 
 `bypass_duplicate`: Whether to skip duplicate parameters, default to `False`.
 
-`dcn_offset_lr_mult`: Learning rate of the deformable convolution, default to 1.
+`dcn_offset_lr_mult`: Learning rate of the deformable convolution.
 
 ### Set different hyperparamters for different model modules
 
