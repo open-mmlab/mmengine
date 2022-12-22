@@ -1287,7 +1287,60 @@ class CosineRestartParamScheduler(_ParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class ReduceOnPlateauParamScheduler(_ParamScheduler):
-    """ReduceOnPlateauParamScheduler."""
+    """Reduce the parameters of each parameter group when a metric has stopped
+    improving. Models often benefit from reducing the parameters by a factor of
+    2-10 once learning stagnates. This scheduler reads a metrics quantity and
+    if no improvement is seen for a ``patience`` number of epochs, the
+    parameters are reduced.
+
+    The implementation is motivated by
+    https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
+
+    Args:
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
+        param_name (str): Name of the parameter to be adjusted, such as
+            ``lr``, ``momentum``.
+        monitor (str): Key name of the value to monitor in metrics dict.
+        rule (str): One of `less`, `greater`. In `less` rule, parameters will
+            be reduced when the quantity monitored has stopped
+            decreasing; in `greater` rule it will be reduced when the
+            quantity monitored has stopped increasing. Defaults to 'less'.
+        factor (float): Factor by which the parameters will be
+            reduced. new_param = param * factor. Defaults to 0.1.
+        patience (int): Number of epochs with no improvement after
+            which parameters will be reduced. For example, if
+            ``patience = 2``, then we will ignore the first 2 epochs
+            with no improvement, and will only decrease the parameters after
+            the 3rd epoch if the monitor value still hasn't improved then.
+            Defaults to 10.
+        threshold (float): Threshold for measuring the new optimum,
+            to only focus on significant changes. Defaults to 1e-4.
+        threshold_rule (str): One of `rel`, `abs`. In `rel` rule,
+            dynamic_threshold = best * ( 1 + threshold ) in 'greater'
+            rule or best * ( 1 - threshold ) in `less` rule.
+            In `abs` rule, dynamic_threshold = best + threshold in
+            `greater` rule or best - threshold in `less` rule.
+            Defaults to 'rel'.
+        cooldown (int): Number of epochs to wait before resuming
+            normal operation after parameters have been reduced. Defaults to 0.
+        min_value (float or list[float]): A scalar or a sequence of scalars.
+            A lower bound on the parameters of each parameter group
+            respectively. Defaults to 0. .
+        eps (float): Minimal decay applied to parameters. If the difference
+            between new and old parameters are smaller than eps, the update is
+            ignored. Defaults to 1e-8.
+        begin (int): Step at which to start updating the parameters.
+            Defaults to 0.
+        end (int): Step at which to stop updating the parameters.
+            Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
 
     need_step_args = True
 
@@ -1301,7 +1354,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
                  threshold: float = 1e-4,
                  threshold_rule: str = 'rel',
                  cooldown: int = 0,
-                 min_value: float = 0.,
+                 min_value: Union[float, Sequence[float]] = 0.,
                  eps: float = 1e-8,
                  begin: int = 0,
                  end: int = INF,
@@ -1362,10 +1415,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         self.patience = patience
         self.cooldown = cooldown
         self.cooldown_counter = 0
-        self.rule = rule
         self.rule_worse = None  # the worse value for the chosen mode
-        self.threshold = threshold
-        self.threshold_rule = threshold_rule
         self.best = None
         self.num_bad_epochs = 0
         self.eps = eps
@@ -1381,6 +1431,14 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         ]
 
     def step(self, metrics):
+        """Adjusts the parameter value of each parameter group based on the
+        specified schedule.
+
+        Args:
+            metrics (Dict[str, float]): Evaluation results of all
+                metrics on validation dataset. The keys are the names of the
+                metrics, and the values are corresponding results.
+        """
         self._global_step += 1
 
         # Compute parameter value per param group in the effective range
@@ -1421,6 +1479,13 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         ]
 
     def print_value(self, is_verbose: bool, group: int, value: float):
+        """Display the current parameter value.
+
+        Args:
+            is_verbose (bool): Whether to print the value.
+            group (int): The index of the current ``param_group``.
+            value (float): The parameter value.
+        """
         if is_verbose:
             step_name = 'epoch' if self.by_epoch else 'iter'
             print_log(
@@ -1429,6 +1494,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
                 logger='current')
 
     def _get_value(self):
+        """Compute value using chainable form of the scheduler."""
         values = [
             float(group[self.param_name]) * self.factor
             for group in self.optimizer.param_groups
@@ -1436,9 +1502,11 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         return [max(v, min_v) for v, min_v in zip(values, self.min_value)]
 
     def _in_cooldown(self):
+        """Judge whether it is in cooldown."""
         return self.cooldown_counter > 0
 
     def _is_better(self, a, best):
+        """Judge whether the monitor value is better."""
         if self.rule == 'less' and self.threshold_rule == 'rel':
             rel_epsilon = 1. - self.threshold
             return a < best * rel_epsilon
@@ -1454,6 +1522,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             return a > best + self.threshold
 
     def _init_is_better(self, rule, threshold, threshold_rule):
+        """Initialize rule and its associated values."""
         if rule not in {'less', 'greater'}:
             raise ValueError('mode ' + rule + ' is unknown!')
         if threshold_rule not in {'rel', 'abs'}:
