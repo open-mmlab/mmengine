@@ -23,7 +23,7 @@ class TmpObject:
         return len(self.tmp)
 
     def __getitem__(self, item):
-        if type(item) == int:
+        if isinstance(item, int):
             if item >= len(self) or item < -len(self):  # type:ignore
                 raise IndexError(f'Index {item} out of range!')
             else:
@@ -58,13 +58,13 @@ class TmpObjectWithoutCat:
         return len(self.tmp)
 
     def __getitem__(self, item):
-        if type(item) == int:
+        if isinstance(item, int):
             if item >= len(self) or item < -len(self):  # type:ignore
                 raise IndexError(f'Index {item} out of range!')
             else:
                 # keep the dimension
                 item = slice(item, None, len(self))
-        return TmpObject(self.tmp[item])
+        return TmpObjectWithoutCat(self.tmp[item])
 
     def __repr__(self):
         return str(self.tmp)
@@ -131,18 +131,18 @@ class TestInstanceData(TestCase):
         with pytest.raises(AssertionError):
             instance_data[item]
 
-        # when input is a bool tensor, The shape of
+        # when input is a bool tensor, the shape of
         # the input at index 0 should equal to
         # the value length in instance_data_field
         with pytest.raises(AssertionError):
             instance_data[item.bool()]
 
-        # test Longtensor
+        # test LongTensor
         long_tensor = torch.randint(5, (2, ))
         long_index_instance_data = instance_data[long_tensor]
         assert len(long_index_instance_data) == len(long_tensor)
 
-        # test bool tensor
+        # test BoolTensor
         bool_tensor = torch.rand(5) > 0.5
         bool_index_instance_data = instance_data[bool_tensor]
         assert len(bool_index_instance_data) == bool_tensor.sum()
@@ -155,7 +155,7 @@ class TestInstanceData(TestCase):
         list_index_instance_data = instance_data[list_index]
         assert len(list_index_instance_data) == len(list_index)
 
-        # text list bool
+        # test list bool
         list_bool = [True, False, True, False, False]
         list_bool_instance_data = instance_data[list_bool]
         assert len(list_bool_instance_data) == 2
