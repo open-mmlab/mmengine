@@ -1523,10 +1523,12 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
 
     def _init_is_better(self, rule, threshold, threshold_rule):
         """Initialize rule and its associated values."""
+        if threshold < 0:
+            raise ValueError(f'threshold {threshold} should be >= 0.')
         if rule not in {'less', 'greater'}:
-            raise ValueError('mode ' + rule + ' is unknown!')
+            raise ValueError(f'mode {rule} is unknown!')
         if threshold_rule not in {'rel', 'abs'}:
-            raise ValueError('threshold mode ' + threshold_rule +
+            raise ValueError(f'threshold mode {threshold_rule}'
                              ' is unknown!')
 
         if rule == 'less':
