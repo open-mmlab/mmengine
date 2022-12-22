@@ -1499,7 +1499,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             float(group[self.param_name]) * self.factor
             for group in self.optimizer.param_groups
         ]
-        return [max(v, min_v) for v, min_v in zip(values, self.min_value)]
+        return [max(v, min_v) for v, min_v in zip(values, self.min_values)]
 
     def _in_cooldown(self):
         """Judge whether it is in cooldown."""
