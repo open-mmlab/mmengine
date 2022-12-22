@@ -278,7 +278,7 @@ Initialized by user-defined `init_weights` in ToyConv
 
 ### Ininitailize module with function
 
-As mentioned in prior \[section\](#Customize the initialization method), we could customize our initialization in `init_weights`. To make it more convenient to initialize modules, MMEngine provides a series of **module initialization functions** to initialize the whole module based on `torch.nn.init`. For example, we want to initialize the weights of the convolutional layer with normal distribution and initialize the bias of the convolutional layer with a constant. The implementation of `torch.nn.init` is as follows:
+As mentioned in prior [section](#customize-the-initialization-method), we could customize our initialization in `init_weights`. To make it more convenient to initialize modules, MMEngine provides a series of **module initialization functions** to initialize the whole module based on `torch.nn.init`. For example, we want to initialize the weights of the convolutional layer with normal distribution and initialize the bias of the convolutional layer with a constant. The implementation of `torch.nn.init` is as follows:
 
 ```python
 from torch.nn.init import normal_, constant_
