@@ -26,30 +26,31 @@ class ProfilerHook(Hook):
 
     PyTorch Profiler is a tool that allows the collection of the performance
     metrics during the training. More details on Profiler can be found at
-    `official docs
-    <https://pytorch.org/docs/1.13.1/profiler.html#torch.profiler.profile>`_
+    `official docs <https://pytorch.org/docs/stable/profiler.html
+    #torch.profiler.profile>`_
 
     Args:
         by_epoch (bool): Profile performance by epoch or by iteration.
             Default to True.
         profile_times (int): The period (epoch/iter) recorded by the profiler.
-            Eg: profile_iters=10 and by_epoch=False, record 0-10 iteration.
-            Default to 1.
+            Default to 1. For example, profile_iters=10 and by_epoch=False,
+            indicating that 0-10 iterations are recorded.
         activity_with_cpu (bool): Activities to be used in the analysis (CPU)
         activity_with_cuda (bool): Activities to be used in the analysis (CUDA)
         schedule (dict, optional): Key-word arguments passed to
-            `torch.profile.schedule
-    <https://pytorch.org/docs/stable/profiler.html#torch.profiler.schedule>`_.
+            `torch.profile.schedule <https://pytorch.org/docs/stable/
+            profiler.html#torch.profiler.schedule>`_.
             Defaults to None, which means profiling without a schedule
         on_trace_ready (callable, dict, optional): Either a handler or a dict
-            of generate handler.
-            [callable] A function that handles torch.autograd.profiler.profile
-            [Terminal] dict(type='log_trace') Key-word arguments passed to
-                torch.autograd.profiler_util.py EventList.table()
-            [Tensorboard] dict(type='tb_trace', **trace_cfg)
-                trace_cfg include dir_name、worker_name、use_gzip
-                dir_name default to "{work_dir}/tf_tracing_logs".
-            Default to None, which mean profiling without a on_trace_ready.
+            of generate handler. Default to None, which mean profiling without
+            a on_trace_ready.The Callable type needs to construct its own
+            function that can handle 'torch.autograd.profiler.profile'.
+            Two officially recommended ways are provided, namely terminal
+            display or tensorboard display.The terminal display content can be
+            adjusted through 'EventList.table()'
+            from 'torch.autograd.profiler_util.py'.
+            If using tensorboard, save to '{work_dir}/tf_tracing_logs'
+            by default.
         record_shapes (bool): Save information about operator's input shapes.
             Default to False.
         profile_memory (bool): Track tensor memory allocation/deallocation.
@@ -65,7 +66,7 @@ class ProfilerHook(Hook):
             Default to None, which mean profiling does not store json files.
     Examples:
         >>> # tensorboard trace
-        >>> trace_config = dict(type='tb_trace', dir_name='work_dir')
+        >>> trace_config = dict(type='tb_trace')
         >>> profiler_hook_cfg = dict(on_trace_ready=trace_config)
     """
     priority = 'VERY_LOW'
@@ -134,7 +135,11 @@ class ProfilerHook(Hook):
 
     @master_only
     def before_run(self, runner):
-        """Initialize the profiler."""
+        """Initialize the profiler.
+
+        Through the runner parameter, the validity of the parameter is further
+        determined.
+        """
         max_times = runner.max_epochs if self.by_epoch else runner.max_iters
         if max_times < self.profile_times:
             raise ValueError(
@@ -206,17 +211,21 @@ class ProfilerHook(Hook):
 
     @master_only
     def after_train_epoch(self, runner):
+        """Determine if the content is exported."""
         if self.by_epoch and runner.epoch == self.profile_times - 1:
             self._export_chrome_trace(runner)
 
     @master_only
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
+        """Update the content according to the schedule, and determine if the
+        content is exported."""
         if self.schedule is None:
             self.profiler.step()
         if not self.by_epoch and runner.iter == self.profile_times - 1:
             self._export_chrome_trace(runner)
 
     def _export_chrome_trace(self, runner):
+        """Exporting content."""
         runner.logger.info('profiler may take a few minutes...')
         self.profiler.__exit__(None, None, None)
         if self.json_trace_path is not None:
