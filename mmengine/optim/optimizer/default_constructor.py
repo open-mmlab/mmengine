@@ -42,6 +42,8 @@ class DefaultOptimWrapperConstructor:
     - ``norm_decay_mult`` (float): It will be multiplied to the weight
       decay for all weight and bias parameters of normalization
       layers.
+    - ``flat_decay_mult`` (float): It will be multiplied to the weight
+      decay for all one-dimensional parameters
     - ``dwconv_decay_mult`` (float): It will be multiplied to the weight
       decay for all weight and bias parameters of depthwise conv
       layers.
@@ -185,12 +187,13 @@ class DefaultOptimWrapperConstructor:
         # first sort with alphabet order and then sort with reversed len of str
         sorted_keys = sorted(sorted(custom_keys.keys()), key=len, reverse=True)
 
-        bias_lr_mult = self.paramwise_cfg.get('bias_lr_mult', 1.)
-        bias_decay_mult = self.paramwise_cfg.get('bias_decay_mult', 1.)
-        norm_decay_mult = self.paramwise_cfg.get('norm_decay_mult', 1.)
-        dwconv_decay_mult = self.paramwise_cfg.get('dwconv_decay_mult', 1.)
+        bias_lr_mult = self.paramwise_cfg.get('bias_lr_mult', None)
+        bias_decay_mult = self.paramwise_cfg.get('bias_decay_mult', None)
+        norm_decay_mult = self.paramwise_cfg.get('norm_decay_mult', None)
+        dwconv_decay_mult = self.paramwise_cfg.get('dwconv_decay_mult', None)
+        flat_decay_mult = self.paramwise_cfg.get('flat_decay_mult', None)
         bypass_duplicate = self.paramwise_cfg.get('bypass_duplicate', False)
-        dcn_offset_lr_mult = self.paramwise_cfg.get('dcn_offset_lr_mult', 1.)
+        dcn_offset_lr_mult = self.paramwise_cfg.get('dcn_offset_lr_mult', None)
 
         # special rules for norm layers and depth-wise conv layers
         is_norm = isinstance(module,
@@ -226,10 +229,12 @@ class DefaultOptimWrapperConstructor:
             if not is_custom:
                 # bias_lr_mult affects all bias parameters
                 # except for norm.bias dcn.conv_offset.bias
-                if name == 'bias' and not (is_norm or is_dcn_module):
+                if name == 'bias' and not (
+                        is_norm or is_dcn_module) and bias_lr_mult is not None:
                     param_group['lr'] = self.base_lr * bias_lr_mult
 
                 if (prefix.find('conv_offset') != -1 and is_dcn_module
+                        and dcn_offset_lr_mult is not None
                         and isinstance(module, torch.nn.Conv2d)):
                     # deal with both dcn_offset's bias & weight
                     param_group['lr'] = self.base_lr * dcn_offset_lr_mult
@@ -237,18 +242,23 @@ class DefaultOptimWrapperConstructor:
                 # apply weight decay policies
                 if self.base_wd is not None:
                     # norm decay
-                    if is_norm:
+                    if is_norm and norm_decay_mult is not None:
                         param_group[
                             'weight_decay'] = self.base_wd * norm_decay_mult
-                    # depth-wise conv
-                    elif is_dwconv:
-                        param_group[
-                            'weight_decay'] = self.base_wd * dwconv_decay_mult
                     # bias lr and decay
-                    elif name == 'bias' and not is_dcn_module:
-                        # TODO: current bias_decay_mult will have affect on DCN
+                    elif (name == 'bias' and not is_dcn_module
+                          and bias_decay_mult is not None):
                         param_group[
                             'weight_decay'] = self.base_wd * bias_decay_mult
+                    # depth-wise conv
+                    elif is_dwconv and dwconv_decay_mult is not None:
+                        param_group[
+                            'weight_decay'] = self.base_wd * dwconv_decay_mult
+                    # flatten parameters except dcn offset
+                    elif (param.ndim == 1 and not is_dcn_module
+                          and flat_decay_mult is not None):
+                        param_group[
+                            'weight_decay'] = self.base_wd * flat_decay_mult
             params.append(param_group)
             for key, value in param_group.items():
                 if key == 'params':

@@ -338,17 +338,19 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 
 `decay_mult`：所有参数的衰减系数
 
-`bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset）
 
-`bias_decay_mult`：偏置的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_decay_mult`：偏置的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset）
 
-`norm_decay_mult`：正则化层权重和偏置的权值衰减系数，默认值为 1
+`norm_decay_mult`：正则化层权重和偏置的权值衰减系数
 
-`dwconv_decay_mult`：Depth-wise 卷积的权值衰减系数，默认值为 1
+`flat_decay_mult`：一维参数的权值衰减系数
+
+`dwconv_decay_mult`：Depth-wise 卷积的权值衰减系数
 
 `bypass_duplicate`：是否跳过重复的参数，默认为 `False`
 
-`dcn_offset_lr_mult`：可变形卷积（Deformable Convolution）的学习率系数，默认值为 1
+`dcn_offset_lr_mult`：可变形卷积（Deformable Convolution）的学习率系数
 
 ### 为模型不同部分的参数设置不同的超参系数
 
@@ -423,7 +425,7 @@ custom_keys 中每一个字段的含义如下：
 
 ### 自定义优化器构造策略
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](./param_scheduler.md)管理。我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](../advanced_tutorial/registry.md)管理。我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
 
 例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，能够对模型不同深度的层自动设置递减的学习率：
 
@@ -485,7 +487,7 @@ optimizer = build_optim_wrapper(model, optim_wrapper)
 08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
 ```
 
-`add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参[考优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
+`add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参考[优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
 
 类似地，如果想构造多个优化器，也需要实现自定义的构造器：
 
