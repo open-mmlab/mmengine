@@ -8,7 +8,8 @@ import torch.optim as optim
 
 from mmengine.optim.scheduler import (ConstantLR, CosineAnnealingLR,
                                       CosineRestartLR, ExponentialLR, LinearLR,
-                                      MultiStepLR, OneCycleLR, PolyLR, StepLR,
+                                      MultiStepLR, OneCycleLR, PolyLR,
+                                      ReduceOnPlateauLR, StepLR,
                                       _ParamScheduler)
 from mmengine.testing import assert_allclose
 
@@ -195,7 +196,8 @@ class TestLRScheduler(TestCase):
                               schedulers,
                               targets,
                               epochs=10,
-                              param_name='lr'):
+                              param_name='lr',
+                              step_args=None):
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
@@ -209,7 +211,10 @@ class TestLRScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            [scheduler.step() for scheduler in schedulers]
+            if step_args is None:
+                [scheduler.step() for scheduler in schedulers]
+            else:
+                [scheduler.step(*step_args) for scheduler in schedulers]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
@@ -361,11 +366,124 @@ class TestLRScheduler(TestCase):
             eta_min=0)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
-    def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
+    def test_reduce_on_plateau_scheduler(self):
+        # inherit _ParamScheduler but not call super().__init__(),
+        # so some codes need to be retested
+
+        # Test error in __init__ method
+        with self.assertRaises(TypeError):
+            ReduceOnPlateauLR('invalid_optimizer')
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, begin=10, end=5)
+        with self.assertRaises(AssertionError):
+            ReduceOnPlateauLR(self.optimizer, by_epoch=False)
+
+        for last_step in (1.5, -2):
+            with self.assertRaises(AssertionError):
+                ReduceOnPlateauLR(self.optimizer, last_step=last_step)
+
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, factor=2.0)
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, min_value=[0.1, 0.1, 0.1, 0.1])
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, threshold=-1.0)
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, rule='foo')
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, threshold_rule='foo')
+
+        # Test error in step method
+        scheduler = ReduceOnPlateauLR(self.optimizer, monitor='loss')
+
+        metrics = None
+        with self.assertRaises(AttributeError):
+            scheduler.step(metrics)
+
+        metrics = dict(loss_foo=1.0)
+        with self.assertRaises(KeyError):
+            scheduler.step(metrics)
+
+        # Test scheduler value
+        epoch = 10
+        factor = 0.1
+        patience = 3
+        cooldown = 2
+        metrics = dict(loss=1.0)
+        single_targets = [
+            0.05,  # in cooldown
+            0.05,  # in cooldown
+            0.05,  # (num_bad_epochs = 1) < patience
+            0.05,  # (num_bad_epochs = 2) < patience
+            0.05,  # (num_bad_epochs = 3) < patience
+            0.005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.005,  # (num_bad_epochs = 1) < patience
+            0.005,  # (num_bad_epochs = 2) < patience
+            0.005,  # (num_bad_epochs = 3) < patience
+            0.0005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+        ]
+
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        for rule in ('less', 'greater'):
+            for threshold_rule in ('rel', 'abs'):
+                scheduler = ReduceOnPlateauLR(
+                    self.optimizer,
+                    monitor='loss',
+                    rule=rule,
+                    factor=factor,
+                    patience=patience,
+                    threshold_rule=threshold_rule,
+                    cooldown=cooldown,
+                    min_value=0.0,
+                )
+                self._test_scheduler_value(
+                    scheduler, targets, epochs=epoch, step_args=(metrics, ))
+
+        # change min_value
+        min_value = 0.01
+        single_targets = [
+            0.05,  # in cooldown
+            0.05,  # in cooldown
+            0.05,  # (num_bad_epochs = 1) < patience
+            0.05,  # (num_bad_epochs = 2) < patience
+            0.05,  # (num_bad_epochs = 3) < patience
+            # because of min_value = 0.01
+            0.01,  # 0.005 (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.01,  # 0.005 (num_bad_epochs = 1) < patience
+            0.01,  # 0.005 (num_bad_epochs = 2) < patience
+            0.01,  # 0.005 (num_bad_epochs = 3) < patience
+            0.01,  # 0.0005 (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+        ]
+
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+        scheduler = ReduceOnPlateauLR(
+            self.optimizer,
+            monitor='loss',
+            factor=factor,
+            patience=patience,
+            cooldown=cooldown,
+            min_value=min_value,
+        )
+        self._test_scheduler_value(
+            scheduler, targets, epochs=epoch, step_args=(metrics, ))
+
+    def _check_scheduler_state_dict(self,
+                                    construct,
+                                    construct2,
+                                    epochs=10,
+                                    step_args=None):
         scheduler = construct()
         for _ in range(epochs):
             scheduler.optimizer.step()
-            scheduler.step()
+            if step_args is None:
+                scheduler.step()
+            else:
+                scheduler.step(*step_args)
         scheduler_copy = construct2()
         scheduler_copy.load_state_dict(scheduler.state_dict())
         for key in scheduler.__dict__.keys():
@@ -428,6 +546,34 @@ class TestLRScheduler(TestCase):
                 restart_weights=[1, 0.5],
                 eta_min=0),
             epochs=10)
+
+    def test_reduce_on_plateau_scheduler_state_dict(self):
+        metrics = dict(loss=1.0)
+        self._check_scheduler_state_dict(
+            lambda: ReduceOnPlateauLR(
+                self.optimizer,
+                monitor='loss',
+                rule='less',
+                factor=0.01,
+                patience=5,
+                threshold=1e-4,
+                threshold_rule='rel',
+                cooldown=0,
+                min_value=0.0,
+                eps=1e-8),
+            lambda: ReduceOnPlateauLR(
+                self.optimizer,
+                monitor='loss_foo',
+                rule='greater',
+                factor=0.05,
+                patience=10,
+                threshold=1e-5,
+                threshold_rule='abs',
+                cooldown=5,
+                min_value=0.1,
+                eps=1e-9),
+            epochs=10,
+            step_args=(metrics, ))
 
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
