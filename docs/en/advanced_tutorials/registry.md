@@ -18,18 +18,18 @@ There are three steps required to use the registry to manage modules in the code
 
 Suppose we want to implement a series of activation modules and want to be able to switch to different modules by just modifying the configuration without modifying the code.
 
-Let's create a regitry first.
+Let's create a registry first.
 
 ```python
 from mmengine import Registry
 # `scope` represents the domain of the registry. If not set, the default value is the package name.
 # e.g. in mmdetection, the scope is mmdet
-# `locations` indicates the location where the modules in this register are defined.
-# And the Registry will automatically import the modules when building them according to these predefined locations.
+# `locations` indicates the location where the modules in this registry are defined.
+# The Registry will automatically import the modules when building them according to these predefined locations.
 ACTIVATION = Registry('activation', scope='mmengine', locations=['mmengine.models.activations'])
 ```
 
-Then we can implement different activation modules, such as `Sigmoid`, `ReLU`, and `Softmax`.
+The module `mmengine.models.activations` specified by `locations` corresponds to the `mmengine/models/activations.py` file. When building modules with registry, the ACTIVATION registry will automatically import implemented modules from this file. Therefore, we can implement different activation layers in the `mmengine/models/activations.py` file, such as `Sigmoid`, `ReLU`, and `Softmax`.
 
 ```python
 import torch.nn as nn
@@ -77,7 +77,14 @@ print(ACTIVATION.module_dict)
 ```
 
 ```{note}
-The registry mechanism will only be triggered when the corresponded module file is imported, so we need to make the registry automatically import the module through the predefined `locations`, or import the file somewhere manually, or dynamically import the module using the ``custom_imports`` field to trigger the mechanism. Please refer to [Importing custom Python modules](config.md#import-the-custom-module) for more details.
+The key to trigger the registry mechanism is to make the module imported.
+There are three ways to register a module into the registry
+
+1. Implement the module in the ``locations``. The registry will automatically import modules in the predefined locations. This is to ease the usage of algorithm libraries so that users can directly use ``REGISTRY.build(cfg)``.
+
+2. Import the file manually. This is common when developers implement a new module in/out side the algorithm library.
+
+3. Use ``custom_imports`` field in config. Please refer to [Importing custom Python modules](config.md#import-the-custom-module) for more details.
 ```
 
 Once the implemented module is successfully registered, we can use the activation module in the configuration file.
