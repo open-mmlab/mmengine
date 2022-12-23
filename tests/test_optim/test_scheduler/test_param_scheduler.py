@@ -539,20 +539,24 @@ class TestParameterScheduler(TestCase):
         # Test scheduler value
         epoch = 10
         factor = 0.1
-        patience = 3
+        patience = 2
         cooldown = 1
         metrics = dict(loss=1.0)
         single_targets = [
+            0.05,  # first
             0.05,  # in cooldown
             0.05,  # (num_bad_epochs = 1) < patience
-            0.05,  # (num_bad_epochs = 2) < patience
-            0.05,  # (num_bad_epochs = 3) = patience
-            0.005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.05,  # (num_bad_epochs = 2) = patience
+            # (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.05,
             0.005,  # in cooldown
             0.005,  # (num_bad_epochs = 1) < patience
-            0.005,  # (num_bad_epochs = 2) < patience
-            0.005,  # (num_bad_epochs = 3) < patience
-            0.0005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.005,  # (num_bad_epochs = 2) = patience
+            # (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.0005,
+            0.0005,  # in cooldown
         ]
 
         targets = [
@@ -578,17 +582,21 @@ class TestParameterScheduler(TestCase):
         # change min_value
         min_value = 0.01
         single_targets = [
+            0.05,  # first
             0.05,  # in cooldown
             0.05,  # (num_bad_epochs = 1) < patience
-            0.05,  # (num_bad_epochs = 2) < patience
-            0.05,  # (num_bad_epochs = 3) < patience
+            0.05,  # (num_bad_epochs = 2) = patience
             # because of min_value = 0.01
-            0.01,  # 0.005 (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            # 0.005 (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.01,
             0.01,  # 0.005 in cooldown
             0.01,  # 0.005 (num_bad_epochs = 1) < patience
-            0.01,  # 0.005 (num_bad_epochs = 2) < patience
-            0.01,  # 0.005 (num_bad_epochs = 3) < patience
-            0.01,  # 0.0005 (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.01,  # 0.005 (num_bad_epochs = 2) = patience
+            # 0.0005 (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.01,
+            0.01,  # 0.0005 in cooldown
         ]
 
         targets = [
