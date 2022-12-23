@@ -449,8 +449,12 @@ class TestMomentumScheduler(TestCase):
         # so some codes need to be retested
 
         # Test error in __init__ method
-        with self.assertRaises(TypeError):
-            ReduceOnPlateauMomentum('invalid_optimizer')
+        with self.assertRaises(ValueError):
+            optimizer = optim.ASGD(
+                self.model.parameters(),
+                lr=0.01,
+            )
+            ReduceOnPlateauMomentum(optimizer)
         with self.assertRaises(ValueError):
             ReduceOnPlateauMomentum(self.optimizer, begin=10, end=5)
         with self.assertRaises(AssertionError):
@@ -486,7 +490,7 @@ class TestMomentumScheduler(TestCase):
         # Test scheduler value
         epoch = 10
         factor = 0.1
-        patience = 3
+        patience = 2
         cooldown = 1
         metrics = dict(loss=1.0)
         single_targets = [
@@ -496,7 +500,7 @@ class TestMomentumScheduler(TestCase):
             0.05,  # (num_bad_epochs = 2) = patience
             # (num_bad_epochs = 3) > patience
             # reset num_bad_epochs cooldown
-            0.05,
+            0.005,
             0.005,  # in cooldown
             0.005,  # (num_bad_epochs = 1) < patience
             0.005,  # (num_bad_epochs = 2) = patience

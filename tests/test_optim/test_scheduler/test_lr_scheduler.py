@@ -407,7 +407,7 @@ class TestLRScheduler(TestCase):
         # Test scheduler value
         epoch = 10
         factor = 0.1
-        patience = 3
+        patience = 2
         cooldown = 1
         metrics = dict(loss=1.0)
         single_targets = [
@@ -417,7 +417,7 @@ class TestLRScheduler(TestCase):
             0.05,  # (num_bad_epochs = 2) = patience
             # (num_bad_epochs = 3) > patience
             # reset num_bad_epochs cooldown
-            0.05,
+            0.005,
             0.005,  # in cooldown
             0.005,  # (num_bad_epochs = 1) < patience
             0.005,  # (num_bad_epochs = 2) = patience
