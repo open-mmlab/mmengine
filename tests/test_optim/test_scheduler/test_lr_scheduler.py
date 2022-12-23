@@ -460,7 +460,7 @@ class TestLRScheduler(TestCase):
 
         # change min_value
         min_value = 0.01
-        single_targets = [
+        single_targets_1 = [
             0.05,  # first
             0.05,  # in cooldown
             0.05,  # (num_bad_epochs = 1) < patience
@@ -478,9 +478,25 @@ class TestLRScheduler(TestCase):
             0.01,  # 0.0005 in cooldown
         ]
 
-        targets = [
-            single_targets, [t * self.layer2_mult for t in single_targets]
+        single_targets_2 = [
+            0.5,  # first
+            0.5,  # in cooldown
+            0.5,  # (num_bad_epochs = 1) < patience
+            0.5,  # (num_bad_epochs = 2) = patience
+            # because of min_value = 0.01
+            # 0.05 (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.05,
+            0.05,  # 0.05 in cooldown
+            0.05,  # 0.05 (num_bad_epochs = 1) < patience
+            0.05,  # 0.05 (num_bad_epochs = 2) = patience
+            # 0.005 (num_bad_epochs = 3) > patience
+            # reset num_bad_epochs cooldown
+            0.01,
+            0.01,  # 0.005 in cooldown
         ]
+
+        targets = [single_targets_1, single_targets_2]
         scheduler = ReduceOnPlateauLR(
             self.optimizer,
             monitor='loss',
