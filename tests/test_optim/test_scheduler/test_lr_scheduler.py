@@ -406,6 +406,7 @@ class TestLRScheduler(TestCase):
 
         # Test scheduler value
         epoch = 10
+        lr = 0.05
         factor = 0.1
         patience = 2
         cooldown = 1
@@ -445,6 +446,17 @@ class TestLRScheduler(TestCase):
                 )
                 self._test_scheduler_value(
                     scheduler, targets, epochs=epoch, step_args=(metrics, ))
+
+                self.optimizer = optim.SGD(
+                    [{
+                        'params': self.model.conv1.parameters()
+                    }, {
+                        'params': self.model.conv2.parameters(),
+                        'lr': lr * self.layer2_mult,
+                    }],
+                    lr=lr,
+                    momentum=0.01,
+                    weight_decay=5e-4)
 
         # change min_value
         min_value = 0.01

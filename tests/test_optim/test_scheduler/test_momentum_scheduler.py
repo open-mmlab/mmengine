@@ -489,6 +489,7 @@ class TestMomentumScheduler(TestCase):
 
         # Test scheduler value
         epoch = 10
+        momentum = 0.05
         factor = 0.1
         patience = 2
         cooldown = 1
@@ -532,6 +533,17 @@ class TestMomentumScheduler(TestCase):
                     targets,
                     epochs=epoch,
                     step_args=(metrics, ))
+
+                self.optimizer = optim.SGD(
+                    [{
+                        'params': self.model.conv1.parameters()
+                    }, {
+                        'params': self.model.conv2.parameters(),
+                        'momentum': momentum * self.layer2_mult
+                    }],
+                    lr=0.01,
+                    momentum=momentum,
+                    weight_decay=5e-4)
 
         # change min_value
         min_value = 0.01
