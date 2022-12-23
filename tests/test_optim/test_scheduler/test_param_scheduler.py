@@ -529,10 +529,10 @@ class TestParameterScheduler(TestCase):
         # Test error in step method
         scheduler = ReduceOnPlateauParamScheduler(
             self.optimizer, param_name='lr', monitor='loss')
+        scheduler.step()
 
-        metrics = None
-        with self.assertRaises(AttributeError):
-            scheduler.step(metrics)
+        with self.assertRaises(TypeError):
+            scheduler.step(('foo', 1.0))
 
         metrics = dict(loss_foo=1.0)
         with self.assertRaises(KeyError):
