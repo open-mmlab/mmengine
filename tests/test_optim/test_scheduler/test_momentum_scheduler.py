@@ -467,6 +467,7 @@ class TestMomentumScheduler(TestCase):
         with self.assertRaises(ValueError):
             ReduceOnPlateauMomentum(self.optimizer, factor=2.0)
         with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, min_value=[0.1, 0.1])
             ReduceOnPlateauMomentum(
                 self.optimizer, min_value=[0.1, 0.1, 0.1, 0.1])
         with self.assertRaises(ValueError):
@@ -591,6 +592,7 @@ class TestMomentumScheduler(TestCase):
             patience=patience,
             cooldown=cooldown,
             min_value=min_value,
+            verbose=True,
         )
         self._test_scheduler_value(
             self.optimizer,

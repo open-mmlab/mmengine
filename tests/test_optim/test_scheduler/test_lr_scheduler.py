@@ -385,6 +385,7 @@ class TestLRScheduler(TestCase):
         with self.assertRaises(ValueError):
             ReduceOnPlateauLR(self.optimizer, factor=2.0)
         with self.assertRaises(ValueError):
+            ReduceOnPlateauLR(self.optimizer, min_value=[0.1, 0.1])
             ReduceOnPlateauLR(self.optimizer, min_value=[0.1, 0.1, 0.1, 0.1])
         with self.assertRaises(ValueError):
             ReduceOnPlateauLR(self.optimizer, threshold=-1.0)
@@ -504,6 +505,7 @@ class TestLRScheduler(TestCase):
             patience=patience,
             cooldown=cooldown,
             min_value=min_value,
+            verbose=True,
         )
         self._test_scheduler_value(
             scheduler, targets, epochs=epoch, step_args=(metrics, ))
