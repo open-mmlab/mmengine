@@ -8,16 +8,63 @@ The core function of `BaseModule` is that it could help us to initialize the mod
 
 Currently, we support the following initialization methods:
 
-| Initializer                                                                                               | Registered name | Function                                                                                                                                 |
-| :-------------------------------------------------------------------------------------------------------- | :-------------: | :--------------------------------------------------------------------------------------------------------------------------------------- |
-| [ConstantInit](../api/generated/mmengine.model.ConstantInit.html#mmengine.model.ConstantInit)             |    Constant     | Initialize the weight and bias with a constant, commonly used for Convolution                                                            |
-| [XavierInit](../api/generated/mmengine.model.XavierInit.html#mmengine.model.XavierInit)                   |     Xavier      | Initialize the weight by `Xavier` initialization, and initialize the bias with a constant                                                |
-| [NormalInit](../api/generated/mmengine.model.NormalInit.html#mmengine.model.NormalInit)                   |     Normal      | Initialize the weight by normal distribution, and initialize the bias with a constant                                                    |
-| [TruncNormalInit](../api/generated/mmengine.model.TruncNormalInit.html#mmengine.model.TruncNormalInit)    |   TruncNormal   | Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer           |
-| [UniformInit](../api/generated/mmengine.model.UniformInit.html#mmengine.model.UniformInit)                |     Uniform     | Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution                    |
-| [KaimingInit](../api/generated/mmengine.model.KaimingInit.html#mmengine.model.KaimingInit)                |     Kaiming     | Initialize the weight by `Kaiming` initialization, and initialize the bias with a constant. Commonly used for convolution                |
-| [Caffe2XavierInit](../api/generated/mmengine.model.Caffe2XavierInit.html#mmengine.model.Caffe2XavierInit) |  Caffe2Xavier   | `Xavier` initialization in Caffe2, and `Kaiming` initialization in PyTorh with `fan_in` and `normal` mode. Commonly used for convolution |
-| [PretrainedInit](../api/generated/mmengine.model.PretrainedInit.html#mmengine.model.PretrainedInit)       |   Pretrained    | Initialize the model with the pretrained model                                                                                           |
+<table class="docutils">
+<thead>
+  <tr>
+    <th>Initializer</th>
+    <th>Registered name</th>
+    <th>Function</th>
+<tbody>
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.ConstantInit.html#mmengine.model.ConstantInit">ConstantInit</a></td>
+  <td>Constant</td>
+  <td>Initialize the weight and bias with a constant, commonly used for Convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.XavierInit.html#mmengine.model.XavierInit">XavierInit</a></td>
+  <td>Xavier</td>
+  <td>Initialize the weight by Xavier initialization, and initialize the bias with a constant</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.NormalInit.html#mmengine.model.NormalInit">NormalInit</a></td>
+  <td>Normal</td>
+  <td>Initialize the weight by normal distribution, and initialize the bias with a constant</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.TruncNormalInit.html#mmengine.model.TruncNormalInit">TruncNormalInit</a></td>
+  <td>TruncNormal</td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.UniformInit.html#mmengine.model.UniformInit">UniformInit</a></td>
+  <td>Uniform</td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.KaimingInit.html#mmengine.model.KaimingInit">KaimingInit</a></td>
+  <td>Kaiming</td>
+  <td>Initialize the weight by Kaiming initialization, and initialize the bias with a constant. Commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.Caffe2XavierInit.html#mmengine.model.Caffe2XavierInit">Caffe2XavierInit</a></td>
+  <td>Caffe2Xavier</td>
+  <td>Xavier initialization in Caffe2, and Kaiming initialization in PyTorh with "fan_in" and "normal" mode. Commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.PretrainedInit.html#mmengine.model.PretrainedInit">PretrainedInit</a></td>
+  <td>Pretrained</td>
+  <td>Initialize the model with the pretrained model</td>
+</tr>
+
+</thead>
+</table>
 
 ### Initialize the model with pretrained model
 
@@ -313,13 +360,51 @@ xavier_init(model)
 
 Currently, MMEngine provide the following initialization function:
 
-| initialization function                                                                                            | function                                                                                                                                 |
-| :----------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
-| [constant_init](../api/generated/mmengine.model.constant_init.html#mmengine.model.constant_init)                   | Initialize the weight and bias with a constant, commonly used for Convolution                                                            |
-| [xavier_init](../api/generated/mmengine.model.xavier_init.html#mmengine.model.xavier_init)                         | Initialize the weight by `Xavier` initialization, and initialize the bias with a constant                                                |
-| [normal_init](../api/generated/mmengine.model.normal_init.html#mmengine.model.normal_init)                         | Initialize the weight by normal distribution, and initialize the bias with a constant                                                    |
-| [trunc_normal_init](../api/generated/mmengine.model.trunc_normal_init.html#mmengine.model.trunc_normal_init)       | Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer           |
-| [uniform_init](../api/generated/mmengine.model.uniform_init.html#mmengine.model.uniform_init)                      | Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution                    |
-| [kaiming_init](../api/generated/mmengine.model.kaiming_init.html#mmengine.model.kaiming_init)                      | Initialize the weight by `Kaiming` initialization, and initialize the bias with a constant. Commonly used for convolution                |
-| [caffe2_xavier_init](../api/generated/mmengine.model.caffe2_xavier_init.html#mmengine.model.caffe2_xavier_init)    | `Xavier` initialization in Caffe2, and `Kaiming` initialization in PyTorh with `fan_in` and `normal` mode. Commonly used for convolution |
-| [bias_init_with_prob](../api/generated/mmengine.model.bias_init_with_prob.html#mmengine.model.bias_init_with_prob) | Initialize the bias with the probability                                                                                                 |
+<table class="docutils">
+<thead>
+  <tr>
+    <th>Initialization function</th>
+    <th>Function</th>
+<tbody>
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.constant_init.html#mmengine.model.constant_init">constant_init</a></td>
+  <td>Initialize the weight and bias with a constant, commonly used for Convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.xavier_init.html#mmengine.model.xavier_init">xavier_init</a></td>
+  <td>Initialize the weight by Xavier initialization, and initialize the bias with a constant</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.normal_init.html#mmengine.model.normal_init">normal_init</a></td>
+  <td>Initialize the weight by normal distribution, and initialize the bias with a constant</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.trunc_normal_init.html#mmengine.model.trunc_normal_init">trunc_normal_init</a></td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.uniform_init.html#mmengine.model.uniform_init">uniform_init</a></td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.kaiming_init.html#mmengine.model.kaiming_init">kaiming_init</a></td>
+  <td>Initialize the weight by Kaiming initialization, and initialize the bias with a constant. Commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.caffe2_xavier_init.html#mmengine.model.caffe2_xavier_init">caffe2_xavier_init</a></td>
+  <td>Xavier initialization in Caffe2, and Kaiming initialization in PyTorh with "fan_in" and "normal" mode. Commonly used for convolution</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.bias_init_with_prob.html#mmengine.model.bias_init_with_prob">bias_init_with_prob</a></td>
+  <td>Initialize the bias with the probability</td>
+</tr>
+
+</thead>
+</table>
