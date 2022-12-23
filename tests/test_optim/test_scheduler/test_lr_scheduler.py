@@ -408,23 +408,19 @@ class TestLRScheduler(TestCase):
         epoch = 10
         factor = 0.1
         patience = 3
-        cooldown = 2
+        cooldown = 1
         metrics = dict(loss=1.0)
-
-        base = 0.05
         single_targets = [
-            base,  # in cooldown
-            base,  # in cooldown
-            base,  # (num_bad_epochs = 1) < patience
-            base,  # (num_bad_epochs = 2) < patience
-            base,  # (num_bad_epochs = 3) < patience
-            # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
-            base * factor,
-            base * factor,  # (num_bad_epochs = 1) < patience
-            base * factor,  # (num_bad_epochs = 2) < patience
-            base * factor,  # (num_bad_epochs = 3) < patience
-            # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
-            base * factor * factor,
+            0.05,  # in cooldown
+            0.05,  # (num_bad_epochs = 1) < patience
+            0.05,  # (num_bad_epochs = 2) < patience
+            0.05,  # (num_bad_epochs = 3) = patience
+            0.005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.005,  # in cooldown
+            0.005,  # (num_bad_epochs = 1) < patience
+            0.005,  # (num_bad_epochs = 2) < patience
+            0.005,  # (num_bad_epochs = 3) < patience
+            0.0005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
         ]
 
         targets = [
@@ -450,12 +446,12 @@ class TestLRScheduler(TestCase):
         min_value = 0.01
         single_targets = [
             0.05,  # in cooldown
-            0.05,  # in cooldown
             0.05,  # (num_bad_epochs = 1) < patience
             0.05,  # (num_bad_epochs = 2) < patience
             0.05,  # (num_bad_epochs = 3) < patience
             # because of min_value = 0.01
             0.01,  # 0.005 (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            0.01,  # 0.005 in cooldown
             0.01,  # 0.005 (num_bad_epochs = 1) < patience
             0.01,  # 0.005 (num_bad_epochs = 2) < patience
             0.01,  # 0.005 (num_bad_epochs = 3) < patience
