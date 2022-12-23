@@ -542,17 +542,21 @@ class TestParameterScheduler(TestCase):
         patience = 3
         cooldown = 2
         metrics = dict(loss=1.0)
+
+        base = 0.05
         single_targets = [
-            0.05,  # in cooldown
-            0.05,  # in cooldown
-            0.05,  # (num_bad_epochs = 1) < patience
-            0.05,  # (num_bad_epochs = 2) < patience
-            0.05,  # (num_bad_epochs = 3) < patience
-            0.005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
-            0.005,  # (num_bad_epochs = 1) < patience
-            0.005,  # (num_bad_epochs = 2) < patience
-            0.005,  # (num_bad_epochs = 3) < patience
-            0.0005,  # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            base,  # in cooldown
+            base,  # in cooldown
+            base,  # (num_bad_epochs = 1) < patience
+            base,  # (num_bad_epochs = 2) < patience
+            base,  # (num_bad_epochs = 3) < patience
+            # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            base * factor,
+            base * factor,  # (num_bad_epochs = 1) < patience
+            base * factor,  # (num_bad_epochs = 2) < patience
+            base * factor,  # (num_bad_epochs = 3) < patience
+            # (num_bad_epochs = 4) > patience, num_bad_epochs = 0
+            base * factor * factor,
         ]
 
         targets = [
