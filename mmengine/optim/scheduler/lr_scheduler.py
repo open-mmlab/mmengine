@@ -71,7 +71,7 @@ class CosineAnnealingLR(LRSchedulerMixin, CosineAnnealingParamScheduler):
     Args:
         optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         T_max (int): Maximum number of iterations.
-        eta_min (float): Minimum learning rate. Defaults to 0.
+        eta_min (float): Minimum learning rate. Defaults to None.
         begin (int): Step at which to start updating the learning rate.
             Defaults to 0.
         end (int): Step at which to stop updating the learning rate.
@@ -82,6 +82,10 @@ class CosineAnnealingLR(LRSchedulerMixin, CosineAnnealingParamScheduler):
             epochs. Defaults to True.
         verbose (bool): Whether to print the learning rate for each update.
             Defaults to False.
+        eta_min_ratio (float, optional): The ratio of the minimum parameter
+            value to the base parameter value. Either `eta_min` or
+            `eta_min_ratio` should be specified. Defaults to None.
+            New in version 0.3.2.
 
     .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983

@@ -1,5 +1,31 @@
 # Changelog of v0.x
 
+## v0.3.2 (11/24/2022)
+
+### New Features & Enhancements
+
+- Send git errors to subprocess.PIPE by @austinmw in https://github.com/open-mmlab/mmengine/pull/717
+- Add a common `TestRunnerTestCase` to build a Runner instance. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/631
+- Align the log by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/436
+- Log the called order of hooks during training process by @songyuc in https://github.com/open-mmlab/mmengine/pull/672
+- Support setting `eta_min_ratio` in `CosineAnnealingParamScheduler` by @cir7 in https://github.com/open-mmlab/mmengine/pull/725
+- Enhance compatibility of `revert_sync_batchnorm` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/695
+
+### Bug Fixes
+
+- Fix `distributed_training.py` in examples by @PingHGao in https://github.com/open-mmlab/mmengine/pull/700
+- Format the log of `CheckpointLoader.load_checkpoint` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/685
+- Fix bug of CosineAnnealingParamScheduler by @fangyixiao18 in https://github.com/open-mmlab/mmengine/pull/735
+- Fix `add_graph` is not called bug by @shenmishajing in https://github.com/open-mmlab/mmengine/pull/632
+- Fix .pre-commit-config-zh-cn.yaml pyupgrade-repo github->gitee by @BayMaxBHL in https://github.com/open-mmlab/mmengine/pull/756
+
+### Docs
+
+- Add English docs of BaseDataset by @GT9505 in https://github.com/open-mmlab/mmengine/pull/713
+- Fix `BaseDataset` typo about lazy initialization by @MengzhangLI in https://github.com/open-mmlab/mmengine/pull/733
+- Fix typo by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/734
+- Translate visualization docs by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/692
+
 ## v0.3.1 (11/09/2022)
 
 ### Highlights

@@ -263,7 +263,7 @@ class Config:
            cfg.work_dir # ". /work_dir/config_setting1"
 
 
-        For details, Please refer to docs/zh_cn/tutorials/config.md .
+        For details, Please refer to docs/zh_cn/advanced_tutorials/config.md .
 
         Args:
             filename (str): Filename of config.
@@ -1029,7 +1029,8 @@ class DictAction(Action):
             option_string (list[str], optional): Option string.
                 Defaults to None.
         """
-        options = {}
+        # Copied behavior from `argparse._ExtendAction`.
+        options = copy.copy(getattr(namespace, self.dest, None) or {})
         if values is not None:
             for kv in values:
                 key, val = kv.split('=', maxsplit=1)
