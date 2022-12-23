@@ -362,10 +362,12 @@ class ReduceOnPlateauLR(LRSchedulerMixin, ReduceOnPlateauParamScheduler):
         eps (float): Minimal decay applied to learning rate. If the difference
             between new and old learning rate is smaller than eps, the update
             is ignored. Defaults to 1e-8.
-        begin (int): Step at which to start updating the parameters.
-            Defaults to 0.
-        end (int): Step at which to stop updating the parameters.
-            Defaults to INF.
+        begin (int): Step at which to start triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to 0.
+        end (int): Step at which to stop triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to INF.
         last_step (int): The index of last step. Used for resume without
             state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by

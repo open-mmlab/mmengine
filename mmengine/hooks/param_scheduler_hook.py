@@ -4,7 +4,7 @@ from typing import Dict, Optional, Union
 from mmengine.optim import _ParamScheduler
 from mmengine.registry import HOOKS
 from mmengine.runner import BaseLoop
-from mmengine.utils import is_list_of
+from mmengine.utils import is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -86,7 +86,7 @@ class ParamSchedulerHook(Hook):
                         runner,
                         metrics: Optional[Dict[str, float]] = None) -> None:
         """Call step function for each scheduler which has attribute
-        ``need_step_args`` after each validation epoch.
+        ``need_val_args`` after each validation epoch.
 
         Args:
             runner (Runner): The runner of the validation process.
@@ -102,6 +102,11 @@ class ParamSchedulerHook(Hook):
         if runner.param_schedulers is None:
             return
 
+        # avoid counting scheduler._global_step
+        # it has counted in after_train_* hook
+        if metrics is None:
+            return
+
         if not self._should_after_val_epoch(runner):
             return
 
@@ -109,7 +114,7 @@ class ParamSchedulerHook(Hook):
             assert isinstance(_param_schedulers, list)
             for scheduler in _param_schedulers:
                 if (scheduler.by_epoch
-                        and getattr(scheduler, 'need_step_args', False)):
+                        and getattr(scheduler, 'need_val_args', False)):
                     scheduler.step(metrics)
 
         if isinstance(runner.param_schedulers, list):
@@ -148,7 +153,14 @@ class ParamSchedulerHook(Hook):
         if isinstance(scheduler, dict):
             scheduler = list(scheduler.values())
 
-        if not is_list_of(scheduler, _ParamScheduler):
+        # the case scheduler = dict(key1=[scheduler1], key2=[scheduler2])
+        if is_seq_of(scheduler, (list, tuple)):
+            _scheduler = []
+            for s in scheduler:
+                _scheduler += s
+            scheduler = _scheduler
+
+        if not is_seq_of(scheduler, _ParamScheduler):
             self._should = False
             return self._should
 

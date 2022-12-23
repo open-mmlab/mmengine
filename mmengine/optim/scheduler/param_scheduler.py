@@ -1330,10 +1330,12 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         eps (float): Minimal decay applied to parameters. If the difference
             between new and old parameters are smaller than eps, the update is
             ignored. Defaults to 1e-8.
-        begin (int): Step at which to start updating the parameters.
-            Defaults to 0.
-        end (int): Step at which to stop updating the parameters.
-            Defaults to INF.
+        begin (int): Step at which to start triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to 0.
+        end (int): Step at which to stop triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to INF.
         last_step (int): The index of last step. Used for resume without
             state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
@@ -1342,7 +1344,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             Defaults to False.
     """
 
-    need_step_args = True
+    need_val_args = True
 
     def __init__(self,
                  optimizer: OptimizerType,
@@ -1430,16 +1432,24 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             group[self.param_name] for group in self.optimizer.param_groups
         ]
 
-    def step(self, metrics):
+    def step(self, metrics=None):
         """Adjusts the parameter value of each parameter group based on the
         specified schedule.
 
         Args:
-            metrics (Dict[str, float]): Evaluation results of all
+            metrics (Dict[str, float], optional): Evaluation results of all
                 metrics on validation dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
+                Defaults to None.
         """
-        self._global_step += 1
+        if metrics is None:
+            # only to count self._global_step
+            self._global_step += 1
+            return
+
+        if not isinstance(metrics, dict):
+            raise TypeError('metrics type should be dict,'
+                            f' but got type {type(metrics)}')
 
         # Compute parameter value per param group in the effective range
         if self.begin <= self._global_step < self.end:

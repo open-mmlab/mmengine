@@ -327,10 +327,12 @@ class ReduceOnPlateauMomentum(ReduceOnPlateauParamScheduler):
         eps (float): Minimal decay applied to momentum. If the difference
             between new and old momentum is smaller than eps, the update is
             ignored. Defaults to 1e-8.
-        begin (int): Step at which to start updating the parameters.
-            Defaults to 0.
-        end (int): Step at which to stop updating the parameters.
-            Defaults to INF.
+        begin (int): Step at which to start triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to 0.
+        end (int): Step at which to stop triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to INF.
         last_step (int): The index of last step. Used for resume without
             state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by
@@ -356,14 +358,15 @@ class ReduceOnPlateauMomentum(ReduceOnPlateauParamScheduler):
             )
         super().__init__(optimizer, param_name, *args, **kwargs)
 
-    def step(self, metrics):
+    def step(self, metrics=None):
         """Adjusts the momentum of each parameter group based on the specified
         schedule.
 
         Args:
-            metrics (Dict[str, float]): Evaluation results of all
+            metrics (Dict[str, float], optional): Evaluation results of all
                 metrics on validation dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
+                Defaults to None.
         """
         super().step(metrics)
         if self.use_betas:
