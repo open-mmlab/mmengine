@@ -8,11 +8,13 @@ from mmengine.hooks import Hook
 from mmengine.registry import HOOKS, MODELS, RUNNERS
 
 
-# Only used for FSDP TTA.
 @HOOKS.register_module()
 class PrepareTTAHook(Hook):
     """Wraps `runner.model` with subclass of :class:`BaseTTAModel` in
     `before_test`.
+
+    Note:
+        This function will only be used with :obj:`MMFullyShardedDataParallel`.
 
     Args:
         tta_cfg (dict): Config dictionary of the test time augmentation model.
@@ -32,7 +34,6 @@ class PrepareTTAHook(Hook):
         runner.model = model  # type: ignore
 
 
-# Only used for FSDP TTA.
 def build_runner_with_tta(cfg: dict) -> 'Runner':
     """Builds runner with tta (test time augmentation) transformation and
     TTAModel.
@@ -44,7 +45,7 @@ def build_runner_with_tta(cfg: dict) -> 'Runner':
         cfg (dict): cfg with ``tta_pipeline`` and ``tta_model``
 
     Notes:
-        This is only a temporary solution. We could refactor the code in the
+        This is only an experimental feature. We may refactor the code in the
         future.
 
     Returns:

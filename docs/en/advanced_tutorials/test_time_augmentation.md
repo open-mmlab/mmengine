@@ -1,11 +1,11 @@
 # Test time augmentation
 
-Test time augmentation (TTA) is a data augmentation strategy used during the testing phase. It involves applying various augmentations, such as flipping and scaling, to the same image and then merging the predictions of each augmented image to produce a more accurate prediction. To make it easier for user to use TTA, MMEngine provides [BaseTTAModel](mmengine.model.BaseTTAModel) class, which allows users to implement different TTA strategies by simply extending the `BaseTTAModel` class according to their needs.
+Test time augmentation (TTA) is a data augmentation strategy used during the testing phase. It involves applying various augmentations, such as flipping and scaling, to the same image and then merging the predictions of each augmented image to produce a more accurate prediction. To make it easier for users to use TTA, MMEngine provides [BaseTTAModel](mmengine.model.BaseTTAModel) class, which allows users to implement different TTA strategies by simply extending the `BaseTTAModel` class according to their needs.
 
 The core implementation of TTA is usually divided into two parts：
 
-1. Data augmentation：This part is implemented in MMCV, see the api docs [TestTimeAug](mmcv.transform.TestTimeAug) for more information.
-2. Merge the predictions：The subclasses of `BaseTTAModel.test_step` will merge the predictions of enhanced data to a more accurate prediction.
+1. Data augmentation: This part is implemented in MMCV, see the api docs [TestTimeAug](mmcv.transform.TestTimeAug) for more information.
+2. Merge the predictions: The subclasses of `BaseTTAModel.test_step` will merge the predictions of enhanced data to a more accurate prediction.
 
 ## Get started
 
@@ -23,17 +23,17 @@ tta_pipeline = [
         transforms=[
             [dict(type='Resize', img_scale=(1333, 800), keep_ratio=True)],
             [dict(type='RandomFlip', flip_ratio=0.),
-                dict(type='RandomFlip', flip_ratio=1.)],
+             dict(type='RandomFlip', flip_ratio=1.)],
             [dict(type='PackXXXInputs', keys=['img'])],
         ])
 ]
 ```
 
-It means that each resized image will be flipped, and enhanced into two images during test phase.
+The above data augmentation pipeline will first perform a scaling enhancement on the image, followed by 2 flipping enhancements (flipping and not flipping). Finally, the image is packaged into the final result using `PackXXXInputs`.
 
 ### Define the merge strategy
 
-Commonly, users only need to inherit `BaseTTAModel` and override the `BaseTTAModel.merge_preds` to merge the predictions of enhanced data. `merge_preds` accept a list of enhanced batch data, and each element of the list means the enhanced single data of the batch.
+Commonly, users only need to inherit `BaseTTAModel` and override the `BaseTTAModel.merge_preds` to merge the predictions of enhanced data. `merge_preds` accepts a list of enhanced batch data, and each element of the list means the enhanced single data of the batch.
 
 The BaseTTAModel class requires inferencing on both flipped and unflipped images and then merges the results. The merge_preds method accepts a list where each element represents the results of applying data augmentation to a single element of the batch. For example, if batch_size is 3, and we flip each image in the batch as an augmentation, merge_preds would accept a parameter like the following:
 

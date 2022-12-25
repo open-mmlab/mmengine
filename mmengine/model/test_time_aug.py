@@ -71,14 +71,14 @@ class BaseTTAModel(BaseModel):
         implement it.
 
     Warning:
-        If ``data_preprocessor`` is not None, it will overwrites the model's
+        If ``data_preprocessor`` is not None, it will overwrite the model's
         ``data_preprocessor``.
 
     Args:
         module (dict or nn.Module): Tested model.
-        data_preprocessor (:obj:`BaseDataPreprocessor`, optional): If model
-            does not define ``data_preprocessor``, it will be the default value
-            for model.
+        data_preprocessor (dict or :obj:`BaseDataPreprocessor`, optional):
+            If model does not define ``data_preprocessor``, it will be the
+            default value for model.
     """
 
     def __init__(
@@ -147,5 +147,5 @@ class BaseTTAModel(BaseModel):
         """``BaseTTAModel.forward`` should not be called."""
         raise NotImplementedError(
             '`BaseTTAModel.forward` will not be called during training or'
-            'testing, please call `test_step` instead. If you want to use'
+            'testing. Please call `test_step` instead. If you want to use'
             '`BaseTTAModel.forward`, please implement this method')
