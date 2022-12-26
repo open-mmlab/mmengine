@@ -36,6 +36,7 @@ def is_npu_available() -> bool:
     """Returns True if Ascend PyTorch and npu devices exist."""
     try:
         import torch_npu  # noqa: F401
+        torch.npu.set_compile_mode(jit_compile=False)
     except Exception:
         return False
     return hasattr(torch, 'npu') and torch.npu.is_available()
