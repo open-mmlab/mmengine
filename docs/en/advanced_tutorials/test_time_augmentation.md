@@ -5,7 +5,7 @@ Test time augmentation (TTA) is a data augmentation strategy used during the tes
 The core implementation of TTA is usually divided into two parts：
 
 1. Data augmentation: This part is implemented in MMCV, see the api docs [TestTimeAug](mmcv.transform.TestTimeAug) for more information.
-2. Merge the predictions: The subclasses of `BaseTTAModel.test_step` will merge the predictions of enhanced data to a more accurate prediction.
+2. Merge the predictions: The subclasses of `BaseTTAModel` will merge the predictions of enhanced data in the `test_step` method to improve the accuracy of predictions.
 
 ## Get started
 
