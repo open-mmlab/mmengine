@@ -9,7 +9,7 @@ TTA 的核心实现通常分为两个部分：
 
 ## 快速上手
 
-一个简单的支持 TTA 的示例可以参考 [example/test_time_augmentation.py](https://github.com/open-mmlab/mmengine/blob/main/examples/test_time_augmentation.py)
+一个简单的支持 TTA 的示例可以参考 [examples/test_time_augmentation.py](https://github.com/open-mmlab/mmengine/blob/main/examples/test_time_augmentation.py)
 
 ### 准备 TTA 数据增强
 

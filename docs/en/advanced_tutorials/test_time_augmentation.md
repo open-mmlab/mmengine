@@ -9,7 +9,7 @@ The core implementation of TTA is usually divided into two parts：
 
 ## Get started
 
-A simple example of TTA is given in [example/test_time_augmentation.py](https://github.com/open-mmlab/mmengine/blob/main/examples/test_time_augmentation.py)
+A simple example of TTA is given in [examples/test_time_augmentation.py](https://github.com/open-mmlab/mmengine/blob/main/examples/test_time_augmentation.py)
 
 ### Prepare test time augmentation pipeline
 
