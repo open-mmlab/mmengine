@@ -650,8 +650,10 @@ def complexity_stats_table(
 def get_model_complexity_info(
     model: nn.Module,
     input_shape: tuple,
+    inputs=None,
     show_table: bool = True,
     show_str: bool = True,
+    format_size: bool = True,
 ):
     """Interface to get the complexity of a model.
 
@@ -661,13 +663,19 @@ def get_model_complexity_info(
         show_table (bool): Whether to show the complexity table.
         show_str (bool): Whether to show the complexity string.
     """
-    inputs = (torch.randn(1, *input_shape), )
+    if inputs is None:
+        inputs = (torch.randn(1, *input_shape), )
+
     flop_handler = FlopAnalyzer(model, inputs)
     activation_handler = ActivationAnalyzer(model, inputs)
 
-    flops = _format_size(flop_handler.total())
-    activations = _format_size(activation_handler.total())
-    params = _format_size(parameter_count(model)[''])
+    flops = flop_handler.total()
+    activations = activation_handler.total()
+    params = parameter_count(model)['']
+
+    flops_str = _format_size(flop_handler.total())
+    activations_str = _format_size(activation_handler.total())
+    params_str = _format_size(parameter_count(model)[''])
 
     if show_table:
         complexity_table = complexity_stats_table(
@@ -688,4 +696,8 @@ def get_model_complexity_info(
     else:
         complexity_str = ''
 
-    return flops, activations, params, complexity_table, complexity_str
+    if format_size:
+        return flops_str, activations_str, params_str, \
+            complexity_table, complexity_str
+    else:
+        return flops, activations, params, complexity_table, complexity_str
