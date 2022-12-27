@@ -152,13 +152,13 @@ class BaseDataset(Dataset):
         }
 
     Args:
-        ann_file (str): Annotation file path. Defaults to ''.
+        ann_file (str, optional): Annotation file path. Defaults to None.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
-        data_root (str): The root directory for ``data_prefix`` and
-            ``ann_file``. Defaults to ''.
+        data_root (str, optional): The root directory for ``data_prefix`` and
+            ``ann_file``. Defaults to None.
         data_prefix (dict): Prefix for training data. Defaults to
-            dict(img_path='').
+            dict(img_path=None).
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
@@ -211,10 +211,10 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str = '',
+                 ann_file: str = None,
                  metainfo: Optional[dict] = None,
-                 data_root: str = '',
-                 data_prefix: dict = dict(img_path=''),
+                 data_root: str = None,
+                 data_prefix: dict = dict(img_path=None),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
@@ -222,10 +222,21 @@ class BaseDataset(Dataset):
                  test_mode: bool = False,
                  lazy_init: bool = False,
                  max_refetch: int = 1000):
-
-        self.data_root = data_root
-        self.data_prefix = copy.copy(data_prefix)
+        # Set `ann_file` to '' by default.
+        if ann_file is None:
+            ann_file = ''
         self.ann_file = ann_file
+        # Set `data_root` to '' by default.
+        if data_root is None:
+            data_root = ''
+        self.data_root = data_root
+        # Set each value of `data_prefix` to '' by default.
+        data_prefix = copy.copy(data_prefix)
+        for key in data_prefix.keys():
+            if data_prefix[key] is None:
+                data_prefix[key] = ''
+        self.data_prefix = data_prefix
+
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
         self.serialize_data = serialize_data
