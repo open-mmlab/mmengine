@@ -28,8 +28,8 @@ class OSSBackend(BaseStorageBackend):
     """
 
     def __init__(self,
-                 access_key_id: str,
-                 access_key_secret: str,
+                 access_key_id: Optiona[str] = None,
+                 access_key_secret: Optional[str] = None,
                  path_mapping: Optional[dict] = None):
         try:
             import oss2
