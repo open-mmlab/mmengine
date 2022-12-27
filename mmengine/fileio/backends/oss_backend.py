@@ -122,7 +122,6 @@ class OSSBackend(BaseStorageBackend):
             >>> backend.get(filepath)
             b'hello world'
         """
-
         endpoint, bucket_name, obj_name = self._parse_path(filepath)
         bucket = self._bucket_instance(endpoint, bucket_name)
         object_stream = bucket.get_object(obj_name)
