@@ -17,9 +17,10 @@ class OSSBackend(BaseStorageBackend):
     or write data to them. Otherwise, OSSBackend will occur an error.
 
     Args:
+        access_key_id (str, optional): xxx.
+        access_key_secret (str, optional): xxx.
         path_mapping (dict, optional): Path mapping dict from local path to
-            oss path. When ``path_mapping={'src': 'dst'}``, ``src`` in
-            ``filepath`` will be replaced by ``dst``. Defaults to None.
+        ``filepath`` will be replaced by ``dst``. Defaults to None.
 
     Examples:
         >>> backend = OSSBackend()
@@ -28,7 +29,7 @@ class OSSBackend(BaseStorageBackend):
     """
 
     def __init__(self,
-                 access_key_id: Optiona[str] = None,
+                 access_key_id: Optional[str] = None,
                  access_key_secret: Optional[str] = None,
                  path_mapping: Optional[dict] = None):
         try:
