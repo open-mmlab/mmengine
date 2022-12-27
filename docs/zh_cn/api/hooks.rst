@@ -22,4 +22,5 @@ mmengine.hooks
    IterTimerHook
    SyncBuffersHook
    EmptyCacheHook
+   ProfilerHook
    PrepareTTAHook
