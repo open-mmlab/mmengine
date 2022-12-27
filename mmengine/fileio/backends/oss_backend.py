@@ -208,9 +208,11 @@ class OSSBackend(BaseStorageBackend):
 
     def rmtree(self, dir_path: Union[str, Path]) -> None:
         """Recursively delete a directory tree.
-        Attention: if dir_path endwith '/', this operator represents
-        delete all files and directory under src. otherwise, delete
-        all files and directory include src folder.
+        
+        Note:
+            If dir_path ends with '/', this operator will
+            delete all files and directories under dir_path. otherwise, delete
+            all files and directories including dir_path ifself.
 
         Args:
             dir_path (str or Path): A directory to be removed.
