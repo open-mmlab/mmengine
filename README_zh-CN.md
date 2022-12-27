@@ -18,9 +18,9 @@
   </div>
   <div>&nbsp;</div>
 
-[![PyPI - Python Version](http://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
-[![PyPI](http://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
-[![license](http://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
+[![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
+[![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
