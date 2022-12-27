@@ -34,8 +34,7 @@ from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope,
-                               count_registered_modules)
+                               VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -371,11 +370,6 @@ class Runner:
 
         # Collect and log environment information.
         self._log_env(env_cfg)
-
-        # collect information of all modules registered in the registries
-        registries_info = count_registered_modules(
-            self.work_dir if self.rank == 0 else None, verbose=False)
-        self.logger.debug(registries_info)
 
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
