@@ -88,8 +88,8 @@ class OSSBackend(BaseStorageBackend):
         parse_res = self.parse_bucket.findall(filepath)
         if not parse_res:
             raise ValueError(
-                f"The input path '{filepath}' format is incorrect. \
-                A example: oss://oss-cn-hangzhou.aliyuncs.com/mmengine/.*")
+                f"The input path '{filepath}' format is incorrect. "
+                "An example: oss://oss-cn-hangzhou.aliyuncs.com/mmengine/.*")
         endpoint, bucket, obj_name = parse_res[0]
         return endpoint, bucket, obj_name
 
