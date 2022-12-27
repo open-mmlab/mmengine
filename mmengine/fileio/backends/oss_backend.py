@@ -329,7 +329,7 @@ class OSSBackend(BaseStorageBackend):
             >>> backend.copyfile_from_local(src, dst)
             'oss://endpoint/bucket/dir/file'
         """
-        dst = self._format_path(self._map_path(self._map_path(dst)))
+        dst = self._format_path(self._map_path(dst))
         src = self._map_path(src)
         if dst.endswith('/'):
             dst = os.path.join(dst, src.split('/')[-1])
