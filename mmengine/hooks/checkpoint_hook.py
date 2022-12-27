@@ -294,18 +294,18 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             metrics (dict): Evaluation results of all metrics
         """
+        if len(metrics) == 0:
+            runner.logger.warn(
+                'Since `metrics` is an empty dict, the behavior to save '
+                'the best checkpoint will be skipped in this evaluation.')
+            return
+
         self._save_best_checkpoint(runner, metrics)
 
     def _get_metric_score(self, metrics, key_indicator):
         eval_res = OrderedDict()
         if metrics is not None:
             eval_res.update(metrics)
-
-        if len(eval_res) == 0:
-            warnings.warn(
-                'Since `eval_res` is an empty dict, the behavior to save '
-                'the best checkpoint will be skipped in this evaluation.')
-            return None
 
         return eval_res[key_indicator]
 
