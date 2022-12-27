@@ -204,11 +204,7 @@ class OSSBackend(BaseStorageBackend):
         """
         endpoint, bucket_name, obj_name = self._parse_path(filepath)
         bucket = self._bucket_instance(endpoint, bucket_name)
-        exist = bucket.object_exists(obj_name)
-        if exist:
-            return True
-        else:
-            return False
+        return bucket.object_exists(obj_name)
 
     def rmtree(self, dir_path: Union[str, Path]) -> None:
         """Recursively delete a directory tree.
