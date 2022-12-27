@@ -329,6 +329,8 @@ class MessageHub(ManagerMixin):
             value = value.item()
         elif isinstance(value, (int, float)):
             value = value
+        elif isinstance(value, np.ScalarType):
+            value = value.item()
         else:
             # check whether value is torch.Tensor but don't want
             # to import torch in this file
