@@ -99,8 +99,9 @@ class OSSBackend(BaseStorageBackend):
         Args:
             endpoint (str): aliyun Endpoint.
             bucket_name (str): bucket name of OSS
+
         Returns:
-            endpoint (Bucket): a instance of OSS
+            Bucket: An instance of OSS.
         """
 
         bucket = self.oss2.Bucket(self._client, endpoint, bucket_name)
