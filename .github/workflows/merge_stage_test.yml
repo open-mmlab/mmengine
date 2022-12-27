@@ -214,7 +214,7 @@ jobs:
           pip install -r requirements/tests.txt
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
-      # Distributed related unit test could failed in macOS
+      # Distributed-related unit tests may fail in macOS
       # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
         run: |
