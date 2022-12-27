@@ -72,14 +72,16 @@ class OSSBackend(BaseStorageBackend):
         return re.sub(r'\\+', '/', filepath)
 
     def _parse_path(self, filepath: Union[str, Path]) -> Tuple[str, str, str]:
-        """Parse bucket and object name from a given ``filepath``.
+        """Parse endpoint, bucket, and object name from a given ``filepath``.
+
         Args:
             filepath (str or Path): Path to read data.
 
         Returns:
-            endpoint (str): access domain or CNAME
-            bucket (str): Bucket name of oss.
-            obj_name (str): Object relative path to bucket.
+            tuple[str, str, str]: The first item is the endpoint meaning
+            access domain or CNAME. The second is the bucket name
+            of oss. The last is obj_name which is the object's relative
+            path to the bucket.
         """
         filepath = self._map_path(filepath)
         filepath = self._format_path(filepath)
