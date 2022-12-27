@@ -49,7 +49,8 @@ class ProfilerHook(Hook):
             display or tensorboard display. The terminal display content can be
             adjusted through 'EventList.table()'
             from 'torch.autograd.profiler_util.py'.
-            If using tensorboard, save to '{work_dir}/tf_tracing_logs' by default.
+            If using tensorboard, save to '{work_dir}/tf_tracing_logs'
+            by default.
         record_shapes (bool): Save information about operator's input shapes.
             Defaults to False.
         profile_memory (bool): Track tensor memory allocation/deallocation.
