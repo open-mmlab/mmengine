@@ -148,7 +148,7 @@ class TestCheckpointHook:
         runner.work_dir = tmp_path
         runner.epoch = 9
         runner.model = Mock()
-        runner.logger.warn = Mock()
+        runner.logger.warning = Mock()
         runner.message_hub = MessageHub.get_instance('test_after_val_epoch')
 
         with pytest.raises(ValueError):
@@ -164,7 +164,7 @@ class TestCheckpointHook:
         checkpoint_hook = CheckpointHook(
             interval=2, by_epoch=True, save_best='auto')
         checkpoint_hook.after_val_epoch(runner, {})
-        runner.logger.warn.assert_called_once()
+        runner.logger.warning.assert_called_once()
 
         # test error when number of rules and metrics are not same
         with pytest.raises(AssertionError) as assert_error:

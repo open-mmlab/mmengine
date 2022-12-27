@@ -295,7 +295,7 @@ class CheckpointHook(Hook):
             metrics (dict): Evaluation results of all metrics
         """
         if len(metrics) == 0:
-            runner.logger.warn(
+            runner.logger.warning(
                 'Since `metrics` is an empty dict, the behavior to save '
                 'the best checkpoint will be skipped in this evaluation.')
             return
