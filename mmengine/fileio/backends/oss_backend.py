@@ -90,7 +90,7 @@ class OSSBackend(BaseStorageBackend):
         if not parse_res:
             raise ValueError(
                 f"The input path '{filepath}' format is incorrect. "
-                "An example: oss://oss-cn-hangzhou.aliyuncs.com/mmengine/.*")
+                'An example: oss://oss-cn-hangzhou.aliyuncs.com/mmengine/.*')
         endpoint, bucket, obj_name = parse_res[0]
         return endpoint, bucket, obj_name
 
@@ -209,11 +209,11 @@ class OSSBackend(BaseStorageBackend):
 
     def rmtree(self, dir_path: Union[str, Path]) -> None:
         """Recursively delete a directory tree.
-        
+
         Note:
             If dir_path ends with '/', this operator will
             delete all files and directories under dir_path. otherwise, delete
-            all files and directories including dir_path ifself.
+            all files and directories including dir_path itself.
 
         Args:
             dir_path (str or Path): A directory to be removed.
