@@ -4,9 +4,9 @@
 
 ### Highlights
 
-- Registry support to import modules automatically
+- Registry supports importing modules automatically
+- Upgrade the documentation and provide the **English documentation**
 - Provide `ProfileHook` to profile the running process
-- Upgrade the documentation and provide the English version
 
 ### New Features & Enhancements
 
@@ -15,7 +15,7 @@
 - Support passing arguments to `OptimWrapper.update_params` by @twmht in https://github.com/open-mmlab/mmengine/pull/796
 - Make `get_torchvision_model` compatible with torch 1.13 by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/793
 - Support `flat_decay_mult` and fix `bias_decay_mult` of depth-wise-conv in `DefaultOptimWrapperConstructor` by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/771
-- registry support import modules automatically. by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/643
+- Registry supports importing modules automatically. by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/643
 - Add profiler hook functionality by @BayMaxBHL in https://github.com/open-mmlab/mmengine/pull/768
 - Make TTAModel compatible with FSDP. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/611
 

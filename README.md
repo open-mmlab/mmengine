@@ -62,8 +62,8 @@ v0.4.0 was released in 2022-12-28.
 
 Highlights:
 
-- Registry support to import modules automatically
-- Upgrade the documentation and provide the English documentation
+- Registry supports importing modules automatically
+- Upgrade the documentation and provide the **English documentation**
 - Provide `ProfileHook` to profile the training/testing process
 
 Read [Changelog](./docs/en/notes/changelog.md#v040-12282022) for more details.
