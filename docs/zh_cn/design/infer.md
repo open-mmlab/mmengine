@@ -113,9 +113,22 @@ class CustomInferencer(BaseInferencer):
 
     def postprocess(self, preds, visualization, return_datasample=False, d=None):
         pass
+
+    def __call__(
+        self,
+        inputs,
+        batch_size=1,
+        show=True,
+        return_datasample=False,
+        a=None,
+        b=None,
+        c=None,
+        d=None):
+        return super().__call__(
+            inputs, batch_size, show, return_datasample, a=a, b=b, c=c, d=d)
 ```
 
-上述代码中，`preprocess`，`forward`，`visualize`，`postprocess` 四个函数的参数中，`a`，`b`，`c`，`d` 为用户可以传入的额外参数（inputs, preds 等参数在 `__call__` 的执行过程中会被自动填入），因此需要在 `preprocess_kwargs`，`forward_kwargs`，`visualize_kwargs`，`postprocess_kwargs` 中指定这些参数对应哪个步骤。这样 `__call__` 阶段用户传入的参数就可以被正确分发给对应的步骤。分发过程由 `BaseInferencer.__call__` 函数实现，因此开发者无需关系。
+上述代码中，`preprocess`，`forward`，`visualize`，`postprocess` 四个函数的 `a`，`b`，`c`，`d` 为用户可以传入的额外参数（`inputs`, `preds` 等参数在 `__call__` 的执行过程中会被自动填入），因此开发者需要在类属性 `preprocess_kwargs`，`forward_kwargs`，`visualize_kwargs`，`postprocess_kwargs` 中指定这些参数，这样 `__call__` 阶段用户传入的参数就可以被正确分发给对应的步骤。分发过程由 `BaseInferencer.__call__` 函数实现，开发者无需关心。
 
 此外，我们需要将 `CustomInferencer` 注册到 MMEngine 定义的 `INFERENCERS` 注册器中
 
@@ -209,3 +222,16 @@ class CustomInferencer(BaseInferencer):
 返回值：
 
 - 可视化结果和预测结果，类型为一个字典。OpenMMLab 系列算法库要求返回的字典包含 `predictions` 和 `visualization` 两个 key。
+
+### `__call__()`
+
+入参：
+
+- inputs：输入数据，通常为图片路径、或者图片数据组成的列表
+- return_datasample：是否将 datasample 转换成 `dict` 返回
+- batch_size：推理的 batch size，会被进一步传给 `preprocess` 函数
+- 其他参数：分发给 `preprocess`、`forward`、`visualize`、`postprocess` 函数的额外参数
+
+返回值：
+
+- `postprocess` 返回的可视化结果和预测结果，类型为一个字典。OpenMMLab 系列算法库要求返回的字典包含 `predictions` 和 `visualization` 两个 key。
