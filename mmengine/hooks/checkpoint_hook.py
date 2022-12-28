@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import warnings
-from collections import OrderedDict
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -302,13 +301,6 @@ class CheckpointHook(Hook):
 
         self._save_best_checkpoint(runner, metrics)
 
-    def _get_metric_score(self, metrics, key_indicator):
-        eval_res = OrderedDict()
-        if metrics is not None:
-            eval_res.update(metrics)
-
-        return eval_res[key_indicator]
-
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
 
@@ -385,7 +377,7 @@ class CheckpointHook(Hook):
         # save best logic
         # get score from messagehub
         for key_indicator, rule in zip(self.key_indicators, self.rules):
-            key_score = self._get_metric_score(metrics, key_indicator)
+            key_score = metrics[key_indicator]
 
             if len(self.key_indicators) == 1:
                 best_score_key = 'best_score'
