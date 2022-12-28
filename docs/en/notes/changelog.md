@@ -54,6 +54,10 @@
 - Fix link error in initialize tutorial. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/843
 - Fix table in `initialized.md` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/844
 
+### Contributors
+
+A total of 16 developers contributed to this release. Thanks @BayMaxBHL, @RangeKing, @Xiangxu-0103, @xin-li-67, @twmht, @shanmo, @sunyc11, @lyviva, @austinmw, @xiexinch, @mzr1996, @RangiLyu, @MambaWong, @C1rN09, @zhouzaida, @HAOCHENYE
+
 ## v0.3.2 (11/24/2022)
 
 ### New Features & Enhancements
