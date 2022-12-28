@@ -4,9 +4,9 @@
 
 ### Highlights
 
-- Registry support import modules automatically.
-- Provide `ProfileHook` to profile the running process.
-- Upgrade the documentation and provide the English version.
+- Registry support to import modules automatically
+- Provide `ProfileHook` to profile the running process
+- Upgrade the documentation and provide the English version
 
 ### New Features & Enhancements
 
