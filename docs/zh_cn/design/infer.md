@@ -146,7 +146,7 @@ class CustomInferencer(BaseInferencer):
 
 ### `__init__()`
 
-`BaseInferencer.__init__` 已经实现了[使用样例](#构建推理器)中构建推理器的逻辑，因此通常情况下不需要重写 `__init__` 函数。
+`BaseInferencer.__init__` 已经实现了[使用样例](#构建推理器)中构建推理器的逻辑，因此通常情况下不需要重写 `__init__` 函数。如果想实现自定义的加载配置文件、权重初始化、pipeline 初始化等逻辑，也可以重写 `__init__` 函数。
 
 ### `_init_pipeline()`
 
@@ -154,7 +154,7 @@ class CustomInferencer(BaseInferencer):
 抽象方法，子类必须实现
 ```
 
-初始化并返回 inferencer 所需的 pipeline。pipeline 用于单张图片，类似于 OpenMMLab 系列算法库中定义的 `train_pipeline`，`test_pipeline`。
+初始化并返回 inferencer 所需的 pipeline。pipeline 用于单张图片，类似于 OpenMMLab 系列算法库中定义的 `train_pipeline`，`test_pipeline`。使用者调用 `__call__` 接口传入的每个 `inputs`，都会经过 pipeline 处理，组成 batch data，然后传入 `forward` 函数。
 
 ### `_init_collate()`
 
@@ -169,7 +169,7 @@ class CustomInferencer(BaseInferencer):
 入参：
 
 - inputs：输入数据，由 `__call__` 传入，通常为图片路径或者图片数据组成的列表
-- batch_size：batch 大小，由用户传入
+- batch_size：batch 大小，由使用者在调用 `__call__` 时传入
 - 其他参数：由用户传入，且在 `preprocess_kwargs` 中指定
 
 返回值：
@@ -216,10 +216,10 @@ class CustomInferencer(BaseInferencer):
 
 入参：
 
-- preds：模型预测结果
+- preds：模型预测结果，类型为 `list`，列表中的每个元素表示一个数据的预测结果。OpenMMLab 系列算法库中，预测结果中每个元素的类型均为 `BaseDataElement`
 - visualization：可视化结果
 - return_datasample：是否将 datasample 转换成 `dict` 返回
-- 其他参数：由用户传入，且在 `visualize_kwargs` 中指定
+- 其他参数：由用户传入，且在 `postprocess_kwargs` 中指定
 
 返回值：
 
@@ -229,11 +229,11 @@ class CustomInferencer(BaseInferencer):
 
 入参：
 
-- inputs：输入数据，通常为图片路径、或者图片数据组成的列表
+- inputs：输入数据，通常为图片路径、或者图片数据组成的列表。`inputs` 中的每个元素也可以是其他类型的数据，只需要保证数据能够被 [\_init_pipeline](#initpipeline) 返回的 `pipeline` 处理即可。当 `inputs` 只含一个推理数据时，它可以不是一个 `list`，`__call__` 会在内部将 `inputs` 包装成列表，以便于后续处理
 - return_datasample：是否将 datasample 转换成 `dict` 返回
 - batch_size：推理的 batch size，会被进一步传给 `preprocess` 函数
 - 其他参数：分发给 `preprocess`、`forward`、`visualize`、`postprocess` 函数的额外参数
 
 返回值：
 
-- `postprocess` 返回的可视化结果和预测结果，类型为一个字典。OpenMMLab 系列算法库要求返回的字典包含 `predictions` 和 `visualization` 两个 key。
+- `postprocess` 返回的可视化结果和预测结果，类型为一个字典。OpenMMLab 系列算法库要求返回的字典包含 `predictions` 和 `visualization` 两个 key
