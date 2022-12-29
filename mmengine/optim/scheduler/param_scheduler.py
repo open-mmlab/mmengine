@@ -1301,7 +1301,8 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
-        monitor (str): Key name of the value to monitor in metrics dict.
+        monitor (str): The name of the metric to measure whether the performance of the model is improved.
+
         rule (str): One of `less`, `greater`. In `less` rule, parameters will
             be reduced when the quantity monitored has stopped
             decreasing; in `greater` rule it will be reduced when the
@@ -1488,7 +1489,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             group[self.param_name] for group in self.optimizer.param_groups
         ]
 
-    def print_value(self, is_verbose: bool, group: int, value: float):
+    def print_value(self, is_verbose: bool, group: int, value: float) -> None:
         """Display the current parameter value.
 
         Args:
