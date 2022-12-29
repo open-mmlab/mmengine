@@ -1294,7 +1294,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
     parameters are reduced.
 
     The implementation is motivated by
-    https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
+    `PyTorch  ReduceLROnPlateau<https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py>`_.
 
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
