@@ -516,10 +516,8 @@ class TestLRScheduler(TestCase):
         scheduler = construct()
         for _ in range(epochs):
             scheduler.optimizer.step()
-            if step_args is None:
-                scheduler.step()
-            else:
-                scheduler.step(*step_args)
+            step_args = [] if step_args is None else step_args
+            scheduler.step(*step_args)
         scheduler_copy = construct2()
         scheduler_copy.load_state_dict(scheduler.state_dict())
         for key in scheduler.__dict__.keys():

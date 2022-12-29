@@ -288,7 +288,8 @@ class CosineRestartMomentum(MomentumSchedulerMixin,
 
 
 @PARAM_SCHEDULERS.register_module()
-class ReduceOnPlateauMomentum(ReduceOnPlateauParamScheduler):
+class ReduceOnPlateauMomentum(MomentumSchedulerMixin,
+                              ReduceOnPlateauParamScheduler):
     """Reduce the momentum of each parameter group when a metric has stopped
     improving. Models often benefit from reducing the momentum by a factor of
     2-10 once learning stagnates. This scheduler reads a metrics quantity and
@@ -341,23 +342,6 @@ class ReduceOnPlateauMomentum(ReduceOnPlateauParamScheduler):
             Defaults to False.
     """
 
-    def __init__(self, optimizer, *args, **kwargs):
-        self.use_betas = False
-        if 'momentum' in optimizer.defaults:
-            param_name = 'momentum'
-        elif 'betas' in optimizer.defaults:
-            # for Adam series optimizer, the momentum is beta_0
-            self.use_betas = True
-            param_name = 'momentum'
-            for group in optimizer.param_groups:
-                # set a reference momentum in the param groups for scheduling
-                group[param_name] = group['betas'][0]
-        else:
-            raise ValueError(
-                'optimizer must support momentum when using momentum scheduler'
-            )
-        super().__init__(optimizer, param_name, *args, **kwargs)
-
     def step(self, metrics=None):
         """Adjusts the momentum of each parameter group based on the specified
         schedule.
@@ -368,7 +352,7 @@ class ReduceOnPlateauMomentum(ReduceOnPlateauParamScheduler):
                 metrics, and the values are corresponding results.
                 Defaults to None.
         """
-        super().step(metrics)
+        super(MomentumSchedulerMixin, self).step(metrics)
         if self.use_betas:
             for group in self.optimizer.param_groups:
                 _, beta_1 = group['betas']

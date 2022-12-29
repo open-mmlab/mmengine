@@ -1294,15 +1294,16 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
     parameters are reduced.
 
     The implementation is motivated by
-    `PyTorch  ReduceLROnPlateau<https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py>`_.
+    `PyTorch
+    ReduceLROnPlateau<https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py>`_.
 
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
-        monitor (str): The name of the metric to measure whether the performance of the model is improved.
-
+        monitor (str): The name of the metric to measure whether
+            the performance of the model is improved.
         rule (str): One of `less`, `greater`. In `less` rule, parameters will
             be reduced when the quantity monitored has stopped
             decreasing; in `greater` rule it will be reduced when the

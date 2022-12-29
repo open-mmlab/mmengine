@@ -255,10 +255,8 @@ class TestParameterScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            if step_args is None:
-                [scheduler.step() for scheduler in schedulers]
-            else:
-                [scheduler.step(*step_args) for scheduler in schedulers]
+            step_args = [] if step_args is None else step_args
+            [scheduler.step(*step_args) for scheduler in schedulers]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
@@ -657,10 +655,8 @@ class TestParameterScheduler(TestCase):
         scheduler = construct()
         for _ in range(epochs):
             scheduler.optimizer.step()
-            if step_args is None:
-                scheduler.step()
-            else:
-                scheduler.step(*step_args)
+            step_args = [] if step_args is None else step_args
+            scheduler.step(*step_args)
         scheduler_copy = construct2()
         torch.save(scheduler.state_dict(),
                    osp.join(self.temp_dir.name, 'tmp.pth'))

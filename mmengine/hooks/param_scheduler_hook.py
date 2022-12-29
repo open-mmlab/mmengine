@@ -4,7 +4,7 @@ from typing import Dict, Optional, Union
 from mmengine.optim import _ParamScheduler
 from mmengine.registry import HOOKS
 from mmengine.runner import BaseLoop
-from mmengine.utils import is_seq_of
+from mmengine.utils import is_list_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -107,11 +107,19 @@ class ParamSchedulerHook(Hook):
         if metrics is None:
             return
 
-        if not self._should_after_val_epoch(runner):
+        # check train_loop is built
+        # to avoid execute schedulers without training
+        # Need to skip building train_loop when call runner.train_loop,
+        # so use runner._train_loop. This is a hacky approach.
+        if not isinstance(runner._train_loop, BaseLoop):
             return
 
         def step(_param_schedulers):
             assert isinstance(_param_schedulers, list)
+            # check param_schedulers is built
+            if not is_list_of(_param_schedulers, _ParamScheduler):
+                return
+
             for scheduler in _param_schedulers:
                 if (scheduler.by_epoch
                         and getattr(scheduler, 'need_val_args', False)):
@@ -127,41 +135,3 @@ class ParamSchedulerHook(Hook):
                 'runner.param_schedulers should be list of ParamScheduler or '
                 'a dict containing list of ParamScheduler, '
                 f'but got {runner.param_schedulers}')
-
-    def _should_after_val_epoch(self, runner) -> bool:
-        """Check whether train_loop and param_schedulers are built before.
-
-        Args:
-            runner (Runner): The runner of the validation process.
-        """
-        self._should: bool
-        if hasattr(self, '_should'):
-            # to save check time
-            return self._should
-
-        self._should = True
-
-        # Check train_loop is built
-        # Need to skip building train_loop when call runner.train_loop,
-        # so use runner._train_loop. This is a hacky approach.
-        if not isinstance(runner._train_loop, BaseLoop):
-            self._should = False
-            return self._should
-
-        # Check param_schedulers is built
-        scheduler = runner.param_schedulers
-        if isinstance(scheduler, dict):
-            scheduler = list(scheduler.values())
-
-        # the case scheduler = dict(key1=[scheduler1], key2=[scheduler2])
-        if is_seq_of(scheduler, (list, tuple)):
-            _scheduler = []
-            for s in scheduler:
-                _scheduler += s
-            scheduler = _scheduler
-
-        if not is_seq_of(scheduler, _ParamScheduler):
-            self._should = False
-            return self._should
-
-        return self._should
