@@ -717,6 +717,8 @@ class TestConfig:
         cfg = Config._file2dict(cfg_file)[0]
         assert cfg == dict(item1=dict(a=1))
 
+        # Simulate the case that the temporary directory include `.`, etc.
+        # /tmp/test.axsgr12/
         class PatchedTempDirectory(tempfile.TemporaryDirectory):
 
             def __init__(self, *args, prefix='test.', **kwargs):
