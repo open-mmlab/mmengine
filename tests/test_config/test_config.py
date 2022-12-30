@@ -718,7 +718,8 @@ class TestConfig:
         assert cfg == dict(item1=dict(a=1))
 
         # Simulate the case that the temporary directory include `.`, etc.
-        # /tmp/test.axsgr12/
+        # /tmp/test.axsgr12/. This patch is to check the issue
+        # https://github.com/open-mmlab/mmengine/issues/788 has been solved.
         class PatchedTempDirectory(tempfile.TemporaryDirectory):
 
             def __init__(self, *args, prefix='test.', **kwargs):
