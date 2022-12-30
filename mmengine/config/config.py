@@ -550,7 +550,7 @@ class Config:
         Returns:
             list: A list of base config.
         """
-        file_format = os.path.splitext(filename)[1]
+        file_format = osp.splitext(filename)[1]
         if file_format == '.py':
             Config._validate_py_syntax(filename)
             with open(filename, encoding='utf-8') as f:
