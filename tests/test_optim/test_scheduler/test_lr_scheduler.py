@@ -198,6 +198,8 @@ class TestLRScheduler(TestCase):
                               epochs=10,
                               param_name='lr',
                               step_args=None):
+        if step_args is not None:
+            assert len(step_args) == epochs
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
         for epoch in range(epochs):
@@ -211,8 +213,8 @@ class TestLRScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            step_args = [] if step_args is None else step_args
-            [scheduler.step(*step_args) for scheduler in schedulers]
+            step_args = [[]] if step_args is None else step_args
+            [scheduler.step(*step_args.pop(0)) for scheduler in schedulers]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
@@ -394,7 +396,7 @@ class TestLRScheduler(TestCase):
 
         # Test error in step method
         scheduler = ReduceOnPlateauLR(self.optimizer, monitor='loss')
-        scheduler.step()
+        assert scheduler.step() is None
 
         with self.assertRaises(TypeError):
             scheduler.step(('foo', 1.0))
@@ -404,120 +406,133 @@ class TestLRScheduler(TestCase):
             scheduler.step(metrics)
 
         # Test scheduler value
-        epoch = 10
-        lr = 0.05
-        factor = 0.1
-        patience = 2
-        cooldown = 1
-        metrics = dict(loss=1.0)
-        single_targets = [
-            0.05,  # first
-            0.05,  # in cooldown
-            0.05,  # (num_bad_epochs = 1) < patience
-            0.05,  # (num_bad_epochs = 2) = patience
-            # (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.005,
-            0.005,  # in cooldown
-            0.005,  # (num_bad_epochs = 1) < patience
-            0.005,  # (num_bad_epochs = 2) = patience
-            # (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.0005,
-            0.0005,  # in cooldown
-        ]
+        def _test_value(_epochs, _targets, _metrics_list, _monitor, _rule,
+                        _factor, _patience, _threshold, _threshold_rule,
+                        _cooldown, _min_value):
+            lr = 0.05
+            momentum = 0.01
+            weight_decay = 5e-4
+            _scheduler = ReduceOnPlateauLR(
+                self.optimizer,
+                monitor=_monitor,
+                rule=_rule,
+                factor=_factor,
+                patience=_patience,
+                threshold=_threshold,
+                threshold_rule=_threshold_rule,
+                cooldown=_cooldown,
+                min_value=_min_value,
+            )
+            self._test_scheduler_value(
+                _scheduler, _targets, epochs=_epochs, step_args=_metrics_list)
+            self.optimizer = optim.SGD([{
+                'params': self.model.conv1.parameters()
+            }, {
+                'params': self.model.conv2.parameters(),
+                'lr': lr * self.layer2_mult,
+            }],
+                                       lr=lr,
+                                       momentum=momentum,
+                                       weight_decay=weight_decay)
 
+        epochs = 10
+        factor = 0.1
+        cooldown = 1
+        patience = 2
+
+        # rule(less) and threshold_rule(rel)
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [{monitor: v} for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
         targets = [
             single_targets, [t * self.layer2_mult for t in single_targets]
         ]
 
-        for rule in ('less', 'greater'):
-            for threshold_rule in ('rel', 'abs'):
-                scheduler = ReduceOnPlateauLR(
-                    self.optimizer,
-                    monitor='loss',
-                    rule=rule,
-                    factor=factor,
-                    patience=patience,
-                    threshold_rule=threshold_rule,
-                    cooldown=cooldown,
-                    min_value=0.0,
-                )
-                self._test_scheduler_value(
-                    scheduler, targets, epochs=epoch, step_args=(metrics, ))
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
 
-                self.optimizer = optim.SGD(
-                    [{
-                        'params': self.model.conv1.parameters()
-                    }, {
-                        'params': self.model.conv2.parameters(),
-                        'lr': lr * self.layer2_mult,
-                    }],
-                    lr=lr,
-                    momentum=0.01,
-                    weight_decay=5e-4)
+        # rule(less) and threshold_rule(abs)
+        rule, threshold_rule = 'less', 'abs'
+        threshold = 0.9
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [{monitor: v} for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(rel)
+        rule, threshold_rule = 'greater', 'rel'
+        threshold = 0.01
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [{monitor: v} for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(abs)
+        rule, threshold_rule = 'greater', 'abs'
+        threshold = 0.9
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [{monitor: v} for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
 
         # change min_value
         min_value = 0.01
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [{monitor: v} for v in metric_values]
         single_targets_1 = [
-            0.05,  # first
-            0.05,  # in cooldown
-            0.05,  # (num_bad_epochs = 1) < patience
-            0.05,  # (num_bad_epochs = 2) = patience
-            # because of min_value = 0.01
-            # 0.005 (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.01,
-            0.01,  # 0.005 in cooldown
-            0.01,  # 0.005 (num_bad_epochs = 1) < patience
-            0.01,  # 0.005 (num_bad_epochs = 2) = patience
-            # 0.0005 (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.01,
-            0.01,  # 0.0005 in cooldown
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, min_value,
+            min_value
         ]
-
-        single_targets_2 = [
-            0.5,  # first
-            0.5,  # in cooldown
-            0.5,  # (num_bad_epochs = 1) < patience
-            0.5,  # (num_bad_epochs = 2) = patience
-            # because of min_value = 0.01
-            # 0.05 (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.05,
-            0.05,  # 0.05 in cooldown
-            0.05,  # 0.05 (num_bad_epochs = 1) < patience
-            0.05,  # 0.05 (num_bad_epochs = 2) = patience
-            # 0.005 (num_bad_epochs = 3) > patience
-            # reset num_bad_epochs cooldown
-            0.01,
-            0.01,  # 0.005 in cooldown
-        ]
-
+        single_targets_2 = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.05, 0.05]
         targets = [single_targets_1, single_targets_2]
-        scheduler = ReduceOnPlateauLR(
-            self.optimizer,
-            monitor='loss',
-            factor=factor,
-            patience=patience,
-            cooldown=cooldown,
-            min_value=min_value,
-            verbose=True,
-        )
-        self._test_scheduler_value(
-            scheduler, targets, epochs=epoch, step_args=(metrics, ))
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, min_value)
 
     def _check_scheduler_state_dict(self,
                                     construct,
                                     construct2,
                                     epochs=10,
                                     step_args=None):
+        if step_args is not None:
+            assert len(step_args) == epochs
         scheduler = construct()
         for _ in range(epochs):
             scheduler.optimizer.step()
-            step_args = [] if step_args is None else step_args
-            scheduler.step(*step_args)
+            step_args = [[]] if step_args is None else step_args
+            scheduler.step(*step_args.pop(0))
         scheduler_copy = construct2()
         scheduler_copy.load_state_dict(scheduler.state_dict())
         for key in scheduler.__dict__.keys():
@@ -582,7 +597,8 @@ class TestLRScheduler(TestCase):
             epochs=10)
 
     def test_reduce_on_plateau_scheduler_state_dict(self):
-        metrics = dict(loss=1.0)
+        epochs = 10
+        metrics_list = [dict(loss=1.0) for _ in range(epochs)]
         self._check_scheduler_state_dict(
             lambda: ReduceOnPlateauLR(
                 self.optimizer,
@@ -606,8 +622,8 @@ class TestLRScheduler(TestCase):
                 cooldown=5,
                 min_value=0.1,
                 eps=1e-9),
-            epochs=10,
-            step_args=(metrics, ))
+            epochs=epochs,
+            step_args=metrics_list)
 
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
