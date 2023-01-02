@@ -117,20 +117,13 @@ class TestParamSchedulerHook:
         # runner._train_loop is not built
         hook = ParamSchedulerHook()  # release self._should
         runner._train_loop = None
-        assert hook._should_after_val_epoch(runner) is False
+        assert hook.after_val_epoch(runner, metrics) is None
 
         # runner.param_schedulers is not built
         hook = ParamSchedulerHook()  # release self._should
         runner._train_loop = MockBaseLoop()
         runner.param_schedulers = dict(key1=[None], key2=[None])
-        assert hook._should_after_val_epoch(runner) is False
-
-        # all is built
-        hook = ParamSchedulerHook()  # release self._should
-        runner._train_loop = MockBaseLoop()
-        scheduler = MockParamScheduler()
-        runner.param_schedulers = [scheduler]
-        assert hook._should_after_val_epoch(runner) is True
+        assert hook.after_val_epoch(runner) is None
 
         # runner.param_schedulers should be a list or dict
         with pytest.raises(TypeError, match=self.error_msg):
