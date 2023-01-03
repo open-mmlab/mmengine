@@ -18,6 +18,9 @@ class OSSBackend(BaseStorageBackend):
     
     Please refer to https://help.aliyun.com/document_detail/85288.html
     to install the required packages of OSSBackend.
+    
+    Please refer to https://help.aliyun.com/document_detail/85288.html
+    to install the required packages of OSSBackend.
 
     Args:
         access_key_id (str, optional): xxx.
