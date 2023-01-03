@@ -68,7 +68,6 @@ img = cv2.imread('path/to/img.jpg')
 result = inferencer(img)
 
 # 输入为 url
-
 img = 'https://xxx.com/img.jpg'
 result = inferencer(img)
 ```
@@ -95,7 +94,7 @@ inferencer 执行推理时，通常会执行以下步骤：
 
 为了优化 inferencer 的使用体验，我们不希望使用者在执行推理时，需要为每个过程都配置一遍参数。换句话说，我们希望使用者可以在不感知上述流程的情况下，简单为 `__call__` 接口配置参数，即可完成推理。
 
-`__call__` 接口会按照顺序执行上述步骤，但是本身却不知道使用者传入的参数需要分发给哪个步骤，因此开发者在实现 `CustomInferencer` 时，需要定义 `preprocess_kwargs`，`forward_kwargs`，`visualize_kwargs`，`postprocess_kwargs` 4 个类属性，每个属性均为一个字符元组（`Set[str]`），用于指定 `__call__` 接口中的参数对应哪个步骤：
+`__call__` 接口会按照顺序执行上述步骤，但是本身却不知道使用者传入的参数需要分发给哪个步骤，因此开发者在实现 `CustomInferencer` 时，需要定义 `preprocess_kwargs`，`forward_kwargs`，`visualize_kwargs`，`postprocess_kwargs` 4 个类属性，每个属性均为一个字符集合（`Set[str]`），用于指定 `__call__` 接口中的参数对应哪个步骤：
 
 ```python
 class CustomInferencer(BaseInferencer):
@@ -146,7 +145,7 @@ class CustomInferencer(BaseInferencer):
 
 ### `__init__()`
 
-`BaseInferencer.__init__` 已经实现了[使用样例](#构建推理器)中构建推理器的逻辑，因此通常情况下不需要重写 `__init__` 函数。如果想实现自定义的加载配置文件、权重初始化、pipeline 初始化等逻辑，也可以重写 `__init__` 函数。
+`BaseInferencer.__init__` 已经实现了[使用样例](#构建推理器)中构建推理器的逻辑，因此通常情况下不需要重写 `__init__` 函数。如果想实现自定义的加载配置文件、权重初始化、pipeline 初始化等逻辑，也可以重写 `__init__` 方法。
 
 ### `_init_pipeline()`
 
@@ -154,7 +153,7 @@ class CustomInferencer(BaseInferencer):
 抽象方法，子类必须实现
 ```
 
-初始化并返回 inferencer 所需的 pipeline。pipeline 用于单张图片，类似于 OpenMMLab 系列算法库中定义的 `train_pipeline`，`test_pipeline`。使用者调用 `__call__` 接口传入的每个 `inputs`，都会经过 pipeline 处理，组成 batch data，然后传入 `forward` 函数。
+初始化并返回 inferencer 所需的 pipeline。pipeline 用于单张图片，类似于 OpenMMLab 系列算法库中定义的 `train_pipeline`，`test_pipeline`。使用者调用 `__call__` 接口传入的每个 `inputs`，都会经过 pipeline 处理，组成 batch data，然后传入 `forward` 方法。
 
 ### `_init_collate()`
 
