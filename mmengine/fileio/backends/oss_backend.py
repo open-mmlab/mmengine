@@ -288,8 +288,12 @@ class OSSBackend(BaseStorageBackend):
         bucket = self._bucket_instance(endpoint, bucket_name)
         for obj in self.oss2.ObjectIterator(
                 bucket, prefix=obj_name, delimiter='/'):
-            # judge if directory or not by function is_prefix
-            filename = str(obj.key)
+            # judge if directory or not by function is_prefix and drop prefix
+            filename = str(obj.key).replace(obj_name, '', 1)
+            # drop prefix
+            if not filename:
+                continue
+
             if obj.is_prefix():  # is dir
                 if list_dir:
                     yield filename
