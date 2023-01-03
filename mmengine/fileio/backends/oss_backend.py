@@ -15,10 +15,7 @@ class OSSBackend(BaseStorageBackend):
     from Endpoint. If the file path contains the bucket name,
     OSSBackend will read data from the specified buckets
     or write data to them. Otherwise, OSSBackend will occur an error.
-    
-    Please refer to https://help.aliyun.com/document_detail/85288.html
-    to install the required packages of OSSBackend.
-    
+
     Please refer to https://help.aliyun.com/document_detail/85288.html
     to install the required packages of OSSBackend.
 
