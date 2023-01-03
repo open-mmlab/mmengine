@@ -271,7 +271,7 @@ runner.train()
 此外，分布式训练时，`DEBUG` 模式还会分进程存储日志。单机多卡，或者多机多卡但是共享存储的情况下，导出的分布式日志路径如下
 
 ```text
-#  共享存储
+# 共享存储
 ./tmp
 ├── tmp.log
 ├── tmp_rank1.log
@@ -289,7 +289,7 @@ runner.train()
 
 ```text
 # 独立存储
-# 设备0：
+# 设备 0：
 work_dir/
 └── exp_name_logs
     ├── exp_name.log
@@ -299,7 +299,7 @@ work_dir/
     ...
     └── exp_name_rank7.log
 
-# 设备7：
+# 设备 7：
 work_dir/
 └── exp_name_logs
     ├── exp_name_rank56.log
