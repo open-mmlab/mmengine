@@ -53,12 +53,12 @@ runner.train()
 以训练阶段为例，日志处理器默认会按照以下方式统计执行器输出的日志：
 
 - 日志前缀：
-  - Epoch 模式（`by_epoch=True`）: `Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
+  - Epoch 模式（`by_epoch=True`）：`Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
   - Iter 模式（`by_epoch=False`）： `Iter(train) [{当前迭代次数}/{总迭代次数}]`
 - 学习率（`lr`）：统计最近一次迭代，参数更新的学习率
 - 时间
-  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平局时间
-  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平局时间
+  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平均时间
+  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平均时间
   - 剩余时间（`eta`）：根据总迭代次数和历次迭代时间计算出来的总剩余时间，剩余时间随着迭代次数增加逐渐趋于稳定
 - 损失：模型前向推理得到的各种字段的损失，默认统计最近 `window_size` 次迭代的平均损失。
 
