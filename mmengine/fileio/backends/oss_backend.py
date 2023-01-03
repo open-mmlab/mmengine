@@ -23,8 +23,8 @@ class OSSBackend(BaseStorageBackend):
     to install the required packages of OSSBackend.
 
     Args:
-        access_key_id (str, optional): xxx.
-        access_key_secret (str, optional): xxx.
+        access_key_id (str, optional): AccessKey ID of your OSS.
+        access_key_secret (str, optional): AccessKey Secret of your OSS.
         path_mapping (dict, optional): Path mapping dict from local path to
             ``filepath`` will be replaced by ``dst``. Defaults to None.
 
