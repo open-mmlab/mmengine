@@ -132,6 +132,7 @@ class TestBaseInferencer(RunnerTestCase):
         inferencer._load_model_from_metafile('retinanet_r18_fpn_1x_coco')
         with self.assertRaisesRegex(ValueError, 'Cannot find model'):
             inferencer._load_model_from_metafile('fake_model')
+        # TODO: Test alias
 
     def test_init_model(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
