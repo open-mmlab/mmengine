@@ -8,8 +8,6 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
-
 from mmengine.fileio.backends import OSSBackend
 
 
@@ -287,6 +285,7 @@ except ImportError:
                 self.backend.join_path(filepath, 'another/path'),
                 'oss://endpoint/bucket/dir/another/path')
 else:
+    import pandas as pd
 
     class TestOSSBackend(TestCase):  # type: ignore
 
