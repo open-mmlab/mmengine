@@ -66,7 +66,7 @@ def build_temporary_directory():
 try:
     import oss2
 
-    # raise ImportError("oss2") offline test
+    # raise ImportError("oss2") #offline test
 except ImportError:
 
     sys.modules['oss2'] = MagicMock()
