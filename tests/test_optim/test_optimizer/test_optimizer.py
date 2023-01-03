@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.distributed.rpc import is_available
 
+from mmengine.dist import get_rank
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
@@ -740,28 +741,23 @@ class TestZeroOptimizer(MultiProcessTestCase):
         self.assertEqual(optimizer.defaults['lr'], self.base_lr)
         self.assertEqual(optimizer.defaults['momentum'], self.momentum)
         self.assertEqual(optimizer.defaults['weight_decay'], self.base_wd)
-        param_groups = optimizer.param_groups[0]
-        if MMCV_FULL_AVAILABLE:
-            param_names = [
-                'param1', 'conv1.weight', 'conv2.weight', 'conv2.bias',
-                'bn.weight', 'bn.bias', 'sub.param1', 'sub.conv1.weight',
-                'sub.conv1.bias', 'sub.gn.weight', 'sub.gn.bias', 'dcn.weight',
-                'dcn.conv_offset.weight', 'dcn.conv_offset.bias'
-            ]
+        param_groups = optimizer.param_groups
+        params_set = set(model.parameters())
+        self.assertEqual(
+            sum(len(param_group['params']) for param_group in param_groups),
+            len(params_set))
+        self.assertTrue(
+            all(param in params_set for param_group in param_groups
+                for param in param_group['params']))
+        state_dict = optimizer.state_dict()
+        if get_rank() == 0:
+            self.assertEqual(
+                sum(len(pg['params']) for pg in state_dict['param_groups']),
+                len(params_set))
         else:
-            param_names = [
-                'param1', 'conv1.weight', 'conv2.weight', 'conv2.bias',
-                'bn.weight', 'bn.bias', 'sub.param1', 'sub.conv1.weight',
-                'sub.conv1.bias', 'sub.gn.weight', 'sub.gn.bias'
-            ]
-        param_dict = dict(model.named_parameters())
-        self.assertEqual(len(param_groups['params']), len(param_names))
-        for i in range(len(param_groups['params'])):
-            assert torch.equal(param_groups['params'][i],
-                               param_dict[param_names[i]])
+            self.assertEqual(state_dict, {})
 
-    def test_build_zero_redundancy_optimizer(self):
-        from torch.distributed.optim import ZeroRedundancyOptimizer
+    def test_zero_redundancy_optimizer(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ExampleModel()
         self.base_lr = 0.01
@@ -777,7 +773,6 @@ class TestZeroOptimizer(MultiProcessTestCase):
                 weight_decay=self.base_wd,
                 momentum=self.momentum))
         optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
-        self.assertIsInstance(optim_wrapper.optimizer, ZeroRedundancyOptimizer)
         self._check_default_optimizer(optim_wrapper.optimizer, model)
 
         # test build optimizer without ``optimizer_type``
@@ -789,6 +784,33 @@ class TestZeroOptimizer(MultiProcessTestCase):
                     weight_decay=self.base_wd,
                     momentum=self.momentum))
             optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+
+    @unittest.skipIf(
+        digit_version(TORCH_VERSION) < digit_version('1.12.0'),
+        reason='ZeRO started to support param groups since pytorch 1.12.0')
+    def test_zero_redundancy_optimizer_with_paramwise_cfg(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ExampleModel()
+        self.base_lr = 0.01
+        self.momentum = 0.0001
+        self.base_wd = 0.9
+
+        # test build function
+        paramwise_cfg = dict(
+            custom_keys={
+                'conv1': dict(lr_mult=0.0, decay_mult=0.0),
+                'conv2': dict(lr_mult=1.0, decay_mult=2.0)
+            })
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='ZeroRedundancyOptimizer',
+                optimizer_type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum),
+            paramwise_cfg=paramwise_cfg)
+        optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+        self._check_default_optimizer(optim_wrapper.optimizer, model)
 
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
