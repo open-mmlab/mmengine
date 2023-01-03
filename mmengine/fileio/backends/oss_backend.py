@@ -20,7 +20,7 @@ class OSSBackend(BaseStorageBackend):
         access_key_id (str, optional): xxx.
         access_key_secret (str, optional): xxx.
         path_mapping (dict, optional): Path mapping dict from local path to
-        ``filepath`` will be replaced by ``dst``. Defaults to None.
+            ``filepath`` will be replaced by ``dst``. Defaults to None.
 
     Examples:
         >>> backend = OSSBackend()
