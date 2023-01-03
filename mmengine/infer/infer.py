@@ -367,10 +367,12 @@ class BaseInferencer(metaclass=InferencerMeta):
         package_path = get_installed_path(project)
         for model_cfg in BaseInferencer._get_models_from_package(package_path):
             model_name = model_cfg['Name'].lower()
-            model_alias_list = [
-                alias.lower for alias in model_cfg.get('Alias', [])
-            ]
-            if (model_name == model or model in model_alias_list):
+            model_aliases = model_cfg.get('Alias', [])
+            if isinstance(model_aliases, str):
+                model_aliases = [model_aliases.lower()]
+            else:
+                model_aliases = [alias.lower() for alias in model_aliases]
+            if (model_name == model or model in model_aliases):
                 cfg = Config.fromfile(
                     osp.join(package_path, '.mim', model_cfg['Config']))
                 weights = model_cfg['Weights']
