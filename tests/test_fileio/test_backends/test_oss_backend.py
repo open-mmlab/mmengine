@@ -272,7 +272,7 @@ except ImportError:
                     self.backend, 'exists', return_value=False):
                 self.assertEqual(
                     self.backend.copytree_from_local(src, dst), dst)
-                self.assertEqual(len(files), 3)
+                self.assertEqual(len(files), 2)
 
                 # dst should not exist
                 with patch.object(self.backend, 'exists', return_value=True):
