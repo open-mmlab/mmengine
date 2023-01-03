@@ -65,6 +65,8 @@ def build_temporary_directory():
 
 try:
     import oss2
+
+    # raise ImportError("oss2") offline test
 except ImportError:
 
     sys.modules['oss2'] = MagicMock()
@@ -124,10 +126,11 @@ except ImportError:
                 for entry in os.scandir(os.path.join(tmp_dir, prefix)):
                     if not entry.name.startswith('.') and entry.is_file():
                         self.file_list.append(
-                            ObjectIteratorResult(entry.name, False))
+                            ObjectIteratorResult(prefix + entry.name, False))
                     elif os.path.isdir(entry.path):
                         self.file_list.append(
-                            ObjectIteratorResult(entry.name + '/', True))
+                            ObjectIteratorResult(prefix + entry.name + '/',
+                                                 True))
             self.len = len(self.file_list)
             self.cur = -1
 
@@ -200,23 +203,40 @@ except ImportError:
 
         def test_list_dir_or_file(self):
             base_dir = f'{self.oss_dir}'
-            dir_path = os.path.join(f'{self.oss_dir}', 'dir2')
+            dir_path = f'{self.oss_dir}dir2/'
             self.assertEqual(
                 set(self.backend.list_dir_or_file(base_dir)),
                 {'dir2/', 'text1.txt', 'text2.txt', 'dir1/'})
+
             self.assertEqual(
                 set(self.backend.list_dir_or_file(dir_path)),
                 {'dir3/', 'img.jpg'})
+
             self.assertEqual(
                 set(self.backend.list_dir_or_file(dir_path, list_dir=False)),
                 {'img.jpg'})
+
             self.assertEqual(
                 set(self.backend.list_dir_or_file(dir_path, list_file=False)),
                 {'dir3/'})
+
             self.assertEqual(
                 set(
                     self.backend.list_dir_or_file(
                         dir_path, list_dir=False, suffix='.jpg')), {'img.jpg'})
+
+            # test recursive
+            self.assertEqual(
+                set(self.backend.list_dir_or_file(dir_path, recursive=True)),
+                {'img.jpg', 'dir3/', 'dir3/text4.txt'})
+
+            with self.assertRaises(TypeError):
+                self.backend.list_dir_or_file(
+                    dir_path, list_file=False, suffix='.txt')
+
+            with self.assertRaises(TypeError):
+                dir_path = f'{self.oss_dir}dir2'
+                self.backend.list_dir_or_file(dir_path, recursive=True)
 
         def test_rmtree(self):
             dir_path = os.path.join(f'{self.oss_dir}', 'dir2')
@@ -247,12 +267,12 @@ except ImportError:
                 files.append([file_stream, file_path])
 
             src = self.local_data_dir
-            dst = os.path.join(f'{self.oss_dir}', 'dir2')
+            dst = os.path.join(f'{self.oss_dir}', 'dir2/')
             with patch.object(self.backend, 'put', put), patch.object(
                     self.backend, 'exists', return_value=False):
                 self.assertEqual(
                     self.backend.copytree_from_local(src, dst), dst)
-                self.assertEqual(len(files), 2)
+                self.assertEqual(len(files), 3)
 
                 # dst should not exist
                 with patch.object(self.backend, 'exists', return_value=True):
@@ -278,6 +298,13 @@ except ImportError:
                     os.path.join(dst, 'file.txt'))
                 self.assertEqual(
                     open(os.path.join(dst, 'file.txt'), 'rb').read(), b'oss')
+
+        def test_copytree_to_local(self):
+            src = f'{self.oss_dir}'
+            dst = self.test_data_dir / 'mmengine'
+            with patch.object(
+                    self.backend, 'copytree_to_local', return_value=dst):
+                self.assertEqual(self.backend.copytree_to_local(src, dst), dst)
 
         def test_join_path(self):
             filepath = 'oss://endpoint/bucket/dir'
@@ -374,7 +401,6 @@ else:
 
         def test_list_dir_or_file(self):
             dir_path = os.path.join(f'{self.oss_dir}', 'dir2/')
-            print(111, set(self.backend.list_dir_or_file(dir_path)))
             self.assertEqual(
                 set(self.backend.list_dir_or_file(dir_path)), {
                     'dir3/', 'oss.txt', 'oss.jpg', 'color.jpg', 'gray.jpg',
@@ -393,6 +419,25 @@ else:
                     self.backend.list_dir_or_file(
                         dir_path, list_dir=False, suffix='.jpg')),
                 {'oss.jpg', 'color.jpg', 'gray.jpg', 'test_img.jpg'})
+
+            # test recursive
+            dir_path = f'{self.oss_dir}data/dir2/'
+            self.assertEqual(
+                set(self.backend.list_dir_or_file(dir_path, recursive=True)),
+                {'img.jpg', 'dir3/', 'dir3/text4.txt'})
+
+            with self.assertRaises(TypeError):
+                dir_path = f'{self.oss_dir}data/dir2/'
+                # dir_path = f'{self.oss_dir}'
+
+                self.backend.list_dir_or_file(
+                    dir_path, list_file=False, suffix='.txt')
+
+            with self.assertRaises(TypeError):
+                dir_path = f'{self.oss_dir}data/dir2'
+                # dir_path = f'{self.oss_dir}'
+
+                self.backend.list_dir_or_file(dir_path, recursive=True)
 
         def test_rmtree(self):
             dir_path = os.path.join(f'{self.oss_dir}', '123')
@@ -438,6 +483,11 @@ else:
                 os.path.join(dst, 'oss.txt'))
             self.assertEqual(
                 open(os.path.join(dst, 'oss.txt'), 'rb').read(), b'OSS\n')
+
+        def test_copytree_to_local(self):
+            src = f'{self.oss_dir}'
+            dst = self.test_data_dir / 'mmengine'
+            self.assertEqual(self.backend.copytree_to_local(src, dst), dst)
 
         def test_join_path(self):
             filepath = 'oss://endpoint/bucket/dir'

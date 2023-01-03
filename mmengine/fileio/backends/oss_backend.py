@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from typing import Iterator, Optional, Tuple, Union
 
+import mmengine
 from .base import BaseStorageBackend
 
 
@@ -231,12 +232,12 @@ class OSSBackend(BaseStorageBackend):
         for obj in self.oss2.ObjectIterator(bucket, prefix=obj_name):
             bucket.delete_object(obj.key)
 
-    def list_dir_or_file(
-            self,
-            dir_path: Union[str, Path],
-            list_dir: bool = True,
-            list_file: bool = True,
-            suffix: Optional[Union[str, Tuple[str]]] = None) -> Iterator[str]:
+    def list_dir_or_file(self,
+                         dir_path: Union[str, Path],
+                         list_dir: bool = True,
+                         list_file: bool = True,
+                         suffix: Optional[Union[str, Tuple[str]]] = None,
+                         recursive: bool = False) -> Iterator[str]:
         """Scan a directory to find the interested directories or files in
         arbitrary order.
 
@@ -248,22 +249,25 @@ class OSSBackend(BaseStorageBackend):
 
         Note:
             :meth:`list_dir_or_file` returns the path relative to ``dir_path``.
-            In addition, the returned path of directory will not contains the
-            suffix '/' which is consistent with other backends.
+            In addition, the returned path of directory will contains the
+            suffix '/' which is inconsistent with other backends.
 
         Args:
             dir_path (str | Path): Path of the directory.
             list_dir (bool): List the directories. Defaults to True.
             list_file (bool): List the path of files. Defaults to True.
             suffix (str or tuple[str], optional):  File suffix
-                that we are interested in. Defaults to None.
+                that we are interested in, such as .txt, .jpg etc.
+                Defaults to None.
+            recursive (bool): If set to True, recursively scan the
+                directory. Defaults to False.
 
         Yields:
             Iterable[str]: A relative path to ``dir_path``.
 
         Examples:
             >>> backend = OSSBackend()
-            >>> dir_path = 'oss://endpoint/bucket/file'
+            >>> dir_path = 'oss://endpoint/bucket/file/'
             >>> # list those files and directories in current directory
             >>> for file_path in backend.list_dir_or_file(dir_path):
             ...     print(file_path)
@@ -283,29 +287,49 @@ class OSSBackend(BaseStorageBackend):
 
         endpoint, bucket_name, obj_name = self._parse_path(dir_path)
         bucket = self._bucket_instance(endpoint, bucket_name)
-        for obj in self.oss2.ObjectIterator(
-                bucket, prefix=obj_name, delimiter='/'):
-            # judge if directory or not by function is_prefix and drop prefix
-            filename = str(obj.key).replace(obj_name, '', 1)
-            # drop prefix
-            if not filename:
-                continue
+        if list_dir and suffix is not None:
+            raise TypeError(
+                '`list_dir` should be False when `suffix` is not None')
 
-            if obj.is_prefix():  # is dir
-                if list_dir:
-                    yield filename
-            else:
-                if list_file:
-                    if suffix:
-                        if isinstance(suffix,
-                                      str) and filename.endswith(suffix):
-                            yield filename
-                        elif isinstance(suffix, tuple):
-                            _suffix = '.' + filename.split('.')[-1]
-                            if _suffix in suffix:
-                                yield filename
-                    else:
-                        yield filename
+        root_path = obj_name
+        if root_path and not root_path.endswith('/'):
+            raise TypeError('`dir_path` must endswith "/" ')
+
+        def __list_dir_or_file(bucket, obj_name, list_dir, list_file, suffix,
+                               recursive):
+            for obj in self.oss2.ObjectIterator(
+                    bucket, prefix=obj_name, delimiter='/'):
+                # judge if directory or not by function
+                # is_prefix and drop prefix
+                full_path = str(obj.key)
+                dir_or_file_path = full_path[len(root_path):]
+                # drop prefix
+                if not dir_or_file_path:
+                    continue
+
+                if obj.is_prefix():  # is dir
+                    if list_dir:
+                        yield dir_or_file_path
+                    if recursive:
+                        yield from __list_dir_or_file(bucket, full_path,
+                                                      list_dir, list_file,
+                                                      suffix, recursive)
+                else:
+                    if list_file and not dir_or_file_path.endswith('/'):
+                        if suffix:
+                            if isinstance(
+                                    suffix,
+                                    str) and dir_or_file_path.endswith(suffix):
+                                yield dir_or_file_path
+                            elif isinstance(suffix, tuple):
+                                _suffix = '.' + dir_or_file_path.split('.')[-1]
+                                if _suffix in suffix:
+                                    yield dir_or_file_path
+                        else:
+                            yield dir_or_file_path
+
+        return __list_dir_or_file(bucket, root_path, list_dir, list_file,
+                                  suffix, recursive)
 
     def copyfile_from_local(
         self,
@@ -428,6 +452,36 @@ class OSSBackend(BaseStorageBackend):
         with open(dst, 'wb') as f:
             f.write(self.get(src))
 
+        return dst
+
+    def copytree_to_local(
+        self,
+        src: Union[str, Path],
+        dst: Union[str, Path],
+    ) -> Union[str, Path]:
+        """Recursively copy an entire directory tree rooted at src to a local
+        directory named dst and return the destination directory.
+
+        Args:
+            src (str or Path): A directory to be copied.Specifically,
+            src is endswith "/"
+            dst (str or Path): Copy directory to local dst.
+
+        Returns:
+            str: The destination directory.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> src = 'oss://endpoint/bucket/file/'
+            >>> dst = 'path/of/your/dir'
+            >>> backend.copytree_to_local(src, dst)
+            'path/of/your/dir'
+        """
+        for path in self.list_dir_or_file(src, list_dir=False, recursive=True):
+            dst_path = osp.join(dst, path)
+            mmengine.mkdir_or_exist(osp.dirname(dst_path))
+            with open(dst_path, 'wb') as f:
+                f.write(self.get(self.join_path(src, path)))
         return dst
 
     def join_path(
