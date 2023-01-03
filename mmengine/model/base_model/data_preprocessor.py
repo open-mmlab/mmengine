@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
-from mmengine.utils import is_list_of
+from mmengine.utils import is_seq_of
 from ..utils import stack_batch
 
 CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list, bytes, str,
@@ -59,10 +59,7 @@ class BaseDataPreprocessor(nn.Module):
         elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
-            raise TypeError(
-                '`BaseDataPreprocessor.cast_data`: batch data must contain '
-                'tensors, numpy arrays, numbers, dicts or lists, but '
-                f'found {type(data)}')
+            return data
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
@@ -219,7 +216,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         data = self.cast_data(data)  # type: ignore
         _batch_inputs = data['inputs']
         # Process data with `pseudo_collate`.
-        if is_list_of(_batch_inputs, torch.Tensor):
+        if is_seq_of(_batch_inputs, torch.Tensor):
             batch_inputs = []
             for _batch_input in _batch_inputs:
                 # channel transform
@@ -264,9 +261,9 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             batch_inputs = F.pad(_batch_inputs, (0, pad_w, 0, pad_h),
                                  'constant', self.pad_value)
         else:
-            raise TypeError('Output of `cast_data` should be a list of dict '
-                            'or a tuple with inputs and data_samples, but got'
-                            f'{type(data)}： {data}')
+            raise TypeError('Output of `cast_data` should be a dict of '
+                            'list/tuple with inputs and data_samples, '
+                            f'but got {type(data)}： {data}')
         data['inputs'] = batch_inputs
         data.setdefault('data_samples', None)
         return data

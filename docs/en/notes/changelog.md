@@ -1,5 +1,63 @@
 # Changelog of v0.x
 
+## v0.4.0 (12/28/2022)
+
+### Highlights
+
+- Registry supports importing modules automatically
+- Upgrade the documentation and provide the **English documentation**
+- Provide `ProfileHook` to profile the running process
+
+### New Features & Enhancements
+
+- Add `conf_path` in PetrelBackend by @sunyc11 in https://github.com/open-mmlab/mmengine/pull/774
+- Support multiple `--cfg-options`. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/759
+- Support passing arguments to `OptimWrapper.update_params` by @twmht in https://github.com/open-mmlab/mmengine/pull/796
+- Make `get_torchvision_model` compatible with torch 1.13 by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/793
+- Support `flat_decay_mult` and fix `bias_decay_mult` of depth-wise-conv in `DefaultOptimWrapperConstructor` by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/771
+- Registry supports importing modules automatically. by @RangiLyu in https://github.com/open-mmlab/mmengine/pull/643
+- Add profiler hook functionality by @BayMaxBHL in https://github.com/open-mmlab/mmengine/pull/768
+- Make TTAModel compatible with FSDP. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/611
+
+### Bug Fixes
+
+- `hub.get_model` fails on some MMCls models by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/784
+- Fix `BaseModel.to` and `BaseDataPreprocessor.to` to make them consistent with `torch.nn.Module` by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/783
+- Fix creating a new logger at PretrainedInit by @xiexinch in https://github.com/open-mmlab/mmengine/pull/791
+- Fix `ZeroRedundancyOptimizer` ambiguous error with param groups when PyTorch \< 1.12.0 by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/818
+- Fix MessageHub set resumed key repeatedly by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/839
+- Add `progress` argument to `load_from_http` by @austinmw in https://github.com/open-mmlab/mmengine/pull/770
+- Ensure metrics is not empty when saving best checkpoint by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/849
+
+### Docs
+
+- Add `contributing.md` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/754
+- Add gif to 15 min tutorial by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/748
+- Refactor documentations and translate them to English by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/786
+- Fix document link by @MambaWong in https://github.com/open-mmlab/mmengine/pull/775
+- Fix typos in EN `contributing.md` by @RangeKing in https://github.com/open-mmlab/mmengine/pull/792
+- Translate data transform docs. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/737
+- Replace markdown table with html table by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/800
+- Fix wrong example in `Visualizer.draw_polygons`  by @lyviva in https://github.com/open-mmlab/mmengine/pull/798
+- Fix docstring format and rescale the images by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/802
+- Fix failed link in registry by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/811
+- Fix typos  by @shanmo in https://github.com/open-mmlab/mmengine/pull/814
+- Fix wrong links and typos in docs by @shanmo in https://github.com/open-mmlab/mmengine/pull/815
+- Translate `save_gpu_memory.md` by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/803
+- Translate the documentation of hook design by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/780
+- Fix docstring format by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/816
+- Translate `registry.md` by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/817
+- Update docstring of `BaseDataElement` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/836
+- Fix typo by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/841
+- Update docstring of `structures` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/840
+- Translate `optim_wrapper.md` by @xin-li-67 in https://github.com/open-mmlab/mmengine/pull/833
+- Fix link error in initialize tutorial. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/843
+- Fix table in `initialized.md` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/844
+
+### Contributors
+
+A total of 16 developers contributed to this release. Thanks @BayMaxBHL, @RangeKing, @Xiangxu-0103, @xin-li-67, @twmht, @shanmo, @sunyc11, @lyviva, @austinmw, @xiexinch, @mzr1996, @RangiLyu, @MambaWong, @C1rN09, @zhouzaida, @HAOCHENYE
+
 ## v0.3.2 (11/24/2022)
 
 ### New Features & Enhancements
