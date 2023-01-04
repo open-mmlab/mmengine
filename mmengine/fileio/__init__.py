@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .backends import (BaseStorageBackend, HTTPBackend, LmdbBackend,
-                       LocalBackend, MemcachedBackend, PetrelBackend,
-                       register_backend)
+                       LocalBackend, MemcachedBackend, OSSBackend,
+                       PetrelBackend, register_backend)
 from .file_client import FileClient, HardDiskBackend
 from .handlers import (BaseFileHandler, JsonHandler, PickleHandler,
                        YamlHandler, register_handler)
@@ -16,7 +16,7 @@ from .parse import dict_from_file, list_from_file
 __all__ = [
     'BaseStorageBackend', 'FileClient', 'PetrelBackend', 'MemcachedBackend',
     'LmdbBackend', 'HardDiskBackend', 'LocalBackend', 'HTTPBackend',
-    'copy_if_symlink_fails', 'copyfile', 'copyfile_from_local',
+    'OSSBackend', 'copy_if_symlink_fails', 'copyfile', 'copyfile_from_local',
     'copyfile_to_local', 'copytree', 'copytree_from_local',
     'copytree_to_local', 'exists', 'generate_presigned_url', 'get',
     'get_file_backend', 'get_local_path', 'get_text', 'isdir', 'isfile',
