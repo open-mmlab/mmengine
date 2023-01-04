@@ -5,18 +5,18 @@ Generative Adversarial Network (GAN) can be used to generate data such as images
 It will be divided into the following steps:
 
 > - [Train Generative Adversarial Network](#train-a-gan)
->   - [Build a Data Loader](#building-a-data-loader)
+>   - [Build a DataLoader](#building-a-dataloader)
 >     - [Build a Dataset](#building-a-dataset)
 > - [Build a Generator Network and a Discriminator Network](#build-a-generator-network-and-a-discriminator-network)
 > - [Build a Generative Adversarial Network Model](#build-a-generative-adversarial-network-model)
 > - [Build an Optimizer](#building-an-optimizer)
 > - [Train with Runner](#training-with-runner)
 
-## Building a Data Loader
+## Building a DataLoader
 
 ### Building a Dataset
 
-First, we will build a dataset class `MNISTDataset` for the MNIST dataset, inheriting from the base dataset class [BaseDataset](mmengine.dataset.BaseDataset), and overload the `load_data_list` function of the base dataset class to ensure that the return value is a `list[dict]`, where each `dict` represents a data sample.
+First, we will build a dataset class `MNISTDataset` for the MNIST dataset, inheriting from the base dataset class [BaseDataset](mmengine.dataset.BaseDataset), and overwrite the `load_data_list` function of the base dataset class to ensure that the return value is a `list[dict]`, where each `dict` represents a data sample.
 More details about using datasets in MMEngine, refer to [the Dataset tutorial](../tutorials/basedataset.md).
 
 ```python
@@ -58,7 +58,7 @@ dataset = MNISTDataset("./data", [])
 
 ```
 
-Use the function 'build_dataloader' in Runner to build the data loader.
+Use the function `build_dataloader` in Runner to build the dataloader.
 
 ```python
 import os
@@ -148,7 +148,7 @@ from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
-The following code implements the basic algorithm of GAN. To implement the algorithm class using MMEngine, you need to inherit from the [BaseModel](mmengine.model.BaseModel) base class and implement the training process in the train_step.  GAN requires alternating training of the generator and discriminator, which are implemented by train_discriminator and train_generator and implement disc_loss and gen_loss to calculate the discriminator loss function and generator loss function.
+The following code implements the basic algorithm of GAN. To implement the algorithm using MMEngine, you need to inherit from the [BaseModel](mmengine.model.BaseModel) and implement the training process in the train_step.  GAN requires alternating training of the generator and discriminator, which are implemented by train_discriminator and train_generator and implement disc_loss and gen_loss to calculate the discriminator loss function and generator loss function.
 More details about BaseModel, refer to [Model tutorial](../tutorials/model.md).
 
 ```python
