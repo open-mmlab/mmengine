@@ -57,7 +57,7 @@ LogProcessor will output the log in the following format:
   - iteration mode(`by_epoch=False`): `Iter(train) [{current_iteration}/{max_iteration}]`)
 - Learning rate (`lr`): The learning rate of the last iteration.
 - Time:
-  - `time`: The averaged time for infernce of the last `window_size` iterations.
+  - `time`: The averaged time for inference of the last `window_size` iterations.
   - `data_time`: The averaged time for loading data of the last `window_size` iterations.
   - `eta`: The estimated time of arrival to finish the training.
 - Loss: The averaged loss output by model of the last `window_size` iterations.
@@ -67,14 +67,14 @@ LogProcessor will output the log in the following format:
 
 The significant digits(`num_digits`) of the log is 4 by default.
 
-Output the value of all custom logsthe at last iteration by default.
+Output the value of all custom logs at the last iteration by default.
 ```
 
 ```{warnning}
 log_processor outputs the epoch based log by default(`by_epoch=True`). To get an expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
 ```
 
-Based on the rules above, the code snippet will count the average value of the `loss1` and `loss2` every 10 iterations.
+Based on the rules above, the code snippet will count the average value of the `loss1` and the `loss2` every 10 iterations.
 
 If we want to count the global average value of `loss1`, we can set `custom_cfg` like this:
 
@@ -87,9 +87,9 @@ runner = Runner(
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.01)),
     log_processor=dict(
         custom_cfg=[
-            dict(data_src='loss1',  # original loss name：loss1
-                 method_name='mean',  # statistical method：mean
-                 window_size='global')])  # window_size：global
+            dict(data_src='loss1',  # original loss name: loss1
+                 method_name='mean',  # statistical method: mean
+                 window_size='global')])  # window_size: global
 )
 runner.train()
 ```
@@ -291,7 +291,7 @@ Besides, logs of different ranks will be saved in `debug` mode if you are traini
 The log of Multiple machine with independent storage:
 
 ```text
-# device: 0：
+# device: 0:
 work_dir/
 └── exp_name_logs
     ├── exp_name.log
@@ -301,7 +301,7 @@ work_dir/
     ...
     └── exp_name_rank7.log
 
-# device: 7：
+# device: 7:
 work_dir/
 └── exp_name_logs
     ├── exp_name_rank56.log
