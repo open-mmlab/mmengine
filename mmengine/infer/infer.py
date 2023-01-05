@@ -392,8 +392,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         specific device.
 
         Args:
-            cfg (ConfigType, optional): Config containing the model
-                information.
+            cfg (ConfigType): Config containing the model information.
             weights (str): Path to the checkpoint.
             device (str, optional): Device to run inference. Defaults to 'cpu'.
 
