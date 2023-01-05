@@ -161,7 +161,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             assert weights is not None, (
                 'If model is None, the configuration of model must be read '
                 'from weights')
-            cfg = None
+            cfg = ConfigDict()
         else:
             raise TypeError('config must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
@@ -169,16 +169,11 @@ class BaseInferencer(metaclass=InferencerMeta):
         if device is None:
             device = get_device()
 
-        self.cfg = cfg
         self.model = self._init_model(cfg, weights, device)  # type: ignore
-        # Since cfg could be read from weights (by `_init_model`), steps
-        # followed by `_init_model` should accept the `self.cfg`.
-        assert self.cfg is not None, (
-            'cfg should be parsed by `model` or loaded from `weight`, but '
-            'got None')
-        self.pipeline = self._init_pipeline(self.cfg)
-        self.collate_fn = self._init_collate(self.cfg)
-        self.visualizer = self._init_visualizer(self.cfg)
+        self.pipeline = self._init_pipeline(cfg)
+        self.collate_fn = self._init_collate(cfg)
+        self.visualizer = self._init_visualizer(cfg)
+        self.cfg = cfg
 
     def __call__(
         self,
@@ -389,7 +384,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
     def _init_model(
         self,
-        cfg: Optional[ConfigType],
+        cfg: ConfigType,
         weights: str,
         device: str = 'cpu',
     ) -> nn.Module:
@@ -407,28 +402,34 @@ class BaseInferencer(metaclass=InferencerMeta):
         """
 
         checkpoint = _load_checkpoint(weights)
-        if cfg is None:
+        if not cfg:
             # The checkpoint saved by MMEngine will keep the cfg string in
             # `message_hub`. For the compatibility of the checkpoints saved by
             # MMCV, if ``message_hub`` is not found, we will try to load the
             # cfg from `meta`.
-            if 'message_hub' in checkpoint:
+            try:
                 cfg_string = checkpoint['message_hub']['runtime_info']['cfg']
-            else:
+            except KeyError:
                 assert 'meta' in checkpoint
-                cfg_string = checkpoint['meta']['config']
-            cfg = Config.fromstring(cfg_string, file_format='.py')
+                meta = checkpoint['meta']
+                if 'cfg' in meta:
+                    cfg_string = meta['cfg']
+                elif 'config' in meta:
+                    cfg_string = meta['config']
+                else:
+                    raise ValueError(
+                        'Cannot find the config in the checkpoint.')
+            cfg.update(
+                Config.fromstring(cfg_string, file_format='.py')._cfg_dict)
 
         # Delete the `pretrained` field to prevent model from loading the
         # the pretrained weights unnecessarily.
         if cfg.model.get('pretrained') is not None:
             del cfg.model.pretrained
 
-        self.cfg = cfg
-
         model = MODELS.build(cfg.model)
+        model.cfg = cfg
         _load_checkpoint_to_model(model, checkpoint)
-        model.cfg = cfg.model
         model.to(device)
         model.eval()
         return model
@@ -491,7 +492,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         if 'visualizer' not in cfg:
             return None
         timestamp = str(datetime.timestamp(datetime.now()))
-        cfg.visualizer['name'] = f'inferencer-{timestamp}'
+        name = cfg.visualizer.get('name', timestamp)
+        if Visualizer.check_instance_created(name):
+            name = f'{name}-{timestamp}'
+        cfg.visualizer.name = name
         return VISUALIZERS.build(cfg.visualizer)
 
     def _get_chunk_data(self, inputs: Iterable, chunk_size: int):

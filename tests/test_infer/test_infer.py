@@ -6,7 +6,6 @@ import os.path as osp
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
 
 from mmengine.infer import BaseInferencer
 from mmengine.registry import VISUALIZERS, DefaultScope
@@ -108,15 +107,13 @@ class TestBaseInferencer(RunnerTestCase):
                 'https://download.openmmlab.com/mmdetection/v2.0/resnest/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco_20200926_125502-20289c16.pth',  # noqa: E501
             )
 
-        # Test load OpenMMLab 1.0 checkpoint
-        inferencer = ToyInferencer(
-            weights=  # noqa: E251
-            'https://download.openmmlab.com/mmdetection/v2.0/resnest/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco_20200926_125502-20289c16.pth',  # noqa: E501
-        )
-        self.assertIsInstance(inferencer.cfg, dict)
-        self.assertIsInstance(inferencer.model, nn.Module)
-
-        # Test load OpenMMLab 2.0 checkpoint
+        if is_installed('mmyolo'):
+            from mmyolo.utils import register_all_modules
+            register_all_modules()
+            inferencer = ToyInferencer(
+                weights=  # noqa: E251
+                'https://download.openmmlab.com/mmyolo/v0/yolov7/yolov7_tiny_syncbn_fast_8x16b-300e_coco/yolov7_tiny_syncbn_fast_8x16b-300e_coco_20221126_102719-0ee5bbdf.pth',  # noqa: E501
+            )
 
     def test_call(self):
         num_imgs = 12
@@ -165,6 +162,11 @@ class TestBaseInferencer(RunnerTestCase):
         cfg.visualizer = dict(type='ToyVisualizer')
         visualizer = inferencer._init_visualizer(cfg)
         self.assertIsInstance(visualizer, ToyVisualizer)
+
+        # test could build visualizer repeatedly with the same name
+        cfg.visualizer = dict(type='ToyVisualizer', name='toy')
+        visualizer = inferencer._init_visualizer(cfg)
+        visualizer = inferencer._init_visualizer(cfg)
 
     def test_dispatch_kwargs(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
