@@ -23,8 +23,6 @@ class BinaryPriPackageIndex(PackageIndex):
 
     def __getitem__(self, project_name: str):
         indexes = super().__getitem__(project_name)
-        import pdb
-        pdb.set_trace()
 
         if project_name not in self.binary_preferred:
             return indexes
