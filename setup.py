@@ -1,9 +1,5 @@
 import re
-from contextlib import contextmanager
-from functools import cmp_to_key
 from setuptools import find_packages, setup  # type: ignore
-from setuptools.command import easy_install
-from setuptools.package_index import PackageIndex
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -15,27 +11,6 @@ def readme():
 
 
 version_file = 'mmengine/version.py'
-
-
-class BinaryPeferredPackageIndex(PackageIndex):
-    binary_preferred: set = set()
-    """A package index that prefers binary packages over source packages."""
-
-    def __getitem__(self, project_name: str):
-        indexes = super().__getitem__(project_name)
-
-        if project_name not in self.binary_preferred:
-            return indexes
-
-        def compare(x, y):
-            if '.whl' in x.location and '.whl' not in y.location:
-                return -1
-            if '.whl' not in x.location and '.whl' in y.location:
-                return 1
-            return x.version < y.version
-
-        indexes.sort(key=cmp_to_key(compare))
-        return indexes
 
 
 def choose_requirement(primary, secondary):
@@ -144,48 +119,34 @@ except ImportError:
     CHOOSE_INSTALL_REQUIRES = [('opencv-python-headless>=3',
                                 'opencv-python>=3')]
     for main, secondary in CHOOSE_INSTALL_REQUIRES:
-        requirement = choose_requirement(main, secondary)
-        BinaryPeferredPackageIndex.binary_preferred.add('opencv-python')
-        install_requires.append(requirement)
+        install_requires.append(choose_requirement(main, secondary))
 
-
-@contextmanager
-def patch_patch_index():
-    """Patch ``PackageIndex`` with ``BinaryPriPackageIndex`` to make sure some
-    packages are installed from binary packages."""
-    ori_package_index = PackageIndex
-    easy_install.easy_install.create_index = BinaryPeferredPackageIndex
-    yield
-    easy_install.easy_install.create_index = ori_package_index
-
-
-with patch_patch_index():
-    setup(
-        name='mmengine',
-        version=get_version(),
-        description='Engine of OpenMMLab projects',
-        long_description=readme(),
-        long_description_content_type='text/markdown',
-        url='https://github.com/open-mmlab/mmengine',
-        author='MMEngine Authors',
-        author_email='openmmlab@gmail.com',
-        packages=find_packages(),
-        include_package_data=True,
-        classifiers=[
-            'Development Status :: 4 - Beta',
-            'License :: OSI Approved :: Apache Software License',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-            'Programming Language :: Python :: 3.9',
-            'Programming Language :: Python :: 3.10',
-            'Topic :: Utilities',
-        ],
-        python_requires='>=3.7',
-        install_requires=install_requires,
-        extras_require={
-            'all': parse_requirements('requirements.txt'),
-            'tests': parse_requirements('requirements/tests.txt'),
-        },
-    )
+setup(
+    name='mmengine',
+    version=get_version(),
+    description='Engine of OpenMMLab projects',
+    long_description=readme(),
+    long_description_content_type='text/markdown',
+    url='https://github.com/open-mmlab/mmengine',
+    author='MMEngine Authors',
+    author_email='openmmlab@gmail.com',
+    packages=find_packages(),
+    include_package_data=True,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Topic :: Utilities',
+    ],
+    python_requires='>=3.7',
+    install_requires=install_requires,
+    extras_require={
+        'all': parse_requirements('requirements.txt'),
+        'tests': parse_requirements('requirements/tests.txt'),
+    },
+)
