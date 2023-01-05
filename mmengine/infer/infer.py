@@ -20,7 +20,8 @@ from mmengine.fileio import (get_file_backend, isdir, join_path,
                              list_dir_or_file, load)
 from mmengine.logging import print_log
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
-from mmengine.runner import load_checkpoint
+from mmengine.runner.checkpoint import (_load_checkpoint,
+                                        _load_checkpoint_to_model)
 from mmengine.structures import InstanceData
 from mmengine.utils import get_installed_path, is_installed
 from mmengine.visualization import Visualizer
@@ -132,7 +133,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     postprocess_kwargs: set = set()
 
     def __init__(self,
-                 model: Union[ModelType, str],
+                 model: Union[ModelType, str, None] = None,
                  weights: Optional[str] = None,
                  device: Optional[str] = None,
                  scope: Optional[str] = None) -> None:
@@ -142,7 +143,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                 scope = default_scope.scope_name
         self.scope = scope
         # Load config to cfg
-        cfg: ConfigType
+        cfg: Optional[ConfigType]
         if isinstance(model, str):
             if osp.isfile(model):
                 cfg = Config.fromfile(model)
@@ -156,22 +157,28 @@ class BaseInferencer(metaclass=InferencerMeta):
             cfg = copy.deepcopy(model)
         elif isinstance(model, dict):
             cfg = copy.deepcopy(ConfigDict(model))
+        elif model is None:
+            assert weights is not None, (
+                'If model is None, the configuration of model must be read '
+                'from weights')
+            cfg = None
         else:
             raise TypeError('config must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
-        # Delete the `pretrained` field to prevent model from loading the
-        # the pretrained weights unnecessarily.
-        if cfg.model.get('pretrained') is not None:
-            del cfg.model.pretrained
 
         if device is None:
             device = get_device()
 
         self.cfg = cfg
         self.model = self._init_model(cfg, weights, device)  # type: ignore
-        self.pipeline = self._init_pipeline(cfg)
-        self.collate_fn = self._init_collate(cfg)
-        self.visualizer = self._init_visualizer(cfg)
+        # Since cfg could be read from weights (by `_init_model`), steps
+        # followed by `_init_model` should accept the `self.cfg`.
+        assert self.cfg is not None, (
+            'cfg should be parsed by `model` or loaded from `weight`, but '
+            'got None')
+        self.pipeline = self._init_pipeline(self.cfg)
+        self.collate_fn = self._init_collate(self.cfg)
+        self.visualizer = self._init_visualizer(self.cfg)
 
     def __call__(
         self,
@@ -382,7 +389,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
     def _init_model(
         self,
-        cfg: ConfigType,
+        cfg: Optional[ConfigType],
         weights: str,
         device: str = 'cpu',
     ) -> nn.Module:
@@ -390,15 +397,37 @@ class BaseInferencer(metaclass=InferencerMeta):
         specific device.
 
         Args:
-            cfg (ConfigType): Config containing the model information.
+            cfg (ConfigType, optional): Config containing the model
+                information.
             weights (str): Path to the checkpoint.
             device (str, optional): Device to run inference. Defaults to 'cpu'.
 
         Returns:
             nn.Module: Model loaded with checkpoint.
         """
+
+        checkpoint = _load_checkpoint(weights)
+        if cfg is None:
+            # The checkpoint saved by MMEngine will keep the cfg string in
+            # `message_hub`. For the compatibility of the checkpoints saved by
+            # MMCV, if ``message_hub`` is not found, we will try to load the
+            # cfg from `meta`.
+            if 'message_hub' in checkpoint:
+                cfg_string = checkpoint['message_hub']['runtime_info']['cfg']
+            else:
+                assert 'meta' in checkpoint
+                cfg_string = checkpoint['meta']['config']
+            cfg = Config.fromstring(cfg_string, file_format='.py')
+
+        # Delete the `pretrained` field to prevent model from loading the
+        # the pretrained weights unnecessarily.
+        if cfg.model.get('pretrained') is not None:
+            del cfg.model.pretrained
+
+        self.cfg = cfg
+
         model = MODELS.build(cfg.model)
-        load_checkpoint(model, weights, map_location='cpu')
+        _load_checkpoint_to_model(model, checkpoint)
         model.cfg = cfg.model
         model.to(device)
         model.eval()
