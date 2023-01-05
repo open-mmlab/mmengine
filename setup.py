@@ -17,7 +17,7 @@ def readme():
 version_file = 'mmengine/version.py'
 
 
-class BinaryPriPackageIndex(PackageIndex):
+class BinaryPeferredPackageIndex(PackageIndex):
     binary_preferred: set = set()
     """A package index that prefers binary packages over source packages."""
 
@@ -145,7 +145,7 @@ except ImportError:
                                 'opencv-python>=3')]
     for main, secondary in CHOOSE_INSTALL_REQUIRES:
         requirement = choose_requirement(main, secondary)
-        BinaryPriPackageIndex.binary_preferred.add('opencv-python')
+        BinaryPeferredPackageIndex.binary_preferred.add('opencv-python')
         install_requires.append(requirement)
 
 
@@ -154,7 +154,7 @@ def patch_patch_index():
     """Patch ``PackageIndex`` with ``BinaryPriPackageIndex`` to make sure some
     packages are installed from binary packages."""
     ori_package_index = PackageIndex
-    easy_install.easy_install.create_index = BinaryPriPackageIndex
+    easy_install.easy_install.create_index = BinaryPeferredPackageIndex
     yield
     easy_install.easy_install.create_index = ori_package_index
 
