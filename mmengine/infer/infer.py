@@ -143,7 +143,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                 scope = default_scope.scope_name
         self.scope = scope
         # Load config to cfg
-        cfg: Optional[ConfigType]
+        cfg: ConfigType
         if isinstance(model, str):
             if osp.isfile(model):
                 cfg = Config.fromfile(model)
