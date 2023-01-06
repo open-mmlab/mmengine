@@ -115,8 +115,7 @@ class ParamSchedulerHook(Hook):
             return
 
         def step(_param_schedulers):
-            assert isinstance(_param_schedulers, list)
-            # check param_schedulers is built
+            # check param_schedulers is list and built
             if not is_list_of(_param_schedulers, _ParamScheduler):
                 return
 
