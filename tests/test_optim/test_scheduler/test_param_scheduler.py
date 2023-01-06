@@ -257,7 +257,8 @@ class TestParameterScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            step_args = [[]] if step_args is None else step_args
+            step_args = [[] for _ in range(len(schedulers))
+                         ] if step_args is None else step_args
             [scheduler.step(*step_args.pop(0)) for scheduler in schedulers]
 
     def test_step_scheduler(self):
