@@ -128,8 +128,8 @@ class TestParamSchedulerHook:
         # runner.param_schedulers should be a list or dict
         with pytest.raises(TypeError, match=self.error_msg):
             hook = ParamSchedulerHook()
-            hook._should = True
             runner = Mock()
+            runner._train_loop = MockBaseLoop()
             scheduler = Mock()
             scheduler.step = Mock()
             scheduler.by_epoch = True
@@ -140,8 +140,8 @@ class TestParamSchedulerHook:
 
         # runner.param_schedulers is a list of schedulers
         hook = ParamSchedulerHook()
-        hook._should = True
         runner = Mock()
+        runner._train_loop = MockBaseLoop()
         scheduler = Mock()
         scheduler.step = Mock()
         scheduler.by_epoch = True

@@ -242,10 +242,14 @@ class TestParameterScheduler(TestCase):
                               epochs=10,
                               param_name='lr',
                               step_args=None):
-        if step_args is not None:
-            assert len(step_args) == epochs
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
+        if step_args is None:
+            step_arg = [{} for _ in range(len(schedulers))]
+            step_args = [step_arg for _ in range(epochs)]
+        else:  # step_args is not None
+            assert len(step_args) == epochs
+            assert len(step_args[0]) == len(schedulers)
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
                                            targets):
@@ -257,9 +261,7 @@ class TestParameterScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            step_args = [[] for _ in range(len(schedulers))
-                         ] if step_args is None else step_args
-            [scheduler.step(*step_args.pop(0)) for scheduler in schedulers]
+            [scheduler.step(**step_args[epoch][i]) for i, scheduler in enumerate(schedulers)]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
@@ -583,7 +585,7 @@ class TestParameterScheduler(TestCase):
         threshold = 0.01
         monitor = 'loss'
         metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
-        metrics_list = [{monitor: v} for v in metric_values]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
         single_targets = [
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
         ]
@@ -599,7 +601,7 @@ class TestParameterScheduler(TestCase):
         threshold = 0.9
         monitor = 'loss'
         metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
-        metrics_list = [{monitor: v} for v in metric_values]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
         single_targets = [
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
         ]
@@ -615,7 +617,7 @@ class TestParameterScheduler(TestCase):
         threshold = 0.01
         monitor = 'bbox_mAP'
         metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
-        metrics_list = [{monitor: v} for v in metric_values]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
         single_targets = [
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
         ]
@@ -631,7 +633,7 @@ class TestParameterScheduler(TestCase):
         threshold = 0.9
         monitor = 'bbox_mAP'
         metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
-        metrics_list = [{monitor: v} for v in metric_values]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
         single_targets = [
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
         ]
@@ -648,7 +650,7 @@ class TestParameterScheduler(TestCase):
         threshold = 0.01
         monitor = 'loss'
         metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
-        metrics_list = [{monitor: v} for v in metric_values]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
         single_targets_1 = [
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, min_value,
             min_value
@@ -664,13 +666,14 @@ class TestParameterScheduler(TestCase):
                                     construct2,
                                     epochs=10,
                                     step_args=None):
-        if step_args is not None:
+        if step_args is None:
+            step_args = [{} for _ in range(epochs)]
+        else:  # step_args is not None
             assert len(step_args) == epochs
         scheduler = construct()
-        for _ in range(epochs):
+        for epoch in range(epochs):
             scheduler.optimizer.step()
-            step_args = [[]] if step_args is None else step_args
-            scheduler.step(*step_args.pop(0))
+            scheduler.step(**step_args[epoch])
         scheduler_copy = construct2()
         torch.save(scheduler.state_dict(),
                    osp.join(self.temp_dir.name, 'tmp.pth'))
@@ -761,7 +764,7 @@ class TestParameterScheduler(TestCase):
 
     def test_reduce_on_plateau_scheduler_state_dict(self):
         epochs = 10
-        metrics_list = [dict(loss=1.0) for _ in range(epochs)]
+        metrics_list = [dict(metrics=dict(loss=1.0)) for _ in range(epochs)]
         self._check_scheduler_state_dict(
             lambda: ReduceOnPlateauParamScheduler(
                 self.optimizer,
