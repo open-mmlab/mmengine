@@ -113,7 +113,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         model (str, optional): Path to the config file or the model name
             defined in metafile. Take the `mmdet metafile <https://github.com/open-mmlab/mmdetection/blob/master/configs/retinanet/metafile.yml>`_
             as an example, the `model` could be `retinanet_r18_fpn_1x_coco` or
-            its alias.
+            its alias. If model is not specified, user must provide the
+            `weights` saved by MMEngine which contains the config string.
+            Defaults to None.
         weights (str, optional): Path to the checkpoint. If it is not specified
             and model is a model name of metafile, the weights will be loaded
             from metafile. Defaults to None.
