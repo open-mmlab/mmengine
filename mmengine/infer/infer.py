@@ -402,19 +402,21 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         checkpoint = _load_checkpoint(weights)
         if not cfg:
-            # The checkpoint saved by MMEngine will keep the cfg string in
-            # `message_hub`. For the compatibility of the checkpoints saved by
-            # MMCV, if ``message_hub`` is not found, we will try to load the
-            # cfg from `meta`.
             try:
+                # Prefer to get config from `message_hub` since `message_hub`
+                # is a more stable module to store all runtime information.
+                # However, the early version of MMEngine will not save config
+                # in `message_hub`, so we will try to load config from `meta`.
                 cfg_string = checkpoint['message_hub']['runtime_info']['cfg']
             except KeyError:
-                assert 'meta' in checkpoint
+                assert 'meta' in checkpoint, (
+                    'If config is not provided, the checkpoint must contain '
+                    'the config string in `meta` or `message_hub`, but both '
+                    '`meta` and `message_hub` are not found in the checkpoint.'
+                )
                 meta = checkpoint['meta']
                 if 'cfg' in meta:
                     cfg_string = meta['cfg']
-                elif 'config' in meta:
-                    cfg_string = meta['config']
                 else:
                     raise ValueError(
                         'Cannot find the config in the checkpoint.')
