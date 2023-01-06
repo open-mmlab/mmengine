@@ -235,15 +235,12 @@ class MMLogger(Logger, ManagerMixin):
 
         level must be an int or a str.
         """
-        # Compatible with python3.6. `logging.Logger` does not have
-        # `_cache` attribute in python3.6.
         self.level = logging._checkLevel(level)
-        if hasattr(self, '_cache'):
-            _accquire_lock()
-            # The same logic as `logging.Manager._clear_cache`.
-            for logger in MMLogger._instance_dict.values():
-                logger._cache.clear()
-            _release_lock()
+        _accquire_lock()
+        # The same logic as `logging.Manager._clear_cache`.
+        for logger in MMLogger._instance_dict.values():
+            logger._cache.clear()
+        _release_lock()
 
 
 def print_log(msg,
