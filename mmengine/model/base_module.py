@@ -26,6 +26,12 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     - ``_params_init_info``: Used to track the parameter initialization
       information. This attribute only exists during executing the
       ``init_weights``.
+
+    Note:
+        :obj:`PretrainedInit` has a higher priority than any other
+        initializer. The loaded pretrained weights will overwrite
+        the previous initialized weights.
+
     Args:
         init_cfg (dict, optional): Initialization config dict.
     """

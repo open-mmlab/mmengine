@@ -102,6 +102,10 @@ toy_net.init_weights()
 
 当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
 
+```{note}
+在所有的初始化器中，`PretrainedInit` 拥有最高的优先级。`init_cfg` 中其他初始化器初始化的权重会被 `PretrainedInit` 加载的预训练权重覆盖。
+```
+
 ### 常用的初始化方式
 
 和使用 `PretrainedInit` 初始化器类似，如果我们想对卷积做 `Kaiming` 初始化，需要令 `init_cfg=dict(type='Kaiming', layer='Conv2d')`。这样模型初始化时，就会以 `Kaiming` 初始化的方式来初始化类型为 `Conv2d` 的模块。
