@@ -211,9 +211,9 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str = None,
+                 ann_file: Optional[str] = None,
                  metainfo: Optional[dict] = None,
-                 data_root: str = None,
+                 data_root: Optional[str] = None,
                  data_prefix: dict = dict(img_path=None),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
