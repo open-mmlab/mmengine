@@ -304,6 +304,7 @@ class ReduceOnPlateauMomentum(MomentumSchedulerMixin,
             be reduced when the quantity monitored has stopped
             decreasing; in `greater` rule it will be reduced when the
             quantity monitored has stopped increasing. Defaults to 'less'.
+            The ``rule`` is the renaming of ``mode`` in pytorch.
         factor (float): Factor by which the momentum will be
             reduced. new_param = param * factor. Defaults to 0.1.
         patience (int): Number of epochs with no improvement after
