@@ -217,7 +217,10 @@ class TestLRScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            [scheduler.step(**step_args[epoch][i]) for i, scheduler in enumerate(schedulers)]
+            [
+                scheduler.step(**step_args[epoch][i])
+                for i, scheduler in enumerate(schedulers)
+            ]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
