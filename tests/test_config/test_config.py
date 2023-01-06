@@ -5,8 +5,10 @@ import os
 import os.path as osp
 import platform
 import sys
+import tempfile
 from importlib import import_module
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -714,6 +716,21 @@ class TestConfig:
                             'config/py_config/test_py_modify_key.py')
         cfg = Config._file2dict(cfg_file)[0]
         assert cfg == dict(item1=dict(a=1))
+
+        # Simulate the case that the temporary directory includes `.`, etc.
+        # /tmp/test.axsgr12/. This patch is to check the issue
+        # https://github.com/open-mmlab/mmengine/issues/788 has been solved.
+        class PatchedTempDirectory(tempfile.TemporaryDirectory):
+
+            def __init__(self, *args, prefix='test.', **kwargs):
+                super().__init__(*args, prefix=prefix, **kwargs)
+
+        with patch('mmengine.config.config.tempfile.TemporaryDirectory',
+                   PatchedTempDirectory):
+            cfg_file = osp.join(self.data_path,
+                                'config/py_config/test_py_modify_key.py')
+            cfg = Config._file2dict(cfg_file)[0]
+            assert cfg == dict(item1=dict(a=1))
 
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,

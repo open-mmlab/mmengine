@@ -6,16 +6,63 @@
 
 为了能够更加灵活地初始化模型权重，`MMEngine` 抽象出了模块基类 `BaseModule`。模块基类继承自 `nn.Module`，在具备 `nn.Module` 基础功能的同时，还支持在构造时接受参数，以此来选择权重初始化方式。继承自 `BaseModule` 的模型可以在实例化阶段接受 `init_cfg` 参数，我们可以通过配置 `init_cfg` 为模型中任意组件灵活地选择初始化方式。目前我们可以在 `init_cfg` 中配置以下初始化器：
 
-| 初始化器                                                        |    注册名    | 功能                                                                                                                               |
-| :-------------------------------------------------------------- | :----------: | :--------------------------------------------------------------------------------------------------------------------------------- |
-| [ConstantInit](../api.html#mmengine.model.ConstantInit)         |   Constant   | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
-| [XavierInit](../api.html#mmengine.model.XavierInit)             |    Xavier    | 将 weight `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                        |
-| [NormalInit](../api.html#mmengine.model.NormalInit)             |    Normal    | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
-| [TruncNormalInit](../api.html#mmengine.model.TruncNormalInit)   | TruncNormal  | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
-| [UniformInit](../api.html#mmengine.model.UniformInit)           |   Uniform    | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
-| [KaimingInit](../api.html#mmengine.model.KaimingInit)           |   Kaiming    | 将 weight 以 `Kaiming` 的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                  |
-| [Caffe2XavierInit](../api.html#mmengine.model.Caffe2XavierInit) | Caffe2Xavier | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，，通常用于初始化卷                      |
-| [PretrainedInit](../api.html#mmengine.model.PretrainedInit)     |  Pretrained  | 加载预训练权重                                                                                                                     |
+<table class="docutils">
+<thead>
+  <tr>
+    <th>Initializer</th>
+    <th>Registered name</th>
+    <th>Function</th>
+<tbody>
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.ConstantInit.html#mmengine.model.ConstantInit">ConstantInit</a></td>
+  <td>Constant</td>
+  <td>将 weight 和 bias 初始化为指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.XavierInit.html#mmengine.model.XavierInit">XavierInit</a></td>
+  <td>Xavier</td>
+  <td>将 weight Xavier 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.NormalInit.html#mmengine.model.NormalInit">NormalInit</a></td>
+  <td>Normal</td>
+  <td>将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.TruncNormalInit.html#mmengine.model.TruncNormalInit">TruncNormalInit</a></td>
+  <td>TruncNormal</td>
+  <td>将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 Transformer</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.UniformInit.html#mmengine.model.UniformInit">UniformInit</a></td>
+  <td>Uniform</td>
+  <td>将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.KaimingInit.html#mmengine.model.KaimingInit">KaimingInit</a></td>
+  <td>Kaiming</td>
+  <td>将 weight 以 Kaiming 的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.Caffe2XavierInit.html#mmengine.model.Caffe2XavierInit">Caffe2XavierInit</a></td>
+  <td>Caffe2Xavier</td>
+  <td>Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 "fan_in", "normal" 模式的 Kaiming 初始化，，通常用于初始化卷</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.PretrainedInit.html#mmengine.model.PretrainedInit">Pretrained</a></td>
+  <td>PretrainedInit</td>
+  <td>加载预训练权重</td>
+</tr>
+
+</thead>
+</table>
 
 我们通过几个例子来理解如何在 `init_cfg` 里配置初始化器，来选择模型的初始化方式。
 
@@ -316,13 +363,51 @@ xavier_init(model)
 
 目前 MMEngine 提供了以下初始化函数：
 
-| 初始化函数                                                            | 功能                                                                                                                               |
-| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| [constant_init](../api.html#mmengine.model.constant_init)             | 将 weight 和 bias 初始化为指定常量，通常用于初始化卷积                                                                             |
-| [xavier_init](../api.html#mmengine.model.xavier_init)                 | 将 weight 以 `Xavier` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
-| [normal_init](../api.html#mmengine.model.normal_init)                 | 将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                     |
-| [trunc_normal_init](../api.html#mmengine.model.trunc_normal_init)     | 将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 `transformer` |
-| [uniform_init](../api.html#mmengine.model.uniform_init)               | 将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积                       |
-| [kaiming_init](../api.html#mmengine.model.kaiming_init)               | 将 weight 以 `Kaiming` 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积                                                    |
-| [caffe2_xavier_init](../api.html#mmengine.model.caffe2_xavier_init)   | Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 `fan_in`, `normal` 模式的 `Kaiming` 初始化，通常用于初始化卷积                      |
-| [bias_init_with_prob](../api.html#mmengine.model.bias_init_with_prob) | 以概率值的形式初始化 bias                                                                                                          |
+<table class="docutils">
+<thead>
+  <tr>
+    <th>初始化函数</th>
+    <th>功能</th>
+<tbody>
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.constant_init.html#mmengine.model.constant_init">constant_init</a></td>
+  <td>将 weight 和 bias 初始化为指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.xavier_init.html#mmengine.model.xavier_init">xavier_init</a></td>
+  <td>将 weight 以 Xavier 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.normal_init.html#mmengine.model.normal_init">normal_init</a></td>
+  <td>将 weight 以正态分布的方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.trunc_normal_init.html#mmengine.model.trunc_normal_init">trunc_normal_init</a></td>
+  <td>将 weight 以被截断的正态分布的方式初始化，参数 a 和 b 为正态分布的有效区域；将 bias 初始化成指定常量，通常用于初始化 Transformer</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.uniform_init.html#mmengine.model.uniform_init">uniform_init</a></td>
+  <td>将 weight 以均匀分布的方式初始化，参数 a 和 b 为均匀分布的范围；将 bias 初始化为指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.kaiming_init.html#mmengine.model.kaiming_init">kaiming_init</a></td>
+  <td>将 weight 以 Kaiming 方式初始化，将 bias 初始化成指定常量，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.caffe2_xavier_init.html#mmengine.model.caffe2_xavier_init">caffe2_xavier_init</a></td>
+  <td>Caffe2 中 Xavier 初始化方式，在 Pytorch 中对应 "fan_in", "normal" 模式的 Kaiming 初始化，通常用于初始化卷积</td>
+</tr>
+
+<tr>
+  <td><a class="reference internal" href="../api/generated/mmengine.model.bias_init_with_prob.html#mmengine.model.bias_init_with_prob">bias_init_with_prob</a></td>
+  <td>以概率值的形式初始化 bias</td>
+</tr>
+
+</thead>
+</table>

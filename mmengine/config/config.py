@@ -550,8 +550,8 @@ class Config:
         Returns:
             list: A list of base config.
         """
-        file_format = filename.partition('.')[-1]
-        if file_format == 'py':
+        file_format = osp.splitext(filename)[1]
+        if file_format == '.py':
             Config._validate_py_syntax(filename)
             with open(filename, encoding='utf-8') as f:
                 codes = ast.parse(f.read()).body
@@ -568,7 +568,7 @@ class Config:
                     base_files = eval(compile(base_code, '', mode='eval'))
                 else:
                     base_files = []
-        elif file_format in ('yml', 'yaml', 'json'):
+        elif file_format in ('.yml', '.yaml', '.json'):
             import mmengine
             cfg_dict = mmengine.load(filename)
             base_files = cfg_dict.get(BASE_KEY, [])
