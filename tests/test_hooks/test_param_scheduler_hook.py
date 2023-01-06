@@ -142,7 +142,7 @@ class TestParamSchedulerHook:
         hook = ParamSchedulerHook()
         runner = Mock()
         runner._train_loop = MockBaseLoop()
-        scheduler = Mock()
+        scheduler = MockParamScheduler()
         scheduler.step = Mock()
         scheduler.by_epoch = True
         scheduler.need_val_args = True
@@ -151,11 +151,11 @@ class TestParamSchedulerHook:
         scheduler.step.assert_called_with(metrics)
 
         # runner.param_schedulers is a dict containing list of schedulers
-        scheduler1 = Mock()
+        scheduler1 = MockParamScheduler()
         scheduler1.step = Mock()
         scheduler1.by_epoch = True
         scheduler1.need_val_args = True
-        scheduler2 = Mock()
+        scheduler2 = MockParamScheduler()
         scheduler2.step = Mock()
         scheduler2.by_epoch = True
         scheduler2.need_val_args = True
