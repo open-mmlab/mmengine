@@ -62,7 +62,7 @@ class TestLogger:
             log_file=str(tmp_file),
             distributed=True)
         assert logger.handlers[0].level == logging.ERROR
-        assert logger.handlers[1].level == logging.INFO
+        assert logger.handlers[1].level == logging.NOTSET
         assert len(logger.handlers) == 2
         assert os.path.exists(log_path)
         # `FileHandler` should be closed in Windows, otherwise we cannot
