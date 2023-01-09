@@ -443,7 +443,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
     def _load_weights_to_model(self, model: nn.Module, checkpoint: dict,
                                cfg: Optional[ConfigType]) -> None:
-        """Loading model from checkpoint and cfg.
+        """Loading model weights and meta information from cfg and checkpoint.
 
         Subclasses could override this method to load extra meta information
         from ``checkpoint`` and ``cfg`` to model.
