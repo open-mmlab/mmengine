@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -23,11 +24,17 @@ class ApexOptimWrapper(OptimWrapper):
     as ``OptimWrapper``.
 
     Warnings:
-        ``ApexOptimWrapper`` requires
-            [nvidia apex](https://github.com/NVIDIA/apex).
+        ``ApexOptimWrapper`` requires `nvidia apex
+        <https://github.com/NVIDIA/apex>`_
 
     Args:
 
+        opt_level (str, default="O1"): Pure or mixed precision
+            optimization level. Accepted values are "O0", "O1", "O2",
+            and "O3".
+        loss_scale (float or str, default=None): If passed as
+            a string, must be a string representing a number,
+            e.g., "128.0", or the string "dynamic".
         **kwargs: Keyword arguments passed to OptimWrapper.
 
     Note:
@@ -36,7 +43,10 @@ class ApexOptimWrapper(OptimWrapper):
         ``accumulative_counts``.
     """
 
-    def __init__(self, opt_level='O1', loss_scale='dynamic', **kwargs):
+    def __init__(self,
+                 opt_level: str = 'O1',
+                 loss_scale: Union[float, str] = 'dynamic',
+                 **kwargs):
         assert apex_amp is not None, \
             'Apex is not installed. Please check ' \
             'https://github.com/NVIDIA/apex#linux.'
@@ -44,7 +54,7 @@ class ApexOptimWrapper(OptimWrapper):
         self.opt_level = opt_level
         self.loss_scale = loss_scale
 
-    def backward(self, loss: torch.Tensor, **kwargs):
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation with :attr:`loss_scaler`.
 
         Args:
@@ -70,7 +80,7 @@ class ApexOptimWrapper(OptimWrapper):
         state_dict['apex_amp'] = apex_amp.state_dict()
         return state_dict
 
-    def load_state_dict(self, state_dict: dict):
+    def load_state_dict(self, state_dict: dict) -> None:
         """Load and parse the state dictionary of :attr:`optimizer` and
         :attr:`apex_amp`.
 
@@ -95,15 +105,16 @@ class ApexOptimWrapper(OptimWrapper):
         Args:
             model (nn.Module): The training model.
         """
-        if hasattr(self.optimizer, '_amp_stash'):
-            yield
-        else:
+        with super().optim_context(model):
+            # when a given optimizer be passed through apex_amp.initialize,
+            # the "_amp_stash" property will be added
+            if hasattr(self.optimizer, '_amp_stash'):
+                yield
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 model = model.module
-            with super().optim_context(model):
-                model, self.optimizer = apex_amp.initialize(
-                    model,
-                    self.optimizer,
-                    opt_level=self.opt_level,
-                    loss_scale=self.loss_scale)
-                yield
+            model, self.optimizer = apex_amp.initialize(
+                model,
+                self.optimizer,
+                opt_level=self.opt_level,
+                loss_scale=self.loss_scale)
+            yield
