@@ -3,7 +3,6 @@ from typing import Dict, Optional, Union
 
 from mmengine.optim import _ParamScheduler
 from mmengine.registry import HOOKS
-from mmengine.runner import BaseLoop
 from mmengine.utils import is_list_of
 from .hook import Hook
 
@@ -38,9 +37,9 @@ class ParamSchedulerHook(Hook):
         if runner.param_schedulers is None:
             return
 
-        def step(_param_schedulers):
-            assert isinstance(_param_schedulers, list)
-            for scheduler in _param_schedulers:
+        def step(param_schedulers):
+            assert isinstance(param_schedulers, list)
+            for scheduler in param_schedulers:
                 if not scheduler.by_epoch:
                     scheduler.step()
 
@@ -65,9 +64,9 @@ class ParamSchedulerHook(Hook):
         if runner.param_schedulers is None:
             return
 
-        def step(_param_schedulers):
-            assert isinstance(_param_schedulers, list)
-            for scheduler in _param_schedulers:
+        def step(param_schedulers):
+            assert isinstance(param_schedulers, list)
+            for scheduler in param_schedulers:
                 if scheduler.by_epoch:
                     scheduler.step()
 
@@ -95,8 +94,8 @@ class ParamSchedulerHook(Hook):
                 metrics, and the values are corresponding results.
 
         Note:
-            if ``runner._train_loop`` or ``runner.param_schedulers``
-            is not built before, the hook ``after_val_epoch`` will be skipped.
+            if ``runner.param_schedulers`` is not built before,
+            the hook ``after_val_epoch`` will be skipped.
         """
 
         if runner.param_schedulers is None:
@@ -107,19 +106,12 @@ class ParamSchedulerHook(Hook):
         if metrics is None:
             return
 
-        # check train_loop is built
-        # to avoid execute schedulers without training
-        # Need to skip building train_loop when call runner.train_loop,
-        # so use runner._train_loop. This is a hacky approach.
-        if not isinstance(runner._train_loop, BaseLoop):
-            return
-
-        def step(_param_schedulers):
+        def step(param_schedulers):
             # check param_schedulers is list and built
-            if not is_list_of(_param_schedulers, _ParamScheduler):
+            if not is_list_of(param_schedulers, _ParamScheduler):
                 return
 
-            for scheduler in _param_schedulers:
+            for scheduler in param_schedulers:
                 if (scheduler.by_epoch
                         and getattr(scheduler, 'need_val_args', False)):
                     scheduler.step(metrics)
