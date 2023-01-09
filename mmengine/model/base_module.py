@@ -5,7 +5,7 @@ import warnings
 from abc import ABCMeta
 from collections import defaultdict
 from logging import FileHandler
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional, Union
 
 import torch.nn as nn
 
@@ -33,10 +33,10 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         the previous initialized weights.
 
     Args:
-        init_cfg (dict, optional): Initialization config dict.
+        init_cfg (dict or List[dict], optional): Initialization config dict.
     """
 
-    def __init__(self, init_cfg=None):
+    def __init__(self, init_cfg: Union[dict, List[dict], None] = None):
         """Initialize BaseModule, inherited from `torch.nn.Module`"""
 
         # NOTE init_cfg can be defined in different levels, but init_cfg
@@ -111,15 +111,15 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 if isinstance(self.init_cfg, dict):
                     init_cfgs = [self.init_cfg]
 
-                # PretrainedInit have higher priority than any other init_cfg.
-                # Therefore we call initialize PretrainedInit last to overwrite
+                # PretrainedInit has higher priority than any other init_cfg.
+                # Therefore we initialize `pretrained_cfg` last to overwrite
                 # the previous initialized weights.
                 # See details in https://github.com/open-mmlab/mmengine/issues/691 # noqa E501
                 other_cfgs = []
                 pretrained_cfg = []
                 for init_cfg in init_cfgs:
                     assert isinstance(init_cfg, dict)
-                    if init_cfg.get('type') == 'Pretrained':
+                    if init_cfg['type'] == 'Pretrained':
                         pretrained_cfg.append(init_cfg)
                     else:
                         other_cfgs.append(init_cfg)
@@ -135,7 +135,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         init_info=f'Initialized by '
                         f'user-defined `init_weights`'
                         f' in {m.__class__.__name__} ')
-            if self.init_cfg:
+            if pretrained_cfg:
                 initialize(self, pretrained_cfg)
             self._is_init = True
         else:
