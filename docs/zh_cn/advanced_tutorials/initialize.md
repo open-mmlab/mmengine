@@ -1,4 +1,4 @@
-# 初始化
+# 权重初始化
 
 基于 Pytorch 构建模型时，我们通常会选择 [nn.Module](https://pytorch.org/docs/stable/nn.html?highlight=nn%20module#module-torch.nn.modules) 作为模型的基类，搭配使用 Pytorch 的初始化模块 [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html?highlight=kaiming#torch.nn.init.kaiming_normal_)，完成模型的初始化。MMEngine 在此基础上抽象出基础模块（BaseModule）,让我们能够通过传参或配置文件来选择模型的初始化方式。此外，`MMEngine` 还提供了一系列模块初始化函数，让我们能够更加方便灵活地初始化模型参数。
 
@@ -101,6 +101,10 @@ toy_net.init_weights()
 ```
 
 当 `init_cfg` 是一个字典时，`type` 字段就表示一种初始化器，它需要被注册到 `WEIGHT_INITIALIZERS` [注册器](registry.md)。我们可以通过指定 `init_cfg=dict(type='Pretrained', checkpoint='path/to/ckpt')` 来加载预训练权重，其中 `Pretrained` 为 `PretrainedInit` 初始化器的缩写，这个映射名由 `WEIGHT_INITIALIZERS` 维护；`checkpoint` 是 `PretrainedInit` 的初始化参数，用于指定权重的加载路径，它可以是本地磁盘路径，也可以是 URL。
+
+```{note}
+在所有的初始化器中，`PretrainedInit` 拥有最高的优先级。`init_cfg` 中其他初始化器初始化的权重会被 `PretrainedInit` 加载的预训练权重覆盖。
+```
 
 ### 常用的初始化方式
 
