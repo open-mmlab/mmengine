@@ -180,12 +180,12 @@ import torch
 filepath1 = '/path/of/your/checkpoint1.pth'
 filepath2 = 'http://path/of/your/checkpoint3.pth'
 
-# 从本地磁盘读取 filepath1
+# 从本地磁盘读取权重文件
 checkpoint = torch.load(filepath1)
 # 保存权重文件到本地磁盘
 torch.save(checkpoint, filepath1)
 
-# 从网络远端读取 filepath2
+# 从网络远端读取权重文件
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
