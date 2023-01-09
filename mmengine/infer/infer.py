@@ -161,10 +161,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         elif isinstance(model, dict):
             cfg = copy.deepcopy(ConfigDict(model))
         elif model is None:
-            assert weights is not None, (
-                'If model is None, the weights must be specified and contain '
-                'a config string because the configuration of model must be '
-                'read from it')
+            if weights is None:
+                raise ValueError(
+                    'If model is None, the weights must be specified since '
+                    'the config needs to be loaded from the weights')
             cfg = ConfigDict()
         else:
             raise TypeError('config must be a filepath or any ConfigType'
@@ -389,7 +389,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     def _init_model(
         self,
         cfg: ConfigType,
-        weights: str,
+        weights: Optional[str],
         device: str = 'cpu',
     ) -> nn.Module:
         """Initialize the model with the given config and checkpoint on the
@@ -397,17 +397,20 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Args:
             cfg (ConfigType): Config containing the model information.
-            weights (str): Path to the checkpoint.
+            weights (str, optional): Path to the checkpoint.
             device (str, optional): Device to run inference. Defaults to 'cpu'.
 
         Returns:
             nn.Module: Model loaded with checkpoint.
         """
-        checkpoint = None
+        checkpoint: Optional[dict] = None
         if weights is not None:
             checkpoint = _load_checkpoint(weights, map_location='cpu')
 
         if not cfg:
+            # Checkpoint could not be None since it has been checked
+            # by `__init__`. Assertion here is only to pass mypy check.
+            assert checkpoint is not None
             try:
                 # Prefer to get config from `message_hub` since `message_hub`
                 # is a more stable module to store all runtime information.
@@ -441,7 +444,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         model.eval()
         return model
 
-    def _load_weights_to_model(self, model: nn.Module, checkpoint: dict,
+    def _load_weights_to_model(self, model: nn.Module,
+                               checkpoint: Optional[dict],
                                cfg: Optional[ConfigType]) -> None:
         """Loading model weights and meta information from cfg and checkpoint.
 
@@ -450,7 +454,7 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Args:
             model (nn.Module): Model to load weights and meta information.
-            checkpoint (dict): The loaded checkpoint.
+            checkpoint (dict, optional): The loaded checkpoint.
             cfg (Config or ConfigDict, optional): The loaded config.
         """
         if checkpoint is not None:
