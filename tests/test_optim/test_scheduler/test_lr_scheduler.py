@@ -197,15 +197,15 @@ class TestLRScheduler(TestCase):
                               targets,
                               epochs=10,
                               param_name='lr',
-                              step_args=None):
+                              step_kwargs=None):
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
-        if step_args is None:
-            step_arg = [{} for _ in range(len(schedulers))]
-            step_args = [step_arg for _ in range(epochs)]
-        else:  # step_args is not None
-            assert len(step_args) == epochs
-            assert len(step_args[0]) == len(schedulers)
+        if step_kwargs is None:
+            step_kwarg = [{} for _ in range(len(schedulers))]
+            step_kwargs = [step_kwarg for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
+            assert len(step_kwargs[0]) == len(schedulers)
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
                                            targets):
@@ -218,7 +218,7 @@ class TestLRScheduler(TestCase):
                     atol=1e-5,
                     rtol=0)
             [
-                scheduler.step(**step_args[epoch][i])
+                scheduler.step(**step_kwargs[epoch][i])
                 for i, scheduler in enumerate(schedulers)
             ]
 
@@ -430,7 +430,10 @@ class TestLRScheduler(TestCase):
                 min_value=_min_value,
             )
             self._test_scheduler_value(
-                _scheduler, _targets, epochs=_epochs, step_args=_metrics_list)
+                _scheduler,
+                _targets,
+                epochs=_epochs,
+                step_kwargs=_metrics_list)
             self.optimizer = optim.SGD([{
                 'params': self.model.conv1.parameters()
             }, {
@@ -531,15 +534,15 @@ class TestLRScheduler(TestCase):
                                     construct,
                                     construct2,
                                     epochs=10,
-                                    step_args=None):
-        if step_args is None:
-            step_args = [{} for _ in range(epochs)]
-        else:  # step_args is not None
-            assert len(step_args) == epochs
+                                    step_kwargs=None):
+        if step_kwargs is None:
+            step_kwargs = [{} for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
         scheduler = construct()
         for epoch in range(epochs):
             scheduler.optimizer.step()
-            scheduler.step(**step_args[epoch])
+            scheduler.step(**step_kwargs[epoch])
         scheduler_copy = construct2()
         scheduler_copy.load_state_dict(scheduler.state_dict())
         for key in scheduler.__dict__.keys():
@@ -630,7 +633,7 @@ class TestLRScheduler(TestCase):
                 min_value=0.1,
                 eps=1e-9),
             epochs=epochs,
-            step_args=metrics_list)
+            step_kwargs=metrics_list)
 
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
