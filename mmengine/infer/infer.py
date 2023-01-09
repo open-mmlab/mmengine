@@ -161,8 +161,9 @@ class BaseInferencer(metaclass=InferencerMeta):
             cfg = copy.deepcopy(ConfigDict(model))
         elif model is None:
             assert weights is not None, (
-                'If model is None, the configuration of model must be read '
-                'from weights')
+                'If model is None, the weights must be specified and contain '
+                'a config string because the configuration of model must be '
+                'read from it')
             cfg = ConfigDict()
         else:
             raise TypeError('config must be a filepath or any ConfigType'

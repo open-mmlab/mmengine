@@ -107,13 +107,8 @@ class TestBaseInferencer(RunnerTestCase):
                 'https://download.openmmlab.com/mmdetection/v2.0/resnest/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco_20200926_125502-20289c16.pth',  # noqa: E501
             )
 
-        if is_installed('mmyolo'):
-            from mmyolo.utils import register_all_modules
-            register_all_modules()
-            inferencer = ToyInferencer(
-                weights=  # noqa: E251
-                'https://download.openmmlab.com/mmyolo/v0/yolov7/yolov7_tiny_syncbn_fast_8x16b-300e_coco/yolov7_tiny_syncbn_fast_8x16b-300e_coco_20221126_102719-0ee5bbdf.pth',  # noqa: E501
-            )
+        checkpoint = self.ckpt_path
+        ToyInferencer(weights=checkpoint)
 
     def test_call(self):
         num_imgs = 12
