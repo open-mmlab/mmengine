@@ -43,7 +43,7 @@ Usually, we should define a model to implement the body of the algorithm. In MME
 Benefits from the `BaseModel`, we only need to make the model inherit from `BaseModel`, and implement the `forward` function to perform the training, testing, and validation process.
 
 ```{note}
-BaseModel inherits from [BaseModule](../advanced_tutorials/initialize.md)，which can be used to initialize the model parameters dynamically.
+BaseModel inherits from [BaseModule](../advanced_tutorials/weight_initialization.md)，which can be used to initialize the model parameters dynamically.
 ```
 
 [**forward**](mmengine.model.BaseModel.forward): The arguments of `forward` need to match with the data given by [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html). If the DataLoader samples a tuple `data`, `forward` needs to accept the value of unpacked `*data`. If DataLoader returns a dict `data`, `forward` needs to accept the key-value of unpacked `**data`. `forward` also accepts `mode` parameter, which is used to control the running branch:

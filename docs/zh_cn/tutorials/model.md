@@ -42,7 +42,7 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 得益于 `BaseModel` 我们只需要让模型继承自模型基类，并按照一定的规范实现 `forward`，就能让模型在执行器中运行起来。
 
 ```{note}
-模型基类继承自[模块基类](../advanced_tutorials/initialize.md)，能够通过配置 `init_cfg` 灵活地选择初始化方式。
+模型基类继承自[模块基类](../advanced_tutorials/weight_initialization.md)，能够通过配置 `init_cfg` 灵活地选择初始化方式。
 ```
 
 [**forward**](mmengine.model.BaseModel.forward): `forward` 的入参需通常需要和 [DataLoader](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html) 的输出保持一致 (自定义[数据预处理器](#数据预处理器datapreprocessor)除外)，如果 `DataLoader` 返回元组类型的数据 `data`，`forward` 需要能够接受 `*data` 的解包后的参数；如果返回字典类型的数据 `data`，`forward` 需要能够接受 `**data` 解包后的参数。 `mode` 参数用于控制 forward 的返回结果：

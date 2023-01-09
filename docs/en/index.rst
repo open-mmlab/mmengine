@@ -39,7 +39,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    advanced_tutorials/config.md
    advanced_tutorials/basedataset.md
    advanced_tutorials/data_transform.md
-   advanced_tutorials/initialize.md
+   advanced_tutorials/weight_initialization.md
    advanced_tutorials/visualization.md
    advanced_tutorials/data_element.md
    advanced_tutorials/distributed.md
