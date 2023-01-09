@@ -5,7 +5,6 @@ import pytest
 
 from mmengine.hooks import ParamSchedulerHook
 from mmengine.optim import _ParamScheduler
-from mmengine.runner import BaseLoop
 
 
 class TestParamSchedulerHook:
@@ -85,15 +84,6 @@ class TestParamSchedulerHook:
     def test_after_val_epoch(self):
         metrics = dict(loss=1.0)
 
-        # mock super BaseLoop class
-        class MockBaseLoop(BaseLoop):
-
-            def __init__(self):
-                pass
-
-            def run(self):
-                pass
-
         # mock super _ParamScheduler class
         class MockParamScheduler(_ParamScheduler):
 
@@ -114,14 +104,8 @@ class TestParamSchedulerHook:
         runner.param_schedulers = [scheduler]
         assert hook.after_val_epoch(runner, None) is None
 
-        # runner._train_loop is not built
-        hook = ParamSchedulerHook()  # release self._should
-        runner._train_loop = None
-        assert hook.after_val_epoch(runner, metrics) is None
-
         # runner.param_schedulers is not built
-        hook = ParamSchedulerHook()  # release self._should
-        runner._train_loop = MockBaseLoop()
+        hook = ParamSchedulerHook()
         runner.param_schedulers = dict(key1=[None], key2=[None])
         assert hook.after_val_epoch(runner) is None
 
@@ -129,7 +113,6 @@ class TestParamSchedulerHook:
         with pytest.raises(TypeError, match=self.error_msg):
             hook = ParamSchedulerHook()
             runner = Mock()
-            runner._train_loop = MockBaseLoop()
             scheduler = Mock()
             scheduler.step = Mock()
             scheduler.by_epoch = True
@@ -141,7 +124,6 @@ class TestParamSchedulerHook:
         # runner.param_schedulers is a list of schedulers
         hook = ParamSchedulerHook()
         runner = Mock()
-        runner._train_loop = MockBaseLoop()
         scheduler = MockParamScheduler()
         scheduler.step = Mock()
         scheduler.by_epoch = True
