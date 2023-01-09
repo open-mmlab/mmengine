@@ -2,6 +2,7 @@
 import copy
 import os.path as osp
 import re
+import warnings
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from typing import (Any, Callable, Dict, Iterable, List, Optional, Sequence,
@@ -402,8 +403,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         Returns:
             nn.Module: Model loaded with checkpoint.
         """
+        checkpoint = None
+        if weights is not None:
+            checkpoint = _load_checkpoint(weights, map_location='cpu')
 
-        checkpoint = _load_checkpoint(weights)
         if not cfg:
             try:
                 # Prefer to get config from `message_hub` since `message_hub`
@@ -433,10 +436,28 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         model = MODELS.build(cfg.model)
         model.cfg = cfg
-        _load_checkpoint_to_model(model, checkpoint)
+        self._load_weights_to_model(model, checkpoint, cfg)
         model.to(device)
         model.eval()
         return model
+
+    def _load_weights_to_model(self, model: nn.Module, checkpoint: dict,
+                               cfg: Optional[ConfigType]) -> None:
+        """Loading model from checkpoint and cfg.
+
+        Subclasses could override this method to load extra meta information
+        from ``checkpoint`` and ``cfg`` to model.
+
+        Args:
+            model (nn.Module): Model to load weights and meta information.
+            checkpoint (dict): The loaded checkpoint.
+            cfg (Config or ConfigDict, optional): The loaded config.
+        """
+        if checkpoint is not None:
+            _load_checkpoint_to_model(model, checkpoint)
+        else:
+            warnings.warn('Checkpoint is not loaded, the inference result is '
+                          'calculated by the randomly initialized model!')
 
     def _init_collate(self, cfg: ConfigType) -> Callable:
         """Initialize the ``collate_fn`` with the given config.
