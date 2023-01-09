@@ -135,7 +135,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         init_info=f'Initialized by '
                         f'user-defined `init_weights`'
                         f' in {m.__class__.__name__} ')
-            if pretrained_cfg:
+            if self.init_cfg and pretrained_cfg:
                 initialize(self, pretrained_cfg)
             self._is_init = True
         else:
