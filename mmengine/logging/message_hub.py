@@ -324,13 +324,11 @@ class MessageHub(ManagerMixin):
         Returns:
             float or int: python built-in type value.
         """
-        if isinstance(value, np.ndarray):
+        if isinstance(value, (np.ndarray,np.number)):
             assert value.size == 1
             value = value.item()
         elif isinstance(value, (int, float)):
             value = value
-        elif isinstance(value, np.number):
-            value = value.item()
         else:
             # check whether value is torch.Tensor but don't want
             # to import torch in this file
