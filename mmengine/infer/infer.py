@@ -167,7 +167,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                     'the config needs to be loaded from the weights')
             cfg = ConfigDict()
         else:
-            raise TypeError('config must be a filepath or any ConfigType'
+            raise TypeError('model must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
 
         if device is None:
@@ -419,10 +419,10 @@ class BaseInferencer(metaclass=InferencerMeta):
                 cfg_string = checkpoint['message_hub']['runtime_info']['cfg']
             except KeyError:
                 assert 'meta' in checkpoint, (
-                    'If config is not provided, the checkpoint must contain '
-                    'the config string in `meta` or `message_hub`, but both '
-                    '`meta` and `message_hub` are not found in the checkpoint.'
-                )
+                    'If model(config) is not provided, the checkpoint must'
+                    'contain the config string in `meta` or `message_hub`, '
+                    'but both `meta` and `message_hub` are not found in the '
+                    'checkpoint.')
                 meta = checkpoint['meta']
                 if 'cfg' in meta:
                     cfg_string = meta['cfg']
