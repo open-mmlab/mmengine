@@ -408,8 +408,6 @@ class BaseInferencer(metaclass=InferencerMeta):
             checkpoint = _load_checkpoint(weights, map_location='cpu')
 
         if not cfg:
-            # Checkpoint could not be None since it has been checked
-            # by `__init__`. Assertion here is only to pass mypy check.
             assert checkpoint is not None
             try:
                 # Prefer to get config from `message_hub` since `message_hub`

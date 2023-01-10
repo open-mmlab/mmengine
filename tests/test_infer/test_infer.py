@@ -94,7 +94,7 @@ class TestBaseInferencer(RunnerTestCase):
         self.assertNotIn('pretrained', inferencer.cfg.model)
 
         # Pass invalid model
-        with self.assertRaisesRegex(TypeError, 'config must'):
+        with self.assertRaisesRegex(TypeError, 'model must'):
             ToyInferencer([self.epoch_based_cfg], self.ckpt_path)
 
         # Pass model as model name defined in metafile
@@ -158,7 +158,7 @@ class TestBaseInferencer(RunnerTestCase):
         visualizer = inferencer._init_visualizer(cfg)
         self.assertIsInstance(visualizer, ToyVisualizer)
 
-        # test could build visualizer repeatedly with the same name
+        # Visualizer could be built with the same name repeatedly.
         cfg.visualizer = dict(type='ToyVisualizer', name='toy')
         visualizer = inferencer._init_visualizer(cfg)
         visualizer = inferencer._init_visualizer(cfg)
@@ -202,7 +202,7 @@ class TestBaseInferencer(RunnerTestCase):
         for i in range(1, 11):
             img = np.array(1)
             img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
-        # Test with directory inputs
+        # Passing a directory of images.
         inputs = inferencer._inputs_to_list(
             osp.join(self.temp_dir.name, 'imgs'))
         dataloader = inferencer.preprocess(inputs, batch_size=3)
