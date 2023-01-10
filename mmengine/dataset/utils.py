@@ -18,7 +18,7 @@ def worker_init_fn(worker_id: int,
                    num_workers: int,
                    rank: int,
                    seed: int,
-                   disable_subprocess_warning=False) -> None:
+                   disable_subprocess_warning: bool = False) -> None:
     """This function will be called on each worker subprocess after seeding and
     before data loading.
 
