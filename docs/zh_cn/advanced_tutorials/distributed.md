@@ -30,6 +30,7 @@ PyTorch 提供了一套基础的通信原语用于多进程之间张量的通信
 - [is_main_process](mmengine.dist.is_main_process)：判断是否为 0 号主进程，非分布式情况下返回 True
 - [master_only](mmengine.dist.master_only)：函数装饰器，用于修饰只需要全局 0 号进程（rank 0 而不是 local rank 0）执行的函数
 - [barrier](mmengine.dist.barrier)：同步所有进程到达相同位置
+- [launch](mmengine.dist.launch)：分布式任务启动函数。[分布式示例](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training.py) 使用 `launch` 函数非常简单地启用多卡训练
 
 ## 分布式通信函数
 

@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import multiprocessing
 import os
+import pickle
+import tempfile
 import unittest
 from unittest import TestCase
 
@@ -220,7 +223,7 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
 
         torch_dist.init_process_group(
             backend='gloo', rank=rank, world_size=world_size)
-        dist.init_local_group(0, world_size)
+        dist.init_local_group(0, [world_size])
 
     def setUp(self):
         super().setUp()
@@ -351,7 +354,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         torch.cuda.set_device(rank % num_gpus)
         torch_dist.init_process_group(
             backend='nccl', rank=rank, world_size=world_size)
-        dist.init_local_group(0, world_size)
+        dist.init_local_group(0, [world_size])
 
     def setUp(self):
         super().setUp()
@@ -606,3 +609,73 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         out = {2, 3}
         with self.assertRaisesRegex(TypeError, 'out should not be a set'):
             dist.cast_data_device(data, expected_device, out=out)
+
+
+def main(result, saved_dir):
+    if 'RANK' in os.environ:
+        dist.init_dist(backend='gloo', launcher='pytorch')
+        rank = os.environ['RANK']
+        result[rank] = rank
+        result = dist.all_gather_object(result)
+        if rank == '0':
+            with open(os.path.join(saved_dir, 'result.pkl'), 'wb') as f:
+                pickle.dump(result, f)
+        torch_dist.destroy_process_group()
+    else:
+        with open(os.path.join(saved_dir, 'result.pkl'), 'wb') as f:
+            pickle.dump(result, f)
+
+
+def test_launch():
+    with tempfile.TemporaryDirectory() as tempdir:
+        # Single process, single machine.
+        result = {}
+        dist.launch(main, args=(result, tempdir))
+        with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
+            result = pickle.load(f)
+            assert result == {}
+
+        # Multiple process, single machine
+        result = {}
+        dist.launch(main, args=(result, tempdir), num_proc_per_machine=3)
+        with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
+            result = pickle.load(f)
+            assert result == [{'0': '0'}, {'1': '1'}, {'2': '2'}]
+
+        # Multiple process, multiple machines
+        result = {}
+        for machine_rank in range(2):
+            proc = multiprocessing.Process(
+                target=dist.launch,
+                args=(main, 2, 2, machine_rank, '127.0.0.1', '7891',
+                      (result, tempdir)),
+                daemon=False)
+            proc.start()
+        proc.join()
+        with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
+            result = pickle.load(f)
+            assert result == [{'0': '0'}, {'1': '1'}, {'2': '2'}, {'3': '3'}]
+
+        # Multiple process, multiple machines, with difference number of GPUs
+        result = {}
+        for machine_rank in range(2):
+            proc = multiprocessing.Process(
+                target=dist.launch,
+                args=(main, [2, 3], 2, machine_rank, '127.0.0.1', '7891',
+                      (result, tempdir)),
+                daemon=False)
+            proc.start()
+        proc.join()
+        with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
+            result = pickle.load(f)
+            assert result == [{
+                '0': '0'
+            }, {
+                '1': '1'
+            }, {
+                '2': '2'
+            }, {
+                '3': '3'
+            }, {
+                '4': '4'
+            }]
