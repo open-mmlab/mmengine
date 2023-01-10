@@ -49,6 +49,7 @@ Their functionalities are listed below:
 - [is_main_process](mmengine.dist.is_main_process): Returns `True` if current process is rank 0 in current process group, otherwise `False` . Always returns `True` when non-distributed
 - [master_only](mmengine.dist.master_only): A function decorator. Functions decorated by `master_only` will only execute on rank 0 process.
 - [barrier](mmengine.dist.barrier): A synchronization primitive. Every process will hold until all processes in the current process group reach the same barrier location
+- [launch](mmengine.dist.launch)：A function to launch distributed task. [distributed_training.py](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training.py) can enable distributed very simple with the `launch` function.
 
 ## Collective communication
 

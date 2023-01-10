@@ -172,7 +172,7 @@ def _init_dist_slurm(backend, port=None) -> None:
     torch_dist.init_process_group(backend=backend)
 
 
-def init_local_group(node_rank: int, num_gpus_per_node: Union[list, int]):
+def init_local_group(node_rank: int, num_proc_per_node: list):
     """Setup the local process group.
 
     Setup a process group which only includes processes that on the same
@@ -189,11 +189,10 @@ def init_local_group(node_rank: int, num_gpus_per_node: Union[list, int]):
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
 
-    num_machines = len(num_gpus_per_node) if isinstance(
-        num_gpus_per_node, list) else 1
+    num_machines = len(num_proc_per_node)
     for i in range(num_machines):
-        start = sum(num_gpus_per_node[:i]) if i != 0 else 0
-        end = sum(num_gpus_per_node[:i + 1])
+        start = sum(num_proc_per_node[:i]) if i != 0 else 0
+        end = sum(num_proc_per_node[:i + 1])
         ranks_on_i = list(range(start, end))
         pg = torch_dist.new_group(ranks_on_i)
         if i == node_rank:
@@ -560,17 +559,35 @@ def cast_data_device(
 
 def launch(
         main_func: Callable,
-        num_gpus_per_machine: Union[list, int],
+        num_proc_per_machine: Union[list, int] = 1,
         num_machines: int = 1,
         machine_rank: int = 0,
         master_addr: str = '127.0.0.1',
         master_port: str = 'auto',
         args: tuple = (),
-):
-    if not isinstance(num_gpus_per_machine, list):
-        num_gpus_per_machine = [num_gpus_per_machine] * num_machines
+) -> None:
+    """Launch distributed task with single or multiple machines/GPU.
 
-    world_size = sum(num_gpus_per_machine)
+    Args:
+        main_func (Callable): Function to be executed in multiple process.
+        num_proc_per_machine (list or int): number of valid gpu for machines.
+            For example, The task will be ran on 2 machine A and machine B.
+            A has 2 valid GPUs, and B has 4 valid GPUs. Then
+            ``num_proc_per_machine`` should be [2, 4]
+        num_machines (int, optional): Number of used machines. Defaults to 1.
+        machine_rank (int, optional): The rank of current machine.
+            Defaults to 0.
+        master_addr (str, optional): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend. Defaults to '127.0.0.1'.
+        master_port (str, optional): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store. Defaults to 'auto'.
+        args (tuple, optional): Arguments passde to main_func. Defaults to ().
+    """
+    if not isinstance(num_proc_per_machine, list):
+        num_proc_per_machine = [num_proc_per_machine] * num_machines
+    torch_dist.init_process_group
+    world_size = sum(num_proc_per_machine)
     if master_port == 'auto':
         master_port = str(_find_free_port())
 
@@ -579,11 +596,11 @@ def launch(
 
         mp.start_processes(
             _distributed_worker,
-            nprocs=num_gpus_per_machine[machine_rank],
+            nprocs=num_proc_per_machine[machine_rank],
             args=(
                 main_func,
                 world_size,
-                num_gpus_per_machine,
+                num_proc_per_machine,
                 machine_rank,
                 master_addr,
                 master_port,
@@ -599,33 +616,62 @@ def _distributed_worker(
     local_rank: int,
     main_func: Callable,
     world_size: int,
-    num_gpus_per_machine: list,
+    num_proc_per_machine: list,
     machine_rank: int,
     master_addr: str,
     master_port: str,
     args,
-):
+) -> None:
+    """Run the task after initializing the environment.
+
+    This function will be launched by ``mp.start_processes`` and ``local_rank``
+    will be filled automatically.
+
+    Part of environment variable defined in `pytorch official docs <https://pytorch.org/docs/stable/elastic/run.html#environment-variables>`_
+    will be initialized.
+
+    Warning:
+        :func:`init_dist` must be called in the ``main_func``
+
+    Args:
+        local_rank (int): Local rank of the current machine.
+        main_func (Callable): Function to be executed.
+        world_size (int): The number of all processes launched on all machines.
+        num_proc_per_machine (list): Number of valid gpu for machines.
+        machine_rank (int): The rank of current machine.
+        master_addr (str): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend.
+        master_port (str): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store.
+        args (tuple, optional): Arguments passde to main_func. Defaults to ().
+    """  # noqa: E501
     has_gpu = torch.cuda.is_available()
     if has_gpu:
-        assert num_gpus_per_machine[machine_rank] <= torch.cuda.device_count()
+        assert num_proc_per_machine[machine_rank] <= torch.cuda.device_count()
     os.environ['RANK'] = \
-        str(sum(num_gpus_per_machine[:machine_rank]) + local_rank)
+        str(sum(num_proc_per_machine[:machine_rank]) + local_rank)
     os.environ['LOCAL_RANK'] = str(local_rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = master_addr
     os.environ['MASTER_PORT'] = master_port
+    num_proc_per_machine = [str(num) for num in num_proc_per_machine]
+    os.environ['NUM_PROC_PER_NODE'] = ' '.join(num_proc_per_machine)
 
-    if has_gpu:
-        torch.cuda.set_device(local_rank)
-
-    # synchronize is needed here to prevent a possible timeout after calling init_process_group
+    # synchronize is needed here to prevent a possible timeout after calling
+    # init_process_group.
     # See: https://github.com/facebookresearch/maskrcnn-benchmark/issues/172
-    # barrier()
+    barrier()
 
     main_func(*args)
 
 
 def _find_free_port() -> str:
+    """Find free port.
+
+    Returns:
+        str: Free port.
+    """
     import socket
 
     # Copied from https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py # noqa: E501

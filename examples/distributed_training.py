@@ -6,6 +6,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.optim import SGD
 
+from mmengine.dist import launch
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
@@ -45,16 +46,19 @@ def parse_args():
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
+        default='pytorch',
         help='job launcher')
-    parser.add_argument('--local_rank', type=int, default=0)
-
+    parser.add_argument(
+        '--num-gpus',
+        nargs='+',
+        type=int,
+        help='number of gpus to use',
+        default=[2])
     args = parser.parse_args()
     return args
 
 
-def main():
-    args = parse_args()
+def main(args):
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
     train_set = torchvision.datasets.CIFAR10(
         'data/cifar10',
@@ -98,4 +102,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    launch(
+        main,
+        args.num_gpus,
+        args=(args, ),
+    )
