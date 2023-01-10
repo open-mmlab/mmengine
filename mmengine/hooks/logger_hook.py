@@ -256,7 +256,7 @@ class LoggerHook(Hook):
                 metrics, and the values are corresponding results.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
-            runner, len(runner.test_dataloader), 'test')
+            runner, len(runner.test_dataloader), 'test', with_non_scalar=True)
         runner.logger.info(log_str)
         dump(
             self._process_tags(tag),
