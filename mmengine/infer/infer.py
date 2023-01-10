@@ -460,8 +460,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         if checkpoint is not None:
             _load_checkpoint_to_model(model, checkpoint)
         else:
-            warnings.warn('Checkpoint is not loaded, the inference result is '
-                          'calculated by the randomly initialized model!')
+            warnings.warn('Checkpoint is not loaded, and the inference '
+                          'result is calculated by the randomly initialized '
+                          'model!')
 
     def _init_collate(self, cfg: ConfigType) -> Callable:
         """Initialize the ``collate_fn`` with the given config.
