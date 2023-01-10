@@ -169,12 +169,15 @@ def init_local_group(node_rank: int, num_proc_per_node: list):
 
     Args:
         node_rank (int): Rank of machines used for training.
-        num_gpus_per_node (int): Number of gpus used for training in a single
-            machine.
+        num_gpus_per_node (list): Number of process used for training in all
+            machines.
     """  # noqa: W501
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
 
+    # `torch_dist.new_group` requires all process to enter the function call.
+    # `_LOCAL_PROCESS_GROUP` will be set as the process group of corresponding
+    # node.
     num_machines = len(num_proc_per_node)
     for i in range(num_machines):
         start = sum(num_proc_per_node[:i]) if i != 0 else 0
