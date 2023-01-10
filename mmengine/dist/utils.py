@@ -3,6 +3,7 @@ import datetime
 import functools
 import os
 import subprocess
+from collections.abc import Iterable, Mapping
 from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
@@ -11,9 +12,8 @@ import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available, is_npu_available
 
-from collections.abc import Iterable, Mapping
+from mmengine.device import is_mlu_available, is_npu_available
 
 _LOCAL_PROCESS_GROUP = None
 
@@ -172,7 +172,7 @@ def _init_dist_slurm(backend, port=None) -> None:
     torch_dist.init_process_group(backend=backend)
 
 
-def init_local_group(node_rank: int, num_gpus_per_node: int):
+def init_local_group(node_rank: int, num_gpus_per_node: Union[list, int]):
     """Setup the local process group.
 
     Setup a process group which only includes processes that on the same
@@ -189,10 +189,15 @@ def init_local_group(node_rank: int, num_gpus_per_node: int):
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
 
-    ranks = list(
-        range(node_rank * num_gpus_per_node,
-              (node_rank + 1) * num_gpus_per_node))
-    _LOCAL_PROCESS_GROUP = torch_dist.new_group(ranks)
+    num_machines = len(num_gpus_per_node) if isinstance(
+        num_gpus_per_node, list) else 1
+    for i in range(num_machines):
+        start = sum(num_gpus_per_node[:i]) if i != 0 else 0
+        end = sum(num_gpus_per_node[:i + 1])
+        ranks_on_i = list(range(start, end))
+        pg = torch_dist.new_group(ranks_on_i)
+        if i == node_rank:
+            _LOCAL_PROCESS_GROUP = pg
 
 
 def get_backend(group: Optional[ProcessGroup] = None) -> Optional[str]:
@@ -551,3 +556,83 @@ def cast_data_device(
     else:
         raise TypeError('data should be a Tensor, list of tensor or dict, '
                         f'but got {data}')
+
+
+def launch(
+        main_func: Callable,
+        num_gpus_per_machine: Union[list, int],
+        num_machines: int = 1,
+        machine_rank: int = 0,
+        master_addr: str = '127.0.0.1',
+        master_port: str = 'auto',
+        args: tuple = (),
+):
+    if not isinstance(num_gpus_per_machine, list):
+        num_gpus_per_machine = [num_gpus_per_machine] * num_machines
+
+    world_size = sum(num_gpus_per_machine)
+    if master_port == 'auto':
+        master_port = str(_find_free_port())
+
+    if world_size > 1:
+        # https://github.com/pytorch/pytorch/pull/14391
+
+        mp.start_processes(
+            _distributed_worker,
+            nprocs=num_gpus_per_machine[machine_rank],
+            args=(
+                main_func,
+                world_size,
+                num_gpus_per_machine,
+                machine_rank,
+                master_addr,
+                master_port,
+                args,
+            ),
+            daemon=False,
+        )
+    else:
+        main_func(*args)
+
+
+def _distributed_worker(
+    local_rank: int,
+    main_func: Callable,
+    world_size: int,
+    num_gpus_per_machine: list,
+    machine_rank: int,
+    master_addr: str,
+    master_port: str,
+    args,
+):
+    has_gpu = torch.cuda.is_available()
+    if has_gpu:
+        assert num_gpus_per_machine[machine_rank] <= torch.cuda.device_count()
+    os.environ['RANK'] = \
+        str(sum(num_gpus_per_machine[:machine_rank]) + local_rank)
+    os.environ['LOCAL_RANK'] = str(local_rank)
+    os.environ['WORLD_SIZE'] = str(world_size)
+    os.environ['MASTER_ADDR'] = master_addr
+    os.environ['MASTER_PORT'] = master_port
+
+    if has_gpu:
+        torch.cuda.set_device(local_rank)
+
+    # synchronize is needed here to prevent a possible timeout after calling init_process_group
+    # See: https://github.com/facebookresearch/maskrcnn-benchmark/issues/172
+    # barrier()
+
+    main_func(*args)
+
+
+def _find_free_port() -> str:
+    import socket
+
+    # Copied from https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py # noqa: E501
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Binding to port 0 will cause the OS to find an available port for us
+    sock.bind(('', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    # NOTE: there is still a chance the port could be taken by other processes.
+    return port
