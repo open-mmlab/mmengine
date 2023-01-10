@@ -4,6 +4,9 @@ import datetime
 from collections import OrderedDict
 from typing import List, Optional, Tuple
 
+import numpy as np
+import torch
+
 from mmengine.device import get_max_cuda_memory, is_cuda_available
 from mmengine.registry import LOG_PROCESSORS
 
@@ -230,6 +233,7 @@ class LogProcessor:
         custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
         # tag is used to write log information to different backends.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        tag.update(self._collect_non_scalars(runner, mode))
         tag.pop('time', None)
         tag.pop('data_time', None)
         # By epoch:
@@ -255,6 +259,9 @@ class LogProcessor:
         for name, val in tag.items():
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
+            if isinstance(val, (torch.Tensor, np.ndarray)):
+                # newline to display tensor and array.
+                val = f'\n{val}\n'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
         return tag, log_str
@@ -304,6 +311,28 @@ class LogProcessor:
                 tag[log_name] = mode_history_scalars[data_src].statistics(
                     **log_cfg)
         return tag
+
+    def _collect_non_scalars(self, runner, mode: str) -> dict:
+        """Collect log information to compose a dict according to mode.
+
+        Args:
+            runner (Runner): The runner of the training/testing/validation
+                process.
+            mode (str): Current mode of runner.
+
+        Returns:
+            dict: non-scalar infos of the specified mode.
+        """
+        # infos of train/val/test phase.
+        infos = runner.message_hub.runtime_info
+        # corresponding mode infos
+        mode_infos = OrderedDict()
+        # extract log info and remove prefix to `mode_infos` according to mode.
+        for prefix_key, value in infos.items():
+            if prefix_key.startswith(mode):
+                key = prefix_key.partition('/')[-1]
+                mode_infos[key] = value
+        return mode_infos
 
     def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""

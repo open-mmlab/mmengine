@@ -136,7 +136,7 @@ class RuntimeInfoHook(Hook):
                 if _is_scalar(value):
                     runner.message_hub.update_scalar(f'val/{key}', value)
                 else:
-                    runner.logger.info(f'{key}:\n{value}')
+                    runner.message_hub.update_info(f'val/{key}', value)
 
     def after_test_epoch(self,
                          runner,
@@ -155,4 +155,4 @@ class RuntimeInfoHook(Hook):
                 if _is_scalar(value):
                     runner.message_hub.update_scalar(f'test/{key}', value)
                 else:
-                    runner.logger.info(f'{key}:\n{value}')
+                    runner.message_hub.update_info(f'test/{key}', value)
