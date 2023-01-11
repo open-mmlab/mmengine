@@ -280,9 +280,7 @@ class LoggerHook(Hook):
                 return value.tolist()
             # Drop unsupported values.
 
-        processed_tags = OrderedDict(
-            {k: process_val(v)
-             for k, v in tags.items()})
+        processed_tags = OrderedDict(process_val(tags))
 
         return processed_tags
 
