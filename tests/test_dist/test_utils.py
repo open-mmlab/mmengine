@@ -613,7 +613,7 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
 
 def main(result, saved_dir):
     if 'RANK' in os.environ:
-        dist.init_dist(backend='gloo', launcher='pytorch')
+        dist.init_dist(backend='nccl', launcher='pytorch')
         rank = os.environ['RANK']
         result[rank] = rank
         result = dist.all_gather_object(result)
@@ -626,6 +626,7 @@ def main(result, saved_dir):
             pickle.dump(result, f)
 
 
+@unittest.skipIf(not torch.cuda.is_available(), 'CUDA should be available')
 def test_launch():
     with tempfile.TemporaryDirectory() as tempdir:
         # Single process, single machine.
