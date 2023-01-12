@@ -2,6 +2,7 @@
 import copy
 import os.path as osp
 import re
+import warnings
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from typing import (Any, Callable, Dict, Iterable, List, Optional, Sequence,
@@ -20,7 +21,8 @@ from mmengine.fileio import (get_file_backend, isdir, join_path,
                              list_dir_or_file, load)
 from mmengine.logging import print_log
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
-from mmengine.runner import load_checkpoint
+from mmengine.runner.checkpoint import (_load_checkpoint,
+                                        _load_checkpoint_to_model)
 from mmengine.structures import InstanceData
 from mmengine.utils import get_installed_path, is_installed
 from mmengine.visualization import Visualizer
@@ -112,7 +114,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         model (str, optional): Path to the config file or the model name
             defined in metafile. Take the `mmdet metafile <https://github.com/open-mmlab/mmdetection/blob/master/configs/retinanet/metafile.yml>`_
             as an example, the `model` could be `retinanet_r18_fpn_1x_coco` or
-            its alias.
+            its alias. If model is not specified, user must provide the
+            `weights` saved by MMEngine which contains the config string.
+            Defaults to None.
         weights (str, optional): Path to the checkpoint. If it is not specified
             and model is a model name of metafile, the weights will be loaded
             from metafile. Defaults to None.
@@ -132,7 +136,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     postprocess_kwargs: set = set()
 
     def __init__(self,
-                 model: Union[ModelType, str],
+                 model: Union[ModelType, str, None] = None,
                  weights: Optional[str] = None,
                  device: Optional[str] = None,
                  scope: Optional[str] = None) -> None:
@@ -156,22 +160,24 @@ class BaseInferencer(metaclass=InferencerMeta):
             cfg = copy.deepcopy(model)
         elif isinstance(model, dict):
             cfg = copy.deepcopy(ConfigDict(model))
+        elif model is None:
+            if weights is None:
+                raise ValueError(
+                    'If model is None, the weights must be specified since '
+                    'the config needs to be loaded from the weights')
+            cfg = ConfigDict()
         else:
-            raise TypeError('config must be a filepath or any ConfigType'
+            raise TypeError('model must be a filepath or any ConfigType'
                             f'object, but got {type(model)}')
-        # Delete the `pretrained` field to prevent model from loading the
-        # the pretrained weights unnecessarily.
-        if cfg.model.get('pretrained') is not None:
-            del cfg.model.pretrained
 
         if device is None:
             device = get_device()
 
-        self.cfg = cfg
         self.model = self._init_model(cfg, weights, device)  # type: ignore
         self.pipeline = self._init_pipeline(cfg)
         self.collate_fn = self._init_collate(cfg)
         self.visualizer = self._init_visualizer(cfg)
+        self.cfg = cfg
 
     def __call__(
         self,
@@ -383,7 +389,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     def _init_model(
         self,
         cfg: ConfigType,
-        weights: str,
+        weights: Optional[str],
         device: str = 'cpu',
     ) -> nn.Module:
         """Initialize the model with the given config and checkpoint on the
@@ -391,18 +397,70 @@ class BaseInferencer(metaclass=InferencerMeta):
 
         Args:
             cfg (ConfigType): Config containing the model information.
-            weights (str): Path to the checkpoint.
+            weights (str, optional): Path to the checkpoint.
             device (str, optional): Device to run inference. Defaults to 'cpu'.
 
         Returns:
             nn.Module: Model loaded with checkpoint.
         """
+        checkpoint: Optional[dict] = None
+        if weights is not None:
+            checkpoint = _load_checkpoint(weights, map_location='cpu')
+
+        if not cfg:
+            assert checkpoint is not None
+            try:
+                # Prefer to get config from `message_hub` since `message_hub`
+                # is a more stable module to store all runtime information.
+                # However, the early version of MMEngine will not save config
+                # in `message_hub`, so we will try to load config from `meta`.
+                cfg_string = checkpoint['message_hub']['runtime_info']['cfg']
+            except KeyError:
+                assert 'meta' in checkpoint, (
+                    'If model(config) is not provided, the checkpoint must'
+                    'contain the config string in `meta` or `message_hub`, '
+                    'but both `meta` and `message_hub` are not found in the '
+                    'checkpoint.')
+                meta = checkpoint['meta']
+                if 'cfg' in meta:
+                    cfg_string = meta['cfg']
+                else:
+                    raise ValueError(
+                        'Cannot find the config in the checkpoint.')
+            cfg.update(
+                Config.fromstring(cfg_string, file_format='.py')._cfg_dict)
+
+        # Delete the `pretrained` field to prevent model from loading the
+        # the pretrained weights unnecessarily.
+        if cfg.model.get('pretrained') is not None:
+            del cfg.model.pretrained
+
         model = MODELS.build(cfg.model)
-        load_checkpoint(model, weights, map_location='cpu')
-        model.cfg = cfg.model
+        model.cfg = cfg
+        self._load_weights_to_model(model, checkpoint, cfg)
         model.to(device)
         model.eval()
         return model
+
+    def _load_weights_to_model(self, model: nn.Module,
+                               checkpoint: Optional[dict],
+                               cfg: Optional[ConfigType]) -> None:
+        """Loading model weights and meta information from cfg and checkpoint.
+
+        Subclasses could override this method to load extra meta information
+        from ``checkpoint`` and ``cfg`` to model.
+
+        Args:
+            model (nn.Module): Model to load weights and meta information.
+            checkpoint (dict, optional): The loaded checkpoint.
+            cfg (Config or ConfigDict, optional): The loaded config.
+        """
+        if checkpoint is not None:
+            _load_checkpoint_to_model(model, checkpoint)
+        else:
+            warnings.warn('Checkpoint is not loaded, and the inference '
+                          'result is calculated by the randomly initialized '
+                          'model!')
 
     def _init_collate(self, cfg: ConfigType) -> Callable:
         """Initialize the ``collate_fn`` with the given config.
@@ -462,7 +520,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         if 'visualizer' not in cfg:
             return None
         timestamp = str(datetime.timestamp(datetime.now()))
-        cfg.visualizer['name'] = f'inferencer-{timestamp}'
+        name = cfg.visualizer.get('name', timestamp)
+        if Visualizer.check_instance_created(name):
+            name = f'{name}-{timestamp}'
+        cfg.visualizer.name = name
         return VISUALIZERS.build(cfg.visualizer)
 
     def _get_chunk_data(self, inputs: Iterable, chunk_size: int):

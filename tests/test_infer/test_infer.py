@@ -94,7 +94,7 @@ class TestBaseInferencer(RunnerTestCase):
         self.assertNotIn('pretrained', inferencer.cfg.model)
 
         # Pass invalid model
-        with self.assertRaisesRegex(TypeError, 'config must'):
+        with self.assertRaisesRegex(TypeError, 'model must'):
             ToyInferencer([self.epoch_based_cfg], self.ckpt_path)
 
         # Pass model as model name defined in metafile
@@ -106,6 +106,9 @@ class TestBaseInferencer(RunnerTestCase):
                 'faster-rcnn_s50_fpn_syncbn-backbone+head_ms-range-1x_coco',
                 'https://download.openmmlab.com/mmdetection/v2.0/resnest/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco/faster_rcnn_s50_fpn_syncbn-backbone%2Bhead_mstrain-range_1x_coco_20200926_125502-20289c16.pth',  # noqa: E501
             )
+
+        checkpoint = self.ckpt_path
+        ToyInferencer(weights=checkpoint)
 
     def test_call(self):
         num_imgs = 12
@@ -155,6 +158,11 @@ class TestBaseInferencer(RunnerTestCase):
         visualizer = inferencer._init_visualizer(cfg)
         self.assertIsInstance(visualizer, ToyVisualizer)
 
+        # Visualizer could be built with the same name repeatedly.
+        cfg.visualizer = dict(type='ToyVisualizer', name='toy')
+        visualizer = inferencer._init_visualizer(cfg)
+        visualizer = inferencer._init_visualizer(cfg)
+
     def test_dispatch_kwargs(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
         kwargs = dict(
@@ -194,7 +202,7 @@ class TestBaseInferencer(RunnerTestCase):
         for i in range(1, 11):
             img = np.array(1)
             img.dump(osp.join(self.temp_dir.name, 'imgs', f'{i}.npy'))
-        # Test with directory inputs
+        # Passing a directory of images.
         inputs = inferencer._inputs_to_list(
             osp.join(self.temp_dir.name, 'imgs'))
         dataloader = inferencer.preprocess(inputs, batch_size=3)
