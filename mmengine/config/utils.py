@@ -13,7 +13,7 @@ PKG2PROJECT = {
     'mmdet': 'mmdet',
     'mmdet3d': 'mmdet3d',
     'mmseg': 'mmsegmentation',
-    'mmaction2': 'mmaction2',
+    'mmaction': 'mmaction2',
     'mmtrack': 'mmtrack',
     'mmpose': 'mmpose',
     'mmedit': 'mmedit',
