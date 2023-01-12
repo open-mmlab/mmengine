@@ -60,9 +60,15 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 
 ## 最近进展
 
-最新版本 v0.3.2 在 2022.11.24 发布。
+最新版本 v0.4.0 在 2022.12.28 发布。
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v032-11242022)
+亮点：
+
+- 注册器支持自动导入模块
+- 文档全面升级，并提供英文文档
+- 新增 `ProfileHook` 以支持训练过程中的性能分析
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v040-12282022)
 
 ## 安装
 
@@ -241,9 +247,8 @@ runner.train()
 - [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [数据集基类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/basedataset.html)
 - [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
-- [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
 - [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
-- [初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
+- [权重初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
 - [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
 - [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
 - [分布式通信原语](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/distributed.html)

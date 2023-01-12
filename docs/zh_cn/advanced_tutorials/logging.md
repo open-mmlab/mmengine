@@ -53,12 +53,12 @@ runner.train()
 以训练阶段为例，日志处理器默认会按照以下方式统计执行器输出的日志：
 
 - 日志前缀：
-  - Epoch 模式（`by_epoch=True`）: `Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
+  - Epoch 模式（`by_epoch=True`）：`Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
   - Iter 模式（`by_epoch=False`）： `Iter(train) [{当前迭代次数}/{总迭代次数}]`
 - 学习率（`lr`）：统计最近一次迭代，参数更新的学习率
 - 时间
-  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平局时间
-  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平局时间
+  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平均时间
+  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平均时间
   - 剩余时间（`eta`）：根据总迭代次数和历次迭代时间计算出来的总剩余时间，剩余时间随着迭代次数增加逐渐趋于稳定
 - 损失：模型前向推理得到的各种字段的损失，默认统计最近 `window_size` 次迭代的平均损失。
 
@@ -271,7 +271,7 @@ runner.train()
 此外，分布式训练时，`DEBUG` 模式还会分进程存储日志。单机多卡，或者多机多卡但是共享存储的情况下，导出的分布式日志路径如下
 
 ```text
-#  共享存储
+# 共享存储
 ./tmp
 ├── tmp.log
 ├── tmp_rank1.log
@@ -289,7 +289,7 @@ runner.train()
 
 ```text
 # 独立存储
-# 设备0：
+# 设备 0：
 work_dir/
 └── exp_name_logs
     ├── exp_name.log
@@ -299,7 +299,7 @@ work_dir/
     ...
     └── exp_name_rank7.log
 
-# 设备7：
+# 设备 7：
 work_dir/
 └── exp_name_logs
     ├── exp_name_rank56.log

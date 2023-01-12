@@ -47,6 +47,7 @@
    advanced_tutorials/fileio.md
    advanced_tutorials/manager_mixin.md
    advanced_tutorials/cross_library.md
+   advanced_tutorials/test_time_augmentation.md
 
 .. toctree::
    :maxdepth: 1

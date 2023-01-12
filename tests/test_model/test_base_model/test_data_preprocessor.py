@@ -84,11 +84,6 @@ class TestBaseDataPreprocessor(TestCase):
         data = dict(string='abc')
         base_data_preprocessor(data)
 
-        with self.assertRaisesRegex(TypeError,
-                                    '`BaseDataPreprocessor.cast_data`:'):
-            data = dict(string=object())
-            base_data_preprocessor(data)
-
 
 class TestImgDataPreprocessor(TestBaseDataPreprocessor):
 

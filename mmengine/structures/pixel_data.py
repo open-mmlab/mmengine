@@ -26,12 +26,12 @@ class PixelData(BaseDataElement):
         >>> pixel_data = PixelData(metainfo=metainfo,
         ...                        image=image,
         ...                        featmap=featmap)
-        >>> print(pixel_data)
-        >>> (20, 40)
+        >>> print(pixel_data.shape)
+        (20, 40)
 
         >>> # slice
         >>> slice_data = pixel_data[10:20, 20:40]
-        >>> assert slice_data.shape == (10, 10)
+        >>> assert slice_data.shape == (10, 20)
         >>> slice_data = pixel_data[10, 20]
         >>> assert slice_data.shape == (1, 1)
 
@@ -47,41 +47,40 @@ class PixelData(BaseDataElement):
         """Set attributes of ``PixelData``.
 
         If the dimension of value is 2 and its shape meet the demand, it
-        will automatically expend its channel-dimension.
+        will automatically expand its channel-dimension.
 
         Args:
             name (str): The key to access the value, stored in `PixelData`.
             value (Union[torch.Tensor, np.ndarray]): The value to store in.
-                The type of value must be  `torch.Tensor` or `np.ndarray`,
+                The type of value must be `torch.Tensor` or `np.ndarray`,
                 and its shape must meet the requirements of `PixelData`.
         """
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)
             else:
-                raise AttributeError(
-                    f'{name} has been used as a '
-                    f'private attribute, which is immutable. ')
+                raise AttributeError(f'{name} has been used as a '
+                                     'private attribute, which is immutable.')
 
         else:
             assert isinstance(value, (torch.Tensor, np.ndarray)), \
-                f'Can set {type(value)}, only support' \
+                f'Can not set {type(value)}, only support' \
                 f' {(torch.Tensor, np.ndarray)}'
 
             if self.shape:
                 assert tuple(value.shape[-2:]) == self.shape, (
-                    f'the height and width of '
+                    'The height and width of '
                     f'values {tuple(value.shape[-2:])} is '
-                    f'not consistent with'
-                    f' the length of this '
-                    f':obj:`PixelData` '
-                    f'{self.shape} ')
+                    'not consistent with '
+                    'the shape of this '
+                    ':obj:`PixelData` '
+                    f'{self.shape}')
             assert value.ndim in [
                 2, 3
             ], f'The dim of value must be 2 or 3, but got {value.ndim}'
             if value.ndim == 2:
                 value = value[None]
-                warnings.warn(f'The shape of value will convert from '
+                warnings.warn('The shape of value will convert from '
                               f'{value.shape[-2:]} to {value.shape}')
             super().__setattr__(name, value)
 
@@ -89,17 +88,17 @@ class PixelData(BaseDataElement):
     def __getitem__(self, item: Sequence[Union[int, slice]]) -> 'PixelData':
         """
         Args:
-            item (Sequence[Union[int, slice]]): get the corresponding values
-            according to item.
+            item (Sequence[Union[int, slice]]): Get the corresponding values
+                according to item.
 
         Returns:
-            obj:`PixelData`: Corresponding values.
+            :obj:`PixelData`: Corresponding values.
         """
 
         new_data = self.__class__(metainfo=self.metainfo)
         if isinstance(item, tuple):
 
-            assert len(item) == 2, 'Only support slice height and width'
+            assert len(item) == 2, 'Only support to slice height and width'
             tmp_item: List[slice] = list()
             for index, single_item in enumerate(item[::-1]):
                 if isinstance(single_item, int):
