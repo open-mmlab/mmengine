@@ -131,15 +131,23 @@ class CustomInferencer(BaseInferencer):
 
 上述代码中，`preprocess`，`forward`，`visualize`，`postprocess` 四个函数的 `a`，`b`，`c`，`d` 为用户可以传入的额外参数（`inputs`, `preds` 等参数在 `__call__` 的执行过程中会被自动填入），因此开发者需要在类属性 `preprocess_kwargs`，`forward_kwargs`，`visualize_kwargs`，`postprocess_kwargs` 中指定这些参数，这样 `__call__` 阶段用户传入的参数就可以被正确分发给对应的步骤。分发过程由 `BaseInferencer.__call__` 函数实现，开发者无需关心。
 
-此外，我们需要将 `CustomInferencer` 注册到 MMEngine 定义的 `INFERENCERS` 注册器中
+此外，我们需要将 `CustomInferencer` 注册到自定义注册器或者 MMEngine 的注册器中
 
 ```python
-from mmengine.registry import INFERENCERS
+from mmseg.registry import INFERENCERS
+# 个人开发者也可以直接将 inferencer 注册到 MMEngine 的注册中
+# from mmengine.registry import INFERENCERS
 
 @INFERENCERS.register_module()
 class CustomInferencer(BaseInferencer):
     ...
 ```
+
+```{note}
+OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册器，而不能注册到 MMEngine 的根注册器（避免重名）。
+```
+
+对于 注册到 MMEngine 定义的 `INFERENCERS` 注册器中
 
 **核心接口说明**：
 
