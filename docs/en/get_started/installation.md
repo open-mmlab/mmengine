@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.6+
+- Python 3.7+
 - PyTorch 1.6+
 - CUDA 9.2+
 - GCC 5.4+

@@ -32,6 +32,9 @@ class Registry:
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
             Defaults to None.
+        locations (list): The locations to import the modules registered
+            in this registry. Defaults to [].
+            New in version 0.4.0.
 
     Examples:
         >>> # define a registry
@@ -54,6 +57,16 @@ class Registry:
         >>>     pass
         >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
 
+        >>> # add locations to enable auto import
+        >>> DETECTORS = Registry('detectors', parent=MODELS,
+        >>>     scope='det', locations=['det.models.detectors'])
+        >>> # define this class in 'det.models.detectors'
+        >>> @DETECTORS.register_module()
+        >>> class MaskRCNN:
+        >>>     pass
+        >>> # The registry will auto import det.models.detectors.MaskRCNN
+        >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
+
     More advanced usages can be found at
     https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
     """
@@ -62,11 +75,14 @@ class Registry:
                  name: str,
                  build_func: Optional[Callable] = None,
                  parent: Optional['Registry'] = None,
-                 scope: Optional[str] = None):
+                 scope: Optional[str] = None,
+                 locations: List = []):
         from .build_functions import build_from_cfg
         self._name = name
         self._module_dict: Dict[str, Type] = dict()
         self._children: Dict[str, 'Registry'] = dict()
+        self._locations = locations
+        self._imported = False
 
         if scope is not None:
             assert isinstance(scope, str)
@@ -240,27 +256,25 @@ class Registry:
             # Get registry by scope
             if default_scope is not None:
                 scope_name = default_scope.scope_name
-                if scope_name in PKG2PROJECT:
-                    try:
-                        module = import_module(f'{scope_name}.utils')
-                        module.register_all_modules(False)  # type: ignore
-                    except (ImportError, AttributeError, ModuleNotFoundError):
-                        if scope in PKG2PROJECT:
-                            print_log(
-                                f'{scope} is not installed and its '
-                                'modules will not be registered. If you '
-                                'want to use modules defined in '
-                                f'{scope}, Please install {scope} by '
-                                f'`pip install {PKG2PROJECT[scope]}.',
-                                logger='current',
-                                level=logging.WARNING)
-                        else:
-                            print_log(
-                                f'Failed to import {scope} and register '
-                                'its modules, please make sure you '
-                                'have registered the module manually.',
-                                logger='current',
-                                level=logging.WARNING)
+                try:
+                    import_module(f'{scope_name}.registry')
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    if scope in PKG2PROJECT:
+                        print_log(
+                            f'{scope} is not installed and its '
+                            'modules will not be registered. If you '
+                            'want to use modules defined in '
+                            f'{scope}, Please install {scope} by '
+                            f'`pip install {PKG2PROJECT[scope]}.',
+                            logger='current',
+                            level=logging.WARNING)
+                    else:
+                        print_log(
+                            f'Failed to import `{scope}.registry` '
+                            f'make sure the registry.py exists in `{scope}` '
+                            'package.',
+                            logger='current',
+                            level=logging.WARNING)
                 root = self._get_root_registry()
                 registry = root._search_child(scope_name)
                 if registry is None:
@@ -289,6 +303,59 @@ class Registry:
         while root.parent is not None:
             root = root.parent
         return root
+
+    def import_from_location(self) -> None:
+        """import modules from the pre-defined locations in self._location."""
+        if not self._imported:
+            # Avoid circular import
+            from ..logging import print_log
+
+            # avoid BC breaking
+            if len(self._locations) == 0 and self.scope in PKG2PROJECT:
+                print_log(
+                    f'The "{self.name}" registry in {self.scope} did not '
+                    'set import location. Fallback to call '
+                    f'`{self.scope}.utils.register_all_modules` '
+                    'instead.',
+                    logger='current',
+                    level=logging.WARNING)
+                try:
+                    module = import_module(f'{self.scope}.utils')
+                    module.register_all_modules(False)  # type: ignore
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    if self.scope in PKG2PROJECT:
+                        print_log(
+                            f'{self.scope} is not installed and its '
+                            'modules will not be registered. If you '
+                            'want to use modules defined in '
+                            f'{self.scope}, Please install {self.scope} by '
+                            f'`pip install {PKG2PROJECT[self.scope]}.',
+                            logger='current',
+                            level=logging.WARNING)
+                    else:
+                        print_log(
+                            f'Failed to import {self.scope} and register '
+                            'its modules, please make sure you '
+                            'have registered the module manually.',
+                            logger='current',
+                            level=logging.WARNING)
+
+            for loc in self._locations:
+                try:
+                    import_module(loc)
+                    print_log(
+                        f"Modules of {self.scope}'s {self.name} registry have "
+                        f'been automatically imported from {loc}',
+                        logger='current',
+                        level=logging.DEBUG)
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    print_log(
+                        f'Failed to import {loc}, please check the '
+                        f'location of the registry {self.name} is '
+                        'correct.',
+                        logger='current',
+                        level=logging.WARNING)
+            self._imported = True
 
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
@@ -346,11 +413,14 @@ class Registry:
         obj_cls = None
         registry_name = self.name
         scope_name = self.scope
+
+        # lazy import the modules to register them into the registry
+        self.import_from_location()
+
         if scope is None or scope == self._scope:
             # get from self
             if real_key in self._module_dict:
                 obj_cls = self._module_dict[real_key]
-
             elif scope is None:
                 # try to get the target from its parent or ancestors
                 parent = self.parent
@@ -362,24 +432,21 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            # import the registry to add the nodes into the registry tree
             try:
-                module = import_module(f'{scope}.utils')
-                module.register_all_modules(False)  # type: ignore
+                import_module(f'{scope}.registry')
+                print_log(
+                    f'Registry node of {scope} has been automatically '
+                    'imported.',
+                    logger='current',
+                    level=logging.DEBUG)
             except (ImportError, AttributeError, ModuleNotFoundError):
-                if scope in PKG2PROJECT:
-                    print_log(
-                        f'{scope} is not installed and its modules '
-                        'will not be registered. If you want to use '
-                        f'modules defined in {scope}, Please install '
-                        f'{scope} by `pip install {PKG2PROJECT[scope]} ',
-                        logger='current',
-                        level=logging.WARNING)
-                else:
-                    print_log(
-                        f'Failed to import "{scope}", and register its '
-                        f'modules. Please register {real_key} manually.',
-                        logger='current',
-                        level=logging.WARNING)
+                print_log(
+                    f'Cannot auto import {scope}.registry, please check '
+                    f'whether the package "{scope}" is installed correctly '
+                    'or import the registry manually.',
+                    logger='current',
+                    level=logging.DEBUG)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)

@@ -1,4 +1,4 @@
-欢迎来到 mmengine 的中文文档！
+欢迎来到 MMEngine 的中文文档！
 =========================================
 您可以在页面左下角切换中英文文档。
 
@@ -47,6 +47,7 @@
    advanced_tutorials/fileio.md
    advanced_tutorials/manager_mixin.md
    advanced_tutorials/cross_library.md
+   advanced_tutorials/test_time_augmentation.md
 
 .. toctree::
    :maxdepth: 1

@@ -60,9 +60,15 @@ Major features:
 
 ## What's New
 
-v0.3.2 was released in 2022-11-24.
+v0.4.0 was released in 2022-12-28.
 
-Read [Changelog](./docs/en/notes/changelog.md#v032-11242022) for more details.
+Highlights:
+
+- Registry supports importing modules automatically
+- Upgrade the documentation and provide the **English documentation**
+- Provide `ProfileHook` to profile the training/testing process
+
+Read [Changelog](./docs/en/notes/changelog.md#v040-12282022) for more details.
 
 ## Installation
 
@@ -232,7 +238,7 @@ runner.train()
 - [Config](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html)
 - [BaseDataset](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html)
 - [Data Transform](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/data_transform.html)
-- [Initialization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/initialize.html)
+- [Weight Initialization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/initialize.html)
 - [Visualization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/visualization.html)
 - [Abstract Data Element](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/data_element.html)
 - [Distribution Communication](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/distributed.html)
