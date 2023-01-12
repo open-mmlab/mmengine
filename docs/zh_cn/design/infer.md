@@ -211,7 +211,7 @@ OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册�
 
 返回值：
 
-- 可视化结果，类型通常为 `List[np.ndarray]`
+- 可视化结果，类型通常为 `List[np.ndarray]`，以目标检测任务为例，列表中的每个元素应该是画完检测框后的图像，直接使用 `cv2.imshow` 就能可视化检测结果。不同任务的可视化流程有所不同，`visualize` 应该返回该领域内，适用于常见可视化流程的结果。
 
 ### `postprocess()`
 
@@ -223,7 +223,7 @@ OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册�
 
 - preds：模型预测结果，类型为 `list`，列表中的每个元素表示一个数据的预测结果。OpenMMLab 系列算法库中，预测结果中每个元素的类型均为 `BaseDataElement`
 - visualization：可视化结果
-- return_datasample：是否将 datasample 转换成 `dict` 返回
+- return_datasample：是否维持 datasample 返回。`False` 时转换成 `dict` 返回
 - 其他参数：由用户传入，且在 `postprocess_kwargs` 中指定
 
 返回值：
