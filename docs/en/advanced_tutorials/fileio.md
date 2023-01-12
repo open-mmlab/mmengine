@@ -189,7 +189,7 @@ torch.save(checkpoint, filepath1)
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
-In `MMEngine`, reading and writing checkpoints in different storage forms can be uniformly implemented with `load_checkpoint` and `save_checkpoint`.
+In `MMEngine`, reading and writing checkpoints in different storage forms can be uniformly implemented with `load_checkpoint` and `save_checkpoint`:
 
 ```python
 from mmengine import load_checkpoint, save_checkpoint
