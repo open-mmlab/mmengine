@@ -135,7 +135,7 @@ class CustomInferencer(BaseInferencer):
 
 ```python
 from mmseg.registry import INFERENCERS
-# 个人开发者也可以直接将 inferencer 注册到 MMEngine 的注册中
+# 也可以注册到 MMEngine 的注册中
 # from mmengine.registry import INFERENCERS
 
 @INFERENCERS.register_module()
@@ -146,8 +146,6 @@ class CustomInferencer(BaseInferencer):
 ```{note}
 OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册器，而不能注册到 MMEngine 的根注册器（避免重名）。
 ```
-
-对于 注册到 MMEngine 定义的 `INFERENCERS` 注册器中
 
 **核心接口说明**：
 
