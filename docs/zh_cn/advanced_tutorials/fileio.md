@@ -37,12 +37,12 @@ with open('test.yaml', 'w') as f:
 ```python
 from mmengine import load, dump
 
-# 从文件中读取数据
+# 从 s3 文件中读取数据
 data = load('s3://bucket-name/test.json')
 data = load('s3://bucket-name/test.yaml')
 data = load('s3://bucket-name/test.pkl')
 
-# 将数据保存至文件 (根据文件名后缀反推文件类型)
+# 将数据保存至 s3 文件（根据文件名后缀反推文件类型）
 dump(data, 's3://bucket-name/out.pkl')
 ```
 
@@ -189,7 +189,7 @@ torch.save(checkpoint, filepath1)
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
-在 `MMEngine` 中，在不同存储格式中读取权重文件可以通过 `load_checkpoint` 和 `save_checkpoint` 来统一实现。
+在 `MMEngine` 中，在不同存储格式中读取权重文件可以通过 `load_checkpoint` 和 `save_checkpoint` 来统一实现：
 
 ```python
 from mmengine import load_checkpoint, save_checkpoint
