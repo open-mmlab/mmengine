@@ -610,3 +610,129 @@ class TensorboardVisBackend(BaseVisBackend):
         """close an opened tensorboard object."""
         if hasattr(self, '_tensorboard'):
             self._tensorboard.close()
+
+@VISBACKENDS.register_module()
+class MLFlowVisBackend(BaseVisBackend):
+    """MLFlow visualization backend class.
+
+    It can write images, config, scalars, etc. to a
+    mlflow file.
+
+    Examples:
+        >>> from mmengine.visualization import MLFlowVisBackend
+        >>> import numpy as np
+        >>> vis_backend = MLFlowVisBackend(save_dir='temp_dir')
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
+        >>> vis_backend.add_image('img', img)
+        >>> vis_backend.add_scaler('mAP', 0.6)
+        >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> vis_backend.add_config(cfg)
+
+    Args:
+        save_dir (str): The root directory to save the files
+            produced by the backend.
+    """
+
+    def __init__(self, 
+                 save_dir: str,
+                 exp_name: Optional[str] = None,
+                 tags: Optional[dict] = None,
+                 params: Optional[dict] = None,
+                 log_model: bool = True):
+        super().__init__(save_dir)
+        self._exp_name = exp_name
+        self._tags = tags
+        self._params = params
+        self._log_model = log_model
+
+    def _init_env(self):
+        """Setup env for MLFlow."""
+        if not os.path.exists(self._save_dir):
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+
+        try:
+            import mlflow
+        except ImportError:
+            raise ImportError('Please install mlflow to use '
+                              'MLFlowVisBackend.')  # type: ignore
+        self._mlflow = mlflow
+
+        if self._exp_name is not None:
+            self._mlflow.set_experiment(self._exp_name)
+        if self._tags is not None:
+            self._mlflow.set_tags(self._tags)
+        if self._params is not None:
+            self._mlflow.log_params(self._params)
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return MLFlow object."""
+        return self._mlflow
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to mlflow.
+
+        Args:
+            config (Config): The Config object
+        """
+        return super().add_config(config, **kwargs)
+
+    @force_init_env
+    def add_image(self,
+                    name: str,
+                    image: np.ndarray,
+                    step: int = 0,
+                    **kwargs) -> None:
+            """Record the image to mlflow.
+    
+            Args:
+                name (str): The image identifier.
+                image (np.ndarray): The image to be saved. The format
+                    should be RGB.
+                step (int): Global step value to record. Default to 0.
+            """
+            self._mlflow.log_image(name, image, step)
+
+
+    @force_init_env
+    def add_scalar(self,
+                     name: str,
+                     value: Union[int, float, torch.Tensor, np.ndarray],
+                     step: int = 0,
+                     **kwargs) -> None:
+          """Record the scalar data to mlflow.
+    
+          Args:
+                name (str): The scalar identifier.
+                value (int, float, torch.Tensor, np.ndarray): Value to save.
+                step (int): Global step value to record. Default to 0.
+          """
+          self._mlflow.log_metric(name, value, step)
+
+    @force_init_env
+    def add_scalars(self,
+                        scalar_dict: dict,
+                        step: int = 0,
+                        file_path: Optional[str] = None,
+                        **kwargs) -> None:
+            """Record the scalar's data to mlflow.
+        
+            Args:
+                    scalar_dict (dict): Key-value pair storing the tag and
+                        corresponding values.
+                    step (int): Global step value to record. Default to 0.
+                    file_path (str, optional): Useless parameter. Just for
+                        interface unification. Default to None.
+            """
+            assert isinstance(scalar_dict, dict)
+            assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                                'through the step parameter'
+            for key, value in scalar_dict.items():
+                self.add_scalar(key, value, step)
+
+    def close(self):
+        """close an opened mlflow object."""
+        pass    # mlflow will close automatically
