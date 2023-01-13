@@ -625,7 +625,7 @@ class Runner:
                     mp_start_method='fork',
                     opencv_num_threads=0
                 ),
-                dist_cfg=dict(backend='nccl'),
+                dist_cfg=dict(backend='nccl', timeout=1800),
                 resource_limit=4096
             )
 
