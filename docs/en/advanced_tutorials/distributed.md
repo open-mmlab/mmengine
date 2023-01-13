@@ -23,6 +23,16 @@ We will detail on these APIs in the following chapters.
 
 - [init_dist](mmengine.dist.init_dist): Launch function of distributed training. Currently it supports 3 launchers including pytorch, slurm and MPI. It also setup the given communication backends, defaults to NCCL.
 
+If you need to change the runtime timeout (default=30 minutes) for distributed operations that take very long, you can specify a different timeout in your runtime configuration like this:
+
+```python
+env_cfg = dict(
+    cudnn_benchmark=True,
+    mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0),
+    dist_cfg=dict(backend='nccl', timeout="10800"), # Sets the timeout to 3h (10800 seconds)
+)
+```
+
 ## Query and control
 
 The query and control functions are all argument free.
