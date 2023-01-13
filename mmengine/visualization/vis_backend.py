@@ -20,14 +20,14 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 
 def force_init_env(old_func: Callable) -> Any:
     """Those methods decorated by ``force_init_env`` will be forced to call
-    ``_init_env`` if the instance has not been fully initiated. This function
+    ``_init_env`` if the instance has not been fully initiated.
+
+    This function
     will decorated all the `add_xxx` method and `experiment` method, because
     `VisBackend` is initialized only when used its API.
-
     Args:
         old_func (Callable): Decorated function, make sure the first arg is an
             instance with ``_init_env`` method.
-
     Returns:
         Any: Depends on old_func.
     """
@@ -61,7 +61,6 @@ class BaseVisBackend(metaclass=ABCMeta):
 
     All backends must inherit ``BaseVisBackend`` and implement
     the required functions.
-
     Args:
         save_dir (str, optional): The root directory to save
             the files produced by the backend.
@@ -162,11 +161,9 @@ class BaseVisBackend(metaclass=ABCMeta):
 @VISBACKENDS.register_module()
 class LocalVisBackend(BaseVisBackend):
     """Local visualization backend class.
-
     It can write image, config, scalars, etc.
     to the local hard disk. You can get the drawing backend
     through the experiment property for custom drawing.
-
     Examples:
         >>> from mmengine.visualization import LocalVisBackend
         >>> import numpy as np
@@ -177,7 +174,6 @@ class LocalVisBackend(BaseVisBackend):
         >>> local_vis_backend.add_scalars({'loss': [1, 2, 3], 'acc': 0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> local_vis_backend.add_config(cfg)
-
     Args:
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer. If it is none, it means no data
@@ -280,7 +276,6 @@ class LocalVisBackend(BaseVisBackend):
 
         The scalar dict will be written to the default and
         specified files if ``file_path`` is specified.
-
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values. The value must be dumped
@@ -323,7 +318,6 @@ class LocalVisBackend(BaseVisBackend):
 @VISBACKENDS.register_module()
 class WandbVisBackend(BaseVisBackend):
     """Wandb visualization backend class.
-
     Examples:
         >>> from mmengine.visualization import WandbVisBackend
         >>> import numpy as np
@@ -334,7 +328,6 @@ class WandbVisBackend(BaseVisBackend):
         >>> wandb_vis_backend.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> wandb_vis_backend.add_config(cfg)
-
     Args:
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer.
@@ -491,21 +484,19 @@ class WandbVisBackend(BaseVisBackend):
 @VISBACKENDS.register_module()
 class TensorboardVisBackend(BaseVisBackend):
     """Tensorboard visualization backend class.
-
     It can write images, config, scalars, etc. to a
     tensorboard file.
-
     Examples:
         >>> from mmengine.visualization import TensorboardVisBackend
         >>> import numpy as np
-        >>> vis_backend = TensorboardVisBackend(save_dir='temp_dir')
-        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
-        >>> vis_backend.add_image('img', img)
-        >>> vis_backend.add_scaler('mAP', 0.6)
-        >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> tensorboard_vis_backend = \
+        >>>     TensorboardVisBackend(save_dir='temp_dir')
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> tensorboard_vis_backend.add_image('img', img)
+        >>> tensorboard_vis_backend.add_scaler('mAP', 0.6)
+        >>> tensorboard_vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        >>> vis_backend.add_config(cfg)
-
+        >>> tensorboard_vis_backend.add_config(cfg)
     Args:
         save_dir (str): The root directory to save the files
             produced by the backend.
@@ -610,3 +601,89 @@ class TensorboardVisBackend(BaseVisBackend):
         """close an opened tensorboard object."""
         if hasattr(self, '_tensorboard'):
             self._tensorboard.close()
+
+
+@VISBACKENDS.register_module()
+class ClearmlVisBackend(BaseVisBackend):
+
+    def __init__(self, save_dir: str, init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)
+        self._init_kwargs = init_kwargs
+
+    def _init_env(self):
+        if not os.path.exists(self._save_dir):
+            os.makedirs(self._save_dir, exist_ok=True)
+        try:
+            import clearml
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install clearml" to install clearml')
+
+        task_kwargs = self.init_kwargs if self.init_kwargs else {}
+        self.task = self.clearml.Task.init(**task_kwargs)
+        self._clearml = self.task.get_logger()
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return clearml object."""
+        return self._clearml
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to clearml.
+
+        Args:
+            config (Config): The Config object
+        """
+        self._clearml.report_text('config', config.pretty_text)
+
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image to clearml.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._clearml.report_image(name, image, step)
+
+    @force_init_env
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar data to clearml.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._clearml.report_scalar(name, value, step)
+
+    @force_init_env
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalar's data to clearml.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Default to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Default to None.
+        """
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                          'through the step parameter'
+        for key, value in scalar_dict.items():
+            self._clearml.report_scalar(key, value, step)
