@@ -120,9 +120,9 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
                          'config name, but found multiple `::` in '
                          f'{cfg_path}')
     package, cfg_path = package_cfg
-    assert package in PKG2PROJECT, 'mmengine does not support to load ' \
-                                   f'{package} config.'
-    package = PKG2PROJECT[package]
+    assert package in MODULE2PACKAGE, (
+        f'mmengine does not support to load {package} config.')
+    package = MODULE2PACKAGE[package]
     return package, cfg_path
 
 

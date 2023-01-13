@@ -93,7 +93,9 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
-    )
+        custom_hooks=[
+            dict(type='ProfilerHook', on_trace_ready=dict(type='tb_trace'))
+        ])
     runner.train()
 
 

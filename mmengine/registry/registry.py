@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from mmengine.config.utils import PKG2PROJECT
+from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
 
@@ -259,13 +259,13 @@ class Registry:
                 try:
                     import_module(f'{scope_name}.registry')
                 except (ImportError, AttributeError, ModuleNotFoundError):
-                    if scope in PKG2PROJECT:
+                    if scope in MODULE2PACKAGE:
                         print_log(
                             f'{scope} is not installed and its '
                             'modules will not be registered. If you '
                             'want to use modules defined in '
                             f'{scope}, Please install {scope} by '
-                            f'`pip install {PKG2PROJECT[scope]}.',
+                            f'`pip install {MODULE2PACKAGE[scope]}.',
                             logger='current',
                             level=logging.WARNING)
                     else:
@@ -311,7 +311,7 @@ class Registry:
             from ..logging import print_log
 
             # avoid BC breaking
-            if len(self._locations) == 0 and self.scope in PKG2PROJECT:
+            if len(self._locations) == 0 and self.scope in MODULE2PACKAGE:
                 print_log(
                     f'The "{self.name}" registry in {self.scope} did not '
                     'set import location. Fallback to call '
@@ -323,13 +323,13 @@ class Registry:
                     module = import_module(f'{self.scope}.utils')
                     module.register_all_modules(False)  # type: ignore
                 except (ImportError, AttributeError, ModuleNotFoundError):
-                    if self.scope in PKG2PROJECT:
+                    if self.scope in MODULE2PACKAGE:
                         print_log(
                             f'{self.scope} is not installed and its '
                             'modules will not be registered. If you '
                             'want to use modules defined in '
                             f'{self.scope}, Please install {self.scope} by '
-                            f'`pip install {PKG2PROJECT[self.scope]}.',
+                            f'`pip install {MODULE2PACKAGE[self.scope]}.',
                             logger='current',
                             level=logging.WARNING)
                     else:
