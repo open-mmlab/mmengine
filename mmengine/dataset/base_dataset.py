@@ -2,7 +2,6 @@
 import copy
 import functools
 import gc
-import os.path as osp
 import pickle
 import warnings
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
@@ -10,7 +9,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from torch.utils.data import Dataset
 
-from mmengine.fileio import list_from_file, load
+from mmengine.fileio import join_path, list_from_file, load
 from mmengine.registry import TRANSFORMS
 from mmengine.utils import is_abs
 
@@ -336,8 +335,8 @@ class BaseDataset(Dataset):
             assert prefix_key in raw_data_info, (
                 f'raw_data_info: {raw_data_info} dose not contain prefix key'
                 f'{prefix_key}, please check your data_prefix.')
-            raw_data_info[prefix_key] = osp.join(prefix,
-                                                 raw_data_info[prefix_key])
+            raw_data_info[prefix_key] = join_path(prefix,
+                                                  raw_data_info[prefix_key])
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
@@ -532,13 +531,13 @@ class BaseDataset(Dataset):
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
         if not is_abs(self.ann_file) and self.ann_file:
-            self.ann_file = osp.join(self.data_root, self.ann_file)
+            self.ann_file = join_path(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
             if isinstance(prefix, str):
                 if not is_abs(prefix):
-                    self.data_prefix[data_key] = osp.join(
+                    self.data_prefix[data_key] = join_path(
                         self.data_root, prefix)
                 else:
                     self.data_prefix[data_key] = prefix
