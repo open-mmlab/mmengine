@@ -8,7 +8,7 @@ from typing import Tuple
 from mmengine.fileio import load
 from mmengine.utils import check_file_exist
 
-PKG2PROJECT = {
+MODULE2PACKAGE = {
     'mmcls': 'mmcls',
     'mmdet': 'mmdet',
     'mmdet3d': 'mmdet3d',
@@ -27,6 +27,12 @@ PKG2PROJECT = {
     'mmselfsup': 'mmselfsup',
     'mmyolo': 'mmyolo',
 }
+
+# PKG2PROJECT is not a proper name to represent the mapping between module name
+# (module import from) and package name (used by pip install). Therefore,
+# PKG2PROJECT will be deprecated and this alias will only be kept until
+# MMEngine v1.0.0
+PKG2PROJECT = MODULE2PACKAGE
 
 
 def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
