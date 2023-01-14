@@ -611,6 +611,7 @@ class TensorboardVisBackend(BaseVisBackend):
         if hasattr(self, '_tensorboard'):
             self._tensorboard.close()
 
+
 @VISBACKENDS.register_module()
 class MLFlowVisBackend(BaseVisBackend):
     """MLFlow visualization backend class.
@@ -639,7 +640,6 @@ class MLFlowVisBackend(BaseVisBackend):
             Default to None.
         log_model (bool, optional): Whether to log the model. Default to True.
     """
-
     def __init__(self, 
                  save_dir: str,
                  exp_name: Optional[str] = None,
@@ -688,10 +688,10 @@ class MLFlowVisBackend(BaseVisBackend):
 
     @force_init_env
     def add_image(self,
-                    name: str,
-                    image: np.ndarray,
-                    step: int = 0,
-                    **kwargs) -> None:
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
             """Record the image to mlflow.
     
             Args:
@@ -705,10 +705,10 @@ class MLFlowVisBackend(BaseVisBackend):
 
     @force_init_env
     def add_scalar(self,
-                     name: str,
-                     value: Union[int, float, torch.Tensor, np.ndarray],
-                     step: int = 0,
-                     **kwargs) -> None:
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
           """Record the scalar data to mlflow.
     
           Args:
@@ -720,12 +720,12 @@ class MLFlowVisBackend(BaseVisBackend):
 
     @force_init_env
     def add_scalars(self,
-                        scalar_dict: dict,
-                        step: int = 0,
-                        file_path: Optional[str] = None,
-                        **kwargs) -> None:
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
             """Record the scalar's data to mlflow.
-        
+
             Args:
                     scalar_dict (dict): Key-value pair storing the tag and
                         corresponding values.

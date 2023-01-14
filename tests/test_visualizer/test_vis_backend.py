@@ -242,6 +242,7 @@ class TestWandbVisBackend:
         wandb_vis_backend.close()
         shutil.rmtree('temp_dir')
 
+
 class TestMLFlowVisBackend:
     def test_init(self):
         MLFlowVisBackend('temp_dir')
@@ -287,5 +288,3 @@ class TestMLFlowVisBackend:
         mlflow_vis_backend._init_env()
         mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
-
-    
