@@ -257,7 +257,7 @@ class TestMLFlowVisBackend:
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        mlflow_vis_backend = MLFlowVisBackend('temp_dir', log_code_name='code')
+        mlflow_vis_backend = MLFlowVisBackend('temp_dir')
         mlflow_vis_backend.add_config(cfg)
         shutil.rmtree('temp_dir')
 
