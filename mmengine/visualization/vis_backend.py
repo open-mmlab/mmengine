@@ -734,7 +734,7 @@ class MLFlowVisBackend(BaseVisBackend):
         """
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
-                                            'through the step parameter'
+                                          'through the step parameter'
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step)
 

@@ -6,5 +6,5 @@ from .visualizer import Visualizer
 
 __all__ = [
     'Visualizer', 'BaseVisBackend', 'LocalVisBackend', 'WandbVisBackend',
-    'TensorboardVisBackend', 'MLflowVisBackend'
+    'TensorboardVisBackend', 'MLFlowVisBackend'
 ]
