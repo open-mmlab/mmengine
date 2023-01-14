@@ -640,6 +640,7 @@ class MLFlowVisBackend(BaseVisBackend):
             Default to None.
         log_model (bool, optional): Whether to log the model. Default to True.
     """
+
     def __init__(self,
                  save_dir: str,
                  exp_name: Optional[str] = None,
@@ -740,4 +741,4 @@ class MLFlowVisBackend(BaseVisBackend):
 
     def close(self):
         """close an opened mlflow object."""
-        pass    # mlflow will close automatically
+        pass  # mlflow will close automatically

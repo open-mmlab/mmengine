@@ -4,6 +4,6 @@ from .vis_backend import (BaseVisBackend, LocalVisBackend, MLFlowVisBackend,
 from .visualizer import Visualizer
 
 __all__ = [
-    'Visualizer', 'BaseVisBackend', 'LocalVisBackend',
-    'WandbVisBackend', 'TensorboardVisBackend', 'MLFlowVisBackend'
+    'Visualizer', 'BaseVisBackend', 'LocalVisBackend', 'WandbVisBackend',
+    'TensorboardVisBackend', 'MLFlowVisBackend'
 ]

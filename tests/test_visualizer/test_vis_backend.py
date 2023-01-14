@@ -244,6 +244,7 @@ class TestWandbVisBackend:
 
 
 class TestMLFlowVisBackend:
+
     def test_init(self):
         MLFlowVisBackend('temp_dir')
         VISBACKENDS.build(dict(type='MLFlowVisBackend', save_dir='temp_dir'))
