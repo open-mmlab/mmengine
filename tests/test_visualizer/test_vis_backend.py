@@ -11,8 +11,8 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (LocalVisBackend, TensorboardVisBackend,
-                                    WandbVisBackend, MLFlowVisBackend)
+from mmengine.visualization import (LocalVisBackend, MLFlowVisBackend,
+                                    TensorboardVisBackend, WandbVisBackend)
 
 
 class TestLocalVisBackend:
