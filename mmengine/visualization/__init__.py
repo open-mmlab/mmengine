@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .vis_backend import (BaseVisBackend, LocalVisBackend,
-                          TensorboardVisBackend, WandbVisBackend, 
+                          TensorboardVisBackend, WandbVisBackend,
                           MLFlowVisBackend)
 from .visualizer import Visualizer
 

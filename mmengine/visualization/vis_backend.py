@@ -640,7 +640,7 @@ class MLFlowVisBackend(BaseVisBackend):
             Default to None.
         log_model (bool, optional): Whether to log the model. Default to True.
     """
-    def __init__(self, 
+    def __init__(self,
                  save_dir: str,
                  exp_name: Optional[str] = None,
                  tags: Optional[dict] = None,
@@ -692,16 +692,15 @@ class MLFlowVisBackend(BaseVisBackend):
                   image: np.ndarray,
                   step: int = 0,
                   **kwargs) -> None:
-            """Record the image to mlflow.
-    
-            Args:
-                name (str): The image identifier.
-                image (np.ndarray): The image to be saved. The format
-                    should be RGB.
-                step (int): Global step value to record. Default to 0.
-            """
-            self._mlflow.log_image(name, image, step)
+        """Record the image to mlflow.
 
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._mlflow.log_image(name, image, step)
 
     @force_init_env
     def add_scalar(self,
@@ -709,14 +708,14 @@ class MLFlowVisBackend(BaseVisBackend):
                    value: Union[int, float, torch.Tensor, np.ndarray],
                    step: int = 0,
                    **kwargs) -> None:
-          """Record the scalar data to mlflow.
-    
-          Args:
-                name (str): The scalar identifier.
-                value (int, float, torch.Tensor, np.ndarray): Value to save.
-                step (int): Global step value to record. Default to 0.
-          """
-          self._mlflow.log_metric(name, value, step)
+        """Record the scalar data to mlflow.
+
+        Args:
+              name (str): The scalar identifier.
+              value (int, float, torch.Tensor, np.ndarray): Value to save.
+              step (int): Global step value to record. Default to 0.
+        """
+        self._mlflow.log_metric(name, value, step)
 
     @force_init_env
     def add_scalars(self,
@@ -724,20 +723,20 @@ class MLFlowVisBackend(BaseVisBackend):
                     step: int = 0,
                     file_path: Optional[str] = None,
                     **kwargs) -> None:
-            """Record the scalar's data to mlflow.
+        """Record the scalar's data to mlflow.
 
-            Args:
-                    scalar_dict (dict): Key-value pair storing the tag and
-                        corresponding values.
-                    step (int): Global step value to record. Default to 0.
-                    file_path (str, optional): Useless parameter. Just for
-                        interface unification. Default to None.
-            """
-            assert isinstance(scalar_dict, dict)
-            assert 'step' not in scalar_dict, 'Please set it directly ' \
-                                                'through the step parameter'
-            for key, value in scalar_dict.items():
-                self.add_scalar(key, value, step)
+        Args:
+                scalar_dict (dict): Key-value pair storing the tag and
+                    corresponding values.
+                step (int): Global step value to record. Default to 0.
+                file_path (str, optional): Useless parameter. Just for
+                    interface unification. Default to None.
+        """
+        assert isinstance(scalar_dict, dict)
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                            'through the step parameter'
+        for key, value in scalar_dict.items():
+            self.add_scalar(key, value, step)
 
     def close(self):
         """close an opened mlflow object."""

@@ -164,15 +164,16 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
         # dump the information to the logger file if there is a `FileHandler`
         for handler in logger.handlers:
             if isinstance(handler, FileHandler):
-                if(handler.stream is not None):
+                if (handler.stream is None):
+                    continue
+                handler.stream.write(
+                    'Name of parameter - Initialization information\n')
+                for name, param in self.named_parameters():
                     handler.stream.write(
-                        'Name of parameter - Initialization information\n')
-                    for name, param in self.named_parameters():
-                        handler.stream.write(
-                            f'\n{name} - {param.shape}: '
-                            f"\n{self._params_init_info[param]['init_info']} \n")
-                    handler.stream.flush()
-                    with_file_handler = True
+                        f'\n{name} - {param.shape}: '
+                        f"\n{self._params_init_info[param]['init_info']} \n")
+                handler.stream.flush()
+                with_file_handler = True
         if not with_file_handler:
             for name, param in self.named_parameters():
                 print_log(
