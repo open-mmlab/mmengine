@@ -519,9 +519,9 @@ class TestParameterScheduler(TestCase):
 
         with self.assertRaises(ValueError):
             ReduceOnPlateauParamScheduler(self.optimizer, 'lr', factor=2.0)
-        with self.assertRaises(ValueError):
-            ReduceOnPlateauParamScheduler(
+        ReduceOnPlateauParamScheduler(
                 self.optimizer, 'lr', min_value=[0.1, 0.1])
+        with self.assertRaises(ValueError):
             ReduceOnPlateauParamScheduler(
                 self.optimizer, 'lr', min_value=[0.1, 0.1, 0.1, 0.1])
         with self.assertRaises(ValueError):
@@ -545,9 +545,9 @@ class TestParameterScheduler(TestCase):
             scheduler.step(metrics)
 
         # Test scheduler value
-        def _test_value(_epochs, _targets, _metrics_list, _monitor, _rule,
-                        _factor, _patience, _threshold, _threshold_rule,
-                        _cooldown, _min_value):
+        def _test_value(epochs, targets, metrics_list, monitor, rule,
+                        factor, patience, threshold, threshold_rule,
+                        cooldown, min_value):
             lr = 0.05
             momentum = 0.01
             weight_decay = 5e-4

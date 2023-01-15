@@ -472,8 +472,8 @@ class TestMomentumScheduler(TestCase):
 
         with self.assertRaises(ValueError):
             ReduceOnPlateauMomentum(self.optimizer, factor=2.0)
+        ReduceOnPlateauMomentum(self.optimizer, min_value=[0.1, 0.1])
         with self.assertRaises(ValueError):
-            ReduceOnPlateauMomentum(self.optimizer, min_value=[0.1, 0.1])
             ReduceOnPlateauMomentum(
                 self.optimizer, min_value=[0.1, 0.1, 0.1, 0.1])
         with self.assertRaises(ValueError):
@@ -495,9 +495,9 @@ class TestMomentumScheduler(TestCase):
             scheduler.step(metrics)
 
         # Test scheduler value
-        def _test_value(_epochs, _targets, _metrics_list, _optimizer, _monitor,
-                        _rule, _factor, _patience, _threshold, _threshold_rule,
-                        _cooldown, _min_value):
+        def _test_value(epochs, targets, metrics_list, optimizer, monitor,
+                        rule, factor, patience, threshold, threshold_rule,
+                        cooldown, min_value):
             lr = 0.01
             momentum = 0.05
             weight_decay = 5e-4
