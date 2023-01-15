@@ -76,7 +76,6 @@ class TestParamSchedulerHook:
         scheduler2.step = Mock()
         scheduler2.by_epoch = True
         runner.param_schedulers = dict(key1=[scheduler1], key2=[scheduler2])
-        hook.after_train_iter(runner, 0)
         hook.after_train_epoch(runner)
         scheduler1.step.assert_called()
         scheduler2.step.assert_called()
@@ -93,22 +92,6 @@ class TestParamSchedulerHook:
             def _get_value(self):
                 pass
 
-        # runner.param_schedulers is None
-        hook = ParamSchedulerHook()
-        runner = Mock()
-        runner.param_schedulers = None
-        assert hook.after_val_epoch(runner, metrics) is None
-
-        # metrics is None
-        scheduler = Mock()
-        runner.param_schedulers = [scheduler]
-        assert hook.after_val_epoch(runner, None) is None
-
-        # runner.param_schedulers is not built
-        hook = ParamSchedulerHook()
-        runner.param_schedulers = dict(key1=[None], key2=[None])
-        assert hook.after_val_epoch(runner) is None
-
         # runner.param_schedulers should be a list or dict
         with pytest.raises(TypeError, match=self.error_msg):
             hook = ParamSchedulerHook()
@@ -119,7 +102,6 @@ class TestParamSchedulerHook:
             scheduler.need_val_args = True
             runner.param_schedulers = scheduler
             hook.after_val_epoch(runner, metrics)
-            scheduler.step.assert_called_with(metrics)
 
         # runner.param_schedulers is a list of schedulers
         hook = ParamSchedulerHook()

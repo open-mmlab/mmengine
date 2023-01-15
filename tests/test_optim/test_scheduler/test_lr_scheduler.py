@@ -412,29 +412,27 @@ class TestLRScheduler(TestCase):
             scheduler.step(metrics)
 
         # Test scheduler value
-        def _test_value(epochs, targets, metrics_list, monitor, rule,
-                        factor, patience, threshold, threshold_rule,
-                        cooldown, min_value):
+        def _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                        patience, threshold, threshold_rule, cooldown,
+                        min_value):
             lr = 0.05
             momentum = 0.01
             weight_decay = 5e-4
-            _scheduler = ReduceOnPlateauLR(
+            scheduler = ReduceOnPlateauLR(
                 self.optimizer,
-                monitor=_monitor,
-                rule=_rule,
-                factor=_factor,
-                patience=_patience,
-                threshold=_threshold,
-                threshold_rule=_threshold_rule,
-                cooldown=_cooldown,
-                min_value=_min_value,
+                monitor=monitor,
+                rule=rule,
+                factor=factor,
+                patience=patience,
+                threshold=threshold,
+                threshold_rule=threshold_rule,
+                cooldown=cooldown,
+                min_value=min_value,
             )
             self._test_scheduler_value(
-                _scheduler,
-                _targets,
-                epochs=_epochs,
-                step_kwargs=_metrics_list)
-                # reset the state of optimizers
+                scheduler, targets, epochs=epochs, step_kwargs=metrics_list)
+
+            # reset the state of optimizers
             self.optimizer = optim.SGD([{
                 'params': self.model.conv1.parameters()
             }, {

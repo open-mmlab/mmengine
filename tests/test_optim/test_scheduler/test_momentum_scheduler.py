@@ -501,23 +501,25 @@ class TestMomentumScheduler(TestCase):
             lr = 0.01
             momentum = 0.05
             weight_decay = 5e-4
-            _scheduler = ReduceOnPlateauMomentum(
-                _optimizer,
-                monitor=_monitor,
-                rule=_rule,
-                factor=_factor,
-                patience=_patience,
-                threshold=_threshold,
-                threshold_rule=_threshold_rule,
-                cooldown=_cooldown,
-                min_value=_min_value,
+            scheduler = ReduceOnPlateauMomentum(
+                optimizer,
+                monitor=monitor,
+                rule=rule,
+                factor=factor,
+                patience=patience,
+                threshold=threshold,
+                threshold_rule=threshold_rule,
+                cooldown=cooldown,
+                min_value=min_value,
             )
             self._test_scheduler_value(
-                _optimizer,
-                _scheduler,
-                _targets,
-                epochs=_epochs,
-                step_kwargs=_metrics_list)
+                optimizer,
+                scheduler,
+                targets,
+                epochs=epochs,
+                step_kwargs=metrics_list)
+
+            # reset the state of optimizers
             self.optimizer = optim.SGD([{
                 'params': self.model.conv1.parameters()
             }, {
