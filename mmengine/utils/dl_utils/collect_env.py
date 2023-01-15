@@ -4,7 +4,6 @@ import os.path as osp
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
-from distutils import errors
 
 import cv2
 import numpy as np
@@ -47,6 +46,8 @@ def collect_env():
             - OpenCV (optional): OpenCV version.
             - MMENGINE: MMENGINE version.
     """
+    from distutils import errors
+
     env_info = OrderedDict()
     env_info['sys.platform'] = sys.platform
     env_info['Python'] = sys.version.replace('\n', '')
