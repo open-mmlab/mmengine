@@ -52,7 +52,7 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
     timeout = kwargs.get('timeout', None)
-    if timeout:
+    if timeout is not None:
         # If a timeout (in seconds) is specified, it must be converted
         # to a timedelta object before forwarding the call to
         # the respective backend, because they expect a timedelta object.
