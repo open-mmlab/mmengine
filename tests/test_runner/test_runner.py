@@ -15,7 +15,8 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
+from mmengine.dataset import (COLLATE_FUNCTIONS, DefaultSampler,
+                              pseudo_collate, worker_init_fn)
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -1267,6 +1268,21 @@ class TestRunner(TestCase):
         cfg = dict(type='CustomTrainLoop', max_epochs=3)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, CustomTrainLoop)
+
+        # test use pytorch default worker_init_fn
+        runner._train_dataloader.worker_init_fn = 'pytorch'
+        runner._train_dataloader.num_workers = 0
+        loop = runner.build_train_loop(cfg)
+        self.assertIsNone(loop.dataloader.worker_init_fn)
+
+        # test use mmengine default worker_init_fn
+        runner._train_dataloader.pop('worker_init_fn')
+        loop = runner.build_train_loop(cfg)
+        self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
+
+        runner._train_dataloader.worker_init_fn = 'mmengine'
+        loop = runner.build_train_loop(cfg)
+        self.assertIs(loop.dataloader.worker_init_fn.func, worker_init_fn)
 
     def test_build_val_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
