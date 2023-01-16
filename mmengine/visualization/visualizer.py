@@ -4,16 +4,9 @@ import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.collections import (LineCollection, PatchCollection,
-                                    PolyCollection)
-from matplotlib.figure import Figure
-from matplotlib.patches import Circle
-from matplotlib.pyplot import new_figure_manager
 
 from mmengine.config import Config
 from mmengine.dist import master_only
@@ -240,6 +233,7 @@ class Visualizer(ManagerMixin):
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
         """
+        import matplotlib.pyplot as plt
         is_inline = 'inline' in plt.get_backend()
         img = self.get_image() if drawn_img is None else drawn_img
         self._init_manager(win_name)
@@ -302,7 +296,8 @@ class Visualizer(ManagerMixin):
         Returns:
              tuple: build canvas figure and axes.
         """
-
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
         fig = Figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
@@ -318,6 +313,8 @@ class Visualizer(ManagerMixin):
         Args:
             win_name (str): The window name.
         """
+        from matplotlib.figure import Figure
+        from matplotlib.pyplot import new_figure_manager
         if getattr(self, 'manager', None) is None:
             self.manager = new_figure_manager(
                 num=1, FigureClass=Figure, **self.fig_show_cfg)
@@ -546,6 +543,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
+        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -614,6 +612,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PatchCollection
+        from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
@@ -760,6 +760,7 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
         face_colors = color_val_matplotlib(face_colors)  # type: ignore
@@ -916,6 +917,7 @@ class Visualizer(ManagerMixin):
         Returns:
             np.ndarray: RGB image.
         """
+        import matplotlib.pyplot as plt
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')

@@ -87,6 +87,18 @@ class BaseDataPreprocessor(nn.Module):
         Returns:
             nn.Module: The model itself.
         """
+
+        # Since Torch has not officially merged
+        # the npu-related fields, using the _parse_to function
+        # directly will cause the NPU to not be found.
+        # Here, the input parameters are processed to avoid errors.
+        if args and isinstance(args[0], str) and 'npu' in args[0]:
+            args = tuple(
+                [list(args)[0].replace('npu', torch.npu.native_device)])
+        if kwargs and 'npu' in str(kwargs.get('device', '')):
+            kwargs['device'] = kwargs['device'].replace(
+                'npu', torch.npu.native_device)
+
         device = torch._C._nn._parse_to(*args, **kwargs)[0]
         if device is not None:
             self._device = torch.device(device)
@@ -100,6 +112,15 @@ class BaseDataPreprocessor(nn.Module):
         """
         self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
+
+    def npu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device(torch.npu.current_device())
+        return super().npu()
 
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`

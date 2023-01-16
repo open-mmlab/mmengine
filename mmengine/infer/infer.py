@@ -14,7 +14,7 @@ import torch.nn as nn
 from rich.progress import track
 
 from mmengine.config import Config, ConfigDict
-from mmengine.config.utils import PKG2PROJECT
+from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
 from mmengine.fileio import (get_file_backend, isdir, join_path,
@@ -40,7 +40,7 @@ class InferencerMeta(ABCMeta):
     """Check the legality of the inferencer.
 
     All Inferencers should not define duplicated keys for
-    ``preprocess_kwargs``,``forward_kwargs``, ``visualize_kwargs`` and
+    ``preprocess_kwargs``, ``forward_kwargs``, ``visualize_kwargs`` and
     ``postprocess_kwargs``.
     """
 
@@ -87,7 +87,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     - ``forward_kwargs``: The keys of the kwargs that will be passed to
       :meth:`forward`
     - ``visualize_kwargs``: The keys of the kwargs that will be passed to
-      :meth:visualize
+      :meth:`visualize`
     - ``postprocess_kwargs``: The keys of the kwargs that will be passed to
       :meth:`postprocess`
 
@@ -108,7 +108,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     - _init_pipeline: Return a callable object to preprocess the input data.
     - visualize: Visualize the results returned by :meth:`forward`.
     - postprocess: Postprocess the results returned by :meth:`forward` and
-      :meth:`visualzie`.
+      :meth:`visualize`.
 
     Args:
         model (str, optional): Path to the config file or the model name
@@ -365,10 +365,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         assert self.scope is not None, (
             'scope should be initialized if you want '
             'to load config from metafile.')
-        assert self.scope in PKG2PROJECT, (
-            f'{self.scope} not in {PKG2PROJECT}!,'
+        assert self.scope in MODULE2PACKAGE, (
+            f'{self.scope} not in {MODULE2PACKAGE}!,'
             'please pass a valid scope.')
-        project = PKG2PROJECT[self.scope]
+        project = MODULE2PACKAGE[self.scope]
         assert is_installed(project), f'Please install {project}'
         package_path = get_installed_path(project)
         for model_cfg in BaseInferencer._get_models_from_package(package_path):
@@ -628,9 +628,10 @@ class BaseInferencer(metaclass=InferencerMeta):
             assert default_scope is not None, (
                 'scope should be initialized if you want '
                 'to load config from metafile.')
-        assert scope in PKG2PROJECT, (
-            f'{scope} not in {PKG2PROJECT}!, please make pass a valid scope.')
-        project = PKG2PROJECT[scope]
+        assert scope in MODULE2PACKAGE, (
+            f'{scope} not in {MODULE2PACKAGE}!, please make pass a valid '
+            'scope.')
+        project = MODULE2PACKAGE[scope]
         assert is_installed(project), (f'Please install {project}')
         package_path = get_installed_path(project)
 

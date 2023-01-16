@@ -3,7 +3,9 @@ import os.path as osp
 from unittest.mock import ANY, MagicMock
 
 import pytest
+import torch
 
+from mmengine.fileio import load
 from mmengine.fileio.file_client import HardDiskBackend
 from mmengine.hooks import LoggerHook
 
@@ -178,12 +180,17 @@ class TestLoggerHook:
         runner.log_dir = tmp_path
         runner.timestamp = 'test_after_test_epoch'
         runner.log_processor.get_log_after_epoch = MagicMock(
-            return_value=(dict(a=1, b=2), 'log_str'))
+            return_value=(
+                dict(a=1, b=2, c={'list': [1, 2]}, d=torch.tensor([1, 2, 3])),
+                'log_str'))
         logger_hook.before_run(runner)
         logger_hook.after_test_epoch(runner)
         runner.log_processor.get_log_after_epoch.assert_called()
         runner.logger.info.assert_called()
         osp.isfile(osp.join(runner.log_dir, 'test_after_test_epoch.json'))
+        json_content = load(
+            osp.join(runner.log_dir, 'test_after_test_epoch.json'))
+        assert json_content == dict(a=1, b=2, c={'list': [1, 2]}, d=[1, 2, 3])
 
     def test_after_val_iter(self):
         logger_hook = LoggerHook()
