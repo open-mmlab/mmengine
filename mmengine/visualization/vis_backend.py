@@ -661,8 +661,7 @@ class MLFlowVisBackend(BaseVisBackend):
         try:
             import mlflow
         except ImportError:
-            raise ImportError('Please install mlflow to use '
-                              'MLFlowVisBackend.')  # type: ignore
+            raise ImportError('Please run "pip install mlflow" to install mlflow')  # type: ignore
         self._mlflow = mlflow
 
         if self._exp_name is not None:
