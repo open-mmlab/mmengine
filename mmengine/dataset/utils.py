@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
+import warnings
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -13,8 +14,11 @@ from mmengine.structures import BaseDataElement
 COLLATE_FUNCTIONS = Registry('Collate Functions')
 
 
-def worker_init_fn(worker_id: int, num_workers: int, rank: int,
-                   seed: int) -> None:
+def worker_init_fn(worker_id: int,
+                   num_workers: int,
+                   rank: int,
+                   seed: int,
+                   disable_subprocess_warning: bool = False) -> None:
     """This function will be called on each worker subprocess after seeding and
     before data loading.
 
@@ -31,6 +35,8 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     torch.manual_seed(worker_seed)
+    if disable_subprocess_warning and worker_id != 0:
+        warnings.simplefilter('ignore')
 
 
 @COLLATE_FUNCTIONS.register_module()
