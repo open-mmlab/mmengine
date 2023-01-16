@@ -56,14 +56,14 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
         # If a timeout (in seconds) is specified, it must be converted
         # to a timedelta object before forwarding the call to
         # the respective backend, because they expect a timedelta object.
-        if type(timeout) == int:
+        try:
             kwargs['timeout'] = datetime.timedelta(seconds=kwargs['timeout'])
-        else:
+        except TypeError as exception:
             raise TypeError(
                 f'Timeout for distributed training must be provided as '
-                f"integer (timeout in seconds), but we've received the type "
+                f"timeout in seconds, but we've received the type "
                 f'{type(timeout)}. Please specify the timeout like this: '
-                f"dist_cfg=dict(backend='nccl', timeout=1800)")
+                f"dist_cfg=dict(backend='nccl', timeout=1800)") from exception
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
     if launcher == 'pytorch':
