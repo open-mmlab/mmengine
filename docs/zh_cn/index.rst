@@ -58,6 +58,7 @@
    design/evaluation.md
    design/visualization.md
    design/logging.md
+   design/infer.md
 
 .. toctree::
    :maxdepth: 1
