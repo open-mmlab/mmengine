@@ -57,7 +57,7 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
         # to a timedelta object before forwarding the call to
         # the respective backend, because they expect a timedelta object.
         try:
-            kwargs['timeout'] = datetime.timedelta(seconds=kwargs['timeout'])
+            kwargs['timeout'] = datetime.timedelta(seconds=timeout)
         except TypeError as exception:
             raise TypeError(
                 f'Timeout for distributed training must be provided as '
