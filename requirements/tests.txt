@@ -1,5 +1,4 @@
 coverage
 lmdb
 parameterized
-pre-commit
 pytest
