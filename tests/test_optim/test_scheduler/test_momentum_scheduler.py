@@ -6,12 +6,15 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+# yapf: disable
 from mmengine.optim.scheduler import (ConstantMomentum,
                                       CosineAnnealingMomentum,
                                       CosineRestartMomentum,
                                       ExponentialMomentum, LinearMomentum,
                                       MultiStepMomentum, PolyMomentum,
-                                      StepMomentum, _ParamScheduler)
+                                      ReduceOnPlateauMomentum, StepMomentum,
+                                      _ParamScheduler)
+# yapf: enable
 from mmengine.testing import assert_allclose
 
 
@@ -213,9 +216,16 @@ class TestMomentumScheduler(TestCase):
                               schedulers,
                               targets,
                               epochs=10,
-                              param_name='momentum'):
+                              param_name='momentum',
+                              step_kwargs=None):
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
+        if step_kwargs is None:
+            step_kwarg = [{} for _ in range(len(schedulers))]
+            step_kwargs = [step_kwarg for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
+            assert len(step_kwargs[0]) == len(schedulers)
         for epoch in range(epochs):
             for param_group, target in zip(optimizer.param_groups, targets):
                 assert_allclose(
@@ -235,7 +245,10 @@ class TestMomentumScheduler(TestCase):
                                param_group['betas'][0]),
                         atol=1e-5,
                         rtol=0)
-            [scheduler.step() for scheduler in schedulers]
+            [
+                scheduler.step(**step_kwargs[epoch][i])
+                for i, scheduler in enumerate(schedulers)
+            ]
 
     def test_step_scheduler(self):
         # momentum = 0.05     if epoch < 3
@@ -437,11 +450,204 @@ class TestMomentumScheduler(TestCase):
         self._test_scheduler_value(
             self.optimizer_with_betas, scheduler, targets, epochs=10)
 
-    def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
+    def test_reduce_on_plateau_scheduler(self):
+        # inherit _ParamScheduler but not call super().__init__(),
+        # so some codes need to be retested
+
+        # Test error in __init__ method
+        with self.assertRaises(ValueError):
+            optimizer = optim.ASGD(
+                self.model.parameters(),
+                lr=0.01,
+            )
+            ReduceOnPlateauMomentum(optimizer)
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, begin=10, end=5)
+        with self.assertRaises(AssertionError):
+            ReduceOnPlateauMomentum(self.optimizer, by_epoch=False)
+
+        for last_step in (1.5, -2):
+            with self.assertRaises(AssertionError):
+                ReduceOnPlateauMomentum(self.optimizer, last_step=last_step)
+
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, factor=2.0)
+        ReduceOnPlateauMomentum(self.optimizer, min_value=[0.1, 0.1])
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(
+                self.optimizer, min_value=[0.1, 0.1, 0.1, 0.1])
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, threshold=-1.0)
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, rule='foo')
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauMomentum(self.optimizer, threshold_rule='foo')
+
+        # Test error in step method
+        scheduler = ReduceOnPlateauMomentum(self.optimizer, monitor='loss')
+        assert scheduler.step() is None
+
+        with self.assertRaises(TypeError):
+            scheduler.step(('foo', 1.0))
+
+        metrics = dict(loss_foo=1.0)
+        with self.assertRaises(KeyError):
+            scheduler.step(metrics)
+
+        # Test scheduler value
+        def _test_value(epochs, targets, metrics_list, optimizer, monitor,
+                        rule, factor, patience, threshold, threshold_rule,
+                        cooldown, min_value):
+            lr = 0.01
+            momentum = 0.05
+            weight_decay = 5e-4
+            scheduler = ReduceOnPlateauMomentum(
+                optimizer,
+                monitor=monitor,
+                rule=rule,
+                factor=factor,
+                patience=patience,
+                threshold=threshold,
+                threshold_rule=threshold_rule,
+                cooldown=cooldown,
+                min_value=min_value,
+            )
+            self._test_scheduler_value(
+                optimizer,
+                scheduler,
+                targets,
+                epochs=epochs,
+                step_kwargs=metrics_list)
+
+            # reset the state of optimizers
+            self.optimizer = optim.SGD([{
+                'params': self.model.conv1.parameters()
+            }, {
+                'params': self.model.conv2.parameters(),
+                'momentum': momentum * self.layer2_mult
+            }],
+                                       lr=lr,
+                                       momentum=momentum,
+                                       weight_decay=weight_decay)
+            self.optimizer_with_betas = optim.Adam(
+                [{
+                    'params': self.model.conv1.parameters()
+                }, {
+                    'params': self.model.conv2.parameters(),
+                    'betas': (momentum * self.layer2_mult, 0.999)
+                }],
+                lr=lr,
+                betas=(momentum, 0.999),
+                weight_decay=weight_decay)
+
+        epochs = 10
+        factor = 0.1
+        cooldown = 1
+        patience = 2
+
+        # rule(less) and threshold_rule(rel)
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, self.optimizer, monitor,
+                    rule, factor, patience, threshold, threshold_rule,
+                    cooldown, 0.0)
+
+        # rule(less) and threshold_rule(abs)
+        rule, threshold_rule = 'less', 'abs'
+        threshold = 0.9
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, self.optimizer, monitor,
+                    rule, factor, patience, threshold, threshold_rule,
+                    cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(rel)
+        rule, threshold_rule = 'greater', 'rel'
+        threshold = 0.01
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, self.optimizer, monitor,
+                    rule, factor, patience, threshold, threshold_rule,
+                    cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(abs)
+        rule, threshold_rule = 'greater', 'abs'
+        threshold = 0.9
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, self.optimizer, monitor,
+                    rule, factor, patience, threshold, threshold_rule,
+                    cooldown, 0.0)
+
+        # change min_value
+        min_value = 0.01
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets_1 = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, min_value,
+            min_value
+        ]
+        single_targets_2 = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.05, 0.05]
+        targets = [single_targets_1, single_targets_2]
+
+        _test_value(epochs, targets, metrics_list, self.optimizer, monitor,
+                    rule, factor, patience, threshold, threshold_rule,
+                    cooldown, min_value)
+
+        _test_value(epochs, targets, metrics_list, self.optimizer_with_betas,
+                    monitor, rule, factor, patience, threshold, threshold_rule,
+                    cooldown, min_value)
+
+    def _check_scheduler_state_dict(self,
+                                    construct,
+                                    construct2,
+                                    epochs=10,
+                                    step_kwargs=None):
+        if step_kwargs is None:
+            step_kwargs = [{} for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
         scheduler = construct()
-        for _ in range(epochs):
+        for epoch in range(epochs):
             scheduler.optimizer.step()
-            scheduler.step()
+            scheduler.step(**step_kwargs[epoch])
         scheduler_copy = construct2()
         scheduler_copy.load_state_dict(scheduler.state_dict())
         for key in scheduler.__dict__.keys():
@@ -505,6 +711,35 @@ class TestMomentumScheduler(TestCase):
                 restart_weights=[1, 0.5],
                 eta_min=0),
             epochs=10)
+
+    def test_reduce_on_plateau_scheduler_state_dict(self):
+        epochs = 10
+        metrics_list = [dict(metrics=dict(loss=1.0)) for _ in range(epochs)]
+        self._check_scheduler_state_dict(
+            lambda: ReduceOnPlateauMomentum(
+                self.optimizer,
+                monitor='loss',
+                rule='less',
+                factor=0.01,
+                patience=5,
+                threshold=1e-4,
+                threshold_rule='rel',
+                cooldown=0,
+                min_value=0.0,
+                eps=1e-8),
+            lambda: ReduceOnPlateauMomentum(
+                self.optimizer,
+                monitor='loss_foo',
+                rule='greater',
+                factor=0.05,
+                patience=10,
+                threshold=1e-5,
+                threshold_rule='abs',
+                cooldown=5,
+                min_value=0.1,
+                eps=1e-9),
+            epochs=epochs,
+            step_kwargs=metrics_list)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):
         # use Linear in the first 5 epochs and then use MultiStep
