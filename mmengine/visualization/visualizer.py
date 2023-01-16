@@ -2,6 +2,8 @@
 import os.path as osp
 import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
+from pathlib import Path
+from matplotlib.font_manager import FontProperties
 
 import cv2
 import numpy as np
@@ -399,6 +401,8 @@ class Visualizer(ManagerMixin):
             vertical_alignments: Union[str, List[str]] = 'top',
             horizontal_alignments: Union[str, List[str]] = 'left',
             font_families: Union[str, List[str]] = 'sans-serif',
+            font_properties: Optional[Union[str, Path, FontProperties, 
+                                List[str], List[Path], List[FontProperties]]] = None,
             bboxes: Optional[Union[dict, List[dict]]] = None) -> 'Visualizer':
         """Draw single or multiple text boxes.
 
@@ -441,6 +445,13 @@ class Visualizer(ManagerMixin):
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
                 or 'monospace'.  Defaults to 'sans-serif'.
+            font_properties (Union[str, Path, FontProperties, List[str], List[Path], 
+                List[FontProperties]], optional): The font properties of texts. 
+                If a `str`, it is interpreted as a fontconfig pattern parsed by `.FontProperties`.
+                If a `pathlib.Path`, it is interpreted as the absolute path to a font file.
+                ``font_properties`` can have the same length with texts or just single value. 
+                If ``font_properties`` is single value, all the texts will 
+                have the same font properties. Defaults to None.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -489,6 +500,14 @@ class Visualizer(ManagerMixin):
                               num_text)
         font_families = value2list(font_families, str, num_text)
 
+        if font_properties is None:
+            font_properties = [None for _ in range(num_text)]  # type: ignore
+        else:
+            check_type_and_length('font_properties', font_properties, 
+                              (str, Path, FontProperties, list), num_text)
+            font_properties = value2list(font_properties, 
+                              (str, Path, FontProperties), num_text)
+
         if bboxes is None:
             bboxes = [None for _ in range(num_text)]  # type: ignore
         else:
@@ -505,6 +524,7 @@ class Visualizer(ManagerMixin):
                 verticalalignment=vertical_alignments[i],
                 horizontalalignment=horizontal_alignments[i],
                 family=font_families[i],
+                fontproperties=font_properties[i],
                 color=colors[i])
         return self
 
