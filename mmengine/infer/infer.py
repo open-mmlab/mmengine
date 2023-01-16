@@ -40,7 +40,7 @@ class InferencerMeta(ABCMeta):
     """Check the legality of the inferencer.
 
     All Inferencers should not define duplicated keys for
-    ``preprocess_kwargs``,``forward_kwargs``, ``visualize_kwargs`` and
+    ``preprocess_kwargs``, ``forward_kwargs``, ``visualize_kwargs`` and
     ``postprocess_kwargs``.
     """
 
@@ -87,7 +87,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     - ``forward_kwargs``: The keys of the kwargs that will be passed to
       :meth:`forward`
     - ``visualize_kwargs``: The keys of the kwargs that will be passed to
-      :meth:visualize
+      :meth:`visualize`
     - ``postprocess_kwargs``: The keys of the kwargs that will be passed to
       :meth:`postprocess`
 
@@ -108,7 +108,7 @@ class BaseInferencer(metaclass=InferencerMeta):
     - _init_pipeline: Return a callable object to preprocess the input data.
     - visualize: Visualize the results returned by :meth:`forward`.
     - postprocess: Postprocess the results returned by :meth:`forward` and
-      :meth:`visualzie`.
+      :meth:`visualize`.
 
     Args:
         model (str, optional): Path to the config file or the model name
