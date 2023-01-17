@@ -392,17 +392,18 @@ class Visualizer(ManagerMixin):
 
     @master_only
     def draw_texts(
-            self,
-            texts: Union[str, List[str]],
-            positions: Union[np.ndarray, torch.Tensor],
-            font_sizes: Optional[Union[int, List[int]]] = None,
-            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            vertical_alignments: Union[str, List[str]] = 'top',
-            horizontal_alignments: Union[str, List[str]] = 'left',
-            font_families: Union[str, List[str]] = 'sans-serif',
-            font_properties: Optional[Union[FontProperties,
-                                            List[FontProperties]]] = None,
-            bboxes: Optional[Union[dict, List[dict]]] = None) -> 'Visualizer':
+        self,
+        texts: Union[str, List[str]],
+        positions: Union[np.ndarray, torch.Tensor],
+        font_sizes: Optional[Union[int, List[int]]] = None,
+        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        vertical_alignments: Union[str, List[str]] = 'top',
+        horizontal_alignments: Union[str, List[str]] = 'left',
+        font_families: Union[str, List[str]] = 'sans-serif',
+        bboxes: Optional[Union[dict, List[dict]]] = None,
+        font_properties: Optional[Union[FontProperties,
+                                        List[FontProperties]]] = None
+    ) -> 'Visualizer':
         """Draw single or multiple text boxes.
 
         Args:
@@ -444,12 +445,6 @@ class Visualizer(ManagerMixin):
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
                 or 'monospace'.  Defaults to 'sans-serif'.
-            font_properties (Union[FontProperties, List[FontProperties]],
-                optional): The font properties of texts. FontProperties is
-                a `font_manager.FontProperties()` object. ``font_properties``
-                can have the same length with texts or just single value.
-                If ``font_properties`` is single value, all the texts will
-                have the same font properties. Defaults to None.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -457,6 +452,12 @@ class Visualizer(ManagerMixin):
                 the texts will have the same bbox. Reference to
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
+            font_properties (Union[FontProperties, List[FontProperties]],
+                optional): The font properties of texts. FontProperties is
+                a `font_manager.FontProperties()` object. ``font_properties``
+                can have the same length with texts or just single value.
+                If ``font_properties`` is single value, all the texts will
+                have the same font properties. Defaults to None.
         """
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
