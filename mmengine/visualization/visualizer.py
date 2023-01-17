@@ -1,13 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import warnings
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
+
+if TYPE_CHECKING:
+    from matplotlib.font_manager import FontProperties
 
 import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.font_manager import FontProperties
 
 from mmengine.config import Config
 from mmengine.dist import master_only
@@ -401,8 +403,8 @@ class Visualizer(ManagerMixin):
         horizontal_alignments: Union[str, List[str]] = 'left',
         font_families: Union[str, List[str]] = 'sans-serif',
         bboxes: Optional[Union[dict, List[dict]]] = None,
-        font_properties: Optional[Union[FontProperties,
-                                        List[FontProperties]]] = None
+        font_properties: Optional[Union['FontProperties',
+                                        List['FontProperties']]] = None
     ) -> 'Visualizer':
         """Draw single or multiple text boxes.
 
@@ -465,6 +467,7 @@ class Visualizer(ManagerMixin):
                 all the texts will have the same font properties.
                 Defaults to None.
         """
+        from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
