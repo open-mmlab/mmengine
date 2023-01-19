@@ -1,5 +1,40 @@
 # Changelog of v0.x
 
+## v0.5.0 (01/19/2023)
+
+# Highlights
+
+- Provide general inference interface in `BaseInferencer`
+- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
+- Deprecate support for python3.6
+
+### New Features & Enhancements
+
+- Deprecate support for python3.6 by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/863
+- Support non-scalar type metric value. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/827
+- Remove unnecessary calls and lazily import to speed import performance by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/837
+- Support `ReduceOnPlateauParamScheduler` by @LEFTeyex in https://github.com/open-mmlab/mmengine/pull/819
+- Disable warning of subprocess launched by dataloader by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/870
+- Add `BaseInferencer` to MMEngine by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/874
+
+### Bug Fixes
+
+- Fix support for Ascend device by @wangjiangben-hw in https://github.com/open-mmlab/mmengine/pull/847
+- Fix `Config` cannot parse base config when there is `.` in tmp path, etc. `tmp/a.b/c` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/856
+- Fix unloaded weights will not be initialized when using `PretrainedIinit` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/764
+- Fix error package name defined in `PKG2PROJECT` by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/872
+
+### Docs
+
+- Fix typos in `advanced_tutorials/logging.md` by @RangeKing in https://github.com/open-mmlab/mmengine/pull/861
+- Translate CN `train_a_gan` to EN by @yaqi0510 in https://github.com/open-mmlab/mmengine/pull/860
+- Update `fileio.md` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/869
+- Add Chinese documentation for inferencer. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/884
+
+### Contributors
+
+A total of 8 developers contributed to this release. Thanks @LEFTeyex, @RangeKing, @yaqi0510, @Xiangxu-0103, @wangjiangben-hw, @mzr1996, @zhouzaida, @HAOCHENYE.
+
 ## v0.4.0 (12/28/2022)
 
 ### Highlights
