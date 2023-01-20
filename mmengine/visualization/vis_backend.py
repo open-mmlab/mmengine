@@ -634,10 +634,12 @@ class MLFlowVisBackend(BaseVisBackend):
         save_dir (str): The root directory to save the files
             produced by the backend.
         exp_name (str, optional): The experiment name. Default to None.
+        run_name (str, optional): The run name. Default to None.
         tags (dict, optional): The tags to be added to the experiment.
             Default to None.
         params (dict, optional): The params to be added to the experiment.
             Default to None.
+        tracking_uri (str, optional): The tracking uri. Default to None.
         log_model (bool, optional): Whether to log the model. Default to True.
     """
 
