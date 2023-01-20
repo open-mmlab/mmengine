@@ -3,6 +3,7 @@ import copy
 import functools
 import os
 import os.path as osp
+import sys
 import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Optional, Sequence, Union
@@ -644,14 +645,18 @@ class MLFlowVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  exp_name: Optional[str] = None,
+                 run_name: Optional[str] = None,
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
+                 tracking_uri: Optional[str] = None,
                  log_model: bool = True):
         super().__init__(save_dir)
         self._exp_name = exp_name
+        self._run_name = run_name
         self._tags = tags
         self._params = params
         self._log_model = log_model
+        self._tracking_uri = tracking_uri
 
     def _init_env(self):
         """Setup env for MLFlow."""
@@ -661,11 +666,23 @@ class MLFlowVisBackend(BaseVisBackend):
         try:
             import mlflow
         except ImportError:
-            raise ImportError('Please run "pip install mlflow" to install mlflow')  # type: ignore
+            raise ImportError(
+                'Please run "pip install mlflow" to install mlflow'
+            )  # type: ignore
         self._mlflow = mlflow
 
-        if self._exp_name is not None:
-            self._mlflow.set_experiment(self._exp_name)
+        if self._tracking_uri is not None:
+            self._mlflow.set_tracking_uri(self._tracking_uri)
+        else:
+            self._mlflow.set_tracking_uri(f'file://{self._save_dir}')
+
+        if self._mlflow.get_experiment_by_name(self._exp_name) is None:
+            self._mlflow.create_experiment(self._exp_name)
+
+        self._mlflow.set_experiment(self._exp_name)
+
+        if self._run_name is not None:
+            self._mlflow.set_tag('mlflow.runName', self._run_name)
         if self._tags is not None:
             self._mlflow.set_tags(self._tags)
         if self._params is not None:
@@ -684,7 +701,8 @@ class MLFlowVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        return super().add_config(config, **kwargs)
+        self.cfg = config
+        self._mlflow.log_params(self._flatten(self.cfg))
 
     @force_init_env
     def add_image(self,
@@ -738,6 +756,32 @@ class MLFlowVisBackend(BaseVisBackend):
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step)
 
-    def close(self):
-        """close an opened mlflow object."""
-        pass  # mlflow will close automatically
+    def close(self) -> None:
+        """Close the mlflow."""
+        work_dir = self.cfg.work_dir
+
+        for file in os.listdir(work_dir):
+            if file.endswith('.pth'):
+                self._mlflow.log_artifact(os.path.join(work_dir, file))
+            elif file == 'last_checkpoint':
+                self._mlflow.log_artifact(os.path.join(work_dir, file))
+            elif file.startswith(os.path.basename(os.path.normpath(work_dir))):
+                self._mlflow.log_artifact(os.path.join(work_dir, file))
+
+        if hasattr(self, '_mlflow'):
+            self._mlflow.end_run()
+
+    def _flatten(self, d, parent_key='', sep='.') -> dict:
+        if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+            from collections.abc import MutableMapping
+        else:
+            from collections import MutableMapping
+
+        items = []
+        for k, v in d.items():
+            new_key = parent_key + sep + k if parent_key else k
+            if isinstance(v, MutableMapping):
+                items.extend(self._flatten(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
