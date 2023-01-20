@@ -58,7 +58,7 @@ Major features:
 
 ## What's New
 
-v0.5.0 was released in 2023-01-19.
+v0.5.0 was released in 2023-01-20.
 
 Highlights:
 
