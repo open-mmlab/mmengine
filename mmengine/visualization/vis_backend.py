@@ -3,7 +3,6 @@ import copy
 import functools
 import os
 import os.path as osp
-import sys
 import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Optional, Sequence, Union
