@@ -777,7 +777,7 @@ class MLFlowVisBackend(BaseVisBackend):
         else:
             from collections import MutableMapping
 
-        items:Any = []
+        items: Any = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, MutableMapping):
