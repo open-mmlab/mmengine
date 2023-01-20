@@ -66,7 +66,7 @@ Highlights:
 - Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
 - Deprecate support for Python3.6
 
-Read [Changelog](./docs/en/notes/changelog.md#v050-01192023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
 
 ## Installation
 

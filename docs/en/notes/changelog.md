@@ -1,6 +1,6 @@
 # Changelog of v0.x
 
-## v0.5.0 (01/19/2023)
+## v0.5.0 (01/20/2023)
 
 # Highlights
 
