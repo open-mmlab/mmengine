@@ -772,10 +772,7 @@ class MLFlowVisBackend(BaseVisBackend):
             self._mlflow.end_run()
 
     def _flatten(self, d, parent_key='', sep='.') -> dict:
-        if sys.version_info.major == 3 and sys.version_info.minor >= 10:
-            from collections.abc import MutableMapping
-        else:
-            from collections import MutableMapping
+        from collections.abc import MutableMapping
 
         items: Any = []
         for k, v in d.items():
