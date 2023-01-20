@@ -286,7 +286,9 @@ class TestMLFlowVisBackend:
         shutil.rmtree('temp_dir')
 
     def test_close(self):
+        cfg = Config(dict(work_dir='temp_dir'))
         mlflow_vis_backend = MLFlowVisBackend('temp_dir')
         mlflow_vis_backend._init_env()
+        mlflow_vis_backend.add_config(cfg)
         mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
