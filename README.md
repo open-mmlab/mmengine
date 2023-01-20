@@ -62,9 +62,9 @@ v0.5.0 was released in 2023-01-19.
 
 Highlights:
 
-- Provide general inference interface in `BaseInferencer`
+- Add `BaseInferencer` to provide a general inference interface
 - Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
-- Deprecate support for python3.6
+- Deprecate support for Python3.6
 
 Read [Changelog](./docs/en/notes/changelog.md#v050-01192023) for more details.
 

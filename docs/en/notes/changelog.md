@@ -4,18 +4,18 @@
 
 # Highlights
 
-- Provide general inference interface in `BaseInferencer`
+- Add `BaseInferencer` to provide a general inference interface
 - Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
-- Deprecate support for python3.6
+- Deprecate support for Python3.6
 
 ### New Features & Enhancements
 
-- Deprecate support for python3.6 by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/863
-- Support non-scalar type metric value. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/827
+- Deprecate support for Python3.6 by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/863
+- Support non-scalar type metric value by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/827
 - Remove unnecessary calls and lazily import to speed import performance by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/837
 - Support `ReduceOnPlateauParamScheduler` by @LEFTeyex in https://github.com/open-mmlab/mmengine/pull/819
 - Disable warning of subprocess launched by dataloader by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/870
-- Add `BaseInferencer` to MMEngine by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/874
+- Add `BaseInferencer` to provide general interface by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/874
 
 ### Bug Fixes
 
@@ -29,7 +29,7 @@
 - Fix typos in `advanced_tutorials/logging.md` by @RangeKing in https://github.com/open-mmlab/mmengine/pull/861
 - Translate CN `train_a_gan` to EN by @yaqi0510 in https://github.com/open-mmlab/mmengine/pull/860
 - Update `fileio.md` by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/869
-- Add Chinese documentation for inferencer. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/884
+- Add Chinese documentation for `inferencer`. by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/884
 
 ### Contributors
 
