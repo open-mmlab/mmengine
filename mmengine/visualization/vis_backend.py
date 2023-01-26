@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import warnings
 from abc import ABCMeta, abstractmethod
+from collections.abc import MutableMapping
 from typing import Any, Callable, Optional, Sequence, Union
 
 import cv2
@@ -640,7 +641,7 @@ class MLFlowVisBackend(BaseVisBackend):
         params (dict, optional): The params to be added to the experiment.
             Default to None.
         tracking_uri (str, optional): The tracking uri. Default to None.
-        log_model (bool, optional): Whether to log the model. Default to True.
+        log_artifact (bool, optional): Whether to log the artifact. Default to False.
     """
 
     def __init__(self,
@@ -650,14 +651,14 @@ class MLFlowVisBackend(BaseVisBackend):
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
                  tracking_uri: Optional[str] = None,
-                 log_model: bool = True):
+                 log_artifact: bool = False):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
         self._tags = tags
         self._params = params
-        self._log_model = log_model
         self._tracking_uri = tracking_uri
+        self._log_artifact = log_artifact
 
     def _init_env(self):
         """Setup env for MLFlow."""
@@ -719,7 +720,7 @@ class MLFlowVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self._mlflow.log_image(name, image, step)
+        self._mlflow.log_image(image, name)
 
     @force_init_env
     def add_scalar(self,
@@ -754,27 +755,26 @@ class MLFlowVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        for key, value in scalar_dict.items():
-            self.add_scalar(key, value, step)
+        self._mlflow.log_metrics(scalar_dict, step)
 
     def close(self) -> None:
         """Close the mlflow."""
-        work_dir = self.cfg.work_dir
+        if self._log_artifact:
+            work_dir = self.cfg.work_dir
 
-        for file in os.listdir(work_dir):
-            if file.endswith('.pth'):
-                self._mlflow.log_artifact(os.path.join(work_dir, file))
-            elif file == 'last_checkpoint':
-                self._mlflow.log_artifact(osp.join(work_dir, file))
-            elif file.startswith(osp.basename(osp.normpath(work_dir))):
-                self._mlflow.log_artifact(osp.join(work_dir, file))
+            for file in os.listdir(work_dir):
+                if file.endswith('.pth'):
+                    self._mlflow.log_artifact(os.path.join(work_dir, file))
+                elif file == 'last_checkpoint':
+                    self._mlflow.log_artifact(osp.join(work_dir, file))
+                elif file.startswith(osp.basename(osp.normpath(work_dir))):
+                    self._mlflow.log_artifact(osp.join(work_dir, file))
 
         if hasattr(self, '_mlflow'):
             self._mlflow.end_run()
 
     def _flatten(self, d, parent_key='', sep='.') -> dict:
-        from collections.abc import MutableMapping
-
+        """Flatten the dict."""
         items: Any = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
