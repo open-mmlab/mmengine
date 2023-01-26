@@ -765,9 +765,9 @@ class MLFlowVisBackend(BaseVisBackend):
             if file.endswith('.pth'):
                 self._mlflow.log_artifact(os.path.join(work_dir, file))
             elif file == 'last_checkpoint':
-                self._mlflow.log_artifact(os.path.join(work_dir, file))
-            elif file.startswith(os.path.basename(os.path.normpath(work_dir))):
-                self._mlflow.log_artifact(os.path.join(work_dir, file))
+                self._mlflow.log_artifact(osp.join(work_dir, file))
+            elif file.startswith(osp.basename(osp.normpath(work_dir))):
+                self._mlflow.log_artifact(osp.join(work_dir, file))
 
         if hasattr(self, '_mlflow'):
             self._mlflow.end_run()
