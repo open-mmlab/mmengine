@@ -776,11 +776,11 @@ class MLFlowVisBackend(BaseVisBackend):
 
     def _flatten(self, d, parent_key='', sep='.') -> dict:
         """Flatten the dict."""
-        items: Any = []
+        items = dict()
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, MutableMapping):
-                items.extend(self._flatten(v, new_key, sep=sep).items())
+                items.update(self._flatten(v, new_key, sep=sep))
             else:
-                items.append((new_key, v))
-        return dict(items)
+                items[new_key] = v
+        return items
