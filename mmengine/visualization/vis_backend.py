@@ -706,6 +706,7 @@ class MLFlowVisBackend(BaseVisBackend):
         """
         self.cfg = config
         self._mlflow.log_params(self._flatten(self.cfg))
+        self._mlflow.log_text(self.cfg.pretty_text, 'config.py')
 
     @force_init_env
     def add_image(self,
@@ -781,6 +782,13 @@ class MLFlowVisBackend(BaseVisBackend):
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, MutableMapping):
                 items.update(self._flatten(v, new_key, sep=sep))
+            elif isinstance(v, list):
+                if any(isinstance(x, dict) for x in v):
+                    for i, x in enumerate(v):
+                        items.update(
+                            self._flatten(x, new_key + sep + str(i), sep=sep))
+                else:
+                    items[new_key] = v
             else:
                 items[new_key] = v
         return items
