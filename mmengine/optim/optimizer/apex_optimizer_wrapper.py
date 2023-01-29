@@ -23,12 +23,11 @@ class ApexOptimWrapper(OptimWrapper):
     ``OptimWrapper``, so ``ApexOptimWrapper`` can be used in the same way
     as ``OptimWrapper``.
 
-    Warnings:
+    Warning:
         ``ApexOptimWrapper`` requires `nvidia apex
         <https://github.com/NVIDIA/apex>`_
 
     Args:
-
         opt_level (str, default="O1"): Pure or mixed precision
             optimization level. Accepted values are "O0", "O1", "O2",
             and "O3".

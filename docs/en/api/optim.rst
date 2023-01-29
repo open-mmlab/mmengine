@@ -20,6 +20,7 @@ Optimizer
    :template: classtemplate.rst
 
     AmpOptimWrapper
+    ApexOptimWrapper
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
