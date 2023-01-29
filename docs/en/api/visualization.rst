@@ -31,6 +31,6 @@ visualization Backend
 
    BaseVisBackend
    LocalVisBackend
-   MLFlowVisBackend
+   MLflowVisBackend
    TensorboardVisBackend
    WandbVisBackend

@@ -614,17 +614,17 @@ class TensorboardVisBackend(BaseVisBackend):
 
 
 @VISBACKENDS.register_module()
-class MLFlowVisBackend(BaseVisBackend):
-    """MLFlow visualization backend class.
+class MLflowVisBackend(BaseVisBackend):
+    """MLflow visualization backend class.
 
     It can write images, config, scalars, etc. to a
     mlflow file.
 
     Examples:
-        >>> from mmengine.visualization import MLFlowVisBackend
+        >>> from mmengine.visualization import MLflowVisBackend
         >>> from mmengine import Config
         >>> import numpy as np
-        >>> vis_backend = MLFlowVisBackend(save_dir='temp_dir')
+        >>> vis_backend = MLflowVisBackend(save_dir='temp_dir')
         >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> vis_backend.add_image('img', img)
         >>> vis_backend.add_scalar('mAP', 0.6)
@@ -663,7 +663,7 @@ class MLFlowVisBackend(BaseVisBackend):
         self._log_artifact = log_artifact
 
     def _init_env(self):
-        """Setup env for MLFlow."""
+        """Setup env for MLflow."""
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
 
@@ -695,7 +695,7 @@ class MLFlowVisBackend(BaseVisBackend):
     @property  # type: ignore
     @force_init_env
     def experiment(self):
-        """Return MLFlow object."""
+        """Return MLflow object."""
         return self._mlflow
 
     @force_init_env
