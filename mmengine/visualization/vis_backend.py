@@ -635,7 +635,7 @@ class MLflowVisBackend(BaseVisBackend):
     Args:
         save_dir (str): The root directory to save the files
             produced by the backend.
-        exp_name (str, optional): The experiment name. Default to None.
+        exp_name (str, optional): The experiment name. Default to 'Default'.
         run_name (str, optional): The run name. Default to None.
         tags (dict, optional): The tags to be added to the experiment.
             Default to None.
@@ -648,7 +648,7 @@ class MLflowVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
-                 exp_name: Optional[str] = None,
+                 exp_name: Optional[str] = 'Default',
                  run_name: Optional[str] = None,
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
@@ -678,7 +678,8 @@ class MLflowVisBackend(BaseVisBackend):
         if self._tracking_uri is not None:
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
-            self._mlflow.set_tracking_uri(f'file://{self._save_dir}')
+            self._mlflow.set_tracking_uri(
+                f'file://{os.path.abspath(self._save_dir)}')
 
         if self._mlflow.get_experiment_by_name(self._exp_name) is None:
             self._mlflow.create_experiment(self._exp_name)
@@ -723,7 +724,7 @@ class MLflowVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self._mlflow.log_image(image, name)
+        self._mlflow.log_image(image, f'{name}.png')
 
     @force_init_env
     def add_scalar(self,

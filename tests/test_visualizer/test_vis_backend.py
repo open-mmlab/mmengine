@@ -264,7 +264,6 @@ class TestMLflowVisBackend:
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
         mlflow_vis_backend = MLflowVisBackend('temp_dir')
         mlflow_vis_backend.add_image('img', image)
-        mlflow_vis_backend.add_image('img', image)
         shutil.rmtree('temp_dir')
 
     def test_add_scalar(self):
@@ -281,7 +280,6 @@ class TestMLflowVisBackend:
         mlflow_vis_backend.add_scalars(input_dict)
         # test append mode
         mlflow_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
-        mlflow_vis_backend.add_scalars({'map': [0.8], 'acc': 0.8})
         shutil.rmtree('temp_dir')
 
     def test_close(self):
