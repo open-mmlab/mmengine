@@ -762,15 +762,7 @@ class MLFlowVisBackend(BaseVisBackend):
     def close(self) -> None:
         """Close the mlflow."""
         if self._log_artifact:
-            work_dir = self.cfg.work_dir
-
-            for file in os.listdir(work_dir):
-                if file.endswith('.pth'):
-                    self._mlflow.log_artifact(os.path.join(work_dir, file))
-                elif file == 'last_checkpoint':
-                    self._mlflow.log_artifact(osp.join(work_dir, file))
-                elif file.startswith(osp.basename(osp.normpath(work_dir))):
-                    self._mlflow.log_artifact(osp.join(work_dir, file))
+            self._mlflow.log_artifacts(self.cfg.work_dir)
 
         if hasattr(self, '_mlflow'):
             self._mlflow.end_run()
