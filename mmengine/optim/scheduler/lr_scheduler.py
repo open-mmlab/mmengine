@@ -1,11 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.registry import PARAM_SCHEDULERS
+# yapf: disable
 from .param_scheduler import (ConstantParamScheduler,
                               CosineAnnealingParamScheduler,
                               CosineRestartParamScheduler,
                               ExponentialParamScheduler, LinearParamScheduler,
                               MultiStepParamScheduler, OneCycleParamScheduler,
-                              PolyParamScheduler, StepParamScheduler)
+                              PolyParamScheduler,
+                              ReduceOnPlateauParamScheduler,
+                              StepParamScheduler)
+
+# yapf: enable
 
 
 class LRSchedulerMixin:
@@ -307,6 +312,63 @@ class CosineRestartLR(LRSchedulerMixin, CosineRestartParamScheduler):
             Defaults to 0.
         end (int): Step at which to stop updating the parameters.
             Defaults to INF.
+        last_step (int): The index of last step. Used for resume without
+            state dict. Defaults to -1.
+        by_epoch (bool): Whether the scheduled parameters are updated by
+            epochs. Defaults to True.
+        verbose (bool): Whether to print the value for each update.
+            Defaults to False.
+    """
+
+
+@PARAM_SCHEDULERS.register_module()
+class ReduceOnPlateauLR(LRSchedulerMixin, ReduceOnPlateauParamScheduler):
+    """Reduce the learning rate of each parameter group when a metric has
+    stopped improving. Models often benefit from reducing the learning rate by
+    a factor of 2-10 once learning stagnates. This scheduler reads a metrics
+    quantity and if no improvement is seen for a ``patience`` number of epochs,
+    the learning rate is reduced.
+
+    Args:
+        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+            optimizer.
+        monitor (str): Key name of the value to monitor in metrics dict.
+        rule (str): One of `less`, `greater`. In `less` rule, learning rate
+            will be reduced when the quantity monitored has stopped
+            decreasing; in `greater` rule it will be reduced when the
+            quantity monitored has stopped increasing. Defaults to 'less'.
+            The ``rule`` is the renaming of ``mode`` in pytorch.
+        factor (float): Factor by which the learning rate will be
+            reduced. new_param = param * factor. Defaults to 0.1.
+        patience (int): Number of epochs with no improvement after
+            which learning rate will be reduced. For example, if
+            ``patience = 2``, then we will ignore the first 2 epochs
+            with no improvement, and will only decrease the learning rate after
+            the 3rd epoch if the monitor value still hasn't improved then.
+            Defaults to 10.
+        threshold (float): Threshold for measuring the new optimum,
+            to only focus on significant changes. Defaults to 1e-4.
+        threshold_rule (str): One of `rel`, `abs`. In `rel` rule,
+            dynamic_threshold = best * ( 1 + threshold ) in 'greater'
+            rule or best * ( 1 - threshold ) in `less` rule.
+            In `abs` rule, dynamic_threshold = best + threshold in
+            `greater` rule or best - threshold in `less` rule.
+            Defaults to 'rel'.
+        cooldown (int): Number of epochs to wait before resuming
+            normal operation after learning rate has been reduced.
+            Defaults to 0.
+        min_value (float or list[float]): A scalar or a sequence of scalars.
+            A lower bound on the learning rate of each parameter group
+            respectively. Defaults to 0. .
+        eps (float): Minimal decay applied to learning rate. If the difference
+            between new and old learning rate is smaller than eps, the update
+            is ignored. Defaults to 1e-8.
+        begin (int): Step at which to start triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to 0.
+        end (int): Step at which to stop triggering the scheduler
+            to monitor in val within the interval calculated
+            according to epoch of training. Defaults to INF.
         last_step (int): The index of last step. Used for resume without
             state dict. Defaults to -1.
         by_epoch (bool): Whether the scheduled parameters are updated by

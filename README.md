@@ -58,15 +58,15 @@ Major features:
 
 ## What's New
 
-v0.4.0 was released in 2022-12-28.
+v0.5.0 was released in 2023-01-20.
 
 Highlights:
 
-- Registry supports importing modules automatically
-- Upgrade the documentation and provide the **English documentation**
-- Provide `ProfileHook` to profile the training/testing process
+- Add `BaseInferencer` to provide a general inference interface
+- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
+- Deprecate support for Python3.6
 
-Read [Changelog](./docs/en/notes/changelog.md#v040-12282022) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
 
 ## Installation
 
