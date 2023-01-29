@@ -244,7 +244,6 @@ class TestWandbVisBackend:
 
 
 class TestMLflowVisBackend:
-    sys.modules['mlflow'] = MagicMock()
 
     def test_init(self):
         MLflowVisBackend('temp_dir')
