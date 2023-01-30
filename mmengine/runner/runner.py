@@ -638,7 +638,7 @@ class Runner:
 
         mp_cfg: dict = env_cfg.get('mp_cfg', {})
         set_multi_processing(**mp_cfg, distributed=self.distributed)
-        self.env_variable(env_cfg.get('env_variable', {}))
+        self.set_env_variable(env_cfg.get('env_variable_cfg', {}))
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
@@ -688,20 +688,20 @@ class Runner:
             deterministic=deterministic,
             diff_rank_seed=diff_rank_seed)
 
-    def env_variable(self, env_cfg: dict) -> None:
+    def set_env_variable(self, env_variable_cfg: dict) -> None:
         """Set environment variable of third-party to by config.
 
         Args:
-            env_cfg (dict): Contains key-value pair which defines the names
-                of environment variable of third-party variables and
+            env_variable_cfg (dict): Contains key-value pair which defines the
+                names of environment variable of third-party variables and
                 corresponding values.
 
         Examples:
-            >>> env_cfg = dict(
+            >>> env_variable_cfg = dict(
             >>>    torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction=True
             >>>    )
         """  # noqa: E501
-        for attributes, value in env_cfg.items():
+        for attributes, value in env_variable_cfg.items():
             assert isinstance(attributes, str)
             if attributes in [
                     'torch.backends.cudnn.benchmark',
@@ -711,7 +711,7 @@ class Runner:
                     '`torch.backends.cudnn.benchmark` or '
                     '`torch.backends.cudnn.deterministic` '
                     'should be set in `randomness_cfg`, rather than '
-                    '`env_cfg`')
+                    '`env_variable_cfg`')
             attributes_list = attributes.split('.')
             root_modules = attributes_list[0]
             modules = attributes_list[1:-1]
@@ -728,7 +728,7 @@ class Runner:
                 setattr(target_module, attribute, value)
             except Exception:
                 raise ValueError(
-                    f'{attributes} defined in `env_variable` does '
+                    f'{attributes} defined in `env_variable_cfg` does '
                     'not exit!')
 
     def build_logger(self,
