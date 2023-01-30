@@ -68,7 +68,7 @@ class Registry:
         >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
 
     More advanced usages can be found at
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
+    https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html.
     """
 
     def __init__(self,
@@ -142,6 +142,8 @@ class Registry:
             >>>     pass
             >>> # The scope of ``ResNet`` will be ``mmdet``.
         """
+        from ..logging import print_log
+
         # `sys._getframe` returns the frame object that many calls below the
         # top of the stack. The call stack for `infer_scope` can be listed as
         # follow:
@@ -157,6 +159,13 @@ class Registry:
             # use "None" to handle some cases which can not infer the scope
             # like initializing Registry in interactive mode
             scope = 'None'
+            print_log(
+                'use "None" to handle some cases which can not infer the '
+                'scope when scope is not specified. You can disable this '
+                'warning by passing a "scope" argument to Registry like '
+                '`Registry(name, scope="toy")`',
+                logger='current',
+                level=logging.WARNING)
         return scope
 
     @staticmethod
