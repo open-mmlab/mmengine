@@ -110,7 +110,7 @@ def is_abs(path: str) -> bool:
     Returns:
         bool: whether path is an absolute path.
     """
-    if osp.isabs(path) or path.startswith(('http', 'https', 's3')):
+    if osp.isabs(path) or path.startswith(('http://', 'https://', 's3://')):
         return True
     else:
         return False

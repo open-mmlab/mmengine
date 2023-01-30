@@ -1,12 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
+import logging
 from collections import OrderedDict
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
-import torch
 
 from mmengine.utils import ManagerMixin
 from .history_buffer import HistoryBuffer
+from .logger import print_log
+
+if TYPE_CHECKING:
+    import torch
 
 
 class MessageHub(ManagerMixin):
@@ -96,7 +101,7 @@ class MessageHub(ManagerMixin):
 
     def update_scalar(self,
                       key: str,
-                      value: Union[int, float, np.ndarray, torch.Tensor],
+                      value: Union[int, float, np.ndarray, 'torch.Tensor'],
                       count: int = 1,
                       resumed: bool = True) -> None:
         """Update :attr:_log_scalars.
@@ -118,7 +123,8 @@ class MessageHub(ManagerMixin):
             keys cannot be modified repeatedly'
 
         Note:
-            resumed cannot be set repeatedly for the same key.
+            The ``resumed`` argument needs to be consistent for the same
+            ``key``.
 
         Args:
             key (str): Key of ``HistoryBuffer``.
@@ -146,6 +152,10 @@ class MessageHub(ManagerMixin):
         be ``dict(value=xxx) or dict(value=xxx, count=xxx)``. Item in
         ``log_dict`` has the same resume option.
 
+        Note:
+            The ``resumed`` argument needs to be consistent for the same
+            ``log_dict``.
+
         Args:
             log_dict (str): Used for batch updating :attr:`_log_scalars`.
             resumed (bool): Whether all ``HistoryBuffer`` referred in
@@ -163,19 +173,18 @@ class MessageHub(ManagerMixin):
         assert isinstance(log_dict, dict), ('`log_dict` must be a dict!, '
                                             f'but got {type(log_dict)}')
         for log_name, log_val in log_dict.items():
-            self._set_resumed_keys(log_name, resumed)
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
                     f'value must be defined in {log_val}'
                 count = self._get_valid_value(log_val.get('count', 1))
-                checked_value = self._get_valid_value(log_val['value'])
+                value = log_val['value']
             else:
                 count = 1
-                checked_value = self._get_valid_value(log_val)
+                value = log_val
             assert isinstance(count,
                               int), ('The type of count must be int. but got '
                                      f'{type(count): {count}}')
-            self.update_scalar(log_name, checked_value, count)
+            self.update_scalar(log_name, value, count, resumed)
 
     def update_info(self, key: str, value: Any, resumed: bool = True) -> None:
         """Update runtime information.
@@ -184,7 +193,8 @@ class MessageHub(ManagerMixin):
         time calling ``update_info``.
 
         Note:
-            resumed cannot be set repeatedly for the same key.
+            The ``resumed`` argument needs to be consistent for the same
+            ``key``.
 
         Examples:
             >>> message_hub = MessageHub()
@@ -197,8 +207,31 @@ class MessageHub(ManagerMixin):
                 could be resumed.
         """
         self._set_resumed_keys(key, resumed)
-        self._resumed_keys[key] = resumed
         self._runtime_info[key] = value
+
+    def update_info_dict(self, info_dict: dict, resumed: bool = True) -> None:
+        """Update runtime information with dictionary.
+
+        The key corresponding runtime information will be overwritten each
+        time calling ``update_info``.
+
+        Note:
+            The ``resumed`` argument needs to be consistent for the same
+            ``info_dict``.
+
+        Examples:
+            >>> message_hub = MessageHub()
+            >>> message_hub.update_info({'iter': 100})
+
+        Args:
+            info_dict (str): Runtime information dictionary.
+            resumed (bool): Whether the corresponding ``HistoryBuffer``
+                could be resumed.
+        """
+        assert isinstance(info_dict, dict), ('`log_dict` must be a dict!, '
+                                             f'but got {type(info_dict)}')
+        for key, value in info_dict.items():
+            self.update_info(key, value, resumed=resumed)
 
     def _set_resumed_keys(self, key: str, resumed: bool) -> None:
         """Set corresponding resumed keys.
@@ -217,7 +250,7 @@ class MessageHub(ManagerMixin):
         else:
             assert self._resumed_keys[key] == resumed, \
                 f'{key} used to be {self._resumed_keys[key]}, but got ' \
-                '{resumed} now. resumed keys cannot be modified repeatedly'
+                '{resumed} now. resumed keys cannot be modified repeatedly.'
 
     @property
     def log_scalars(self) -> OrderedDict:
@@ -281,7 +314,7 @@ class MessageHub(ManagerMixin):
         return self._runtime_info[key]
 
     def _get_valid_value(
-            self, value: Union[torch.Tensor, np.ndarray, int, float]) \
+            self, value: Union['torch.Tensor', np.ndarray, int, float]) \
             -> Union[int, float]:
         """Convert value to python built-in type.
 
@@ -294,27 +327,116 @@ class MessageHub(ManagerMixin):
         if isinstance(value, np.ndarray):
             assert value.size == 1
             value = value.item()
-        elif isinstance(value, torch.Tensor):
-            assert value.numel() == 1
-            value = value.item()
+        elif isinstance(value, (int, float)):
+            value = value
         else:
-            assert isinstance(value, (int, float))
+            # check whether value is torch.Tensor but don't want
+            # to import torch in this file
+            assert hasattr(value, 'numel') and value.numel() == 1
+            value = value.item()
         return value  # type: ignore
 
-    def __getstate__(self):
-        for key in list(self._log_scalars.keys()):
-            assert key in self._resumed_keys, (
-                f'Cannot found {key} in {self}._resumed_keys, '
-                'please make sure you do not change the _resumed_keys '
-                'outside the class')
-            if not self._resumed_keys[key]:
-                self._log_scalars.pop(key)
+    def state_dict(self) -> dict:
+        """Returns a dictionary containing log scalars, runtime information and
+        resumed keys, which should be resumed.
 
-        for key in list(self._runtime_info.keys()):
-            assert key in self._resumed_keys, (
-                f'Cannot found {key} in {self}._resumed_keys, '
-                'please make sure you do not change the _resumed_keys '
-                'outside the class')
-            if not self._resumed_keys[key]:
-                self._runtime_info.pop(key)
-        return self.__dict__
+        The returned ``state_dict`` can be loaded by :meth:`load_state_dict`.
+
+        Returns:
+            dict: A dictionary contains ``log_scalars``, ``runtime_info`` and
+            ``resumed_keys``.
+        """
+        saved_scalars = OrderedDict()
+        saved_info = OrderedDict()
+
+        for key, value in self._log_scalars.items():
+            if self._resumed_keys.get(key, False):
+                saved_scalars[key] = copy.deepcopy(value)
+
+        for key, value in self._runtime_info.items():
+            if self._resumed_keys.get(key, False):
+                try:
+                    saved_info[key] = copy.deepcopy(value)
+                except:  # noqa: E722
+                    print_log(
+                        f'{key} in message_hub cannot be copied, '
+                        f'just return its reference. ',
+                        logger='current',
+                        level=logging.WARNING)
+                    saved_info[key] = value
+        return dict(
+            log_scalars=saved_scalars,
+            runtime_info=saved_info,
+            resumed_keys=self._resumed_keys)
+
+    def load_state_dict(self, state_dict: Union['MessageHub', dict]) -> None:
+        """Loads log scalars, runtime information and resumed keys from
+        ``state_dict`` or ``message_hub``.
+
+        If ``state_dict`` is a dictionary returned by :meth:`state_dict`, it
+        will only make copies of data which should be resumed from the source
+        ``message_hub``.
+
+        If ``state_dict`` is a ``message_hub`` instance, it will make copies of
+        all data from the source message_hub. We suggest to load data from
+        ``dict`` rather than a ``MessageHub`` instance.
+
+        Args:
+            state_dict (dict or MessageHub): A dictionary contains key
+                ``log_scalars`` ``runtime_info`` and ``resumed_keys``, or a
+                MessageHub instance.
+        """
+        if isinstance(state_dict, dict):
+            for key in ('log_scalars', 'runtime_info', 'resumed_keys'):
+                assert key in state_dict, (
+                    'The loaded `state_dict` of `MessageHub` must contain '
+                    f'key: `{key}`')
+            # The old `MessageHub` could save non-HistoryBuffer `log_scalars`,
+            # therefore the loaded `log_scalars` needs to be filtered.
+            for key, value in state_dict['log_scalars'].items():
+                if not isinstance(value, HistoryBuffer):
+                    print_log(
+                        f'{key} in message_hub is not HistoryBuffer, '
+                        f'just skip resuming it.',
+                        logger='current',
+                        level=logging.WARNING)
+                    continue
+                self.log_scalars[key] = value
+
+            for key, value in state_dict['runtime_info'].items():
+                try:
+                    self._runtime_info[key] = copy.deepcopy(value)
+                except:  # noqa: E722
+                    print_log(
+                        f'{key} in message_hub cannot be copied, '
+                        f'just return its reference.',
+                        logger='current',
+                        level=logging.WARNING)
+                    self._runtime_info[key] = value
+
+            for key, value in state_dict['resumed_keys'].items():
+                if key not in set(self.log_scalars.keys()) | \
+                        set(self._runtime_info.keys()):
+                    print_log(
+                        f'resumed key: {key} is not defined in message_hub, '
+                        f'just skip resuming this key.',
+                        logger='current',
+                        level=logging.WARNING)
+                    continue
+                elif not value:
+                    print_log(
+                        f'Although resumed key: {key} is False, {key} '
+                        'will still be loaded this time. This key will '
+                        'not be saved by the next calling of '
+                        '`MessageHub.state_dict()`',
+                        logger='current',
+                        level=logging.WARNING)
+                self._resumed_keys[key] = value
+
+        # Since some checkpoints saved serialized `message_hub` instance,
+        # `load_state_dict` support loading `message_hub` instance for
+        # compatibility
+        else:
+            self._log_scalars = copy.deepcopy(state_dict._log_scalars)
+            self._runtime_info = copy.deepcopy(state_dict._runtime_info)
+            self._resumed_keys = copy.deepcopy(state_dict._resumed_keys)

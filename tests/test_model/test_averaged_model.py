@@ -93,6 +93,13 @@ class TestAveragedModel(TestCase):
             model = torch.nn.Sequential(
                 torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
             ExponentialMovingAverage(model, momentum=3)
+
+        with self.assertWarnsRegex(
+                Warning,
+                'The value of momentum in EMA is usually a small number'):
+            model = torch.nn.Sequential(
+                torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+            ExponentialMovingAverage(model, momentum=0.9)
         # test EMA
         model = torch.nn.Sequential(
             torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))

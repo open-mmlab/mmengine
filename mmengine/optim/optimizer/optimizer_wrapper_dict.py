@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -46,7 +46,10 @@ class OptimWrapperDict(OptimWrapper):
                 f'but got {key}: {type(value)}')
         self.optim_wrappers = optim_wrapper_dict
 
-    def update_params(self, loss: torch.Tensor) -> None:
+    def update_params(self,
+                      loss: torch.Tensor,
+                      step_kwargs: Optional[Dict] = None,
+                      zero_kwargs: Optional[Dict] = None) -> None:
         """Update all optimizer wrappers would lead to a duplicate backward
         errors, and OptimWrapperDict does not know which optimizer wrapper
         should be updated.
@@ -57,7 +60,7 @@ class OptimWrapperDict(OptimWrapper):
         raise NotImplementedError('`update_params` should be called by each '
                                   'optimizer separately`')
 
-    def backward(self, loss: torch.Tensor) -> None:
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Since OptimWrapperDict doesn't know which optimizer wrapper's
         backward method should be called (``loss_scaler`` maybe different in
         different :obj:AmpOptimWrapper), this method is not implemented.
@@ -68,13 +71,13 @@ class OptimWrapperDict(OptimWrapper):
         raise NotImplementedError('`backward` should be called by each '
                                   'optimizer separately`')
 
-    def step(self) -> None:
+    def step(self, **kwargs) -> None:
         """Since the backward method is not implemented, the step should not be
         implemented either."""
         raise NotImplementedError('`step` should be called by each '
                                   'optimizer separately`')
 
-    def zero_grad(self) -> None:
+    def zero_grad(self, **kwargs) -> None:
         """Set the gradients of all optimizer wrappers to zero."""
         for optim_wrapper in self.optim_wrappers.values():
             optim_wrapper.zero_grad()

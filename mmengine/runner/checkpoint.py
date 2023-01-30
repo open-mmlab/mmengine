@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import io
+import logging
 import os
 import os.path as osp
 import pkgutil
@@ -8,17 +9,18 @@ import warnings
 from collections import OrderedDict
 from importlib import import_module
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import torch
-import torchvision
 
 import mmengine
 from mmengine.dist import get_dist_info
-from mmengine.fileio import FileClient
+from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
-from mmengine.model import is_model_wrapper
-from mmengine.utils import load_url, mkdir_or_exist
+from mmengine.logging import print_log
+from mmengine.model import BaseTTAModel, is_model_wrapper
+from mmengine.utils import deprecated_function, digit_version, mkdir_or_exist
+from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
 # downloaded from Internet. If it is not set, as a workaround, using
@@ -71,7 +73,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
     def load(module, prefix=''):
         # recursively check parallel module in case that the model has a
         # complicated structure, e.g., nn.Module(nn.Module(DDP))
-        if is_model_wrapper(module):
+        if is_model_wrapper(module) or isinstance(module, BaseTTAModel):
             module = module.module
         local_metadata = {} if metadata is None else metadata.get(
             prefix[:-1], {})
@@ -104,21 +106,64 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         err_msg = '\n'.join(err_msg)
         if strict:
             raise RuntimeError(err_msg)
-        elif logger is not None:
-            logger.warning(err_msg)
         else:
-            print(err_msg)
+            print_log(err_msg, logger=logger, level=logging.WARNING)
 
 
 def get_torchvision_models():
-    model_urls = dict()
-    for _, name, ispkg in pkgutil.walk_packages(torchvision.models.__path__):
-        if ispkg:
-            continue
-        _zoo = import_module(f'torchvision.models.{name}')
-        if hasattr(_zoo, 'model_urls'):
-            _urls = getattr(_zoo, 'model_urls')
-            model_urls.update(_urls)
+    import torchvision
+    if digit_version(torchvision.__version__) < digit_version('0.13.0a0'):
+        model_urls = dict()
+        # When the version of torchvision is lower than 0.13, the model url is
+        # not declared in `torchvision.model.__init__.py`, so we need to
+        # iterate through `torchvision.models.__path__` to get the url for each
+        # model.
+        for _, name, ispkg in pkgutil.walk_packages(
+                torchvision.models.__path__):
+            if ispkg:
+                continue
+            _zoo = import_module(f'torchvision.models.{name}')
+            if hasattr(_zoo, 'model_urls'):
+                _urls = getattr(_zoo, 'model_urls')
+                model_urls.update(_urls)
+    else:
+        # Since torchvision bumps to v0.13, the weight loading logic,
+        # model keys and model urls have been changed. Here the URLs of old
+        # version is loaded to avoid breaking back compatibility. If the
+        # torchvision version>=0.13.0, new URLs will be added. Users can get
+        # the resnet50 checkpoint by setting 'resnet50.imagent1k_v1',
+        # 'resnet50' or 'ResNet50_Weights.IMAGENET1K_V1' in the config.
+        json_path = osp.join(mmengine.__path__[0], 'hub/torchvision_0.12.json')
+        model_urls = mmengine.load(json_path)
+        if digit_version(torchvision.__version__) < digit_version('0.14.0a0'):
+            weights_list = [
+                cls for cls_name, cls in torchvision.models.__dict__.items()
+                if cls_name.endswith('_Weights')
+            ]
+        else:
+            weights_list = [
+                torchvision.models.get_model_weights(model)
+                for model in torchvision.models.list_models(torchvision.models)
+            ]
+
+        for cls in weights_list:
+            # The name of torchvision model weights classes ends with
+            # `_Weights` such as `ResNet18_Weights`. However, some model weight
+            # classes, such as `MNASNet0_75_Weights` does not have any urls in
+            # torchvision 0.13.0 and cannot be iterated. Here we simply check
+            # `DEFAULT` attribute to ensure the class is not empty.
+            if not hasattr(cls, 'DEFAULT'):
+                continue
+            # Since `cls.DEFAULT` can not be accessed by iterating cls, we set
+            # default urls explicitly.
+            cls_name = cls.__name__
+            cls_key = cls_name.replace('_Weights', '').lower()
+            model_urls[f'{cls_key}.default'] = cls.DEFAULT.url
+            for weight_enum in cls:
+                cls_key = cls_name.replace('_Weights', '').lower()
+                cls_key = f'{cls_key}.{weight_enum.name.lower()}'
+                model_urls[cls_key] = weight_enum.url
+
     return model_urls
 
 
@@ -234,15 +279,14 @@ class CheckpointLoader:
                 return cls._schemes[p]
 
     @classmethod
-    def load_checkpoint(cls, filename, map_location=None, logger=None):
+    def load_checkpoint(cls, filename, map_location=None, logger='current'):
         """load checkpoint through URL scheme path.
 
         Args:
             filename (str): checkpoint file name with given prefix
             map_location (str, optional): Same as :func:`torch.load`.
                 Default: None
-            logger (:mod:`logging.Logger`, optional): The logger for message.
-                Default: None
+            logger (str): The logger for message. Defaults to 'current'.
 
         Returns:
             dict or OrderedDict: The loaded checkpoint.
@@ -250,9 +294,10 @@ class CheckpointLoader:
 
         checkpoint_loader = cls._get_checkpoint_loader(filename)
         class_name = checkpoint_loader.__name__
-        mmengine.print_log(
-            f'{class_name[10:]} loads checkpoint from path: {filename}',
-            logger)
+        print_log(
+            f'Loads checkpoint by {class_name[10:]} backend from path: '
+            f'{filename}',
+            logger=logger)
         return checkpoint_loader(filename, map_location)
 
 
@@ -275,7 +320,10 @@ def load_from_local(filename, map_location):
 
 
 @CheckpointLoader.register_scheme(prefixes=('http://', 'https://'))
-def load_from_http(filename, map_location=None, model_dir=None):
+def load_from_http(filename,
+                   map_location=None,
+                   model_dir=None,
+                   progress=os.isatty(0)):
     """load checkpoint through HTTP or HTTPS scheme path. In distributed
     setting, this function only download checkpoint at local rank 0.
 
@@ -292,12 +340,18 @@ def load_from_http(filename, map_location=None, model_dir=None):
     rank, world_size = get_dist_info()
     if rank == 0:
         checkpoint = load_url(
-            filename, model_dir=model_dir, map_location=map_location)
+            filename,
+            model_dir=model_dir,
+            map_location=map_location,
+            progress=progress)
     if world_size > 1:
         torch.distributed.barrier()
         if rank > 0:
             checkpoint = load_url(
-                filename, model_dir=model_dir, map_location=map_location)
+                filename,
+                model_dir=model_dir,
+                map_location=map_location,
+                progress=progress)
     return checkpoint
 
 
@@ -333,7 +387,8 @@ def load_from_pavi(filename, map_location=None):
     return checkpoint
 
 
-@CheckpointLoader.register_scheme(prefixes=r'(\S+\:)?s3://')
+@CheckpointLoader.register_scheme(
+    prefixes=[r'(\S+\:)?s3://', r'(\S+\:)?petrel://'])
 def load_from_ceph(filename, map_location=None, backend='petrel'):
     """load checkpoint through the file path prefixed with s3.  In distributed
     setting, this function download ckpt at all ranks to different temporary
@@ -342,35 +397,15 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     Args:
         filename (str): checkpoint file path with s3 prefix
         map_location (str, optional): Same as :func:`torch.load`.
-        backend (str, optional): The storage backend type. Options are 'ceph',
-            'petrel'. Default: 'petrel'.
-
-    .. warning::
-        :class:`mmengine.fileio.file_client.CephBackend` will be deprecated,
-        please use :class:`mmengine.fileio.file_client.PetrelBackend` instead.
+        backend (str, optional): The storage backend type.
+            Defaults to 'petrel'.
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    allowed_backends = ['ceph', 'petrel']
-    if backend not in allowed_backends:
-        raise ValueError(f'Load from Backend {backend} is not supported.')
-
-    if backend == 'ceph':
-        warnings.warn(
-            'CephBackend will be deprecated, please use PetrelBackend instead',
-            DeprecationWarning)
-
-    # CephClient and PetrelBackend have the same prefix 's3://' and the latter
-    # will be chosen as default. If PetrelBackend can not be instantiated
-    # successfully, the CephClient will be chosen.
-    try:
-        file_client = FileClient(backend=backend)
-    except ImportError:
-        allowed_backends.remove(backend)
-        file_client = FileClient(backend=allowed_backends[0])
-
-    with io.BytesIO(file_client.get(filename)) as buffer:
+    file_backend = get_file_backend(
+        filename, backend_args={'backend': backend})
+    with io.BytesIO(file_backend.get(filename)) as buffer:
         checkpoint = torch.load(buffer, map_location=map_location)
     return checkpoint
 
@@ -592,6 +627,11 @@ def weights_to_cpu(state_dict):
     return state_dict_cpu
 
 
+@deprecated_function(
+    since='0.3.0',
+    removed_in='0.5.0',
+    instructions='`_save_to_state_dict` will be deprecated in the future, '
+    'please use `nn.Module._save_to_state_dict` directly.')
 def _save_to_state_dict(module, destination, prefix, keep_vars):
     """Saves module state to `destination` dictionary.
 
@@ -609,8 +649,7 @@ def _save_to_state_dict(module, destination, prefix, keep_vars):
         if param is not None:
             destination[prefix + name] = param if keep_vars else param.detach()
     for name, buf in module._buffers.items():
-        # remove check of _non_persistent_buffers_set to allow nn.BatchNorm2d
-        if buf is not None:
+        if buf is not None and name not in module._non_persistent_buffers_set:
             destination[prefix + name] = buf if keep_vars else buf.detach()
 
 
@@ -645,7 +684,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
         destination._metadata = OrderedDict()
     destination._metadata[prefix[:-1]] = local_metadata = dict(
         version=module._version)
-    _save_to_state_dict(module, destination, prefix, keep_vars)
+    module._save_to_state_dict(destination, prefix, keep_vars)
     for name, child in module._modules.items():
         if child is not None:
             get_state_dict(
@@ -657,7 +696,10 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
     return destination
 
 
-def save_checkpoint(checkpoint, filename, file_client_args=None):
+def save_checkpoint(checkpoint,
+                    filename,
+                    file_client_args=None,
+                    backend_args=None):
     """Save checkpoint to file.
 
     Args:
@@ -665,13 +707,26 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
         filename (str): Checkpoint filename.
         file_client_args (dict, optional): Arguments to instantiate a
             FileClient. See :class:`mmengine.fileio.FileClient` for details.
-            Defaults to None.
+            Defaults to None. It will be deprecated in future. Please use
+            `backend_args` instead.
+        backend_args (dict, optional): Arguments to instantiate the
+            preifx of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
     """
-    if filename.startswith('pavi://'):
-        if file_client_args is not None:
+    if file_client_args is not None:
+        warnings.warn(
+            '"file_client_args" will be deprecated in future. '
+            'Please use "backend_args" instead', DeprecationWarning)
+        if backend_args is not None:
             raise ValueError(
-                'file_client_args should be "None" if filename starts with'
-                f'"pavi://", but got {file_client_args}')
+                '"file_client_args" and "backend_args" cannot be set '
+                'at the same time.')
+
+    if filename.startswith('pavi://'):
+        if file_client_args is not None or backend_args is not None:
+            raise ValueError(
+                '"file_client_args" or "backend_args" should be "None" if '
+                'filename starts with "pavi://"')
         try:
             from pavi import exception, modelcloud
         except ImportError:
@@ -692,12 +747,18 @@ def save_checkpoint(checkpoint, filename, file_client_args=None):
             model.create_file(checkpoint_file, name=model_name)
     else:
         file_client = FileClient.infer_client(file_client_args, filename)
+        if file_client_args is None:
+            file_backend = get_file_backend(
+                filename, backend_args=backend_args)
+        else:
+            file_backend = file_client
+
         with io.BytesIO() as f:
             torch.save(checkpoint, f)
-            file_client.put(f.getvalue(), filename)
+            file_backend.put(f.getvalue(), filename)
 
 
-def find_latest_checkpoint(path: str):
+def find_latest_checkpoint(path: str) -> Optional[str]:
     """Find the latest checkpoint from the given path.
 
     Refer to https://github.com/facebookresearch/fvcore/blob/main/fvcore/common/checkpoint.py  # noqa: E501
@@ -709,12 +770,11 @@ def find_latest_checkpoint(path: str):
         str or None: File path of the latest checkpoint.
     """
     save_file = osp.join(path, 'last_checkpoint')
-    try:
+    last_saved: Optional[str]
+    if os.path.exists(save_file):
         with open(save_file) as f:
             last_saved = f.read().strip()
-    except OSError:
-        raise OSError(
-            'last_checkpoint file does not exist, maybe because it has just'
-            ' been deleted by a separate process')
-
+    else:
+        print_log('Did not find last_checkpoint to be resumed.')
+        last_saved = None
     return last_saved

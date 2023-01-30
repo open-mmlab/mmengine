@@ -5,14 +5,12 @@ import os
 import os.path as osp
 import platform
 import shutil
-import sys
 import tempfile
 import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
 from collections import abc
-from importlib import import_module
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
@@ -20,7 +18,11 @@ from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
-from mmengine.utils import check_file_exist, import_modules_from_strings
+from mmengine.logging import print_log
+from mmengine.utils import (check_file_exist, get_installed_path,
+                            import_modules_from_strings, is_installed)
+from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
+                    _get_external_cfg_path, _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -85,7 +87,9 @@ def add_args(parser: ArgumentParser,
             parser.add_argument(
                 '--' + prefix + k, type=type(next(iter(v))), nargs='+')
         else:
-            print(f'cannot parse key {prefix + k} of type {type(v)}')
+            print_log(
+                f'cannot parse key {prefix + k} of type {type(v)}',
+                logger='current')
     return parser
 
 
@@ -142,7 +146,7 @@ class Config:
         if cfg_text:
             text = cfg_text
         elif filename:
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 text = f.read()
         else:
             text = ''
@@ -198,7 +202,7 @@ class Config:
         # `temp_file` is opened first in `tempfile.NamedTemporaryFile` and
         #  second in `Config.from_file`.
         # In addition, a named temporary file will be removed after closed.
-        # As a workround we set `delete=False` and close the temporary file
+        # As a workaround we set `delete=False` and close the temporary file
         # before opening again.
 
         with tempfile.NamedTemporaryFile(
@@ -259,7 +263,7 @@ class Config:
            cfg.work_dir # ". /work_dir/config_setting1"
 
 
-        For details, Please refer to docs/zh_cn/tutorials/config.md .
+        For details, Please refer to docs/zh_cn/advanced_tutorials/config.md .
 
         Args:
             filename (str): Filename of config.
@@ -380,7 +384,7 @@ class Config:
                 dir=temp_config_dir, suffix=fileExtname)
             if platform.system() == 'Windows':
                 temp_config_file.close()
-            temp_config_name = osp.basename(temp_config_file.name)
+
             # Substitute predefined variables
             if use_predefined_variables:
                 Config._substitute_predefined_vars(filename,
@@ -391,37 +395,70 @@ class Config:
             base_var_dict = Config._pre_substitute_base_vars(
                 temp_config_file.name, temp_config_file.name)
 
+            # Handle base files
+            base_cfg_dict = ConfigDict()
+            cfg_text_list = list()
+            for base_cfg_path in Config._get_base_files(temp_config_file.name):
+                base_cfg_path, scope = Config._get_cfg_path(
+                    base_cfg_path, filename)
+                _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
+                cfg_text_list.append(_cfg_text)
+                duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
+                if len(duplicate_keys) > 0:
+                    raise KeyError('Duplicate key is not allowed among bases. '
+                                   f'Duplicate keys: {duplicate_keys}')
+
+                # _dict_to_config_dict will do the following things:
+                # 1. Recursively converts ``dict`` to :obj:`ConfigDict`.
+                # 2. Set `_scope_` for the outer dict variable for the base
+                # config.
+                # 3. Set `scope` attribute for each base variable. Different
+                # from `_scope_`， `scope` is not a key of base dict,
+                # `scope` attribute will be parsed to key `_scope_` by
+                # function `_parse_scope` only if the base variable is
+                # accessed by the current config.
+                _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
+                base_cfg_dict.update(_cfg_dict)
+
             if filename.endswith('.py'):
-                temp_module_name = osp.splitext(temp_config_name)[0]
-                sys.path.insert(0, temp_config_dir)
-                Config._validate_py_syntax(filename)
-                mod = import_module(temp_module_name)
-                sys.path.pop(0)
+                with open(temp_config_file.name, encoding='utf-8') as f:
+                    codes = ast.parse(f.read())
+                    codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
+                codeobj = compile(codes, '', mode='exec')
+                # Support load global variable in nested function of the
+                # config.
+                global_locals_var = {'_base_': base_cfg_dict}
+                ori_keys = set(global_locals_var.keys())
+                eval(codeobj, global_locals_var, global_locals_var)
                 cfg_dict = {
-                    name: value
-                    for name, value in mod.__dict__.items()
-                    if not any((name.startswith('__'),
-                                isinstance(value, types.ModuleType),
-                                isinstance(value, types.FunctionType)))
+                    key: value
+                    for key, value in global_locals_var.items()
+                    if (key not in ori_keys and not key.startswith('__'))
                 }
-                # delete imported module
-                del sys.modules[temp_module_name]
             elif filename.endswith(('.yml', '.yaml', '.json')):
                 cfg_dict = load(temp_config_file.name)
             # close temp file
+            for key, value in list(cfg_dict.items()):
+                if isinstance(value, (types.FunctionType, types.ModuleType)):
+                    cfg_dict.pop(key)
             temp_config_file.close()
+
+            # If the current config accesses a base variable of base
+            # configs, The ``scope`` attribute of corresponding variable
+            # will be converted to the `_scope_`.
+            Config._parse_scope(cfg_dict)
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
             deprecation_info = cfg_dict.pop(DEPRECATION_KEY)
             warning_msg = f'The config file {filename} will be deprecated ' \
-                          'in the future.'
+                'in the future.'
             if 'expected' in deprecation_info:
                 warning_msg += f' Please use {deprecation_info["expected"]} ' \
-                               'instead.'
+                    'instead.'
             if 'reference' in deprecation_info:
                 warning_msg += ' More information can be found at ' \
-                               f'{deprecation_info["reference"]}'
+                    f'{deprecation_info["reference"]}'
             warnings.warn(warning_msg, DeprecationWarning)
 
         cfg_text = filename + '\n'
@@ -429,40 +466,160 @@ class Config:
             # Setting encoding explicitly to resolve coding issue on windows
             cfg_text += f.read()
 
-        if BASE_KEY in cfg_dict:
-            cfg_dir = osp.dirname(filename)
-            base_filename = cfg_dict.pop(BASE_KEY)
-            base_filename = base_filename if isinstance(
-                base_filename, list) else [base_filename]
+        # Substitute base variables from strings to their actual values
+        cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
+                                                base_cfg_dict)
+        cfg_dict.pop(BASE_KEY, None)
 
-            cfg_dict_list = list()
-            cfg_text_list = list()
-            for f in base_filename:
-                _cfg_dict, _cfg_text = Config._file2dict(
-                    osp.join(cfg_dir, str(f)))
-                cfg_dict_list.append(_cfg_dict)
-                cfg_text_list.append(_cfg_text)
+        cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
+        cfg_dict = {
+            k: v
+            for k, v in cfg_dict.items() if not k.startswith('__')
+        }
 
-            base_cfg_dict: dict = dict()
-            for c in cfg_dict_list:
-                duplicate_keys = base_cfg_dict.keys() & c.keys()
-                if len(duplicate_keys) > 0:
-                    raise KeyError('Duplicate key is not allowed among bases. '
-                                   f'Duplicate keys: {duplicate_keys}')
-                base_cfg_dict.update(c)
-
-            # Substitute base variables from strings to their actual values
-            cfg_dict = Config._substitute_base_vars(cfg_dict, base_var_dict,
-                                                    base_cfg_dict)
-
-            base_cfg_dict = Config._merge_a_into_b(cfg_dict, base_cfg_dict)
-            cfg_dict = base_cfg_dict
-
-            # merge cfg_text
-            cfg_text_list.append(cfg_text)
-            cfg_text = '\n'.join(cfg_text_list)
+        # merge cfg_text
+        cfg_text_list.append(cfg_text)
+        cfg_text = '\n'.join(cfg_text_list)
 
         return cfg_dict, cfg_text
+
+    @staticmethod
+    def _dict_to_config_dict(cfg: dict,
+                             scope: Optional[str] = None,
+                             has_scope=True):
+        """Recursively converts ``dict`` to :obj:`ConfigDict`.
+
+        Args:
+            cfg (dict): Config dict.
+            scope (str, optional): Scope of instance.
+            has_scope (bool): Whether to add `_scope_` key to config dict.
+
+        Returns:
+            ConfigDict: Converted dict.
+        """
+        # Only the outer dict with key `type` should have the key `_scope_`.
+        if isinstance(cfg, dict):
+            if has_scope and 'type' in cfg:
+                has_scope = False
+                if scope is not None and cfg.get('_scope_', None) is None:
+                    cfg._scope_ = scope  # type: ignore
+            cfg = ConfigDict(cfg)
+            dict.__setattr__(cfg, 'scope', scope)
+            for key, value in cfg.items():
+                cfg[key] = Config._dict_to_config_dict(
+                    value, scope=scope, has_scope=has_scope)
+        elif isinstance(cfg, tuple):
+            cfg = tuple(
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg)
+        elif isinstance(cfg, list):
+            cfg = [
+                Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
+                for _cfg in cfg
+            ]
+        return cfg
+
+    @staticmethod
+    def _parse_scope(cfg: dict) -> None:
+        """Adds ``_scope_`` to :obj:`ConfigDict` instance, which means a base
+        variable.
+
+        If the config dict already has the scope, scope will not be
+        overwritten.
+
+        Args:
+            cfg (dict): Config needs to be parsed with scope.
+        """
+        if isinstance(cfg, ConfigDict):
+            cfg._scope_ = cfg.scope
+        elif isinstance(cfg, (tuple, list)):
+            [Config._parse_scope(value) for value in cfg]
+        else:
+            return
+
+    @staticmethod
+    def _get_base_files(filename: str) -> list:
+        """Get the base config file.
+
+        Args:
+            filename (str): The config file.
+
+        Raises:
+            TypeError: Name of config file.
+
+        Returns:
+            list: A list of base config.
+        """
+        file_format = osp.splitext(filename)[1]
+        if file_format == '.py':
+            Config._validate_py_syntax(filename)
+            with open(filename, encoding='utf-8') as f:
+                codes = ast.parse(f.read()).body
+
+                def is_base_line(c):
+                    return (isinstance(c, ast.Assign)
+                            and isinstance(c.targets[0], ast.Name)
+                            and c.targets[0].id == BASE_KEY)
+
+                base_code = next((c for c in codes if is_base_line(c)), None)
+                if base_code is not None:
+                    base_code = ast.Expression(  # type: ignore
+                        body=base_code.value)  # type: ignore
+                    base_files = eval(compile(base_code, '', mode='eval'))
+                else:
+                    base_files = []
+        elif file_format in ('.yml', '.yaml', '.json'):
+            import mmengine
+            cfg_dict = mmengine.load(filename)
+            base_files = cfg_dict.get(BASE_KEY, [])
+        else:
+            raise TypeError('The config type should be py, json, yaml or '
+                            f'yml, but got {file_format}')
+        base_files = base_files if isinstance(base_files,
+                                              list) else [base_files]
+        return base_files
+
+    @staticmethod
+    def _get_cfg_path(cfg_path: str,
+                      filename: str) -> Tuple[str, Optional[str]]:
+        """Get the config path from the current or external package.
+
+        Args:
+            cfg_path (str): Relative path of config.
+            filename (str): The config file being parsed.
+
+        Returns:
+            Tuple[str, str or None]: Path and scope of config. If the config
+            is not an external config, the scope will be `None`.
+        """
+        if '::' in cfg_path:
+            # `cfg_path` startswith '::' means an external config path.
+            # Get package name and relative config path.
+            scope = cfg_path.partition('::')[0]
+            package, cfg_path = _get_package_and_cfg_path(cfg_path)
+
+            if not is_installed(package):
+                raise ModuleNotFoundError(
+                    f'{package} is not installed, please install {package} '
+                    f'manually')
+
+            # Get installed package path.
+            package_path = get_installed_path(package)
+            try:
+                # Get config path from meta file.
+                cfg_path = _get_external_cfg_path(package_path, cfg_path)
+            except ValueError:
+                # Since base config does not have a metafile, it should be
+                # concatenated with package path and relative config path.
+                cfg_path = _get_external_cfg_base_path(package_path, cfg_path)
+            except FileNotFoundError as e:
+                raise e
+            return cfg_path, scope
+        else:
+            # Get local config path.
+            cfg_dir = osp.dirname(filename)
+            cfg_path = osp.join(cfg_dir, cfg_path)
+            return cfg_path, None
 
     @staticmethod
     def _merge_a_into_b(a: dict,
@@ -733,23 +890,22 @@ class Config:
                 Defaults to True.
 
         Examples:
-            >>> options = {'model.backbone.depth': 50,
-            ...            'model.backbone.with_cp':True}
+            >>> from mmengine import Config
+            >>> #  Merge dictionary element
+            >>> options = {'model.backbone.depth': 50, 'model.backbone.with_cp': True}
             >>> cfg = Config(dict(model=dict(backbone=dict(type='ResNet'))))
             >>> cfg.merge_from_dict(options)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(
-            ...     model=dict(backbone=dict(depth=50, with_cp=True)))
-
+            >>> cfg._cfg_dict
+            {'model': {'backbone': {'type': 'ResNet', 'depth': 50, 'with_cp': True}}}
             >>> # Merge list element
-            >>> cfg = Config(dict(pipeline=[
-            ...     dict(type='LoadImage'), dict(type='LoadAnnotations')]))
+            >>> cfg = Config(
+            >>>     dict(pipeline=[dict(type='LoadImage'),
+            >>>                    dict(type='LoadAnnotations')]))
             >>> options = dict(pipeline={'0': dict(type='SelfLoadImage')})
             >>> cfg.merge_from_dict(options, allow_list_keys=True)
-            >>> cfg_dict = super(Config, self).__getattribute__('_cfg_dict')
-            >>> assert cfg_dict == dict(pipeline=[
-            ...     dict(type='SelfLoadImage'), dict(type='LoadAnnotations')])
-        """
+            >>> cfg._cfg_dict
+            {'pipeline': [{'type': 'SelfLoadImage'}, {'type': 'LoadAnnotations'}]}
+        """  # noqa: E501
         option_cfg_dict: dict = {}
         for full_key, v in options.items():
             d = option_cfg_dict
@@ -873,7 +1029,8 @@ class DictAction(Action):
             option_string (list[str], optional): Option string.
                 Defaults to None.
         """
-        options = {}
+        # Copied behavior from `argparse._ExtendAction`.
+        options = copy.copy(getattr(namespace, self.dest, None) or {})
         if values is not None:
             for kv in values:
                 key, val = kv.split('=', maxsplit=1)

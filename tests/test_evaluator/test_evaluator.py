@@ -1,13 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
+import unittest
 from typing import Dict, List, Optional, Sequence
 from unittest import TestCase
 
 import numpy as np
+import torch
 
-from mmengine.data import BaseDataElement
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
 from mmengine.registry import METRICS
+from mmengine.structures import BaseDataElement
 
 
 @METRICS.register_module()
@@ -39,9 +41,9 @@ class ToyMetric(BaseMetric):
 
     def process(self, data_batch, predictions):
         results = [{
-            'pred': pred.get('pred'),
-            'label': data['data_sample'].get('label')
-        } for pred, data in zip(predictions, data_batch)]
+            'pred': prediction['label'],
+            'label': prediction['label']
+        } for prediction in predictions]
         self.results.extend(results)
 
     def compute_metrics(self, results: List):
@@ -66,8 +68,7 @@ class NonPrefixedMetric(BaseMetric):
     """Evaluator with unassigned `default_prefix` to test the warning
     information."""
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[dict]) -> None:
+    def process(self, data_batch, predictions: Sequence[dict]) -> None:
         pass
 
     def compute_metrics(self, results: list) -> dict:
@@ -79,12 +80,13 @@ def generate_test_results(size, batch_size, pred, label):
     bs_residual = size % batch_size
     for i in range(num_batch):
         bs = bs_residual if i == num_batch - 1 else batch_size
-        data_batch = [
-            dict(
-                inputs=np.zeros((3, 10, 10)),
-                data_sample=BaseDataElement(label=label)) for _ in range(bs)
+        data_batch = {
+            'inputs': [np.zeros((3, 10, 10)) for _ in range(bs)],
+            'data_sample': [BaseDataElement(label=label) for _ in range(bs)]
+        }
+        predictions = [
+            BaseDataElement(pred=pred, label=label) for _ in range(bs)
         ]
-        predictions = [BaseDataElement(pred=pred) for _ in range(bs)]
         yield (data_batch, predictions)
 
 
@@ -97,9 +99,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
         self.assertAlmostEqual(metrics['Toy/accuracy'], 1.0)
@@ -122,9 +124,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
 
@@ -143,9 +145,9 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, predictions in generate_test_results(
+        for data_samples, outputs in generate_test_results(
                 size, batch_size, pred=1, label=1):
-            evaluator.process(data_samples, predictions)
+            evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         with self.assertRaisesRegex(
                 ValueError,
@@ -231,10 +233,51 @@ class TestEvaluator(TestCase):
 
         size = 10
 
+        all_data = [dict() for _ in range(10)]
+        all_predictions = [
+            BaseDataElement(pred=0, label=1) for _ in range(size)
+        ]
+        evaluator.offline_evaluate(all_predictions, all_data)
+
+        # Test with None data
+        all_data = None
+        evaluator.offline_evaluate(all_predictions, all_data)
+
+        # Different length of data and predictions will raise an error.
+        all_data = [dict() for _ in range(9)]
+        with self.assertRaisesRegex(
+                AssertionError,
+                'data_samples and data should have the same length'):
+            evaluator.offline_evaluate(all_predictions, all_data)
+
+    @unittest.skipUnless(torch.cuda.is_available(), 'can only run with gpu')
+    def test_evaluate_cast_cpu(self):
+        cfg = dict(type='ToyMetric')
+        evaluator = Evaluator(cfg)
+
+        size = 10
+
         all_data = [
             dict(
-                inputs=np.zeros((3, 10, 10)),
-                data_sample=BaseDataElement(label=1)) for _ in range(size)
+                inputs=torch.zeros((3, 10, 10), device='cuda'),
+                data_sample=BaseDataElement(
+                    label=torch.ones((1, ), device='cuda')))
+            for _ in range(size)
         ]
-        all_predictions = [BaseDataElement(pred=0) for _ in range(size)]
-        evaluator.offline_evaluate(all_data, all_predictions)
+        all_predictions = [
+            BaseDataElement(
+                pred=torch.zeros((1, ), device='cuda'),
+                label=torch.ones((1, ), device='cuda')) for _ in range(size)
+        ]
+        for data, pred in zip(all_data, all_predictions):
+            evaluator.process([pred], [data])
+
+        def test_results_device(results: List):
+            for result in results:
+                self.assertEqual(result['pred'].device, torch.device('cpu'))
+                self.assertEqual(result['label'].device, torch.device('cpu'))
+            return {}
+
+        # replace the `compute_metrics` to the test function
+        evaluator.metrics[0].compute_metrics = test_results_device
+        evaluator.evaluate(size)

@@ -2,20 +2,16 @@
 import collections.abc
 import functools
 import itertools
-import pkgutil
+import logging
+import re
 import subprocess
+import textwrap
 import warnings
 from collections import abc
 from importlib import import_module
 from inspect import getfullargspec
 from itertools import repeat
-from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
-
-import numpy as np
-import torch
-import torch.nn as nn
-
-from .parrots_wrapper import _BatchNorm, _InstanceNorm
+from typing import Any, Callable, Optional, Type, Union
 
 
 # From PyTorch internals
@@ -133,14 +129,14 @@ def tuple_cast(inputs, dst_type):
     return iter_cast(inputs, dst_type, return_type=tuple)
 
 
-def is_seq_of(seq: Sequence,
-              expected_type: Type,
+def is_seq_of(seq: Any,
+              expected_type: Union[Type, tuple],
               seq_type: Type = None) -> bool:
     """Check whether it is a sequence of some type.
 
     Args:
         seq (Sequence): The sequence to be checked.
-        expected_type (type): Expected type of sequence items.
+        expected_type (type or tuple): Expected type of sequence items.
         seq_type (type, optional): Expected sequence type. Defaults to None.
 
     Returns:
@@ -396,101 +392,70 @@ def has_method(obj: object, method: str) -> bool:
     return hasattr(obj, method) and callable(getattr(obj, method))
 
 
-def mmcv_full_available() -> bool:
-    """Check whether mmcv-full is installed.
+def deprecated_function(since: str, removed_in: str,
+                        instructions: str) -> Callable:
+    """Marks functions as deprecated.
 
-    Returns:
-        bool: True if mmcv-full is installed else False.
-    """
-    try:
-        import mmcv  # noqa: F401
-    except ImportError:
-        return False
-    ext_loader = pkgutil.find_loader('mmcv._ext')
-    return ext_loader is not None
-
-
-def is_norm(layer: nn.Module,
-            exclude: Optional[Union[type, Tuple[type]]] = None) -> bool:
-    """Check if a layer is a normalization layer.
+    Throw a warning when a deprecated function is called, and add a note in the
+    docstring. Modified from https://github.com/pytorch/pytorch/blob/master/torch/onnx/_deprecation.py
 
     Args:
-        layer (nn.Module): The layer to be checked.
-        exclude (type, tuple[type], optional): Types to be excluded.
+        since (str): The version when the function was first deprecated.
+        removed_in (str): The version when the function will be removed.
+        instructions (str): The action users should take.
 
     Returns:
-        bool: Whether the layer is a norm layer.
-    """
-    if exclude is not None:
-        if not isinstance(exclude, tuple):
-            exclude = (exclude, )
-        if not is_tuple_of(exclude, type):
-            raise TypeError(
-                f'"exclude" must be either None or type or a tuple of types, '
-                f'but got {type(exclude)}: {exclude}')
+        Callable: A new function, which will be deprecated soon.
+    """  # noqa: E501
+    from mmengine import print_log
 
-    if exclude and isinstance(layer, exclude):
-        return False
+    def decorator(function):
 
-    all_norm_bases = (_BatchNorm, _InstanceNorm, nn.GroupNorm, nn.LayerNorm)
-    return isinstance(layer, all_norm_bases)
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+            print_log(
+                f"'{function.__module__}.{function.__name__}' "
+                f'is deprecated in version {since} and will be '
+                f'removed in version {removed_in}. Please {instructions}.',
+                logger='current',
+                level=logging.WARNING,
+            )
+            return function(*args, **kwargs)
 
+        indent = '    '
+        # Add a deprecation note to the docstring.
+        docstring = function.__doc__ or ''
+        # Add a note to the docstring.
+        deprecation_note = textwrap.dedent(f"""\
+            .. deprecated:: {since}
+                Deprecated and will be removed in version {removed_in}.
+                Please {instructions}.
+            """)
+        # Split docstring at first occurrence of newline
+        pattern = '\n\n'
+        summary_and_body = re.split(pattern, docstring, 1)
 
-def tensor2imgs(tensor: torch.Tensor,
-                mean: Optional[Tuple[float, float, float]] = None,
-                std: Optional[Tuple[float, float, float]] = None,
-                to_bgr: bool = True):
-    """Convert tensor to 3-channel images or 1-channel gray images.
+        if len(summary_and_body) > 1:
+            summary, body = summary_and_body
+            body = textwrap.indent(textwrap.dedent(body), indent)
+            summary = '\n'.join(
+                [textwrap.dedent(string) for string in summary.split('\n')])
+            summary = textwrap.indent(summary, prefix=indent)
+            # Dedent the body. We cannot do this with the presence of the
+            # summary because the body contains leading whitespaces when the
+            # summary does not.
+            new_docstring_parts = [
+                deprecation_note, '\n\n', summary, '\n\n', body
+            ]
+        else:
+            summary = summary_and_body[0]
+            summary = '\n'.join(
+                [textwrap.dedent(string) for string in summary.split('\n')])
+            summary = textwrap.indent(summary, prefix=indent)
+            new_docstring_parts = [deprecation_note, '\n\n', summary]
 
-    Args:
-        tensor (torch.Tensor): Tensor that contains multiple images, shape (
-            N, C, H, W). :math:`C` can be either 3 or 1. If C is 3, the format
-            should be RGB.
-        mean (tuple[float], optional): Mean of images. If None,
-            (0, 0, 0) will be used for tensor with 3-channel,
-            while (0, ) for tensor with 1-channel. Defaults to None.
-        std (tuple[float], optional): Standard deviation of images. If None,
-            (1, 1, 1) will be used for tensor with 3-channel,
-            while (1, ) for tensor with 1-channel. Defaults to None.
-        to_bgr (bool): For the tensor with 3 channel, convert its format to
-            BGR. For the tensor with 1 channel, it must be False. Defaults to
-            True.
+        wrapper.__doc__ = ''.join(new_docstring_parts)
 
-    Returns:
-        list[np.ndarray]: A list that contains multiple images.
-    """
+        return wrapper
 
-    assert torch.is_tensor(tensor) and tensor.ndim == 4
-    channels = tensor.size(1)
-    assert channels in [1, 3]
-    if mean is None:
-        mean = (0, ) * channels
-    if std is None:
-        std = (1, ) * channels
-    assert (channels == len(mean) == len(std) == 3) or \
-           (channels == len(mean) == len(std) == 1 and not to_bgr)
-    mean = tensor.new_tensor(mean).view(1, -1)
-    std = tensor.new_tensor(std).view(1, -1)
-    tensor = tensor.permute(0, 2, 3, 1) * std + mean
-    imgs = tensor.detach().cpu().numpy()
-    if to_bgr and channels == 3:
-        imgs = imgs[:, :, :, (2, 1, 0)]  # RGB2BGR
-    imgs = [np.ascontiguousarray(img) for img in imgs]
-    return imgs
-
-
-def has_batch_norm(model: nn.Module) -> bool:
-    """Detect whether model has a BatchNormalization layer.
-
-    Args:
-        model (nn.Module): training model.
-
-    Returns:
-        bool: whether model has a BatchNormalization layer
-    """
-    if isinstance(model, _BatchNorm):
-        return True
-    for m in model.children():
-        if has_batch_norm(m):
-            return True
-    return False
+    return decorator

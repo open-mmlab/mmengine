@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence, Union
 
-from mmengine.data import BaseDataElement
+from mmengine import is_method_overridden
 
-DATA_BATCH = Optional[Sequence[dict]]
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 class Hook:
@@ -13,6 +13,13 @@ class Hook:
     """
 
     priority = 'NORMAL'
+    stages = ('before_run', 'after_load_checkpoint', 'before_train',
+              'before_train_epoch', 'before_train_iter', 'after_train_iter',
+              'after_train_epoch', 'before_val', 'before_val_epoch',
+              'before_val_iter', 'after_val_iter', 'after_val_epoch',
+              'after_val', 'before_save_checkpoint', 'after_train',
+              'before_test', 'before_test_epoch', 'before_test_iter',
+              'after_test_iter', 'after_test_epoch', 'after_test', 'after_run')
 
     def before_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
@@ -184,8 +191,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
         """
         self._before_iter(
             runner, batch_idx=batch_idx, data_batch=data_batch, mode='train')
@@ -200,7 +206,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
+            data_batch (dict, optional): Data from dataloader.
                 Defaults to None.
         """
         self._before_iter(
@@ -216,7 +222,7 @@ class Hook:
         Args:
             runner (Runner): The runner of the testing process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
                 Defaults to None.
         """
         self._before_iter(
@@ -233,10 +239,8 @@ class Hook:
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the train loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
+            data_batch (dict tuple or list, optional): Data from dataloader.
             outputs (dict, optional): Outputs from model.
-                Defaults to None.
         """
         self._after_iter(
             runner,
@@ -249,18 +253,15 @@ class Hook:
                        runner,
                        batch_idx: int,
                        data_batch: DATA_BATCH = None,
-                       outputs: Optional[Sequence[BaseDataElement]] = None) \
-            -> None:
+                       outputs: Optional[Sequence] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each validation iteration.
 
         Args:
             runner (Runner): The runner of the validation process.
             batch_idx (int): The index of the current batch in the val loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
-            outputs (dict or sequence, optional): Outputs from
-                model. Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (Sequence, optional): Outputs from model.
         """
         self._after_iter(
             runner,
@@ -269,22 +270,19 @@ class Hook:
             outputs=outputs,
             mode='val')
 
-    def after_test_iter(
-            self,
-            runner,
-            batch_idx: int,
-            data_batch: DATA_BATCH = None,
-            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
+    def after_test_iter(self,
+                        runner,
+                        batch_idx: int,
+                        data_batch: DATA_BATCH = None,
+                        outputs: Optional[Sequence] = None) -> None:
         """All subclasses should override this method, if they need any
         operations after each test iteration.
 
         Args:
             runner (Runner): The runner of the training  process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
-            outputs (dict, optional): Outputs from model.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (Sequence, optional): Outputs from model.
         """
         self._after_iter(
             runner,
@@ -327,8 +325,7 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -337,8 +334,7 @@ class Hook:
                     runner,
                     batch_idx: int,
                     data_batch: DATA_BATCH = None,
-                    outputs: Optional[Union[Sequence[BaseDataElement],
-                                            dict]] = None,
+                    outputs: Optional[Union[Sequence, dict]] = None,
                     mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any
         operations after each epoch.
@@ -347,10 +343,8 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             batch_idx (int): The index of the current batch in the loop.
-            data_batch (Sequence[dict], optional): Data from dataloader.
-                Defaults to None.
-            outputs (Sequence[BaseDataElement], optional): Outputs from model.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (dict or Sequence, optional): Outputs from model.
             mode (str): Current mode of runner. Defaults to 'train'.
         """
         pass
@@ -431,3 +425,28 @@ class Hook:
             bool: Whether current iteration is the last train iteration.
         """
         return runner.iter + 1 == runner.max_iters
+
+    def get_triggered_stages(self) -> list:
+        trigger_stages = set()
+        for stage in Hook.stages:
+            if is_method_overridden(stage, Hook, self):
+                trigger_stages.add(stage)
+
+        # some methods will be triggered in multi stages
+        # use this dict to map method to stages.
+        method_stages_map = {
+            '_before_epoch':
+            ['before_train_epoch', 'before_val_epoch', 'before_test_epoch'],
+            '_after_epoch':
+            ['after_train_epoch', 'after_val_epoch', 'after_test_epoch'],
+            '_before_iter':
+            ['before_train_iter', 'before_val_iter', 'before_test_iter'],
+            '_after_iter':
+            ['after_train_iter', 'after_val_iter', 'after_test_iter'],
+        }
+
+        for method, map_stages in method_stages_map.items():
+            if is_method_overridden(method, Hook, self):
+                trigger_stages.update(map_stages)
+
+        return list(trigger_stages)

@@ -1,14 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
 
-from mmengine.data import BaseDataElement
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
-from mmengine.utils.misc import tensor2imgs
+from mmengine.utils.dl_utils import tensor2imgs
+
+DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 # TODO: Due to interface changes, the current class
@@ -18,7 +19,7 @@ class NaiveVisualizationHook(Hook):
     """Show or Write the predicted results during the process of testing.
 
     Args:
-        interval (int): Visualization interval. Default: 1.
+        interval (int): Visualization interval. Defaults to 1.
         draw_gt (bool): Whether to draw the ground truth. Default to True.
         draw_pred (bool): Whether to draw the predicted result.
             Default to True.
@@ -48,21 +49,26 @@ class NaiveVisualizationHook(Hook):
         unpad_image = input[:unpad_height, :unpad_width]
         return unpad_image
 
-    def after_test_iter(
-            self,
-            runner,
-            batch_idx: int,
-            data_batch: Optional[Sequence[dict]] = None,
-            outputs: Optional[Sequence[BaseDataElement]] = None) -> None:
+    def before_train(self, runner) -> None:
+        """Call add_graph method of visualizer.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        runner.visualizer.add_graph(runner.model, None)
+
+    def after_test_iter(self,
+                        runner,
+                        batch_idx: int,
+                        data_batch: DATA_BATCH = None,
+                        outputs: Optional[Sequence] = None) -> None:
         """Show or Write the predicted results.
 
         Args:
             runner (Runner): The runner of the training process.
             batch_idx (int): The index of the current batch in the test loop.
-            data_batch (Sequence[dict], optional): Data
-                from dataloader. Defaults to None.
-            outputs (Sequence[BaseDataElement], optional): Outputs from model.
-                Defaults to None.
+            data_batch (dict or tuple or list, optional): Data from dataloader.
+            outputs (Sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self._interval):
             for data, output in zip(data_batch, outputs):  # type: ignore

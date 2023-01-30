@@ -3,11 +3,17 @@ from contextlib import contextmanager
 
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler
 
+from mmengine.device import is_cuda_available, is_npu_available
 from mmengine.registry import OPTIM_WRAPPERS
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 from .optimizer_wrapper import OptimWrapper
+
+if is_npu_available():
+    from torch.npu.amp import GradScaler
+else:
+    from torch.cuda.amp import GradScaler
 
 
 @OPTIM_WRAPPERS.register_module()
@@ -43,8 +49,8 @@ class AmpOptimWrapper(OptimWrapper):
     def __init__(self, loss_scale='dynamic', **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
-        assert torch.cuda.is_available(), (
-            '``AmpOptimizerWrapper`` is only available training on gpu')
+        assert is_cuda_available() or is_npu_available(), (
+            '``AmpOptimizerWrapper`` is only available training on gpu or npu')
         super().__init__(**kwargs)
         self._scale_update_param = None
         if loss_scale == 'dynamic':
@@ -62,21 +68,27 @@ class AmpOptimWrapper(OptimWrapper):
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
 
-    def backward(self, loss: torch.Tensor):
+    def backward(self, loss: torch.Tensor, **kwargs):
         """Perform gradient back propagation with :attr:`loss_scaler`.
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`
         """
-        self.loss_scaler.scale(loss).backward()
+        self.loss_scaler.scale(loss).backward(**kwargs)
         self._inner_count += 1
 
-    def step(self):
-        """Update parameters with :attr:`loss_scaler`."""
+    def step(self, **kwargs):
+        """Update parameters with :attr:`loss_scaler`.
+
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
+        """
         if self.clip_grad_kwargs:
             self.loss_scaler.unscale_(self.optimizer)
             self._clip_grad()
-        self.loss_scaler.step(self.optimizer)
+        self.loss_scaler.step(self.optimizer, **kwargs)
         self.loss_scaler.update(self._scale_update_param)
 
     def state_dict(self) -> dict:

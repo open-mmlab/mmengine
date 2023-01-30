@@ -11,19 +11,19 @@ class DefaultScope(ManagerMixin):
     """Scope of current task used to reset the current registry, which can be
     accessed globally.
 
-    Consider the case of resetting the current ``Resgitry`` by``default_scope``
-    in the internal module which cannot access runner directly, it is difficult
-    to get the ``default_scope`` defined in ``Runner``. However, if ``Runner``
-    created ``DefaultScope`` instance by given ``default_scope``, the internal
-    module can get ``default_scope`` by ``DefaultScope.get_current_instance``
-    everywhere.
+    Consider the case of resetting the current ``Registry`` by
+    ``default_scope`` in the internal module which cannot access runner
+    directly, it is difficult to get the ``default_scope`` defined in
+    ``Runner``. However, if ``Runner`` created ``DefaultScope`` instance
+    by given ``default_scope``, the internal module can get
+    ``default_scope`` by ``DefaultScope.get_current_instance`` everywhere.
 
     Args:
         name (str): Name of default scope for global access.
         scope_name (str): Scope of current task.
 
     Examples:
-        >>> from mmengine import MODELS
+        >>> from mmengine.model import MODELS
         >>> # Define default scope in runner.
         >>> DefaultScope.get_instance('task', scope_name='mmdet')
         >>> # Get default scope globally.
@@ -32,6 +32,9 @@ class DefaultScope(ManagerMixin):
 
     def __init__(self, name: str, scope_name: str):
         super().__init__(name)
+        assert isinstance(
+            scope_name,
+            str), (f'scope_name should be a string, but got {scope_name}')
         self._scope_name = scope_name
 
     @property
@@ -83,6 +86,8 @@ class DefaultScope(ManagerMixin):
             yield
         else:
             tmp = copy.deepcopy(cls._instance_dict)
+            # To avoid create an instance with the same name.
+            time.sleep(1e-6)
             cls.get_instance(f'overwrite-{time.time()}', scope_name=scope_name)
             try:
                 yield

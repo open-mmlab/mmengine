@@ -19,12 +19,15 @@ class Compose:
     """Compose multiple transforms sequentially.
 
     Args:
-        transforms (Sequence[dict, callable]): Sequence of transform object or
-            config dict to be composed.
+        transforms (Sequence[dict, callable], optional): Sequence of transform
+            object or config dict to be composed.
     """
 
-    def __init__(self, transforms: Sequence[Union[dict, Callable]]):
+    def __init__(self, transforms: Optional[Sequence[Union[dict, Callable]]]):
         self.transforms: List[Callable] = []
+
+        if transforms is None:
+            transforms = []
 
         for transform in transforms:
             # `Compose` can be built with config dict with type and
@@ -152,10 +155,10 @@ class BaseDataset(Dataset):
         ann_file (str): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
-        data_root (str, optional): The root directory for ``data_prefix`` and
-            ``ann_file``. Defaults to None.
-        data_prefix (dict, optional): Prefix for training data. Defaults to
-            dict(img_path=None, seg_path=None).
+        data_root (str): The root directory for ``data_prefix`` and
+            ``ann_file``. Defaults to ''.
+        data_prefix (dict): Prefix for training data. Defaults to
+            dict(img_path='').
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
@@ -171,15 +174,15 @@ class BaseDataset(Dataset):
             instantiation. In some cases, such as visualization, only the meta
             information of the dataset is needed, which is not necessary to
             load annotation file. ``Basedataset`` can skip load annotations to
-            save time by set ``lazy_init=False``. Defaults to False.
+            save time by set ``lazy_init=True``. Defaults to False.
         max_refetch (int, optional): If ``Basedataset.prepare_data`` get a
             None img. The maximum extra number of cycles to get a valid
             image. Defaults to 1000.
 
     Note:
-        BaseDataset collects meta information from `annotation file` (the
-        lowest priority), ``BaseDataset.METAINFO``(medium) and `metainfo
-        parameter` (highest) passed to constructors. The lower priority meta
+        BaseDataset collects meta information from ``annotation file`` (the
+        lowest priority), ``BaseDataset.METAINFO``(medium) and ``metainfo
+        parameter`` (highest) passed to constructors. The lower priority meta
         information will be overwritten by higher one.
 
     Note:
@@ -189,7 +192,7 @@ class BaseDataset(Dataset):
         conflicts with original dataset.
 
     Examples:
-        Assume the annotation file is given above.
+        >>> # Assume the annotation file is given above.
         >>> class CustomDataset(BaseDataset):
         >>>     METAINFO: dict = dict(task_name='custom_task',
         >>>                           dataset_type='custom_type')
@@ -210,8 +213,8 @@ class BaseDataset(Dataset):
     def __init__(self,
                  ann_file: str = '',
                  metainfo: Optional[dict] = None,
-                 data_root: Optional[str] = None,
-                 data_prefix: dict = dict(img_path=None, seg_path=None),
+                 data_root: str = '',
+                 data_prefix: dict = dict(img_path=''),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
                  serialize_data: bool = True,
@@ -235,8 +238,7 @@ class BaseDataset(Dataset):
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
-        if self.data_root is not None:
-            self._join_prefix()
+        self._join_prefix()
 
         # Build pipeline.
         self.pipeline = Compose(pipeline)
@@ -262,7 +264,7 @@ class BaseDataset(Dataset):
                 self.data_bytes[start_addr:end_addr])  # type: ignore
             data_info = pickle.loads(bytes)  # type: ignore
         else:
-            data_info = self.data_list[idx]
+            data_info = copy.deepcopy(self.data_list[idx])
         # Some codebase needs `sample_idx` of data information. Here we convert
         # the idx to a positive number and save it in data information.
         if idx >= 0:
@@ -418,7 +420,7 @@ class BaseDataset(Dataset):
         """Load annotations from an annotation file named as ``self.ann_file``
 
         If the annotation file does not follow `OpenMMLab 2.0 format dataset
-        <https://github.com/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/basedataset.md>`_ .
+        <https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html>`_ .
         The subclass must override this method for load annotations. The meta
         information of annotation file will be overwritten :attr:`METAINFO`
         and ``metainfo`` argument of constructor.
@@ -534,16 +536,14 @@ class BaseDataset(Dataset):
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
-            if prefix is None:
-                self.data_prefix[data_key] = self.data_root
-            elif isinstance(prefix, str):
+            if isinstance(prefix, str):
                 if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
                         self.data_root, prefix)
                 else:
                     self.data_prefix[data_key] = prefix
             else:
-                raise TypeError('prefix should be a string or None, but got '
+                raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
 
     @force_full_init

@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
 from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional
@@ -17,25 +18,29 @@ class BaseAveragedModel(nn.Module):
     training neural networks. This class implements the averaging process
     for a model. All subclasses must implement the `avg_func` method.
     This class creates a copy of the provided module :attr:`model`
-    on the device :attr:`device` and allows computing running averages of the
+    on the :attr:`device` and allows computing running averages of the
     parameters of the :attr:`model`.
+
     The code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/optim/swa_utils.py.
+
     Different from the `AveragedModel` in PyTorch, we use in-place operation
     to improve the parameter updating speed, which is about 5 times faster
     than the non-in-place version.
 
     In mmengine, we provide two ways to use the model averaging:
+
     1. Use the model averaging module in hook:
-        We provide an EMAHook to apply the model averaging during training.
-        Add ``custom_hooks=[dict(type='EMAHook')]`` to the config or the runner.
-        The hook is implemented in mmengine/hooks/ema_hook.py
+       We provide an :class:`mmengine.hooks.EMAHook` to apply the model
+       averaging during training. Add ``custom_hooks=[dict(type='EMAHook')]``
+       to the config or the runner.
 
     2. Use the model averaging module directly in the algorithm. Take the ema
        teacher in semi-supervise as an example:
-        >>> from mmengine.model import ExponentialMovingAverage
-        >>> student = ResNet(depth=50)
-        >>> # use ema model as teacher
-        >>> ema_teacher = ExponentialMovingAverage(student)
+
+       >>> from mmengine.model import ExponentialMovingAverage
+       >>> student = ResNet(depth=50)
+       >>> # use ema model as teacher
+       >>> ema_teacher = ExponentialMovingAverage(student)
 
     Args:
         model (nn.Module): The model to be averaged.
@@ -103,6 +108,11 @@ class BaseAveragedModel(nn.Module):
                     self.avg_func(p_avg.data,
                                   src_parameters[k].data.to(device),
                                   self.steps)
+        if not self.update_buffers:
+            # If not update the buffers,
+            # keep the buffers in sync with the source model.
+            for b_avg, b_src in zip(self.module.buffers(), model.buffers()):
+                b_avg.data.copy_(b_src.data.to(b_avg.device))
         self.steps += 1
 
 
@@ -134,7 +144,7 @@ class StochasticWeightAverage(BaseAveragedModel):
 
 @MODELS.register_module()
 class ExponentialMovingAverage(BaseAveragedModel):
-    """Implements the exponential moving average (EMA) of the model.
+    r"""Implements the exponential moving average (EMA) of the model.
 
     All parameters are updated by the formula as below:
 
@@ -142,12 +152,20 @@ class ExponentialMovingAverage(BaseAveragedModel):
 
             Xema_{t+1} = (1 - momentum) * Xema_{t} +  momentum * X_t
 
+    .. note::
+        This :attr:`momentum` argument is different from one used in optimizer
+        classes and the conventional notion of momentum. Mathematically,
+        :math:`Xema_{t+1}` is the moving average and :math:`X_t` is the
+        new observed value. The value of momentum is usually a small number,
+        allowing observed values to slowly update the ema parameters.
+
     Args:
         model (nn.Module): The model to be averaged.
         momentum (float): The momentum used for updating ema parameter.
-            Ema's parameter are updated with the formula:
-           `averaged_param = (1-momentum) * averaged_param + momentum *
-           source_param`. Defaults to 0.0002.
+            Defaults to 0.0002.
+            Ema's parameter are updated with the formula
+            :math:`averaged\_param = (1-momentum) * averaged\_param +
+            momentum * source\_param`.
         interval (int): Interval between two updates. Defaults to 1.
         device (torch.device, optional): If provided, the averaged model will
             be stored on the :attr:`device`. Defaults to None.
@@ -165,6 +183,12 @@ class ExponentialMovingAverage(BaseAveragedModel):
         super().__init__(model, interval, device, update_buffers)
         assert 0.0 < momentum < 1.0, 'momentum must be in range (0.0, 1.0)'\
                                      f'but got {momentum}'
+        if momentum > 0.5:
+            warnings.warn(
+                'The value of momentum in EMA is usually a small number,'
+                'which is different from the conventional notion of '
+                f'momentum but got {momentum}. Please make sure the '
+                f'value is correct.')
         self.momentum = momentum
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,
@@ -178,20 +202,20 @@ class ExponentialMovingAverage(BaseAveragedModel):
             steps (int): The number of times the parameters have been
                 updated.
         """
-        averaged_param.mul_(1 - self.momentum).add_(
-            source_param, alpha=self.momentum)
+        averaged_param.lerp_(source_param, self.momentum)
 
 
 @MODELS.register_module()
 class MomentumAnnealingEMA(ExponentialMovingAverage):
-    """Exponential moving average (EMA) with momentum annealing strategy.
+    r"""Exponential moving average (EMA) with momentum annealing strategy.
 
     Args:
         model (nn.Module): The model to be averaged.
         momentum (float): The momentum used for updating ema parameter.
-            Ema's parameter are updated with the formula:
-           `averaged_param = (1-momentum) * averaged_param + momentum *
-           source_param`. Defaults to 0.0002.
+            Defaults to 0.0002.
+            Ema's parameter are updated with the formula
+            :math:`averaged\_param = (1-momentum) * averaged\_param +
+            momentum * source\_param`.
         gamma (int): Use a larger momentum early in training and gradually
             annealing to a smaller value to update the ema model smoothly. The
             momentum is calculated as max(momentum, gamma / (gamma + steps))
@@ -232,4 +256,4 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
                 updated.
         """
         momentum = max(self.momentum, self.gamma / (self.gamma + self.steps))
-        averaged_param.mul_(1 - momentum).add_(source_param, alpha=momentum)
+        averaged_param.lerp_(source_param, momentum)

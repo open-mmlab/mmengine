@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import time
 from typing import Any
 from unittest import TestCase
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import torch
@@ -117,12 +117,13 @@ class TestVisualizer(TestCase):
                 save_dir='temp_dir')
 
         # test global init
+        instance_name = 'visualizer' + str(time.time())
         visualizer = Visualizer.get_instance(
-            'visualizer',
+            instance_name,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         assert len(visualizer._vis_backends) == 2
-        visualizer_any = Visualizer.get_instance('visualizer')
+        visualizer_any = Visualizer.get_instance(instance_name)
         assert visualizer_any == visualizer
 
     def test_set_image(self):
@@ -169,12 +170,10 @@ class TestVisualizer(TestCase):
             image=self.image,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
-        fig_num = visualizer.fig_save_num
-        assert fig_num in plt.get_fignums()
+
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is False
         visualizer.close()
-        assert fig_num not in plt.get_fignums()
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is True
 
@@ -365,21 +364,21 @@ class TestVisualizer(TestCase):
             visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [16, 4]]))
 
     def test_draw_binary_masks(self):
-        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
         visualizer = Visualizer(image=self.image)
         visualizer.draw_binary_masks(binary_mask)
         visualizer.draw_binary_masks(torch.from_numpy(binary_mask))
         # multi binary
-        binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(bool)
         visualizer = Visualizer(image=self.image)
         visualizer.draw_binary_masks(binary_mask, colors=['r', (0, 255, 0)])
         # test the error that the size of mask and image are different.
         with pytest.raises(AssertionError):
-            binary_mask = np.random.randint(0, 2, size=(8, 10)).astype(np.bool)
+            binary_mask = np.random.randint(0, 2, size=(8, 10)).astype(bool)
             visualizer.draw_binary_masks(binary_mask)
 
         # test non binary mask error
-        binary_mask = np.random.randint(0, 2, size=(10, 10, 3)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10, 3)).astype(bool)
         with pytest.raises(AssertionError):
             visualizer.draw_binary_masks(binary_mask)
 
@@ -496,7 +495,7 @@ class TestVisualizer(TestCase):
 
     def test_chain_call(self):
         visualizer = Visualizer(image=self.image)
-        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(np.bool)
+        binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
         visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2])). \
             draw_texts('test', torch.tensor([5, 5])). \
             draw_lines(x_datas=torch.tensor([1, 5]),

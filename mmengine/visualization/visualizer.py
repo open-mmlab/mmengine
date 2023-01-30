@@ -4,18 +4,14 @@ import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.collections import (LineCollection, PatchCollection,
-                                    PolyCollection)
-from matplotlib.patches import Circle
 
 from mmengine.config import Config
-from mmengine.data import BaseDataElement
 from mmengine.dist import master_only
 from mmengine.registry import VISBACKENDS, VISUALIZERS
+from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,
@@ -107,11 +103,11 @@ class Visualizer(ManagerMixin):
         >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
         >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
         >>>                  radius=np.array[1, 2], colors=['g', 'r'])
-        >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
-        >>>                    edge_colors='g')
-        >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
-        >>>                        np.array([2, 2, 3, 2, 3, 3, 2, 3]],
-        >>>                   edge_colors=['g', 'r'])
+        >>> square = np.array([[0, 0], [100, 0], [100, 100], [0, 100]])
+        >>> vis.draw_polygons(polygons=square, edge_colors='g')
+        >>> squares = [np.array([[0, 0], [100, 0], [100, 100], [0, 100]]),
+        >>>            np.array([[0, 0], [50, 0], [50, 50], [0, 50]])]
+        >>> vis.draw_polygons(polygons=squares, edge_colors=['g', 'r'])
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
         >>> heatmap = vis.draw_featmap(featmap, img,
         >>>                            channel_reduction='select_max')
@@ -135,19 +131,19 @@ class Visualizer(ManagerMixin):
 
         >>> # inherit
         >>> class DetLocalVisualizer(Visualizer):
-        >>>        def add_datasample(self,
-        >>>                           name,
-        >>>                           image: np.ndarray,
-        >>>                           gt_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           pred_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           draw_gt: bool = True,
-        >>>                           draw_pred: bool = True,
-        >>>                           show: bool = False,
-        >>>                           wait_time: int = 0,
-        >>>                           step: int = 0) -> None:
-        >>>           pass
+        >>>      def add_datasample(self,
+        >>>                         name,
+        >>>                         image: np.ndarray,
+        >>>                         gt_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         pred_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         draw_gt: bool = True,
+        >>>                         draw_pred: bool = True,
+        >>>                         show: bool = False,
+        >>>                         wait_time: int = 0,
+        >>>                         step: int = 0) -> None:
+        >>>         pass
     """
 
     def __init__(
@@ -157,7 +153,7 @@ class Visualizer(ManagerMixin):
         vis_backends: Optional[List[Dict]] = None,
         save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False, num='show')
+        fig_show_cfg=dict(frameon=False)
     ) -> None:
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
@@ -196,17 +192,12 @@ class Visualizer(ManagerMixin):
                 vis_backend.setdefault('save_dir', save_dir)
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
-        self.is_inline = 'inline' in plt.get_backend()
-
         self.fig_save = None
-        self.fig_show = None
-        self.fig_save_num = fig_save_cfg.get('num', None)
-        self.fig_show_num = fig_show_cfg.get('num', None)
         self.fig_save_cfg = fig_save_cfg
         self.fig_show_cfg = fig_show_cfg
 
-        (self.fig_save, self.ax_save,
-         self.fig_save_num) = self._initialize_fig(fig_save_cfg)
+        (self.fig_save_canvas, self.fig_save,
+         self.ax_save) = self._initialize_fig(fig_save_cfg)
         self.dpi = self.fig_save.get_dpi()
 
         if image is not None:
@@ -242,20 +233,23 @@ class Visualizer(ManagerMixin):
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
         """
-        if self.is_inline:
-            return
-        if self.fig_show is None or not plt.fignum_exists(self.fig_show_num):
-            (self.fig_show, self.ax_show,
-             self.fig_show_num) = self._initialize_fig(self.fig_show_cfg)
+        import matplotlib.pyplot as plt
+        is_inline = 'inline' in plt.get_backend()
         img = self.get_image() if drawn_img is None else drawn_img
-        self.ax_show.cla()
-        self.ax_show.axis(False)
-        self.fig_show.canvas.manager.set_window_title(win_name)  # type: ignore
-        # Refresh canvas, necessary for Qt5 backend.
-        self.ax_show.imshow(img)
-        self.fig_show.canvas.draw()  # type: ignore
-        wait_continue(
-            self.fig_show, timeout=wait_time, continue_key=continue_key)
+        self._init_manager(win_name)
+        fig = self.manager.canvas.figure
+        # remove white edges by set subplot margin
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        fig.clear()
+        ax = fig.add_subplot()
+        ax.axis(False)
+        ax.imshow(img)
+        self.manager.canvas.draw()
+
+        # Find a better way for inline to show the image
+        if is_inline:
+            return fig
+        wait_continue(fig, timeout=wait_time, continue_key=continue_key)
 
     @master_only
     def set_image(self, image: np.ndarray) -> None:
@@ -291,7 +285,7 @@ class Visualizer(ManagerMixin):
             np.ndarray: the drawn image which channel is RGB.
         """
         assert self._image is not None, 'Please set image using `set_image`'
-        return img_from_canvas(self.fig_save.canvas)  # type: ignore
+        return img_from_canvas(self.fig_save_canvas)  # type: ignore
 
     def _initialize_fig(self, fig_cfg) -> tuple:
         """Build figure according to fig_cfg.
@@ -300,15 +294,37 @@ class Visualizer(ManagerMixin):
             fig_cfg (dict): The config to build figure.
 
         Returns:
-             tuple: build figure, axes and fig number.
+             tuple: build canvas figure and axes.
         """
-        fig = plt.figure(**fig_cfg)
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+        fig = Figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
 
         # remove white edges by set subplot margin
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        return (fig, ax, fig.number)
+        canvas = FigureCanvasAgg(fig)
+        return canvas, fig, ax
+
+    def _init_manager(self, win_name: str) -> None:
+        """Initialize the matplot manager.
+
+        Args:
+            win_name (str): The window name.
+        """
+        from matplotlib.figure import Figure
+        from matplotlib.pyplot import new_figure_manager
+        if getattr(self, 'manager', None) is None:
+            self.manager = new_figure_manager(
+                num=1, FigureClass=Figure, **self.fig_show_cfg)
+
+        try:
+            self.manager.set_window_title(win_name)
+        except Exception:
+            self.manager = new_figure_manager(
+                num=1, FigureClass=Figure, **self.fig_show_cfg)
+            self.manager.set_window_title(win_name)
 
     @master_only
     def get_backend(self, name) -> 'BaseVisBackend':
@@ -356,9 +372,9 @@ class Visualizer(ManagerMixin):
                 for more details. Defaults to 'g.
             marker (str, optional): The marker style.
                 See :mod:`matplotlib.markers` for more information about
-                marker styles. Default to None.
+                marker styles. Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
-                Default to None.
+                Defaults to None.
         """
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
@@ -424,7 +440,7 @@ class Visualizer(ManagerMixin):
                 just single value. If ``font_families`` is single value, all
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                 or 'monospace'.  Defaults to 'sans-serif'.
+                or 'monospace'.  Defaults to 'sans-serif'.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -527,6 +543,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
+        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -595,6 +612,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PatchCollection
+        from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
@@ -670,7 +689,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
         """
@@ -715,7 +734,7 @@ class Visualizer(ManagerMixin):
         """Draw single or multiple bboxes.
 
         Args:
-            polygons (Union[Union[np.ndarray, torch.Tensor],
+            polygons (Union[Union[np.ndarray, torch.Tensor],\
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
@@ -737,10 +756,11 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
         face_colors = color_val_matplotlib(face_colors)  # type: ignore
@@ -852,28 +872,28 @@ class Visualizer(ManagerMixin):
         """Draw featmap.
 
         - If `overlaid_image` is not None, the final output image will be the
-        weighted sum of img and featmap.
+          weighted sum of img and featmap.
 
         - If `resize_shape` is specified, `featmap` and `overlaid_image`
-        are interpolated.
+          are interpolated.
 
         - If `resize_shape` is None and `overlaid_image` is not None,
-        the feature map will be interpolated to the spatial size of the image
-        in the case where the spatial dimensions of `overlaid_image` and
-        `featmap` are different.
+          the feature map will be interpolated to the spatial size of the image
+          in the case where the spatial dimensions of `overlaid_image` and
+          `featmap` are different.
 
         - If `channel_reduction` is "squeeze_mean" and "select_max",
-        it will compress featmap to single channel image and weighted
-        sum to `overlaid_image`.
+          it will compress featmap to single channel image and weighted
+          sum to `overlaid_image`.
 
         -  if `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
-          channel and treated as image and will be weighted sum
-          to ``overlaid_image``.
+            channel and treated as image and will be weighted sum
+            to ``overlaid_image``.
           - If topk > 0, it will select topk channel to show by the sum of
-          each channel. At the same time, you can specify the `arrangement`
-          to set the window layout.
+            each channel. At the same time, you can specify the `arrangement`
+            to set the window layout.
 
         Args:
             featmap (torch.Tensor): The featmap to draw which format is
@@ -897,6 +917,7 @@ class Visualizer(ManagerMixin):
         Returns:
             np.ndarray: RGB image.
         """
+        import matplotlib.pyplot as plt
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')
@@ -982,7 +1003,9 @@ class Visualizer(ManagerMixin):
                 axes.imshow(
                     convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
-            return img_from_canvas(fig.canvas)
+            image = img_from_canvas(fig.canvas)
+            plt.close(fig)
+            return image
 
     @master_only
     def add_config(self, config: Config, **kwargs):
@@ -1059,8 +1082,7 @@ class Visualizer(ManagerMixin):
     def add_datasample(self,
                        name,
                        image: np.ndarray,
-                       gt_sample: Optional['BaseDataElement'] = None,
-                       pred_sample: Optional['BaseDataElement'] = None,
+                       data_sample: Optional['BaseDataElement'] = None,
                        draw_gt: bool = True,
                        draw_pred: bool = True,
                        show: bool = False,
@@ -1071,9 +1093,6 @@ class Visualizer(ManagerMixin):
 
     def close(self) -> None:
         """close an opened object."""
-        plt.close(self.fig_save)
-        if self.fig_show is not None:
-            plt.close(self.fig_show)
         for vis_backend in self._vis_backends.values():
             vis_backend.close()
 

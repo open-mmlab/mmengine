@@ -1,15 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 from contextlib import contextmanager
 from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
-from torch.nn.utils import clip_grad
 from torch.optim import Optimizer
 
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import MessageHub, print_log
 from mmengine.registry import OPTIM_WRAPPERS
-from mmengine.utils import has_batch_norm
+from mmengine.utils.dl_utils import has_batch_norm
 
 
 @OPTIM_WRAPPERS.register_module()
@@ -31,7 +31,27 @@ class OptimWrapper:
             gradients. The parameters will be updated per
             ``accumulative_counts``.
         clip_grad (dict, optional): If ``clip_grad`` is not None, it will be
-            the arguments of ``torch.nn.utils.clip_grad``.
+            the arguments of :func:`torch.nn.utils.clip_grad_norm_` or
+            :func:`torch.nn.utils.clip_grad_value_`. ``clip_grad`` should be a
+            dict, and the keys could be set as follows:
+
+            If the key ``type`` is not set, or ``type`` is "norm",
+            the accepted keys are as follows:
+
+            - max_norm (float or int): Max norm of the gradients.
+            - norm_type (float or int): Type of the used p-norm. Can be
+              ``'inf'`` for infinity norm.
+            - error_if_nonfinite (bool): If True, an error is thrown if
+              the total norm of the gradients from :attr:`parameters` is
+              ``nan``, ``inf``, or ``-inf``. Default: False (will switch
+              to True in the future)
+
+            If the key ``type`` is set to "value", the accepted keys are as
+            follows:
+
+            - clip_value (float or int): maximum allowed value of the
+              gradients. The gradients are clipped in the range
+              ``(-clip_value, +clip_value)``.
 
     Note:
         If ``accumulative_counts`` is larger than 1, perform
@@ -48,11 +68,18 @@ class OptimWrapper:
         ``_inner_count += 1`` is automatically performed.
 
     Examples:
-        >>> # Config sample of OptimWrapper.
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # norm.
         >>> optim_wrapper_cfg = dict(
         >>>     type='OptimWrapper',
         >>>     _accumulative_counts=1,
         >>>     clip_grad=dict(max_norm=0.2))
+        >>> # Config sample of OptimWrapper and enable clipping gradient by
+        >>> # value.
+        >>> optim_wrapper_cfg = dict(
+        >>>     type='OptimWrapper',
+        >>>     _accumulative_counts=1,
+        >>>     clip_grad=dict(type='value', clip_value=0.2))
         >>> # Use OptimWrapper to update model.
         >>> import torch.nn as nn
         >>> import torch
@@ -104,9 +131,23 @@ class OptimWrapper:
             # clip_grad_kwargs should not be non-empty dict.
             assert isinstance(clip_grad, dict) and clip_grad, (
                 'If `clip_grad` is not None, it should be a `dict` '
-                'which is the arguments of `torch.nn.utils.clip_grad`')
+                'which is the arguments of `torch.nn.utils.clip_grad_norm_` '
+                'or clip_grad_value_`.')
+            clip_type = clip_grad.pop('type', 'norm')
+            if clip_type == 'norm':
+                self.clip_func = torch.nn.utils.clip_grad_norm_
+                self.grad_name = 'grad_norm'
+            elif clip_type == 'value':
+                self.clip_func = torch.nn.utils.clip_grad_value_
+                self.grad_name = 'grad_value'
+            else:
+                raise ValueError('type of clip_grad should be "norm" or '
+                                 f'"value" but got {clip_type}')
+            assert clip_grad, ('`clip_grad` should contain other arguments '
+                               'besides `type`. The arguments should match '
+                               'with the `torch.nn.utils.clip_grad_norm_` or '
+                               'clip_grad_value_`')
         self.clip_grad_kwargs = clip_grad
-        self.logger = MMLogger.get_current_instance()
         # Used to update `grad_norm` log message.
         self.message_hub = MessageHub.get_current_instance()
         self._inner_count = 0
@@ -115,32 +156,40 @@ class OptimWrapper:
         # lost when the `_max_counts` is not divisible by
         # `accumulative_counts`.
         self._max_counts = -1
-        # If `_inner_count` is smaller than `_divisible_counts`, the loss
-        # factor used for gradient accumulation should be the same as
-        # `_accumulative_counts`. If `_max_counts` has not been initialized,
-        # the loss factor will always be the same as `_accumulative_counts`.
-        self._divisible_counts = -1
         # The `_remainder_iter` is used for calculating loss factor at the
         # last few iterations. If `_max_counts` has not been initialized,
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
-    def update_params(self, loss: torch.Tensor) -> None:
+    def update_params(self,
+                      loss: torch.Tensor,
+                      step_kwargs: Optional[Dict] = None,
+                      zero_kwargs: Optional[Dict] = None) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:
             loss (torch.Tensor): A tensor for back propagation.
+            step_kwargs (dict): Arguments for optimizer.step.
+                Defaults to None.
+                New in version v0.4.0.
+            zero_kwargs (dict): Arguments for optimizer.zero_grad.
+                Defaults to None.
+                New in version v0.4.0.
         """
+        if step_kwargs is None:
+            step_kwargs = {}
+        if zero_kwargs is None:
+            zero_kwargs = {}
         loss = self.scale_loss(loss)
         self.backward(loss)
         # Update parameters only if `self._inner_count` is divisible by
         # `self._accumulative_counts` or `self._inner_count` equals to
         # `self._max_counts`
         if self.should_update():
-            self.step()
-            self.zero_grad()
+            self.step(**step_kwargs)
+            self.zero_grad(**zero_kwargs)
 
-    def backward(self, loss: torch.Tensor) -> None:
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation.
 
         Provide unified ``backward`` interface compatible with automatic mixed
@@ -154,20 +203,25 @@ class OptimWrapper:
 
         Args:
             loss (torch.Tensor): The loss of current iteration.
+            kwargs: Keyword arguments passed to :meth:`torch.Tensor.backward`.
         """
-        loss.backward()
+        loss.backward(**kwargs)
         self._inner_count += 1
 
-    def zero_grad(self) -> None:
+    def zero_grad(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.zero_grad``.
 
         Provide unified ``zero_grad`` interface compatible with automatic mixed
         precision training. Subclass can overload this method to implement the
         required logic.
-        """
-        self.optimizer.zero_grad()
 
-    def step(self) -> None:
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.zero_grad`.
+        """
+        self.optimizer.zero_grad(**kwargs)
+
+    def step(self, **kwargs) -> None:
         """A wrapper of ``Optimizer.step``.
 
         Provide unified ``step`` interface compatible with automatic mixed
@@ -177,10 +231,14 @@ class OptimWrapper:
 
         Clip grad if :attr:`clip_grad_kwargs` is not None, and then update
         parameters.
+
+        Args:
+            kwargs: Keyword arguments passed to
+                :meth:`torch.optim.Optimizer.step`.
         """
         if self.clip_grad_kwargs:
             self._clip_grad()
-        self.optimizer.step()
+        self.optimizer.step(**kwargs)
 
     def state_dict(self) -> dict:
         """A wrapper of ``Optimizer.state_dict``.
@@ -219,6 +277,17 @@ class OptimWrapper:
              dict: the ``param_groups`` of :attr:`optimizer`.
         """
         return self.optimizer.param_groups
+
+    @property
+    def defaults(self) -> dict:
+        """A wrapper of ``Optimizer.defaults``.
+
+        Make OptimizeWrapper compatible with :class:`_ParamScheduler`.
+
+        Returns:
+             dict: the ``param_groups`` of :attr:`optimizer`.
+        """
+        return self.optimizer.defaults
 
     def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of the optimizer.
@@ -290,9 +359,11 @@ class OptimWrapper:
         params = list(
             filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            grad_norm = clip_grad.clip_grad_norm_(params,
-                                                  **self.clip_grad_kwargs)
-            self.message_hub.update_scalar('train/grad_norm', float(grad_norm))
+            grad = self.clip_func(params, **self.clip_grad_kwargs)
+            # `torch.nn.utils.clip_grad_value_` will return None.
+            if grad is not None:
+                self.message_hub.update_scalar(f'train/{self.grad_name}',
+                                               float(grad))
 
     def initialize_count_status(self, model: nn.Module, init_counts: int,
                                 max_counts: int) -> None:
@@ -312,24 +383,22 @@ class OptimWrapper:
         self._inner_count = init_counts
         self._max_counts = max_counts
         if self._inner_count % self._accumulative_counts != 0:
-            self.logger.warning(
+            print_log(
                 'Resumed iteration number is not divisible by '
                 '`_accumulative_counts` in `GradientCumulativeOptimizerHook`, '
                 'which means the gradient of some iterations is lost and the '
-                'result may be influenced slightly.')
+                'result may be influenced slightly.',
+                logger='current',
+                level=logging.WARNING)
 
         if has_batch_norm(model) and self._accumulative_counts > 1:
-            self.logger.warning(
+            print_log(
                 'Gradient accumulative may slightly decrease '
-                'performance because the model has BatchNorm layers.')
-        residual_counts = max_counts - init_counts
-        # The maximum number of training iteration that is divisible by
-        # `_accumulative_counts`.
-        self._divisible_counts = (
-            residual_counts // self._accumulative_counts *
-            self._accumulative_counts)
+                'performance because the model has BatchNorm layers.',
+                logger='current',
+                level=logging.WARNING)
         # Remainder of `_max_counts` divided by `_accumulative_counts`
-        self._remainder_counts = residual_counts - self._divisible_counts
+        self._remainder_counts = self._max_counts % self._accumulative_counts
 
     def should_update(self) -> bool:
         """Decide whether the parameters should be updated at the current
@@ -385,7 +454,7 @@ class OptimWrapper:
             # be divisible by `self._accumulative_counts`, so the
             # `loss_scale` for the last few iterations needs to be
             # recalculated.
-            if self._inner_count < self._divisible_counts:
+            if self._inner_count < self._max_counts - self._remainder_counts:
                 loss_factor = self._accumulative_counts
             else:
                 loss_factor = self._remainder_counts

@@ -7,12 +7,12 @@ from torch.distributed import ProcessGroup
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
 
-from mmengine.data import BaseDataElement
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS, Registry
+from mmengine.structures import BaseDataElement
 
 # support customize fsdp policy
-FSDP_WRAP_POLICYS = Registry('fsdp wrap policy')
+FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
@@ -60,7 +60,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             users' pre-defined config in MMEngine, its type is expected to be
             `None`, `str` or `Callable`. If it's `str`, then
             MMFullyShardedDataParallel will try to get specified method in
-            ``FSDP_WRAP_POLICYS`` registry,and this method will be passed to
+            ``FSDP_WRAP_POLICIES`` registry,and this method will be passed to
             FullyShardedDataParallel to finally initialize model.
 
             Note that this policy currently will only apply to child modules of
@@ -97,6 +97,9 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             computation overlapping.
             Pros and cons of each algorithm is explained in class
             ``BackwardPrefetch``.
+
+        **kwargs: Keyword arguments passed to
+            :class:`FullyShardedDataParallel`.
     """
 
     def __init__(
@@ -106,6 +109,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         cpu_offload: Optional[Union[bool, CPUOffload]] = None,
         fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
         backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+        **kwargs,
     ):
 
         if cpu_offload is not None:
@@ -118,10 +122,10 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
         if fsdp_auto_wrap_policy is not None:
             if isinstance(fsdp_auto_wrap_policy, str):
-                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICYS, \
-                    '`FSDP_WRAP_POLICYS` has no ' \
+                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICIES, \
+                    '`FSDP_WRAP_POLICIES` has no ' \
                     f'function {fsdp_auto_wrap_policy}'
-                fsdp_auto_wrap_policy = FSDP_WRAP_POLICYS.get(  # type: ignore
+                fsdp_auto_wrap_policy = FSDP_WRAP_POLICIES.get(  # type: ignore
                     fsdp_auto_wrap_policy)
                 if not isinstance(fsdp_auto_wrap_policy,
                                   Callable):  # type: ignore
@@ -150,10 +154,15 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
-        super().__init__(module, process_group, cpu_offload,
-                         fsdp_auto_wrap_policy, backward_prefetch)
+        super().__init__(
+            module=module,
+            process_group=process_group,
+            auto_wrap_policy=fsdp_auto_wrap_policy,
+            cpu_offload=cpu_offload,
+            backward_prefetch=backward_prefetch,
+            **kwargs)
 
-    def train_step(self, data: List[dict],
+    def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Interface for model forward, backward and parameters updating during
         training process.
@@ -168,7 +177,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         - Return log messages of losses.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
             optim_wrapper (OptimWrapper): A wrapper of optimizer to
                 update parameters.
 
@@ -177,18 +186,23 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         """
         # enable automatic mixed precision training context.
         with optim_wrapper.optim_context(self):
-            batch_inputs, data_samples = self.module.data_preprocessor(
-                data, training=True)
-            losses = self(batch_inputs, data_samples, mode='loss')
+            data = self.module.data_preprocessor(data, training=True)
+            if isinstance(data, dict):
+                losses = self(**data, mode='loss')
+            elif isinstance(data, (list, tuple)):
+                losses = self(*data, mode='loss')
+            else:
+                raise TypeError('Output of `data_preprocessor` should be '
+                                f'list tuple or dict, but got {type(data)}')
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
         return log_vars
 
-    def val_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def val_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the prediction of module during validation process.
 
         Args:
-            data (List[dict]): Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
@@ -196,11 +210,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         inputs, data_sample = self.module.data_preprocessor(data, False)
         return self(inputs, data_sample, mode='predict')
 
-    def test_step(self, data: List[dict]) -> List[BaseDataElement]:
+    def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
 
         Args:
-            data: Data sampled by dataloader.
+            data (dict): Data sampled by dataloader.
 
         Returns:
             List[BaseDataElement]: The predictions of given data.

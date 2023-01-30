@@ -1,191 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import logging
 import sys
-import warnings
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from contextlib import contextmanager
+from importlib import import_module
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from ..config import Config, ConfigDict
-from ..utils import ManagerMixin, is_seq_of
+from mmengine.config.utils import MODULE2PACKAGE
+from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
-
-
-def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
-                          registry: 'Registry') -> Any:
-    """Build a Runner object.
-    Examples:
-        >>> from mmengine import Registry, build_runner_from_cfg
-        >>> RUNNERS = Registry('runners', build_func=build_runner_from_cfg)
-        >>> @RUNNERS.register_module()
-        >>> class CustomRunner(Runner):
-        >>>     def setup_env(env_cfg):
-        >>>         pass
-        >>> cfg = dict(runner_type='CustomRunner', ...)
-        >>> custom_runner = RUNNERS.build(cfg)
-
-    Args:
-        cfg (dict or ConfigDict or Config): Config dict. If "runner_type" key
-            exists, it will be used to build a custom runner. Otherwise, it
-            will be used to build a default runner.
-        registry (:obj:`Registry`): The registry to search the type from.
-
-    Returns:
-        object: The constructed runner object.
-    """
-    from ..logging.logger import MMLogger
-
-    assert isinstance(
-        cfg,
-        (dict, ConfigDict, Config
-         )), f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}'
-    assert isinstance(
-        registry, Registry), ('registry should be a mmengine.Registry object',
-                              f'but got {type(registry)}')
-
-    args = cfg.copy()
-    obj_type = args.pop('runner_type', 'mmengine.Runner')
-    if isinstance(obj_type, str):
-        runner_cls = registry.get(obj_type)
-        if runner_cls is None:
-            raise KeyError(
-                f'{obj_type} is not in the {registry.name} registry. '
-                f'Please check whether the value of `{obj_type}` is correct or'
-                ' it was registered as expected. More details can be found at'
-                ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
-            )
-    elif inspect.isclass(obj_type):
-        runner_cls = obj_type
-    else:
-        raise TypeError(
-            f'type must be a str or valid type, but got {type(obj_type)}')
-
-    try:
-        runner = runner_cls.from_cfg(args)  # type: ignore
-        logger: MMLogger = MMLogger.get_current_instance()
-        logger.info(
-            f'An `{runner_cls.__name__}` instance is built '  # type: ignore
-            f'from registry, its implementation can be found in'
-            f'{runner_cls.__module__}')  # type: ignore
-        return runner
-
-    except Exception as e:
-        # Normal TypeError does not print class name.
-        cls_location = '/'.join(
-            runner_cls.__module__.split('.'))  # type: ignore
-        raise type(e)(
-            f'class `{runner_cls.__name__}` in '  # type: ignore
-            f'{cls_location}.py: {e}')
-
-
-def build_from_cfg(
-        cfg: Union[dict, ConfigDict, Config],
-        registry: 'Registry',
-        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
-    """Build a module from config dict when it is a class configuration, or
-    call a function from config dict when it is a function configuration.
-
-    At least one of the ``cfg`` and ``default_args`` contains the key "type"
-    which type should be either str or class. If they all contain it, the key
-    in ``cfg`` will be used because ``cfg`` has a high priority than
-    ``default_args`` that means if a key exist in both of them, the value of
-    the key will be ``cfg[key]``. They will be merged first and the key "type"
-    will be popped up and the remaining keys will be used as initialization
-    arguments.
-
-    Examples:
-        >>> from mmengine import Registry, build_from_cfg
-        >>> MODELS = Registry('models')
-        >>> @MODELS.register_module()
-        >>> class ResNet:
-        >>>     def __init__(self, depth, stages=4):
-        >>>         self.depth = depth
-        >>>         self.stages = stages
-        >>> cfg = dict(type='ResNet', depth=50)
-        >>> model = build_from_cfg(cfg, MODELS)
-        >>> # Returns an instantiated object
-        >>> @MODELS.register_module()
-        >>> def resnet50():
-        >>>     pass
-        >>> resnet = build_from_cfg(dict(type='resnet50'), MODELS)
-        >>> # Return a result of the calling function
-
-    Args:
-        cfg (dict or ConfigDict or Config): Config dict. It should at least
-            contain the key "type".
-        registry (:obj:`Registry`): The registry to search the type from.
-        default_args (dict or ConfigDict or Config, optional): Default
-            initialization arguments. Defaults to None.
-
-    Returns:
-        object: The constructed object.
-    """
-    # Avoid circular import
-    from ..logging.logger import MMLogger
-
-    if not isinstance(cfg, (dict, ConfigDict, Config)):
-        raise TypeError(
-            f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}')
-
-    if 'type' not in cfg:
-        if default_args is None or 'type' not in default_args:
-            raise KeyError(
-                '`cfg` or `default_args` must contain the key "type", '
-                f'but got {cfg}\n{default_args}')
-
-    if not isinstance(registry, Registry):
-        raise TypeError('registry must be a mmengine.Registry object, '
-                        f'but got {type(registry)}')
-
-    if not (isinstance(default_args,
-                       (dict, ConfigDict, Config)) or default_args is None):
-        raise TypeError(
-            'default_args should be a dict, ConfigDict, Config or None, '
-            f'but got {type(default_args)}')
-
-    args = cfg.copy()
-
-    if default_args is not None:
-        for name, value in default_args.items():
-            args.setdefault(name, value)
-
-    obj_type = args.pop('type')
-    if isinstance(obj_type, str):
-        obj_cls = registry.get(obj_type)
-        if obj_cls is None:
-            raise KeyError(
-                f'{obj_type} is not in the {registry.name} registry. '
-                f'Please check whether the value of `{obj_type}` is correct or'
-                ' it was registered as expected. More details can be found at'
-                ' https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
-            )
-    elif inspect.isclass(obj_type) or inspect.isfunction(obj_type):
-        obj_cls = obj_type
-    else:
-        raise TypeError(
-            f'type must be a str or valid type, but got {type(obj_type)}')
-
-    try:
-        # If `obj_cls` inherits from `ManagerMixin`, it should be instantiated
-        # by `ManagerMixin.get_instance` to ensure that it can be accessed
-        # globally.
-        if issubclass(obj_cls, ManagerMixin):  # type: ignore
-            obj = obj_cls.get_instance(**args)  # type: ignore
-        else:
-            obj = obj_cls(**args)  # type: ignore
-
-        logger: MMLogger = MMLogger.get_current_instance()
-        logger.info(
-            f'An `{obj_cls.__name__}` instance is built from '  # type: ignore
-            f'registry, its implementation can be found in '
-            f'{obj_cls.__module__}')  # type: ignore
-        return obj
-
-    except Exception as e:
-        # Normal TypeError does not print class name.
-        cls_location = '/'.join(obj_cls.__module__.split('.'))  # type: ignore
-        raise type(e)(
-            f'class `{obj_cls.__name__}` in '  # type: ignore
-            f'{cls_location}.py: {e}')
 
 
 class Registry:
@@ -208,6 +32,9 @@ class Registry:
             for children registry. If not specified, scope will be the name of
             the package where class is defined, e.g. mmdet, mmcls, mmseg.
             Defaults to None.
+        locations (list): The locations to import the modules registered
+            in this registry. Defaults to [].
+            New in version 0.4.0.
 
     Examples:
         >>> # define a registry
@@ -230,6 +57,16 @@ class Registry:
         >>>     pass
         >>> fasterrcnn = DETECTORS.build(dict(type='FasterRCNN'))
 
+        >>> # add locations to enable auto import
+        >>> DETECTORS = Registry('detectors', parent=MODELS,
+        >>>     scope='det', locations=['det.models.detectors'])
+        >>> # define this class in 'det.models.detectors'
+        >>> @DETECTORS.register_module()
+        >>> class MaskRCNN:
+        >>>     pass
+        >>> # The registry will auto import det.models.detectors.MaskRCNN
+        >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
+
     More advanced usages can be found at
     https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
     """
@@ -238,16 +75,20 @@ class Registry:
                  name: str,
                  build_func: Optional[Callable] = None,
                  parent: Optional['Registry'] = None,
-                 scope: Optional[str] = None):
+                 scope: Optional[str] = None,
+                 locations: List = []):
+        from .build_functions import build_from_cfg
         self._name = name
         self._module_dict: Dict[str, Type] = dict()
         self._children: Dict[str, 'Registry'] = dict()
+        self._locations = locations
+        self._imported = False
 
         if scope is not None:
             assert isinstance(scope, str)
             self._scope = scope
         else:
-            self._scope = self.infer_scope() if scope is None else scope
+            self._scope = self.infer_scope()
 
         # See https://mypy.readthedocs.io/en/stable/common_issues.html#
         # variables-vs-type-aliases for the use
@@ -360,12 +201,168 @@ class Registry:
     def root(self):
         return self._get_root_registry()
 
+    @contextmanager
+    def switch_scope_and_registry(self, scope: Optional[str]) -> Generator:
+        """Temporarily switch default scope to the target scope, and get the
+        corresponding registry.
+
+        If the registry of the corresponding scope exists, yield the
+        registry, otherwise yield the current itself.
+
+        Args:
+            scope (str, optional): The target scope.
+
+        Examples:
+            >>> from mmengine.registry import Registry, DefaultScope, MODELS
+            >>> import time
+            >>> # External Registry
+            >>> MMDET_MODELS = Registry('mmdet_model', scope='mmdet',
+            >>>     parent=MODELS)
+            >>> MMCLS_MODELS = Registry('mmcls_model', scope='mmcls',
+            >>>     parent=MODELS)
+            >>> # Local Registry
+            >>> CUSTOM_MODELS = Registry('custom_model', scope='custom',
+            >>>     parent=MODELS)
+            >>>
+            >>> # Initiate DefaultScope
+            >>> DefaultScope.get_instance(f'scope_{time.time()}',
+            >>>     scope_name='custom')
+            >>> # Check default scope
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+            >>> # Switch to mmcls scope and get `MMCLS_MODELS` registry.
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>     registry.scope
+            mmcls
+            >>> # Nested switch scope
+            >>> with CUSTOM_MODELS.switch_scope_and_registry(scope='mmdet') as mmdet_registry:
+            >>>     DefaultScope.get_current_instance().scope_name
+            mmdet
+            >>>     mmdet_registry.scope
+            mmdet
+            >>>     with CUSTOM_MODELS.switch_scope_and_registry(scope='mmcls') as mmcls_registry:
+            >>>         DefaultScope.get_current_instance().scope_name
+            mmcls
+            >>>         mmcls_registry.scope
+            mmcls
+            >>>
+            >>> # Check switch back to original scope.
+            >>> DefaultScope.get_current_instance().scope_name
+            custom
+        """  # noqa: E501
+        from ..logging import print_log
+
+        # Switch to the given scope temporarily. If the corresponding registry
+        # can be found in root registry, return the registry under the scope,
+        # otherwise return the registry itself.
+        with DefaultScope.overwrite_default_scope(scope):
+            # Get the global default scope
+            default_scope = DefaultScope.get_current_instance()
+            # Get registry by scope
+            if default_scope is not None:
+                scope_name = default_scope.scope_name
+                try:
+                    import_module(f'{scope_name}.registry')
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    if scope in MODULE2PACKAGE:
+                        print_log(
+                            f'{scope} is not installed and its '
+                            'modules will not be registered. If you '
+                            'want to use modules defined in '
+                            f'{scope}, Please install {scope} by '
+                            f'`pip install {MODULE2PACKAGE[scope]}.',
+                            logger='current',
+                            level=logging.WARNING)
+                    else:
+                        print_log(
+                            f'Failed to import `{scope}.registry` '
+                            f'make sure the registry.py exists in `{scope}` '
+                            'package.',
+                            logger='current',
+                            level=logging.WARNING)
+                root = self._get_root_registry()
+                registry = root._search_child(scope_name)
+                if registry is None:
+                    # if `default_scope` can not be found, fallback to argument
+                    # `registry`
+                    print_log(
+                        f'Failed to search registry with scope "{scope_name}" '
+                        f'in the "{root.name}" registry tree. '
+                        f'As a workaround, the current "{self.name}" registry '
+                        f'in "{self.scope}" is used to build instance. This '
+                        'may cause unexpected failure when running the built '
+                        f'modules. Please check whether "{scope_name}" is a '
+                        'correct scope, or whether the registry is '
+                        'initialized.',
+                        logger='current',
+                        level=logging.WARNING)
+                    registry = self
+            # If there is no built default scope, just return current registry.
+            else:
+                registry = self
+            yield registry
+
     def _get_root_registry(self) -> 'Registry':
         """Return the root registry."""
         root = self
         while root.parent is not None:
             root = root.parent
         return root
+
+    def import_from_location(self) -> None:
+        """import modules from the pre-defined locations in self._location."""
+        if not self._imported:
+            # Avoid circular import
+            from ..logging import print_log
+
+            # avoid BC breaking
+            if len(self._locations) == 0 and self.scope in MODULE2PACKAGE:
+                print_log(
+                    f'The "{self.name}" registry in {self.scope} did not '
+                    'set import location. Fallback to call '
+                    f'`{self.scope}.utils.register_all_modules` '
+                    'instead.',
+                    logger='current',
+                    level=logging.WARNING)
+                try:
+                    module = import_module(f'{self.scope}.utils')
+                    module.register_all_modules(False)  # type: ignore
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    if self.scope in MODULE2PACKAGE:
+                        print_log(
+                            f'{self.scope} is not installed and its '
+                            'modules will not be registered. If you '
+                            'want to use modules defined in '
+                            f'{self.scope}, Please install {self.scope} by '
+                            f'`pip install {MODULE2PACKAGE[self.scope]}.',
+                            logger='current',
+                            level=logging.WARNING)
+                    else:
+                        print_log(
+                            f'Failed to import {self.scope} and register '
+                            'its modules, please make sure you '
+                            'have registered the module manually.',
+                            logger='current',
+                            level=logging.WARNING)
+
+            for loc in self._locations:
+                try:
+                    import_module(loc)
+                    print_log(
+                        f"Modules of {self.scope}'s {self.name} registry have "
+                        f'been automatically imported from {loc}',
+                        logger='current',
+                        level=logging.DEBUG)
+                except (ImportError, AttributeError, ModuleNotFoundError):
+                    print_log(
+                        f'Failed to import {loc}, please check the '
+                        f'location of the registry {self.name} is '
+                        'correct.',
+                        logger='current',
+                        level=logging.WARNING)
+            self._imported = True
 
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
@@ -417,17 +414,20 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
         # Avoid circular import
-        from ..logging.logger import MMLogger
+        from ..logging import print_log
 
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
         registry_name = self.name
         scope_name = self.scope
+
+        # lazy import the modules to register them into the registry
+        self.import_from_location()
+
         if scope is None or scope == self._scope:
             # get from self
             if real_key in self._module_dict:
                 obj_cls = self._module_dict[real_key]
-
             elif scope is None:
                 # try to get the target from its parent or ancestors
                 parent = self.parent
@@ -439,6 +439,21 @@ class Registry:
                         break
                     parent = parent.parent
         else:
+            # import the registry to add the nodes into the registry tree
+            try:
+                import_module(f'{scope}.registry')
+                print_log(
+                    f'Registry node of {scope} has been automatically '
+                    'imported.',
+                    logger='current',
+                    level=logging.DEBUG)
+            except (ImportError, AttributeError, ModuleNotFoundError):
+                print_log(
+                    f'Cannot auto import {scope}.registry, please check '
+                    f'whether the package "{scope}" is installed correctly '
+                    'or import the registry manually.',
+                    logger='current',
+                    level=logging.DEBUG)
             # get from self._children
             if scope in self._children:
                 obj_cls = self._children[scope].get(real_key)
@@ -455,10 +470,11 @@ class Registry:
                     obj_cls = root.get(key)
 
         if obj_cls is not None:
-            logger: MMLogger = MMLogger.get_current_instance()
-            logger.info(
+            print_log(
                 f'Get class `{obj_cls.__name__}` from "{registry_name}"'
-                f' registry in "{scope_name}"')
+                f' registry in "{scope_name}"',
+                logger='current',
+                level=logging.DEBUG)
         return obj_cls
 
     def _search_child(self, scope: str) -> Optional['Registry']:
@@ -487,13 +503,16 @@ class Registry:
 
         return None
 
-    def build(self, cfg, *args, **kwargs) -> Any:
+    def build(self, cfg: dict, *args, **kwargs) -> Any:
         """Build an instance.
 
-        Build an instance by calling :attr:`build_func`. If the global
-        variable default scope (:obj:`DefaultScope`) exists ,
-        :meth:`build` will firstly get the responding registry and then call
-        its own :meth:`build`.
+        Build an instance by calling :attr:`build_func`.
+
+        Args:
+            cfg (dict): Config dict needs to be built.
+
+        Returns:
+            Any: The constructed object.
 
         Examples:
             >>> from mmengine import Registry
@@ -506,28 +525,7 @@ class Registry:
             >>> cfg = dict(type='ResNet', depth=50)
             >>> model = MODELS.build(cfg)
         """
-        with DefaultScope.overwrite_default_scope(cfg.pop('_scope_', None)):
-            # get the global default scope
-            default_scope = DefaultScope.get_current_instance()
-            if default_scope is not None:
-                scope_name = default_scope.scope_name
-                root = self._get_root_registry()
-                registry = root._search_child(scope_name)
-                if registry is None:
-                    # if `default_scope` can not be found, fallback to use self
-                    warnings.warn(
-                        f'Failed to search registry with scope "{scope_name}" '
-                        f'in the "{root.name}" registry tree. '
-                        f'As a workaround, the current "{self.name}" registry '
-                        f'in "{self.scope}" is used to build instance. This '
-                        f'may cause unexpected failure when running the built '
-                        f'modules. Please check whether "{scope_name}" is a '
-                        f'correct scope, or whether the registry is '
-                        f'initialized.')
-                    registry = self
-            else:
-                registry = self
-            return registry.build_func(cfg, *args, **kwargs, registry=registry)
+        return self.build_func(cfg, *args, **kwargs, registry=self)
 
     def _add_child(self, registry: 'Registry') -> None:
         """Add a child for a registry.

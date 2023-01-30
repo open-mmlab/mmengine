@@ -4,9 +4,15 @@ from collections import OrderedDict
 
 import numpy as np
 import pytest
-import torch
 
-from mmengine import MessageHub
+from mmengine.logging import HistoryBuffer, MessageHub
+from mmengine.utils import is_installed
+
+
+class NoDeepCopy:
+
+    def __deepcopy__(self, memodict={}):
+        raise NotImplementedError
 
 
 class TestMessageHub:
@@ -45,6 +51,15 @@ class TestMessageHub:
         message_hub.update_info('key', 1)
         assert message_hub.runtime_info['key'] == 1
 
+    def test_update_infos(self):
+        message_hub = MessageHub.get_instance('mmengine')
+        # test runtime value can be overwritten.
+        message_hub.update_info_dict({'a': 2, 'b': 3})
+        assert message_hub.runtime_info['a'] == 2
+        assert message_hub.runtime_info['b'] == 3
+        assert message_hub._resumed_keys['a']
+        assert message_hub._resumed_keys['b']
+
     def test_get_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
         # Get undefined key will raise error
@@ -69,7 +84,9 @@ class TestMessageHub:
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
 
+    @pytest.mark.skipif(not is_installed('torch'), reason='requires torch')
     def test_get_scalars(self):
+        import torch
         message_hub = MessageHub.get_instance('mmengine')
         log_dict = dict(
             loss=1,
@@ -94,6 +111,66 @@ class TestMessageHub:
             loss_dict = dict(error_type=dict(count=1))
             message_hub.update_scalars(loss_dict)
 
+    def test_state_dict(self):
+        message_hub = MessageHub.get_instance('test_state_dict')
+        # update log_scalars.
+        message_hub.update_scalar('loss', 0.1)
+        message_hub.update_scalar('lr', 0.1, resumed=False)
+        # update runtime information
+        message_hub.update_info('iter', 1, resumed=True)
+        message_hub.update_info('tensor', [1, 2, 3], resumed=False)
+        no_copy = NoDeepCopy()
+        message_hub.update_info('no_copy', no_copy, resumed=True)
+        state_dict = message_hub.state_dict()
+
+        assert state_dict['log_scalars']['loss'].data == (np.array([0.1]),
+                                                          np.array([1]))
+        assert 'lr' not in state_dict['log_scalars']
+        assert state_dict['runtime_info']['iter'] == 1
+        assert 'tensor' not in state_dict['runtime_info']
+        assert state_dict['runtime_info']['no_copy'] is no_copy
+
+    def test_load_state_dict(self, capsys):
+        message_hub1 = MessageHub.get_instance('test_load_state_dict1')
+        # update log_scalars.
+        message_hub1.update_scalar('loss', 0.1)
+        message_hub1.update_scalar('lr', 0.1, resumed=False)
+        # update runtime information
+        message_hub1.update_info('iter', 1, resumed=True)
+        message_hub1.update_info('tensor', [1, 2, 3], resumed=False)
+        state_dict = message_hub1.state_dict()
+
+        # Resume from state_dict
+        message_hub2 = MessageHub.get_instance('test_load_state_dict2')
+        message_hub2.load_state_dict(state_dict)
+        assert message_hub2.get_scalar('loss').data == (np.array([0.1]),
+                                                        np.array([1]))
+        assert message_hub2.get_info('iter') == 1
+
+        # Test resume from `MessageHub` instance.
+        message_hub3 = MessageHub.get_instance('test_load_state_dict3')
+        message_hub3.load_state_dict(state_dict)
+        assert message_hub3.get_scalar('loss').data == (np.array([0.1]),
+                                                        np.array([1]))
+        assert message_hub3.get_info('iter') == 1
+
+        # Test resume custom state_dict
+        state_dict = OrderedDict()
+        state_dict['log_scalars'] = dict(a=1, b=HistoryBuffer())
+        state_dict['runtime_info'] = dict(c=1, d=NoDeepCopy(), e=1)
+        state_dict['resumed_keys'] = dict(
+            a=True, b=True, c=True, e=False, f=True)
+
+        message_hub4 = MessageHub.get_instance('test_load_state_dict4')
+        message_hub4.load_state_dict(state_dict)
+        assert 'a' not in message_hub4.log_scalars and 'b' in \
+               message_hub4.log_scalars
+        assert 'c' in message_hub4.runtime_info and \
+               state_dict['runtime_info']['d'] is \
+               message_hub4.runtime_info['d']
+        assert message_hub4._resumed_keys == OrderedDict(
+            b=True, c=True, e=False)
+
     def test_getstate(self):
         message_hub = MessageHub.get_instance('name')
         # update log_scalars.
@@ -116,8 +193,8 @@ class TestMessageHub:
     def test_get_instance(self):
         # Test get root mmengine message hub.
         MessageHub._instance_dict = OrderedDict()
-        root_logger = MessageHub.get_current_instance()
-        assert id(MessageHub.get_instance('mmengine')) == id(root_logger)
+        message_hub = MessageHub.get_current_instance()
+        assert id(MessageHub.get_instance('mmengine')) == id(message_hub)
         # Test original `get_current_instance` function.
         MessageHub.get_instance('mmdet')
         assert MessageHub.get_current_instance().instance_name == 'mmdet'

@@ -1,10 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import datetime
 import os.path as osp
+import warnings
 from typing import Optional
 
 from mmengine.fileio import dump
+from mmengine.logging import print_log
 from . import root
+from .default_scope import DefaultScope
 from .registry import Registry
 
 
@@ -35,8 +38,10 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
                 else:
                     registry_info[folder] = [name]
             if verbose:
-                print(f"Find {num_modules} modules in {scope}'s "
-                      f"'{_registry.name}' registry ")
+                print_log(
+                    f"Find {num_modules} modules in {scope}'s "
+                    f"'{_registry.name}' registry ",
+                    logger='current')
             modules_info.append(registry_info)
         else:
             return
@@ -54,10 +59,20 @@ def count_registered_modules(save_path: Optional[str] = None,
 
     Args:
         save_path (str, optional): Path to save the json file.
-        verbose (bool): Whether to print log. Default: True
+        verbose (bool): Whether to print log. Defaults to True.
+
     Returns:
         dict: Statistic results of all registered modules.
     """
+    # import modules to trigger registering
+    import mmengine.dataset
+    import mmengine.evaluator
+    import mmengine.hooks
+    import mmengine.model
+    import mmengine.optim
+    import mmengine.runner
+    import mmengine.visualization  # noqa: F401
+
     registries_info = {}
     # traverse all registries in MMEngine
     for item in dir(root):
@@ -70,9 +85,32 @@ def count_registered_modules(save_path: Optional[str] = None,
         scan_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         registries=registries_info)
     if verbose:
-        print('Finish registry analysis, got: ', scan_data)
+        print_log(
+            f'Finish registry analysis, got: {scan_data}', logger='current')
     if save_path is not None:
         json_path = osp.join(save_path, 'modules_statistic_results.json')
         dump(scan_data, json_path, indent=2)
-        print(f'Result has been saved to {json_path}')
+        print_log(f'Result has been saved to {json_path}', logger='current')
     return scan_data
+
+
+def init_default_scope(scope: str) -> None:
+    """Initialize the given default scope.
+
+    Args:
+        scope (str): The name of the default scope.
+    """
+    never_created = DefaultScope.get_current_instance(
+    ) is None or not DefaultScope.check_instance_created(scope)
+    if never_created:
+        DefaultScope.get_instance(scope, scope_name=scope)
+        return
+    current_scope = DefaultScope.get_current_instance()  # type: ignore
+    if current_scope.scope_name != scope:  # type: ignore
+        warnings.warn('The current default scope '  # type: ignore
+                      f'"{current_scope.scope_name}" is not "{scope}", '
+                      '`init_default_scope` will force set the current'
+                      f'default scope to "{scope}".')
+        # avoid name conflict
+        new_instance_name = f'{scope}-{datetime.datetime.now()}'
+        DefaultScope.get_instance(new_instance_name, scope_name=scope)

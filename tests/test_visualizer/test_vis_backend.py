@@ -86,6 +86,7 @@ class TestLocalVisBackend:
         input_dict = {'map': 0.7, 'acc': 0.9}
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalars(input_dict)
+        assert input_dict == {'map': 0.7, 'acc': 0.9}
         out_dict = load(local_vis_backend._scalar_save_file, 'json')
         assert out_dict == {'map': 0.7, 'acc': 0.9, 'step': 0}
 
@@ -143,7 +144,19 @@ class TestTensorboardVisBackend:
         # test append mode
         tensorboard_vis_backend.add_scalar('map', 0.9, step=0)
         tensorboard_vis_backend.add_scalar('map', 0.95, step=1)
-
+        # test with numpy
+        with pytest.warns(None) as record:
+            tensorboard_vis_backend.add_scalar('map', np.array(0.9), step=0)
+            tensorboard_vis_backend.add_scalar('map', np.array(0.95), step=1)
+            tensorboard_vis_backend.add_scalar('map', np.array(9), step=0)
+            tensorboard_vis_backend.add_scalar('map', np.array(95), step=1)
+            tensorboard_vis_backend.add_scalar('map', np.array([9])[0], step=0)
+            tensorboard_vis_backend.add_scalar(
+                'map', np.array([95])[0], step=1)
+        assert len(record) == 0
+        # test with tensor
+        tensorboard_vis_backend.add_scalar('map', torch.tensor(0.9), step=0)
+        tensorboard_vis_backend.add_scalar('map', torch.tensor(0.95), step=1)
         # Unprocessable data will output a warning message
         with pytest.warns(Warning):
             tensorboard_vis_backend.add_scalar('map', [0.95])
@@ -193,7 +206,7 @@ class TestWandbVisBackend:
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        wandb_vis_backend = WandbVisBackend('temp_dir')
+        wandb_vis_backend = WandbVisBackend('temp_dir', log_code_name='code')
         _wandb = wandb_vis_backend.experiment
         _wandb.run.dir = 'temp_dir'
         wandb_vis_backend.add_config(cfg)

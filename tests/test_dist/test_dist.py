@@ -13,7 +13,8 @@ import torch.distributed as torch_dist
 import mmengine.dist as dist
 from mmengine.dist.dist import sync_random_seed
 from mmengine.testing._internal import MultiProcessTestCase
-from mmengine.utils import TORCH_VERSION, digit_version
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 class TestDist(TestCase):
@@ -640,6 +641,7 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
                 ]
 
             data_gen = (item for item in data)
+            dist.all_reduce_params(data_gen, coalesce=coalesce, op=reduce_op)
 
             if reduce_op == 'sum':
                 expected = (

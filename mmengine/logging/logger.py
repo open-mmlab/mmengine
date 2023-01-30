@@ -7,7 +7,6 @@ from typing import Optional, Union
 
 from termcolor import colored
 
-from mmengine import dist
 from mmengine.utils import ManagerMixin
 from mmengine.utils.manager import _accquire_lock, _release_lock
 
@@ -19,18 +18,24 @@ class MMFormatter(logging.Formatter):
     Args:
         color (bool): Whether to use colorful format. filehandler is not
             allowed to use color format, otherwise it will be garbled.
+        blink (bool): Whether to blink the ``INFO`` and ``DEBUG`` logging
+            level.
+        **kwargs: Keyword arguments passed to
+            :meth:`logging.Formatter.__init__`.
     """
     _color_mapping: dict = dict(
         ERROR='red', WARNING='yellow', INFO='white', DEBUG='green')
 
-    def __init__(self, color: bool = True, **kwargs):
-
+    def __init__(self, color: bool = True, blink: bool = False, **kwargs):
         super().__init__(**kwargs)
+        assert not (not color and blink), (
+            'blink should only be available when color is True')
         # Get prefix format according to color.
-        error_prefix = self._get_prefix('ERROR', color)
-        warn_prefix = self._get_prefix('WARNING', color)
-        info_prefix = self._get_prefix('INFO', color)
-        debug_prefix = self._get_prefix('DEBUG', color)
+        error_prefix = self._get_prefix('ERROR', color, blink=True)
+        warn_prefix = self._get_prefix('WARNING', color, blink=True)
+        info_prefix = self._get_prefix('INFO', color, blink)
+        debug_prefix = self._get_prefix('DEBUG', color, blink)
+
         # Config output format.
         self.err_format = (f'%(asctime)s - %(name)s - {error_prefix} - '
                            '%(pathname)s - %(funcName)s - %(lineno)d - '
@@ -42,21 +47,22 @@ class MMFormatter(logging.Formatter):
         self.debug_format = (f'%(asctime)s - %(name)s - {debug_prefix} - %('
                              'message)s')
 
-    def _get_prefix(self, level: str, color: bool) -> str:
+    def _get_prefix(self, level: str, color: bool, blink=False) -> str:
         """Get the prefix of the target log level.
 
         Args:
             level (str): log level.
             color (bool): Whether to get colorful prefix.
+            blink (bool): Whether the prefix will blink.
 
         Returns:
             str: The plain or colorful prefix.
         """
         if color:
-            prefix = colored(
-                level,
-                self._color_mapping[level],
-                attrs=['blink', 'underline'])
+            attrs = ['underline']
+            if blink:
+                attrs.append('blink')
+            prefix = colored(level, self._color_mapping[level], attrs=attrs)
         else:
             prefix = level
         return prefix
@@ -103,7 +109,7 @@ class MMLogger(Logger, ManagerMixin):
           ``MMLogger.get_instance`` but not ``logging.getLogger``. This feature
           ensures ``MMLogger`` will not be incluenced by third-party logging
           config.
-        - Different from ``logging.Logger``, ``MMLogger`` will not log warrning
+        - Different from ``logging.Logger``, ``MMLogger`` will not log warning
           or error message without ``Handler``.
 
     Examples:
@@ -145,7 +151,8 @@ class MMLogger(Logger, ManagerMixin):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-        rank = dist.get_rank()
+
+        rank = _get_rank()
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
@@ -246,6 +253,7 @@ def print_log(msg,
         logger (Logger or str, optional): If the type of logger is
         ``logging.Logger``, we directly use logger to log messages.
             Some special loggers are:
+
             - "silent": No message will be printed.
             - "current": Use latest created logger to log message.
             - other str: Instance name of logger. The corresponding logger
@@ -278,3 +286,14 @@ def print_log(msg,
         raise TypeError(
             '`logger` should be either a logging.Logger object, str, '
             f'"silent", "current" or None, but got {type(logger)}')
+
+
+def _get_rank():
+    """Support using logging module without torch."""
+    try:
+        # requires torch
+        from mmengine.dist import get_rank
+    except ImportError:
+        return 0
+    else:
+        return get_rank()

@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Any, Iterator, List, Optional, Sequence, Union
 
-from mmengine.data import BaseDataElement
-from ..registry.root import METRICS
+from mmengine.dataset import pseudo_collate
+from mmengine.registry import EVALUATOR, METRICS
+from mmengine.structures import BaseDataElement
 from .metric import BaseMetric
 
 
+@EVALUATOR.register_module()
 class Evaluator:
     """Wrapper class to compose multiple :class:`BaseMetric` instances.
 
@@ -19,13 +21,10 @@ class Evaluator:
             metrics = [metrics]
         self.metrics: List[BaseMetric] = []
         for metric in metrics:
-            if isinstance(metric, BaseMetric):
-                self.metrics.append(metric)
-            elif isinstance(metric, dict):
+            if isinstance(metric, dict):
                 self.metrics.append(METRICS.build(metric))
             else:
-                raise TypeError('metric should be a dict or a BaseMetric, '
-                                f'but got {metric}.')
+                self.metrics.append(metric)
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -39,34 +38,26 @@ class Evaluator:
         for metric in self.metrics:
             metric.dataset_meta = dataset_meta
 
-    def process(self, data_batch: Sequence[dict],
-                predictions: Sequence[BaseDataElement]):
+    def process(self,
+                data_samples: Sequence[BaseDataElement],
+                data_batch: Optional[Any] = None):
         """Convert ``BaseDataSample`` to dict and invoke process method of each
         metric.
 
         Args:
-            data_batch (Sequence[dict]): A batch of data from the dataloader.
-            predictions (Sequence[BaseDataElement]): A batch of outputs from
-                the model.
+            data_samples (Sequence[BaseDataElement]): predictions of the model,
+                and the ground truth of the validation set.
+            data_batch (Any, optional): A batch of data from the dataloader.
         """
-        _data_batch = []
-        for data in data_batch:
-            if isinstance(data['data_sample'], BaseDataElement):
-                _data_batch.append(
-                    dict(
-                        inputs=data['inputs'],
-                        data_sample=data['data_sample'].to_dict()))
+        _data_samples = []
+        for data_sample in data_samples:
+            if isinstance(data_sample, BaseDataElement):
+                _data_samples.append(data_sample.to_dict())
             else:
-                _data_batch.append(data)
-        _predictions = []
-        for pred in predictions:
-            if isinstance(pred, BaseDataElement):
-                _predictions.append(pred.to_dict())
-            else:
-                _predictions.append(pred)
+                _data_samples.append(data_sample)
 
         for metric in self.metrics:
-            metric.process(_data_batch, _predictions)
+            metric.process(data_batch, _data_samples)
 
     def evaluate(self, size: int) -> dict:
         """Invoke ``evaluate`` method of each metric and collect the metrics
@@ -99,15 +90,15 @@ class Evaluator:
         return metrics
 
     def offline_evaluate(self,
-                         data: Sequence,
-                         predictions: Sequence,
+                         data_samples: Sequence,
+                         data: Optional[Sequence] = None,
                          chunk_size: int = 1):
         """Offline evaluate the dumped predictions on the given data .
 
         Args:
-            data (Sequence): All data of the validation set.
-            predictions (Sequence): All predictions of the model on the
-                validation set.
+            data_samples (Sequence): All predictions and ground truth of the
+                model and the validation set.
+            data (Sequence, optional): All data of the validation set.
             chunk_size (int): The number of data samples and predictions to be
                 processed in a batch.
         """
@@ -126,10 +117,19 @@ class Evaluator:
                 if chunk:
                     yield chunk
 
+        if data is not None:
+            assert len(data_samples) == len(data), (
+                'data_samples and data should have the same length, but got '
+                f'data_samples length: {len(data_samples)} '
+                f'data length: {len(data)}')
+            data = get_chunks(iter(data), chunk_size)
+
         size = 0
-        for data_chunk, pred_chunk in zip(
-                get_chunks(iter(data), chunk_size),
-                get_chunks(iter(predictions), chunk_size)):
-            size += len(data_chunk)
-            self.process(data_chunk, pred_chunk)
+        for output_chunk in get_chunks(iter(data_samples), chunk_size):
+            if data is not None:
+                data_chunk = pseudo_collate(next(data))  # type: ignore
+            else:
+                data_chunk = None
+            size += len(output_chunk)
+            self.process(output_chunk, data_chunk)
         return self.evaluate(size)

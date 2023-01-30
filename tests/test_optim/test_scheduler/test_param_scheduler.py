@@ -1,20 +1,25 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
+import os.path as osp
+import tempfile
 from unittest import TestCase
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+from mmengine.optim import OptimWrapper
 # yapf: disable
 from mmengine.optim.scheduler import (ConstantParamScheduler,
                                       CosineAnnealingParamScheduler,
+                                      CosineRestartParamScheduler,
                                       ExponentialParamScheduler,
                                       LinearParamScheduler,
                                       MultiStepParamScheduler,
-                                      PolyParamScheduler, StepParamScheduler,
-                                      _ParamScheduler)
-from mmengine.optim.scheduler.param_scheduler import OneCycleParamScheduler
+                                      OneCycleParamScheduler,
+                                      PolyParamScheduler,
+                                      ReduceOnPlateauParamScheduler,
+                                      StepParamScheduler, _ParamScheduler)
 # yapf: enable
 from mmengine.testing import assert_allclose
 
@@ -39,8 +44,23 @@ class TestParameterScheduler(TestCase):
         tearDown() -> cleanUp()
         """
         self.model = ToyModel()
+        self.layer2_mult = 10
+        lr = 0.05
+        momentum = 0.01
+        weight_decay = 5e-4
         self.optimizer = optim.SGD(
-            self.model.parameters(), lr=0.05, momentum=0.01, weight_decay=5e-4)
+            [{
+                'params': self.model.conv1.parameters()
+            }, {
+                'params': self.model.conv2.parameters(),
+                'lr': lr * self.layer2_mult,
+                'momentum': momentum * self.layer2_mult,
+                'weight_decay': weight_decay * self.layer2_mult
+            }],
+            lr=lr,
+            momentum=momentum,
+            weight_decay=weight_decay)
+        self.temp_dir = tempfile.TemporaryDirectory()
 
     def test_base_scheduler_step(self):
         with self.assertRaises(NotImplementedError):
@@ -83,21 +103,19 @@ class TestParameterScheduler(TestCase):
 
         results = []
         for epoch in range(5):
-            for param_group in self.optimizer.param_groups:
-                results.append(param_group['lr'])
-                # The order should be
-                # train_epoch() -> save_checkpoint() -> scheduler.step().
-                # Break at here to simulate the checkpoint is saved before
-                # the scheduler.step().
-                if epoch == 4:
-                    break
-                scheduler.step()
+            results.append(self.optimizer.param_groups[0]['lr'])
+            # The order should be
+            # train_epoch() -> save_checkpoint() -> scheduler.step().
+            # Break at here to simulate the checkpoint is saved before
+            # the scheduler.step().
+            if epoch == 4:
+                break
+            scheduler.step()
         scheduler2 = ExponentialParamScheduler(
             self.optimizer, param_name='lr', gamma=0.9, last_step=4)
         for epoch in range(6):
-            for param_group in self.optimizer.param_groups:
-                results.append(param_group['lr'])
-                scheduler2.step()
+            results.append(self.optimizer.param_groups[0]['lr'])
+            scheduler2.step()
 
         for epoch in range(epochs):
             assert_allclose(
@@ -141,7 +159,10 @@ class TestParameterScheduler(TestCase):
 
     def test_get_last_value(self):
         epochs = 10
-        targets = [[0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]]
+        single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = StepParamScheduler(
             self.optimizer, param_name='lr', step_size=3, gamma=0.1)
         for epoch in range(epochs):
@@ -199,7 +220,9 @@ class TestParameterScheduler(TestCase):
         single_targets = [0.05] * begin + [x * 0.05
                                            for x in interpolation] + [0.05] * (
                                                epochs - iters - begin)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = LinearParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -217,9 +240,16 @@ class TestParameterScheduler(TestCase):
                               schedulers,
                               targets,
                               epochs=10,
-                              param_name='lr'):
+                              param_name='lr',
+                              step_kwargs=None):
         if isinstance(schedulers, _ParamScheduler):
             schedulers = [schedulers]
+        if step_kwargs is None:
+            step_kwarg = [{} for _ in range(len(schedulers))]
+            step_kwargs = [step_kwarg for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
+            assert len(step_kwargs[0]) == len(schedulers)
         for epoch in range(epochs):
             for param_group, target in zip(self.optimizer.param_groups,
                                            targets):
@@ -231,7 +261,10 @@ class TestParameterScheduler(TestCase):
                         param_group[param_name]),
                     atol=1e-5,
                     rtol=0)
-            [scheduler.step() for scheduler in schedulers]
+            [
+                scheduler.step(**step_kwargs[epoch][i])
+                for i, scheduler in enumerate(schedulers)
+            ]
 
     def test_step_scheduler(self):
         # lr = 0.05     if epoch < 3
@@ -241,7 +274,9 @@ class TestParameterScheduler(TestCase):
         epochs = 10
         single_targets = [0.05] * 3 + [0.005] * 3 + [0.0005] * 3 + [0.00005
                                                                     ] * 3
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = StepParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -254,7 +289,9 @@ class TestParameterScheduler(TestCase):
         # momentum = 0.001    if 2 <= epoch < 4
         epochs = 4
         single_targets = [0.01] * 2 + [0.001] * 2
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = StepParamScheduler(
             self.optimizer, param_name='momentum', gamma=0.1, step_size=2)
         self._test_scheduler_value(
@@ -268,7 +305,9 @@ class TestParameterScheduler(TestCase):
         epochs = 10
         single_targets = [0.05] * 2 + [0.005] * 3 + [0.0005] * 4 + [0.00005
                                                                     ] * 3
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = MultiStepParamScheduler(
             self.optimizer, param_name='lr', gamma=0.1, milestones=[2, 5, 9])
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -282,7 +321,9 @@ class TestParameterScheduler(TestCase):
         # lr = 0.005    if 5 <= epoch
         epochs = 10
         single_targets = [0.025] * 4 + [0.05] * 6
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = ConstantParamScheduler(
             self.optimizer, param_name='lr', factor=1.0 / 2, end=5)
         self._test_scheduler_value(scheduler, targets, epochs)
@@ -313,7 +354,9 @@ class TestParameterScheduler(TestCase):
         ]
         single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
             epochs - iters)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = LinearParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -324,35 +367,77 @@ class TestParameterScheduler(TestCase):
     def test_exp_scheduler(self):
         epochs = 10
         single_targets = [0.05 * (0.9**x) for x in range(epochs)]
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = ExponentialParamScheduler(
             self.optimizer, param_name='lr', gamma=0.9)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_cos_anneal_scheduler(self):
+        with self.assertRaises(AssertionError):
+            CosineAnnealingParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                T_max=10,
+                eta_min=0,
+                eta_min_ratio=0.1)
         epochs = 12
         t = 10
-        eta_min = 1e-10
-        single_targets = [
+        eta_min = 5e-3
+        targets1 = [
             eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
             for x in range(epochs)
         ]
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets2 = [
+            eta_min + (0.5 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
+        ]
+        targets = [targets1, targets2]
         scheduler = CosineAnnealingParamScheduler(
             self.optimizer, param_name='lr', T_max=t, eta_min=eta_min)
         self._test_scheduler_value(scheduler, targets, epochs)
+
+        # Test `eta_min_ratio`
+        self.setUp()
+        eta_min_ratio = 1e-3
+        targets1 = [
+            0.05 * eta_min_ratio + (0.05 - 0.05 * eta_min_ratio) *
+            (1 + math.cos(math.pi * x / t)) / 2 for x in range(epochs)
+        ]
+        targets2 = [
+            0.5 * eta_min_ratio + (0.5 - 0.5 * eta_min_ratio) *
+            (1 + math.cos(math.pi * x / t)) / 2 for x in range(epochs)
+        ]
+        targets = [targets1, targets2]
+        scheduler = CosineAnnealingParamScheduler(
+            self.optimizer,
+            param_name='lr',
+            T_max=t,
+            eta_min_ratio=eta_min_ratio)
+        self._test_scheduler_value(scheduler, targets, epochs)
+
+        # Test default `T_max`
+        scheduler = CosineAnnealingParamScheduler(
+            self.optimizer, param_name='lr', begin=5, end=100, eta_min=eta_min)
+        self.assertEqual(scheduler.T_max, 100 - 5)
 
     def test_poly_scheduler(self):
         epochs = 10
         power = 0.9
         min_lr = 0.001
         iters = 4
-        single_targets = [
+        targets_layer1 = [
             min_lr + (0.05 - min_lr) * (1 - i / iters)**power
             for i in range(iters)
         ] + [min_lr] * (
             epochs - iters)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets_layer2 = [
+            min_lr + (0.05 * self.layer2_mult - min_lr) *
+            (1 - i / iters)**power for i in range(iters)
+        ] + [min_lr] * (
+            epochs - iters)
+        targets = [targets_layer1, targets_layer2]
         scheduler = PolyParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -361,13 +446,244 @@ class TestParameterScheduler(TestCase):
             end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
-    def _check_scheduler_state_dict(self, construct, construct2, epochs=10):
+    def test_cosine_restart_scheduler(self):
+        with self.assertRaises(AssertionError):
+            CosineRestartParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0,
+                eta_min_ratio=0.1)
+        with self.assertRaises(AssertionError):
+            CosineRestartParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                periods=[4, 5],
+                restart_weights=[1, 0.5, 0.0],
+                eta_min=0)
+        single_targets = [
+            0.05, 0.0426776, 0.025, 0.00732233, 0.025, 0.022612712, 0.01636271,
+            0.0086372, 0.0023872, 0.0023872
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        # Test with non-zero eta-min.
+        scheduler = CosineRestartParamScheduler(
+            self.optimizer,
+            param_name='lr',
+            periods=[4, 5],
+            restart_weights=[1, 0.5],
+            eta_min=0)
+        self._test_scheduler_value(scheduler, targets, epochs=10)
+
+        epochs = 10
+        t = 10
+        eta_min = 5e-3
+        targets1 = [
+            eta_min + (0.05 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
+        ]
+        targets2 = [
+            eta_min + (0.5 - eta_min) * (1 + math.cos(math.pi * x / t)) / 2
+            for x in range(epochs)
+        ]
+        targets = [targets1, targets2]
+        scheduler = CosineRestartParamScheduler(
+            self.optimizer,
+            param_name='lr',
+            periods=[t],
+            restart_weights=[1],
+            eta_min=eta_min)
+        self._test_scheduler_value(scheduler, targets, epochs=10)
+
+    def test_reduce_on_plateau_scheduler(self):
+        # inherit _ParamScheduler but not call super().__init__(),
+        # so some codes need to be retested
+
+        # Test error in __init__ method
+        with self.assertRaises(TypeError):
+            ReduceOnPlateauParamScheduler('invalid_optimizer', param_name='lr')
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(
+                self.optimizer, 'lr', begin=10, end=5)
+        with self.assertRaises(AssertionError):
+            ReduceOnPlateauParamScheduler(self.optimizer, 'lr', by_epoch=False)
+
+        for last_step in (1.5, -2):
+            with self.assertRaises(AssertionError):
+                ReduceOnPlateauParamScheduler(
+                    self.optimizer, 'lr', last_step=last_step)
+
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(self.optimizer, 'lr', factor=2.0)
+        ReduceOnPlateauParamScheduler(
+            self.optimizer, 'lr', min_value=[0.1, 0.1])
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(
+                self.optimizer, 'lr', min_value=[0.1, 0.1, 0.1, 0.1])
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(self.optimizer, 'lr', threshold=-1.0)
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(self.optimizer, 'lr', rule='foo')
+        with self.assertRaises(ValueError):
+            ReduceOnPlateauParamScheduler(
+                self.optimizer, 'lr', threshold_rule='foo')
+
+        # Test error in step method
+        scheduler = ReduceOnPlateauParamScheduler(
+            self.optimizer, param_name='lr', monitor='loss')
+        assert scheduler.step() is None
+
+        with self.assertRaises(TypeError):
+            scheduler.step(('foo', 1.0))
+
+        metrics = dict(loss_foo=1.0)
+        with self.assertRaises(KeyError):
+            scheduler.step(metrics)
+
+        # Test scheduler value
+        def _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                        patience, threshold, threshold_rule, cooldown,
+                        min_value):
+            lr = 0.05
+            momentum = 0.01
+            weight_decay = 5e-4
+            scheduler = ReduceOnPlateauParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                monitor=monitor,
+                rule=rule,
+                factor=factor,
+                patience=patience,
+                threshold=threshold,
+                threshold_rule=threshold_rule,
+                cooldown=cooldown,
+                min_value=min_value,
+            )
+            self._test_scheduler_value(
+                scheduler, targets, epochs=epochs, step_kwargs=metrics_list)
+
+            # reset the state of optimizers
+            self.optimizer = optim.SGD(
+                [{
+                    'params': self.model.conv1.parameters()
+                }, {
+                    'params': self.model.conv2.parameters(),
+                    'lr': lr * self.layer2_mult,
+                    'momentum': momentum * self.layer2_mult,
+                    'weight_decay': weight_decay * self.layer2_mult
+                }],
+                lr=lr,
+                momentum=momentum,
+                weight_decay=weight_decay)
+
+        epochs = 10
+        factor = 0.1
+        cooldown = 1
+        patience = 2
+
+        # rule(less) and threshold_rule(rel)
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # rule(less) and threshold_rule(abs)
+        rule, threshold_rule = 'less', 'abs'
+        threshold = 0.9
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(rel)
+        rule, threshold_rule = 'greater', 'rel'
+        threshold = 0.01
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # rule(greater) and threshold_rule(abs)
+        rule, threshold_rule = 'greater', 'abs'
+        threshold = 0.9
+        monitor = 'bbox_mAP'
+        metric_values = [1., 2., 3., 4., 5., 5., 5., 5., 5., 5.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.005, 0.005
+        ]
+        targets = [
+            single_targets, [t * self.layer2_mult for t in single_targets]
+        ]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, 0.0)
+
+        # change min_value
+        min_value = 0.01
+        rule, threshold_rule = 'less', 'rel'
+        threshold = 0.01
+        monitor = 'loss'
+        metric_values = [10., 9., 8., 7., 6., 6., 6., 6., 6., 6.]
+        metrics_list = [[dict(metrics={monitor: v})] for v in metric_values]
+        single_targets_1 = [
+            0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, min_value,
+            min_value
+        ]
+        single_targets_2 = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.05, 0.05]
+        targets = [single_targets_1, single_targets_2]
+
+        _test_value(epochs, targets, metrics_list, monitor, rule, factor,
+                    patience, threshold, threshold_rule, cooldown, min_value)
+
+    def _check_scheduler_state_dict(self,
+                                    construct,
+                                    construct2,
+                                    epochs=10,
+                                    step_kwargs=None):
+        if step_kwargs is None:
+            step_kwargs = [{} for _ in range(epochs)]
+        else:  # step_kwargs is not None
+            assert len(step_kwargs) == epochs
         scheduler = construct()
-        for _ in range(epochs):
+        for epoch in range(epochs):
             scheduler.optimizer.step()
-            scheduler.step()
+            scheduler.step(**step_kwargs[epoch])
         scheduler_copy = construct2()
-        scheduler_copy.load_state_dict(scheduler.state_dict())
+        torch.save(scheduler.state_dict(),
+                   osp.join(self.temp_dir.name, 'tmp.pth'))
+        state_dict = torch.load(osp.join(self.temp_dir.name, 'tmp.pth'))
+        scheduler_copy.load_state_dict(state_dict)
         for key in scheduler.__dict__.keys():
             if key != 'optimizer':
                 self.assertEqual(scheduler.__dict__[key],
@@ -435,6 +751,53 @@ class TestParameterScheduler(TestCase):
                 self.optimizer, param_name='lr', power=0.8, eta_min=0.002),
             epochs=10)
 
+    def test_cosine_restart_scheduler_state_dict(self):
+        self._check_scheduler_state_dict(
+            lambda: CosineRestartParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                periods=[4, 5],
+                restart_weights=[1, 0.5],
+                eta_min=0),
+            lambda: CosineRestartParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                periods=[4, 6],
+                restart_weights=[1, 0.5],
+                eta_min=0),
+            epochs=10)
+
+    def test_reduce_on_plateau_scheduler_state_dict(self):
+        epochs = 10
+        metrics_list = [dict(metrics=dict(loss=1.0)) for _ in range(epochs)]
+        self._check_scheduler_state_dict(
+            lambda: ReduceOnPlateauParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                monitor='loss',
+                rule='less',
+                factor=0.01,
+                patience=5,
+                threshold=1e-4,
+                threshold_rule='rel',
+                cooldown=0,
+                min_value=0.0,
+                eps=1e-8),
+            lambda: ReduceOnPlateauParamScheduler(
+                self.optimizer,
+                param_name='lr',
+                monitor='loss_foo',
+                rule='greater',
+                factor=0.05,
+                patience=10,
+                threshold=1e-5,
+                threshold_rule='abs',
+                cooldown=5,
+                min_value=0.1,
+                eps=1e-9),
+            epochs=epochs,
+            step_kwargs=metrics_list)
+
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
         with self.assertRaises(AssertionError):
@@ -451,8 +814,7 @@ class TestParameterScheduler(TestCase):
         epoch_length = 7
         single_targets = [0.01] * 2 * epoch_length + [0.001] * 2 * epoch_length
         targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
+            single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = StepParamScheduler.build_iter_from_epoch(
             self.optimizer,
@@ -475,8 +837,7 @@ class TestParameterScheduler(TestCase):
                               0.0005
                           ] * 4 * epoch_length + [0.00005] * 3 * epoch_length
         targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
+            single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = MultiStepParamScheduler.build_iter_from_epoch(
             self.optimizer,
@@ -494,8 +855,7 @@ class TestParameterScheduler(TestCase):
         single_targets = [0.025] * (5 * epoch_length -
                                     1) + [0.05] * (5 * epoch_length + 1)
         targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
+            single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = ConstantParamScheduler.build_iter_from_epoch(
             self.optimizer,
@@ -517,7 +877,9 @@ class TestParameterScheduler(TestCase):
         ]
         single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
             epochs * epoch_length - iters)
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler = LinearParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
@@ -534,8 +896,7 @@ class TestParameterScheduler(TestCase):
             0.05 * (0.9**x) for x in range(epochs * epoch_length)
         ]
         targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
+            single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = ExponentialParamScheduler.build_iter_from_epoch(
             self.optimizer,
@@ -555,8 +916,7 @@ class TestParameterScheduler(TestCase):
             for x in range(epochs * epoch_length)
         ]
         targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
+            single_targets, [x * self.layer2_mult for x in single_targets]
         ]
         scheduler = CosineAnnealingParamScheduler.build_iter_from_epoch(
             self.optimizer,
@@ -574,15 +934,17 @@ class TestParameterScheduler(TestCase):
         epoch_length = 11
 
         iters = end * epoch_length - 1
-        single_targets = [
+        targets_layer1 = [
             min_lr + (0.05 - min_lr) * (1 - i / iters)**power
             for i in range(iters)
         ] + [min_lr] * (
             epochs - iters)
-        targets = [
-            single_targets,
-            [x * epochs * epoch_length for x in single_targets]
-        ]
+        targets_layer2 = [
+            min_lr + (0.05 * self.layer2_mult - min_lr) *
+            (1 - i / iters)**power for i in range(iters)
+        ] + [min_lr] * (
+            epochs - iters)
+        targets = [targets_layer1, targets_layer2]
         scheduler = PolyParamScheduler.build_iter_from_epoch(
             self.optimizer,
             param_name='lr',
@@ -597,7 +959,9 @@ class TestParameterScheduler(TestCase):
         epochs = 12
         single_targets = [0.025, 0.03125, 0.0375, 0.04375
                           ] + [0.05] * 4 + [0.005] * 3 + [0.0005] * 1
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler1 = LinearParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -626,7 +990,9 @@ class TestParameterScheduler(TestCase):
             (1 + math.cos(math.pi * x / 5)) / 2 for x in range(5)
         ]
         single_targets = single_targets1 + single_targets2
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler2 = CosineAnnealingParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -642,7 +1008,9 @@ class TestParameterScheduler(TestCase):
         epochs = 10
         single_targets = [0.025, 0.03125, 0.0375, 0.004375
                           ] + [0.005] * 2 + [0.0005] * 3 + [0.00005] * 1
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler1 = LinearParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -668,7 +1036,9 @@ class TestParameterScheduler(TestCase):
         ]
         single_targets = single_targets1 + [single_targets1[-1]
                                             ] * 5 + single_targets2
-        targets = [single_targets, [x * epochs for x in single_targets]]
+        targets = [
+            single_targets, [x * self.layer2_mult for x in single_targets]
+        ]
         scheduler2 = CosineAnnealingParamScheduler(
             self.optimizer,
             param_name='lr',
@@ -695,3 +1065,10 @@ class TestParameterScheduler(TestCase):
                 param_name='lr',
                 total_steps=10,
                 anneal_strategy='a')
+
+
+class TestParameterSchedulerOptimWrapper(TestParameterScheduler):
+
+    def setUp(self):
+        super().setUp()
+        self.optimizer = OptimWrapper(optimizer=self.optimizer)
