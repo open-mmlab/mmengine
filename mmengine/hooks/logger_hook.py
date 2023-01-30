@@ -86,14 +86,14 @@ class LoggerHook(Hook):
                  backend_args: Optional[dict] = None):
 
         assert isinstance(interval, int) and interval > 0, (
-            'interval must be greater than 0, ')
+            'interval must be greater than 0')
         self.interval = interval
 
         assert isinstance(ignore_last, bool), ('ignore_last must be a boolean')
         self.ignore_last = ignore_last
 
         assert isinstance(interval_exp_name, int) and interval_exp_name > 0, (
-            'interval_exp_name must be greater than 0, ')
+            'interval_exp_name must be greater than 0')
         self.interval_exp_name = interval_exp_name
 
         if out_dir is not None:
