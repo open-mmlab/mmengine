@@ -528,13 +528,35 @@ Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root'
 
 The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
 
-```note
-Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields. In the above example, dataset.ann_file = data_root + 'train.json', so when data_root is replaced, dataset.ann_file will also be changed. Meanwhile, --cfg-options replace a field after the configuration file is parsed. --cfg-options data_root='/new/dataset/path/' does not affect dataset.ann_file
+It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users modified fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
+
+We take `demo_train.py` and `replace_data_root.py` for example. If we replace `data_root` by setting `--cfg-options data_root='/new/dataset/path'`:
+
+```bash
+python demo_train.py replace_data_root.py --cfg-options data_root='/new/dataset/path/'
 ```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+As we can see, only `data_root` has been modified. `dataset.ann_file` is still the default value.
+
+In contrast, if we replace `data_root` by setting `DATASET=/new/dataset/path`:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+Both `data_root` and `dataset.ann_file` have been modified.
 
 Environment variables can also be used to replace other types of fields. We can use `{{'$ENV_VAR:DEF_VAL'}}` or `{{"$ENV_VAR:DEF_VAL"}}` format to ensure the configuration file conforms to python syntax.
 
-We can task `replace_num_classes.py` as an example:
+We can take `replace_num_classes.py` as an example:
 
 ```
 model=dict(

@@ -528,9 +528,31 @@ Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root'
 
 `data_root` 被替换成了环境变量 `DATASET` 的值 `/new/dataset/path/`。
 
-```note
-环境变量的替换发生在配置文件解析之前。如果该配置还参与到其他配置的定义时，环境变量替换也会影响到其他配置。在上例中 dataset.ann_file 等于 data_root + 'train.json', 因此当 data_root 被替换时，dataset.ann_file 也会发生变化。而 --cfg-options 是在配置文件解析后去替换特定配置。--cfg-options data_root='/new/dataset/path/' 不会影响到 dataset.ann_file
+值得注意的是，`--cfg-options` 与 `{{$ENV_VAR:DEF_VAL}}` 都可以在命令行改变配置文件的值，但他们还有一些区别。环境变量的替换发生在配置文件解析之前。如果该配置还参与到其他配置的定义时，环境变量替换也会影响到其他配置，而 `--cfg-options` 只会改变要修改的配置文件的值。
+
+我们以 `demo_train.py` 与 `replace_data_root.py` 为例。 如果我们通过配置 `--cfg-options data_root='/new/dataset/path'` 来修改 `data_root`：
+
+```bash
+python demo_train.py replace_data_root.py --cfg-options data_root='/new/dataset/path/'
 ```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+从输出结果上看，只有 `data_root` 被修改为新的值。`dataset.ann_file` 依然保持原始值。
+
+作为对比，如果我们通过配置 `DATASET=/new/dataset/path` 来修改 `data_root`:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+`data_root` 与 `dataset.ann_file` 同时被修改了。
 
 环境变量也可以用来替换字符串以外的配置，这时可以使用 `{{'$ENV_VAR:DEF_VAL'}}` 或者 `{{"$ENV_VAR:DEF_VAL"}}` 格式。`''` 与 `""` 用来保证配置文件合乎 python 语法。
 
