@@ -727,30 +727,38 @@ class TestRunner(TestCase):
 
     def test_setup_env(self):
         # TODO
-        # 1.Test torch_cfg.
-        # 1.1 Test valid torch_cfg
+        # 1.Test env_variable.
+        # 1.1 Test valid env_variable
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        torch_cfg = {'backends.cuda.matmul.allow_tf32': True}
-        cfg.env_cfg.torch_cfg = torch_cfg
+        env_variable = {'torch.backends.cuda.matmul.allow_tf32': True}
+        cfg.env_cfg.env_variable = env_variable
         cfg.experiment_name = 'test_build_logger1'
         runner = Runner.from_cfg(cfg)
         self.assertTrue(torch.backends.cuda.matmul.allow_tf32)
 
-        torch_cfg['backends.cuda.matmul.allow_tf32'] = False
+        env_variable['torch.backends.cuda.matmul.allow_tf32'] = False
         runner.setup_env(cfg.env_cfg)
         self.assertFalse(torch.backends.cuda.matmul.allow_tf32)
 
-        # Test invalid torch_cfg
+        # Test invalid env_variable
         with self.assertRaisesRegex(ValueError,
                                     'torch.backends.cuda.matmul.allow_tf31'):
-            cfg.env_cfg.torch_cfg = {
+            cfg.env_cfg.env_variable = {
                 'torch.backends.cuda.matmul.allow_tf31': True
             }
             runner.setup_env(cfg.env_cfg)
 
-        # Test set torch_cfg with randomness_cfg
-        with self.assertRaisesRegex(ValueError, 'backends.cudnn.benchmark'):
-            cfg.env_cfg.torch_cfg = {'backends.cudnn.benchmark': True}
+        # Test set env_variable with randomness_cfg
+        with self.assertRaisesRegex(ValueError,
+                                    'torch.backends.cudnn.benchmark'):
+            cfg.env_cfg.env_variable = {'torch.backends.cudnn.benchmark': True}
+            runner.setup_env(cfg.env_cfg)
+
+        # Test invalid module
+        with self.assertRaisesRegex(ImportError, 'Cannot import'):
+            cfg.env_cfg.env_variable = {
+                'unknown.backends.cudnn.benchmark': True
+            }
             runner.setup_env(cfg.env_cfg)
 
     def test_build_logger(self):

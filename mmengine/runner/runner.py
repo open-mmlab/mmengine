@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import importlib
 import logging
 import os
 import os.path as osp
@@ -637,7 +638,7 @@ class Runner:
 
         mp_cfg: dict = env_cfg.get('mp_cfg', {})
         set_multi_processing(**mp_cfg, distributed=self.distributed)
-        self.set_torch_cfg(env_cfg.get('torch_cfg', {}))
+        self.env_variable(env_cfg.get('env_variable', {}))
         # init distributed env first, since logger depends on the dist info.
         if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
@@ -687,41 +688,47 @@ class Runner:
             deterministic=deterministic,
             diff_rank_seed=diff_rank_seed)
 
-    def set_torch_cfg(self, torch_cfg: dict) -> None:
-        """Set torch variable to by config.
+    def env_variable(self, env_cfg: dict) -> None:
+        """Set environment variable of third-party to by config.
 
         Args:
-            torch_cfg (dict): Contains key-value pair which defines the names
-                of torch variables and corresponding values.
+            env_cfg (dict): Contains key-value pair which defines the names
+                of environment variable of third-party variables and
+                corresponding values.
 
         Examples:
-            >>> torch_cfg = dict(
-            >>>    backends.cuda.matmul.allow_tf32=True,
+            >>> env_cfg = dict(
             >>>    torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction=True
             >>>    )
         """  # noqa: E501
-        for attributes, value in torch_cfg.items():
+        for attributes, value in env_cfg.items():
             assert isinstance(attributes, str)
             if attributes in [
-                    'backends.cudnn.benchmark', 'backends.cudnn.deterministic',
                     'torch.backends.cudnn.benchmark',
-                    'torch.backends.cudnn.deterministic'
+                    'torch.backends.cudnn.deterministic',
             ]:
                 raise ValueError(
-                    'backends.cudnn.benchmark or backends.cudnn.deterministic '
+                    '`torch.backends.cudnn.benchmark` or '
+                    '`torch.backends.cudnn.deterministic` '
                     'should be set in `randomness_cfg`, rather than '
-                    '`torch_cfg`')
+                    '`env_cfg`')
             attributes_list = attributes.split('.')
-            modules = attributes_list[:-1]
+            root_modules = attributes_list[0]
+            modules = attributes_list[1:-1]
             attribute = attributes_list[-1]
-            target_module = torch
+            try:
+                target_module = importlib.import_module(root_modules)
+            except ImportError as e:
+                raise ImportError(
+                    f'Cannot import {root_modules}, please make sure'
+                    f'the first part of {attributes} is a valid module') from e
             try:
                 for module in modules:
                     target_module = getattr(target_module, module)
                 setattr(target_module, attribute, value)
             except Exception:
                 raise ValueError(
-                    f'torch.{attributes} defined in `torch_cfg` does '
+                    f'{attributes} defined in `env_variable` does '
                     'not exit!')
 
     def build_logger(self,
