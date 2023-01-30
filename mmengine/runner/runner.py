@@ -703,7 +703,9 @@ class Runner:
         for attributes, value in torch_cfg.items():
             assert isinstance(attributes, str)
             if attributes in [
-                    'backends.cudnn.benchmark', 'backends.cudnn.deterministic'
+                    'backends.cudnn.benchmark', 'backends.cudnn.deterministic',
+                    'torch.backends.cudnn.benchmark',
+                    'torch.backends.cudnn.deterministic'
             ]:
                 raise ValueError(
                     'backends.cudnn.benchmark or backends.cudnn.deterministic '
