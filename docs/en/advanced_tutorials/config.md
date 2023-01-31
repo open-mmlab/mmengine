@@ -528,7 +528,7 @@ Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root'
 
 The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
 
-It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users modified fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
+It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users to modify fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
 
 We take `demo_train.py` and `replace_data_root.py` for example. If we replace `data_root` by setting `--cfg-options data_root='/new/dataset/path'`:
 

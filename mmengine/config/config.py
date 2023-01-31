@@ -152,7 +152,7 @@ class Config:
         else:
             text = ''
         super().__setattr__('_text', text)
-        if not env_variables:
+        if env_variables is None:
             env_variables = dict()
         super().__setattr__('_env_variables', env_variables)
 
