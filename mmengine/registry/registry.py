@@ -150,22 +150,22 @@ class Registry:
         # frame-0: `infer_scope` itself
         # frame-1: `__init__` of `Registry` which calls the `infer_scope`
         # frame-2: Where the `Registry(...)` is called
-        try:
-            filename = inspect.getmodule(  # type: ignore
-                sys._getframe(2)).__name__
+        module = inspect.getmodule(sys._getframe(2))
+        if module is not None:
+            filename = module.__name__
             split_filename = filename.split('.')
             scope = split_filename[0]
-        except AttributeError:
-            # use "None" to handle some cases which can not infer the scope
+        else:
+            # use "mmengine" to handle some cases which can not infer the scope
             # like initializing Registry in interactive mode
-            scope = 'None'
+            scope = 'mmengine'
             print_log(
-                'use "None" to handle some cases which can not infer the '
-                'scope when scope is not specified. You can disable this '
-                'warning by passing a "scope" argument to Registry like '
-                '`Registry(name, scope="toy")`',
+                'set scope as "mmengine" when scope can not be inferred. You '
+                'can disable this warning by passing a "scope" argument to '
+                'Registry like `Registry(name, scope="toy")`',
                 logger='current',
                 level=logging.WARNING)
+
         return scope
 
     @staticmethod
