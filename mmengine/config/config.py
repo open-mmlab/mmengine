@@ -298,7 +298,7 @@ class Config:
             tmp_config_file.write(config_file)
 
     @staticmethod
-    def _substitute_environment_vars(filename: str, temp_config_name: str):
+    def _substitute_env_variables(filename: str, temp_config_name: str):
         """Substitute environment variables in config with actual values.
 
         Sometimes, we want to change some items in the config with environment
@@ -466,7 +466,7 @@ class Config:
             # Substitute environment variables
             env_variables = dict()
             if use_environment_variables:
-                env_variables = Config._substitute_environment_vars(
+                env_variables = Config._substitute_env_variables(
                     temp_config_file.name, temp_config_file.name)
             # Substitute base variables from placeholders to strings
             base_var_dict = Config._pre_substitute_base_vars(

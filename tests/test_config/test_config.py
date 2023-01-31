@@ -384,10 +384,10 @@ class TestConfig:
         with open(cfg, 'w') as f:
             f.write(cfg_text)
         with pytest.raises(KeyError):
-            Config._substitute_environment_vars(cfg, substituted_cfg)
+            Config._substitute_env_variables(cfg, substituted_cfg)
 
         os.environ['A'] = 'text_A'
-        Config._substitute_environment_vars(cfg, substituted_cfg)
+        Config._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'a=text_A\n'
         os.environ.pop('A')
@@ -395,12 +395,12 @@ class TestConfig:
         cfg_text = 'b={{$B:80}}\n'
         with open(cfg, 'w') as f:
             f.write(cfg_text)
-        Config._substitute_environment_vars(cfg, substituted_cfg)
+        Config._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'b=80\n'
 
         os.environ['B'] = '100'
-        Config._substitute_environment_vars(cfg, substituted_cfg)
+        Config._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'b=100\n'
         os.environ.pop('B')
@@ -408,7 +408,7 @@ class TestConfig:
         cfg_text = 'c={{"$C:80"}}\n'
         with open(cfg, 'w') as f:
             f.write(cfg_text)
-        Config._substitute_environment_vars(cfg, substituted_cfg)
+        Config._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'c=80\n'
 
