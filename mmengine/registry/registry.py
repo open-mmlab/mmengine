@@ -161,7 +161,7 @@ class Registry:
             scope = 'mmengine'
             print_log(
                 'set scope as "mmengine" when scope can not be inferred. You '
-                'can disable this warning by passing a "scope" argument to '
+                'can silence this warning by passing a "scope" argument to '
                 'Registry like `Registry(name, scope="toy")`',
                 logger='current',
                 level=logging.WARNING)
