@@ -91,8 +91,10 @@ def _get_file_backend(prefix: str, backend_args: dict):
     """
     # backend name has a higher priority
     if 'backend' in backend_args:
-        backend_name = backend_args.pop('backend')
-        backend = backends[backend_name](**backend_args)
+        # backend_args should not be modified
+        backend_args_bak = backend_args.copy()
+        backend_name = backend_args_bak.pop('backend')
+        backend = backends[backend_name](**backend_args_bak)
     else:
         backend = prefix_to_backends[prefix](**backend_args)
     return backend
