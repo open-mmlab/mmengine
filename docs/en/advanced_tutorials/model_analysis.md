@@ -54,6 +54,7 @@ The return outputs is dict, which contains the following keys:
 - `activations`: number of total activations, e.g., 10000, 10000
 - `activations_str`: with formatted string, e.g., 1.0G, 100M
 - `out_table`: print related information by table
+
 ```
 | model                            | #parameters or shape| #flops    |
 |:---------------------------------|:--------------------|:----------|
@@ -92,6 +93,7 @@ The return outputs is dict, which contains the following keys:
 |    s2.pathway0_res2.branch2.c_bn |    0.512K           |           |
 |    ............................. |    ......           |    ...... |
 ```
+
 - `out_arch`:  print related information by network layers
 
 ```bash
@@ -120,6 +122,7 @@ The return outputs is dict, which contains the following keys:
 ```
 
 ## Interface
+
 We provide more options to support custom output
 
 - `model`: (nn.Module) the model to be analyzed

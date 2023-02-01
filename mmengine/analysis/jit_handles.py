@@ -22,6 +22,7 @@ def get_shape(val: Any) -> Optional[List[int]]:
 
     Args:
         val (torch._C.Value): jit value object.
+
     Returns:
         list(int): return a list of ints.
     """
