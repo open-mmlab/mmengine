@@ -10,7 +10,7 @@ from typing import Any, Callable, List, Optional, Union
 import numpy as np
 
 try:
-    from math import prod
+    from math import prod  # type: ignore
 except ImportError:
     from numpy import prod  # type: ignore
 
@@ -34,11 +34,13 @@ def get_shape(val: Any) -> Optional[List[int]]:
 """
 Below are flop/activation counters for various ops.
 Every counter has the following signature:
+
 Args:
     inputs (list(torch._C.Value)):
         The inputs of the op in the form of a list of jit object.
     outputs (list(torch._C.Value)):
         The outputs of the op in the form of a list of jit object.
+
 Returns:
     number: The number of flops/activations for the operation.
     or Counter[str]
@@ -52,6 +54,7 @@ def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
     Args:
         op_name (str): The name of the operation. If given, the handle will
             return a counter using this name.
+
     Returns:
         Callable: An activation handle for the given operation.
     """
@@ -120,11 +123,13 @@ def conv_flop_count(
     convolution are calculated as.
 
     flops = (x_shape[2:] * prod(w_shape) * batch_size).
+
     Args:
         x_shape (list(int)): The input shape before convolution.
         w_shape (list(int)): The filter shape.
         out_shape (list(int)): The output shape after convolution.
         transposed (bool): is the convolution transposed
+
     Returns:
         int: the number of flops
     """
@@ -251,6 +256,7 @@ def elementwise_flop_counter(input_scale: float = 1,
 
         input_tensor.numel() * input_scale +
         output_tensor.numel() * output_scale
+
     Args:
         input_scale: scale of the input tensor (first argument)
         output_scale: scale of the output tensor (first element in outputs)

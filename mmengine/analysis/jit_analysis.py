@@ -134,12 +134,14 @@ def _get_scoped_trace_graph(
     is in-lined and has all model parameters treated as inputs. The input
     model has the scope name '', while its descendants have names of the
     form 'child.grandchild.grandgrandchild...'.
+
     Args:
         model (nn.Module) : The module to trace
         inputs (tuple) : Inputs used during the trace of the model
         aliases (dict(str or nn.Module, str) : maps modules and module
             names to the canonical name to be used as the scope for
             that module.
+
     Returns:
         graph (torch._C.Graph) : The pytorch JIT trace of the model
     """
@@ -222,6 +224,7 @@ class JitModelAnalysis:
         Args:
             model: The model to analyze
             inputs: The inputs to the model for analysis.
+
         We will trace the execution of `model.forward(inputs)`. This means
         inputs have to be tensors or tuple of tensors (see
         https://pytorch.org/docs/stable/generated/torch.jit.trace.html#torch.jit.trace).
@@ -253,6 +256,7 @@ class JitModelAnalysis:
         Args:
             module_name (str) : The submodule to get data for. Defaults to
                 the entire model.
+
         Returns:
             int : The aggregated statistic.
         """
@@ -283,6 +287,7 @@ class JitModelAnalysis:
 
         The operator handle determines
         the name associated with each operator type.
+
         Returns:
             dict(str, Counter(str)):
                 The statistics for each submodule and each operator.
@@ -310,9 +315,11 @@ class JitModelAnalysis:
 
         Does not include
         operators that are explicitly ignored.
+
         Args:
             module_name (str) : The submodule to list unsupported ops.
                 Defaults to the entire model.
+
         Returns:
             Counter(str) : The number of occurrences each unsupported operator.
         """
@@ -331,6 +338,7 @@ class JitModelAnalysis:
         other python methods. In the latter case, statistics will not be
         attributed to the submodule, though the statistics will be included
         in the parent module.
+
         Returns:
             set(str) : The set of submodule names that were never called
                 during the trace of the model.
@@ -340,8 +348,8 @@ class JitModelAnalysis:
 
     def set_op_handle(self, *args,
                       **kwargs: Optional[Handle]) -> 'JitModelAnalysis':
-        """
-        Sets additional operator handles, or replaces existing ones.
+        """Sets additional operator handles, or replaces existing ones.
+
         Args:
             args: (str, Handle) pairs of operator names and handles.
             kwargs: mapping from operator names to handles.
@@ -351,6 +359,7 @@ class JitModelAnalysis:
         inputs and outputs of the operator, in the form of
         ``list(torch._C.Value)``. The function should return a counter object
         with per-operator statistics.
+
         Examples
         ::
             handlers = {"aten::linear": my_handler}
@@ -385,8 +394,10 @@ class JitModelAnalysis:
 
         This is the name that will be used as a key when statistics are
         output using .by_module() and .by_module_and_operator().
+
         Args:
             name (str) : The name of the module to find the canonical name for.
+
         Returns:
             str : The canonical name of the module.
         """
@@ -412,6 +423,7 @@ class JitModelAnalysis:
             new_inputs (typing.Tuple[object, ...] or None) : new inputs
                 for the new JitModelAnalysis. If None, uses the original
                 inputs.
+
         Returns:
             JitModelAnalysis : the new model analysis object
         """
@@ -431,6 +443,7 @@ class JitModelAnalysis:
         * 'all' : keeps all warnings raised while tracing
         * 'no_tracer_warning' : suppress torch.jit.TracerWarning only
         * 'none' : suppress all warnings raised while tracing
+
         Args:
             mode (str) : warning mode in one of the above values.
         """
@@ -465,6 +478,7 @@ class JitModelAnalysis:
         Defaults
         to True. Counts of unsupported operators may be obtained from
         :meth:`unsupported_ops` regardless of this setting.
+
         Args:
             enabled (bool) : Set to 'True' to show unsupported operator
                 warnings.
@@ -481,6 +495,7 @@ class JitModelAnalysis:
         accessed via calls to ``.forward()`` or other methods of the module.
         The set of uncalled modules may be obtained from
         :meth:`uncalled_modules` regardless of this setting.
+
         Args:
             enabled (bool) : Set to 'True' to show warnings.
         """

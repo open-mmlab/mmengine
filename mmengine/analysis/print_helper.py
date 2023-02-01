@@ -19,11 +19,13 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
 
     Expresses the number in terms of 'kilo', 'mega', etc., using
     'K', 'M', etc. as a suffix.
+
     Args:
         x (int) : The integer to format.
         sig_figs (int) : The number of significant figures to keep
         hide_zero (bool) : If True, x=0 is replaced with an empty string
             instead of '0'.
+
     Returns:
         str : The formatted string.
     """
@@ -50,9 +52,8 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
 def _pretty_statistics(statistics: Dict[str, Dict[str, int]],
                        sig_figs: int = 3,
                        hide_zero: bool = False) -> Dict[str, Dict[str, str]]:
-    """Converts numeric statistics to strings with kilo/mega/giga/etc.
+    """Converts numeric statistics to strings with kilo/mega/giga/etc. labels.
 
-    labels.
     Args:
         statistics (dict(str, dict(str, int))) : the statistics to
             format. Organized as a dictionary over modules, which are
@@ -60,6 +61,7 @@ def _pretty_statistics(statistics: Dict[str, Dict[str, int]],
         sig_figs (int) : the number of significant figures for each stat
         hide_zero (bool) : if True, statistics that are zero will be
             written as an empty string. Defaults to False.
+
     Return:
         dict(str, dict(str, str)) : the input statistics as pretty strings
     """
@@ -79,6 +81,7 @@ def _group_by_module(
 
     Args:
         statistics (dict(str, dict(str, any))) : the statistics to convert
+
     Returns:
         dict(str, dict(str, any)) : the reorganized statistics
     """
@@ -99,6 +102,7 @@ def _indicate_uncalled_modules(
     with the specified indicator, instead of using the existing string.
 
     Assumes the statistic is already formatting in string form.
+
     Args:
         statistics (dict(str, dict(str, str))) : the statistics to
             format. Organized as a dictionary over modules, which are
@@ -108,6 +112,7 @@ def _indicate_uncalled_modules(
         uncalled_modules set(str) : a set of names of uncalled modules.
         indicator (str) : the string that will be used to indicate
             unused modules. Defaults to 'N/A'.
+
     Returns:
         dict(str, dict(str, str)) : the modified statistics
     """
@@ -131,6 +136,7 @@ def _remove_zero_statistics(
     This can help declutter the reporting of statistics
     if many submodules have zero statistics. Assumes the statistics have
     a model hierarchy starting with a root that has name ''.
+
     Args:
         statistics (dict(str, dict(str, int))) : the statistics to
             remove zeros from. Organized as a dictionary over modules,
@@ -140,6 +146,7 @@ def _remove_zero_statistics(
         require_trivial_children (bool) : If True, a statistic will only
             be deleted if all its children are also deleted. Defaults to
             False.
+
     Returns:
         dict(str, dict(str, int)) : the input statistics dictionary,
             with submodules removed if they have zero for all statistics.
@@ -172,8 +179,8 @@ def _fill_missing_statistics(
     """If, for a given submodule name in the model, a statistic is missing from
     statistics, fills it in with zero.
 
-    This visually uniformizes
-    the reporting of statistics.
+    This visually uniformizes the reporting of statistics.
+
     Args:
         model (nn.Module) : the model whose submodule names will be
             used to fill statistics
@@ -182,6 +189,7 @@ def _fill_missing_statistics(
             over statistics, which are each a dictionary over submodules'
             names. The statistics are assumed to be formatted already
             to the desired string format for printing.
+
     Returns:
         dict(str, dict(str, int)) : the input statistics with missing
             values filled with zero.
@@ -207,6 +215,7 @@ def _model_stats_str(model: nn.Module,
             over module names, which are each a dictionary over statistics.
             The statistics are assumed to be formatted already to the
             desired string format for printing.
+
     Returns:
         str : the string representation of the model with the statistics
             inserted.
@@ -362,6 +371,7 @@ def _stats_table_format(
         stat_columns (list(str)) : Specify the order of the columns to print.
             If None, columns are found automatically from the provided
             statistics.
+
     Return:
         str : The formatted table.
     """
@@ -417,21 +427,20 @@ def _stats_table_format(
 def complexity_stats_str(
         flops: FlopAnalyzer,
         activations: Optional[ActivationAnalyzer] = None) -> str:
-    """
-    Calculates the parameters and flops of the model with the given inputs
+    """Calculates the parameters and flops of the model with the given inputs
     and returns a string representation of the model that includes the
-    parameters and flops of every submodule. The string is structured
-    to be similar that given by str(model), though it is not guaranteed to
-    be identical in form if the default string representation of a module has
-    been overridden. If a module has zero parameters and flops, statistics
-    will not be reported for succinctness.
-    The trace can only register the scope of a module if it is called
-    directly, which means flops (and activations) arising from explicit
-    calls to .forward() or to other python functions of the module will
-    not be attributed to that module. Modules that are never called will
-    have 'N/A' listed for their flops; this means they are either unused
-    or their statistics are missing for this reason. Any such flops are still
-    counted towards the parent
+    parameters and flops of every submodule. The string is structured to be
+    similar that given by str(model), though it is not guaranteed to be
+    identical in form if the default string representation of a module has been
+    overridden. If a module has zero parameters and flops, statistics will not
+    be reported for succinctness. The trace can only register the scope of a
+    module if it is called directly, which means flops (and activations)
+    arising from explicit calls to .forward() or to other python functions of
+    the module will not be attributed to that module. Modules that are never
+    called will have 'N/A' listed for their flops; this means they are either
+    unused or their statistics are missing for this reason. Any such flops are
+    still counted towards the parent.
+
     Example:
     >>> import torch
     >>> import torch.nn as nn
@@ -474,10 +483,12 @@ def complexity_stats_str(
         )
       )
     )
+
     Args:
         flops (FlopAnalyzer): the flop counting object
         activations (bool) : If given, the activations of each layer will
             also be calculated and included in the representation.
+
     Returns:
         str:
             a string representation of the model with the number of
@@ -504,12 +515,12 @@ def complexity_stats_str(
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(stats, force_keep=all_uncalled)
     stats = _pretty_statistics(stats, sig_figs=2)  # type: ignore
-    stats = _indicate_uncalled_modules(
+    stats = _indicate_uncalled_modules(  # type: ignore
         stats,  # type: ignore
         '#flops',  # type: ignore
         flops.uncalled_modules())  # type: ignore
     if activations is not None:
-        stats = _indicate_uncalled_modules(
+        stats = _indicate_uncalled_modules(  # type: ignore
             stats,  # type: ignore
             '#acts',  # type: ignore
             activations.uncalled_modules())  # type: ignore
@@ -570,6 +581,7 @@ def complexity_stats_table(
         |    s2.pathway0_res2.branch2.c    |    16.4K            |    0.537G |
         |    s2.pathway0_res2.branch2.c_bn |    0.512K           |           |
         |    ............................. |    ......           |    ...... |
+
     Args:
         flops (FlopAnalyzer): the flop counting object
         max_depth (int) : The max depth of submodules to include in the
@@ -578,8 +590,10 @@ def complexity_stats_table(
             activation counts as an additional column in the table.
         show_param_shapes (bool) : If true, shapes for parameters will be
             included in the table. Defaults to True.
+
     Returns:
         str : The formatted table.
+
     Examples:
     ::
         print(complexity_stats_table(FlopAnalyzer(model, inputs)))
@@ -610,14 +624,14 @@ def complexity_stats_table(
         stats,  # type: ignore
         require_trivial_children=True)  # type: ignore
     stats = _pretty_statistics(stats, hide_zero=False)  # type: ignore
-    stats = _indicate_uncalled_modules(
+    stats = _indicate_uncalled_modules(  # type: ignore
         stats,  # type: ignore
         flops_header,  # type: ignore
         flops.uncalled_modules() & stats.keys(),  # type: ignore
         uncalled_indicator='',  # type: ignore
     )
     if activations:
-        stats = _indicate_uncalled_modules(
+        stats = _indicate_uncalled_modules(  # type: ignore
             stats,  # type: ignore
             acts_header,  # type: ignore
             activations.uncalled_modules() & stats.keys(),  # type: ignore
@@ -633,7 +647,7 @@ def complexity_stats_table(
     for mod in stats:
         if mod in param_shapes:
             if show_param_shapes:
-                stats[mod][params_header] = str(
+                stats[mod][params_header] = str(  # type: ignore
                     param_shapes[mod])  # type: ignore
             else:
                 to_delete.append(mod)
@@ -652,16 +666,21 @@ def get_model_complexity_info(
     input_shape: tuple,
     inputs=None,
     show_table: bool = True,
-    show_str: bool = True,
-    format_size: bool = True,
+    show_arch: bool = True,
 ):
     """Interface to get the complexity of a model.
 
     Args:
         model (nn.Module): The model to analyze.
         input_shape (tuple): The input shape of the model.
+        inputs (Optional[torch.Tensor]): The input tensor of the model.
+            If not given the input tensor will be generated automatically
+            with the given input_shape.
         show_table (bool): Whether to show the complexity table.
-        show_str (bool): Whether to show the complexity string.
+        show_arch (bool): Whether to show the complexity arch.
+
+    Returns:
+        dict: The complexity information of the model.
     """
     if inputs is None:
         inputs = (torch.randn(1, *input_shape), )
@@ -673,9 +692,9 @@ def get_model_complexity_info(
     activations = activation_handler.total()
     params = parameter_count(model)['']
 
-    flops_str = _format_size(flop_handler.total())
-    activations_str = _format_size(activation_handler.total())
-    params_str = _format_size(parameter_count(model)[''])
+    flops_str = _format_size(flops)
+    activations_str = _format_size(activations)
+    params_str = _format_size(params)
 
     if show_table:
         complexity_table = complexity_stats_table(
@@ -687,17 +706,22 @@ def get_model_complexity_info(
     else:
         complexity_table = ''
 
-    if show_str:
-        complexity_str = complexity_stats_str(
+    if show_arch:
+        complexity_arch = complexity_stats_str(
             flops=flop_handler,
             activations=activation_handler,
         )
-        complexity_str = '\n' + complexity_str
+        complexity_arch = '\n' + complexity_arch
     else:
-        complexity_str = ''
+        complexity_arch = ''
 
-    if format_size:
-        return flops_str, activations_str, params_str, \
-            complexity_table, complexity_str
-    else:
-        return flops, activations, params, complexity_table, complexity_str
+    return {
+        'flops': flops,
+        'flops_str': flops_str,
+        'activations': activations,
+        'activations_str': activations_str,
+        'params': params,
+        'params_str': params_str,
+        'out_table': complexity_table,
+        'out_arch': complexity_arch
+    }
