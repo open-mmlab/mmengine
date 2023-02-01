@@ -27,7 +27,7 @@ from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
 DEPRECATION_KEY = '_deprecation_'
-RESERVED_KEYS = ['filename', 'text', 'pretty_text']
+RESERVED_KEYS = ['filename', 'text', 'pretty_text', 'env_variables']
 
 if platform.system() == 'Windows':
     import regex as re
@@ -130,7 +130,8 @@ class Config:
     def __init__(self,
                  cfg_dict: dict = None,
                  cfg_text: Optional[str] = None,
-                 filename: Optional[Union[str, Path]] = None):
+                 filename: Optional[Union[str, Path]] = None,
+                 env_variables: Optional[dict] = None):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -151,11 +152,15 @@ class Config:
         else:
             text = ''
         super().__setattr__('_text', text)
+        if env_variables is None:
+            env_variables = dict()
+        super().__setattr__('_env_variables', env_variables)
 
     @staticmethod
     def fromfile(filename: Union[str, Path],
                  use_predefined_variables: bool = True,
-                 import_custom_modules: bool = True) -> 'Config':
+                 import_custom_modules: bool = True,
+                 use_environment_variables: bool = True) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
@@ -169,14 +174,18 @@ class Config:
             Config: Config instance built from config file.
         """
         filename = str(filename) if isinstance(filename, Path) else filename
-        cfg_dict, cfg_text = Config._file2dict(filename,
-                                               use_predefined_variables)
+        cfg_dict, cfg_text, env_variables = Config._file2dict(
+            filename, use_predefined_variables, use_environment_variables)
         if import_custom_modules and cfg_dict.get('custom_imports', None):
             try:
                 import_modules_from_strings(**cfg_dict['custom_imports'])
             except ImportError as e:
                 raise ImportError('Failed to custom import!') from e
-        return Config(cfg_dict, cfg_text=cfg_text, filename=filename)
+        return Config(
+            cfg_dict,
+            cfg_text=cfg_text,
+            filename=filename,
+            env_variables=env_variables)
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -289,6 +298,67 @@ class Config:
             tmp_config_file.write(config_file)
 
     @staticmethod
+    def _substitute_env_variables(filename: str, temp_config_name: str):
+        """Substitute environment variables in config with actual values.
+
+        Sometimes, we want to change some items in the config with environment
+        variables. For examples, we expect to change dataset root by setting
+        ``DATASET_ROOT=/dataset/root/path`` in the command line. This can be
+        easily achieved by writing lines in the config as follows
+
+        .. code-block:: python
+
+           data_root = '{{$DATASET_ROOT:/default/dataset}}/images'
+
+
+        Here, ``{{$DATASET_ROOT:/default/dataset}}`` indicates using the
+        environment variable ``DATASET_ROOT`` to replace the part between
+        ``{{}}``. If the ``DATASET_ROOT`` is not set, the default value
+        ``/default/dataset`` will be used.
+
+        Environment variables not only can replace items in the string, they
+        can also substitute other types of data in config. In this situation,
+        we can write the config as below
+
+        .. code-block:: python
+
+           model = dict(
+               bbox_head = dict(num_classes={{'$NUM_CLASSES:80'}}))
+
+
+        For details, Please refer to docs/zh_cn/tutorials/config.md .
+
+        Args:
+            filename (str): Filename of config.
+            temp_config_name (str): Temporary filename to save substituted
+                config.
+        """
+        with open(filename, encoding='utf-8') as f:
+            config_file = f.read()
+        regexp = r'\{\{[\'\"]?\s*\$(\w+)\s*\:\s*(\S*?)\s*[\'\"]?\}\}'
+        keys = re.findall(regexp, config_file)
+        env_variables = dict()
+        for var_name, value in keys:
+            regexp = r'\{\{[\'\"]?\s*\$' + var_name + r'\s*\:\s*' \
+                + value + r'\s*[\'\"]?\}\}'
+            if var_name in os.environ:
+                value = os.environ[var_name]
+                env_variables[var_name] = value
+                print_log(
+                    f'Using env variable `{var_name}` with value of '
+                    f'{value} to replace item in config.',
+                    logger='current')
+            if not value:
+                raise KeyError(f'`{var_name}` cannot be found in `os.environ`.'
+                               f' Please set `{var_name}` in environment or '
+                               'give a default value.')
+            config_file = re.sub(regexp, value, config_file)
+
+        with open(temp_config_name, 'w', encoding='utf-8') as tmp_config_file:
+            tmp_config_file.write(config_file)
+        return env_variables
+
+    @staticmethod
     def _pre_substitute_base_vars(filename: str,
                                   temp_config_name: str) -> dict:
         """Preceding step for substituting variables in base config with actual
@@ -361,8 +431,10 @@ class Config:
         return cfg
 
     @staticmethod
-    def _file2dict(filename: str,
-                   use_predefined_variables: bool = True) -> Tuple[dict, str]:
+    def _file2dict(
+            filename: str,
+            use_predefined_variables: bool = True,
+            use_environment_variables: bool = True) -> Tuple[dict, str, dict]:
         """Transform file to variables dictionary.
 
         Args:
@@ -391,6 +463,11 @@ class Config:
                                                    temp_config_file.name)
             else:
                 shutil.copyfile(filename, temp_config_file.name)
+            # Substitute environment variables
+            env_variables = dict()
+            if use_environment_variables:
+                env_variables = Config._substitute_env_variables(
+                    temp_config_file.name, temp_config_file.name)
             # Substitute base variables from placeholders to strings
             base_var_dict = Config._pre_substitute_base_vars(
                 temp_config_file.name, temp_config_file.name)
@@ -401,8 +478,12 @@ class Config:
             for base_cfg_path in Config._get_base_files(temp_config_file.name):
                 base_cfg_path, scope = Config._get_cfg_path(
                     base_cfg_path, filename)
-                _cfg_dict, _cfg_text = Config._file2dict(base_cfg_path)
+                _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
+                    filename=base_cfg_path,
+                    use_predefined_variables=use_predefined_variables,
+                    use_environment_variables=use_environment_variables)
                 cfg_text_list.append(_cfg_text)
+                env_variables.update(_env_variables)
                 duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
                 if len(duplicate_keys) > 0:
                     raise KeyError('Duplicate key is not allowed among bases. '
@@ -481,7 +562,7 @@ class Config:
         cfg_text_list.append(cfg_text)
         cfg_text = '\n'.join(cfg_text_list)
 
-        return cfg_dict, cfg_text
+        return cfg_dict, cfg_text, env_variables
 
     @staticmethod
     def _dict_to_config_dict(cfg: dict,
@@ -704,6 +785,11 @@ class Config:
         return self._text
 
     @property
+    def env_variables(self) -> dict:
+        """get used environment variables."""
+        return self._env_variables
+
+    @property
     def pretty_text(self) -> str:
         """get formatted python config text."""
 
@@ -823,8 +909,9 @@ class Config:
     def __iter__(self):
         return iter(self._cfg_dict)
 
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
-        return (self._cfg_dict, self._filename, self._text)
+    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], dict]:
+        return (self._cfg_dict, self._filename, self._text,
+                self._env_variables)
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -843,11 +930,13 @@ class Config:
 
         return other
 
-    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
-        _cfg_dict, _filename, _text = state
+    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
+                                        dict]):
+        _cfg_dict, _filename, _text, _env_variables = state
         super().__setattr__('_cfg_dict', _cfg_dict)
         super().__setattr__('_filename', _filename)
         super().__setattr__('_text', _text)
+        super().__setattr__('_text', _env_variables)
 
     def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.
