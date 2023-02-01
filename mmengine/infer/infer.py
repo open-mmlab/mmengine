@@ -370,7 +370,8 @@ class BaseInferencer(metaclass=InferencerMeta):
             'please pass a valid scope.')
 
         config_dir = BaseInferencer._get_config_dir(self.scope)
-        for model_cfg in BaseInferencer._get_models_from_package(config_dir):
+        for model_cfg in BaseInferencer._get_models_from_config_dir(
+                config_dir):
             model_name = model_cfg['Name'].lower()
             model_aliases = model_cfg.get('Alias', [])
             if isinstance(model_aliases, str):
@@ -627,7 +628,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         )
 
     @staticmethod
-    def _get_models_from_package(config_dir: str):
+    def _get_models_from_config_dir(config_dir: str):
         """Load model config defined in metafile from package path.
 
         Args:
@@ -670,7 +671,8 @@ class BaseInferencer(metaclass=InferencerMeta):
             f'{scope} not in {MODULE2PACKAGE}!, please make pass a valid '
             'scope.')
         config_dir = BaseInferencer._get_config_dir(scope)
-        for model_cfg in BaseInferencer._get_models_from_package(config_dir):
+        for model_cfg in BaseInferencer._get_models_from_config_dir(
+                config_dir):
             model_name = [model_cfg['Name']]
             model_name.extend(model_cfg.get('Alias', []))
             for name in model_name:
