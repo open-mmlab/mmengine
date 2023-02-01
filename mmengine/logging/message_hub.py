@@ -314,17 +314,19 @@ class MessageHub(ManagerMixin):
         return self._runtime_info[key]
 
     def _get_valid_value(
-            self, value: Union['torch.Tensor', np.ndarray, int, float]) \
-            -> Union[int, float]:
+        self,
+        value: Union['torch.Tensor', np.ndarray, np.number, int, float],
+    ) -> Union[int, float]:
         """Convert value to python built-in type.
 
         Args:
-            value (torch.Tensor or np.ndarray or int or float): value of log.
+            value (torch.Tensor or np.ndarray or np.number or int or float):
+                value of log.
 
         Returns:
             float or int: python built-in type value.
         """
-        if isinstance(value, np.ndarray):
+        if isinstance(value, (np.ndarray, np.number)):
             assert value.size == 1
             value = value.item()
         elif isinstance(value, (int, float)):
