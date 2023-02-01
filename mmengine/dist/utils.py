@@ -169,8 +169,8 @@ def init_local_group(node_rank: int, num_proc_per_node: list):
 
     Args:
         node_rank (int): Rank of machines used for training.
-        num_gpus_per_node (list): Number of process used for training in all
-            machines.
+        num_gpus_per_node (list): Number of processes used for training in each
+            machine.
     """  # noqa: W501
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
@@ -558,12 +558,15 @@ def launch(
     """Launch distributed task with single or multiple machines/GPU.
 
     Args:
-        main_func (Callable): Function to be executed in multiple process.
-        num_proc_per_machine (list or int): number of valid gpu for machines.
-            For example, The task will be ran on 2 machine A and machine B.
-            A has 2 valid GPUs, and B has 4 valid GPUs. Then
-            ``num_proc_per_machine`` should be [2, 4]
-        num_machines (int, optional): Number of used machines. Defaults to 1.
+        main_func (Callable): Function to be executed in multiple processes.
+        num_proc_per_machine (list or int): Number of valid processes for
+            machines. For example, The task will be ran on 2 machine A and
+            machine B. A has 2 processes, and B has 4 valid processes. Then
+            ``num_proc_per_machine`` should be [2, 4]. If
+            ``num_proc_per_machine`` is a single ``int``, it means all
+            machines launch ``num_proc_per_machine`` processes.
+        num_machines (int, optional): Number of used machines. This argument is
+            only useful when ``num_proc_per_machine`` is an int. Defaults to 1.
         machine_rank (int, optional): The rank of current machine.
             Defaults to 0.
         master_addr (str, optional): The FQDN of the host that is running
@@ -571,13 +574,16 @@ def launch(
             backend. Defaults to '127.0.0.1'.
         master_port (str, optional): The port on the ``master_addr`` that can
             be used to host the C10d TCP store. Defaults to 'auto'.
-        args (tuple, optional): Arguments passde to main_func. Defaults to ().
+        args (tuple, optional): Arguments passed to main_func. Defaults to ().
     """
     if not isinstance(num_proc_per_machine, list):
         num_proc_per_machine = [num_proc_per_machine] * num_machines
-    torch_dist.init_process_group
     world_size = sum(num_proc_per_machine)
+
     if master_port == 'auto':
+        assert len(num_proc_per_machine) == 1, (
+            'Automatically inferring free port on multiple machines will lead'
+            'to potential error.')
         master_port = str(_find_free_port())
 
     if world_size > 1:
@@ -626,7 +632,8 @@ def _distributed_worker(
         local_rank (int): Local rank of the current machine.
         main_func (Callable): Function to be executed.
         world_size (int): The number of all processes launched on all machines.
-        num_proc_per_machine (list): Number of valid gpu for machines.
+        num_proc_per_machine (list): Number of launched processes of all
+            machines.
         machine_rank (int): The rank of current machine.
         master_addr (str): The FQDN of the host that is running
             worker with rank 0; used to initialize the Torch Distributed
