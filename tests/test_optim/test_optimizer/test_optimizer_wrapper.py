@@ -290,6 +290,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.zero_grad = MagicMock()
 
 
+@unittest.skipIf(not torch.cuda.is_available(), reason='need gpu to test Apex')
 class TestApexOptimWrapper(TestCase):
 
     def setUp(self) -> None:

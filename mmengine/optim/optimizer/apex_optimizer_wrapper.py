@@ -5,6 +5,9 @@ from typing import Optional, Union
 import torch
 import torch.nn as nn
 
+# a circular import will be caused by
+# from mmengine.model.wrappers import is_model_wrapper
+import mmengine
 from mmengine.registry import OPTIM_WRAPPERS
 from .optimizer_wrapper import OptimWrapper
 
@@ -158,7 +161,7 @@ class ApexOptimWrapper(OptimWrapper):
             if hasattr(self.optimizer, '_amp_stash'):
                 yield
                 return
-            if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+            if mmengine.model.wrappers.is_model_wrapper(model):
                 model = model.module
             model, self.optimizer = apex_amp.initialize(
                 model,
