@@ -3,7 +3,6 @@ import logging
 import math
 import os.path as osp
 import tempfile
-from unittest import TestCase
 from unittest.mock import Mock
 
 import pytest
@@ -17,6 +16,7 @@ from mmengine.logging import MMLogger
 from mmengine.model import BaseModel
 from mmengine.optim import OptimWrapper
 from mmengine.runner import Runner
+from mmengine.testing import RunnerTestCase
 
 
 class ToyModel(BaseModel):
@@ -82,7 +82,7 @@ def get_mock_runner():
     return runner
 
 
-class TestEarlyStoppingHook(TestCase):
+class TestEarlyStoppingHook(RunnerTestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()

@@ -27,6 +27,8 @@ class EarlyStoppingHook(Hook):
             after which training will be stopped. Defaults to 5.
         stopping_threshold (float, optional): Stop training immediately once
             the monitored quantity reaches this threshold. Defaults to None.
+        save_last (bool, optional): Whether to save last status when early
+            stopping is enabled.
     """
     priority = 'LOWEST'
 
@@ -46,6 +48,7 @@ class EarlyStoppingHook(Hook):
         check_finite: bool = True,
         patience: int = 5,
         stopping_threshold: Optional[float] = None,
+        save_last: bool = False,
     ):
 
         self.monitor = monitor
@@ -64,7 +67,7 @@ class EarlyStoppingHook(Hook):
 
         self.wait_count = 0
         self.best_score = -inf if rule == 'greater' else inf
-        self.default_end_message = ' This training process stops early.'
+        self.save_last = save_last
 
     def _check_stop_condition(self, current_score: float) -> Tuple[bool, str]:
         compare = self.rule_map[self.rule]
@@ -136,4 +139,8 @@ class EarlyStoppingHook(Hook):
         stop_training, message = self._check_stop_condition(current_score)
         if stop_training:
             runner.train_loop.stop_training = True
-            runner.logger.info(message + self.default_end_message)
+            runner.logger.info(message)
+            if self.save_last:
+                runner.logger.info(
+                    f'Saving last checkpoint at {runner.epoch + 1} epochs.')
+                # TODO how to save ref: CheckpointHook._save_checkpoint(runner)
