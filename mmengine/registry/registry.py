@@ -442,6 +442,7 @@ class Registry:
         scope_name = self.scope
 
         # lazy import the modules to register them into the registry
+
         self.import_from_location()
 
         if scope is None or scope == self._scope:
