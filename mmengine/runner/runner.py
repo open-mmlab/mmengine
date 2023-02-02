@@ -1367,12 +1367,20 @@ class Runner:
 
         # build dataloader
         init_fn: Optional[partial]
+
         if seed is not None:
+            disable_subprocess_warning = dataloader_cfg.pop(
+                'disable_subprocess_warning', False)
+            assert isinstance(
+                disable_subprocess_warning,
+                bool), ('disable_subprocess_warning should be a bool, but got '
+                        f'{type(disable_subprocess_warning)}')
             init_fn = partial(
                 worker_init_fn,
                 num_workers=dataloader_cfg.get('num_workers'),
                 rank=get_rank(),
-                seed=seed)
+                seed=seed,
+                disable_subprocess_warning=disable_subprocess_warning)
         else:
             init_fn = None
 

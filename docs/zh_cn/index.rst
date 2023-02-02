@@ -58,6 +58,7 @@
    design/evaluation.md
    design/visualization.md
    design/logging.md
+   design/infer.md
 
 .. toctree::
    :maxdepth: 1
@@ -82,6 +83,7 @@
    mmengine.evaluator <api/evaluator>
    mmengine.structures <api/structures>
    mmengine.dataset <api/dataset>
+   mmengine.infer <api/infer>
    mmengine.device <api/device>
    mmengine.hub <api/hub>
    mmengine.logging <api/logging>

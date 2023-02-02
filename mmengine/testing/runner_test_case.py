@@ -31,7 +31,7 @@ class ToyModel(BaseModel):
         self.linear1 = nn.Linear(2, 2)
         self.linear2 = nn.Linear(2, 1)
 
-    def forward(self, inputs, data_samples, mode='tensor'):
+    def forward(self, inputs, data_samples=None, mode='tensor'):
         if isinstance(inputs, list):
             inputs = torch.stack(inputs)
         if isinstance(data_samples, list):

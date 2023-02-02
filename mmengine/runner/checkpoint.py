@@ -12,7 +12,6 @@ from tempfile import TemporaryDirectory
 from typing import Callable, Dict, Optional
 
 import torch
-import torchvision
 
 import mmengine
 from mmengine.dist import get_dist_info
@@ -112,6 +111,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
 
 
 def get_torchvision_models():
+    import torchvision
     if digit_version(torchvision.__version__) < digit_version('0.13.0a0'):
         model_urls = dict()
         # When the version of torchvision is lower than 0.13, the model url is
