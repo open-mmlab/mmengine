@@ -24,8 +24,7 @@ class ApexOptimWrapper(OptimWrapper):
     as ``OptimWrapper``.
 
     Warning:
-        ``ApexOptimWrapper`` requires `nvidia apex
-        <https://github.com/NVIDIA/apex>`_
+        ``ApexOptimWrapper`` requires `nvidia apex <https://github.com/NVIDIA/apex>`_
 
     Args:
         opt_level (str, default="O1"): Pure or mixed precision
@@ -69,7 +68,7 @@ class ApexOptimWrapper(OptimWrapper):
         If you use ``IterBasedRunner`` and enable gradient accumulation,
         the original `max_iters` should be multiplied by
         ``accumulative_counts``.
-    """
+    """  # noqa: E501
 
     def __init__(self,
                  opt_level: str = 'O1',
@@ -158,6 +157,7 @@ class ApexOptimWrapper(OptimWrapper):
             # the "_amp_stash" property will be added
             if hasattr(self.optimizer, '_amp_stash'):
                 yield
+                return
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 model = model.module
             model, self.optimizer = apex_amp.initialize(

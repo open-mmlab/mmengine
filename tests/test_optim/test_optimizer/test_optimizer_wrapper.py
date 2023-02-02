@@ -315,7 +315,6 @@ class TestApexOptimWrapper(TestCase):
         apex_optim_wrapper = ApexOptimWrapper(
             optimizer=optimizer, opt_level='O1', loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
-            apex_optim_wrapper.optimizer.param_groups = MagicMock()
             loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
             apex_optim_wrapper.backward(loss)
             apex_optim_wrapper.step()
