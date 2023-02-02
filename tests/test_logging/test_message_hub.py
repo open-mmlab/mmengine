@@ -34,14 +34,18 @@ class TestMessageHub:
 
     def test_update_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
-        # test create target `HistoryBuffer` by name
+        # Update scalar with int.
         message_hub.update_scalar('name', 1)
         log_buffer = message_hub.log_scalars['name']
         assert (log_buffer._log_history == np.array([1])).all()
-        # test update target `HistoryBuffer` by name
-        message_hub.update_scalar('name', 1)
+
+        # Update scalar with np.ndarray.
+        message_hub.update_scalar('name', np.array(1))
         assert (log_buffer._log_history == np.array([1, 1])).all()
-        # unmatched string will raise a key error
+
+        # Update scalar with np.int
+        message_hub.update_scalar('name', np.int32(1))
+        assert (log_buffer._log_history == np.array([1, 1, 1])).all()
 
     def test_update_info(self):
         message_hub = MessageHub.get_instance('mmengine')

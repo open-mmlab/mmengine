@@ -68,7 +68,7 @@ class Registry:
         >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
 
     More advanced usages can be found at
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
+    https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html.
     """
 
     def __init__(self,
@@ -142,15 +142,31 @@ class Registry:
             >>>     pass
             >>> # The scope of ``ResNet`` will be ``mmdet``.
         """
+        from ..logging import print_log
+
         # `sys._getframe` returns the frame object that many calls below the
         # top of the stack. The call stack for `infer_scope` can be listed as
         # follow:
         # frame-0: `infer_scope` itself
         # frame-1: `__init__` of `Registry` which calls the `infer_scope`
         # frame-2: Where the `Registry(...)` is called
-        filename = inspect.getmodule(sys._getframe(2)).__name__  # type: ignore
-        split_filename = filename.split('.')
-        return split_filename[0]
+        module = inspect.getmodule(sys._getframe(2))
+        if module is not None:
+            filename = module.__name__
+            split_filename = filename.split('.')
+            scope = split_filename[0]
+        else:
+            # use "mmengine" to handle some cases which can not infer the scope
+            # like initializing Registry in interactive mode
+            scope = 'mmengine'
+            print_log(
+                'set scope as "mmengine" when scope can not be inferred. You '
+                'can silence this warning by passing a "scope" argument to '
+                'Registry like `Registry(name, scope="toy")`',
+                logger='current',
+                level=logging.WARNING)
+
+        return scope
 
     @staticmethod
     def split_scope_key(key: str) -> Tuple[Optional[str], str]:
