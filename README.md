@@ -268,6 +268,7 @@ runner.train()
 - [Evaluation](https://mmengine.readthedocs.io/en/latest/design/evaluation.html)
 - [Visualization](https://mmengine.readthedocs.io/en/latest/design/visualization.html)
 - [Logging](https://mmengine.readthedocs.io/en/latest/design/logging.html)
+- [Infer](https://mmengine.readthedocs.io/en/latest/design/infer.html)
 
 </details>
 
