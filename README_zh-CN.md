@@ -124,7 +124,7 @@ class MMResNet50(BaseModel):
 <details>
 <summary>构建数据集</summary>
 
-其次，我们需要构建训练和验证所需要的**数据集（Dataset）**和**数据加载器（DataLoader）**。对于基础的训练和验证功能，我们可以直接使用符合 PyTorch 标准的数据加载器和数据集。
+其次，我们需要构建训练和验证所需要的**数据集（Dataset）**和**数据加载器（DataLoader）**。在该示例中，我们使用 TorchVision 支持的方式构建数据集。
 
 ```python
 import torchvision.transforms as transforms
@@ -185,28 +185,22 @@ class Accuracy(BaseMetric):
 <details>
 <summary>构建执行器</summary>
 
-最后，我们利用构建好的**模型**，**数据加载器**，**评测指标**构建一个**执行器（Runner）**，同时在其中配置**优化器**、**工作路径**、**训练与验证配置**等选项。
+最后，我们利用构建好的`模型`，`数据加载器`，`评测指标`构建一个**执行器（Runner）**，并伴随其他的配置信息，如下所示。
 
 ```python
 from torch.optim import SGD
 from mmengine.runner import Runner
 
 runner = Runner(
-    # 用以训练和验证的模型，需要满足特定的接口需求
     model=MMResNet50(),
-    # 工作路径，用以保存训练日志、权重文件信息
     work_dir='./work_dir',
-    # 训练数据加载器，需要满足 PyTorch 数据加载器协议
     train_dataloader=train_dataloader,
     # 优化器包装，用于模型优化，并提供 AMP、梯度累积等附加功能
     optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-    # 训练配置，用于指定训练周期、验证间隔等信息
+    # 训练配置，例如 epoch 等
     train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
-    # 验证数据加载器，需要满足 PyTorch 数据加载器协议
     val_dataloader=val_dataloader,
-    # 验证配置，用于指定验证所需要的额外参数
     val_cfg=dict(),
-    # 用于验证的评测器，这里使用默认评测器，并评测指标
     val_evaluator=dict(type=Accuracy),
 )
 ```
@@ -252,6 +246,7 @@ runner.train()
 - [文件读写](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/fileio.html)
 - [全局管理器 (ManagerMixin)](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/manager_mixin.html)
 - [跨库调用模块](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/cross_library.html)
+- [测试时增强](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/test_time_augmentation.html)
 
 </details>
 
@@ -273,6 +268,7 @@ runner.train()
 - [模型精度评测](https://mmengine.readthedocs.io/zh_CN/latest/design/evaluation.html)
 - [可视化](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
 - [日志系统](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)
+- [推理接口](https://mmengine.readthedocs.io/zh_CN/latest/design/infer.html)
 
 </details>
 

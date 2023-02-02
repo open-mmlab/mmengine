@@ -246,6 +246,7 @@ runner.train()
 - [File IO](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/fileio.html)
 - [Global manager (ManagerMixin)](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/manager_mixin.html)
 - [Use modules from other libraries](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/cross_library.html)
+- [Test Time Agumentation](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/test_time_augmentation.html)
 
 </details>
 
