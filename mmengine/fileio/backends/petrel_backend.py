@@ -27,6 +27,8 @@ class PetrelBackend(BaseStorageBackend):
             ``filepath`` will be replaced by ``dst``. Defaults to None.
         enable_mc (bool, optional): Whether to enable memcached support.
             Defaults to True.
+        conf_path (str, optional): Config path of Petrel client. Default: None.
+            `New in version 0.3.3`.
 
     Examples:
         >>> backend = PetrelBackend()
@@ -38,14 +40,15 @@ class PetrelBackend(BaseStorageBackend):
 
     def __init__(self,
                  path_mapping: Optional[dict] = None,
-                 enable_mc: bool = True):
+                 enable_mc: bool = True,
+                 conf_path: Optional[str] = None):
         try:
             from petrel_client import client
         except ImportError:
             raise ImportError('Please install petrel_client to enable '
                               'PetrelBackend.')
 
-        self._client = client.Client(enable_mc=enable_mc)
+        self._client = client.Client(conf_path=conf_path, enable_mc=enable_mc)
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
 

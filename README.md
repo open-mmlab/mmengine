@@ -58,11 +58,15 @@ Major features:
 
 ## What's New
 
-v0.3.1 was released in 2022-11-09.
+v0.5.0 was released in 2023-01-20.
 
-**Fix error when saving best checkpoint in ddp-training**.
+Highlights:
 
-Read [Changelog](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022") for more details.
+- Add `BaseInferencer` to provide a general inference interface
+- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
+- Deprecate support for Python3.6
+
+Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
 
 ## Installation
 
@@ -207,6 +211,71 @@ runner = Runner(
 ```python
 runner.train()
 ```
+
+</details>
+
+## Learn More
+
+<details>
+<summary>Tutorials</summary>
+
+- [Runner](https://mmengine.readthedocs.io/en/latest/tutorials/runner.html)
+- [Dataset and DataLoader](https://mmengine.readthedocs.io/en/latest/tutorials/dataset.html)
+- [Model](https://mmengine.readthedocs.io/en/latest/tutorials/model.html)
+- [Evaluation](https://mmengine.readthedocs.io/en/latest/tutorials/evaluation.html)
+- [OptimWrapper](https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html)
+- [Parameter Scheduler](https://mmengine.readthedocs.io/en/latest/tutorials/param_scheduler.html)
+- [Hook](https://mmengine.readthedocs.io/en/latest/tutorials/hook.html)
+
+</details>
+
+<details>
+<summary>Advanced tutorials</summary>
+
+- [Registry](https://mmengine.readthedocs.io/en/latest/tutorials/registry.html)
+- [Config](https://mmengine.readthedocs.io/en/latest/tutorials/config.html)
+- [BaseDataset](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html)
+- [Data Transform](https://mmengine.readthedocs.io/en/latest/tutorials/data_transform.html)
+- [Weight Initialization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/initialize.html)
+- [Visualization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/visualization.html)
+- [Abstract Data Element](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/data_element.html)
+- [Distribution Communication](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/distributed.html)
+- [Logging](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/logging.html)
+- [File IO](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/fileio.html)
+- [Global manager (ManagerMixin)](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/manager_mixin.html)
+- [Use modules from other libraries](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/cross_library.html)
+
+</details>
+
+<details>
+<summary>Examples</summary>
+
+- [Resume Training](https://mmengine.readthedocs.io/en/latest/examples/resume_training.html)
+- [Speed up Training](https://mmengine.readthedocs.io/en/latest/examples/speed_up_training.html)
+- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/examples/save_gpu_memory.html)
+- [Train a GAN](https://mmengine.readthedocs.io/en/latest/examples/train_a_gan.html)
+
+</details>
+
+<details>
+<summary>Design</summary>
+
+- [Hook](https://mmengine.readthedocs.io/en/latest/design/hook.html)
+- [Runner](https://mmengine.readthedocs.io/en/latest/design/runner.html)
+- [Evaluation](https://mmengine.readthedocs.io/en/latest/design/evaluation.html)
+- [Visualization](https://mmengine.readthedocs.io/en/latest/design/visualization.html)
+- [Logging](https://mmengine.readthedocs.io/en/latest/design/logging.html)
+
+</details>
+
+<details>
+<summary>Migration guide</summary>
+
+- [Migrate Runner from MMCV to MMEngine](https://mmengine.readthedocs.io/en/latest/migration/runner.html)
+- [Migrate Hook from MMCV to MMEngine](https://mmengine.readthedocs.io/en/latest/migration/hook.html)
+- [Migrate Model from MMCV to MMEngine](https://mmengine.readthedocs.io/en/latest/migration/model.html)
+- [Migrate Parameter Scheduler from MMCV to MMEngine](https://mmengine.readthedocs.io/en/latest/migration/param_scheduler.html)
+- [Migrate Data Transform to OpenMMLab 2.0](https://mmengine.readthedocs.io/en/latest/migration/transform.html)
 
 </details>
 

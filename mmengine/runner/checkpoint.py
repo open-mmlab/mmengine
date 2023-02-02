@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import io
+import logging
 import os
 import os.path as osp
 import pkgutil
@@ -11,7 +12,6 @@ from tempfile import TemporaryDirectory
 from typing import Callable, Dict, Optional
 
 import torch
-import torchvision
 
 import mmengine
 from mmengine.dist import get_dist_info
@@ -19,7 +19,7 @@ from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import BaseTTAModel, is_model_wrapper
-from mmengine.utils import deprecated_function, mkdir_or_exist
+from mmengine.utils import deprecated_function, digit_version, mkdir_or_exist
 from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
@@ -106,21 +106,64 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         err_msg = '\n'.join(err_msg)
         if strict:
             raise RuntimeError(err_msg)
-        elif logger is not None:
-            logger.warning(err_msg)
         else:
-            print(err_msg)
+            print_log(err_msg, logger=logger, level=logging.WARNING)
 
 
 def get_torchvision_models():
-    model_urls = dict()
-    for _, name, ispkg in pkgutil.walk_packages(torchvision.models.__path__):
-        if ispkg:
-            continue
-        _zoo = import_module(f'torchvision.models.{name}')
-        if hasattr(_zoo, 'model_urls'):
-            _urls = getattr(_zoo, 'model_urls')
-            model_urls.update(_urls)
+    import torchvision
+    if digit_version(torchvision.__version__) < digit_version('0.13.0a0'):
+        model_urls = dict()
+        # When the version of torchvision is lower than 0.13, the model url is
+        # not declared in `torchvision.model.__init__.py`, so we need to
+        # iterate through `torchvision.models.__path__` to get the url for each
+        # model.
+        for _, name, ispkg in pkgutil.walk_packages(
+                torchvision.models.__path__):
+            if ispkg:
+                continue
+            _zoo = import_module(f'torchvision.models.{name}')
+            if hasattr(_zoo, 'model_urls'):
+                _urls = getattr(_zoo, 'model_urls')
+                model_urls.update(_urls)
+    else:
+        # Since torchvision bumps to v0.13, the weight loading logic,
+        # model keys and model urls have been changed. Here the URLs of old
+        # version is loaded to avoid breaking back compatibility. If the
+        # torchvision version>=0.13.0, new URLs will be added. Users can get
+        # the resnet50 checkpoint by setting 'resnet50.imagent1k_v1',
+        # 'resnet50' or 'ResNet50_Weights.IMAGENET1K_V1' in the config.
+        json_path = osp.join(mmengine.__path__[0], 'hub/torchvision_0.12.json')
+        model_urls = mmengine.load(json_path)
+        if digit_version(torchvision.__version__) < digit_version('0.14.0a0'):
+            weights_list = [
+                cls for cls_name, cls in torchvision.models.__dict__.items()
+                if cls_name.endswith('_Weights')
+            ]
+        else:
+            weights_list = [
+                torchvision.models.get_model_weights(model)
+                for model in torchvision.models.list_models(torchvision.models)
+            ]
+
+        for cls in weights_list:
+            # The name of torchvision model weights classes ends with
+            # `_Weights` such as `ResNet18_Weights`. However, some model weight
+            # classes, such as `MNASNet0_75_Weights` does not have any urls in
+            # torchvision 0.13.0 and cannot be iterated. Here we simply check
+            # `DEFAULT` attribute to ensure the class is not empty.
+            if not hasattr(cls, 'DEFAULT'):
+                continue
+            # Since `cls.DEFAULT` can not be accessed by iterating cls, we set
+            # default urls explicitly.
+            cls_name = cls.__name__
+            cls_key = cls_name.replace('_Weights', '').lower()
+            model_urls[f'{cls_key}.default'] = cls.DEFAULT.url
+            for weight_enum in cls:
+                cls_key = cls_name.replace('_Weights', '').lower()
+                cls_key = f'{cls_key}.{weight_enum.name.lower()}'
+                model_urls[cls_key] = weight_enum.url
+
     return model_urls
 
 
@@ -277,7 +320,10 @@ def load_from_local(filename, map_location):
 
 
 @CheckpointLoader.register_scheme(prefixes=('http://', 'https://'))
-def load_from_http(filename, map_location=None, model_dir=None):
+def load_from_http(filename,
+                   map_location=None,
+                   model_dir=None,
+                   progress=os.isatty(0)):
     """load checkpoint through HTTP or HTTPS scheme path. In distributed
     setting, this function only download checkpoint at local rank 0.
 
@@ -294,12 +340,18 @@ def load_from_http(filename, map_location=None, model_dir=None):
     rank, world_size = get_dist_info()
     if rank == 0:
         checkpoint = load_url(
-            filename, model_dir=model_dir, map_location=map_location)
+            filename,
+            model_dir=model_dir,
+            map_location=map_location,
+            progress=progress)
     if world_size > 1:
         torch.distributed.barrier()
         if rank > 0:
             checkpoint = load_url(
-                filename, model_dir=model_dir, map_location=map_location)
+                filename,
+                model_dir=model_dir,
+                map_location=map_location,
+                progress=progress)
     return checkpoint
 
 

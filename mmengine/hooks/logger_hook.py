@@ -2,8 +2,12 @@
 import os
 import os.path as osp
 import warnings
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
+
+import numpy as np
+import torch
 
 from mmengine.fileio import FileClient, dump
 from mmengine.fileio.io import get_file_backend
@@ -252,9 +256,33 @@ class LoggerHook(Hook):
                 metrics, and the values are corresponding results.
         """
         tag, log_str = runner.log_processor.get_log_after_epoch(
-            runner, len(runner.test_dataloader), 'test')
+            runner, len(runner.test_dataloader), 'test', with_non_scalar=True)
         runner.logger.info(log_str)
-        dump(tag, osp.join(runner.log_dir, self.json_log_path))  # type: ignore
+        dump(
+            self._process_tags(tag),
+            osp.join(runner.log_dir, self.json_log_path))  # type: ignore
+
+    @staticmethod
+    def _process_tags(tags: dict):
+        """Convert tag values to json-friendly type."""
+
+        def process_val(value):
+            if isinstance(value, (list, tuple)):
+                # Array type of json
+                return [process_val(item) for item in value]
+            elif isinstance(value, dict):
+                # Object type of json
+                return {k: process_val(v) for k, v in value.items()}
+            elif isinstance(value, (str, int, float, bool)) or value is None:
+                # Other supported type of json
+                return value
+            elif isinstance(value, (torch.Tensor, np.ndarray)):
+                return value.tolist()
+            # Drop unsupported values.
+
+        processed_tags = OrderedDict(process_val(tags))
+
+        return processed_tags
 
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``

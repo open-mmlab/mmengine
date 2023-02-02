@@ -1,14 +1,14 @@
 # 文件读写
 
-`MMEngine` 实现了一套统一的文件读写接口，可以用同一个函数来处理不同的文件格式，如 `json`、
-`yaml` 和 `pickle`，并且可以方便地拓展其它的文件格式。除此之外，文件读写模块还支持从多种文件存储后端读写文件，包括本地磁盘、Petrel（内部使用）、Memcached、LMDB 和 HTTP。
+`MMEngine` 在 `fileio` 模块中实现了一套统一的文件读写接口。通过 `fileio` 模块，我们可以用同一个函数来处理不同的文件格式，如 `json`、`yaml` 和 `pickle`，并且可以方便地拓展其它的文件格式。
+
+`fileio` 模块也支持从多种文件存储后端读写文件，包括本地磁盘、Petrel（内部使用）、Memcached、LMDB 和 HTTP。
 
 ## 读取和保存数据
 
-`MMEngine` 提供了两个通用的接口用于读取和保存数据，目前支持的格式有 `json`、`yaml` 和
-`pickle`。
+`MMEngine` 为读取和保存数据提供了统一的 API 接口，目前支持的格式有 `json`、`yaml` 和 `pickle`。
 
-### 从硬盘读取数据或者将数据保存至硬盘
+### 从硬盘中读写文件
 
 ```python
 from mmengine import load, dump
@@ -37,21 +37,21 @@ with open('test.yaml', 'w') as f:
 ```python
 from mmengine import load, dump
 
-# 从 s3 文件读取数据
+# 从 s3 文件中读取数据
 data = load('s3://bucket-name/test.json')
 data = load('s3://bucket-name/test.yaml')
 data = load('s3://bucket-name/test.pkl')
 
-# 将数据保存至 s3 文件 (根据文件名后缀反推文件类型)
+# 将数据保存至 s3 文件（根据文件名后缀反推文件类型）
 dump(data, 's3://bucket-name/out.pkl')
 ```
 
-我们提供了易于拓展的方式以支持更多的文件格式，我们只需要创建一个继承自 `BaseFileHandler` 的文件句柄类，句柄类至少需要重写三个方法。然后使用使用 `register_handler` 装饰器将句柄类注册为对应文件格式的读写句柄。
+拓展 API 以支持更多的文件格式是很方便的。你所需要做的是写一个继承自 `BaseFileHandler` 的文件句柄，并使用一个或者多个文件格式来注册它。
 
 ```python
 from mmengine import register_handler, BaseFileHandler
 
-# 支持为文件句柄类注册多个文件格式
+# 为了注册多个文件格式，可以使用列表作为参数。
 # @register_handler(['txt', 'log'])
 @register_handler('txt')
 class TxtHandler1(BaseFileHandler):
@@ -66,7 +66,7 @@ class TxtHandler1(BaseFileHandler):
         return str(obj)
 ```
 
-以 `PickleHandler` 为例
+以 `PickleHandler` 为例：
 
 ```python
 from mmengine import BaseFileHandler
@@ -96,7 +96,7 @@ class PickleHandler(BaseFileHandler):
 
 ## 读取文件并返回列表或字典
 
-例如， `a.txt` 是文本文件，一共有5行内容。
+例如，`a.txt` 是文本文件，一共有 5 行内容。
 
 ```
 a
@@ -108,7 +108,7 @@ e
 
 ### 从硬盘读取
 
-使用 `list_from_file` 读取 `a.txt`
+使用 `list_from_file` 从 `a.txt` 中读取列表：
 
 ```python
 from mmengine import list_from_file
@@ -123,7 +123,7 @@ print(list_from_file('a.txt', prefix='/mnt/'))
 # ['/mnt/a', '/mnt/b', '/mnt/c', '/mnt/d', '/mnt/e']
 ```
 
-同样， `b.txt` 也是文本文件，一共有3行内容
+例如，`b.txt` 是文本文件，一共有 3 行内容。
 
 ```
 1 cat
@@ -131,7 +131,7 @@ print(list_from_file('a.txt', prefix='/mnt/'))
 3 panda
 ```
 
-使用 `dict_from_file` 读取 `b.txt`
+使用 `dict_from_file` 从 `b.txt` 中读取字典：
 
 ```python
 from mmengine import dict_from_file
@@ -144,7 +144,7 @@ print(dict_from_file('b.txt', key_type=int))
 
 ### 从其他存储后端读取
 
-使用 `list_from_file` 读取 `s3://bucket-name/a.txt`
+使用 `list_from_file` 从 `s3://bucket-name/a.txt` 中读取列表：
 
 ```python
 from mmengine import list_from_file
@@ -159,7 +159,7 @@ print(list_from_file('s3://bucket-name/a.txt', prefix='/mnt/'))
 # ['/mnt/a', '/mnt/b', '/mnt/c', '/mnt/d', '/mnt/e']
 ```
 
-使用 `dict_from_file` 读取 `b.txt`
+使用 `dict_from_file` 从 `s3://bucket-name/b.txt` 中读取字典：
 
 ```python
 from mmengine import dict_from_file
@@ -172,7 +172,7 @@ print(dict_from_file('s3://bucket-name/b.txt', key_type=int))
 
 ## 读取和保存权重文件
 
-通常情况下，我们可以通过下面的方式从磁盘或者网络远端读取权重文件。
+通常情况下，我们可以通过下面的方式从磁盘或网络远端读取权重文件：
 
 ```python
 import torch
@@ -189,8 +189,7 @@ torch.save(checkpoint, filepath1)
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
-在 `mmengine` 中，得益于多文件存储后端的支持，不同存储形式的权重文件读写可以通过
-`load_checkpoint` 和 `save_checkpoint` 来统一实现。
+在 `MMEngine` 中，在不同存储格式中读取权重文件可以通过 `load_checkpoint` 和 `save_checkpoint` 来统一实现：
 
 ```python
 from mmengine import load_checkpoint, save_checkpoint

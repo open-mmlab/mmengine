@@ -5,8 +5,10 @@ import os
 import os.path as osp
 import platform
 import sys
+import tempfile
 from importlib import import_module
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -322,6 +324,14 @@ class TestConfig:
         assert cfg.item2 == dict(a=1, b=0.1, c='x')
         assert cfg.item3 is False
 
+        # test multiple options
+        args = parser.parse_args([
+            '--options', 'item1.a=1', 'item2.a=2', '--options', 'item2.a=1',
+            'item3=false'
+        ])
+        out_dict = {'item1.a': 1, 'item2.a': 1, 'item3': False}
+        assert args.options == out_dict
+
     def test_validate_py_syntax(self, tmp_path):
         tmp_cfg = tmp_path / 'tmp_config.py'
         with open(tmp_cfg, 'w') as f:
@@ -365,6 +375,42 @@ class TestConfig:
 
         with open(substituted_cfg) as f:
             assert f.read() == expected_text
+
+    def test_substitute_environment_vars(self, tmp_path):
+        cfg = tmp_path / 'tmp_cfg1.py'
+        substituted_cfg = tmp_path / 'tmp_cfg2.py'
+
+        cfg_text = 'a={{$A:}}\n'
+        with open(cfg, 'w') as f:
+            f.write(cfg_text)
+        with pytest.raises(KeyError):
+            Config._substitute_env_variables(cfg, substituted_cfg)
+
+        os.environ['A'] = 'text_A'
+        Config._substitute_env_variables(cfg, substituted_cfg)
+        with open(substituted_cfg) as f:
+            assert f.read() == 'a=text_A\n'
+        os.environ.pop('A')
+
+        cfg_text = 'b={{$B:80}}\n'
+        with open(cfg, 'w') as f:
+            f.write(cfg_text)
+        Config._substitute_env_variables(cfg, substituted_cfg)
+        with open(substituted_cfg) as f:
+            assert f.read() == 'b=80\n'
+
+        os.environ['B'] = '100'
+        Config._substitute_env_variables(cfg, substituted_cfg)
+        with open(substituted_cfg) as f:
+            assert f.read() == 'b=100\n'
+        os.environ.pop('B')
+
+        cfg_text = 'c={{"$C:80"}}\n'
+        with open(cfg, 'w') as f:
+            f.write(cfg_text)
+        Config._substitute_env_variables(cfg, substituted_cfg)
+        with open(substituted_cfg) as f:
+            assert f.read() == 'c=80\n'
 
     def test_pre_substitute_base_vars(self, tmp_path):
         cfg_path = osp.join(self.data_path, 'config',
@@ -426,6 +472,7 @@ class TestConfig:
 
         self._simple_load()
         self._predefined_vars()
+        self._environment_vars()
         self._base_variables()
         self._merge_from_base()
         self._code_in_config()
@@ -467,9 +514,10 @@ class TestConfig:
                 filename = f'{file_format}_config/{name}.{file_format}'
 
                 cfg_file = osp.join(self.data_path, 'config', filename)
-                cfg_dict, cfg_text = Config._file2dict(cfg_file)
+                cfg_dict, cfg_text, env_variables = Config._file2dict(cfg_file)
                 assert isinstance(cfg_text, str)
                 assert isinstance(cfg_dict, dict)
+                assert isinstance(env_variables, dict)
 
     def _get_file_path(self, file_path):
         if platform.system() == 'Windows':
@@ -523,6 +571,31 @@ class TestConfig:
         assert Config.fromfile(cfg_file, False)['item1'] == '{{ fileDirname }}'
         assert Config.fromfile(cfg_file)['item1'] == self._get_file_path(
             osp.dirname(cfg_file))
+
+    def _environment_vars(self):
+        # test parse predefined_var in config
+        cfg_file = osp.join(self.data_path,
+                            'config/py_config/test_environment_var.py')
+
+        with pytest.raises(KeyError):
+            Config._file2dict(cfg_file)
+
+        os.environ['ITEM1'] = '60'
+        cfg_dict_dst = dict(item1='60', item2='default_value', item3=80)
+        assert Config._file2dict(cfg_file)[0]['item1'] == cfg_dict_dst['item1']
+        assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
+        assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
+
+        os.environ['ITEM2'] = 'new_value'
+        os.environ['ITEM3'] = '50'
+        cfg_dict_dst = dict(item1='60', item2='new_value', item3=50)
+        assert Config._file2dict(cfg_file)[0]['item1'] == cfg_dict_dst['item1']
+        assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
+        assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
+
+        os.environ.pop('ITEM1')
+        os.environ.pop('ITEM2')
+        os.environ.pop('ITEM3')
 
     def _merge_from_base(self):
         cfg_file = osp.join(self.data_path,
@@ -706,6 +779,21 @@ class TestConfig:
                             'config/py_config/test_py_modify_key.py')
         cfg = Config._file2dict(cfg_file)[0]
         assert cfg == dict(item1=dict(a=1))
+
+        # Simulate the case that the temporary directory includes `.`, etc.
+        # /tmp/test.axsgr12/. This patch is to check the issue
+        # https://github.com/open-mmlab/mmengine/issues/788 has been solved.
+        class PatchedTempDirectory(tempfile.TemporaryDirectory):
+
+            def __init__(self, *args, prefix='test.', **kwargs):
+                super().__init__(*args, prefix=prefix, **kwargs)
+
+        with patch('mmengine.config.config.tempfile.TemporaryDirectory',
+                   PatchedTempDirectory):
+            cfg_file = osp.join(self.data_path,
+                                'config/py_config/test_py_modify_key.py')
+            cfg = Config._file2dict(cfg_file)[0]
+            assert cfg == dict(item1=dict(a=1))
 
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,

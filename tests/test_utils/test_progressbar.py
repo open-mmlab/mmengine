@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import platform
 import time
 from io import StringIO
+from unittest import skipIf
 from unittest.mock import patch
 
 import mmengine
@@ -39,6 +41,9 @@ class TestProgressBar:
         prog_bar.start()
         assert out.getvalue() == f'[{" " * bar_width}] 0/10, elapsed: 0s, ETA:'
 
+    @skipIf(
+        platform.system() != 'Linux',
+        reason='Only test `TestProgressBar.test_update` in Linux')
     def test_update(self):
         out = StringIO()
         bar_width = 20
@@ -57,6 +62,9 @@ class TestProgressBar:
         assert out.getvalue() == f'\r[{">" * 2 + " " * 18}] 1/10, 1.0 ' \
                                  'task/s, elapsed: 1s, ETA:     9s'
 
+    @skipIf(
+        platform.system() != 'Linux',
+        reason='Only test `TestProgressBar.test_adaptive_length` in Linux')
     def test_adaptive_length(self):
         with patch.dict('os.environ', {'COLUMNS': '80'}):
             out = StringIO()
@@ -83,6 +91,9 @@ def sleep_1s(num):
     return num
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_progress_list` in Linux')
 def test_track_progress_list():
     out = StringIO()
     ret = mmengine.track_progress(sleep_1s, [1, 2, 3], bar_width=3, file=out)
@@ -94,6 +105,9 @@ def test_track_progress_list():
     assert ret == [1, 2, 3]
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_progress_iterator` in Linux')
 def test_track_progress_iterator():
     out = StringIO()
     ret = mmengine.track_progress(
@@ -106,6 +120,9 @@ def test_track_progress_iterator():
     assert ret == [1, 2, 3]
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_iter_progress` in Linux')
 def test_track_iter_progress():
     out = StringIO()
     ret = []
@@ -119,6 +136,9 @@ def test_track_iter_progress():
     assert ret == [1, 2, 3]
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_enum_progress` in Linux')
 def test_track_enum_progress():
     out = StringIO()
     ret = []
@@ -136,6 +156,9 @@ def test_track_enum_progress():
     assert count == [0, 1, 2]
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_parallel_progress_list` in Linux')
 def test_track_parallel_progress_list():
     out = StringIO()
     results = mmengine.track_parallel_progress(
@@ -150,6 +173,9 @@ def test_track_parallel_progress_list():
     assert results == [1, 2, 3, 4]
 
 
+@skipIf(
+    platform.system() != 'Linux',
+    reason='Only test `test_track_parallel_progress_iterator` in Linux')
 def test_track_parallel_progress_iterator():
     out = StringIO()
     results = mmengine.track_parallel_progress(

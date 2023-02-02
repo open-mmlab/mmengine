@@ -23,10 +23,11 @@ MMEngine 实现的[注册器](mmengine.registry.Registry)可以看作一个映�
 ```python
 from mmengine import Registry
 # scope 表示注册器的作用域，如果不设置，默认为包名，例如在 mmdetection 中，它的 scope 为 mmdet
-ACTIVATION = Registry('activation', scope='mmengine')
+# locations 表示注册在此注册器的模块所存放的位置，注册器会根据预先定义的位置在构建模块时自动 import
+ACTIVATION = Registry('activation', scope='mmengine', locations=['mmengine.models.activations'])
 ```
 
-然后我们可以实现不同的激活模块，例如 `Sigmoid`，`ReLU` 和 `Softmax`。
+`locations` 指定的模块 `mmengine.models.activations` 对应了 `mmengine/models/activations.py` 文件。在使用注册器构建模块的时候，ACTIVATION 注册器会自动从该文件中导入实现的模块。因此，我们可以在 `mmengine/models/activations.py` 文件中实现不同的激活函数，例如 `Sigmoid`，`ReLU` 和 `Softmax`。
 
 ```python
 import torch.nn as nn
@@ -74,7 +75,13 @@ print(ACTIVATION.module_dict)
 ```
 
 ```{note}
-只有模块所在的文件被导入时，注册机制才会被触发，所以我们需要在某处导入该文件或者使用 `custom_imports` 字段动态导入该模块进而触发注册机制，详情见[导入自定义 Python 模块](config.md)。
+只有模块所在的文件被导入时，注册机制才会被触发，用户可以通过三种方式将模块添加到注册器中：
+
+1. 在 ``locations`` 指向的文件中实现模块。注册器将自动在预先定义的位置导入模块。这种方式是为了简化算法库的使用，以便用户可以直接使用 ``REGISTRY.build(cfg)``。
+
+2. 手动导入文件。常用于用户在算法库之内或之外实现新的模块。
+
+3. 在配置中使用 ``custom_imports`` 字段。 详情请参考[导入自定义Python模块](config.md#import-the-custom-module)。
 ```
 
 模块成功注册后，我们可以通过配置文件使用这个激活模块。
@@ -119,7 +126,7 @@ def build_activation(cfg, registry, *args, **kwargs):
 并将 `build_activation` 传递给 `build_func` 参数
 
 ```python
-ACTIVATION = Registry('activation', build_func=build_activation, scope='mmengine')
+ACTIVATION = Registry('activation', build_func=build_activation, scope='mmengine', locations=['mmengine.models.activations'])
 
 @ACTIVATION.register_module()
 class Tanh(nn.Module):
@@ -206,7 +213,7 @@ class RReLU(nn.Module):
 ```python
 from mmengine import Registry, MODELS as MMENGINE_MODELS
 
-MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha')
+MODELS = Registry('model', parent=MMENGINE_MODELS, scope='mmalpha', locations=['mmalpha.models'])
 ```
 
 下图是 `MMEngine` 和 `MMAlpha` 的注册器层级结构。

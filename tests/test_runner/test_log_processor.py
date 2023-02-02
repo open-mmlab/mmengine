@@ -91,7 +91,7 @@ class TestLogProcessor:
         if by_epoch:
             if mode in ['train', 'val']:
                 cur_epoch = log_processor._get_epoch(self.runner, mode)
-                log_str = (f'Epoch({mode}) [{cur_epoch}][2/'
+                log_str = (f'Epoch({mode})  [{cur_epoch}][ 2/'
                            f'{len(cur_loop.dataloader)}]  ')
             else:
                 log_str = (f'Epoch({mode}) [2/{len(cur_loop.dataloader)}]  ')
@@ -114,6 +114,9 @@ class TestLogProcessor:
             if mode == 'train':
                 max_iters = self.runner.max_iters
                 log_str = f'Iter({mode}) [11/{max_iters}]  '
+            elif mode == 'val':
+                max_iters = len(cur_loop.dataloader)
+                log_str = f'Iter({mode}) [ 2/{max_iters}]  '
             else:
                 max_iters = len(cur_loop.dataloader)
                 log_str = f'Iter({mode}) [2/{max_iters}]  '
@@ -141,19 +144,28 @@ class TestLogProcessor:
         # Prepare LoggerHook
         log_processor = LogProcessor(by_epoch=by_epoch)
         # Prepare validation information.
-        val_logs = dict(accuracy=0.9, data_time=1.0)
-        log_processor._collect_scalars = MagicMock(return_value=val_logs)
+        scalar_logs = dict(accuracy=0.9, data_time=1.0)
+        non_scalar_logs = dict(
+            recall={
+                'cat': 1,
+                'dog': 0
+            }, cm=torch.tensor([1, 2, 3]))
+        log_processor._collect_scalars = MagicMock(return_value=scalar_logs)
+        log_processor._collect_non_scalars = MagicMock(
+            return_value=non_scalar_logs)
         _, out = log_processor.get_log_after_epoch(self.runner, 2, mode)
+        expect_metric_str = ("accuracy: 0.9000  recall: {'cat': 1, 'dog': 0}  "
+                             'cm: \ntensor([1, 2, 3])\n')
         if by_epoch:
             if mode == 'test':
-                assert out == 'Epoch(test) [5/5]  accuracy: 0.9000'
+                assert out == 'Epoch(test) [5/5]  ' + expect_metric_str
             else:
-                assert out == 'Epoch(val) [1][10/10]  accuracy: 0.9000'
+                assert out == 'Epoch(val) [1][10/10]  ' + expect_metric_str
         else:
             if mode == 'test':
-                assert out == 'Iter(test) [5/5]  accuracy: 0.9000'
+                assert out == 'Iter(test) [5/5]  ' + expect_metric_str
             else:
-                assert out == 'Iter(val) [10/10]  accuracy: 0.9000'
+                assert out == 'Iter(val) [10/10]  ' + expect_metric_str
 
     def test_collect_scalars(self):
         history_count = np.ones(100)
@@ -192,6 +204,21 @@ class TestLogProcessor:
             copy.deepcopy(custom_cfg), self.runner, mode='val')
         assert list(tag.keys()) == ['metric']
         assert tag['metric'] == metric_scalars[-1]
+
+    def test_collect_non_scalars(self):
+        metric1 = np.random.rand(10)
+        metric2 = torch.tensor(10)
+
+        log_processor = LogProcessor()
+        # Collect with prefix.
+        log_infos = {'test/metric1': metric1, 'test/metric2': metric2}
+        self.runner.message_hub._runtime_info = log_infos
+        tag = log_processor._collect_non_scalars(self.runner, mode='test')
+        # Test training key in tag.
+        assert list(tag.keys()) == ['metric1', 'metric2']
+        # Test statistics lr with `current`, loss and time with 'mean'
+        assert tag['metric1'] is metric1
+        assert tag['metric2'] is metric2
 
     @patch('torch.cuda.max_memory_allocated', MagicMock())
     @patch('torch.cuda.reset_peak_memory_stats', MagicMock())
@@ -238,6 +265,7 @@ class TestLogProcessor:
     def setup(self):
         runner = MagicMock()
         runner.epoch = 1
+        runner.max_epochs = 10
         runner.iter = 10
         runner.max_iters = 50
         runner.train_dataloader = [0] * 20

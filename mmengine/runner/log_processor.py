@@ -2,7 +2,11 @@
 import copy
 import datetime
 from collections import OrderedDict
+from itertools import chain
 from typing import List, Optional, Tuple
+
+import numpy as np
+import torch
 
 from mmengine.device import get_max_cuda_memory, is_cuda_available
 from mmengine.registry import LOG_PROCESSORS
@@ -140,20 +144,40 @@ class LogProcessor:
         #  train: Epoch [5/10000] ... (divided by `max_iter`)
         #  val/test: Epoch [5/2000] ... (divided by length of dataloader)
         if self.by_epoch:
+            # Align the iteration log:
+            # Epoch(train)  [  9][010/270]
+            # ...                 ||| |||
+            # Epoch(train)  [ 10][100/270]
+            dataloader_len = len(current_loop.dataloader)
+            cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
+
             if mode in ['train', 'val']:
+                # Right Align the epoch log:
+                # Epoch(train)   [9][100/270]
+                # ...             ||
+                # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
+                max_epochs = runner.max_epochs
+                # 3 means the three characters: "[", "]", and " " occupied in
+                # " [{max_epochs}]"
+                cur_epoch_str = f'[{cur_epoch}]'.rjust(
+                    len(str(max_epochs)) + 3, ' ')
                 tag['epoch'] = cur_epoch
-                log_str = (f'Epoch({mode}) [{cur_epoch}]'
-                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
+                log_str = (f'Epoch({mode}){cur_epoch_str}'
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
             else:
                 log_str = (f'Epoch({mode}) '
-                           f'[{cur_iter}/{len(current_loop.dataloader)}]  ')
+                           f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
+                cur_iter_str = str(cur_iter).rjust(len(str(runner.max_iters)))
                 log_str = (f'Iter({mode}) '
-                           f'[{cur_iter}/{runner.max_iters}]  ')
+                           f'[{cur_iter_str}/{runner.max_iters}]  ')
             else:
-                log_str = (f'Iter({mode}) [{batch_idx + 1}'
+                dataloader_len = len(current_loop.dataloader)
+                cur_iter_str = str(batch_idx + 1).rjust(
+                    len(str(dataloader_len)))
+                log_str = (f'Iter({mode}) [{cur_iter_str}'
                            f'/{len(current_loop.dataloader)}]  ')
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
@@ -186,8 +210,11 @@ class LogProcessor:
             log_str += '  '.join(log_items)
         return tag, log_str
 
-    def get_log_after_epoch(self, runner, batch_idx: int,
-                            mode: str) -> Tuple[dict, str]:
+    def get_log_after_epoch(self,
+                            runner,
+                            batch_idx: int,
+                            mode: str,
+                            with_non_scalar: bool = False) -> Tuple[dict, str]:
         """Format log string after validation or testing epoch.
 
         Args:
@@ -195,6 +222,8 @@ class LogProcessor:
             batch_idx (int): The index of the current batch in the current
                 loop.
             mode (str): Current mode of runner.
+            with_non_scalar (bool): Whether to include non-scalar infos in the
+                returned tag. Defaults to False.
 
         Return:
             Tuple(dict, str): Formatted log dict/string which will be
@@ -210,6 +239,7 @@ class LogProcessor:
         custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
         # tag is used to write log information to different backends.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        non_scalar_tag = self._collect_non_scalars(runner, mode)
         tag.pop('time', None)
         tag.pop('data_time', None)
         # By epoch:
@@ -232,11 +262,17 @@ class LogProcessor:
         # `time` and `data_time` will not be recorded in after epoch log
         # message.
         log_items = []
-        for name, val in tag.items():
+        for name, val in chain(tag.items(), non_scalar_tag.items()):
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
+            if isinstance(val, (torch.Tensor, np.ndarray)):
+                # newline to display tensor and array.
+                val = f'\n{val}\n'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
+
+        if with_non_scalar:
+            tag.update(non_scalar_tag)
         return tag, log_str
 
     def _collect_scalars(self, custom_cfg: List[dict], runner,
@@ -284,6 +320,28 @@ class LogProcessor:
                 tag[log_name] = mode_history_scalars[data_src].statistics(
                     **log_cfg)
         return tag
+
+    def _collect_non_scalars(self, runner, mode: str) -> dict:
+        """Collect log information to compose a dict according to mode.
+
+        Args:
+            runner (Runner): The runner of the training/testing/validation
+                process.
+            mode (str): Current mode of runner.
+
+        Returns:
+            dict: non-scalar infos of the specified mode.
+        """
+        # infos of train/val/test phase.
+        infos = runner.message_hub.runtime_info
+        # corresponding mode infos
+        mode_infos = OrderedDict()
+        # extract log info and remove prefix to `mode_infos` according to mode.
+        for prefix_key, value in infos.items():
+            if prefix_key.startswith(mode):
+                key = prefix_key.partition('/')[-1]
+                mode_infos[key] = value
+        return mode_infos
 
     def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""

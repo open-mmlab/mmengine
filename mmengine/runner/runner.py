@@ -34,8 +34,7 @@ from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
                                LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
                                OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope,
-                               count_registered_modules)
+                               VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -281,8 +280,8 @@ class Runner:
         if not (all(item is None for item in training_related)
                 or all(item is not None for item in training_related)):
             raise ValueError(
-                'train_dataloader, train_cfg, and optimizer should be either '
-                'all None or not None, but got '
+                'train_dataloader, train_cfg, and optim_wrapper should be '
+                'either all None or not None, but got '
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optim_wrapper={optim_wrapper}.')
@@ -298,7 +297,7 @@ class Runner:
         # parameters of optimizer, param_scheduler can be None
         if param_scheduler is not None and self.optim_wrapper is None:
             raise ValueError(
-                'param_scheduler should be None when optimizer is None, '
+                'param_scheduler should be None when optim_wrapper is None, '
                 f'but got {param_scheduler}')
 
         # Parse `param_scheduler` to a list or a dict. If `optim_wrapper` is a
@@ -372,11 +371,6 @@ class Runner:
         # Collect and log environment information.
         self._log_env(env_cfg)
 
-        # collect information of all modules registered in the registries
-        registries_info = count_registered_modules(
-            self.work_dir if self.rank == 0 else None, verbose=False)
-        self.logger.debug(registries_info)
-
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
         # runtime information (iter and epoch). Those components that do not
@@ -415,6 +409,9 @@ class Runner:
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
+        # log hooks information
+        self.logger.info(f'Hooks will be executed in the following '
+                         f'order:\n{self.get_hooks_info()}')
 
         # dump `cfg` to `work_dir`
         self.dump_config()
@@ -1370,12 +1367,20 @@ class Runner:
 
         # build dataloader
         init_fn: Optional[partial]
+
         if seed is not None:
+            disable_subprocess_warning = dataloader_cfg.pop(
+                'disable_subprocess_warning', False)
+            assert isinstance(
+                disable_subprocess_warning,
+                bool), ('disable_subprocess_warning should be a bool, but got '
+                        f'{type(disable_subprocess_warning)}')
             init_fn = partial(
                 worker_init_fn,
                 num_workers=dataloader_cfg.get('num_workers'),
                 rank=get_rank(),
-                seed=seed)
+                seed=seed,
+                disable_subprocess_warning=disable_subprocess_warning)
         else:
             init_fn = None
 
@@ -1575,6 +1580,29 @@ class Runner:
             log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
 
         return log_processor  # type: ignore
+
+    def get_hooks_info(self) -> str:
+        # Get hooks info in each stage
+        stage_hook_map: Dict[str, list] = {stage: [] for stage in Hook.stages}
+        for hook in self.hooks:
+            try:
+                priority = Priority(hook.priority).name  # type: ignore
+            except ValueError:
+                priority = hook.priority  # type: ignore
+            classname = hook.__class__.__name__
+            hook_info = f'({priority:<12}) {classname:<35}'
+            for trigger_stage in hook.get_triggered_stages():
+                stage_hook_map[trigger_stage].append(hook_info)
+
+        stage_hook_infos = []
+        for stage in Hook.stages:
+            hook_infos = stage_hook_map[stage]
+            if len(hook_infos) > 0:
+                info = f'{stage}:\n'
+                info += '\n'.join(hook_infos)
+                info += '\n -------------------- '
+                stage_hook_infos.append(info)
+        return '\n'.join(stage_hook_infos)
 
     def load_or_resume(self) -> None:
         """load or resume checkpoint."""

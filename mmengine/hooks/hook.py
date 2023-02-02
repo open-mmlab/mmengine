@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional, Sequence, Union
 
+from mmengine import is_method_overridden
+
 DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
@@ -11,6 +13,13 @@ class Hook:
     """
 
     priority = 'NORMAL'
+    stages = ('before_run', 'after_load_checkpoint', 'before_train',
+              'before_train_epoch', 'before_train_iter', 'after_train_iter',
+              'after_train_epoch', 'before_val', 'before_val_epoch',
+              'before_val_iter', 'after_val_iter', 'after_val_epoch',
+              'after_val', 'before_save_checkpoint', 'after_train',
+              'before_test', 'before_test_epoch', 'before_test_iter',
+              'after_test_iter', 'after_test_epoch', 'after_test', 'after_run')
 
     def before_run(self, runner) -> None:
         """All subclasses should override this method, if they need any
@@ -416,3 +425,28 @@ class Hook:
             bool: Whether current iteration is the last train iteration.
         """
         return runner.iter + 1 == runner.max_iters
+
+    def get_triggered_stages(self) -> list:
+        trigger_stages = set()
+        for stage in Hook.stages:
+            if is_method_overridden(stage, Hook, self):
+                trigger_stages.add(stage)
+
+        # some methods will be triggered in multi stages
+        # use this dict to map method to stages.
+        method_stages_map = {
+            '_before_epoch':
+            ['before_train_epoch', 'before_val_epoch', 'before_test_epoch'],
+            '_after_epoch':
+            ['after_train_epoch', 'after_val_epoch', 'after_test_epoch'],
+            '_before_iter':
+            ['before_train_iter', 'before_val_iter', 'before_test_iter'],
+            '_after_iter':
+            ['after_train_iter', 'after_val_iter', 'after_test_iter'],
+        }
+
+        for method, map_stages in method_stages_map.items():
+            if is_method_overridden(method, Hook, self):
+                trigger_stages.update(map_stages)
+
+        return list(trigger_stages)

@@ -60,11 +60,15 @@ MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，�
 
 ## 最近进展
 
-最新版本 v0.3.1 在 2022.11.09 发布。
+最新版本 v0.5.0 在 2023.01.20 发布。
 
-**修复分布式训练时，保存最佳 checkpoint 报错问题**。
+亮点：
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0.3.1 "09/11/2022")
+- 新增 `BaseInferencer` 以提供通用的推理接口
+- 新增 `ReduceOnPlateauParamScheduler` 以实现根据 metric 变化自动调整学习率或动量
+- MMEngine 不再维护对 Python3.6 的支持
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v050-01202023)
 
 ## 安装
 
@@ -226,31 +230,38 @@ runner.train()
 - [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)
 - [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
+- [数据集与数据加载器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/dataset.html)
 - [模型](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/model.html)
 - [评测指标和评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluation.html)
 - [优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html)
 - [优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
 - [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
+- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
 
 </details>
 
 <details>
 <summary>进阶教程</summary>
 
+- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
+- [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [数据集基类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/basedataset.html)
 - [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
+- [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
+- [权重初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
 - [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
-- [初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
+- [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
 - [分布式通信原语](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/distributed.html)
 - [记录日志](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/logging.html)
 - [文件读写](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/fileio.html)
 - [辅助类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/utils.html)
+- [全局管理器](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/manager_mixin.html)
+- [跨库调用模块](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/cross_library.html)
 
 </details>
 
 <details>
 <summary>示例</summary>
-
 - [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
 - [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
 - [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
@@ -258,27 +269,21 @@ runner.train()
 - [训练生成对抗网络](https://mmengine.readthedocs.io/zh_CN/latest/examples/train_a_gan.html)
 
 </details>
-
 <details>
 <summary>架构设计</summary>
-
 - [钩子的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
 - [执行器的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
 - [模型精度评测的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/evaluation.html)
 - [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
 - [日志系统的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)
-
 </details>
-
 <details>
 <summary>迁移指南</summary>
-
 - [迁移 MMCV 执行器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/runner.html)
 - [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/hook.html)
 - [迁移 MMCV 模型到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/model.html)
 - [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/param_scheduler.html)
 - [数据变换类的迁移](https://mmengine.readthedocs.io/zh_CN/latest/migration/transform.html)
-
 </details>
 
 ## 贡献指南
@@ -315,10 +320,10 @@ runner.train()
 
 ## 欢迎加入 OpenMMLab 社区
 
-扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 OpenMMLab 团队的 [官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=aCvMxdr3)，或通过添加微信“Open小喵Lab”加入官方交流微信群。
+扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 OpenMMLab 团队的 [官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=K0QI8ByU)，或通过添加微信“Open小喵Lab”加入官方交流微信群。
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151554-1a0748f0-a1bb-4565-84a6-ab3040247ef1.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151778-d17c1368-125f-4fde-adbe-38cc6eb3be98.jpg" height="400" />
+<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/25839884/203904835-62392033-02d4-4c73-a68c-c9e4c1e2b07f.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151778-d17c1368-125f-4fde-adbe-38cc6eb3be98.jpg" height="400" />
 </div>
 
 我们会在 OpenMMLab 社区为大家

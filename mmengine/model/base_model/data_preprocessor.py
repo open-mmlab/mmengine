@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
-from mmengine.utils import is_list_of
+from mmengine.utils import is_seq_of
 from ..utils import stack_batch
 
 CastData = Union[tuple, dict, BaseDataElement, torch.Tensor, list, bytes, str,
@@ -59,10 +59,7 @@ class BaseDataPreprocessor(nn.Module):
         elif isinstance(data, (torch.Tensor, BaseDataElement)):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
-            raise TypeError(
-                '`BaseDataPreprocessor.cast_data`: batch data must contain '
-                'tensors, numpy arrays, numbers, dicts or lists, but '
-                f'found {type(data)}')
+            return data
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
         """Preprocesses the data into the model input format.
@@ -84,19 +81,28 @@ class BaseDataPreprocessor(nn.Module):
     def device(self):
         return self._device
 
-    def to(self, device: Optional[Union[int, torch.device]], *args,
-           **kwargs) -> nn.Module:
+    def to(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
-
-        Args:
-            device (int or torch.device, optional): The desired device of the
-                parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
-        self._device = torch.device(device)
-        return super().to(device)
+
+        # Since Torch has not officially merged
+        # the npu-related fields, using the _parse_to function
+        # directly will cause the NPU to not be found.
+        # Here, the input parameters are processed to avoid errors.
+        if args and isinstance(args[0], str) and 'npu' in args[0]:
+            args = tuple(
+                [list(args)[0].replace('npu', torch.npu.native_device)])
+        if kwargs and 'npu' in str(kwargs.get('device', '')):
+            kwargs['device'] = kwargs['device'].replace(
+                'npu', torch.npu.native_device)
+
+        device = torch._C._nn._parse_to(*args, **kwargs)[0]
+        if device is not None:
+            self._device = torch.device(device)
+        return super().to(*args, **kwargs)
 
     def cuda(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
@@ -106,6 +112,15 @@ class BaseDataPreprocessor(nn.Module):
         """
         self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
+
+    def npu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device(torch.npu.current_device())
+        return super().npu()
 
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
@@ -222,7 +237,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         data = self.cast_data(data)  # type: ignore
         _batch_inputs = data['inputs']
         # Process data with `pseudo_collate`.
-        if is_list_of(_batch_inputs, torch.Tensor):
+        if is_seq_of(_batch_inputs, torch.Tensor):
             batch_inputs = []
             for _batch_input in _batch_inputs:
                 # channel transform
@@ -267,9 +282,9 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             batch_inputs = F.pad(_batch_inputs, (0, pad_w, 0, pad_h),
                                  'constant', self.pad_value)
         else:
-            raise TypeError('Output of `cast_data` should be a list of dict '
-                            'or a tuple with inputs and data_samples, but got'
-                            f'{type(data)}： {data}')
+            raise TypeError('Output of `cast_data` should be a dict of '
+                            'list/tuple with inputs and data_samples, '
+                            f'but got {type(data)}： {data}')
         data['inputs'] = batch_inputs
         data.setdefault('data_samples', None)
         return data

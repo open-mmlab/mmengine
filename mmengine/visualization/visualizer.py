@@ -4,16 +4,9 @@ import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.collections import (LineCollection, PatchCollection,
-                                    PolyCollection)
-from matplotlib.figure import Figure
-from matplotlib.patches import Circle
-from matplotlib.pyplot import new_figure_manager
 
 from mmengine.config import Config
 from mmengine.dist import master_only
@@ -110,11 +103,11 @@ class Visualizer(ManagerMixin):
         >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
         >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
         >>>                  radius=np.array[1, 2], colors=['g', 'r'])
-        >>> vis.draw_polygons(np.array([0, 0, 1, 0, 1, 1, 0, 1]),
-        >>>                    edge_colors='g')
-        >>> vis.draw_polygons(bbox=[np.array([0, 0, 1, 0, 1, 1, 0, 1],
-        >>>                        np.array([2, 2, 3, 2, 3, 3, 2, 3]],
-        >>>                   edge_colors=['g', 'r'])
+        >>> square = np.array([[0, 0], [100, 0], [100, 100], [0, 100]])
+        >>> vis.draw_polygons(polygons=square, edge_colors='g')
+        >>> squares = [np.array([[0, 0], [100, 0], [100, 100], [0, 100]]),
+        >>>            np.array([[0, 0], [50, 0], [50, 50], [0, 50]])]
+        >>> vis.draw_polygons(polygons=squares, edge_colors=['g', 'r'])
         >>> vis.draw_binary_masks(binary_mask, alpha=0.6)
         >>> heatmap = vis.draw_featmap(featmap, img,
         >>>                            channel_reduction='select_max')
@@ -138,19 +131,19 @@ class Visualizer(ManagerMixin):
 
         >>> # inherit
         >>> class DetLocalVisualizer(Visualizer):
-        >>>        def add_datasample(self,
-        >>>                           name,
-        >>>                           image: np.ndarray,
-        >>>                           gt_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           pred_sample:
-        >>>                               Optional['BaseDataElement'] = None,
-        >>>                           draw_gt: bool = True,
-        >>>                           draw_pred: bool = True,
-        >>>                           show: bool = False,
-        >>>                           wait_time: int = 0,
-        >>>                           step: int = 0) -> None:
-        >>>           pass
+        >>>      def add_datasample(self,
+        >>>                         name,
+        >>>                         image: np.ndarray,
+        >>>                         gt_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         pred_sample:
+        >>>                             Optional['BaseDataElement'] = None,
+        >>>                         draw_gt: bool = True,
+        >>>                         draw_pred: bool = True,
+        >>>                         show: bool = False,
+        >>>                         wait_time: int = 0,
+        >>>                         step: int = 0) -> None:
+        >>>         pass
     """
 
     def __init__(
@@ -240,6 +233,7 @@ class Visualizer(ManagerMixin):
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
         """
+        import matplotlib.pyplot as plt
         is_inline = 'inline' in plt.get_backend()
         img = self.get_image() if drawn_img is None else drawn_img
         self._init_manager(win_name)
@@ -302,7 +296,8 @@ class Visualizer(ManagerMixin):
         Returns:
              tuple: build canvas figure and axes.
         """
-
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
         fig = Figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
@@ -318,6 +313,8 @@ class Visualizer(ManagerMixin):
         Args:
             win_name (str): The window name.
         """
+        from matplotlib.figure import Figure
+        from matplotlib.pyplot import new_figure_manager
         if getattr(self, 'manager', None) is None:
             self.manager = new_figure_manager(
                 num=1, FigureClass=Figure, **self.fig_show_cfg)
@@ -375,9 +372,9 @@ class Visualizer(ManagerMixin):
                 for more details. Defaults to 'g.
             marker (str, optional): The marker style.
                 See :mod:`matplotlib.markers` for more information about
-                marker styles. Default to None.
+                marker styles. Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
-                Default to None.
+                Defaults to None.
         """
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
@@ -443,7 +440,7 @@ class Visualizer(ManagerMixin):
                 just single value. If ``font_families`` is single value, all
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                 or 'monospace'.  Defaults to 'sans-serif'.
+                or 'monospace'.  Defaults to 'sans-serif'.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -546,6 +543,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
+        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -614,6 +612,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PatchCollection
+        from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
@@ -689,7 +689,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
         """
@@ -734,7 +734,7 @@ class Visualizer(ManagerMixin):
         """Draw single or multiple bboxes.
 
         Args:
-            polygons (Union[Union[np.ndarray, torch.Tensor],
+            polygons (Union[Union[np.ndarray, torch.Tensor],\
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
@@ -756,10 +756,11 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
         face_colors = color_val_matplotlib(face_colors)  # type: ignore
@@ -871,28 +872,28 @@ class Visualizer(ManagerMixin):
         """Draw featmap.
 
         - If `overlaid_image` is not None, the final output image will be the
-        weighted sum of img and featmap.
+          weighted sum of img and featmap.
 
         - If `resize_shape` is specified, `featmap` and `overlaid_image`
-        are interpolated.
+          are interpolated.
 
         - If `resize_shape` is None and `overlaid_image` is not None,
-        the feature map will be interpolated to the spatial size of the image
-        in the case where the spatial dimensions of `overlaid_image` and
-        `featmap` are different.
+          the feature map will be interpolated to the spatial size of the image
+          in the case where the spatial dimensions of `overlaid_image` and
+          `featmap` are different.
 
         - If `channel_reduction` is "squeeze_mean" and "select_max",
-        it will compress featmap to single channel image and weighted
-        sum to `overlaid_image`.
+          it will compress featmap to single channel image and weighted
+          sum to `overlaid_image`.
 
         -  if `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
-          channel and treated as image and will be weighted sum
-          to ``overlaid_image``.
+            channel and treated as image and will be weighted sum
+            to ``overlaid_image``.
           - If topk > 0, it will select topk channel to show by the sum of
-          each channel. At the same time, you can specify the `arrangement`
-          to set the window layout.
+            each channel. At the same time, you can specify the `arrangement`
+            to set the window layout.
 
         Args:
             featmap (torch.Tensor): The featmap to draw which format is
@@ -916,6 +917,7 @@ class Visualizer(ManagerMixin):
         Returns:
             np.ndarray: RGB image.
         """
+        import matplotlib.pyplot as plt
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')
