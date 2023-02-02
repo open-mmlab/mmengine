@@ -158,24 +158,22 @@ class ApexOptimWrapper(OptimWrapper):
         with super().optim_context(model):
             # when a given optimizer be passed through apex_amp.initialize,
             # the "_amp_stash" property will be added
-            if hasattr(self.optimizer, '_amp_stash'):
-                yield
-                return
-            if mmengine.model.wrappers.is_model_wrapper(model):
-                model = model.module
-            model, self.optimizer = apex_amp.initialize(
-                model,
-                self.optimizer,
-                opt_level=self.opt_level,
-                loss_scale=self.loss_scale,
-                enabled=self.enabled,
-                cast_model_type=self.cast_model_type,
-                patch_torch_functions=self.patch_torch_functions,
-                keep_batchnorm_fp32=self.keep_batchnorm_fp32,
-                master_weights=self.master_weights,
-                cast_model_outputs=self.cast_model_outputs,
-                num_losses=self.num_losses,
-                verbosity=self.verbosity,
-                min_loss_scale=self.min_loss_scale,
-                max_loss_scale=self.max_loss_scale)
+            if not hasattr(self.optimizer, '_amp_stash'):
+                if mmengine.model.wrappers.is_model_wrapper(model):
+                    model = model.module
+                model, self.optimizer = apex_amp.initialize(
+                    model,
+                    self.optimizer,
+                    opt_level=self.opt_level,
+                    loss_scale=self.loss_scale,
+                    enabled=self.enabled,
+                    cast_model_type=self.cast_model_type,
+                    patch_torch_functions=self.patch_torch_functions,
+                    keep_batchnorm_fp32=self.keep_batchnorm_fp32,
+                    master_weights=self.master_weights,
+                    cast_model_outputs=self.cast_model_outputs,
+                    num_losses=self.num_losses,
+                    verbosity=self.verbosity,
+                    min_loss_scale=self.min_loss_scale,
+                    max_loss_scale=self.max_loss_scale)
             yield
