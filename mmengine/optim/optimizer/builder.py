@@ -42,14 +42,15 @@ def register_dadaptation_optimizers() -> List[str]:
     dadaptation_optimizers = []
     try:
         import dadaptation
+    except ImportError:
+        pass
+    else:
         for module_name in ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']:
             _optim = getattr(dadaptation, module_name)
             if inspect.isclass(_optim) and issubclass(_optim,
                                                       torch.optim.Optimizer):
                 OPTIMIZERS.register_module(module=_optim)
                 dadaptation_optimizers.append(module_name)
-    except BaseException:
-        pass
     return dadaptation_optimizers
 
 
