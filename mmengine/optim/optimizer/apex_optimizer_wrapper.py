@@ -184,7 +184,7 @@ class ApexOptimWrapper(OptimWrapper):
                     min_loss_scale=self.min_loss_scale,
                     max_loss_scale=self.max_loss_scale)
                 # loading apex_amp state_dict after initialization of apex_amp
-                if self._apex_amp_state_dict:
+                if self._apex_amp_state_dict is not None:
                     apex_amp.load_state_dict(self._apex_amp_state_dict)
                     self._apex_amp_state_dict = None
             yield
