@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from mmengine.config.utils import PKG2PROJECT
+from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
 
@@ -68,7 +68,7 @@ class Registry:
         >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
 
     More advanced usages can be found at
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
+    https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html.
     """
 
     def __init__(self,
@@ -142,15 +142,31 @@ class Registry:
             >>>     pass
             >>> # The scope of ``ResNet`` will be ``mmdet``.
         """
+        from ..logging import print_log
+
         # `sys._getframe` returns the frame object that many calls below the
         # top of the stack. The call stack for `infer_scope` can be listed as
         # follow:
         # frame-0: `infer_scope` itself
         # frame-1: `__init__` of `Registry` which calls the `infer_scope`
         # frame-2: Where the `Registry(...)` is called
-        filename = inspect.getmodule(sys._getframe(2)).__name__  # type: ignore
-        split_filename = filename.split('.')
-        return split_filename[0]
+        module = inspect.getmodule(sys._getframe(2))
+        if module is not None:
+            filename = module.__name__
+            split_filename = filename.split('.')
+            scope = split_filename[0]
+        else:
+            # use "mmengine" to handle some cases which can not infer the scope
+            # like initializing Registry in interactive mode
+            scope = 'mmengine'
+            print_log(
+                'set scope as "mmengine" when scope can not be inferred. You '
+                'can silence this warning by passing a "scope" argument to '
+                'Registry like `Registry(name, scope="toy")`',
+                logger='current',
+                level=logging.WARNING)
+
+        return scope
 
     @staticmethod
     def split_scope_key(key: str) -> Tuple[Optional[str], str]:
@@ -195,7 +211,7 @@ class Registry:
         return self._get_root_registry()
 
     @contextmanager
-    def switch_scope_and_registry(self, scope: str) -> Generator:
+    def switch_scope_and_registry(self, scope: Optional[str]) -> Generator:
         """Temporarily switch default scope to the target scope, and get the
         corresponding registry.
 
@@ -203,7 +219,7 @@ class Registry:
         registry, otherwise yield the current itself.
 
         Args:
-            scope (str): The target scope.
+            scope (str, optional): The target scope.
 
         Examples:
             >>> from mmengine.registry import Registry, DefaultScope, MODELS
@@ -259,13 +275,13 @@ class Registry:
                 try:
                     import_module(f'{scope_name}.registry')
                 except (ImportError, AttributeError, ModuleNotFoundError):
-                    if scope in PKG2PROJECT:
+                    if scope in MODULE2PACKAGE:
                         print_log(
                             f'{scope} is not installed and its '
                             'modules will not be registered. If you '
                             'want to use modules defined in '
                             f'{scope}, Please install {scope} by '
-                            f'`pip install {PKG2PROJECT[scope]}.',
+                            f'`pip install {MODULE2PACKAGE[scope]}.',
                             logger='current',
                             level=logging.WARNING)
                     else:
@@ -311,7 +327,7 @@ class Registry:
             from ..logging import print_log
 
             # avoid BC breaking
-            if len(self._locations) == 0 and self.scope in PKG2PROJECT:
+            if len(self._locations) == 0 and self.scope in MODULE2PACKAGE:
                 print_log(
                     f'The "{self.name}" registry in {self.scope} did not '
                     'set import location. Fallback to call '
@@ -323,13 +339,13 @@ class Registry:
                     module = import_module(f'{self.scope}.utils')
                     module.register_all_modules(False)  # type: ignore
                 except (ImportError, AttributeError, ModuleNotFoundError):
-                    if self.scope in PKG2PROJECT:
+                    if self.scope in MODULE2PACKAGE:
                         print_log(
                             f'{self.scope} is not installed and its '
                             'modules will not be registered. If you '
                             'want to use modules defined in '
                             f'{self.scope}, Please install {self.scope} by '
-                            f'`pip install {PKG2PROJECT[self.scope]}.',
+                            f'`pip install {MODULE2PACKAGE[self.scope]}.',
                             logger='current',
                             level=logging.WARNING)
                     else:

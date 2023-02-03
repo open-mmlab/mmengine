@@ -63,3 +63,6 @@ Scheduler
    StepLR
    StepMomentum
    StepParamScheduler
+   ReduceOnPlateauLR
+   ReduceOnPlateauMomentum
+   ReduceOnPlateauParamScheduler

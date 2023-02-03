@@ -508,6 +508,17 @@ class BaseDataElement:
         return new_data
 
     # Tensor-like methods
+    def npu(self) -> 'BaseDataElement':
+        """Convert all tensors to NPU in data."""
+        new_data = self.new()
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
+                v = v.npu()
+                data = {k: v}
+                new_data.set_data(data)
+        return new_data
+
+    # Tensor-like methods
     def detach(self) -> 'BaseDataElement':
         """Detach all tensors in data."""
         new_data = self.new()
