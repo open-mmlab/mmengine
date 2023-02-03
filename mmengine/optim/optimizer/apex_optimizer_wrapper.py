@@ -103,6 +103,7 @@ class ApexOptimWrapper(OptimWrapper):
         self.verbosity = verbosity
         self.min_loss_scale = min_loss_scale
         self.max_loss_scale = max_loss_scale
+        self._apex_amp_state_dict = None
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation with :attr:`loss_scaler`.
@@ -138,12 +139,18 @@ class ApexOptimWrapper(OptimWrapper):
         load the corresponding keys. Otherwise, only the :attr:`optimizer`
         will load the state dictionary.
 
+        Note:
+            :meth:`load_state_dict` shuold be called after
+            `apex_amp.initialize` is called.
         Args:
             state_dict (dict): The state dict of :attr:`optimizer` and
                 :attr:`apex_amp`
         """
         if 'apex_amp' in state_dict:
-            apex_amp.load_state_dict(state_dict.pop('apex_amp'))
+            if hasattr(self.optimizer, '_amp_stash'):
+                apex_amp.load_state_dict(state_dict.pop('apex_amp'))
+            else:
+                self._apex_amp_state_dict = state_dict.pop('apex_amp')
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager
@@ -176,4 +183,8 @@ class ApexOptimWrapper(OptimWrapper):
                     verbosity=self.verbosity,
                     min_loss_scale=self.min_loss_scale,
                     max_loss_scale=self.max_loss_scale)
+                # loading apex_amp state_dict after initialization of apex_amp
+                if self._apex_amp_state_dict:
+                    apex_amp.load_state_dict(self._apex_amp_state_dict)
+                    self._apex_amp_state_dict = None
             yield
