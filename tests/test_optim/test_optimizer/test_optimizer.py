@@ -576,6 +576,21 @@ class TestBuilder(TestCase):
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,
                                   **paramwise_cfg)
 
+        # test DefaultOptimWrapperConstructor when the params in shared
+        # modules do not require grad
+        model.conv1[0].requires_grad_(False)
+        self.assertWarnsRegex(
+            Warning,
+            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
+            lambda: optim_constructor(model))
+        optim_wrapper = optim_constructor(model)
+        model_parameters = list(model.parameters())
+        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        assert len(optim_wrapper.optimizer.param_groups) == len(
+            model_parameters) == num_params
+        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
+                                  **paramwise_cfg)
+
     def test_default_optimizer_constructor_custom_key(self):
         # test DefaultOptimWrapperConstructor with custom_keys and
         # ExampleModel
