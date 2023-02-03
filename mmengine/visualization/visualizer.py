@@ -466,6 +466,7 @@ class Visualizer(ManagerMixin):
                 just single value. If ``font_properties`` is single value,
                 all the texts will have the same font properties.
                 Defaults to None.
+                `New in version 0.6.0.`
         """
         from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
