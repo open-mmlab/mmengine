@@ -13,7 +13,8 @@ from mmengine.dist import get_rank
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
-from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
+from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+                                              TORCH_OPTIMIZERS)
 from mmengine.registry import build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
@@ -23,6 +24,14 @@ MMCV_FULL_AVAILABLE = mmcv_full_available()
 if not MMCV_FULL_AVAILABLE:
     sys.modules['mmcv.ops'] = MagicMock(
         DeformConv2d=dict, ModulatedDeformConv2d=dict)
+
+
+def has_dadaptation() -> bool:
+    try:
+        import dadaptation  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 class ExampleModel(nn.Module):
@@ -205,6 +214,12 @@ class TestBuilder(TestCase):
             'Optimizer', 'RMSprop', 'Rprop', 'SGD', 'SparseAdam'
         ]
         assert set(torch_optimizers).issubset(set(TORCH_OPTIMIZERS))
+
+    @unittest.skipIf(not has_dadaptation(), 'dadaptation is not installed')
+    def test_dadaptation_optimizers(self):
+        dadaptation_optimizers = ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']
+        assert set(dadaptation_optimizers).issubset(
+            set(DADAPTATION_OPTIMIZERS))
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
