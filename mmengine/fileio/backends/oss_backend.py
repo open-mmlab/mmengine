@@ -2,8 +2,11 @@
 import os
 import os.path as osp
 import re
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional, Tuple, Union
+from shutil import SameFileError
+from typing import Generator, Iterator, Optional, Tuple, Union
 
 import mmengine
 from .base import BaseStorageBackend
@@ -68,8 +71,8 @@ class OSSBackend(BaseStorageBackend):
 
         If the ``filepath`` is concatenated by ``os.path.join``, in a Windows
         environment, the ``filepath`` will be the format of
-        's3://bucket_name\\image.jpg'. By invoking :meth:`_format_path`, the
-        above ``filepath`` will be converted to 's3://bucket_name/image.jpg'.
+        'oss://bucket_name\\image.jpg'. By invoking :meth:`_format_path`, the
+        above ``filepath`` will be converted to 'oss://bucket_name/image.jpg'.
 
         Args:
             filepath (str): Path to be formatted.
@@ -207,30 +210,269 @@ class OSSBackend(BaseStorageBackend):
             >>> backend.exists(filepath)
             True
         """
+
         endpoint, bucket_name, obj_name = self._parse_path(filepath)
         bucket = self._bucket_instance(endpoint, bucket_name)
         return bucket.object_exists(obj_name)
 
-    def rmtree(self, dir_path: Union[str, Path]) -> None:
-        """Recursively delete a directory tree.
+    def isdir(self, filepath: Union[str, Path]) -> bool:
+        """Check whether a file path is a directory.
+        note: Current version of oss2 Python SDK has not supported
+        to judge whether a directory exists, latter version may support.
 
-        Note:
-            If dir_path ends with '/', this operator will
-            delete all files and directories under dir_path. otherwise, delete
-            all files and directories including dir_path itself.
 
         Args:
-            dir_path (str or Path): A directory to be removed.
+            filepath (str or Path): Path to be checked
+            whether it is a directory.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` points to a directory,
+            ``False`` otherwise.
 
         Examples:
             >>> backend = OSSBackend()
-            >>> dir_path = 'oss://endpoint/bucket/src'
-            >>> backend.rmtree(dir_path)
+            >>> filepath = 'oss://endpoint/bucket/file/
+            >>> backend.isdir(filepath)
+            True
         """
-        endpoint, bucket_name, obj_name = self._parse_path(dir_path)
-        bucket = self._bucket_instance(endpoint, bucket_name)
-        for obj in self.oss2.ObjectIterator(bucket, prefix=obj_name):
-            bucket.delete_object(obj.key)
+
+        raise NotImplementedError(
+            'Current version of oss2 Python SDK has not supported'
+            'the `isdir` method, it may add latter.')
+        return self.exists(filepath)
+
+    def isfile(self, filepath: Union[str, Path]) -> bool:
+        """Check whether a file path is a file.
+
+        Args:
+            filepath (str or Path): Path to be checked whether it is a file.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` points to a file, ``False``
+            otherwise.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> filepath = 'oss://endpoint/bucket/file'
+            >>> backend.isfile(filepath)
+            True
+        """
+
+        return self.exists(filepath)
+
+    def join_path(
+        self,
+        filepath: Union[str, Path],
+        *filepaths: Union[str, Path],
+    ) -> str:
+        """Concatenate all file paths.
+
+        Join one or more filepath components intelligently. The return value
+        is the concatenation of filepath and any members of *filepaths.
+
+        Args:
+            filepath (str or Path): Path to be concatenated.
+
+        Returns:
+            str: The result after concatenation.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> filepath = 'oss://endpoint/bucket/dir'
+            >>> backend.join_path(filepath, 'another/path')
+            'oss://endpoint/bucket/dir/another/path'
+        """
+        filepath = self._format_path(self._map_path(filepath))
+        if filepath.endswith('/'):
+            filepath = filepath[:-1]
+        formatted_paths = [filepath]
+        for path in filepaths:
+            formatted_path = self._format_path(self._map_path(path))
+            formatted_paths.append(formatted_path.lstrip('/'))
+
+        return '/'.join(formatted_paths)
+
+    @contextmanager
+    def get_loacl_path(
+        self,
+        filepath: Union[str, Path],
+    ) -> Generator[Union[str, Path], None, None]:
+        """Download a file from ``filepath`` to a local temporary directory,
+        and return the temporary path.
+
+        ``get_local_path`` is decorated by :meth:`contxtlib.contextmanager`. It
+        can be called with ``with`` statement, and when exists from the
+        ``with`` statement, the temporary path will be released.
+
+        Args:
+            filepath (str or Path): Download a file from ``filepath``.
+
+        Yields:
+            Iterable[str]: Only yield one temporary path.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> # After existing from the ``with`` clause,
+            >>> # the path will be removed
+            >>> filepath = 'oss://endpoint/bucket/file'
+            >>> with backend.get_local_path(filepath) as path:
+            ...     # do something here
+        """
+        assert self.isfile(filepath)
+        try:
+            f = tempfile.NamedTemporaryFile(delete=False)
+            f.write(self.get(filepath))
+            f.close()
+            yield f.name
+        finally:
+            os.remove(f.name)
+
+    def copyfile(
+        self,
+        src: Union[str, Path],
+        dst: Union[str, Path],
+    ) -> str:
+        """Copy a file src to dst and return the destination file.
+
+        Note: Currently, only file copy is supported.
+        src and dst must be have the same endpoint.
+
+        The files (src) in the source buckets are copied to the same or
+        different target (dst) buckets in the same region.
+
+        Args:
+            src (str or Path): A file to be copied.
+            dst (str or Path): Copy file to dst.
+
+        Returns:
+            str: The destination file.
+
+        Raises:
+            SameFileError: If src and dst are the same file, a SameFileError
+                will be raised.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> # copy in the same bucket.
+            >>> src = 'oss://endpoint/bucket/file'
+            >>> dst = 'oss://endpoint/bucket/file1'
+            >>> backend.copyfile(src, dst)
+            'oss://endpoint/bucket/file1'
+
+            >>> backend = OSSBackend()
+            >>> # copy in different bucket.
+            >>> src = 'oss://endpoint/bucket/file'
+            >>> dst = 'oss://endpoint/bucket1/file1'
+            >>> backend.copyfile(src, dst)
+            'oss://endpoint/bucket1/file1'
+        """
+        src_endpoint, src_bucket_name, src_obj_name = self._parse_path(src)
+        dst_endpoint, dst_bucket_name, dst_obj_name = self._parse_path(dst)
+
+        assert (dst_endpoint == src_endpoint
+                ), 'src and dst must be have the same endpoint.'
+        if src == dst:
+            raise SameFileError('src and dst should not be same')
+        bucket = self._bucket_instance(src_endpoint, dst_bucket_name)
+        result = bucket.copy_object(src_bucket_name, src_obj_name,
+                                    dst_obj_name)
+
+        assert (result.status == 200
+                ), 'copy failed, please check your network status.'
+        return str(dst)
+
+    def party_copyfile(
+        self,
+        src: Union[str, Path],
+        dst: Union[str, Path],
+    ) -> str:
+        """Copy files larger than 1GB from src to dst shard.
+
+        Note: Currently, only file copy is supported.
+        src and dst must be have the same endpoint.
+
+        Copy the files (src) in the source Bucket to the same
+        or different target (dst) buckets in the same region.
+
+        Args:
+            src (str or Path): A file to be copied.
+            dst (str or Path): Copy file to dst.
+
+        Returns:
+            str: The destination file.
+
+        Raises:
+            SameFileError: If src and dst are the same file, a SameFileError
+                will be raised.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> # copy in the same bucket.
+            >>> src = 'oss://endpoint/bucket/file'
+            >>> dst = 'oss://endpoint/bucket/file1'
+            >>> backend.copyfile(src, dst)
+            'oss://endpoint/bucket/file1'
+
+            >>> backend = OSSBackend()
+            >>> # copy in different bucket.
+            >>> src = 'oss://endpoint/bucket/file'
+            >>> dst = 'oss://endpoint/bucket1/file1'
+            >>> backend.copyfile(src, dst)
+            'oss://endpoint/bucket1/file1'
+        """
+        src_endpoint, src_bucket_name, src_obj_name = self._parse_path(src)
+        dst_endpoint, dst_bucket_name, dst_obj_name = self._parse_path(dst)
+
+        assert (dst_endpoint == src_endpoint
+                ), 'src and dst must be have the same endpoint.'
+        if src == dst:
+            raise SameFileError('src and dst should not be same.')
+
+        src_bucket = self._bucket_instance(src_endpoint, src_bucket_name)
+        # get src file size
+        total_size = src_bucket.head_object(src_obj_name).content_length
+        assert (
+            total_size >= 100 * 1024
+        ), f'{total_size} >= 100*1024 small file can use copyfile operator.'
+
+        # init shard, get shard size
+        from oss2 import determine_part_size
+        from oss2.models import PartInfo
+        part_size = determine_part_size(total_size, preferred_size=100 * 1024)
+
+        if src_bucket_name == dst_bucket_name:
+            dst_bucket = src_bucket
+        else:
+            dst_bucket = self._bucket_instance(dst_endpoint, dst_bucket_name)
+
+        upload_id = dst_bucket.init_multipart_upload(dst_obj_name).upload_id
+        parts = []
+        part_number = 1
+        offset = 0
+        while offset < total_size:
+            num_to_upload = min(part_size, total_size - offset)
+            end = offset + num_to_upload - 1
+            result = dst_bucket.upload_part_copy(src_bucket_name, src_obj_name,
+                                                 (offset, end), dst_obj_name,
+                                                 upload_id, part_number)
+            # save part info
+            parts.append(PartInfo(part_number, result.etag))
+            offset += num_to_upload
+            part_number += 1
+        # part copy success
+        result = dst_bucket.complete_multipart_upload(dst_obj_name, upload_id,
+                                                      parts)
+
+        assert (result.status == 200
+                ), f'copy failed, status with {result.status}, '
+        'please check your network status.'
+        # get dst file meta information
+        head_info = dst_bucket.head_object(dst_obj_name)
+        assert (head_info.content_length == total_size
+                ), 'copying file occurs error, '
+        f'dst file size {head_info.content_length}'
+        f'does not equals src file size {total_size}, please recopy.'
+        return str(dst)
 
     def list_dir_or_file(self,
                          dir_path: Union[str, Path],
@@ -341,8 +583,6 @@ class OSSBackend(BaseStorageBackend):
         Args:
             src (str or Path): A local file to be copied.
             dst (str or Path): Copy file to dst.
-            backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
 
         Returns:
             str: If dst specifies a directory, the file will be copied into dst
@@ -484,34 +724,86 @@ class OSSBackend(BaseStorageBackend):
                 f.write(self.get(self.join_path(src, path)))
         return dst
 
-    def join_path(
-        self,
-        filepath: Union[str, Path],
-        *filepaths: Union[str, Path],
-    ) -> str:
-        """Concatenate all file paths.
-
-        Join one or more filepath components intelligently. The return value
-        is the concatenation of filepath and any members of *filepaths.
+    def remove(self, filepath: Union[str, Path]) -> None:
+        """Remove a file.
 
         Args:
-            filepath (str or Path): Path to be concatenated.
+            filepath (str or Path): Path to be removed.
 
-        Returns:
-            str: The result after concatenation.
+        Raises:
+            FileNotFoundError: If filepath does not exist, an FileNotFoundError
+                will be raised.
+            IsADirectoryError: If filepath is a directory, an IsADirectoryError
+                will be raised.
 
         Examples:
             >>> backend = OSSBackend()
-            >>> filepath = 'oss://endpoint/bucket/dir'
-            >>> backend.join_path(filepath, 'another/path')
-            'oss://endpoint/bucket/dir/another/path'
+            >>> filepath = 'oss://endpoint/bucket/file'
+            >>> backend.remove(filepath)
         """
-        filepath = self._format_path(self._map_path(filepath))
-        if filepath.endswith('/'):
-            filepath = filepath[:-1]
-        formatted_paths = [filepath]
-        for path in filepaths:
-            formatted_path = self._format_path(self._map_path(path))
-            formatted_paths.append(formatted_path.lstrip('/'))
+        if not self.exists(filepath):
+            raise FileNotFoundError(f'filepath {filepath} does not exist')
+        assert (str(filepath)[-1] !=
+                '/'), 'only delete a file by remove function.'
+        endpoint, bucket_name, obj_name = self._parse_path(filepath)
+        bucket = self._bucket_instance(endpoint, bucket_name)
+        bucket.delete_object(obj_name)
 
-        return '/'.join(formatted_paths)
+    def rmtree(self, dir_path: Union[str, Path]) -> None:
+        """Recursively delete a directory tree.
+
+        Note:
+            If dir_path ends with '/', this operator will
+            delete all files and directories under dir_path. otherwise, delete
+            all files and directories including dir_path itself.
+
+        Args:
+            dir_path (str or Path): A directory to be removed.
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> dir_path = 'oss://endpoint/bucket/src'
+            >>> backend.rmtree(dir_path)
+        """
+        endpoint, bucket_name, obj_name = self._parse_path(dir_path)
+        bucket = self._bucket_instance(endpoint, bucket_name)
+        for obj in self.oss2.ObjectIterator(bucket, prefix=obj_name):
+            bucket.delete_object(obj.key)
+
+    def symlink(
+        self,
+        src: Union[str, Path],
+        dst: Union[str, Path],
+    ) -> None:
+        """Create a symbolic link pointing to src file named dst file.
+        Note: src and dst must be have the same endpoint and bucket.
+
+        Args:
+            src (str or Path): A file to be linked.
+            dst (str or Path): address linked.
+
+        Returns:
+            bool: Return True if link successfully. otherwise False
+
+        Examples:
+            >>> backend = OSSBackend()
+            >>> src = 'oss://endpoint/bucket/file'
+            >>> dst = 'oss://endpoint/bucket/file2'
+            >>> backend.symlink(src, dst)
+            True
+        """
+        if not self.exists(src):
+            raise FileNotFoundError(f'filepath {src} does not exist')
+        endpoint, bucket_name, obj_name = self._parse_path(src)
+        dst_endpoint, dst_bucket_name, dst_obj_name = self._parse_path(dst)
+        assert (
+            dst_endpoint == endpoint
+        ), f'dst_endpoint {dst_endpoint} is not equal src_endpoint {endpoint},'
+        'illegal operator.'
+        assert (dst_bucket_name == bucket_name
+                ), f'dst_bucket_name {dst_bucket_name} '
+        f'is not equal src_bucket_name {bucket_name},'
+        ' illegal operator.'
+
+        bucket = self._bucket_instance(endpoint, bucket_name)
+        bucket.put_symlink(obj_name, dst_obj_name)
