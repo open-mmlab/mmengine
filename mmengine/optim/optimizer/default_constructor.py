@@ -204,13 +204,14 @@ class DefaultOptimWrapperConstructor:
 
         for name, param in module.named_parameters(recurse=False):
             param_group = {'params': [param]}
-            if not param.requires_grad:
-                params.append(param_group)
-                continue
             if bypass_duplicate and self._is_in(param_group, params):
                 warnings.warn(f'{prefix} is duplicate. It is skipped since '
                               f'bypass_duplicate={bypass_duplicate}')
                 continue
+            if not param.requires_grad:
+                params.append(param_group)
+                continue
+
             # if the parameter match one of the custom keys, ignore other rules
             is_custom = False
             for key in sorted_keys:
