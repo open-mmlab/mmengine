@@ -1,10 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import shutil
 import sys
 import tempfile
 import warnings
 from contextlib import contextmanager
 from pathlib import Path
+from shutil import SameFileError
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -101,13 +103,29 @@ except ImportError:
         def object_exists(self, key):
             not_existed_path = 'img.jpg'
             exist_img_path = 'img.txt'
+            exist_dir = 'data/'
+            copyfile_path = 'img_copy.jpg'
             if key == not_existed_path:
                 return False
             elif key == exist_img_path:
                 return True
+            elif key == exist_dir:
+                return True
+            elif key == copyfile_path:
+                return True
 
         def delete_object(self, key):
             pass
+
+        def put_symlink(self, target_key, symlink_key):
+            return True
+
+        def copy_object(self, source_bucket_name, source_key, target_key):
+
+            class Result:
+                status = 200
+
+            return Result()
 
     class ObjectIteratorResult:
 
@@ -185,6 +203,50 @@ except ImportError:
             not_existed_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
             self.assertFalse(self.backend.exists(not_existed_path))
 
+        def test_isdir(self):
+            exist_directory = os.path.join(f'{self.oss_dir}', 'data')
+            with self.assertRaises(NotImplementedError):
+                self.backend.isdir(exist_directory)
+
+        def test_isfile(self):
+            exist_img_path = os.path.join(f'{self.oss_dir}', 'img.txt')
+            self.assertTrue(self.backend.isfile(exist_img_path))
+
+        def test_join_path(self):
+            filepath = 'oss://endpoint/bucket/dir'
+            self.assertEqual(
+                self.backend.join_path(filepath, 'another/path'),
+                'oss://endpoint/bucket/dir/another/path')
+
+        def test_get_local_path(self):
+            img_path = os.path.join(f'{self.oss_dir}', 'img.txt')
+            with self.backend.get_loacl_path(img_path) as f:
+                with open(f) as fobj:
+                    self.assertEqual(fobj.read(), 'OSS')
+
+        def test_copyfile(self):
+            src_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
+            dst_path = os.path.join(f'{self.oss_dir}', 'img_copy.jpg')
+
+            dst = self.backend.copyfile(src_path, dst_path)
+            self.assertTrue(self.backend.exists(dst))
+
+            with self.assertRaises(SameFileError):
+                self.backend.copyfile(src_path, src_path)
+
+        def test_party_copyfile(self):
+            src_path = os.path.join(f'{self.oss_dir}', 'bigfile.zip')
+            dst_path = os.path.join(f'{self.oss_dir}', 'bigfile_copy.zip')
+            with patch.object(
+                    self.backend, 'party_copyfile',
+                    return_value=dst_path) as party_copyfil_obj:
+                dst = self.backend.party_copyfile(src_path, dst_path)
+                self.assertEqual(dst, dst_path)
+                party_copyfil_obj.assert_called_once()
+
+            with self.assertRaises(SameFileError):
+                self.backend.copyfile(src_path, src_path)
+
         def test_get(self):
             img_path = os.path.join(f'{self.oss_dir}', 'dir2/oss.txt')
             self.assertEqual(self.backend.get(img_path), b'OSS')
@@ -237,10 +299,6 @@ except ImportError:
             with self.assertRaises(TypeError):
                 dir_path = f'{self.oss_dir}dir2'
                 self.backend.list_dir_or_file(dir_path, recursive=True)
-
-        def test_rmtree(self):
-            dir_path = os.path.join(f'{self.oss_dir}', 'dir2')
-            self.backend.rmtree(dir_path)
 
         def test_copyfile_from_local(self):
 
@@ -306,11 +364,19 @@ except ImportError:
                     self.backend, 'copytree_to_local', return_value=dst):
                 self.assertEqual(self.backend.copytree_to_local(src, dst), dst)
 
-        def test_join_path(self):
-            filepath = 'oss://endpoint/bucket/dir'
-            self.assertEqual(
-                self.backend.join_path(filepath, 'another/path'),
-                'oss://endpoint/bucket/dir/another/path')
+        def test_remove(self):
+            dir_path = os.path.join(f'{self.oss_dir}', 'img.txt')
+            with patch.object(self.backend, 'remove') as remove_obj:
+                self.backend.remove(dir_path)
+                remove_obj.assert_called_once()
+
+        def test_symlink(self):
+            file_path = os.path.join(f'{self.oss_dir}', 'text5.txt')
+            linked_file_path = os.path.join(f'{self.oss_dir}',
+                                            'linked_text5.txt')
+            with self.assertRaises(FileNotFoundError):
+                self.backend.symlink(file_path, linked_file_path)
+
 else:
     import pandas as pd
 
@@ -399,6 +465,45 @@ else:
             not_existed_path = os.path.join(f'{self.oss_dir}', 'img1.jpg')
             self.assertFalse(self.backend.exists(not_existed_path))
 
+        def test_isdir(self):
+            exist_directory = os.path.join(f'{self.oss_dir}', 'data')
+            with self.assertRaises(NotImplementedError):
+                self.backend.isdir(exist_directory)
+
+        def test_isfile(self):
+            exist_img_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
+            self.assertTrue(self.backend.isfile(exist_img_path))
+
+        def test_join_path(self):
+            filepath = 'oss://endpoint/bucket/dir'
+            self.assertEqual(
+                self.backend.join_path(filepath, 'another/path'),
+                'oss://endpoint/bucket/dir/another/path')
+
+        def test_get_local_path(self):
+            img_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
+            with self.backend.get_loacl_path(img_path) as f:
+                with open(f) as fobj:
+                    self.assertEqual(fobj.read(), 'img')
+
+        def test_copyfile(self):
+            src_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
+            dst_path = os.path.join(f'{self.oss_dir}', 'img_copy.jpg')
+            dst = self.backend.copyfile(src_path, dst_path)
+            self.assertTrue(self.backend.exists(dst))
+
+            with self.assertRaises(SameFileError):
+                self.backend.copyfile(src_path, src_path)
+
+        def test_party_copyfile(self):
+            src_path = os.path.join(f'{self.oss_dir}', 'bigfile.zip')
+            dst_path = os.path.join(f'{self.oss_dir}', 'bigfile_copy.zip')
+            dst = self.backend.party_copyfile(src_path, dst_path)
+            self.assertTrue(self.backend.exists(dst))
+
+            with self.assertRaises(SameFileError):
+                self.backend.copyfile(src_path, src_path)
+
         def test_list_dir_or_file(self):
             dir_path = os.path.join(f'{self.oss_dir}', 'dir2/')
             self.assertEqual(
@@ -439,9 +544,12 @@ else:
 
                 self.backend.list_dir_or_file(dir_path, recursive=True)
 
-        def test_rmtree(self):
-            dir_path = os.path.join(f'{self.oss_dir}', '123')
-            self.backend.rmtree(dir_path)
+        def test_remove(self):
+            dir_path = os.path.join(f'{self.oss_dir}', 'remove.txt')
+            self.backend.put(b'remove', dir_path)
+            self.assertTrue(self.backend.exists(dir_path))
+            self.backend.remove(dir_path)
+            self.assertFalse(self.backend.exists(dir_path))
 
         def test_copyfile_from_local(self):
 
@@ -474,6 +582,7 @@ else:
             dst = Path(self.local_data_dir) / 'oss.txt'
             self.assertEqual(self.backend.copyfile_to_local(src, dst), dst)
             self.assertEqual(open(dst, 'rb').read(), b'OSS\n')
+            os.remove(dst)
 
             # dst is a folder
             src = os.path.join(f'{self.oss_dir}', 'oss.txt')
@@ -483,14 +592,17 @@ else:
                 os.path.join(dst, 'oss.txt'))
             self.assertEqual(
                 open(os.path.join(dst, 'oss.txt'), 'rb').read(), b'OSS\n')
+            os.remove(os.path.join(dst, 'oss.txt'))
 
         def test_copytree_to_local(self):
             src = f'{self.oss_dir}'
             dst = self.test_data_dir / 'mmengine'
             self.assertEqual(self.backend.copytree_to_local(src, dst), dst)
+            shutil.rmtree(dst)
 
-        def test_join_path(self):
-            filepath = 'oss://endpoint/bucket/dir'
-            self.assertEqual(
-                self.backend.join_path(filepath, 'another/path'),
-                'oss://endpoint/bucket/dir/another/path')
+        def test_symlink(self):
+            file_path = os.path.join(f'{self.oss_dir}', 'text5.txt')
+            linked_file_path = os.path.join(f'{self.oss_dir}',
+                                            'linked_text5.txt')
+            self.backend.symlink(file_path, linked_file_path)
+            self.assertTrue(self.backend.exists(linked_file_path))
