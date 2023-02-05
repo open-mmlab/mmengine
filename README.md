@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" height="100"/>
+  <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" width="600"/>
   <div>&nbsp;</div>
   <div align="center">
     <b><font size="5">OpenMMLab website</font></b>
@@ -24,6 +24,8 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
+[📘Documentation](https://mmengine.readthedocs.io/en/latest/) |
+[🛠️Installation](https://mmengine.readthedocs.io/en/latest/get_started/installation.html) |
 [🤔Reporting Issues](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -42,8 +44,8 @@ Major features:
 
 1. **A universal and powerful runner**:
 
-   - Supports training different tasks with a small amount of code, e.g., ImageNet can be trained with only 80 lines of code (400 lines of the original PyTorch example)
-   - Easily compatible with models from popular algorithm libraries such as TIMM, TorchVision, and Detectron2
+   - Supports training different tasks with a small amount of code, e.g., ImageNet can be trained with only 80 lines of code (400 lines of the original PyTorch example).
+   - Easily compatible with models from popular algorithm libraries such as TIMM, TorchVision, and Detectron2.
 
 2. **Open architecture with unified interfaces**:
 
@@ -94,7 +96,7 @@ Taking the training of a ResNet-50 model on the CIFAR-10 dataset as an example, 
 
 First, we need to define a **model** which 1) inherits from `BaseModel` and 2) accepts an additional argument `mode` in the `forward` method, in addition to those arguments related to the dataset.
 
-- During training, the value of `mode` is "loss," and the `forward` method should return a   `dict` containing the key "loss".
+- During training, the value of `mode` is "loss", and the `forward` method should return a `dict` containing the key "loss".
 - During validation, the value of `mode` is "predict", and the forward method should return results containing both predictions and labels.
 
 ```python
@@ -193,7 +195,7 @@ runner = Runner(
     model=MMResNet50(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader,
-    # a wapper to execute back propagation and gradient update, etc.
+    # a wrapper to execute back propagation and gradient update, etc.
     optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
     # set some training configs like epochs
     train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
@@ -232,10 +234,10 @@ runner.train()
 <details>
 <summary>Advanced tutorials</summary>
 
-- [Registry](https://mmengine.readthedocs.io/en/latest/tutorials/registry.html)
-- [Config](https://mmengine.readthedocs.io/en/latest/tutorials/config.html)
+- [Registry](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html)
+- [Config](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html)
 - [BaseDataset](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/basedataset.html)
-- [Data Transform](https://mmengine.readthedocs.io/en/latest/tutorials/data_transform.html)
+- [Data Transform](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/data_transform.html)
 - [Weight Initialization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/initialize.html)
 - [Visualization](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/visualization.html)
 - [Abstract Data Element](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/data_element.html)
@@ -244,11 +246,12 @@ runner.train()
 - [File IO](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/fileio.html)
 - [Global manager (ManagerMixin)](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/manager_mixin.html)
 - [Use modules from other libraries](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/cross_library.html)
+- [Test Time Agumentation](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/test_time_augmentation.html)
 
 </details>
 
 <details>
-<summary>Examples</summary>
+<summary>Common Usage</summary>
 
 - [Resume Training](https://mmengine.readthedocs.io/en/latest/examples/resume_training.html)
 - [Speed up Training](https://mmengine.readthedocs.io/en/latest/examples/speed_up_training.html)
@@ -265,6 +268,7 @@ runner.train()
 - [Evaluation](https://mmengine.readthedocs.io/en/latest/design/evaluation.html)
 - [Visualization](https://mmengine.readthedocs.io/en/latest/design/visualization.html)
 - [Logging](https://mmengine.readthedocs.io/en/latest/design/logging.html)
+- [Infer](https://mmengine.readthedocs.io/en/latest/design/infer.html)
 
 </details>
 

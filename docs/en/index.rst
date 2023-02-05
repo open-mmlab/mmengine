@@ -58,6 +58,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    design/evaluation.md
    design/visualization.md
    design/logging.md
+   design/infer.md
 
 .. toctree::
    :maxdepth: 1
