@@ -147,6 +147,10 @@ class ApexOptimWrapper(OptimWrapper):
                 :attr:`apex_amp`
         """
         if 'apex_amp' in state_dict:
+            # when `apex_amp` is not initialized, calling `load_state_dict`
+            # will raise an error, so we temporarily cache the apex_amp
+            # part, and then load it into `apex_amp` after completing
+            # the `apex_amp` initialization in `optim_context` method
             if hasattr(self.optimizer, '_amp_stash'):
                 apex_amp.load_state_dict(state_dict.pop('apex_amp'))
             else:
