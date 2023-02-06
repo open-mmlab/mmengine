@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
-                        AmpOptimWrapper, DefaultOptimWrapperConstructor,
-                        OptimWrapper, OptimWrapperDict, build_optim_wrapper)
+                        AmpOptimWrapper, ApexOptimWrapper,
+                        DefaultOptimWrapperConstructor, OptimWrapper,
+                        OptimWrapperDict, build_optim_wrapper)
 # yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
@@ -25,8 +26,8 @@ __all__ = [
     'MultiStepMomentum', 'StepMomentum', 'ConstantParamScheduler',
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
-    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict',
-    'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR', 'PolyMomentum',
-    'PolyParamScheduler', 'ReduceOnPlateauLR', 'ReduceOnPlateauMomentum',
-    'ReduceOnPlateauParamScheduler'
+    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'ApexOptimWrapper',
+    'OptimWrapperDict', 'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR',
+    'PolyMomentum', 'PolyParamScheduler', 'ReduceOnPlateauLR',
+    'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler'
 ]
