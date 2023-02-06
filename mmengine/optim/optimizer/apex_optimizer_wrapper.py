@@ -74,8 +74,9 @@ class ApexOptimWrapper(OptimWrapper):
         If you use ``IterBasedRunner`` and enable gradient accumulation,
         the original `max_iters` should be multiplied by
         ``accumulative_counts``.
-        
-    `New in version 0.6.0.`
+
+    Note:
+        `New in version 0.6.0.`
     """  # noqa: E501
 
     def __init__(self,
