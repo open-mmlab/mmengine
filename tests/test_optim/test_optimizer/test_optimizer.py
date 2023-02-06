@@ -136,7 +136,8 @@ class TestBuilder(TestCase):
                              dwconv_decay_mult=1,
                              dcn_offset_lr_mult=1,
                              flat_decay_mult=1,
-                             bypass_duplicate=False):
+                             bypass_duplicate=False,
+                             reduce_param_groups=False):
         param_groups = optimizer.param_groups
         assert isinstance(optimizer, torch.optim.SGD)
         assert optimizer.defaults['lr'] == self.base_lr
@@ -277,7 +278,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor_cfg = dict(
             type='DefaultOptimWrapperConstructor',
             optim_wrapper_cfg=optim_wrapper,
@@ -410,7 +412,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(model)
@@ -450,7 +453,8 @@ class TestBuilder(TestCase):
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
                 dcn_offset_lr_mult=0.1,
-                flat_decay_mult=0.3)
+                flat_decay_mult=0.3,
+                reduce_param_groups=False)
             optim_constructor = DefaultOptimWrapperConstructor(
                 optim_wrapper_cfg, paramwise_cfg)
             optim_wrapper = optim_constructor(model)
@@ -506,7 +510,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(self.model)
@@ -527,7 +532,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            reduce_param_groups=False)
 
         for param in self.model.parameters():
             param.requires_grad = False
@@ -561,7 +567,8 @@ class TestBuilder(TestCase):
             bias_lr_mult=2,
             bias_decay_mult=0.5,
             norm_decay_mult=0,
-            dwconv_decay_mult=0.1)
+            dwconv_decay_mult=0.1,
+            reduce_param_groups=False)
 
         with self.assertRaisesRegex(
                 ValueError,
@@ -577,7 +584,8 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
             flat_decay_mult=0.3,
-            bypass_duplicate=True)
+            bypass_duplicate=True,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
 
@@ -610,7 +618,8 @@ class TestBuilder(TestCase):
                 'sub.gn': dict(lr_mult=0.01),
                 'non_exist_key': dict(lr_mult=0.0)
             },
-            norm_decay_mult=0.5)
+            norm_decay_mult=0.5,
+            reduce_param_groups=False)
 
         with self.assertRaises(TypeError):
             # custom_keys should be a dict
@@ -697,7 +706,9 @@ class TestBuilder(TestCase):
             type='OptimWrapper',
             optimizer=dict(
                 type='SGD', lr=self.base_lr, momentum=self.momentum))
-        paramwise_cfg = dict(custom_keys={'param1': dict(lr_mult=10)})
+        paramwise_cfg = dict(
+            custom_keys={'param1': dict(lr_mult=10)},
+            reduce_param_groups=False)
 
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)

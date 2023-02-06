@@ -299,7 +299,10 @@ class DefaultOptimWrapperConstructor:
             params: List = []
             self.add_params(params, model)
             # grouping parameters with the same hyper-parameters
-            optimizer_cfg['params'] = reduce_param_groups(params)
+            if self.paramwise_cfg.get('reduce_param_groups', True):
+                optimizer_cfg['params'] = reduce_param_groups(params)
+            else:
+                optimizer_cfg['params'] = params
             # enable foreach for pytorch 1.12.0+ to speed up training
             if digit_version(TORCH_VERSION) >= digit_version('1.12.0'):
                 optimizer_cfg.setdefault('foreach', True)
