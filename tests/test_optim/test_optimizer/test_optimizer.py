@@ -15,6 +15,8 @@ from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS)
+from mmengine.optim.optimizer.default_constructor import (_expand_param_groups,
+                                                          reduce_param_groups)
 from mmengine.registry import build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
@@ -739,6 +741,69 @@ class TestBuilder(TestCase):
                     for setting in settings:
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
+
+    def test_expand_params_groups(self):
+        # ref: https://github.com/facebookresearch/detectron2/blob/main/tests/test_solver.py  # noqa: E501
+        params = [
+            {
+                'params': ['p1', 'p2', 'p3', 'p4'],
+                'lr': 1.0,
+                'weight_decay': 3.0,
+            },
+            {
+                'params': ['p2', 'p3', 'p5'],
+                'lr': 2.0,
+                'momentum': 2.0,
+            },
+            {
+                'params': ['p1'],
+                'weight_decay': 4.0,
+            },
+        ]
+        out = _expand_param_groups(params)
+        gt = [
+            dict(params=['p1'], lr=1.0, weight_decay=4.0),
+            dict(params=['p2'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p3'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p4'], lr=1.0, weight_decay=3.0),
+            dict(params=['p5'], lr=2.0, momentum=2.0),
+        ]
+        self.assertEqual(out, gt)
+
+    def test_reduce_param_groups(self):
+        # ref: https://github.com/facebookresearch/detectron2/blob/main/tests/test_solver.py  # noqa: E501
+        params = [
+            dict(params=['p1'], lr=1.0, weight_decay=4.0),
+            dict(params=['p2', 'p6'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p3'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p4'], lr=1.0, weight_decay=3.0),
+            dict(params=['p5'], lr=2.0, momentum=2.0),
+        ]
+        gt_groups = [
+            {
+                'lr': 1.0,
+                'weight_decay': 4.0,
+                'params': ['p1'],
+            },
+            {
+                'lr': 2.0,
+                'weight_decay': 3.0,
+                'momentum': 2.0,
+                'params': ['p2', 'p6', 'p3'],
+            },
+            {
+                'lr': 1.0,
+                'weight_decay': 3.0,
+                'params': ['p4'],
+            },
+            {
+                'lr': 2.0,
+                'momentum': 2.0,
+                'params': ['p5'],
+            },
+        ]
+        out = reduce_param_groups(params)
+        self.assertEqual(out, gt_groups)
 
 
 @unittest.skipIf(

@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import List, Optional, Union
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -9,8 +10,8 @@ from torch.nn import GroupNorm, LayerNorm
 from mmengine.logging import print_log
 from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
                                OPTIMIZERS)
-from mmengine.utils import is_list_of
-from mmengine.utils.dl_utils import mmcv_full_available
+from mmengine.utils import digit_version, is_list_of
+from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
 from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
 from .optimizer_wrapper import OptimWrapper
 
@@ -297,8 +298,66 @@ class DefaultOptimWrapperConstructor:
             # set param-wise lr and weight decay recursively
             params: List = []
             self.add_params(params, model)
-            optimizer_cfg['params'] = params
+            # grouping parameters with the same hyper-parameters
+            optimizer_cfg['params'] = reduce_param_groups(params)
+            # enable foreach for pytorch 1.12.0+ to speed up training
+            if digit_version(TORCH_VERSION) >= digit_version('1.12.0'):
+                optimizer_cfg.setdefault('foreach', True)
+            else:
+                optimizer_cfg.pop('foreach', None)
+
             optimizer = OPTIMIZERS.build(optimizer_cfg)
         optim_wrapper = OPTIM_WRAPPERS.build(
             optim_wrapper_cfg, default_args=dict(optimizer=optimizer))
         return optim_wrapper
+
+
+def _expand_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Transform parameter groups into per-parameter structure. Later items in
+    `params` can overwrite parameters set in previous items.
+
+    Ref: https://github.com/facebookresearch/detectron2/blob/main/detectron2/solver/build.py
+
+    Args:
+        params (List[Dict[str, Any]]): The parameter groups.
+
+    Returns:
+        List[Dict[str, Any]]: List of expanded parameter groups.
+    """  # noqa: E501
+    ret: dict = defaultdict(dict)
+    for item in params:
+        assert 'params' in item
+        cur_params = {x: y for x, y in item.items() if x != 'params'}
+        for param in item['params']:
+            ret[param].update({'params': [param], **cur_params})
+    return list(ret.values())
+
+
+def reduce_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Reorganize the parameter groups and merge duplicated groups. The number
+    of parameter groups needs to be as small as possible in order to
+    efficiently use the PyTorch multi-tensor optimizer. Therefore instead of
+    using a parameter_group per single parameter, we reorganize the parameter
+    groups and merge duplicated groups. This approach speeds up multi-tensor
+    optimizer significantly.
+
+    Ref: https://github.com/facebookresearch/detectron2/blob/main/detectron2/solver/build.py
+
+    Args:
+        params (List[Dict[str, Any]]): The parameter groups.
+
+    Returns:
+        List[Dict[str, Any]]: The reorganized parameter groups.
+    """  # noqa: E501
+    params = _expand_param_groups(params)
+    groups = defaultdict(
+        list)  # re-group all parameter groups by their hyperparams
+    for item in params:
+        cur_params = tuple((x, y) for x, y in item.items() if x != 'params')
+        groups[cur_params].extend(item['params'])
+    ret = []
+    for param_keys, param_values in groups.items():
+        cur = {kv[0]: kv[1] for kv in param_keys}
+        cur['params'] = param_values
+        ret.append(cur)
+    return ret
