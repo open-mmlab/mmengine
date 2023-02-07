@@ -45,7 +45,7 @@ class OSSBackend(BaseStorageBackend):
         except ImportError:
             raise ImportError('Please install OSS_client to enable '
                               'OSSBackend.')
-        self._client = self.oss2.Auth(
+        self._auth = self.oss2.Auth(
             access_key_id=access_key_id, access_key_secret=access_key_secret)
 
         assert isinstance(path_mapping, dict) or path_mapping is None
@@ -112,7 +112,7 @@ class OSSBackend(BaseStorageBackend):
             Bucket: An instance of OSS.
         """
 
-        bucket = self.oss2.Bucket(self._client, endpoint, bucket_name)
+        bucket = self.oss2.Bucket(self._auth, endpoint, bucket_name)
         return bucket
 
     def get(self, filepath: Union[str, Path]) -> bytes:
