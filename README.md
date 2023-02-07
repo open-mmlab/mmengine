@@ -258,11 +258,11 @@ runner.train()
 </details>
 
 <details>
-<summary>Common Usages</summary>
+<summary>Common Usage</summary>
 
-- [Resume Training](https://mmengine.readthedocs.io/en/latest/common_usag/resume_training.html)
-- [Speed up Training](https://mmengine.readthedocs.io/en/latest/common_usag/speed_up_training.html)
-- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usag/save_gpu_memory.html)
+- [Resume Training](https://mmengine.readthedocs.io/en/latest/common_usage/resume_training.html)
+- [Speed up Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html)
+- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html)
 
 </details>
 
