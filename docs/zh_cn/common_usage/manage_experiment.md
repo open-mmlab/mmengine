@@ -6,7 +6,7 @@ MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn
 - 可视化模型结构图
 - 可视化特征图
 
-下面基于[15 分钟上手 MMENGINE](../get_stated/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
+下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
 
 ## TensorBoard
 
