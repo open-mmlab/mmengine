@@ -251,12 +251,18 @@ runner.train()
 </details>
 
 <details>
+<summary>Examples</summary>
+
+- [Train a GAN](https://mmengine.readthedocs.io/en/latest/examples/train_a_gan.html)
+
+</details>
+
+<details>
 <summary>Common Usage</summary>
 
-- [Resume Training](https://mmengine.readthedocs.io/en/latest/examples/resume_training.html)
-- [Speed up Training](https://mmengine.readthedocs.io/en/latest/examples/speed_up_training.html)
-- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/examples/save_gpu_memory.html)
-- [Train a GAN](https://mmengine.readthedocs.io/en/latest/examples/train_a_gan.html)
+- [Resume Training](https://mmengine.readthedocs.io/en/latest/common_usage/resume_training.html)
+- [Speed up Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html)
+- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html)
 
 </details>
 
