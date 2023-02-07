@@ -70,7 +70,7 @@ The significant digits(`num_digits`) of the log is 4 by default.
 Output the value of all custom logs at the last iteration by default.
 ```
 
-```{warnning}
+```{warning}
 log_processor outputs the epoch based log by default(`by_epoch=True`). To get an expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
 ```
 
