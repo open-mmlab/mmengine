@@ -14,11 +14,18 @@ from torch.optim import SGD, Adam, Optimizer
 
 from mmengine.dist import all_gather
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.optim import AmpOptimWrapper, OptimWrapper
+from mmengine.optim import AmpOptimWrapper, ApexOptimWrapper, OptimWrapper
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+
+is_apex_available = False
+try:
+    import apex.amp as apex_amp
+    is_apex_available = True
+except ImportError:
+    pass
 
 
 class ToyModel(nn.Module):
@@ -281,6 +288,101 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper.backward = mock_methd
         optim_wrapper.step = MagicMock()
         optim_wrapper.zero_grad = MagicMock()
+
+
+@unittest.skipIf(not torch.cuda.is_available(), reason='need gpu to test Apex')
+class TestApexOptimWrapper(TestCase):
+
+    def setUp(self) -> None:
+        self.model = ToyModel().cuda()
+        self.optimizer = SGD(self.model.parameters(), lr=0.1)
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_init(self):
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            pass
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_step(self):
+        optimizer = MagicMock(spec=Optimizer)
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
+            apex_optim_wrapper.backward(loss)
+            apex_optim_wrapper.step()
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_backward(self):
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
+            apex_optim_wrapper.backward(loss)
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_state_dict(self):
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
+            apex_optim_wrapper.update_params(loss)
+            state_dict = apex_optim_wrapper.state_dict()
+            amp_state_dict = state_dict.pop('apex_amp')
+            optim_state_dict = state_dict
+
+            self.assertDictEqual(optim_state_dict,
+                                 apex_optim_wrapper.optimizer.state_dict())
+            self.assertDictEqual(amp_state_dict, apex_amp.state_dict())
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_load_state_dict(self):
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            # Test load from optimizer
+            optimizer = SGD(self.model.parameters(), lr=0.1)
+            apex_optim_wrapper.load_state_dict(optimizer.state_dict())
+
+            self.assertDictEqual(optimizer.state_dict(),
+                                 apex_optim_wrapper.optimizer.state_dict())
+            # Test load from optim_wrapper
+            apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer)
+            apex_optim_wrapper_ = ApexOptimWrapper(
+                optimizer=SGD(self.model.parameters(), lr=0.1))
+            apex_optim_wrapper_.load_state_dict(
+                apex_optim_wrapper.state_dict())
+            self.assertDictEqual(apex_optim_wrapper.optimizer.state_dict(),
+                                 apex_optim_wrapper_.optimizer.state_dict())
+
+    @unittest.skipIf(
+        not is_apex_available,
+        reason='`apex` is not available, Please install apex from '
+        'https://www.github.com/nvidia/apex')
+    def test_optim_context(self):
+        apex_optim_wrapper = ApexOptimWrapper(
+            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        with apex_optim_wrapper.optim_context(self.model):
+            x = torch.randn(1, 1, 1, 1).cuda()
+            y = nn.Conv2d(1, 1, 1).cuda()(x)
+            self.assertEqual(y.dtype, torch.float16)
 
 
 class TestAmpOptimWrapper(TestCase):

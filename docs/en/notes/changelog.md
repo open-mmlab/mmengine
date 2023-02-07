@@ -2,7 +2,7 @@
 
 ## v0.5.0 (01/20/2023)
 
-# Highlights
+### Highlights
 
 - Add `BaseInferencer` to provide a general inference interface
 - Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
