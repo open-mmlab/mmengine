@@ -4,7 +4,7 @@
 
 As MMCV supports more and more deep learning tasks, and users' needs become much more complicated, we have higher requirements for the flexibility and versatility of the existing `Runner` of MMCV. Therefore, MMEngine implements a more general and flexible `Runner` based on MMCV to support more complicated training processes.
 
-The `Runner` in MMEngine expands the scope and takes on more functions. we abstracted [training loop controller (EpochBasedTrainLoop/IterBasedTrainLoop)](mmengine.runner.EpochBasedLoop), [validation loop controller ( ValLoop)](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop) to make it more convenient for users to customize their training process.
+The `Runner` in MMEngine expands the scope and takes on more functions. we abstracted [training loop controller (EpochBasedTrainLoop/IterBasedTrainLoop)](mmengine.runner.EpochBasedTrainLoop), [validation loop controller ( ValLoop)](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop) to make it more convenient for users to customize their training process.
 
 Firstly, we will introduce how to migrate the entry point of training from MMCV to MMEngine, to simplify and unify the training script. Then, we'll introduce the difference in the instantiation of `Runner` between MMCV and MMEngine in detail.
 
@@ -1165,7 +1165,7 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 
 ### Prepare testing/validation components
 
-MMCV implements the validation process by `EvalHook`, and we'll not talk too much about it here. Given that validation is a common process in training, MMEngine abstracts validation as two independent modules: [Evaluator](../tutorials/evaluation.md) and [ValLoop](../tutorials/runner.md). We can customize the metric or the validation process by defining a new [loop](mmengine.runner.ValLoop) or a new [metric](mmengine.evaluator.BaseMetirc).
+MMCV implements the validation process by `EvalHook`, and we'll not talk too much about it here. Given that validation is a common process in training, MMEngine abstracts validation as two independent modules: [Evaluator](../tutorials/evaluation.md) and [ValLoop](../tutorials/runner.md). We can customize the metric or the validation process by defining a new [loop](mmengine.runner.ValLoop) or a new [metric](mmengine.evaluator.BaseMetric).
 
 ```python
 import torch
