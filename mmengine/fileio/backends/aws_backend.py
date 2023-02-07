@@ -38,7 +38,7 @@ class AWSBackend(BaseStorageBackend):
             raise ImportError('Please install boto3 to enable '
                               'AWS_Backend.')
 
-        self._client = boto3.Client('s3')
+        self._client = boto3.resource('s3')
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
         # Use to parse bucket and obj_name
@@ -85,7 +85,8 @@ class AWSBackend(BaseStorageBackend):
         parse_res = self.parse_bucket.findall(filepath)
         if not parse_res:
             raise ValueError(
-                f"The input path '{filepath}' format is incorrect.")
+                f"The input path '{filepath}' format is incorrect."
+                'Correct example: s3://bucket/file')
         bucket, obj_name = parse_res[0]
         return bucket, obj_name
 
@@ -129,9 +130,11 @@ class AWSBackend(BaseStorageBackend):
 
         Examples:
             >>> backend = HTTPBackend()
-            >>> backend.get('aws://xxx')
+            >>> backend.get('aws://bucket/file')
             b'hello world'
         """
+        bucket, obj_name = self._parse_path(filepath)
+        self._check_bucket(bucket)
         return urlopen(filepath).read()
 
     def get_text(self, filepath, encoding='utf-8') -> str:
@@ -150,6 +153,7 @@ class AWSBackend(BaseStorageBackend):
             >>> backend.get_text('http://path/of/file')
             'hello world'
         """
+        bucket, obj_name = self._parse_path(filepath)
         return urlopen(filepath).read().decode(encoding)
 
     def put(self, obj: bytes, filepath: Union[str, Path]) -> None:

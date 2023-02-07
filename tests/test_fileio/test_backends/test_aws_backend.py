@@ -3,6 +3,8 @@ from typing import Sequence
 from unittest import TestCase, TestLoader
 from unittest.mock import MagicMock, patch
 
+from mmengine.fileio import AWSBackend
+
 
 class MyTestLoader(TestLoader):
 
@@ -54,11 +56,15 @@ except ImportError:
 else:
 
     class TestAWSBackend(TestCase):
+        aws = 'aws://mmengine/'
 
         @classmethod
         def setUpClass(cls):
             cls.s3 = boto3.resource('s3')
-            print('import betto')
+            # Upload a new file for test
+            cls.s3.Bucket('mmengine').put_object(Key='s3.txt', Body=b's3')
+
+            cls.backend = AWSBackend()
 
         def setUp(self) -> None:
             pass
@@ -93,6 +99,10 @@ else:
 
         def test_list_list_dir_or_file(self):
             pass
+
+        def test_get(self):
+            file_path = self.aws + 's3.txt'
+            self.assertEqual(self.backend.get(file_path), b's3')
 
         def tearDown(self) -> None:
             pass
