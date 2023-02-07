@@ -776,8 +776,8 @@ def generate_presigned_url(
     Args:
         url (str): Url of video stream.
         client_method (str): Method of client, 'get_object' or
-            'put_object'. Default: 'get_object'.
-        expires_in (int): expires, in seconds. Default: 3600.
+            'put_object'. Defaults to 'get_object'.
+        expires_in (int): expires, in seconds. Defaults to 3600.
         backend_args (dict, optional): Arguments to instantiate the
             corresponding backend. Defaults to None.
 
