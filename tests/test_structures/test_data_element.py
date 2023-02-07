@@ -458,3 +458,16 @@ class TestBaseDataElement(TestCase):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo=metainfo, **data)
         self.assertDictEqual(instances.metainfo, metainfo)
+
+    def test_pin_memory(self):
+        metainfo, data = self.setup_data()
+
+        instances = BaseDataElement(metainfo=metainfo, **data)
+        self.assertEqual(instances.gt_instances.bboxes.is_pinned(), False)
+        self.assertEqual(instances.gt_instances.labels.is_pinned(), False)
+        self.assertEqual(instances.pred_instances.bboxes.is_pinned(), False)
+
+        instances = instances.pin_memory()
+        self.assertEqual(instances.gt_instances.bboxes.is_pinned(), True)
+        self.assertEqual(instances.gt_instances.labels.is_pinned(), True)
+        self.assertEqual(instances.pred_instances.bboxes.is_pinned(), True)

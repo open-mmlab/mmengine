@@ -5,6 +5,7 @@ from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
+from torch.utils.data._utils.pin_memory import pin_memory
 
 
 class BaseDataElement:
@@ -560,6 +561,16 @@ class BaseDataElement:
             k: v.to_dict() if isinstance(v, BaseDataElement) else v
             for k, v in self.all_items()
         }
+
+    def pin_memory(self) -> 'BaseDataElement':
+        """BaseDataElement supports pin_memory function to speed up
+        training."""
+        for k, v in self.items():
+            if not isinstance(v, BaseDataElement):
+                setattr(self, k, pin_memory(v))
+            else:
+                setattr(self, k, v.pin_memory())
+        return self
 
     def __repr__(self) -> str:
         """Represent the object."""
