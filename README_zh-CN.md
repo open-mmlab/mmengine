@@ -251,12 +251,18 @@ runner.train()
 </details>
 
 <details>
+<summary>示例</summary>
+
+- [训练生成对抗网络](https://mmengine.readthedocs.io/zh_CN/latest/examples/train_a_gan.html)
+
+</details>
+
+<details>
 <summary>常用功能</summary>
 
-- [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
-- [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
-- [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
-- [训练生成对抗网络](https://mmengine.readthedocs.io/zh_CN/latest/examples/train_a_gan.html)
+- [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/resume_training.html)
+- [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/speed_up_training.html)
+- [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
 
 </details>
 

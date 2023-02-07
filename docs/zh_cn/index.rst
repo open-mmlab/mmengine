@@ -12,12 +12,17 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 示例
+
+   examples/train_a_gan.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 常用功能
 
-   examples/resume_training.md
-   examples/speed_up_training.md
-   examples/save_gpu_memory.md
-   examples/train_a_gan.md
+   common_usage/resume_training.md
+   common_usage/speed_up_training.md
+   common_usage/save_gpu_memory.md
 
 .. toctree::
    :maxdepth: 3

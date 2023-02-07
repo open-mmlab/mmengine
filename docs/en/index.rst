@@ -12,12 +12,17 @@ You can switch between Chinese and English documents in the lower-left corner of
 
 .. toctree::
    :maxdepth: 1
+   :caption: Examples
+
+   examples/train_a_gan.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: Common Usage
 
-   examples/resume_training.md
-   examples/speed_up_training.md
-   examples/save_gpu_memory.md
-   examples/train_a_gan.md
+   common_usage/resume_training.md
+   common_usage/speed_up_training.md
+   common_usage/save_gpu_memory.md
 
 .. toctree::
    :maxdepth: 3
