@@ -103,20 +103,20 @@ The following diagram illustrates this sequence of method calls:
 After data augmentation with TestTimeAug, the resulting data will have the following format:
 
 ```python
-image1  = dict(
+image1 = dict(
     inputs=[data_1_1, data_1_2],
-    data_sample=[data_sample1_1, data_sample1_2])
-）
+    data_sample=[data_sample1_1, data_sample1_2]
+)
 
-image2  = dict(
+image2 = dict(
     inputs=[data_2_1, data_2_2],
-    data_sample=[data_sample2_1, data_sample2_2])
-）
+    data_sample=[data_sample2_1, data_sample2_2]
+)
 
-image3  = dict(
+image3 = dict(
     inputs=[data_3_1, data_3_2],
-    data_sample=[data_sample3_1, data_sample3_2])
-）
+    data_sample=[data_sample3_1, data_sample3_2]
+)
 ```
 
 where `data_{i}_{j}` means the enhanced data，and `data_sample_{i}_{j}` means the ground truth of enhanced data. Then the data will be processed by `Dataloader`, which contributes to the following format:
