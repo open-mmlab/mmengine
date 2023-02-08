@@ -414,7 +414,7 @@ The length of instance_data is 2
 AssertionError: the length of values 3 is not consistent with the length of this :obj:`InstanceData` 2
 ```
 
-### 类字典访问和设置属性
+#### 类字典访问和设置属性
 
 `InstanceData` 支持类似字典的操作访问和设置其 **data** 属性。
 
@@ -728,7 +728,7 @@ print(InstanceData.cat([instance_data, instance_data]))
 - 对 `PixelData` 中 data 所存储的数据进行了尺寸的校验
 - 支持对 data 部分的数据对实例进行空间维度的索引和切片。
 
-## 数据校验
+#### 数据校验
 
 `PixelData` 会对传入到 data 的数据进行维度与长宽的校验。
 
@@ -774,7 +774,7 @@ pixel_data.map2 = torch.randint(0, 255, (1, 3, 20, 40))
 AssertionError: The dim of value must be 2 or 3, but got 4
 ```
 
-### 空间维度索引
+#### 空间维度索引
 
 `PixelData` 支持对 data 部分的数据对实例进行空间维度的索引和切片，只需传入长宽的索引即可。
 

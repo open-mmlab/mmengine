@@ -324,7 +324,7 @@ class LocalVisBackend(BaseVisBackend):
 class WandbVisBackend(BaseVisBackend):
     """Wandb visualization backend class.
 
-    Examples
+    Examples:
         >>> from mmengine.visualization import WandbVisBackend
         >>> import numpy as np
         >>> wandb_vis_backend = WandbVisBackend()
