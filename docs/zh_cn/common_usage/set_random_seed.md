@@ -20,6 +20,7 @@ runner = Runner(
     val_dataloader=val_dataloader,
     val_cfg=dict(),
     val_evaluator=dict(type=Accuracy),
+    # 新增 randomness 设置
     randomness=dict(seed=0),
 )
 runner.train()
