@@ -131,7 +131,7 @@ runner.train()
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](../advanced_tutorials/logging.md)。
 
 ### ParamSchedulerHook
 
@@ -262,4 +262,4 @@ class CheckInvalidLossHook(Hook):
     priority = 'ABOVE_NORMAL'
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](../api/hooks)。

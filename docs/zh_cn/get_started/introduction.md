@@ -55,4 +55,4 @@ MMEngine 中还实现了各种算法模型执行过程中需要用到的公共�
 - [分布式通信原语（Distributed Communication Primitives）](../advanced_tutorials/distributed.md)：负责在程序分布式运行过程中不同进程间的通信。这套接口屏蔽了分布式和非分布式环境的区别，同时也自动处理了数据的设备和通信后端。
 - [其他工具（Utils）](../advanced_tutorials/manager_mixin.md)：还有一些工具性的模块，如 ManagerMixin，它实现了一种全局变量的创建和获取方式，执行器内很多全局可见对象的基类就是 ManagerMixin。
 
-用户可以进一步阅读[教程](<>)来了解这些模块的高级用法，也可以参考[设计文档](<>) 了解它们的设计思路与细节。
+用户可以进一步阅读[教程](../tutorials/runner.md)来了解这些模块的高级用法，也可以参考[设计文档](../design/hook.md) 了解它们的设计思路与细节。

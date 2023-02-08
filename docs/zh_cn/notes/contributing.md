@@ -164,7 +164,7 @@ git push -u origin {branch_name}
 
 MMEngine 会在不同的平台（Linux、Window、Mac），基于不同版本的 Python、PyTorch、CUDA 对提交的代码进行单元测试，以保证代码的正确性，如果有任何一个没有通过，我们可点击上图中的 `Details` 来查看具体的测试信息，以便于我们修改代码。
 
-(3) 如果 PR 通过了 CI，那么就可以等待其他开发者的 review，并根据 reviewer 的意见，修改代码，并重复 [4](#4-提交代码并本地通过单元测试)-[5](#5-推送代码到远程) 步骤，直到 reviewer 同意合入 PR。
+(3) 如果 PR 通过了 CI，那么就可以等待其他开发者的 review，并根据 reviewer 的意见，修改代码，并重复 [4](#4-提交代码并在本地通过单元测试)-[5](#5-推送代码到远程) 步骤，直到 reviewer 同意合入 PR。
 
 <img src="https://user-images.githubusercontent.com/57566630/202145400-cc2cd8c4-10b0-472f-ba37-07e6f50acc67.png" width="1200">
 
@@ -224,10 +224,10 @@ make html
 - [mdformat](https://github.com/executablebooks/mdformat): 检查 markdown 文件的工具
 - [docformatter](https://github.com/myint/docformatter): 格式化 docstring 的工具
 
-yapf 和 isort 的配置可以在 [setup.cfg](./setup.cfg) 找到
+yapf 和 isort 的配置可以在 [setup.cfg](../../../setup.cfg) 找到
 
 通过配置 [pre-commit hook](https://pre-commit.com/) ，我们可以在提交代码时自动检查和格式化 `flake8`、`yapf`、`isort`、`trailing whitespaces`、`markdown files`，修复 `end-of-files`、`double-quoted-strings`、`python-encoding-pragma`、`mixed-line-ending`，调整 `requirments.txt` 的包顺序。
-pre-commit 钩子的配置可以在 [.pre-commit-config](./.pre-commit-config.yaml) 找到。
+pre-commit 钩子的配置可以在 [.pre-commit-config](../../../.pre-commit-config.yaml) 找到。
 
 pre-commit 具体的安装使用方式见[拉取请求](#2-配置-pre-commit)。
 
