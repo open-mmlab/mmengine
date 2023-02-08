@@ -39,7 +39,7 @@ test_evaluator = [
 
 如果算法库中提供的常用评测指标无法满足需求，用户也可以增加自定义的评测指标。我们以简化的分类正确率为例，介绍实现自定义评测指标的方法：
 
-1. 在定义新的评测指标类时，需要继承基类 [`BaseMetric`](mmengine.evaluator.BaseMetric)（关于该基类的介绍，可以参考[设计文档](../design/evaluation.md)）。此外，评测指标类需要用注册器 `METRICS` 进行注册（关于注册器的说明请参考 [Registry 文档](../advanced_tutorials/registry.md)）。
+1. 在定义新的评测指标类时，需要继承基类 [BaseMetric](mmengine.evaluator.BaseMetric)（关于该基类的介绍，可以参考[设计文档](../design/evaluation.md)）。此外，评测指标类需要用注册器 `METRICS` 进行注册（关于注册器的说明请参考 [Registry 文档](../advanced_tutorials/registry.md)）。
 
 2. 实现 `process()` 方法。该方法有 2 个输入参数，分别是一个批次的测试数据样本 `data_batch` 和模型预测结果 `data_samples`。我们从中分别取出样本类别标签和分类预测结果，并存放在 `self.results` 中。
 

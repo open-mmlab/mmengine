@@ -8,7 +8,7 @@ the `__call__` method should be a dictionary.
 
 In OpenMMLab 2.0, to make the data transform classes more extensible, we use `transform` method instead of
 `__call__` method to implement data transformation, and all data transform classes should inherit the
-[`mmcv.transforms.BaseTransform`](mmcv.transforms.BaseTransform) class. And you can still use these data
+[mmcv.transforms.BaseTransform](mmcv.transforms.BaseTransform) class. And you can still use these data
 transform classes by calling.
 
 A tutorial to implement a data transform class can be found in the [Data Transform](../advanced_tutorials/data_element.md).

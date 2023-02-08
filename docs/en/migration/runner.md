@@ -4,7 +4,7 @@
 
 As MMCV supports more and more deep learning tasks, and users' needs become much more complicated, we have higher requirements for the flexibility and versatility of the existing `Runner` of MMCV. Therefore, MMEngine implements a more general and flexible `Runner` based on MMCV to support more complicated training processes.
 
-The `Runner` in MMEngine expands the scope and takes on more functions. we abstracted [training loop controller (EpochBasedTrainLoop/IterBasedTrainLoop)](mmengine.runner.EpochBasedTrainLoop), [validation loop controller ( ValLoop)](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop) to make it more convenient for users to customize their training process.
+The `Runner` in MMEngine expands the scope and takes on more functions. we abstracted [training loop controller (EpochBasedTrainLoop/IterBasedTrainLoop)](mmengine.runner.EpochBasedTrainLoop), [validation loop controller (ValLoop)](mmengine.runner.ValLoop) and [TestLoop](mmengine.runner.TestLoop) to make it more convenient for users to customize their training process.
 
 Firstly, we will introduce how to migrate the entry point of training from MMCV to MMEngine, to simplify and unify the training script. Then, we'll introduce the difference in the instantiation of `Runner` between MMCV and MMEngine in detail.
 

@@ -214,7 +214,7 @@ class MMEngineToyModel(BaseModel):
 </thead>
 </table>
 
-关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor) 和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper) 的说明，详见[模型教程](../tutorials/model.md#数据预处理器datapreprocessor)和[优化器封装教程](../tutorials/optim_wrapper.md)。
+关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor)和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper)的说明，详见[模型教程](../tutorials/model.md#数据预处理器datapreprocessor)和[优化器封装教程](../tutorials/optim_wrapper.md)。
 
 模型具体差异如下：
 

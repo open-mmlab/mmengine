@@ -459,7 +459,7 @@ class Visualizer(ManagerMixin):
                 a ``font_manager.FontProperties()`` object.
                 If you want to draw Chinese texts, you need to prepare
                 a font file that can show Chinese characters properly.
-                For example: `simhei.ttf` , `simsun.ttc` , `simkai.ttf` and so on.
+                For example: `simhei.ttf`, `simsun.ttc`, `simkai.ttf` and so on.
                 Then set ``font_properties=matplotlib.font_manager.FontProperties(fname='path/to/font_file')``
                 ``font_properties`` can have the same length with texts or
                 just single value. If ``font_properties`` is single value,

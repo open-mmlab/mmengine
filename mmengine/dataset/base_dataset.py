@@ -548,7 +548,7 @@ class BaseDataset(Dataset):
 
     @force_full_init
     def get_subset_(self, indices: Union[Sequence[int], int]) -> None:
-        """The in-place version of  ``get_subset`` to convert dataset to a
+        """The in-place version of ``get_subset`` to convert dataset to a
         subset of original dataset.
 
         This method will convert the original dataset to a subset of dataset.
