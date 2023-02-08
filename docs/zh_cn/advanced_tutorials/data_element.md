@@ -728,7 +728,7 @@ print(InstanceData.cat([instance_data, instance_data]))
 - 对 `PixelData` 中 data 所存储的数据进行了尺寸的校验
 - 支持对 data 部分的数据对实例进行空间维度的索引和切片。
 
-### 数据校验
+## 数据校验
 
 `PixelData` 会对传入到 data 的数据进行维度与长宽的校验。
 
@@ -1004,7 +1004,7 @@ AssertionError: tensor([[0.4370, 0.1661, 0.0902, 0.8421],
 
 下面以 MMDetection 为例更具体地说明 OpenMMLab 的算法库将如何迁移使用抽象数据接口，以简化模块和组件接口的。我们假定 MMDetection 和 MMEngine 中实现了 DetDataSample 和 InstanceData。
 
-#### 1. 组件接口的简化
+### 1. 组件接口的简化
 
 检测器的外部接口可以得到显著的简化和统一。MMDet 2.X 中单阶段检测器和单阶段分割算法的接口如下。在训练过程中，`SingleStageDetector` 需要获取
 `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
@@ -1054,7 +1054,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
 
 ```
 
-#### 2. 模块接口的简化
+### 2. 模块接口的简化
 
 MMDet 2.X 中 `HungarianAssigner` 和 `MaskHungarianAssigner` 分别用于在训练过程中将检测框和实例掩码和标注的实例进行匹配。他们内部的匹配逻辑实现是一样的，只是接口和损失函数的计算不同。
 但是，接口的不同使得 `HungarianAssigner` 中的代码无法被复用，`MaskHungarianAssigner` 中重写了很多冗余的逻辑。

@@ -1,4 +1,4 @@
-## 贡献代码
+# 贡献代码
 
 欢迎加入 MMEngine 社区，我们致力于打造最前沿的深度学习模型训练的基础库，我们欢迎任何类型的贡献，包括但不限于
 
@@ -23,11 +23,11 @@
 1. 提交 issue，确认添加文档的必要性。
 2. 添加文档，提交拉取请求。
 
-### 拉取请求工作流
+## 拉取请求工作流
 
 如果你对拉取请求不了解，没关系，接下来的内容将会从零开始，一步一步地指引你如何创建一个拉取请求。如果你想深入了解拉取请求的开发模式，可以参考 github [官方文档](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-requests)
 
-#### 1. 复刻仓库
+### 1. 复刻仓库
 
 当你第一次提交拉取请求时，先复刻 OpenMMLab 原代码库，点击 GitHub 页面右上角的 **Fork** 按钮，复刻后的代码库将会出现在你的 GitHub 个人主页下。
 
@@ -58,7 +58,7 @@ upstream	git@github.com:open-mmlab/mmengine (push)
 这里对 origin 和 upstream 进行一个简单的介绍，当我们使用 git clone 来克隆代码时，会默认创建一个 origin 的 remote，它指向我们克隆的代码库地址，而 upstream 则是我们自己添加的，用来指向原始代码库地址。当然如果你不喜欢他叫 upstream，也可以自己修改，比如叫 open-mmlab。我们通常向 origin 提交代码（即 fork 下来的远程仓库），然后向 upstream 提交一个 pull request。如果提交的代码和最新的代码发生冲突，再从 upstream 拉取最新的代码，和本地分支解决冲突，再提交到 origin。
 ```
 
-#### 2. 配置 pre-commit
+### 2. 配置 pre-commit
 
 在本地开发环境中，我们使用 [pre-commit](https://pre-commit.com/#intro) 来检查代码风格，以确保代码风格的统一。在提交代码，需要先安装 pre-commit（需要在 mmengine 目录下执行）:
 
@@ -95,7 +95,7 @@ pre-commit run --all-files -c .pre-commit-config-zh-cn.yaml
 git commit -m "xxx" --no-verify
 ```
 
-#### 3. 创建开发分支
+### 3. 创建开发分支
 
 安装完 pre-commit 之后，我们需要基于 master 创建开发分支，建议的分支命名规则为 `username/pr_name`。
 
@@ -109,7 +109,7 @@ git checkout -b yhc/refactor_contributing_doc
 git pull upstream master
 ```
 
-#### 4. 提交代码并在本地通过单元测试
+### 4. 提交代码并在本地通过单元测试
 
 - MMEngine 引入了 mypy 来做静态类型检查，以增加代码的鲁棒性。因此我们在提交代码时，需要补充 Type Hints。具体规则可以参考[教程](https://zhuanlan.zhihu.com/p/519335398)。
 
@@ -127,7 +127,7 @@ git pull upstream master
 
 - 如果修改/添加了文档，参考[指引](#文档渲染)确认文档渲染正常。
 
-#### 5. 推送代码到远程
+### 5. 推送代码到远程
 
 代码通过单元测试和 pre-commit 检查后，将代码推送到远程仓库，如果是第一次推送，可以在 `git push` 后加上 `-u` 参数以关联远程分支
 
@@ -137,7 +137,7 @@ git push -u origin {branch_name}
 
 这样下次就可以直接使用 `git push` 命令推送代码了，而无需指定分支和远程仓库。
 
-#### 6. 提交拉取请求（PR）
+### 6. 提交拉取请求（PR）
 
 (1) 在 GitHub 的 Pull request 界面创建拉取请求
 <img src="https://user-images.githubusercontent.com/57566630/201533288-516f7ac4-0b14-4dc8-afbd-912475c368b5.png" width="1200">
@@ -170,7 +170,7 @@ MMEngine 会在不同的平台（Linux、Window、Mac），基于不同版本的
 
 所有 reviewer 同意合入 PR 后，我们会尽快将 PR 合并到主分支。
 
-#### 7. 解决冲突
+### 7. 解决冲突
 
 随着时间的推移，我们的代码库会不断更新，这时候，如果你的 PR 与主分支存在冲突，你需要解决冲突，解决冲突的方式有两种：
 
@@ -188,9 +188,9 @@ git merge upstream/master
 
 如果你非常善于处理冲突，那么可以使用 rebase 的方式来解决冲突，因为这能够保证你的 commit log 的整洁。如果你不太熟悉 `rebase` 的使用，那么可以使用 `merge` 的方式来解决冲突。
 
-### 指引
+## 指引
 
-#### 单元测试
+### 单元测试
 
 在提交修复代码错误或新增特性的拉取请求时，我们应该尽可能的让单元测试覆盖所有提交的代码，计算单元测试覆盖率的方法如下
 
@@ -200,7 +200,7 @@ python -m coverage html
 # check file in htmlcov/index.html
 ```
 
-#### 文档渲染
+### 文档渲染
 
 在提交修复代码错误或新增特性的拉取请求时，可能会需要修改/新增模块的 docstring。我们需要确认渲染后的文档样式是正确的。
 本地生成渲染后的文档的方法如下
@@ -213,7 +213,7 @@ make html
 # check file in ./docs/zh_cn/_build/html/index.html
 ```
 
-### Python 代码风格
+## Python 代码风格
 
 [PEP8](https://www.python.org/dev/peps/pep-0008/) 作为 OpenMMLab 算法库首选的代码规范，我们使用以下工具检查和格式化代码
 
@@ -233,7 +233,7 @@ pre-commit 具体的安装使用方式见[拉取请求](#2-配置-pre-commit)。
 
 更具体的规范请参考 [OpenMMLab 代码规范](code_style.md)。
 
-### 拉取请求规范
+## 拉取请求规范
 
 1. 使用 [pre-commit hook](https://pre-commit.com)，尽量减少代码风格相关问题
 
