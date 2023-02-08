@@ -1293,9 +1293,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
     if no improvement is seen for a ``patience`` number of epochs, the
     parameters are reduced.
 
-    The implementation is motivated by
-    `PyTorch
-    ReduceLROnPlateau<https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py>`_.
+    The implementation is motivated by `PyTorch ReduceLROnPlateau`_.
 
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
@@ -1345,6 +1343,9 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             epochs. Defaults to True.
         verbose (bool): Whether to print the value for each update.
             Defaults to False.
+
+    .. _PyTorch ReduceLROnPlateau:
+       https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py
     """
 
     need_val_args = True

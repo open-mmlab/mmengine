@@ -125,6 +125,7 @@ class LinearLR(LRSchedulerMixin, LinearParamScheduler):
 
     Notice that such decay can happen simultaneously with other changes to the
     learning rate from outside this scheduler.
+
     Args:
         optimizer (Optimizer or OptimWrapper): Wrapped optimizer.
         start_factor (float): The number we multiply learning rate in the

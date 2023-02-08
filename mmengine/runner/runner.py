@@ -1053,7 +1053,7 @@ class Runner:
             MultiOptimWrapperConstructor which gets parameters passed to
             corresponding optimizers and compose the ``OptimWrapperDict``.
             More details about how to customize OptimizerConstructor can be
-            found at `optimizer-docs <https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html>`_.
+            found at `optimizer-docs`_.
 
         Returns:
             OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
@@ -1208,7 +1208,7 @@ class Runner:
             schedulers build from ``scheduler``.
 
         .. _optimizer-docs:
-           https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
+           https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
         """
         param_schedulers: ParamSchedulerType
         if not isinstance(self.optim_wrapper, OptimWrapperDict):

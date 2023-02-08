@@ -251,10 +251,10 @@ class PetrelBackend(BaseStorageBackend):
         filepath: Union[str, Path],
         *filepaths: Union[str, Path],
     ) -> str:
-        """Concatenate all file paths.
+        r"""Concatenate all file paths.
 
         Join one or more filepath components intelligently. The return value
-        is the concatenation of filepath and any members of *filepaths.
+        is the concatenation of filepath and any members of \*filepaths.
 
         Args:
             filepath (str or Path): Path to be concatenated.
