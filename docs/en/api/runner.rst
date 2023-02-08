@@ -85,3 +85,4 @@ Miscellaneous
    :nosignatures:
 
    get_priority
+   set_random_seed
