@@ -58,6 +58,10 @@ runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.train()
 ```
 
+### LoggerHook
+
+[LoggerHook](mmengine.hooks.LoggerHook) collects logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb, etc.
+
 ### CheckpointHook
 
 [CheckpointHook](mmengine.hooks.CheckpointHook) saves the checkpoints at a given interval. In the case of distributed training, only the master process will save the checkpoints. The main features of `CheckpointHook` is as follows.

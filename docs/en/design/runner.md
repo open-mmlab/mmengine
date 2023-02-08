@@ -162,7 +162,7 @@ custom_hooks = [dict(type='CustomValHook')]
 ## Customize Runner
 
 Moreover, you can write your own runner by subclassing `Runner` if the built-in `Runner` is not feasible.
-The method is similar to writing other modules: write your subclass inherited from `Runner`, overrides some functions, register it to [RUNNERS](mmengine.registry.RUNNERS) and access it by assigning `runner_type` in your config file.
+The method is similar to writing other modules: write your subclass inherited from `Runner`, overrides some functions, register it to `mmengine.registry.RUNNERS` and access it by assigning `runner_type` in your config file.
 
 ```python
 from mmengine.registry import RUNNERS
