@@ -19,24 +19,20 @@ OpenMMLab 2.0 数据集格式规范规定，标注文件必须为 `json` 或 `ya
 ```json
 
 {
-    'metainfo':
+    "metainfo":
         {
-            'classes': ('cat', 'dog'),
-            ...
+            "classes": ["cat", "dog"]
         },
-    'data_list':
+    "data_list":
         [
             {
-                'img_path': "xxx/xxx_0.jpg",
-                'img_label': 0,
-                ...
+                "img_path": "xxx/xxx_0.jpg",
+                "img_label": 0
             },
             {
-                'img_path': "xxx/xxx_1.jpg",
-                'img_label': 1,
-                ...
-            },
-            ...
+                "img_path": "xxx/xxx_1.jpg",
+                "img_label": 1
+            }
         ]
 }
 ```

@@ -344,10 +344,9 @@ class WandbVisBackend(BaseVisBackend):
             A dict of metrics and summary for wandb.define_metric.
             The key is metric and the value is summary.
             When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
-            The maximum value of``coco/bbox_mAP`` is logged on wandb UI.
-            See
-            `wandb docs <https://docs.wandb.ai/ref/python/run#define_metric>`_
-            for details.
+            The maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
+            See `wandb define_metric <https://docs.wandb.ai/ref/python/
+            run#define_metric>`_ for details.
             Default: None
         commit: (bool, optional) Save the metrics dict to the wandb server
                 and increment the step.  If false `wandb.log` just
@@ -357,7 +356,7 @@ class WandbVisBackend(BaseVisBackend):
         log_code_name: (str, optional) The name of code artifact.
             By default, the artifact will be named
             source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
-            `wandb docs <https://docs.wandb.ai/ref/python/run#log_code>`_
+            `wandb log_code <https://docs.wandb.ai/ref/python/run#log_code>`_
             for details. Defaults to None.
             New in version 0.3.0.
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.

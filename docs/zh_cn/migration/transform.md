@@ -4,7 +4,7 @@
 
 在 TorchVision 的数据变换类接口约定中，数据变换类需要实现 `__call__` 方法，而在 OpenMMLab 1.0 的接口约定中，进一步要求
 `__call__` 方法的输出应当是一个字典，在各种数据变换中对这个字典进行增删查改。在 OpenMMLab 2.0 中，为了提升后续的可扩展性，我们将原先的 `__call__` 方法迁移为 `transform` 方法，并要求数据变换类应当继承
-[`mmcv.transforms.BaseTransfrom`](https://mmcv.readthedocs.io/en/dev-2.x/api.html#TODO)。具体如何实现一个数据变换类，可以参见[文档](../advanced_tutorials/data_transform.md)。
+[mmcv.transforms.BaseTransform](mmcv.transforms.BaseTransform)。具体如何实现一个数据变换类，可以参见[文档](../advanced_tutorials/data_transform.md)。
 
 由于在此次更新中，我们将部分共用的数据变换类统一迁移至 MMCV 中，因此本文将会对比这些数据变换在旧版本（[MMClassification v0.23.2](https://github.com/open-mmlab/mmclassification/tree/v0.23.2)、[MMDetection v2.25.1](https://github.com/open-mmlab/mmdetection/tree/v2.25.1)）和新版本（[MMCV v2.0.0rc0](https://github.com/open-mmlab/mmcv/tree/2.x)）中的功能、用法和实现上的差异。
 

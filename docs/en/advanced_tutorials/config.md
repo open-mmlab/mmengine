@@ -352,15 +352,16 @@ optimizer:
 
 `resnet50_dump.json`
 
-````json
+```json
 {"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "model": {"type": "ResNet", "depth": 50}}
+```
 
 In addition, `dump` can also dump `cfg` loaded from a dictionary.
 
 ```python
 cfg = Config(dict(a=1, b=2))
 cfg.dump('dump_dict.py')
-````
+```
 
 `dump_dict.py`
 

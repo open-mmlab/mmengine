@@ -155,6 +155,7 @@ class LinearMomentum(MomentumSchedulerMixin, LinearParamScheduler):
 
     Notice that such decay can happen simultaneously with other changes to the
     momentum from outside this scheduler.
+
     Args:
         optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
             optimizer.

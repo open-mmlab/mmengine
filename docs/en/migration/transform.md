@@ -8,7 +8,7 @@ the `__call__` method should be a dictionary.
 
 In OpenMMLab 2.0, to make the data transform classes more extensible, we use `transform` method instead of
 `__call__` method to implement data transformation, and all data transform classes should inherit the
-[`mmcv.transforms.BaseTransfrom`](mmcv.transforms.BaseTransfrom) class. And you can still use these data
+[mmcv.transforms.BaseTransform](mmcv.transforms.BaseTransform) class. And you can still use these data
 transform classes by calling.
 
 A tutorial to implement a data transform class can be found in the [Data Transform](../advanced_tutorials/data_element.md).
@@ -126,7 +126,7 @@ we will compare the functionalities, usages and implementations between the orig
 
 ## Implementation Differences
 
-Take `RandomFlip` as example, the new version [RandomFlip](<>) in MMCV inherits `BaseTransfrom`, and move the
+Take `RandomFlip` as example, the new version [RandomFlip](mmcv.transforms.RandomFlip) in MMCV inherits `BaseTransfrom`, and move the
 functionality implementation from `__call__` to `transform` method. In addition, the randomness related code
 is placed in some extra methods and these methods need to be wrapped by `cache_randomness` decorator.
 

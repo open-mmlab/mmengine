@@ -454,20 +454,19 @@ class Visualizer(ManagerMixin):
                 the texts will have the same bbox. Reference to
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
-            font_properties (Union[FontProperties, List[FontProperties]],
-                optional): The font properties of texts. FontProperties is
-                a `font_manager.FontProperties()` object.
+            font_properties (Union[FontProperties, List[FontProperties]], optional):
+                The font properties of texts. FontProperties is
+                a ``font_manager.FontProperties()`` object.
                 If you want to draw Chinese texts, you need to prepare
                 a font file that can show Chinese characters properly.
-                For example: `simhei.ttf`,`simsun.ttc`,`simkai.ttf` and so on.
-                Then set font_properties=matplotlib.font_manager.FontProperties
-                        (fname='path/to/font_file')
+                For example: `simhei.ttf`, `simsun.ttc`, `simkai.ttf` and so on.
+                Then set ``font_properties=matplotlib.font_manager.FontProperties(fname='path/to/font_file')``
                 ``font_properties`` can have the same length with texts or
                 just single value. If ``font_properties`` is single value,
                 all the texts will have the same font properties.
                 Defaults to None.
                 `New in version 0.6.0.`
-        """
+        """  # noqa: E501
         from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
@@ -915,7 +914,7 @@ class Visualizer(ManagerMixin):
           it will compress featmap to single channel image and weighted
           sum to `overlaid_image`.
 
-        -  if `channel_reduction` is None
+        - If `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
             channel and treated as image and will be weighted sum
