@@ -414,7 +414,7 @@ class Runner:
                          f'order:\n{self.get_hooks_info()}')
 
         # dump `cfg` to `work_dir`
-        self.dump_config()
+        # self.dump_config()
 
     @classmethod
     def from_cfg(cls, cfg: ConfigType) -> 'Runner':
@@ -458,6 +458,39 @@ class Runner:
             cfg=cfg,
         )
 
+        return runner
+
+    @classmethod
+    def from_lazy_cfg(cls, built_cfg, cfg):
+        runner = cls(
+            model=built_cfg['model'],
+            work_dir=built_cfg['work_dir'],
+            train_dataloader=built_cfg.get('train_dataloader'),
+            val_dataloader=built_cfg.get('val_dataloader'),
+            test_dataloader=built_cfg.get('test_dataloader'),
+            train_cfg=built_cfg.get('train_cfg'),
+            val_cfg=built_cfg.get('val_cfg'),
+            test_cfg=built_cfg.get('test_cfg'),
+            auto_scale_lr=built_cfg.get('auto_scale_lr'),
+            optim_wrapper=built_cfg.get('optim_wrapper'),
+            param_scheduler=built_cfg.get('param_scheduler'),
+            val_evaluator=built_cfg.get('val_evaluator'),
+            test_evaluator=built_cfg.get('test_evaluator'),
+            default_hooks=built_cfg.get('default_hooks'),
+            custom_hooks=built_cfg.get('custom_hooks'),
+            data_preprocessor=built_cfg.get('data_preprocessor'),
+            load_from=built_cfg.get('load_from'),
+            resume=built_cfg.get('resume', False),
+            launcher=built_cfg.get('launcher', 'none'),
+            env_cfg=built_cfg.get('env_cfg'),  # type: ignore
+            log_processor=built_cfg.get('log_processor'),
+            log_level=built_cfg.get('log_level', 'INFO'),
+            visualizer=built_cfg.get('visualizer'),
+            default_scope=built_cfg.get('default_scope', 'mmengine'),
+            randomness=built_cfg.get('randomness', dict(seed=None)),
+            experiment_name=built_cfg.get('experiment_name'),
+            cfg=cfg,
+        )
         return runner
 
     @property
@@ -1792,6 +1825,7 @@ class Runner:
             hook_obj = HOOKS.build(hook)
         else:
             hook_obj = hook
+            _priority = hook.priority
 
         if priority is not None:
             hook_obj.priority = priority
@@ -2285,4 +2319,4 @@ class Runner:
                          env_info + '\n'
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
-        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+        # self.logger.info(f'Config:\n{self.cfg.pretty_text}')

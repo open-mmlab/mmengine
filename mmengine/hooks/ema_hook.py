@@ -45,6 +45,8 @@ class EMAHook(Hook):
                  begin_iter: int = 0,
                  begin_epoch: int = 0,
                  **kwargs):
+        priority = kwargs.pop('priority', None)
+        super().__init__(priority=priority)
         self.strict_load = strict_load
         self.ema_cfg = dict(type=ema_type, **kwargs)
         assert not (begin_iter != 0 and begin_epoch != 0), (

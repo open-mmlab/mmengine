@@ -11,6 +11,8 @@ class Hook:
 
     All hooks should inherit from this class.
     """
+    def __init__(self, priority=None, *args, **kwargs) -> None:
+        self.priority = priority if priority is not None else self.priority
 
     priority = 'NORMAL'
     stages = ('before_run', 'after_load_checkpoint', 'before_train',

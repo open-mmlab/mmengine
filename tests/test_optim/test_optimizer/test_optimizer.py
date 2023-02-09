@@ -571,6 +571,30 @@ class TestBuilder(TestCase):
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        assert len(optim_wrapper.param_groups) == len(
+            model_parameters) == num_params
+        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
+                                  **paramwise_cfg)
+        
+        model = ExampleDuplicateModel(duplicate_model_require_grad=False)
+        paramwise_cfg = dict(
+            bias_lr_mult=2,
+            bias_decay_mult=0.5,
+            norm_decay_mult=0,
+            dwconv_decay_mult=0.1,
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3,
+            bypass_duplicate=True)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
+
+        self.assertWarnsRegex(
+            Warning,
+            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
+            lambda: optim_constructor(model))
+        optim_wrapper = optim_constructor(model)
+        model_parameters = list(model.parameters())
+        num_params = 14 if MMCV_FULL_AVAILABLE else 11
         assert len(optim_wrapper.optimizer.param_groups) == len(
             model_parameters) == num_params
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,

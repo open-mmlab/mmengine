@@ -1,9 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mmengine.config import Config, ConfigDict
+from mmengine.config.auto_call_config import Config as _Config
 from mmengine.utils import ManagerMixin
 from .registry import Registry
 
@@ -63,7 +65,7 @@ def build_from_cfg(
     # Avoid circular import
     from ..logging import print_log
 
-    if not isinstance(cfg, (dict, ConfigDict, Config)):
+    if not isinstance(cfg, (dict, ConfigDict, Config, _Config)):
         raise TypeError(
             f'cfg should be a dict, ConfigDict or Config, but got {type(cfg)}')
 
@@ -83,7 +85,7 @@ def build_from_cfg(
             'default_args should be a dict, ConfigDict, Config or None, '
             f'but got {type(default_args)}')
 
-    args = cfg.copy()
+    args = copy.deepcopy(cfg)
     if default_args is not None:
         for name, value in default_args.items():
             args.setdefault(name, value)

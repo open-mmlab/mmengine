@@ -48,7 +48,7 @@ class RuntimeInfoHook(Hook):
             runner (Runner): The runner of the training process.
         """
         metainfo = dict(
-            cfg=runner.cfg.pretty_text,
+            # cfg=runner.cfg.pretty_text,
             seed=runner.seed,
             experiment_name=runner.experiment_name,
             mmengine_version=__version__ + get_git_hash())

@@ -17,6 +17,8 @@ class TestLogger:
 
     @patch('mmengine.logging.logger._get_rank', lambda: 0)
     def test_init_rank0(self, tmp_path):
+        breakpoint()
+        
         logger = MMLogger.get_instance('rank0.pkg1', log_level='INFO')
         assert logger.name == 'mmengine'
         assert logger.instance_name == 'rank0.pkg1'
