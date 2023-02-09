@@ -27,7 +27,7 @@ def calc_dynamic_intervals(
 
     Returns:
         Tuple[List[int], List[int]]: a list of milestone and its corresponding
-            intervals.
+        intervals.
     """
     if dynamic_interval_list is None:
         return [0], [start_interval]
