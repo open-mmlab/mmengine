@@ -26,16 +26,34 @@ class LazyCall:
         # self.args = args
 
     def build(self):
+        def _build_lazy_call(kwargs):
+            if isinstance(kwargs, Mapping):
+                for key, value in kwargs.items():
+                    kwargs[key] = _build_lazy_call(value)
+                return kwargs
+            elif isinstance(kwargs, (list, list)):
+                for i, value in enumerate(kwargs):
+                    kwargs[i] = _build_lazy_call(kwargs[i])
+                return kwargs
+            elif isinstance(kwargs, LazyCall):
+                return kwargs.build()
+            else:
+                return kwargs
+                
+
+        kwargs = _build_lazy_call(copy.deepcopy(self.kwargs))
+
         if self.name_id in self.module_dict:
             module = self.module_dict[self.name_id]
             module = importlib.import_module(module)
             func = getattr(module, self.name_id)
-            return func(**self.kwargs)
+            return func(**kwargs)
         func_name_list = self.name_id.split('.')
+
 
         # Built by custom function: def xxx
         if self.name_id in self.global_dict:
-            return self.global_dict[self.name_id](*self.args, **self.kwargs)
+            return self.global_dict[self.name_id](**kwargs)
         for i in range(len(func_name_list)):
             func_name = '.'.join(func_name_list[:i + 1])
             if func_name in self.module_dict:
@@ -54,7 +72,7 @@ class LazyCall:
                     for attr in func_name_list:
                         func = getattr(func, attr)
 
-                return func(**self.kwargs)
+                return func(**kwargs)
         raise Exception()
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -71,10 +89,15 @@ class LazyCall:
     def __getattr__(self, name: str) -> Any:
         if name in self.kwargs:
             return self.kwargs[name]
+        raise ValueError()
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        return cls(copy.deepcopy(self.name_id), **copy.deepcopy(self.kwargs))
+        ret = cls(copy.deepcopy(self.name_id), **copy.deepcopy(self.kwargs))
+        super(LazyCall, ret).__setattr__('global_dict', self.global_dict)
+        super(LazyCall, ret).__setattr__('module_dict', self.module_dict)
+
+        return ret
 
     def set_build_variable(self, global_dict, module_dict):
         super().__setattr__('global_dict', global_dict)

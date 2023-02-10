@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
+from mmengine.config.auto_call_config import LazyCall
 from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
@@ -341,9 +342,9 @@ class Runner:
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
-        elif self.cfg.filename is not None:
-            filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
+        # elif self.cfg.filename is not None:
+        #     filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
+        #     self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
         else:
             self._experiment_name = self.timestamp
         self._log_dir = osp.join(self.work_dir, self.timestamp)
@@ -1284,6 +1285,8 @@ class Runner:
         elif isinstance(evaluator, list):
             # use the default `Evaluator`
             return Evaluator(evaluator)  # type: ignore
+        elif isinstance(evaluator, LazyCall):
+            return evaluator.build()
         else:
             raise TypeError(
                 'evaluator should be one of dict, list of dict, and Evaluator'
@@ -1334,6 +1337,8 @@ class Runner:
         sampler_seed = None if diff_rank_seed else seed
         sampler_cfg.seed = sampler_seed
         sampler = sampler_cfg.build()
+        dataset = dataloader.dataset.build()
+        sampler_cfg.dataset = dataset
         dataloader_cfg.sampler = sampler
         return dataloader_cfg.build()
 
@@ -1407,7 +1412,7 @@ class Runner:
         """
         if isinstance(loop, BaseLoop):
             return loop
-        elif not isinstance(loop, dict):
+        elif isinstance(loop, LazyCall):
             raise TypeError(
                 f'train_loop should be a Loop object or dict, but got {loop}')
 
@@ -1492,7 +1497,8 @@ class Runner:
             :obj:`LogProcessor`: Log processor object build from
             ``log_processor_cfg``.
         """
-        log_processor = log_processor.build()
+        if isinstance(log_processor, LazyCall):
+            return log_processor.build()
         return log_processor  # type: ignore
 
     def get_hooks_info(self) -> str:
@@ -1688,15 +1694,16 @@ class Runner:
             priority (int or str or :obj:`Priority`, optional): Hook priority.
                 Lower value means higher priority.
         """
-        if not isinstance(hook, (Hook, dict)):
-            raise TypeError(
-                f'hook should be an instance of Hook or dict, but got {hook}')
+        # if not isinstance(hook, (Hook, dict)):
+        #     raise TypeError(
+        #         f'hook should be an instance of Hook or dict, but got {hook}')
 
         _priority = None
         if isinstance(hook, dict):
             if 'priority' in hook:
                 _priority = hook.pop('priority')
-
+            hook_obj = HOOKS.build(hook)
+        elif isinstance(hook, LazyCall):
             hook_obj = hook.build()
         else:
             hook_obj = hook
