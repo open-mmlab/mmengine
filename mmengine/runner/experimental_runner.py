@@ -2038,7 +2038,6 @@ class Runner:
                 out_dir, filename, backend_args=backend_args)
 
         meta.update(
-            cfg=self.cfg.pretty_text,
             seed=self.seed,
             experiment_name=self.experiment_name,
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
