@@ -2,6 +2,7 @@
 import time
 
 import pytest
+from tabulate import tabulate
 
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
@@ -473,14 +474,17 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        repr_str = 'Registry(name=cat, items={'
-        repr_str += (
-            "'BritishShorthair': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.BritishShorthair'>, ")
-        repr_str += (
-            "'Munchkin': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.Munchkin'>")
-        repr_str += '})'
+        table_content = [
+            ('BritishShorthair',
+             "<class 'test_registry.TestRegistry.test_repr."
+             "<locals>.BritishShorthair'>"),
+            ('Munchkin', "<class 'test_registry.TestRegistry.test_repr."
+             "<locals>.Munchkin'>"),
+        ]
+        table = tabulate(
+            table_content, headers=['Names', 'Objects'], tablefmt='fancy_grid')
+        repr_str = 'Registry of cat:\n'
+        repr_str += table
         assert repr(CATS) == repr_str
 
 
