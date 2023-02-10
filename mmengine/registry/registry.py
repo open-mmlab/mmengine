@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from tabulate import tabulate
+
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
@@ -120,9 +122,12 @@ class Registry:
         return self.get(key) is not None
 
     def __repr__(self):
-        format_str = self.__class__.__name__ + \
-                     f'(name={self._name}, ' \
-                     f'items={self._module_dict})'
+        table_headers = ['Names', 'Objects']
+        table = tabulate(
+            self._module_dict.items(),
+            headers=table_headers,
+            tablefmt='fancy_grid')
+        format_str = f'Registry of {self._name}:\n' + table
         return format_str
 
     @staticmethod
