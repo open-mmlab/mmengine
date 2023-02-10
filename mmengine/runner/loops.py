@@ -12,6 +12,7 @@ from mmengine.registry import LOOPS
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
+from mmengine.config.auto_call_config import LazyCall
 
 
 @LOOPS.register_module()
@@ -320,7 +321,7 @@ class ValLoop(BaseLoop):
                  fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
-        if isinstance(evaluator, dict) or isinstance(evaluator, list):
+        if isinstance(evaluator, (dict, list, LazyCall)):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             assert isinstance(evaluator, Evaluator), (

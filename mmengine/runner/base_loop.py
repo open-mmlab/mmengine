@@ -4,6 +4,8 @@ from typing import Any, Dict, Union
 
 from torch.utils.data import DataLoader
 
+from mmengine.config.auto_call_config import LazyCall
+
 
 class BaseLoop(metaclass=ABCMeta):
     """Base loop class.
@@ -19,7 +21,7 @@ class BaseLoop(metaclass=ABCMeta):
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
-        if isinstance(dataloader, dict):
+        if isinstance(dataloader, (dict, LazyCall)):
             # Determine whether or not different ranks use different seed.
             diff_rank_seed = runner._randomness_cfg.get(
                 'diff_rank_seed', False)
