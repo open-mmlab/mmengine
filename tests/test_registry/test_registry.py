@@ -474,12 +474,10 @@ class TestRegistry:
         class Munchkin:
             pass
 
+        item_prefix = "<class 'test_registry.TestRegistry.test_repr.<locals>."
         table_content = [
-            ('BritishShorthair',
-             "<class 'test_registry.TestRegistry.test_repr."
-             "<locals>.BritishShorthair'>"),
-            ('Munchkin', "<class 'test_registry.TestRegistry.test_repr."
-             "<locals>.Munchkin'>"),
+            ('BritishShorthair', item_prefix + "BritishShorthair'>"),
+            ('Munchkin', item_prefix + "Munchkin'>"),
         ]
         table = tabulate(
             table_content, headers=['Names', 'Objects'], tablefmt='fancy_grid')
