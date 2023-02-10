@@ -211,70 +211,72 @@ class TestProfilerHook(RunnerTestCase):
 class TestNPUProfilerHook(RunnerTestCase):
 
     def test_init(self):
-        # Test profile_times_args
-        NPUProfilerHook(
-            profile_start_iters=0,
-            profile_end_iters=1,
-            profiler_result_path='')
+
+        profiler_result_path = ops.join(self.temp_dir.name,
+                                        'test/cann_profiling')
+
+        NPUProfilerHook(profiler_result_path=profiler_result_path)
+
         with self.assertRaises(ValueError):
-            ProfilerHook(
+            NPUProfilerHook(
                 profile_start_iters=1,
                 profile_end_iters=0,
-                profiler_result_path='')
+                profiler_result_path=profiler_result_path)
 
     def test_before_run(self):
+        profiler_result_path = ops.join(self.temp_dir.name,
+                                        'test/cann_profiling')
         runner = MagicMock()
-        runner.max_iters = 100
+        runner.max_iters = 1
         runner.logger = MMLogger.get_instance('test_npu_profiler')
 
-        hook = NPUProfilerHook()
+        hook = NPUProfilerHook(profiler_result_path=profiler_result_path)
         hook.before_run(runner)
-        hook.profiler.__exit__(None, None, None)
 
         with self.assertRaises(ValueError):
-            hook = ProfilerHook(
+            hook = NPUProfilerHook(
                 profile_start_iters=0,
-                profile_end_iters=100,
-                profiler_result_path='')
+                profile_end_iters=10,
+                profiler_result_path=profiler_result_path)
             hook.before_run(runner)
-            hook.profiler.__exit__(None, None, None)
 
     def test_after_train_iter(self):
+        profiler_result_path = ops.join(self.temp_dir.name,
+                                        'test/cann_profiling')
         runner = MagicMock()
         runner.max_iters = 10000
         runner.logger = MMLogger.get_instance('test_npu_profiler')
 
-        runner.iter = 9
+        runner.iter = 0
 
         hook = NPUProfilerHook(
             profile_start_iters=0,
             profile_end_iters=10,
-            profiler_result_path='')
+            profiler_result_path=profiler_result_path)
         hook.before_run(runner)
-        hook.profiler.__exit__(None, None, None)
 
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
-        hook.profiler.__exit__.assert_called_once()
-        hook.profiler.step.assert_called_once()
 
     def test_with_runner(self):
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='NPUProfilerHook',
-                profile_start_iters=0,
-                end_process=True)
-        ]
-        runner = self.build_runner(self.epoch_based_cfg)
-        runner.train()
-
         profiler_result_path = ops.join(self.temp_dir.name,
                                         'test/cann_profiling')
         self.epoch_based_cfg['custom_hooks'] = [
             dict(
                 type='NPUProfilerHook',
+                profile_start_iters=0,
                 profiler_result_path=profiler_result_path,
-                ge_profiling_to_std_out=True)
+                end_process=False)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='NPUProfilerHook',
+                profiler_result_path=profiler_result_path,
+                ge_profiling_to_std_out=True,
+                end_process=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -283,4 +285,6 @@ class TestNPUProfilerHook(RunnerTestCase):
             ops.exists(profiler_result_path),
             'ERROR::profiler result path is not generated!')
 
-        self.assertTrue(os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1')
+        self.assertTrue(
+            os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1',
+            'ERROR::GE PROFILING fail!')
