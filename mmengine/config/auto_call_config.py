@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import copy
 import importlib
@@ -8,24 +9,19 @@ from abc import ABCMeta
 from collections import OrderedDict
 from typing import Any, Mapping, Optional, Union
 
-from ml_collections import ConfigDict as _ConfigDict
-from ml_collections.config_dict.config_dict import (FrozenConfigDict,
-                                                    _configdict_fill_seed)
-
+from mmengine.config import ConfigDict
 from mmengine.utils import get_installed_path
 
 
 class LazyCall:
-    def __init__(
-        self,
-        name_id,
-        **kwargs
-    ) -> None:
+
+    def __init__(self, name_id, **kwargs) -> None:
         super().__setattr__('name_id', name_id)
         super().__setattr__('kwargs', kwargs)
         # self.args = args
 
     def build(self):
+
         def _build_lazy_call(kwargs):
             if isinstance(kwargs, Mapping):
                 for key, value in kwargs.items():
@@ -39,7 +35,6 @@ class LazyCall:
                 return kwargs.build()
             else:
                 return kwargs
-                
 
         kwargs = _build_lazy_call(copy.deepcopy(self.kwargs))
 
@@ -49,7 +44,6 @@ class LazyCall:
             func = getattr(module, self.name_id)
             return func(**kwargs)
         func_name_list = self.name_id.split('.')
-
 
         # Built by custom function: def xxx
         if self.name_id in self.global_dict:
@@ -81,11 +75,11 @@ class LazyCall:
             return
         self.kwargs[name] = value
         super().__setattr__(name, value)
-    
+
     def setdefault(self, name, value):
         if name not in self.kwargs:
             self.kwargs[name] = value
-    
+
     def __getattr__(self, name: str) -> Any:
         if name in self.kwargs:
             return self.kwargs[name]
@@ -104,15 +98,13 @@ class LazyCall:
         super().__setattr__('module_dict', module_dict)
 
 
-
-
 class LazyNameCall(LazyCall):
+
     def build(self):
         module = self.module_dict[self.name_id]
         module = importlib.import_module(module)
         func = getattr(module, self.name_id)
         return func
-    
 
     # def _addindent(self, s_, numSpaces):
     #     s = s_.split('\n')
@@ -136,12 +128,13 @@ class LazyNameCall(LazyCall):
     #     return ret
     # def __call__(self, *args, **kwds):
     #     return self.returned(*args, **kwds)
-        
+
 
 # from mmengine.config import ConfigDict
 
 
 class Transform(ast.NodeTransformer):
+
     def __init__(self, base_dict, module_dict, global_dict) -> None:
         self.base_dict = base_dict
         self.module_dict = module_dict
@@ -171,8 +164,7 @@ class Transform(ast.NodeTransformer):
         new_node = ast.Call(
             ast.Name(id='LazyCall', ctx=ast.Load()),
             args=node.args,
-            keywords=node.keywords
-        )
+            keywords=node.keywords)
         return super().generic_visit(new_node)
 
     def visit_ImportFrom(self, node):
@@ -181,21 +173,20 @@ class Transform(ast.NodeTransformer):
         if module in self.base_dict:
             for name in node.names:
                 if name.name == '*':
-                    self.global_dict.update(self.base_dict[module]._fields)
+                    self.global_dict.update(self.base_dict[module])
                     return None
                 self.global_dict[name.name] = self.base_dict[module][name.name]
 
         for name in node.names:
             self.module_dict[name.name] = module
         return None
-    
+
     def visit_Name(self, node: ast.Name) -> Any:
         if node.id in self.module_dict:
             new_node = ast.Call(
                 func=ast.Name(id='LazyNameCall', ctx=ast.Load()),
                 args=[ast.Constant(value=node.id, kind=None)],
-                keywords=[]
-            )
+                keywords=[])
             return new_node
         else:
             return node
@@ -204,7 +195,7 @@ class Transform(ast.NodeTransformer):
     #     for name in node.names:
     #         module_dict[name.name] = module_dict
     #     return node
-    
+
     # def visit_Assign(self, node):
     #     if (isinstance(node.targets[0], ast.Name)
     #             and node.targets[0].id == self.key):
@@ -213,35 +204,29 @@ class Transform(ast.NodeTransformer):
     #         return node
 
 
-
-
-class Config(_ConfigDict, dict):
+class Config(OrderedDict):
     base_key = '_base_'
 
-    def __init__(self, *args, module_dict=None, global_dict=None, type_safe=False, **kwargs):
-        super().__init__(*args, type_safe=type_safe, **kwargs)
-        object.__setattr__(self, 'module_dict', module_dict)
-        object.__setattr__(self, 'global_dict', global_dict)
-    
     def setdefault(self, key, default):
         if key not in self.keys():
             setattr(self, key, default)
 
     @classmethod
     def _parse(cls, filepath, module_dict):
-        with open(filepath, 'r') as f:
-            global_dict = OrderedDict({'LazyCall': LazyCall,
-                                       'LazyNameCall': LazyNameCall})
+        with open(filepath) as f:
+            global_dict = OrderedDict({
+                'LazyCall': LazyCall,
+                'LazyNameCall': LazyNameCall
+            })
             base_dict = {}
             module_dict = {}
 
             code = ast.parse(f.read())
             base_code = []
             for inst in code.body:
-                if (isinstance(inst, ast.Assign) and
-                    isinstance(inst.targets[0], ast.Name) and
-                    inst.targets[0].id == cls.base_key
-                ):
+                if (isinstance(inst, ast.Assign)
+                        and isinstance(inst.targets[0], ast.Name)
+                        and inst.targets[0].id == cls.base_key):
                     base_code.append(inst)
             variable_dict: dict = {}
             base_code = ast.Module(body=base_code, type_ignores=[])
@@ -259,7 +244,8 @@ class Config(_ConfigDict, dict):
                     # Relative import
                     module_path = base_module[level:].replace('.', '/')
                     base_dir = osp.dirname(filepath)
-                    module_path = osp.join(base_dir, '.' * level, f'{module_path}.py')
+                    module_path = osp.join(base_dir, '.' * level,
+                                           f'{module_path}.py')
                 else:
                     # Absolute import
                     module_list = base_module.split()
@@ -269,22 +255,20 @@ class Config(_ConfigDict, dict):
                         package = module_list[0]
                         root_path = get_installed_path(package)
                         module_path = osp.join(root_path, *module_list[1:])
-                base_module_dict, base_cfg = cls._parse(module_path, module_dict)
+                base_module_dict, base_cfg = cls._parse(
+                    module_path, module_dict)
                 module_dict.update(base_module_dict)
                 base_dict[base_module] = base_cfg
             # TODO only support relative import now.
             transform = Transform(
                 base_dict=base_dict,
                 module_dict=module_dict,
-                global_dict=global_dict
-            )
+                global_dict=global_dict)
             modified_code = transform.visit(code)
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
-                compile(modified_code, '', mode='exec'),
-                global_dict,
-                global_dict
-            )
+                compile(modified_code, '', mode='exec'), global_dict,
+                global_dict)
 
             ret = OrderedDict()
             for key, value in global_dict.items():
@@ -293,14 +277,14 @@ class Config(_ConfigDict, dict):
                 ret[key] = value
 
             cfg_dict = Config._to_config_dict(ret, global_dict, module_dict)
-            return module_dict, cls(cfg_dict,
-                                    module_dict=module_dict,
-                                    global_dict=global_dict)
+            return module_dict, cls(
+                cfg_dict, module_dict=module_dict, global_dict=global_dict)
 
     @classmethod
     def fromfile(cls, filepath: str):
         module_dict = OrderedDict()
-        module_dict, cfg_dict = cls._parse(filepath=filepath, module_dict=module_dict)
+        module_dict, cfg_dict = cls._parse(
+            filepath=filepath, module_dict=module_dict)
         return cfg_dict
 
     @classmethod
@@ -309,7 +293,7 @@ class Config(_ConfigDict, dict):
         result = OrderedDict()
 
         def _convert(cfg_dict):
-            if isinstance(cfg_dict, (dict, _ConfigDict)):
+            if isinstance(cfg_dict, dict):
                 for key, value in cfg_dict.items():
                     cfg_dict[key] = _convert(value)
                 return cls(cfg_dict)
@@ -328,8 +312,9 @@ class Config(_ConfigDict, dict):
         return result
 
     def build(self):
+
         def _build(cfg_dict):
-            if isinstance(cfg_dict, (dict, _ConfigDict)):
+            if isinstance(cfg_dict, dict):
                 for key, value in cfg_dict.items():
                     cfg_dict[key] = _build(value)
             if isinstance(cfg_dict, (list, tuple)):
@@ -338,8 +323,9 @@ class Config(_ConfigDict, dict):
                 cfg_dict.kwargs = _build(cfg_dict.kwargs)
                 return cfg_dict.build()
             return cfg_dict
+
         ret = copy.deepcopy(self)
-        for key in ret._fields.keys():
+        for key in ret.keys():
             ret[key] = _build(self[key])
         return ret
 
@@ -356,3 +342,10 @@ class Config(_ConfigDict, dict):
             return copy.deepcopy(self)
         return copy.copy(self)
 
+    def __getattr__(self, key):
+        if key in self.keys():
+            return self[key]
+        raise AttributeError(f'No attribute named {key}')
+
+    def __setattr__(self, key, value):
+        self[key] = value
