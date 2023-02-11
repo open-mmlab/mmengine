@@ -735,9 +735,9 @@ class MLflowVisBackend(BaseVisBackend):
         """Record the scalar data to mlflow.
 
         Args:
-              name (str): The scalar identifier.
-              value (int, float, torch.Tensor, np.ndarray): Value to save.
-              step (int): Global step value to record. Default to 0.
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Default to 0.
         """
         self._mlflow.log_metric(name, value, step)
 
