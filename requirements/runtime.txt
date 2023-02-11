@@ -4,6 +4,5 @@ numpy
 pyyaml
 regex;sys_platform=='win32'
 rich
-tabulate
 termcolor
 yapf

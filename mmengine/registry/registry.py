@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import io
 import logging
 import sys
 from collections.abc import Callable
@@ -7,7 +8,8 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from tabulate import tabulate
+from rich.console import Console
+from rich.table import Table
 
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
@@ -122,13 +124,25 @@ class Registry:
         return self.get(key) is not None
 
     def __repr__(self):
-        table_headers = ['Names', 'Objects']
-        table = tabulate(
-            self._module_dict.items(),
-            headers=table_headers,
-            tablefmt='fancy_grid')
-        format_str = f'Registry of {self._name}:\n' + table
-        return format_str
+        table = Table(title=f'Registry of {self._name}')
+        table.add_column('Names', justify='right', style='cyan')
+        table.add_column('Objects', justify='right', style='green')
+
+        # In table header, len('Names') == 5 and len('Objects') == 7
+        max_name_width = 5
+        max_obj_width = 7
+        for name, obj in self._module_dict.items():
+            max_name_width = max(max_name_width, len(name))
+            max_obj_width = max(max_obj_width, len(str(obj)))
+            table.add_row(name, str(obj))
+
+        # number 3 is for table border
+        table_width = max_name_width + max_obj_width + 3
+        with io.StringIO() as sio:
+            console = Console(file=sio, width=table_width)
+            console.print(table)
+            table_str = sio.getvalue()
+        return table_str
 
     @staticmethod
     def infer_scope() -> str:

@@ -1,8 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import io
 import time
 
 import pytest
-from tabulate import tabulate
+from rich.console import Console
 
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
@@ -474,15 +475,12 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        item_prefix = "<class 'test_registry.TestRegistry.test_repr.<locals>."
-        table_content = [
-            ('BritishShorthair', item_prefix + "BritishShorthair'>"),
-            ('Munchkin', item_prefix + "Munchkin'>"),
-        ]
-        table = tabulate(
-            table_content, headers=['Names', 'Objects'], tablefmt='fancy_grid')
-        repr_str = 'Registry of cat:\n'
-        repr_str += table
+        with io.StringIO() as sio:
+            console = Console(file=sio, width=16 + 72 + 3)
+            console.print(CATS)
+            repr_str = sio.getvalue()
+        assert repr_str[-1] == '\n'
+        repr_str = repr_str[:-1]
         assert repr(CATS) == repr_str
 
 
