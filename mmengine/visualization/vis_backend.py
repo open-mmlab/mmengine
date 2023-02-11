@@ -635,7 +635,7 @@ class MLflowVisBackend(BaseVisBackend):
     Args:
         save_dir (str): The root directory to save the files
             produced by the backend.
-        exp_name (str, optional): The experiment name. Default to 'Default'.
+        exp_name (str, optional): The experiment name. Default to None.
         run_name (str, optional): The run name. Default to None.
         tags (dict, optional): The tags to be added to the experiment.
             Default to None.
@@ -648,7 +648,7 @@ class MLflowVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
-                 exp_name: Optional[str] = 'Default',
+                 exp_name: Optional[str] = None,
                  run_name: Optional[str] = None,
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
@@ -680,6 +680,8 @@ class MLflowVisBackend(BaseVisBackend):
         else:
             self._mlflow.set_tracking_uri(
                 f'file://{os.path.abspath(self._save_dir)}')
+
+        self._exp_name = self._exp_name or 'Default'
 
         if self._mlflow.get_experiment_by_name(self._exp_name) is None:
             self._mlflow.create_experiment(self._exp_name)
