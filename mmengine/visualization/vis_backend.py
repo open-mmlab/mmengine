@@ -724,7 +724,7 @@ class MLflowVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self._mlflow.log_image(image, f'{name}.png')
+        self._mlflow.log_image(image, name)
 
     @force_init_env
     def add_scalar(self,
