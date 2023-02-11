@@ -626,7 +626,7 @@ class MLflowVisBackend(BaseVisBackend):
         >>> import numpy as np
         >>> vis_backend = MLflowVisBackend(save_dir='temp_dir')
         >>> img = np.random.randint(0, 256, size=(10, 10, 3))
-        >>> vis_backend.add_image('img', img)
+        >>> vis_backend.add_image('img.png', img)
         >>> vis_backend.add_scalar('mAP', 0.6)
         >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
