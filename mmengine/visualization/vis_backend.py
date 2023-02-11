@@ -750,11 +750,11 @@ class MLflowVisBackend(BaseVisBackend):
         """Record the scalar's data to mlflow.
 
         Args:
-                scalar_dict (dict): Key-value pair storing the tag and
-                    corresponding values.
-                step (int): Global step value to record. Default to 0.
-                file_path (str, optional): Useless parameter. Just for
-                    interface unification. Default to None.
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Default to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Default to None.
         """
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
