@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
 import logging
+from functools import partial
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mmengine.config import Config, ConfigDict
@@ -111,14 +112,26 @@ def build_from_cfg(
                 f'type must be a str or valid type, but got {type(obj_type)}')
 
         try:
-            # If `obj_cls` inherits from `ManagerMixin`, it should be
-            # instantiated by `ManagerMixin.get_instance` to ensure that it
-            # can be accessed globally.
-            if inspect.isclass(obj_cls) and \
-                    issubclass(obj_cls, ManagerMixin):  # type: ignore
-                obj = obj_cls.get_instance(**args)  # type: ignore
+            # Handle the case when `obj_cls` is a class.
+            if inspect.isclass(obj_cls):
+                # If `obj_cls` inherits from `ManagerMixin`, it should be
+                # instantiated by `ManagerMixin.get_instance` to ensure that it
+                # can be accessed globally.
+                if issubclass(obj_cls, ManagerMixin):  # type: ignore
+                    obj = obj_cls.get_instance(**args)  # type: ignore
+                else:
+                    obj = obj_cls(**args)  # type: ignore
+            # Handle the case when `obj_cls` is a function.
+            elif inspect.isfunction(obj_cls):
+                # If `args` is not empty, `functiontools.partial` will be used
+                # to attach arguments to function.
+                if args:
+                    obj = partial(obj_cls, **args)  # type: ignore
+                else:
+                    obj = obj_cls
             else:
-                obj = obj_cls(**args)  # type: ignore
+                raise TypeError('Require a `class` or `function` to build, '
+                                f'but got a {type(obj_cls)} object')
 
             print_log(
                 f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
