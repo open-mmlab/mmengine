@@ -126,6 +126,21 @@ def test_build_from_cfg(cfg_type):
     build_from_cfg(cfg, VISUALIZER)
     Visualizer.get_current_instance()
 
+    # test construct function
+    FUNCTION = Registry('function')
+
+    @FUNCTION.register_module()
+    def add(a, b):
+        return a + b
+
+    cfg = dict(type='add')
+    func = build_from_cfg(cfg, FUNCTION)
+    assert func(1, 3) == 4
+
+    cfg = dict(type='add', b=6)
+    func = build_from_cfg(cfg, FUNCTION)
+    assert func(1) == 7
+
 
 @pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 def test_build_model_from_cfg():
