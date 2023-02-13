@@ -274,7 +274,7 @@ class CosineRestartMomentum(MomentumSchedulerMixin,
             Defaults to None.
         eta_min_ratio (float, optional): The ratio of minimum parameter value
             to the base parameter value. Either `min_lr` or `min_lr_ratio`
-            should be specified. Default: None.
+            should be specified. Defaults to None.
         begin (int): Step at which to start updating the parameters.
             Defaults to 0.
         end (int): Step at which to stop updating the parameters.

@@ -43,9 +43,9 @@ class FileClient:
 
     Args:
         backend (str, optional): The storage backend type. Options are "disk",
-            "memcached", "lmdb", "http" and "petrel". Default: None.
+            "memcached", "lmdb", "http" and "petrel". Defaults to None.
         prefix (str, optional): The prefix of the registered storage backend.
-            Options are "s3", "http", "https". Default: None.
+            Options are "s3", "http", "https". Defaults to None.
 
     Examples:
         >>> # only set backend
@@ -163,9 +163,9 @@ class FileClient:
 
         Args:
             file_client_args (dict, optional): Arguments to instantiate a
-                FileClient. Default: None.
+                FileClient. Defaults to None.
             uri (str | Path, optional): Uri to be parsed that contains the file
-                prefix. Default: None.
+                prefix. Defaults to None.
 
         Examples:
             >>> uri = 's3://path/of/your/file'
@@ -263,7 +263,7 @@ class FileClient:
             force (bool, optional): Whether to override the backend if the name
                 has already been registered. Defaults to False.
             prefixes (str or list[str] or tuple[str], optional): The prefixes
-                of the registered storage backend. Default: None.
+                of the registered storage backend. Defaults to None.
                 `New in version 1.3.15.`
         """
         if backend is not None:
@@ -302,7 +302,7 @@ class FileClient:
         Args:
             filepath (str or Path): Path to read data.
             encoding (str): The encoding format used to open the ``filepath``.
-                Default: 'utf-8'.
+                Defaults to 'utf-8'.
 
         Returns:
             str: Expected text reading from ``filepath``.
@@ -333,7 +333,7 @@ class FileClient:
             obj (str): Data to be written.
             filepath (str or Path): Path to write data.
             encoding (str, optional): The encoding format used to open the
-                `filepath`. Default: 'utf-8'.
+                `filepath`. Defaults to 'utf-8'.
         """
         self.client.put_text(obj, filepath)
 
@@ -442,12 +442,12 @@ class FileClient:
 
         Args:
             dir_path (str | Path): Path of the directory.
-            list_dir (bool): List the directories. Default: True.
-            list_file (bool): List the path of files. Default: True.
+            list_dir (bool): List the directories. Defaults to True.
+            list_file (bool): List the path of files. Defaults to True.
             suffix (str or tuple[str], optional):  File suffix
-                that we are interested in. Default: None.
+                that we are interested in. Defaults to None.
             recursive (bool): If set to True, recursively scan the
-                directory. Default: False.
+                directory. Defaults to False.
 
         Yields:
             Iterable[str]: A relative path to ``dir_path``.

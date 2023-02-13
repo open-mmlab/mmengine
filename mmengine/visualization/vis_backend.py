@@ -117,8 +117,8 @@ class BaseVisBackend(metaclass=ABCMeta):
         Args:
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
-                should be RGB. Default to None.
-            step (int): Global step value to record. Default to 0.
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
         """
         pass
 
@@ -132,7 +132,7 @@ class BaseVisBackend(metaclass=ABCMeta):
         Args:
             name (str): The scalar identifier.
             value (int, float): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         pass
 
@@ -146,11 +146,11 @@ class BaseVisBackend(metaclass=ABCMeta):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the `file_path` file at the same time
                 if the `file_path` parameter is specified.
-                Default to None.
+                Defaults to None.
         """
         pass
 
@@ -183,11 +183,11 @@ class LocalVisBackend(BaseVisBackend):
             produced by the visualizer. If it is none, it means no data
             is stored.
         img_save_dir (str): The directory to save images.
-            Default to 'vis_image'.
+            Defaults to 'vis_image'.
         config_save_file (str): The file name to save config.
-            Default to 'config.py'.
+            Defaults to 'config.py'.
         scalar_save_file (str):  The file name to save scalar values.
-            Default to 'scalars.json'.
+            Defaults to 'scalars.json'.
     """
 
     def __init__(self,
@@ -244,8 +244,8 @@ class LocalVisBackend(BaseVisBackend):
         Args:
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
-                should be RGB. Default to None.
-            step (int): Global step value to record. Default to 0.
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
         """
         assert image.dtype == np.uint8
         drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -264,7 +264,7 @@ class LocalVisBackend(BaseVisBackend):
         Args:
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         if isinstance(value, torch.Tensor):
             value = value.item()
@@ -285,11 +285,11 @@ class LocalVisBackend(BaseVisBackend):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values. The value must be dumped
                 into json format.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the ``file_path`` file at the same time
                 if the ``file_path`` parameter is specified.
-                Default to None.
+                Defaults to None.
         """
         assert isinstance(scalar_dict, dict)
         scalar_dict = copy.deepcopy(scalar_dict)
@@ -339,7 +339,9 @@ class WandbVisBackend(BaseVisBackend):
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer.
         init_kwargs (dict, optional): wandb initialization
-            input parameters. Default to None.
+            input parameters.
+            See `wandb.init <https://docs.wandb.ai/ref/python/init>`_ for
+            details. Defaults to None.
         define_metric_cfg (dict, optional):
             A dict of metrics and summary for wandb.define_metric.
             The key is metric and the value is summary.
@@ -349,10 +351,10 @@ class WandbVisBackend(BaseVisBackend):
             run#define_metric>`_ for details.
             Default: None
         commit: (bool, optional) Save the metrics dict to the wandb server
-                and increment the step.  If false `wandb.log` just
-                updates the current metrics dict with the row argument
-                and metrics won't be saved until `wandb.log` is called
-                with `commit=True`. Default to True.
+            and increment the step.  If false `wandb.log` just updates the
+            current metrics dict with the row argument and metrics won't be
+            saved until `wandb.log` is called with `commit=True`.
+            Defaults to True.
         log_code_name: (str, optional) The name of code artifact.
             By default, the artifact will be named
             source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
@@ -442,7 +444,7 @@ class WandbVisBackend(BaseVisBackend):
             image (np.ndarray): The image to be saved. The format
                 should be RGB.
             step (int): Useless parameter. Wandb does not
-                need this parameter. Default to 0.
+                need this parameter. Defaults to 0.
         """
         image = self._wandb.Image(image)
         self._wandb.log({name: image}, commit=self._commit)
@@ -459,7 +461,7 @@ class WandbVisBackend(BaseVisBackend):
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Useless parameter. Wandb does not
-                need this parameter. Default to 0.
+                need this parameter. Defaults to 0.
         """
         self._wandb.log({name: value}, commit=self._commit)
 
@@ -475,9 +477,9 @@ class WandbVisBackend(BaseVisBackend):
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
             step (int): Useless parameter. Wandb does not
-                need this parameter. Default to 0.
+                need this parameter. Defaults to 0.
             file_path (str, optional): Useless parameter. Just for
-                interface unification. Default to None.
+                interface unification. Defaults to None.
         """
         self._wandb.log(scalar_dict, commit=self._commit)
 
@@ -560,7 +562,7 @@ class TensorboardVisBackend(BaseVisBackend):
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
                 should be RGB.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         self._tensorboard.add_image(name, image, step, dataformats='HWC')
 
@@ -575,14 +577,14 @@ class TensorboardVisBackend(BaseVisBackend):
         Args:
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         if isinstance(value,
                       (int, float, torch.Tensor, np.ndarray, np.number)):
             self._tensorboard.add_scalar(name, value, step)
         else:
             warnings.warn(f'Got {type(value)}, but numpy array, torch tensor, '
-                          f'int or float are expected. skip it！')
+                          f'int or float are expected. skip it!')
 
     @force_init_env
     def add_scalars(self,
@@ -595,9 +597,9 @@ class TensorboardVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): Useless parameter. Just for
-                interface unification. Default to None.
+                interface unification. Defaults to None.
         """
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \

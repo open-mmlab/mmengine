@@ -924,20 +924,20 @@ class OneCycleParamScheduler(_ParamScheduler):
             for each parameter group.
         total_steps (int): The total number of steps in the cycle. Note that
             if a value is not provided here, then it will be equal to
-            ``end - begin``. Default to None
+            ``end - begin``. Defaults to None
         pct_start (float): The percentage of the cycle (in number of steps)
             spent increasing the learning rate.
-            Default to 0.3
+            Defaults to 0.3
         anneal_strategy (str): {'cos', 'linear'}
             Specifies the annealing strategy: "cos" for cosine annealing,
             "linear" for linear annealing.
-            Default to 'cos'
+            Defaults to 'cos'
         div_factor (float): Determines the initial learning rate via
             initial_param = eta_max/div_factor
-            Default to 25
+            Defaults to 25
         final_div_factor (float): Determines the minimum learning rate via
             eta_min = initial_param/final_div_factor
-            Default to 1e4
+            Defaults to 1e4
         three_phase (bool): If ``True``, use a third phase of the schedule to
             annihilate the learning rate according to 'final_div_factor'
             instead of modifying the second phase (the first two phases will be
