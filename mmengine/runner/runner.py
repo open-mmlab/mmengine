@@ -2027,7 +2027,7 @@ class Runner:
                 the model and checkpoint.
             revise_keys (list): A list of customized keywords to modify the
                 state_dict in checkpoint. Each item is a (pattern, replacement)
-                pair of the regular expression operations. Default: strip
+                pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
         checkpoint = _load_checkpoint(filename, map_location=map_location)

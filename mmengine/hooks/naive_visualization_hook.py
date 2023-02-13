@@ -20,9 +20,9 @@ class NaiveVisualizationHook(Hook):
 
     Args:
         interval (int): Visualization interval. Defaults to 1.
-        draw_gt (bool): Whether to draw the ground truth. Default to True.
+        draw_gt (bool): Whether to draw the ground truth. Defaults to True.
         draw_pred (bool): Whether to draw the predicted result.
-            Default to True.
+            Defaults to True.
     """
     priority = 'NORMAL'
 

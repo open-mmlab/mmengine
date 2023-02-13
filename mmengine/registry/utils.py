@@ -17,7 +17,7 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
 
     Args:
         registry (Registry): a registry node in the registry tree.
-        verbose (bool): Whether to print log. Default: True
+        verbose (bool): Whether to print log. Defaults to True
 
     Returns:
         list: Statistic results of all modules in each node of the registry
