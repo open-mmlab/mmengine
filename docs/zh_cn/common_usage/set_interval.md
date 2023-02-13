@@ -46,6 +46,8 @@ runner.train()
 
 ## 设置保存权重的间隔
 
+设置 `CheckpointHook` 的 `interval` 值即可定制保存权重的间隔。
+
 - EpochBased
 
 在 `EpochBased` 模式下，`interval` 的默认值为 1，表示训练一个 Epoch，保存一次权重。
