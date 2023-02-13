@@ -1,6 +1,6 @@
 # 从 EpochBased 切换至 IterBased
 
-MMEngine 很多模块的默认配置都会按照 Epoch 训练模型，例如 ParamScheduler, LoggerHook, CheckPointHook 等，因此按照 epoch 训练时，不需要为这些模块设置 `by_epoch` 参数：
+MMEngine 很多模块默认按照 Epoch 训练模型，例如 ParamScheduler, LoggerHook, CheckPointHook 等，常见的 EpochBasedTraining 配置写法如下：
 
 ```python
 param_scheduler = dict(
@@ -31,9 +31,9 @@ runner = Runner(
 )
 ```
 
-如果需要按照 iter 训练模型，则需要做以下改动：
+如果想按照 iter 训练模型，需要做以下改动：
 
-1. 将 `train_cfg` 中的 `by_epoch` 设置为 `False`，同时设置 `max_iters` 为训练的总 iter 数量，val_iterval 为验证的间隔 iter 数量。
+1. 将 `train_cfg` 中的 `by_epoch` 设置为 `False`，同时将 `max_iters` 设置为训练的总 iter 数，`val_iterval` 设置为验证间隔的 iter 数。
 
    ```python
    train_cfg = dict(
