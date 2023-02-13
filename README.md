@@ -36,7 +36,6 @@ English | [简体中文](README_zh-CN.md)
 
 </div>
 
-<br>
 <div align="center">
   <a href="https://openmmlab.medium.com/" style="text-decoration:none;">
     <img src="https://user-images.githubusercontent.com/25839884/218347043-00d5c608-22b3-4e59-a87d-5b603377718e.png" width="3%" alt="" /></a>
