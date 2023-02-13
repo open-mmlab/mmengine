@@ -7,7 +7,7 @@ from .iter_timer_hook import IterTimerHook
 from .logger_hook import LoggerHook
 from .naive_visualization_hook import NaiveVisualizationHook
 from .param_scheduler_hook import ParamSchedulerHook
-from .profiler_hook import ProfilerHook
+from .profiler_hook import NPUProfilerHook, ProfilerHook
 from .runtime_info_hook import RuntimeInfoHook
 from .sampler_seed_hook import DistSamplerSeedHook
 from .sync_buffer_hook import SyncBuffersHook
@@ -17,5 +17,5 @@ __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
     'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'ProfilerHook',
-    'PrepareTTAHook'
+    'NPUProfilerHook', 'PrepareTTAHook'
 ]
