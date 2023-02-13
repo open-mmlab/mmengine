@@ -6,7 +6,7 @@ MMEngine 支持两种训练模式，基于轮次的 `EpochBased` 方式和基于
 
 ## 设置训练和验证的间隔
 
-设置 `Runner` 初始化参数 `train_cfg` 中的 `val_interval` 值即可定制训练和验证的间隔。
+设置 [Runner](mmengine.runner.Runner) 初始化参数 `train_cfg` 中的 `val_interval` 值即可定制训练和验证的间隔。
 
 - EpochBased
 
@@ -46,7 +46,7 @@ runner.train()
 
 ## 设置保存权重的间隔
 
-设置 `CheckpointHook` 的 `interval` 值即可定制保存权重的间隔。
+设置 [CheckpointHook](mmengine.hooks.CheckpointHook) 的 `interval` 值即可定制保存权重的间隔。
 
 - EpochBased
 
@@ -94,7 +94,7 @@ runner.train()
 
 ## 设置打印日志的间隔
 
-默认情况下，每迭代 10 次往终端打印 1 次日志，可以通过设置 `LoggerHook` 的 `interval` 参数进行设置。
+默认情况下，每迭代 10 次往终端打印 1 次日志，可以通过设置 [LoggerHook](mmengine.hooks.LoggerHook) 的 `interval` 参数进行设置。
 
 ```python
 # 设置每 20 次打印一次
