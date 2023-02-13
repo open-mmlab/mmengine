@@ -1,4 +1,4 @@
-# 设置间隔
+# 设置日志、权重保存、验证的频率
 
 MMEngine 支持两种训练模式，基于轮次的 `EpochBased` 方式和基于迭代次数的 `IterBased` 方式，这两种方式在下游算法库均有使用，例如 [MMDetection](https://github.com/open-mmlab/mmdetection) 默认使用 EpochBased 方式，[MMSegmentation](https://github.com/open-mmlab/mmsegmentation) 默认使用 IterBased 方式。
 
