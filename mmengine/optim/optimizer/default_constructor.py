@@ -51,7 +51,7 @@ class DefaultOptimWrapperConstructor:
       rate for parameters of offset layer in the deformable convs
       of a model.
     - ``bypass_duplicate`` (bool): If true, the duplicate parameters
-      would not be added into optimizer. Default: False.
+      would not be added into optimizer. Defaults to False.
 
     Note:
 

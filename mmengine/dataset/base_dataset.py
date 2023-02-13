@@ -290,7 +290,7 @@ class BaseDataset(Dataset):
               filter_cfg.
             - slice_data: Slice dataset according to ``self._indices``
             - serialize_data: Serialize ``self.data_list`` if
-            ``self.serialize_data`` is True.
+              ``self.serialize_data`` is True.
         """
         if self._fully_initialized:
             return
@@ -548,7 +548,7 @@ class BaseDataset(Dataset):
 
     @force_full_init
     def get_subset_(self, indices: Union[Sequence[int], int]) -> None:
-        """The in-place version of  ``get_subset `` to convert dataset to a
+        """The in-place version of ``get_subset`` to convert dataset to a
         subset of original dataset.
 
         This method will convert the original dataset to a subset of dataset.

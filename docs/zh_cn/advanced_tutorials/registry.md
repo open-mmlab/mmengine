@@ -81,7 +81,7 @@ print(ACTIVATION.module_dict)
 
 2. 手动导入文件。常用于用户在算法库之内或之外实现新的模块。
 
-3. 在配置中使用 ``custom_imports`` 字段。 详情请参考[导入自定义Python模块](config.md#import-the-custom-module)。
+3. 在配置中使用 ``custom_imports`` 字段。 详情请参考[导入自定义Python模块](config.md#导入自定义-python-模块)。
 ```
 
 模块成功注册后，我们可以通过配置文件使用这个激活模块。

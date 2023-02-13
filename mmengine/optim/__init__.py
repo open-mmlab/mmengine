@@ -2,7 +2,8 @@
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimWrapper, ApexOptimWrapper,
                         DefaultOptimWrapperConstructor, OptimWrapper,
-                        OptimWrapperDict, build_optim_wrapper)
+                        OptimWrapperDict, ZeroRedundancyOptimizer,
+                        build_optim_wrapper)
 # yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
@@ -29,5 +30,6 @@ __all__ = [
     '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'ApexOptimWrapper',
     'OptimWrapperDict', 'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR',
     'PolyMomentum', 'PolyParamScheduler', 'ReduceOnPlateauLR',
-    'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler'
+    'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler',
+    'ZeroRedundancyOptimizer'
 ]

@@ -594,7 +594,7 @@ class Registry:
             name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
             force (bool): Whether to override an existing class with the same
-                name. Default to False.
+                name. Defaults to False.
             module (type, optional): Module class or function to be registered.
                 Defaults to None.
 

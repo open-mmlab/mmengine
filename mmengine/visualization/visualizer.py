@@ -71,7 +71,7 @@ class Visualizer(ManagerMixin):
         image (np.ndarray, optional): the origin image to draw. The format
             should be RGB. Defaults to None.
         vis_backends (list, optional): Visual backend config list.
-            Default to None.
+            Defaults to None.
         save_dir (str, optional): Save file dir for all storage backends.
             If it is None, the backend storage will not save any data.
         fig_save_cfg (dict): Keyword parameters of figure for saving.
@@ -454,20 +454,19 @@ class Visualizer(ManagerMixin):
                 the texts will have the same bbox. Reference to
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
-            font_properties (Union[FontProperties, List[FontProperties]],
-                optional): The font properties of texts. FontProperties is
-                a `font_manager.FontProperties()` object.
+            font_properties (Union[FontProperties, List[FontProperties]], optional):
+                The font properties of texts. FontProperties is
+                a ``font_manager.FontProperties()`` object.
                 If you want to draw Chinese texts, you need to prepare
                 a font file that can show Chinese characters properly.
-                For example: `simhei.ttf`,`simsun.ttc`,`simkai.ttf` and so on.
-                Then set font_properties=matplotlib.font_manager.FontProperties
-                        (fname='path/to/font_file')
+                For example: `simhei.ttf`, `simsun.ttc`, `simkai.ttf` and so on.
+                Then set ``font_properties=matplotlib.font_manager.FontProperties(fname='path/to/font_file')``
                 ``font_properties`` can have the same length with texts or
                 just single value. If ``font_properties`` is single value,
                 all the texts will have the same font properties.
                 Defaults to None.
                 `New in version 0.6.0.`
-        """
+        """  # noqa: E501
         from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
@@ -637,7 +636,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
@@ -915,7 +914,7 @@ class Visualizer(ManagerMixin):
           it will compress featmap to single channel image and weighted
           sum to `overlaid_image`.
 
-        -  if `channel_reduction` is None
+        - If `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
             channel and treated as image and will be weighted sum
@@ -928,7 +927,7 @@ class Visualizer(ManagerMixin):
             featmap (torch.Tensor): The featmap to draw which format is
                 (C, H, W).
             overlaid_image (np.ndarray, optional): The overlaid image.
-                Default to None.
+                Defaults to None.
             channel_reduction (str, optional): Reduce multiple channels to a
                 single channel. The optional value is 'squeeze_mean'
                 or 'select_max'. Defaults to 'squeeze_mean'.
@@ -939,7 +938,7 @@ class Visualizer(ManagerMixin):
             arrangement (Tuple[int, int]): The arrangement of featmap when
                 channel_reduction is not None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
-                Default to None.
+                Defaults to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
                 Defaults to 0.5.
 
@@ -1065,8 +1064,8 @@ class Visualizer(ManagerMixin):
         Args:
             name (str): The image identifier.
             image (np.ndarray, optional): The image to be saved. The format
-                should be RGB. Default to None.
-            step (int): Global step value to record. Default to 0.
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_image(name, image, step)  # type: ignore
@@ -1082,7 +1081,7 @@ class Visualizer(ManagerMixin):
         Args:
             name (str): The scalar identifier.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
@@ -1098,11 +1097,11 @@ class Visualizer(ManagerMixin):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the `file_path` file at the same time
                 if the `file_path` parameter is specified.
-                Default to None.
+                Defaults to None.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalars(scalar_dict, step, file_path, **kwargs)

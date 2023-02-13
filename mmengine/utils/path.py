@@ -42,11 +42,11 @@ def scandir(dir_path, suffix=None, recursive=False, case_sensitive=True):
     Args:
         dir_path (str | :obj:`Path`): Path of the directory.
         suffix (str | tuple(str), optional): File suffix that we are
-            interested in. Default: None.
+            interested in. Defaults to None.
         recursive (bool, optional): If set to True, recursively scan the
-            directory. Default: False.
+            directory. Defaults to False.
         case_sensitive (bool, optional) : If set to False, ignore the case of
-            suffix. Default: True.
+            suffix. Defaults to True.
 
     Returns:
         A generator for all the interested files with relative paths.

@@ -16,7 +16,7 @@
 
 ### 构建数据集
 
-接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 [BaseDataset](mmengine.dataset.BaseDataset), 并且重载数据集基类的 `load_data_list` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
+接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 [BaseDataset](mmengine.dataset.BaseDataset), 并且重载数据集基类的 `load_data_list` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../advanced_tutorials/basedataset.md)。
 
 ```python
 import numpy as np
@@ -261,7 +261,7 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 ## 构建优化器
 
 MMEngine 使用 [OptimWrapper](mmengine.optim.OptimWrapper) 来封装优化器，对于多个优化器的情况，使用 [OptimWrapperDict](mmengine.optim.OptimWrapperDict) 对 OptimWrapper 再进行一次封装。
-关于优化器的更多信息，请参考[优化器教程](../tutorials/optimizer.md).
+关于优化器的更多信息，请参考[优化器教程](../tutorials/optim_wrapper.md).
 
 ```python
 from mmengine.optim import OptimWrapper, OptimWrapperDict

@@ -100,18 +100,20 @@ cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
 ```python
 image1  = dict(
     inputs=[data_1_1, data_1_2],
-    data_sample=[data_sample1_1, data_sample1_2])
-）
+    data_sample=[data_sample1_1, data_sample1_2]
+)
 
 image2  = dict(
     inputs=[data_2_1, data_2_2],
-    data_sample=[data_sample2_1, data_sample2_2])
-）
+    data_sample=[data_sample2_1, data_sample2_2]
+)
+
 
 image3  = dict(
     inputs=[data_3_1, data_3_2],
-    data_sample=[data_sample3_1, data_sample3_2])
-）
+    data_sample=[data_sample3_1, data_sample3_2]
+)
+
 ```
 
 其中 `data_{i}_{j}` 为增强后的数据，`data_sample_{i}_{j}` 为增强后数据的标签信息。

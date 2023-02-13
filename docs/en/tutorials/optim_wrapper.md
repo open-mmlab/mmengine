@@ -426,7 +426,7 @@ Each field in `custom_keys` is defined as follows.
 
 ### Customize optimizer construction policies
 
-Like other modules in MMEngine, the optimizer wrapper constructor is also managed by the [registry](../advanced_tutorial/registry.md). We can customize the hyperparameter policies by implementing custom optimizer wrapper constructors.
+Like other modules in MMEngine, the optimizer wrapper constructor is also managed by the [registry](../advanced_tutorials/registry.md). We can customize the hyperparameter policies by implementing custom optimizer wrapper constructors.
 
 For example, we can implement an optimizer wrapper constructor called `LayerDecayOptimWrapperConstructor` that automatically set decreasing learning rates for layers of different depths of the model.
 
