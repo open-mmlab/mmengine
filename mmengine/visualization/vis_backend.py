@@ -679,7 +679,7 @@ class MLflowVisBackend(BaseVisBackend):
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
             self._mlflow.set_tracking_uri(
-                f'file://{os.path.abspath(self._save_dir)}')
+                f'file:\\{os.path.abspath(self._save_dir)}')
 
         self._exp_name = self._exp_name or 'Default'
 
