@@ -1,6 +1,18 @@
 # Model Complexity Analysis
 
-We provide a tool to help the complexity analysis for the network. Currently, it's inspired from implementation of [fvcore](https://github.com/facebookresearch/fvcore). It provides the interfaces to compute "parameter", "activation" and "flops" of the given model, and supports print the related information layer-by-layer in terms of network structure or table.
+We provide a tool to help the complexity analysis for the network. We borrow the idea from the implementation of [fvcore](https://github.com/facebookresearch/fvcore) to build this tool, and plan to support more custom operators in the future.  Currently, it provides the interfaces to compute "parameter", "activation" and "flops" of the given model, and supports print the related information layer-by-layer in terms of network structure or table. The analysis tool provides both operator-level and module-level flop counts simultaneously. Please refer to [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md) for implementation details of how to accurately measure the flops of one operator if interested.
+
+## What's FLOPs
+
+Flop is not a well-defined metric in complexity analysis, we follow [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis) to use one fused multiple-add as one flop.
+
+## What's Activation
+
+Activation is used to measure the feature quantity produced from one layer.
+
+For example, given the inputs with shape `inputs = torch.randn((1, 3, 10, 10))`, and one linear layer with `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=1)`.
+
+We get the `output` with shape `(1, 10, 10, 10)` after feed the `inputs` into `conv`. The activation quantity of `output` of this `conv` layer is `1000=10*10*10`
 
 ## Usage
 

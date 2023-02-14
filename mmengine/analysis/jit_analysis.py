@@ -290,8 +290,8 @@ class JitModelAnalysis:
 
         Returns:
             dict(str, Counter(str)):
-                The statistics for each submodule and each operator.
-                Grouped by submodule names, then by operator name.
+            The statistics for each submodule and each operator.
+            Grouped by submodule names, then by operator name.
         """
         stats = self._analyze()
         return stats.counts
@@ -341,7 +341,7 @@ class JitModelAnalysis:
 
         Returns:
             set(str) : The set of submodule names that were never called
-                during the trace of the model.
+            during the trace of the model.
         """
         stats = self._analyze()
         return stats.uncalled_mods

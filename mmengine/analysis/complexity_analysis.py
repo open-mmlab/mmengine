@@ -216,8 +216,8 @@ def flop_count(
 
     Returns:
         tuple[defaultdict, Counter]: A dictionary that records the number of
-            gflops for each operation and a Counter that records the number of
-            unsupported operations.
+        gflops for each operation and a Counter that records the number of
+        unsupported operations.
     """
     if supported_ops is None:
         supported_ops = {}
@@ -250,8 +250,8 @@ def activation_count(
 
     Returns:
         tuple[defaultdict, Counter]: A dictionary that records the number of
-            activation (mega) for each operation and a Counter that records the
-            number of unsupported operations.
+        activation (mega) for each operation and a Counter that records the
+        number of unsupported operations.
     """
     if supported_ops is None:
         supported_ops = {}
@@ -274,9 +274,9 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
 
     Returns:
         dict (str-> int): the key is either a parameter name or a module name.
-            The value is the number of elements in the parameter, or in all
-            parameters of the module. The key "" corresponds to the total
-            number of parameters of the model.
+        The value is the number of elements in the parameter, or in all
+        parameters of the module. The key "" corresponds to the total
+        number of parameters of the model.
     """
     r = defaultdict(int)  # type: typing.DefaultDict[str, int]
     for name, prm in model.named_parameters():

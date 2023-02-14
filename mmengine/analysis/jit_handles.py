@@ -49,7 +49,7 @@ Returns:
 
 
 def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
-    """This method return a handle that counts the number of activation from
+    """This method returns a handle that counts the number of activation from
     the output shape for the specified operation.
 
     Args:

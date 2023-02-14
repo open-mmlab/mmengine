@@ -149,7 +149,7 @@ def _remove_zero_statistics(
 
     Returns:
         dict(str, dict(str, int)) : the input statistics dictionary,
-            with submodules removed if they have zero for all statistics.
+        with submodules removed if they have zero for all statistics.
     """
     out_stats: Dict[str, Dict[str, int]] = {}
     _force_keep: Set[str] = force_keep if force_keep else set() | {''}
@@ -192,7 +192,7 @@ def _fill_missing_statistics(
 
     Returns:
         dict(str, dict(str, int)) : the input statistics with missing
-            values filled with zero.
+        values filled with zero.
     """
     out_stats = {name: stat.copy() for name, stat in statistics.items()}
     for mod_name, _ in model.named_modules():
@@ -218,7 +218,7 @@ def _model_stats_str(model: nn.Module,
 
     Returns:
         str : the string representation of the model with the statistics
-            inserted.
+        inserted.
     """
 
     # Copied from nn.Module._addindent
@@ -490,9 +490,8 @@ def complexity_stats_str(
             also be calculated and included in the representation.
 
     Returns:
-        str:
-            a string representation of the model with the number of
-            parameters and flops included.
+        str: a string representation of the model with the number of
+        parameters and flops included.
     """
     # cast to dict since pyre doesn't like the implicit defaultdict->dict
     model = flops._model
