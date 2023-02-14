@@ -1,11 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
+import io
 import logging
 import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
+
+from rich.console import Console
+from rich.table import Table
 
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
@@ -120,10 +124,18 @@ class Registry:
         return self.get(key) is not None
 
     def __repr__(self):
-        format_str = self.__class__.__name__ + \
-                     f'(name={self._name}, ' \
-                     f'items={self._module_dict})'
-        return format_str
+        table = Table(title=f'Registry of {self._name}')
+        table.add_column('Names', justify='left', style='cyan')
+        table.add_column('Objects', justify='left', style='green')
+
+        for name, obj in sorted(self._module_dict.items()):
+            table.add_row(name, str(obj))
+
+        with io.StringIO() as sio:
+            console = Console(file=sio)
+            console.print(table, end='')
+            table_str = sio.getvalue()
+        return table_str
 
     @staticmethod
     def infer_scope() -> str:

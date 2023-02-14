@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import io
 import time
 
 import pytest
+from rich.console import Console
 
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
@@ -473,14 +475,11 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        repr_str = 'Registry(name=cat, items={'
-        repr_str += (
-            "'BritishShorthair': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.BritishShorthair'>, ")
-        repr_str += (
-            "'Munchkin': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.Munchkin'>")
-        repr_str += '})'
+        with io.StringIO() as sio:
+            console = Console(file=sio)
+            console.print(CATS, end='')
+            repr_str = sio.getvalue()
+
         assert repr(CATS) == repr_str
 
 
