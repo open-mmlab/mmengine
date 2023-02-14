@@ -4,7 +4,7 @@
 
 TTA 的核心实现通常分为两个部分：
 
-1. 测试时的数据增强：测试时数据增强主要在 MMCV 中实现，可以参考 [TestTimeAug 的 API 文档](mmcv.transform.TestTimeAug)，本文档不再赘述。
+1. 测试时的数据增强：测试时数据增强主要在 MMCV 中实现，可以参考 [TestTimeAug 的 API 文档](mmcv.transforms.TestTimeAug)，本文档不再赘述。
 2. 模型推理以及结果融合：`BaseTTAModel` 的主要功能就是实现这一部分，`BaseTTAModel.test_step` 会解析测试时增强后的数据并进行推理。用户继承 `BaseTTAModel` 后只需实现相应的融合策略即可。
 
 ## 快速上手
