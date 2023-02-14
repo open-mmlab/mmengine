@@ -125,22 +125,15 @@ class Registry:
 
     def __repr__(self):
         table = Table(title=f'Registry of {self._name}')
-        table.add_column('Names', justify='right', style='cyan')
-        table.add_column('Objects', justify='right', style='green')
+        table.add_column('Names', justify='left', style='cyan')
+        table.add_column('Objects', justify='left', style='green')
 
-        # In table header, len('Names') == 5 and len('Objects') == 7
-        max_name_width = 5
-        max_obj_width = 7
         for name, obj in self._module_dict.items():
-            max_name_width = max(max_name_width, len(name))
-            max_obj_width = max(max_obj_width, len(str(obj)))
             table.add_row(name, str(obj))
 
-        # number 3 is for table border
-        table_width = max_name_width + max_obj_width + 3
         with io.StringIO() as sio:
-            console = Console(file=sio, width=table_width)
-            console.print(table)
+            console = Console(file=sio)
+            console.print(table, end='')
             table_str = sio.getvalue()
         return table_str
 

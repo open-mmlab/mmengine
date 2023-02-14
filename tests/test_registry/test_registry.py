@@ -476,11 +476,10 @@ class TestRegistry:
             pass
 
         with io.StringIO() as sio:
-            console = Console(file=sio, width=16 + 72 + 3)
-            console.print(CATS)
+            console = Console(file=sio)
+            console.print(CATS, end='')
             repr_str = sio.getvalue()
-        assert repr_str[-1] == '\n'
-        repr_str = repr_str[:-1]
+
         assert repr(CATS) == repr_str
 
 
