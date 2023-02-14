@@ -726,7 +726,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Tracer warnings
         analyzer.tracer_warnings(mode='all')
         analyzer._stats = None  # Manually clear cache so trace is rerun
-        self.assertWarns(torch.jit._trace.TracerWarning, analyzer.total)
+        self.assertWarns(torch.jit.TracerWarning, analyzer.total)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
 
@@ -737,8 +737,7 @@ class TestJitModelAnalysis(unittest.TestCase):
             _ = analyzer.total()
             if w:
                 warning_types = [s.category for s in w]
-                self.assertFalse(
-                    torch.jit._trace.TracerWarning in warning_types)
+                self.assertFalse(torch.jit.TracerWarning in warning_types)
                 self.assertFalse(RuntimeWarning in warning_types)
 
         analyzer.tracer_warnings(mode='no_tracer_warning')
@@ -750,8 +749,7 @@ class TestJitModelAnalysis(unittest.TestCase):
             _ = analyzer.total()
             if w:
                 warning_types = [s.category for s in w]
-                self.assertFalse(
-                    torch.jit._trace.TracerWarning in warning_types)
+                self.assertFalse(torch.jit.TracerWarning in warning_types)
 
         # Unsupported ops and uncalled modules warnings
 
