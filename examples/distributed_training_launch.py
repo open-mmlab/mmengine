@@ -54,6 +54,24 @@ def parse_args():
         type=int,
         help='number of gpus to use',
         default=[2])
+    parser.add_argument(
+        '--num-machine', type=int, help='number of machines to use', default=1)
+    parser.add_argument(
+        '--machine-rank',
+        type=int,
+        help='The rank of current machine.',
+        default=0)
+    parser.add_argument(
+        '--master-addr',
+        type=str,
+        help='The FQDN of the host that is running worker with rank 0.',
+        default='127.0.0.1')
+    parser.add_argument(
+        '--master-port',
+        type=str,
+        default='auto',
+        help='The port on the ``master_addr``.',
+    )
     args = parser.parse_args()
     return args
 
@@ -106,5 +124,9 @@ if __name__ == '__main__':
     launch(
         main,
         args.num_gpus,
+        args.num_machine,
+        args.machine_rank,
+        args.master_addr,
+        args.master_port,
         args=(args, ),
     )
