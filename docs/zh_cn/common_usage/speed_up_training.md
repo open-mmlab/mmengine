@@ -1,7 +1,5 @@
 # 加速训练
 
-/
-
 ## 分布式训练
 
 MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环境中有多张显卡时，我们可以使用以下命令开启单机多卡或者多机多卡的方式从而缩短模型的训练时间。
@@ -11,7 +9,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
   假设当前机器有 8 张显卡，可以使用以下命令开启多卡训练
 
   ```bash
-  python -m torch.distributed.launch --nproc_per_node=8 examples/distributed_training.py --launcher pytorch
+  python -m torch.distributed.launch --nproc_per_node=8 examples/distributed_training --launcher pytorch
   ```
 
   MMEngine 也支持从 Python 脚本启动多卡训练
