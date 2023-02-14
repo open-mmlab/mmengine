@@ -569,7 +569,7 @@ def launch(
         master_port: str = 'auto',
         args: tuple = (),
 ) -> None:
-    """Launch distributed task with single or multiple machines/GPU.
+    """Launch distributed task with single or multiple machines/GPUs.
 
     Args:
         main_func (Callable): Function to be executed in multiple processes.

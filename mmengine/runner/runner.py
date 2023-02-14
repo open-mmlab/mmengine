@@ -642,6 +642,11 @@ class Runner:
         if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
             init_dist(self.launcher, **dist_cfg)
+            # If distributed training is launched by `mmengine.dist.launch`,
+            # `NUM_PROC_PER_NODE` will be set in the environment variable.
+            # It means that the task is launched by multiple machines,
+            # and `init_local_group` should be called to ensure each machine
+            # has their own process group.
             if 'NUM_PROC_PER_NODE' in os.environ:
                 rank = int(os.environ['RANK'])
                 num_proc_per_node: Union[List[int], List[str]]
