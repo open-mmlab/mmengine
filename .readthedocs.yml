@@ -1,7 +1,6 @@
 version: 2
 
 formats:
-    - html
     - epub
 
 python:
