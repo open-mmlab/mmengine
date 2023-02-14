@@ -54,7 +54,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       examples/distributed_training.py --launcher pytorch
   ```
 
-  如果想从 Python 脚本启动多几多卡训练：
+  如果想从 Python 脚本启动多机多卡训练：
 
   第 1 台机器运行以下命令
 
