@@ -128,7 +128,7 @@ class Registry:
         table.add_column('Names', justify='left', style='cyan')
         table.add_column('Objects', justify='left', style='green')
 
-        for name, obj in self._module_dict.items():
+        for name, obj in sorted(self._module_dict.items()):
             table.add_row(name, str(obj))
 
         with io.StringIO() as sio:
