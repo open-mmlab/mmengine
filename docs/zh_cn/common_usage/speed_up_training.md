@@ -70,7 +70,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
   python examples/distributed_training_launch.py \
       --num-gpus 8 \
       --num-machine 2 \
-      --machine-rank 0 \
+      --machine-rank 1 \
       --master_addr ${ip address to machine of rank 0 } \
       --master-port 29500
   ```
