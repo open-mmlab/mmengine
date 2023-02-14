@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import os
 import random
 from typing import List, Optional, Tuple
 
@@ -71,11 +72,14 @@ def set_random_seed(seed: Optional[int] = None,
     torch.cuda.manual_seed_all(seed)
     # os.environ['PYTHONHASHSEED'] = str(seed)
     if deterministic:
+        if digit_version(torch.version.cuda) >= digit_version('10.2'):
+            os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
         if torch.backends.cudnn.benchmark:
             print_log(
                 'torch.backends.cudnn.benchmark is going to be set as '
                 '`False` to cause cuDNN to deterministically select an '
-                'algorithm',
+                'algorithm, which may limit overall performance, see more '
+                'informaton in https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility',  # noqa: E501
                 logger='current',
                 level=logging.WARNING)
         torch.backends.cudnn.deterministic = True
