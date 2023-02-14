@@ -249,8 +249,10 @@ param_scheduler = dict(
   <td valign="top" class='two-column-table-wrapper' width="50%" colspan="1">
   <div style="overflow-x: auto">
 
-```
-# Using default arguments, no need to configure
+```python
+# The default configuration of log_processor is used for epoch based training.
+# Defining it here additionally is for building runner with the same way.
+log_processor = dict(by_epoch=False)
 ```
 
 </div>
