@@ -206,9 +206,12 @@ class JitModelAnalysis:
     statistic for any submodule in the model. Is lazily evaluated, and will
     perform the trace when a statistic is first requested. Changing the
     operator handles will cause the trace to be rerun on the next request.
+
     Submodules may be referred to using the module's name. The input model has
     name "", while its descendants have names of the form
-    "child.grandchild.grandgrandchild...". An operator is treated as within the
+    "child.grandchild.grandgrandchild...".
+
+    An operator is treated as within the
     scope of a module if calling that module directly resulted in that operator
     being run. In particular, this means that calls to other functions owned by
     a module or explicit calls to module.forward(...) will not register
@@ -271,6 +274,7 @@ class JitModelAnalysis:
 
         The operator handle determines the name associated with each
         operator type.
+
         Args:
             module_name (str) : The submodule to get data for. Defaults
                 to the entire model.
@@ -289,7 +293,7 @@ class JitModelAnalysis:
         the name associated with each operator type.
 
         Returns:
-            dict(str, Counter(str)):
+            dict[str, Counter(str)]:
             The statistics for each submodule and each operator.
             Grouped by submodule names, then by operator name.
         """
