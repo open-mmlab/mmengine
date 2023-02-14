@@ -20,23 +20,28 @@ class LazyCall:
         super().__setattr__('kwargs', kwargs)
         # self.args = args
 
-    def build(self):
-
-        def _build_lazy_call(kwargs):
+    def build(self, memo=dict()):
+        # built is used for duplicated built.
+        def _build_lazy_call(kwargs, global_built):
             if isinstance(kwargs, Mapping):
                 for key, value in kwargs.items():
-                    kwargs[key] = _build_lazy_call(value)
+                    kwargs[key] = _build_lazy_call(value, global_built)
                 return kwargs
             elif isinstance(kwargs, (list, list)):
                 for i, value in enumerate(kwargs):
-                    kwargs[i] = _build_lazy_call(kwargs[i])
+                    kwargs[i] = _build_lazy_call(kwargs[i], global_built)
                 return kwargs
             elif isinstance(kwargs, LazyCall):
-                return kwargs.build()
+                if id(kwargs) not in global_built:
+                    ret = kwargs.build(memo=global_built)
+                    global_built[id(kwargs)] = ret
+                    return ret
+                else:
+                    return global_built[id(kwargs)]
             else:
                 return kwargs
 
-        kwargs = _build_lazy_call(copy.deepcopy(self.kwargs))
+        kwargs = _build_lazy_call(copy.deepcopy(self.kwargs), memo)
 
         if self.name_id in self.module_dict:
             module = self.module_dict[self.name_id]
@@ -84,6 +89,9 @@ class LazyCall:
         if name in self.kwargs:
             return self.kwargs[name]
         raise ValueError()
+
+    def __contains__(self, key):
+        return key in self.kwargs
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -267,7 +275,7 @@ class Config(OrderedDict):
             modified_code = transform.visit(code)
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
-                compile(modified_code, '', mode='exec'), global_dict,
+                compile(modified_code, filepath, mode='exec'), global_dict,
                 global_dict)
 
             ret = OrderedDict()
@@ -312,6 +320,7 @@ class Config(OrderedDict):
         return result
 
     def build(self):
+        built = dict()
 
         def _build(cfg_dict):
             if isinstance(cfg_dict, dict):
@@ -320,8 +329,12 @@ class Config(OrderedDict):
             if isinstance(cfg_dict, (list, tuple)):
                 return type(cfg_dict)(_build(item) for item in cfg_dict)
             if isinstance(cfg_dict, LazyCall):
+                if id(cfg_dict) in built:
+                    return built[id(cfg_dict)]
                 cfg_dict.kwargs = _build(cfg_dict.kwargs)
-                return cfg_dict.build()
+                ret = cfg_dict.build()
+                built[id(cfg_dict)] = ret
+                return ret
             return cfg_dict
 
         ret = copy.deepcopy(self)

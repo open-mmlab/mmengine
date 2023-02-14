@@ -1333,13 +1333,16 @@ class Runner:
         dataloader_cfg = copy.deepcopy(dataloader)
 
         # build sampler
-        sampler_cfg = dataloader_cfg.sampler
+        if 'sampler' in dataloader_cfg:
+            sampler_cfg = dataloader_cfg.sampler
+        elif 'batch_sampler' in dataloader_cfg:
+            sampler_cfg = dataloader_cfg.batch_sampler.sampler
         sampler_seed = None if diff_rank_seed else seed
         sampler_cfg.seed = sampler_seed
-        sampler = sampler_cfg.build()
-        dataset = dataloader.dataset.build()
-        sampler_cfg.dataset = dataset
-        dataloader_cfg.sampler = sampler
+        # sampler = sampler_cfg.build()
+        # dataset = dataloader.dataset.build()
+        # sampler_cfg.dataset = dataset
+        # dataloader_cfg.sampler = sampler
         return dataloader_cfg.build()
 
     def build_train_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
