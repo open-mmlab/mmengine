@@ -674,7 +674,7 @@ def get_model_complexity_info(
     Args:
         model (nn.Module): The model to analyze.
         input_shape (tuple): The input shape of the model.
-        inputs (Optional[torch.Tensor]): The input tensor of the model.
+        inputs (torch.Tensor, optional): The input tensor of the model.
             If not given the input tensor will be generated automatically
             with the given input_shape.
         show_table (bool): Whether to show the complexity table.
