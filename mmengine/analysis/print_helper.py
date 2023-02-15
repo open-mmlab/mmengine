@@ -665,7 +665,7 @@ def complexity_stats_table(
 def get_model_complexity_info(
     model: nn.Module,
     input_shape: tuple,
-    inputs=None,
+    inputs: Optional[torch.Tensor] = None,
     show_table: bool = True,
     show_arch: bool = True,
 ):
