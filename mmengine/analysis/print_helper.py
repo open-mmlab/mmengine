@@ -363,17 +363,18 @@ def _stats_table_format(
     """Formats the statistics obtained from a model in a nice table.
 
     Args:
-        statistics (dict(str, dict(str, str))) : The statistics to print.
+        statistics (dict[str, dict[str, str]]): The statistics to print.
             Organized as a dictionary over modules, then as a dictionary
             over statistics in the model. The statistics are assumed to
             already be formatted for printing.
-        max_depth (int) : The maximum submodule depth to recurse to.
-        stat_columns (list(str)) : Specify the order of the columns to print.
+        max_depth (int): The maximum submodule depth to recurse to.
+            Defaults to 3.
+        stat_columns (list[str]): Specify the order of the columns to print.
             If None, columns are found automatically from the provided
-            statistics.
+            statistics. Defaults to None.
 
     Return:
-        str : The formatted table.
+        str: The formatted table.
     """
     if stat_columns is None:
         stat_columns = set()  # type: ignore
