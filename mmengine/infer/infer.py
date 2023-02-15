@@ -413,14 +413,13 @@ class BaseInferencer(metaclass=InferencerMeta):
         # The first element of module.__path__ means package installation path.
         package_path = module.__path__[0]
 
-        if osp.exists(osp.join(package_path, '.mim')):
-            config_dir = osp.join(package_path, '.mim')
-        else:
-            assert osp.exists(
-                osp.join(osp.dirname(package_path), 'configs')
-            ), (f'Cannot find Configs directory in {package_path}!, please '
-                f'check the completeness of the {scope}.')
+        if osp.exists(osp.join(osp.dirname(package_path), 'configs')):
             config_dir = osp.dirname(package_path)
+        else:
+            config_dir = osp.exists(osp.join(package_path, '.mim'))
+            assert config_dir, (
+                f'Cannot find Configs directory in {package_path}!, please '
+                f'check the completeness of the {scope}.')
         return config_dir
 
     def _init_model(
