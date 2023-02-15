@@ -273,7 +273,7 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
         model (nn.Module): the model to count parameters.
 
     Returns:
-        dict (str-> int): the key is either a parameter name or a module name.
+        dict[str, int]: the key is either a parameter name or a module name.
         The value is the number of elements in the parameter, or in all
         parameters of the module. The key "" corresponds to the total
         number of parameters of the model.
