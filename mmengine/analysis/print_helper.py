@@ -55,15 +55,16 @@ def _pretty_statistics(statistics: Dict[str, Dict[str, int]],
     """Converts numeric statistics to strings with kilo/mega/giga/etc. labels.
 
     Args:
-        statistics (dict(str, dict(str, int))) : the statistics to
+        statistics (dict[str, dict[str, int]]) : the statistics to
             format. Organized as a dictionary over modules, which are
             each a dictionary over statistic types.
-        sig_figs (int) : the number of significant figures for each stat
-        hide_zero (bool) : if True, statistics that are zero will be
+        sig_figs (int): the number of significant figures for each stat.
+            Defaults to 3.
+        hide_zero (bool): if True, statistics that are zero will be
             written as an empty string. Defaults to False.
 
     Return:
-        dict(str, dict(str, str)) : the input statistics as pretty strings
+        dict[str, dict[str, str]]: the input statistics as pretty strings
     """
     out_stats = {}
     for mod, stats in statistics.items():
