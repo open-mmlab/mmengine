@@ -182,16 +182,16 @@ def _fill_missing_statistics(
     This visually uniformizes the reporting of statistics.
 
     Args:
-        model (nn.Module) : the model whose submodule names will be
-            used to fill statistics
-        statistics (dict(str, dict(str, int))) : the statistics to
+        model (nn.Module): the model whose submodule names will be
+            used to fill in statistics
+        statistics (dict[str, dict[str, int]]) : the statistics to
             fill in missing values for. Organized as a dictionary
             over statistics, which are each a dictionary over submodules'
             names. The statistics are assumed to be formatted already
             to the desired string format for printing.
 
     Returns:
-        dict(str, dict(str, int)) : the input statistics with missing
+        dict[str, dict[str, int]]: the input statistics with missing
         values filled with zero.
     """
     out_stats = {name: stat.copy() for name, stat in statistics.items()}
