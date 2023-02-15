@@ -596,8 +596,8 @@ def complexity_stats_table(
         str: The formatted table.
 
     Examples:
-    ::
-        print(complexity_stats_table(FlopAnalyzer(model, inputs)))
+
+        >>> print(complexity_stats_table(FlopAnalyzer(model, inputs)))
     """
     params_header = '#parameters' + (' or shape' if show_param_shapes else '')
     flops_header, acts_header = '#flops', '#activations'
