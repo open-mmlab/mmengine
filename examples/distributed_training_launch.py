@@ -121,14 +121,15 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.num_gpus == [1] and args.num_machine == 1:
-        assert args.launcher == 'none', (
-            'launcher must be none for single GPU training')
+    if args.launcher != 'pytorch':
+        assert args.num_gpus == [1] and args.num_machine == 1, (
+            'Single GPU training or distributed training launched by mpi or ',
+            'slurm should not be set with multiple GPUs or machines, ')
         main(args)
     else:
-        assert args.launcher != 'none', (
-            'launcher must be set for multi-GPU training')
-
+        assert sum(args.num_gpus) > 1 or args.num_machine > 1, (
+            '`num_gpus` must be larger than 1 for pytorch distributed '
+            'training launcher')
         launch(
             main,
             args.num_gpus,
