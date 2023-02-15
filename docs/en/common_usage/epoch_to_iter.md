@@ -1,6 +1,6 @@
 # EpochBasedTraining to IterBasedTraining
 
-Many modules in MMEngine default to training models by epoch, such as `ParamScheduler`, `LoggerHook`, `CheckPointHook`, etc. Therefore, you need to adjust the configuration of these modules when training by iteration. For example, a commonly epoch based configuration is as follows:
+Many modules in MMEngine default to training models by epoch, such as `ParamScheduler`, `LoggerHook`, `CheckPointHook`, etc. Therefore, you need to adjust the configuration of these modules when training by iteration. For example, a commonly used epoch based configuration is as follows:
 
 ```python
 param_scheduler = dict(
@@ -80,7 +80,7 @@ log_processor = dict(
 )
 ```
 
-Take \[traing CIFAR10\]\[../get_started/15_minutes.md\] as an example:
+Take [training CIFAR10](../get_started/15_minutes.md) as an example:
 
 <table class="docutils">
 <thead>
@@ -127,29 +127,29 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-train_dataloader = DataLoader(batch_size=32,
-                              shuffle=True,
-                              dataset=torchvision.datasets.CIFAR10(
-                                  'data/cifar10',
-                                  train=True,
-                                  download=True,
-                                  transform=transforms.Compose([
-                                      transforms.RandomCrop(32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize(**norm_cfg)
-                                  ])))
+train_dataloader = DataLoader(
+    batch_size=32,
+    shuffle=True,
+    dataset=torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)])))
 
-val_dataloader = DataLoader(batch_size=32,
-                            shuffle=False,
-                            dataset=torchvision.datasets.CIFAR10(
-                                'data/cifar10',
-                                train=False,
-                                download=True,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize(**norm_cfg)
-                                ])))
+val_dataloader = DataLoader(
+    batch_size=32,
+    shuffle=False,
+    dataset=torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=False,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)])))
 ```
 
 </div>

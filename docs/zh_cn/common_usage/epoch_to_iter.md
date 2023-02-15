@@ -80,7 +80,7 @@ runner = Runner(
    )
    ```
 
-以\[ 15 分钟教程训练 CIFAR10 数据集\]\[../get_started/15_minutes.md\] 为例：
+以 [15 分钟教程训练 CIFAR10 数据集](../get_started/15_minutes.md)为例：
 
 <table class="docutils">
 <thead>
@@ -127,29 +127,29 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-train_dataloader = DataLoader(batch_size=32,
-                              shuffle=True,
-                              dataset=torchvision.datasets.CIFAR10(
-                                  'data/cifar10',
-                                  train=True,
-                                  download=True,
-                                  transform=transforms.Compose([
-                                      transforms.RandomCrop(32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize(**norm_cfg)
-                                  ])))
+train_dataloader = DataLoader(
+    batch_size=32,
+    shuffle=True,
+    dataset=torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)])))
 
-val_dataloader = DataLoader(batch_size=32,
-                            shuffle=False,
-                            dataset=torchvision.datasets.CIFAR10(
-                                'data/cifar10',
-                                train=False,
-                                download=True,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize(**norm_cfg)
-                                ])))
+val_dataloader = DataLoader(
+    batch_size=32,
+    shuffle=False,
+    dataset=torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=False,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)])))
 ```
 
 </div>
@@ -249,8 +249,10 @@ param_scheduler = dict(
   <td valign="top" class='two-column-table-wrapper' width="50%" colspan="1">
   <div style="overflow-x: auto">
 
-```
-# Using default arguments, no need to configure
+```python
+# The default configuration of log_processor is used for epoch based training.
+# Defining it here additionally is for building runner with the same way.
+log_processor = dict(by_epoch=False)
 ```
 
 </div>
