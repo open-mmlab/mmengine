@@ -8,7 +8,6 @@ MMEngine provides the ability to set the random number and select a deterministi
 - differ_rand_seed: whether to set different seeds for different processes by adding the process index number to the seed.
 - deterministic: whether to set deterministic options for the CUDNN backend.
 
-
 Let's take the [Get Started in 15 Minutes](../get_started/15_minutes.md) as an example to demonstrate how to add `randomness` in MMEngine.
 
 ```python
@@ -27,4 +26,4 @@ runner = Runner(
 runner.train()
 ```
 
-Note: Even with the random number set and the deterministic algorithm chosen, there may still be fluctuations between any two experiments, as described in [Where does the randomness of training come from in PyTorch-based MMDetection?] (https://www.zhihu.com/question/453511684/answer/1839683634)
+Note: Even with the random number set and the deterministic algorithm chosen, there may still be fluctuations between any two experiments, as described in \[Where does the randomness of training come from in PyTorch-based MMDetection?\] (https://www.zhihu.com/question/453511684/answer/1839683634)
