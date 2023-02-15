@@ -678,7 +678,9 @@ def get_model_complexity_info(
             If not given the input tensor will be generated automatically
             with the given input_shape.
         show_table (bool): Whether to show the complexity table.
+            Defaults to True.
         show_arch (bool): Whether to show the complexity arch.
+            Defaults to True.
 
     Returns:
         dict: The complexity information of the model.
