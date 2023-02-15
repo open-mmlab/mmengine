@@ -138,17 +138,17 @@ def _remove_zero_statistics(
     a model hierarchy starting with a root that has name ''.
 
     Args:
-        statistics (dict(str, dict(str, int))) : the statistics to
+        statistics (dict[str, dict[str, int]]): the statistics to
             remove zeros from. Organized as a dictionary over modules,
             which are each a dictionary over statistic types.
-        force_keep (set(str) or None) : a set of modules to always keep, even
+        force_keep (set[str] or None): a set of modules to always keep, even
             if they are all zero.
-        require_trivial_children (bool) : If True, a statistic will only
+        require_trivial_children (bool): If True, a statistic will only
             be deleted if all its children are also deleted. Defaults to
             False.
 
     Returns:
-        dict(str, dict(str, int)) : the input statistics dictionary,
+        dict[str, dict[str, int]]: the input statistics dictionary,
         with submodules removed if they have zero for all statistics.
     """
     out_stats: Dict[str, Dict[str, int]] = {}
