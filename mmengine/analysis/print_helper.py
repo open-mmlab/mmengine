@@ -341,9 +341,9 @@ def _fastforward(
     that child, merge statistics and their names into one row.
 
     Then repeat until the condition isn't met.
+
     Returns:
-        str: the new name
-        dict: the combined statistics of this row
+        tuple[str, dict]: the new name and the combined statistics of this row
     """
     single_child = _get_single_child(name, statistics)
     if single_child is None:
