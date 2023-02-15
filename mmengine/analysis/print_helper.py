@@ -209,15 +209,15 @@ def _model_stats_str(model: nn.Module,
     information for each submodule.
 
     Args:
-        model (nn.Module) : the model to form a representation of.
-        statistics (dict(str, dict(str, str))) : the statistics to
+        model (nn.Module): the model to form a representation of.
+        statistics (dict[str, dict[str, str]]): the statistics to
             include in the model representations. Organized as a dictionary
             over module names, which are each a dictionary over statistics.
             The statistics are assumed to be formatted already to the
             desired string format for printing.
 
     Returns:
-        str : the string representation of the model with the statistics
+        str: the string representation of the model with the statistics
         inserted.
     """
 
