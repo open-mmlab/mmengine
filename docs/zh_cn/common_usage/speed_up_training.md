@@ -14,8 +14,8 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
 
   MMEngine 也支持从 Python 脚本启动多卡训练
 
-  ```python
-  python examples/distributed_training_launch.py --num-gpus 8
+  ```bash
+  python examples/distributed_training_launch.py --num-gpus 8 --launcher pytorch
   ```
 
   如果需要指定显卡的编号，可以设置 `CUDA_VISIBLE_DEVICES` 环境变量，例如使用第 0 和第 3 张卡
@@ -61,7 +61,8 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       --num-gpus 8 \
       --num-machine 2 \
       --machine-rank 0 \
-      --master-port 29500
+      --master-port 29500 \
+      --launcher pytorch
   ```
 
   第 2 台机器运行以下命令
@@ -73,6 +74,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       --machine-rank 1 \
       --master_addr ${ip address to machine of rank 0 } \
       --master-port 29500
+      --launcher pytorch
   ```
 
   如果在 slurm 集群运行 MMEngine，只需运行以下命令即可开启 2 机 16 卡的训练

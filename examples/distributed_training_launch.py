@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='pytorch',
+        default='none',
         help='job launcher')
     parser.add_argument(
         '--num-gpus',
@@ -121,12 +121,20 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    launch(
-        main,
-        args.num_gpus,
-        args.num_machine,
-        args.machine_rank,
-        args.master_addr,
-        args.master_port,
-        args=(args, ),
-    )
+    if args.num_gpus == [1] and args.num_machine == 1:
+        assert args.launcher == 'none', (
+            'launcher must be none for single GPU training')
+        main(args)
+    else:
+        assert args.launcher != 'none', (
+            'launcher must be set for multi-GPU training')
+
+        launch(
+            main,
+            args.num_gpus,
+            args.num_machine,
+            args.machine_rank,
+            args.master_addr,
+            args.master_port,
+            args=(args, ),
+        )
