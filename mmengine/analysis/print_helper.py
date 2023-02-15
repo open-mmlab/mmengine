@@ -21,13 +21,14 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
     'K', 'M', etc. as a suffix.
 
     Args:
-        x (int) : The integer to format.
-        sig_figs (int) : The number of significant figures to keep
-        hide_zero (bool) : If True, x=0 is replaced with an empty string
-            instead of '0'.
+        x (int): The integer to format.
+        sig_figs (int): The number of significant figures to keep.
+            Defaults to 3.
+        hide_zero (bool): If True, x=0 is replaced with an empty string
+            instead of '0'. Defaults to False.
 
     Returns:
-        str : The formatted string.
+        str: The formatted string.
     """
     if hide_zero and x == 0:
         return ''
