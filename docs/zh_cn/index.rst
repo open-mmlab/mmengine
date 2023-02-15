@@ -81,6 +81,8 @@
    :maxdepth: 2
    :caption: API 文档
 
+   mmengine.infer <api/infer>
+   mmengine.analysis <api/analysis>
    mmengine.registry <api/registry>
    mmengine.config <api/config>
    mmengine.runner <api/runner>

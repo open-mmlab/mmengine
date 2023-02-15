@@ -146,6 +146,10 @@ def _get_scoped_trace_graph(
         graph (torch._C.Graph) : The pytorch JIT trace of the model
     """
 
+    # torch.jit._get_trace_graph can trace torch function like `aten::linear`,
+    # `aten::add` etc. However, the traced node(function) cannot tell it is
+    # called by which module. `ScopePushHook` and `ScopePopHook` can
+    # help traced node get the module name information by `node.scopeName()`.
     class ScopePushHook:
 
         def __init__(self, name: str) -> None:
@@ -589,6 +593,17 @@ class JitModelAnalysis:
                 kind = kind + '.' + node.pyname()
             scope_names = node.scopeName().split('/')
             all_seen.update(scope_names)
+            # The result of node.scopeName() is like: `layer1/layer1.layer`
+            # Therefore, if there is not shared module ancestors will have the
+            # same value. However, if layer1.layer is used by multiple modules.
+            # scopeName() will return
+            # `layer1/layer1.layer`
+            # `layer2/layer1.layer` respectively
+            # If mode is `caller`, the ancestors will be:
+            # 'layer1', 'layer2', 'layer1.layer'
+            # else, the ancestors will be:
+            # 'layer1', 'layer1.layer'
+            # which means only the flops will only be counted into `layer1`.
             if self._ancestor_mode == 'caller':
                 ancestors = set(scope_names)
             else:
