@@ -55,7 +55,10 @@ def parse_args():
         help='number of gpus to use',
         default=[2])
     parser.add_argument(
-        '--num-machine', type=int, help='number of machines to use', default=1)
+        '--num-machines',
+        type=int,
+        help='number of machines to use',
+        default=1)
     parser.add_argument(
         '--machine-rank',
         type=int,
