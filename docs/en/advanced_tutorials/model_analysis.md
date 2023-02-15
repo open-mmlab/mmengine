@@ -12,7 +12,7 @@ Activation is used to measure the feature quantity produced from one layer.
 
 For example, given the inputs with shape `inputs = torch.randn((1, 3, 10, 10))`, and one linear layer with `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=1)`.
 
-We get the `output` with shape `(1, 10, 10, 10)` after feed the `inputs` into `conv`. The activation quantity of `output` of this `conv` layer is `1000=10*10*10`
+We get the `output` with shape `(1, 10, 10, 10)` after feeding the `inputs` into `conv`. The activation quantity of `output` of this `conv` layer is `1000=10*10*10`
 
 ## Usage
 
