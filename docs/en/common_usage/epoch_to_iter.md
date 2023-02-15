@@ -91,7 +91,7 @@ Take [training CIFAR10](../get_started/15_minutes.md) as an example:
 <tbody>
 <tr>
   <td>Build model</td>
-  <td valign="top" class='two-column-table-wrapper' width="50%" colspan="2"><div style="overflow-x: auto">
+  <td colspan="2"><div>
 
 ```python
 import torch.nn.functional as F
@@ -112,15 +112,14 @@ class MMResNet50(BaseModel):
             return x, labels
 ```
 
-</div>
-  </td>
+</td>
+  </div>
 </tr>
 
 <tr>
   <td>Build dataloader</td>
 
-<td valign="top" class='two-column-table-wrapper' width="50%" colspan="2">
-  <div style="overflow-x: auto">
+<td colspan="2">
 
 ```python
 import torchvision.transforms as transforms
@@ -152,14 +151,12 @@ val_dataloader = DataLoader(
             transforms.Normalize(**norm_cfg)])))
 ```
 
-</div>
-  </td>
+</td>
 </tr>
 
 <tr>
   <td>Prepare metric</td>
-  <td valign="top" class='two-column-table-wrapper' width="50%" colspan="2">
-  <div style="overflow-x: auto">
+  <td colspan="2">
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -181,8 +178,7 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 ```
 
-</div>
-  </td>
+</td>
   </tr>
 
 <tr>
@@ -302,8 +298,7 @@ train_cfg = dict(
 
 <tr>
   <td>Build Runner</td>
-  <td valign="top" class='two-column-table-wrapper' width="50%" colspan="2">
-  <div style="overflow-x: auto">
+  <td colspan="2">
 
 ```python
 from torch.optim import SGD
@@ -323,8 +318,7 @@ runner = Runner(
 runner.train()
 ```
 
-</div>
-  </td>
+</td>
 </tr>
 
 </thead>
