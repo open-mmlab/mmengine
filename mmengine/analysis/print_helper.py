@@ -584,15 +584,16 @@ def complexity_stats_table(
 
     Args:
         flops (FlopAnalyzer): the flop counting object
-        max_depth (int) : The max depth of submodules to include in the
+        max_depth (int): The max depth of submodules to include in the
             table. Defaults to 3.
-        activations (ActivationAnalyzer or None) : If given, include
+        activations (ActivationAnalyzer or None): If given, include
             activation counts as an additional column in the table.
-        show_param_shapes (bool) : If true, shapes for parameters will be
+            Defaults to None.
+        show_param_shapes (bool): If true, shapes for parameters will be
             included in the table. Defaults to True.
 
     Returns:
-        str : The formatted table.
+        str: The formatted table.
 
     Examples:
     ::
