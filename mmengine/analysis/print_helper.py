@@ -104,17 +104,17 @@ def _indicate_uncalled_modules(
     Assumes the statistic is already formatting in string form.
 
     Args:
-        statistics (dict(str, dict(str, str))) : the statistics to
+        statistics (dict[str, dict[str, str]]): the statistics to
             format. Organized as a dictionary over modules, which are
             each a dictionary over statistic types. Expects statistics
             have already been converted to strings.
-        stat_name (str) : the name of the statistic being modified
-        uncalled_modules set(str) : a set of names of uncalled modules.
-        indicator (str) : the string that will be used to indicate
+        stat_name (str): the name of the statistic being modified
+        uncalled_modules set(str): a set of names of uncalled modules.
+        indicator (str): the string that will be used to indicate
             unused modules. Defaults to 'N/A'.
 
     Returns:
-        dict(str, dict(str, str)) : the modified statistics
+        dict[str, dict[str, str]]: the modified statistics
     """
 
     stats_out = {mod: stats.copy() for mod, stats in statistics.items()}
