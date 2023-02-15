@@ -14,9 +14,11 @@ For example, given the inputs with shape `inputs = torch.randn((1, 3, 10, 10))`,
 
 We get the `output` with shape `(1, 10, 10, 10)` after feeding the `inputs` into `conv`. The activation quantity of `output` of this `conv` layer is `1000=10*10*10`
 
-## Usage
+Let's start with the following examples.
 
-Let's start with an example as follows:
+## Usage Example 1: Model built with native nn.Module
+
+### Code
 
 ```python
 import torch
@@ -51,8 +53,8 @@ analysis_results = get_model_complexity_info(model, input_shape)
 print(analysis_results['out_table'])
 print(analysis_results['out_arch'])
 
-print(analysis_results['flops_str'])
-print(analysis_results['params_str'])
+print("Model Flops:{}".format(analysis_results['flops_str']))
+print("Model Parameters:{}".format(analysis_results['params_str']))
 ```
 
 ### Description of Results
@@ -131,6 +133,49 @@ The return outputs is dict, which contains the following keys:
     )
     )
 )
+```
+
+## Usage Example 2: Model built with mmengine
+
+### Code
+
+```python
+import torch.nn.functional as F
+import torchvision
+from mmengine.model import BaseModel
+from mmengine.analysis import get_model_complexity_info
+
+
+class MMResNet50(BaseModel):
+    def __init__(self):
+        super().__init__()
+        self.resnet = torchvision.models.resnet50()
+
+    def forward(self, imgs, labels=None, mode='extract_feat'):
+        x = self.resnet(imgs)
+        if mode == 'loss':
+            return {'loss': F.cross_entropy(x, labels)}
+        elif mode == 'predict':
+            return x, labels
+        elif mode == 'extract_feat':
+            return x
+
+
+input_shape = (3, 224, 224)
+model = MMResNet50()
+
+analysis_results = get_model_complexity_info(model, input_shape)
+
+
+print("Model Flops:{}".format(analysis_results['flops_str']))
+print("Model Parameters:{}".format(analysis_results['params_str']))
+```
+
+### Output
+
+```bash
+Model Flops:4.145G
+Model Parameters:25.557M
 ```
 
 ## Interface

@@ -489,8 +489,9 @@ def complexity_stats_str(
 
     Args:
         flops (FlopAnalyzer): the flop counting object
-        activations (bool) : If given, the activations of each layer will
-            also be calculated and included in the representation.
+        activations (ActivationAnalyzer or None): If given, the activations of
+            each layer will also be calculated and included in the
+            representation. Defaults to None.
 
     Returns:
         str: a string representation of the model with the number of
