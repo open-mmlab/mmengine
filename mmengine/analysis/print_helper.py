@@ -80,10 +80,10 @@ def _group_by_module(
     to statistics organized first by module and then by statistic type.
 
     Args:
-        statistics (dict(str, dict(str, any))) : the statistics to convert
+        statistics (dict[str, dict[str, any]]): the statistics to convert
 
     Returns:
-        dict(str, dict(str, any)) : the reorganized statistics
+        dict[str, dict[str, any]]: the reorganized statistics
     """
     out_stats = defaultdict(dict)  # type: Dict[str, Dict[str, Any]]
     for stat_name, stat in statistics.items():
