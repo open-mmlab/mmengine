@@ -80,7 +80,6 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 2
    :caption: API Reference
 
-   mmengine.infer <api/infer>
    mmengine.analysis <api/analysis>
    mmengine.registry <api/registry>
    mmengine.config <api/config>
