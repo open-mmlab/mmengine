@@ -58,8 +58,8 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   ```bash
   python examples/distributed_training_launch.py \
       --num-gpus 8 \
-      --num-machine 2 \
-      --machine-rank 0 \
+      --num-nodes 2 \
+      --node-rank 0 \
       --master-port 29500
   ```
 
@@ -68,9 +68,9 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   ```bash
   python examples/distributed_training_launch.py \
       --num-gpus 8 \
-      --num-machine 2 \
-      --machine-rank 1 \
-      --master_addr ${ip address to machine of rank 0 } \
+      --num-nodes 2 \
+      --node-rank 1 \
+      --master_addr ${ip address to node of rank 0 } \
       --master-port 29500
   ```
 

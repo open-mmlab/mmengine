@@ -176,15 +176,15 @@ def init_local_group(node_rank: int, num_proc_per_node: list):
     """Setup the local process group.
 
     Setup a process group which only includes processes that on the same
-    machine as the current process.
+    node as the current process.
 
     The code is modified from
     https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py
 
     Args:
-        node_rank (int): Rank of machines used for training.
+        node_rank (int): Rank of node used for training.
         num_gpus_per_node (list): Number of processes used for training in each
-            machine.
+            node.
     """  # noqa: W501
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
@@ -192,8 +192,8 @@ def init_local_group(node_rank: int, num_proc_per_node: list):
     # `torch_dist.new_group` requires all process to enter the function call.
     # `_LOCAL_PROCESS_GROUP` will be set as the process group of corresponding
     # node.
-    num_machines = len(num_proc_per_node)
-    for i in range(num_machines):
+    num_nodes = len(num_proc_per_node)
+    for i in range(num_nodes):
         start = sum(num_proc_per_node[:i]) if i != 0 else 0
         end = sum(num_proc_per_node[:i + 1])
         ranks_on_i = list(range(start, end))
@@ -562,26 +562,26 @@ def cast_data_device(
 
 def launch(
         main_func: Callable,
-        num_proc_per_machine: Union[list, int] = 1,
-        num_machines: int = 1,
-        machine_rank: int = 0,
+        num_proc_per_node: Union[list, int] = 1,
+        num_nodes: int = 1,
+        node_rank: int = 0,
         master_addr: str = '127.0.0.1',
         master_port: str = 'auto',
         args: tuple = (),
 ) -> None:
-    """Launch distributed task with single or multiple machines/GPUs.
+    """Launch distributed task with single or multiple nodes(machines)/GPUs.
 
     Args:
         main_func (Callable): Function to be executed in multiple processes.
-        num_proc_per_machine (list or int): Number of valid processes for
-            machines. For example, The task will be ran on 2 machine A and
-            machine B. A has 2 processes, and B has 4 valid processes. Then
-            ``num_proc_per_machine`` should be [2, 4]. If
-            ``num_proc_per_machine`` is a single ``int``, it means all
-            machines launch ``num_proc_per_machine`` processes.
-        num_machines (int, optional): Number of used machines. This argument is
-            only useful when ``num_proc_per_machine`` is an int. Defaults to 1.
-        machine_rank (int, optional): The rank of current machine.
+        num_proc_per_node (list or int): Number of valid processes for
+            nodes. For example, The task will be ran on 2 node A and
+            node B. A has 2 processes, and B has 4 valid processes. Then
+            ``num_proc_per_node`` should be [2, 4]. If
+            ``num_proc_per_node`` is a single ``int``, it means all
+            nodes launch ``num_proc_per_node`` processes.
+        num_nodes (int, optional): Number of used nodes. This argument is
+            only useful when ``num_proc_per_node`` is an int. Defaults to 1.
+        node_rank (int, optional): The rank of current node.
             Defaults to 0.
         master_addr (str, optional): The FQDN of the host that is running
             worker with rank 0; used to initialize the Torch Distributed
@@ -590,13 +590,13 @@ def launch(
             be used to host the C10d TCP store. Defaults to 'auto'.
         args (tuple, optional): Arguments passed to main_func. Defaults to ().
     """
-    if not isinstance(num_proc_per_machine, list):
-        num_proc_per_machine = [num_proc_per_machine] * num_machines
-    world_size = sum(num_proc_per_machine)
+    if not isinstance(num_proc_per_node, list):
+        num_proc_per_node = [num_proc_per_node] * num_nodes
+    world_size = sum(num_proc_per_node)
 
     if master_port == 'auto':
-        assert len(num_proc_per_machine) == 1, (
-            'Automatically inferring free port on multiple machines will lead'
+        assert len(num_proc_per_node) == 1, (
+            'Automatically inferring free port on multiple nodes will lead'
             'to potential error.')
         master_port = str(_find_free_port())
 
@@ -605,12 +605,12 @@ def launch(
 
         mp.start_processes(
             _distributed_worker,
-            nprocs=num_proc_per_machine[machine_rank],
+            nprocs=num_proc_per_node[node_rank],
             args=(
                 main_func,
                 world_size,
-                num_proc_per_machine,
-                machine_rank,
+                num_proc_per_node,
+                node_rank,
                 master_addr,
                 master_port,
                 args,
@@ -625,8 +625,8 @@ def _distributed_worker(
     local_rank: int,
     main_func: Callable,
     world_size: int,
-    num_proc_per_machine: list,
-    machine_rank: int,
+    num_proc_per_node: list,
+    node_rank: int,
     master_addr: str,
     master_port: str,
     args,
@@ -643,12 +643,12 @@ def _distributed_worker(
         :func:`init_dist` must be called in the ``main_func``
 
     Args:
-        local_rank (int): Local rank of the current machine.
+        local_rank (int): Local rank of the current node.
         main_func (Callable): Function to be executed.
-        world_size (int): The number of all processes launched on all machines.
-        num_proc_per_machine (list): Number of launched processes of all
-            machines.
-        machine_rank (int): The rank of current machine.
+        world_size (int): The number of all processes launched on all nodes.
+        num_proc_per_node (list): Number of launched processes of all
+            nodes.
+        node_rank (int): The rank of current node.
         master_addr (str): The FQDN of the host that is running
             worker with rank 0; used to initialize the Torch Distributed
             backend.
@@ -658,15 +658,15 @@ def _distributed_worker(
     """  # noqa: E501
     has_gpu = torch.cuda.is_available()
     if has_gpu:
-        assert num_proc_per_machine[machine_rank] <= torch.cuda.device_count()
+        assert num_proc_per_node[node_rank] <= torch.cuda.device_count()
     os.environ['RANK'] = \
-        str(sum(num_proc_per_machine[:machine_rank]) + local_rank)
+        str(sum(num_proc_per_node[:node_rank]) + local_rank)
     os.environ['LOCAL_RANK'] = str(local_rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = master_addr
     os.environ['MASTER_PORT'] = master_port
-    num_proc_per_machine = [str(num) for num in num_proc_per_machine]
-    os.environ['NUM_PROC_PER_NODE'] = ' '.join(num_proc_per_machine)
+    num_proc_per_node = [str(num) for num in num_proc_per_node]
+    os.environ['NUM_PROC_PER_NODE'] = ' '.join(num_proc_per_node)
 
     # synchronize is needed here to prevent a possible timeout after calling
     # init_process_group.

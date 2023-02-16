@@ -629,27 +629,27 @@ def main(result, saved_dir):
 @unittest.skipIf(not torch.cuda.is_available(), 'CUDA should be available')
 def test_launch():
     with tempfile.TemporaryDirectory() as tempdir:
-        # Single process, single machine.
+        # Single process, single node.
         result = {}
         dist.launch(main, args=(result, tempdir))
         with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
             result = pickle.load(f)
             assert result == {}
 
-        # Multiple process, single machine
+        # Multiple process, single node
         result = {}
-        dist.launch(main, args=(result, tempdir), num_proc_per_machine=3)
+        dist.launch(main, args=(result, tempdir), num_proc_per_node=3)
         with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
             result = pickle.load(f)
             assert result == [{'0': '0'}, {'1': '1'}, {'2': '2'}]
 
-        # Multiple process, multiple machines
+        # Multiple process, multiple nodes
         result = {}
-        for machine_rank in range(2):
+        for node_rank in range(2):
             proc = multiprocessing.Process(
                 target=dist.launch,
-                args=(main, 2, 2, machine_rank, '127.0.0.1', '7891',
-                      (result, tempdir)),
+                args=(main, 2, 2, node_rank, '127.0.0.1', '7891', (result,
+                                                                   tempdir)),
                 daemon=False)
             proc.start()
         proc.join()
@@ -659,10 +659,10 @@ def test_launch():
 
         # Multiple process, multiple machines, with difference number of GPUs
         result = {}
-        for machine_rank in range(2):
+        for node_rank in range(2):
             proc = multiprocessing.Process(
                 target=dist.launch,
-                args=(main, [2, 3], 2, machine_rank, '127.0.0.1', '7891',
+                args=(main, [2, 3], 2, node_rank, '127.0.0.1', '7891',
                       (result, tempdir)),
                 daemon=False)
             proc.start()

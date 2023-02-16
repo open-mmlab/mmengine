@@ -55,15 +55,9 @@ def parse_args():
         help='number of gpus to use',
         default=[2])
     parser.add_argument(
-        '--num-machines',
-        type=int,
-        help='number of machines to use',
-        default=1)
+        '--num-nodes', type=int, help='number of nodes to use', default=1)
     parser.add_argument(
-        '--machine-rank',
-        type=int,
-        help='The rank of current machine.',
-        default=0)
+        '--node-rank', type=int, help='The rank of current node.', default=0)
     parser.add_argument(
         '--master-addr',
         type=str,
@@ -127,8 +121,8 @@ if __name__ == '__main__':
     launch(
         main,
         args.num_gpus,
-        args.num_machine,
-        args.machine_rank,
+        args.num_nodes,
+        args.node_rank,
         args.master_addr,
         args.master_port,
         args=(args, ),
