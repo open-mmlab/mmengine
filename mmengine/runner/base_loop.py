@@ -18,7 +18,6 @@ class BaseLoop(metaclass=ABCMeta):
         dataloader (Dataloader or dict): An iterator to generate one batch of
             dataset each iteration.
     """
-
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
         if isinstance(dataloader, (dict, LazyCall)):

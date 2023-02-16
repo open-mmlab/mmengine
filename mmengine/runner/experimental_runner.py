@@ -1145,9 +1145,13 @@ class Runner:
                         'Use the max epochs/iters of train loop as default.')
 
                 param_schedulers.append(
-                    _scheduler.build(
-                        _scheduler)
-                )
+                    PARAM_SCHEDULERS.build(
+                        _scheduler,
+                        default_args=dict(
+                            optimizer=optim_wrapper,
+                            epoch_length=len(self.train_dataloader))))
+            elif isinstance(scheduler, LazyCall):
+                param_schedulers.append(scheduler.build())
             else:
                 raise TypeError(
                     'scheduler should be a _ParamScheduler object or dict, '

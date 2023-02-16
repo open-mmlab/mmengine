@@ -15,29 +15,35 @@ from mmengine.utils import get_installed_path
 
 class LazyCall:
 
-    def __init__(self, name_id, **kwargs) -> None:
+    def __init__(self, name_id, instance_id=None, **kwargs) -> None:
         super().__setattr__('name_id', name_id)
         super().__setattr__('kwargs', kwargs)
+        instance_id = id(self) if instance_id is None else instance_id 
+        super().__setattr__('instance_id', instance_id)
         # self.args = args
 
-    def build(self, memo=dict()):
+    def build(self, memo=None):
+        if memo is None:
+            memo = dict()
         # built is used for duplicated built.
         def _build_lazy_call(kwargs, global_built):
             if isinstance(kwargs, Mapping):
-                for key, value in kwargs.items():
-                    kwargs[key] = _build_lazy_call(value, global_built)
-                return kwargs
-            elif isinstance(kwargs, (list, list)):
-                for i, value in enumerate(kwargs):
-                    kwargs[i] = _build_lazy_call(kwargs[i], global_built)
-                return kwargs
+                return type(kwargs)({key: _build_lazy_call(value, global_built) for key, value in kwargs.items()})
+                # for key, value in kwargs.items():
+                #     kwargs[key] = _build_lazy_call(value, global_built)
+                # return kwargs
+            elif isinstance(kwargs, (list, tuple)):
+                return type(kwargs)([_build_lazy_call(value, global_built) for value in kwargs])
+                # for i, value in enumerate(kwargs):
+                    # kwargs[i] = _build_lazy_call(kwargs[i], global_built)
+                # return kwargs
             elif isinstance(kwargs, LazyCall):
-                if id(kwargs) not in global_built:
+                if kwargs.instance_id not in global_built:
                     ret = kwargs.build(memo=global_built)
-                    global_built[id(kwargs)] = ret
+                    global_built[kwargs.instance_id] = ret
                     return ret
                 else:
-                    return global_built[id(kwargs)]
+                    return global_built[kwargs.instance_id]
             else:
                 return kwargs
 
@@ -95,7 +101,10 @@ class LazyCall:
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        ret = cls(copy.deepcopy(self.name_id), **copy.deepcopy(self.kwargs))
+        ret = cls(
+            copy.deepcopy(self.name_id),
+            instance_id=self.instance_id,
+            **copy.deepcopy(self.kwargs))
         super(LazyCall, ret).__setattr__('global_dict', self.global_dict)
         super(LazyCall, ret).__setattr__('module_dict', self.module_dict)
 
@@ -108,7 +117,7 @@ class LazyCall:
 
 class LazyNameCall(LazyCall):
 
-    def build(self):
+    def build(self, memo=None):
         module = self.module_dict[self.name_id]
         module = importlib.import_module(module)
         func = getattr(module, self.name_id)
@@ -299,7 +308,7 @@ class Config(OrderedDict):
     def _to_config_dict(cls, cfg_dict, global_dict, module_dict):
         ordered_keys = cfg_dict.keys()
         result = OrderedDict()
-
+        # Do not used generator-expression here for the building sequence.
         def _convert(cfg_dict):
             if isinstance(cfg_dict, dict):
                 for key, value in cfg_dict.items():
