@@ -12,6 +12,7 @@ from typing import Any, Mapping, Optional, Union
 from mmengine.config import ConfigDict
 from mmengine.utils import get_installed_path
 
+EAGER_IMPORTS = ['mmengine.config']
 
 class LazyCall:
 
@@ -81,7 +82,7 @@ class LazyCall:
         raise Exception()
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name == 'kwargs':
+        if name == 'kwargs' or name == 'name_id' or name == 'instance_id':
             super().__setattr__(name, value)
             return
         self.kwargs[name] = value
@@ -186,6 +187,9 @@ class Transform(ast.NodeTransformer):
 
     def visit_ImportFrom(self, node):
         # Relative improt
+        for eager_import in EAGER_IMPORTS:
+            if node.module.startswith(eager_import):
+                return super().generic_visit(node)
         module = f'{node.level*"."}{node.module}'
         if module in self.base_dict:
             for name in node.names:
@@ -259,19 +263,22 @@ class Config(OrderedDict):
                 level = len(re.match(r'\.*', base_module).group())
                 if level > 0:
                     # Relative import
-                    module_path = base_module[level:].replace('.', '/')
                     base_dir = osp.dirname(filepath)
-                    module_path = osp.join(base_dir, '.' * level,
-                                           f'{module_path}.py')
+                    module_path = osp.join(
+                        base_dir,
+                        *(['..'] * (level - 1)),
+                        f'{base_module[level:].replace(".", "/")}.py')
                 else:
                     # Absolute import
-                    module_list = base_module.split()
+                    module_list = base_module.split('.')
                     if len(module_list) == 1:
-                        module_path = osp.abspath(f'{module_list[0]}.py')
+                        # TODO
+                        ...
+                        # module_path = osp.abspath(f'{module_list[0]}.py')
                     else:
                         package = module_list[0]
                         root_path = get_installed_path(package)
-                        module_path = osp.join(root_path, *module_list[1:])
+                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'
                 base_module_dict, base_cfg = cls._parse(
                     module_path, module_dict)
                 module_dict.update(base_module_dict)
@@ -371,3 +378,8 @@ class Config(OrderedDict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+
+def convert_to(ori: LazyCall, target: LazyNameCall):
+    ori.name_id = target.name_id
+    return ori
