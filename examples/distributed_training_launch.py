@@ -52,22 +52,34 @@ def parse_args():
         '--num-gpus',
         nargs='+',
         type=int,
-        help='number of gpus to use',
-        default=[2])
+        help='Number of GPUs used by the currently node for training.',
+        default=[1])
     parser.add_argument(
-        '--num-nodes', type=int, help='number of nodes to use', default=1)
+        '--num-nodes',
+        type=int,
+        help='Number of nodes used for training.',
+        default=1)
     parser.add_argument(
-        '--node-rank', type=int, help='The rank of current node.', default=0)
+        '--node-rank', type=int, help='Rank of current node.', default=0)
     parser.add_argument(
         '--master-addr',
         type=str,
-        help='The FQDN of the host that is running worker with rank 0.',
+        help='Host address of the rank 0 node. You do not need to set this '
+        'argument for the rank 0 node (defaults to 127.0.0.1), '
+        'but need to set it as the address of the rank 0 node for '
+        'the other nodes. This argument should only be set then you '
+        'want to launch distributed training directly from `train.py`. ',
         default='127.0.0.1')
     parser.add_argument(
         '--master-port',
         type=str,
         default='auto',
-        help='The port on the ``master_addr``.',
+        help='Port of the master address.',
+    )
+    parser.add_argument(
+        '--local_rank',
+        help='This arguments is preserved for compatibility with '
+        '`torch.distributed.launch`, please do not set it manually.',
     )
     args = parser.parse_args()
     return args

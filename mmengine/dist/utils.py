@@ -616,7 +616,7 @@ def launch(
                 args,
             ),
             daemon=False,
-        )
+            start_method=mp.get_start_method())
     else:
         main_func(*args)
 
