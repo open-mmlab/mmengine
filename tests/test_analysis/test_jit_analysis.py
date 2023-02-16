@@ -753,7 +753,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Unsupported ops and uncalled modules warnings
 
-        logger = logging.getLogger()
+        logger = MMLogger.get_current_instance()
         skipeed_msg = 'Unsupported operator aten::add encountered 1 time(s)'
         uncalled_msg = 'never called'
         uncalled_modules = 'fc1'  # fc2 is called by chance
@@ -771,7 +771,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer.uncalled_modules_warnings(enabled=True)
         analyzer._stats = None  # Manually clear cache so trace is rerun
 
-        # logger = logging.getLogger()
         logger = MMLogger.get_current_instance()
         with self.assertLogs(logger, logging.WARN) as cm:
             _ = analyzer.total()
@@ -792,7 +791,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = FlopAnalyzer(model=mod, inputs=torch.rand(1, 3))
         analyzer.unsupported_ops_warnings(enabled=False)
 
-        logger = logging.getLogger()
+        logger = MMLogger.get_current_instance()
         with self.assertLogs(logger, logging.WARN) as cm:
             logger.warning('Dummy warning.')
             _ = analyzer.total()
