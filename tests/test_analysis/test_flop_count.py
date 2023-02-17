@@ -41,7 +41,7 @@ class ThreeNet(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(input_dim, conv_dim, 1, 1)
         out_dim = 1
-        self.pool: 'nn.Module' = nn.AdaptiveAvgPool2d((out_dim, out_dim))
+        self.pool = nn.AdaptiveAvgPool2d((out_dim, out_dim))
         self.linear1 = nn.Linear(conv_dim, linear_dim)
         self.linear2 = nn.Linear(linear_dim, 1)
 
@@ -164,7 +164,7 @@ class CustomNet(nn.Module):
     def __init__(self, input_dim: int, output_dim: int) -> None:
         super().__init__()
         self.conv = nn.Linear(input_dim, output_dim)
-        self.sigmoid: 'nn.Module' = nn.Sigmoid()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
@@ -243,7 +243,8 @@ class TestFlopAnalyzer(unittest.TestCase):
         custom_ops2: Dict[str, Handle] = {
             f'aten::{self.lin_op}': addmm_dummy_flop_jit
         }
-        flop_dict2, _ = flop_count(customNet, (x, ), supported_ops=custom_ops2)
+        flop_dict2, _ = flop_count(
+            custom_net, (x, ), supported_ops=custom_ops2)
         flop = 400000 / 1e9
         self.assertEqual(
             flop_dict2[self.lin_op],
@@ -304,7 +305,7 @@ class TestFlopAnalyzer(unittest.TestCase):
             return
         extra_dim = 5
         x = torch.randn(batch_size, extra_dim, input_dim)
-        flop_dict, _ = flop_count(linearNet, (x, ))
+        flop_dict, _ = flop_count(linear_net, (x, ))
         gt_flop = batch_size * input_dim * extra_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_flop
