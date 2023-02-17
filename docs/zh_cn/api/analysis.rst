@@ -4,6 +4,11 @@
 mmengine.analysis
 ===================================
 
+.. contents:: mmengine.analysis
+   :depth: 2
+   :local:
+   :backlinks: top
+
 .. currentmodule:: mmengine.analysis
 
 .. autosummary::
@@ -13,6 +18,11 @@ mmengine.analysis
 
    ActivationAnalyzer
    FlopAnalyzer
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
    activation_count
    flop_count
    parameter_count
