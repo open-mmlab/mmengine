@@ -58,10 +58,6 @@ class TestActivationAnalyzer(unittest.TestCase):
         trace = torch.jit.trace(lin, (lin_x, ))
         node_kinds = [node.kind() for node in trace.graph.nodes()]
         assert 'aten::addmm' in node_kinds or 'aten::linear' in node_kinds
-        if 'aten::addmm' in node_kinds:
-            self.lin_op = 'addmm'
-        else:
-            self.lin_op = 'linear'
 
     def test_conv2d(self) -> None:
         """Test the activation count for convolutions."""
@@ -69,16 +65,16 @@ class TestActivationAnalyzer(unittest.TestCase):
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        convNet = SmallConvNet(input_dim)
-        ac_dict, _ = activation_count(convNet, (x, ))
-        gt_count = sum(convNet.get_gt_activation(x))
+        conv_net = SmallConvNet(input_dim)
+        ac_dict, _ = activation_count(conv_net, (x, ))
+        gt_count = sum(conv_net.get_gt_activation(x))
 
         gt_dict = defaultdict(float)
         gt_dict['conv'] = gt_count / 1e6
         self.assertDictEqual(
             gt_dict,
             ac_dict,
-            'ConvNet with 3 layers failed to pass the activation count test.',
+            'conv_net with 3 layers failed to pass the activation count test.',
         )
 
     def test_linear(self) -> None:
@@ -86,12 +82,12 @@ class TestActivationAnalyzer(unittest.TestCase):
         batch_size = 1
         input_dim = 10
         output_dim = 20
-        netLinear = nn.Linear(input_dim, output_dim)
+        linear = nn.Linear(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
-        ac_dict, _ = activation_count(netLinear, (x, ))
+        ac_dict, _ = activation_count(linear, (x, ))
         gt_count = batch_size * output_dim
         gt_dict = defaultdict(float)
-        gt_dict[self.lin_op] = gt_count / 1e6
+        gt_dict['linear'] = gt_count / 1e6
         self.assertEqual(gt_dict, ac_dict,
                          'FC layer failed to pass the activation count test.')
 
@@ -106,16 +102,16 @@ class TestActivationAnalyzer(unittest.TestCase):
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        convNet = SmallConvNet(input_dim)
+        conv_net = SmallConvNet(input_dim)
         sp_ops: Dict[str, Handle] = {'aten::_convolution': dummy_handle}
-        ac_dict, _ = activation_count(convNet, (x, ), sp_ops)
+        ac_dict, _ = activation_count(conv_net, (x, ), sp_ops)
         gt_dict = defaultdict(float)
         conv_layers = 3
         gt_dict['conv'] = 100 * conv_layers / 1e6
         self.assertDictEqual(
             gt_dict,
             ac_dict,
-            'ConvNet with 3 layers failed to pass the activation count test.',
+            'conv_net with 3 layers failed to pass the activation count test.',
         )
 
     def test_activation_count_class(self) -> None:
@@ -136,9 +132,9 @@ class TestActivationAnalyzer(unittest.TestCase):
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        convNet = SmallConvNet(input_dim)
-        acts_counter = ActivationAnalyzer(convNet, (x, ))
-        gt_counts = convNet.get_gt_activation(x)
+        conv_net = SmallConvNet(input_dim)
+        acts_counter = ActivationAnalyzer(conv_net, (x, ))
+        gt_counts = conv_net.get_gt_activation(x)
         gt_dict = Counter({
             '': sum(gt_counts),
             'conv1': gt_counts[0],
