@@ -363,10 +363,10 @@ class JitModelAnalysis:
         inputs and outputs of the operator, in the form of
         ``list(torch._C.Value)``. The function should return a counter object
         with per-operator statistics.
-        
+
         Args:
             args: (str, Handle) pairs of operator names and handles.
-            kwargs: mapping from operator names to handles.   
+            kwargs: mapping from operator names to handles.
 
         Examples:
             >>> handlers = {"aten::linear": my_handler}
