@@ -278,14 +278,14 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
         parameters of the module. The key "" corresponds to the total
         number of parameters of the model.
     """
-    r = defaultdict(int)  # type: typing.DefaultDict[str, int]
-    for name, prm in model.named_parameters():
-        size = prm.numel()
+    count = defaultdict(int)  # type: typing.DefaultDict[str, int]
+    for name, param in model.named_parameters():
+        size = param.numel()
         name = name.split('.')
         for k in range(0, len(name) + 1):
             prefix = '.'.join(name[:k])
-            r[prefix] += size
-    return r
+            count[prefix] += size
+    return count
 
 
 def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
