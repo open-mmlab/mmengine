@@ -93,9 +93,9 @@ class Statistics:
     """For keeping track of the various model statistics recorded during
     analysis."""
 
-    counts: 'Dict[str, typing.Counter[str]]'
-    unsupported_ops: 'Dict[str, typing.Counter[str]]'
-    uncalled_mods: 'Set[str]'
+    counts: Dict[str, typing.Counter[str]]
+    unsupported_ops: Dict[str, typing.Counter[str]]
+    uncalled_mods: Set[str]
 
 
 def _named_modules_with_dup(model: nn.Module,
@@ -130,20 +130,19 @@ def _get_scoped_trace_graph(
     """Traces the provided module using torch.jit._get_trace_graph, but adds
     submodule scope information to each graph node.
 
-    The resulting graph
-    is in-lined and has all model parameters treated as inputs. The input
-    model has the scope name '', while its descendants have names of the
-    form 'child.grandchild.grandgrandchild...'.
+    The resulting graph is in-lined and has all model parameters treated as
+    inputs. The input model has the scope name '', while its descendants
+    have names of the form 'child.grandchild.grandgrandchild...'.
 
     Args:
-        model (nn.Module) : The module to trace
-        inputs (tuple) : Inputs used during the trace of the model
-        aliases (dict(str or nn.Module, str) : maps modules and module
+        model (nn.Module): The module to trace
+        inputs (tuple): Inputs used during the trace of the model
+        aliases (dict[str or nn.Module, str]): maps modules and module
             names to the canonical name to be used as the scope for
             that module.
 
     Returns:
-        graph (torch._C.Graph) : The pytorch JIT trace of the model
+        graph (torch._C.Graph): The pytorch JIT trace of the model
     """
 
     # torch.jit._get_trace_graph can trace torch function like `aten::linear`,
@@ -261,11 +260,11 @@ class JitModelAnalysis:
         requested module.
 
         Args:
-            module_name (str) : The submodule to get data for. Defaults to
+            module_name (str): The submodule to get data for. Defaults to
                 the entire model.
 
         Returns:
-            int : The aggregated statistic.
+            int: The aggregated statistic.
         """
         stats = self._analyze()
         module_name = self.canonical_module_name(module_name)
@@ -280,10 +279,11 @@ class JitModelAnalysis:
         operator type.
 
         Args:
-            module_name (str) : The submodule to get data for. Defaults
+            module_name (str): The submodule to get data for. Defaults
                 to the entire model.
+
         Returns:
-            Counter(str) : The statistics for each operator.
+            Counter(str): The statistics for each operator.
         """
         stats = self._analyze()
         module_name = self.canonical_module_name(module_name)
@@ -293,13 +293,13 @@ class JitModelAnalysis:
         """Returns the statistics for all submodules, separated out by operator
         type for each submodule.
 
-        The operator handle determines
-        the name associated with each operator type.
+        The operator handle determines the name associated with
+        each operator type.
 
         Returns:
-            dict[str, Counter(str)]:
-            The statistics for each submodule and each operator.
-            Grouped by submodule names, then by operator name.
+            dict[str, Counter(str)]: The statistics for each submodule
+            and each operator. Grouped by submodule names, then
+            by operator name.
         """
         stats = self._analyze()
         return stats.counts
@@ -321,15 +321,14 @@ class JitModelAnalysis:
         """Lists the number of operators that were encountered but unsupported
         because no operator handle is available for them.
 
-        Does not include
-        operators that are explicitly ignored.
+        Does not include operators that are explicitly ignored.
 
         Args:
-            module_name (str) : The submodule to list unsupported ops.
+            module_name (str): The submodule to list unsupported ops.
                 Defaults to the entire model.
 
         Returns:
-            Counter(str) : The number of occurrences each unsupported operator.
+            Counter(str): The number of occurrences each unsupported operator.
         """
         if self._stats is None:
             raise RuntimeError('Analysis results should be computed '
@@ -341,14 +340,14 @@ class JitModelAnalysis:
         """Returns a set of submodules that were never called during the trace
         of the graph.
 
-        This may be because they were unused, or
-        because they were accessed via direct calls .forward() or with
-        other python methods. In the latter case, statistics will not be
-        attributed to the submodule, though the statistics will be included
+        This may be because they were unused, or because they were
+        accessed via direct calls .forward() or with other python methods.
+        In the latter case, statistics will not be attributed to the submodule,
+        though the statistics will be included
         in the parent module.
 
         Returns:
-            set(str) : The set of submodule names that were never called
+            set[str]: The set of submodule names that were never called
             during the trace of the model.
         """
         stats = self._analyze()
@@ -358,22 +357,21 @@ class JitModelAnalysis:
                       **kwargs: Optional[Handle]) -> 'JitModelAnalysis':
         """Sets additional operator handles, or replaces existing ones.
 
-        Args:
-            args: (str, Handle) pairs of operator names and handles.
-            kwargs: mapping from operator names to handles.
         If a handle is ``None``, the op will be explicitly ignored. Otherwise,
         handle should be a function that calculates the desirable statistic
         from an operator. The function must take two arguments, which are the
         inputs and outputs of the operator, in the form of
         ``list(torch._C.Value)``. The function should return a counter object
         with per-operator statistics.
+        
+        Args:
+            args: (str, Handle) pairs of operator names and handles.
+            kwargs: mapping from operator names to handles.   
 
-        Examples
-        ::
-            handlers = {"aten::linear": my_handler}
-            counter.set_op_handle("aten::matmul", None,
-                                  "aten::bmm", my_handler2)
-                   .set_op_handle(**handlers)
+        Examples:
+            >>> handlers = {"aten::linear": my_handler}
+            >>> counter.set_op_handle("aten::matmul", None,
+            ...     "aten::bmm", my_handler2).set_op_handle(**handlers)
         """
         self._stats = None
         if len(args) % 2 != 0:
@@ -404,10 +402,10 @@ class JitModelAnalysis:
         output using .by_module() and .by_module_and_operator().
 
         Args:
-            name (str) : The name of the module to find the canonical name for.
+            name (str): The name of the module to find the canonical name for.
 
         Returns:
-            str : The canonical name of the module.
+            str: The canonical name of the module.
         """
         # Blocks access by a direct module reference
         assert isinstance(name, str), 'Module name must be a string.'
@@ -426,14 +424,15 @@ class JitModelAnalysis:
         settings, but on a new model or new inputs.
 
         Args:
-            new_model (nn.Module or None) : a new model for the new
+            new_model (nn.Module or None): a new model for the new
                 JitModelAnalysis. If None, uses the original model.
-            new_inputs (typing.Tuple[object, ...] or None) : new inputs
+                Defaults to None.
+            new_inputs (typing.Tuple[object, ...], optional): new inputs
                 for the new JitModelAnalysis. If None, uses the original
-                inputs.
+                inputs. Defaults to None.
 
         Returns:
-            JitModelAnalysis : the new model analysis object
+            JitModelAnalysis: the new model analysis object
         """
         model = self._model if new_model is None else new_model
         inputs = self._inputs if new_inputs is None else new_inputs
@@ -464,12 +463,13 @@ class JitModelAnalysis:
         """Sets how to determine the ancestor modules of an operator. Must be
         one of "owner" or "caller".
 
-        * "caller": an operator belongs to all modules that is currently
+        * "caller": an operator belongs to all modules that are currently
             executing `forward()` at the time the operator is called.
         * "owner": an operator belongs to the last module that's executing
             `forward()` at the time the operator is called, plus this
             module's recursive parents. If an module has multiple parents
             (e.g. a shared module), only one will be picked.
+
         For most cases, a module only calls submodules it owns, so both
         options would work identically. In certain edge cases, this option
         will affect the hierarchy of results, but won't affect the total
@@ -483,12 +483,11 @@ class JitModelAnalysis:
     def unsupported_ops_warnings(self: T, enabled: bool) -> T:
         """Sets if warnings for unsupported operators are shown.
 
-        Defaults
-        to True. Counts of unsupported operators may be obtained from
-        :meth:`unsupported_ops` regardless of this setting.
+        Defaults to True. Counts of unsupported operators may be
+        obtained from :meth:`unsupported_ops` regardless of this setting.
 
         Args:
-            enabled (bool) : Set to 'True' to show unsupported operator
+            enabled (bool): Set to 'True' to show unsupported operator
                 warnings.
         """
         self._enable_warn_unsupported_ops = enabled
@@ -497,15 +496,14 @@ class JitModelAnalysis:
     def uncalled_modules_warnings(self: T, enabled: bool) -> T:
         """Sets if warnings from uncalled submodules are shown.
 
-        Defaults to true.
-        A submodule is considered "uncalled" if it is never called during
-        tracing. This may be because it is actually unused, or because it is
-        accessed via calls to ``.forward()`` or other methods of the module.
-        The set of uncalled modules may be obtained from
+        Defaults to true. A submodule is considered "uncalled" if it is never
+        called during tracing. This may be because it is actually unused, or
+        because it is accessed via calls to ``.forward()`` or other methods of
+        the module. The set of uncalled modules may be obtained from
         :meth:`uncalled_modules` regardless of this setting.
 
         Args:
-            enabled (bool) : Set to 'True' to show warnings.
+            enabled (bool): Set to 'True' to show warnings.
         """
         self._enable_warn_uncalled_mods = enabled
         return self
