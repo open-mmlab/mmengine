@@ -55,19 +55,20 @@ class FlopAnalyzer(JitModelAnalysis):
 
     Note:
         - Flop is not a well-defined concept. We just produce our best
-           estimate.
+          estimate.
         - We count one fused multiply-add as one flop.
 
     Handles for additional operators may be added, or the default ones
     overwritten, using the ``.set_op_handle(name, func)`` method.
     See the method documentation for details.
     Flop counts can be obtained as:
-        - ``.total(module_name="")``: total flop count for the module
-        - ``.by_operator(module_name="")``: flop counts for the module, as a
-            Counter over different operator types
-        - ``.by_module()``: Counter of flop counts for all submodules
-        - ``.by_module_and_operator()``: dictionary indexed by descendant of
-            Counters over different operator types
+
+    - ``.total(module_name="")``: total flop count for the module
+    - ``.by_operator(module_name="")``: flop counts for the module, as a
+      Counter over different operator types
+    - ``.by_module()``: Counter of flop counts for all submodules
+    - ``.by_module_and_operator()``: dictionary indexed by descendant of
+      Counters over different operator types
 
     An operator is treated as within a module if it is executed inside the
     module's ``__call__`` method. Note that this does not include calls to
@@ -132,12 +133,13 @@ class ActivationAnalyzer(JitModelAnalysis):
     the default ones overwritten, using the ``.set_op_handle(name, func)``
     method. See the method documentation for details. Activation counts can be
     obtained as:
-        - ``.total(module_name="")``: total activation count for a module
-        - ``.by_operator(module_name="")``: activation counts for the module,
-            as a Counter over different operator types
-        - ``.by_module()``: Counter of activation counts for all submodules
-        - ``.by_module_and_operator()``: dictionary indexed by descendant of
-            Counters over different operator types
+
+    - ``.total(module_name="")``: total activation count for a module
+    - ``.by_operator(module_name="")``: activation counts for the module,
+      as a Counter over different operator types
+    - ``.by_module()``: Counter of activation counts for all submodules
+    - ``.by_module_and_operator()``: dictionary indexed by descendant of
+      Counters over different operator types
 
     An operator is treated as within a module if it is executed inside the
     module's ``__call__`` method. Note that this does not include calls to
@@ -296,39 +298,40 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/parameter_count.py
 
     in a nice table. It looks like this:
-    ::
-        | name                            | #elements or shape   |
-        |:--------------------------------|:---------------------|
-        | model                           | 37.9M                |
-        |  backbone                       |  31.5M               |
-        |   backbone.fpn_lateral3         |   0.1M               |
-        |    backbone.fpn_lateral3.weight |    (256, 512, 1, 1)  |
-        |    backbone.fpn_lateral3.bias   |    (256,)            |
-        |   backbone.fpn_output3          |   0.6M               |
-        |    backbone.fpn_output3.weight  |    (256, 256, 3, 3)  |
-        |    backbone.fpn_output3.bias    |    (256,)            |
-        |   backbone.fpn_lateral4         |   0.3M               |
-        |    backbone.fpn_lateral4.weight |    (256, 1024, 1, 1) |
-        |    backbone.fpn_lateral4.bias   |    (256,)            |
-        |   backbone.fpn_output4          |   0.6M               |
-        |    backbone.fpn_output4.weight  |    (256, 256, 3, 3)  |
-        |    backbone.fpn_output4.bias    |    (256,)            |
-        |   backbone.fpn_lateral5         |   0.5M               |
-        |    backbone.fpn_lateral5.weight |    (256, 2048, 1, 1) |
-        |    backbone.fpn_lateral5.bias   |    (256,)            |
-        |   backbone.fpn_output5          |   0.6M               |
-        |    backbone.fpn_output5.weight  |    (256, 256, 3, 3)  |
-        |    backbone.fpn_output5.bias    |    (256,)            |
-        |   backbone.top_block            |   5.3M               |
-        |    backbone.top_block.p6        |    4.7M              |
-        |    backbone.top_block.p7        |    0.6M              |
-        |   backbone.bottom_up            |   23.5M              |
-        |    backbone.bottom_up.stem      |    9.4K              |
-        |    backbone.bottom_up.res2      |    0.2M              |
-        |    backbone.bottom_up.res3      |    1.2M              |
-        |    backbone.bottom_up.res4      |    7.1M              |
-        |    backbone.bottom_up.res5      |    14.9M             |
-        |    ......                       |    .....             |
+    +---------------------------------+----------------------+
+    | name                            | #elements or shape   |
+    +=================================+======================+
+    | model                           | 37.9M                |
+    |  backbone                       |  31.5M               |
+    |   backbone.fpn_lateral3         |   0.1M               |
+    |    backbone.fpn_lateral3.weight |    (256, 512, 1, 1)  |
+    |    backbone.fpn_lateral3.bias   |    (256,)            |
+    |   backbone.fpn_output3          |   0.6M               |
+    |    backbone.fpn_output3.weight  |    (256, 256, 3, 3)  |
+    |    backbone.fpn_output3.bias    |    (256,)            |
+    |   backbone.fpn_lateral4         |   0.3M               |
+    |    backbone.fpn_lateral4.weight |    (256, 1024, 1, 1) |
+    |    backbone.fpn_lateral4.bias   |    (256,)            |
+    |   backbone.fpn_output4          |   0.6M               |
+    |    backbone.fpn_output4.weight  |    (256, 256, 3, 3)  |
+    |    backbone.fpn_output4.bias    |    (256,)            |
+    |   backbone.fpn_lateral5         |   0.5M               |
+    |    backbone.fpn_lateral5.weight |    (256, 2048, 1, 1) |
+    |    backbone.fpn_lateral5.bias   |    (256,)            |
+    |   backbone.fpn_output5          |   0.6M               |
+    |    backbone.fpn_output5.weight  |    (256, 256, 3, 3)  |
+    |    backbone.fpn_output5.bias    |    (256,)            |
+    |   backbone.top_block            |   5.3M               |
+    |    backbone.top_block.p6        |    4.7M              |
+    |    backbone.top_block.p7        |    0.6M              |
+    |   backbone.bottom_up            |   23.5M              |
+    |    backbone.bottom_up.stem      |    9.4K              |
+    |    backbone.bottom_up.res2      |    0.2M              |
+    |    backbone.bottom_up.res3      |    1.2M              |
+    |    backbone.bottom_up.res4      |    7.1M              |
+    |    backbone.bottom_up.res5      |    14.9M             |
+    |    ......                       |    .....             |
+    +---------------------------------+----------------------+
 
     Args:
         model (nn.Module): the model to count parameters.

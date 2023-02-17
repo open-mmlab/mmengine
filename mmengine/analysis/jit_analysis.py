@@ -214,12 +214,11 @@ class JitModelAnalysis:
     name "", while its descendants have names of the form
     "child.grandchild.grandgrandchild...".
 
-    An operator is treated as within the
-    scope of a module if calling that module directly resulted in that operator
-    being run. In particular, this means that calls to other functions owned by
-    a module or explicit calls to module.forward(...) will not register
-    resulting operators as contributing statistics to that module.
-
+    An operator is treated as within the scope of a module if calling that
+    module directly resulted in that operator being run. In particular, this
+    means that calls to other functions owned by a module or explicit
+    calls to module.forward(...) will not register resulting operators as
+    contributing statistics to that module.
 
     We will trace the execution of `model.forward(inputs)`. This means
     inputs have to be tensors or tuple of tensors (see
