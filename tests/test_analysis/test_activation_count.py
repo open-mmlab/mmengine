@@ -44,7 +44,7 @@ class SmallConvNet(nn.Module):
         count2 = prod(list(x.size()))
         x = self.conv3(x)
         count3 = prod(list(x.size()))
-        return (count1, count2, count3)
+        return count1, count2, count3
 
 
 class TestActivationAnalyzer(unittest.TestCase):
