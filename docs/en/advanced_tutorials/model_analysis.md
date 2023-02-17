@@ -151,13 +151,13 @@ class MMResNet50(BaseModel):
         super().__init__()
         self.resnet = torchvision.models.resnet50()
 
-    def forward(self, imgs, labels=None, mode='extract_feat'):
+    def forward(self, imgs, labels=None, mode='tensor'):
         x = self.resnet(imgs)
         if mode == 'loss':
             return {'loss': F.cross_entropy(x, labels)}
         elif mode == 'predict':
             return x, labels
-        elif mode == 'extract_feat':
+        elif mode == 'tensor':
             return x
 
 
