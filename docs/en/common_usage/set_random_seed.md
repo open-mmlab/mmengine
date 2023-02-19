@@ -36,4 +36,4 @@ Then why do we still have fluctuations? This is because the CUDA implementation 
 
 The randomness of the summing order leads to another problem, that is, since the summed values are generally floating point numbers that have the problem of precision loss, there will be a slight difference in the final result.
 
-So, by setting random seeds and deterministic to `True`, we can make sure that the initialization weights and even the forward outputs of the model are identical for each experiment, and the loss values are also identical. However, there may be subtle differences after one backpropagation, and the final mAP of the trained models will be slightly different.
+So, by setting random seeds and deterministic to `True`, we can make sure that the initialization weights and even the forward outputs of the model are identical for each experiment, and the loss values are also identical. However, there may be subtle differences after one backpropagation, and the final performance of the trained models will be slightly different.
