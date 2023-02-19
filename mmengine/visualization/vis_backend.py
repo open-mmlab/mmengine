@@ -678,8 +678,11 @@ class MLflowVisBackend(BaseVisBackend):
         if self._tracking_uri is not None:
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
-            self._mlflow.set_tracking_uri(
-                f'file:\\{os.path.abspath(self._save_dir)}')
+            if os.name == 'nt':
+                file_url = f'file:\\{os.path.abspath(self._save_dir)}'
+            else:
+                file_url = f'file://{os.path.abspath(self._save_dir)}'
+            self._mlflow.set_tracking_uri(file_url)
 
         self._exp_name = self._exp_name or 'Default'
 
