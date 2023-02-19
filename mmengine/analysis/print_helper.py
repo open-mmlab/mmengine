@@ -303,6 +303,7 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # type: ignore
 def _get_single_child(name: str,
                       statistics: Dict[str, Dict[str, str]]) -> Optional[str]:
     """If the given module has only a single child in statistics, return it.
+
     Otherwise, return None.
     """
     prefix = name + ('.' if name else '')
