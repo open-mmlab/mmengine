@@ -1167,7 +1167,7 @@ class Runner:
           in runner, ``build_param_scheduler`` will return a dict containing
           the same keys with multiple optimizers and each value is a list of
           parameter schedulers. Note that, if you want different optimizers to
-          use different parameter shedulers to update optimizer's
+          use different parameter schedulers to update optimizer's
           hyper-parameters, the input parameter ``scheduler`` also needs to be
           a dict and its key are consistent with multiple optimizers.
           Otherwise, the same parameter schedulers will be used to update
@@ -1198,7 +1198,7 @@ class Runner:
             <mmengine.optim.scheduler.lr_scheduler.StepLR at 0x7f70f6eb6150>]
 
         Above examples only provide the case of one optimizer and one scheduler
-        or multiple shedulers. If you want to know how to set parameter
+        or multiple schedulers. If you want to know how to set parameter
         scheduler when using multiple optimizers, you can find more examples
         `optimizer-docs`_.
 
@@ -2233,7 +2233,7 @@ class Runner:
         if is_seq_of(param_scheduler, dict):
             for _param_scheduler in param_scheduler:
                 assert 'type' in _param_scheduler, (
-                    'Each parameter sheduler should contain the key type, '
+                    'Each parameter scheduler should contain the key type, '
                     f'but got {_param_scheduler}')
         elif isinstance(param_scheduler, dict):
             if 'type' not in param_scheduler:
