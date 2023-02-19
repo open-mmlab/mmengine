@@ -64,7 +64,7 @@ def _pretty_statistics(statistics: Dict[str, Dict[str, int]],
         hide_zero (bool): if True, statistics that are zero will be
             written as an empty string. Defaults to False.
 
-    Return:
+    Returns:
         dict[str, dict[str, str]]: the input statistics as pretty strings
     """
     out_stats = {}
@@ -303,7 +303,6 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # type: ignore
 def _get_single_child(name: str,
                       statistics: Dict[str, Dict[str, str]]) -> Optional[str]:
     """If the given module has only a single child in statistics, return it.
-
     Otherwise, return None.
     """
     prefix = name + ('.' if name else '')
@@ -444,48 +443,48 @@ def complexity_stats_str(
     unused or their statistics are missing for this reason. Any such flops are
     still counted towards the parent.
 
-    Example:
-    >>> import torch
-    >>> import torch.nn as nn
-    >>> class InnerNet(nn.Module):
-    ...     def __init__(self):
-    ...         super().__init__()
-    ...         self.fc1 = nn.Linear(10,10)
-    ...         self.fc2 = nn.Linear(10,10)
-    ...     def forward(self, x):
-    ...         return self.fc1(self.fc2(x))
-    >>> class TestNet(nn.Module):
-    ...     def __init__(self):
-    ...         super().__init__()
-    ...         self.fc1 = nn.Linear(10,10)
-    ...         self.fc2 = nn.Linear(10,10)
-    ...         self.inner = InnerNet()
-    ...     def forward(self, x):
-    ...         return self.fc1(self.fc2(self.inner(x)))
-    >>> inputs = torch.randn((1,10))
-    >>> print(complexity_stats_str(FlopAnalyzer(model, inputs)))
-    TestNet(
-      #params: 0.44K, #flops: 0.4K
-      (fc1): Linear(
-        in_features=10, out_features=10, bias=True
-        #params: 0.11K, #flops: 100
-      )
-      (fc2): Linear(
-        in_features=10, out_features=10, bias=True
-        #params: 0.11K, #flops: 100
-      )
-      (inner): InnerNet(
-        #params: 0.22K, #flops: 0.2K
-        (fc1): Linear(
-          in_features=10, out_features=10, bias=True
-          #params: 0.11K, #flops: 100
+    Examples:
+        >>> import torch
+        >>> import torch.nn as nn
+        >>> class InnerNet(nn.Module):
+        ...     def __init__(self):
+        ...         super().__init__()
+        ...         self.fc1 = nn.Linear(10,10)
+        ...         self.fc2 = nn.Linear(10,10)
+        ...     def forward(self, x):
+        ...         return self.fc1(self.fc2(x))
+        >>> class TestNet(nn.Module):
+        ...     def __init__(self):
+        ...         super().__init__()
+        ...         self.fc1 = nn.Linear(10,10)
+        ...         self.fc2 = nn.Linear(10,10)
+        ...         self.inner = InnerNet()
+        ...     def forward(self, x):
+        ...         return self.fc1(self.fc2(self.inner(x)))
+        >>> inputs = torch.randn((1,10))
+        >>> print(complexity_stats_str(FlopAnalyzer(model, inputs)))
+        TestNet(
+          #params: 0.44K, #flops: 0.4K
+          (fc1): Linear(
+            in_features=10, out_features=10, bias=True
+            #params: 0.11K, #flops: 100
+          )
+          (fc2): Linear(
+            in_features=10, out_features=10, bias=True
+            #params: 0.11K, #flops: 100
+          )
+          (inner): InnerNet(
+            #params: 0.22K, #flops: 0.2K
+            (fc1): Linear(
+              in_features=10, out_features=10, bias=True
+              #params: 0.11K, #flops: 100
+            )
+            (fc2): Linear(
+              in_features=10, out_features=10, bias=True
+              #params: 0.11K, #flops: 100
+            )
+          )
         )
-        (fc2): Linear(
-          in_features=10, out_features=10, bias=True
-          #params: 0.11K, #flops: 100
-        )
-      )
-    )
 
     Args:
         flops (FlopAnalyzer): the flop counting object
@@ -599,7 +598,6 @@ def complexity_stats_table(
         str: The formatted table.
 
     Examples:
-
         >>> print(complexity_stats_table(FlopAnalyzer(model, inputs)))
     """
     params_header = '#parameters' + (' or shape' if show_param_shapes else '')
