@@ -26,7 +26,7 @@ runner = Runner(
 runner.train()
 ```
 
-However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms are chosen. Here we briefly explain why and where these fluctuations come from.
+However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms chosen. Here we briefly explain why and where these fluctuations come from.
 
 First, randomness not only exists in OpenMMLab algorithms like MMDetection. You may encounter it in most of the deep learning frameworks. The core reason is that the atomic operations in CUDA are unordered and random during parallel training.
 
