@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
 import torch.nn as nn
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from torch import Tensor
@@ -341,7 +342,8 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     rows.append(('model', format_size(count.pop(''))))
     fill(0, '')
 
-    table = Table(title=f'parameter count of {model.__class__.__name__}')
+    table = Table(
+        title=f'parameter count of {model.__class__.__name__}', box=box.ASCII2)
     table.add_column('name')
     table.add_column('#elements or shape')
 
