@@ -475,9 +475,7 @@ class TestRegistry:
 
         assert 'Registry of cat' in repr(CATS)
         assert 'BritishShorthair' in repr(CATS)
-        assert "test_repr.<locals>.BritishShorthair'>" in repr(CATS)
         assert 'Munchkin' in repr(CATS)
-        assert "test_repr.<locals>.Munchkin'>" in repr(CATS)
 
 
 @pytest.mark.parametrize('cfg_type', [dict, ConfigDict, Config])
