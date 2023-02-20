@@ -714,9 +714,9 @@ class BaseDataset(Dataset):
         Args:
             indices (int or Sequence[int]): If type of indices is int,
                 indices represents the first or last few data of data
-                information. If  indices of indices is Sequence, indices
-                represents the target data information index which consist
-                of subset data information.
+                information. If type of indices is Sequence, indices represents
+                the target data information index which consist of subset data
+                information.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: subset of data information.
