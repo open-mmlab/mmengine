@@ -70,24 +70,24 @@ The return outputs is dict, which contains the following keys:
 - `out_table`: print related information by table
 
 ```
-┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┓
-┃ module              ┃ #parameters or shape ┃ #flops ┃ #activations ┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━┩
-│ model               │ 0.44K                │ 0.4K   │ 40           │
-│  fc1                │  0.11K               │  100   │  10          │
-│   fc1.weight        │   (10, 10)           │        │              │
-│   fc1.bias          │   (10,)              │        │              │
-│  fc2                │  0.11K               │  100   │  10          │
-│   fc2.weight        │   (10, 10)           │        │              │
-│   fc2.bias          │   (10,)              │        │              │
-│  inner              │  0.22K               │  0.2K  │  20          │
-│   inner.fc1         │   0.11K              │   100  │   10         │
-│    inner.fc1.weight │    (10, 10)          │        │              │
-│    inner.fc1.bias   │    (10,)             │        │              │
-│   inner.fc2         │   0.11K              │   100  │   10         │
-│    inner.fc2.weight │    (10, 10)          │        │              │
-│    inner.fc2.bias   │    (10,)             │        │              │
-└─────────────────────┴──────────────────────┴────────┴──────────────┘
+----------------------------------------------------------------------
+| module              | #parameters or shape | #flops | #activations |
+----------------------------------------------------------------------
+| model               | 0.44K                | 0.4K   | 40           |
+|  fc1                |  0.11K               |  100   |  10          |
+|   fc1.weight        |   (10, 10)           |        |              |
+|   fc1.bias          |   (10,)              |        |              |
+|  fc2                |  0.11K               |  100   |  10          |
+|   fc2.weight        |   (10, 10)           |        |              |
+|   fc2.bias          |   (10,)              |        |              |
+|  inner              |  0.22K               |  0.2K  |  20          |
+|   inner.fc1         |   0.11K              |   100  |   10         |
+|    inner.fc1.weight |    (10, 10)          |        |              |
+|    inner.fc1.bias   |    (10,)             |        |              |
+|   inner.fc2         |   0.11K              |   100  |   10         |
+|    inner.fc2.weight |    (10, 10)          |        |              |
+|    inner.fc2.bias   |    (10,)             |        |              |
+----------------------------------------------------------------------
 ```
 
 - `out_arch`:  print related information by network layers
