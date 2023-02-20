@@ -70,68 +70,50 @@ The return outputs is dict, which contains the following keys:
 - `out_table`: print related information by table
 
 ```
-| model                            | #parameters or shape| #flops    |
-|:---------------------------------|:--------------------|:----------|
-| model                            | 34.6M               | 65.7G     |
-|  s1                              |  15.4K              |  4.32G    |
-|   s1.pathway0_stem               |   9.54K             |   1.23G   |
-|    s1.pathway0_stem.conv         |    9.41K            |    1.23G  |
-|    s1.pathway0_stem.bn           |    0.128K           |           |
-|   s1.pathway1_stem               |   5.9K              |   3.08G   |
-|    s1.pathway1_stem.conv         |    5.88K            |    3.08G  |
-|    s1.pathway1_stem.bn           |    16               |           |
-|  s1_fuse                         |  0.928K             |  29.4M    |
-|   s1_fuse.conv_f2s               |   0.896K            |   29.4M   |
-|    s1_fuse.conv_f2s.weight       |    (16, 8, 7, 1, 1) |           |
-|   s1_fuse.bn                     |   32                |           |
-|    s1_fuse.bn.weight             |    (16,)            |           |
-|    s1_fuse.bn.bias               |    (16,)            |           |
-|  s2                              |  0.226M             |  7.73G    |
-|   s2.pathway0_res0               |   80.1K             |   2.58G   |
-|    s2.pathway0_res0.branch1      |    20.5K            |    0.671G |
-|    s2.pathway0_res0.branch1_bn   |    0.512K           |           |
-|    s2.pathway0_res0.branch2      |    59.1K            |    1.91G  |
-|   s2.pathway0_res1.branch2       |   70.4K             |   2.28G   |
-|    s2.pathway0_res1.branch2.a    |    16.4K            |    0.537G |
-|    s2.pathway0_res1.branch2.a_bn |    0.128K           |           |
-|    s2.pathway0_res1.branch2.b    |    36.9K            |    1.21G  |
-|    s2.pathway0_res1.branch2.b_bn |    0.128K           |           |
-|    s2.pathway0_res1.branch2.c    |    16.4K            |    0.537G |
-|    s2.pathway0_res1.branch2.c_bn |    0.512K           |           |
-|   s2.pathway0_res2.branch2       |   70.4K             |   2.28G   |
-|    s2.pathway0_res2.branch2.a    |    16.4K            |    0.537G |
-|    s2.pathway0_res2.branch2.a_bn |    0.128K           |           |
-|    s2.pathway0_res2.branch2.b    |    36.9K            |    1.21G  |
-|    s2.pathway0_res2.branch2.b_bn |    0.128K           |           |
-|    s2.pathway0_res2.branch2.c    |    16.4K            |    0.537G |
-|    s2.pathway0_res2.branch2.c_bn |    0.512K           |           |
-|    ............................. |    ......           |    ...... |
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ module              ┃ #parameters or shape ┃ #flops ┃ #activations ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ model               │ 0.44K                │ 0.4K   │ 40           │
+│  fc1                │  0.11K               │  100   │  10          │
+│   fc1.weight        │   (10, 10)           │        │              │
+│   fc1.bias          │   (10,)              │        │              │
+│  fc2                │  0.11K               │  100   │  10          │
+│   fc2.weight        │   (10, 10)           │        │              │
+│   fc2.bias          │   (10,)              │        │              │
+│  inner              │  0.22K               │  0.2K  │  20          │
+│   inner.fc1         │   0.11K              │   100  │   10         │
+│    inner.fc1.weight │    (10, 10)          │        │              │
+│    inner.fc1.bias   │    (10,)             │        │              │
+│   inner.fc2         │   0.11K              │   100  │   10         │
+│    inner.fc2.weight │    (10, 10)          │        │              │
+│    inner.fc2.bias   │    (10,)             │        │              │
+└─────────────────────┴──────────────────────┴────────┴──────────────┘
 ```
 
 - `out_arch`:  print related information by network layers
 
 ```bash
-    TestNet(
-    #params: 0.44K, #flops: 0.4K
-    (fc1): Linear(
+TestNet(
+  #params: 0.44K, #flops: 0.4K, #acts: 40
+  (fc1): Linear(
     in_features=10, out_features=10, bias=True
-    #params: 0.11K, #flops: 100
+    #params: 0.11K, #flops: 100, #acts: 10
+  )
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    #params: 0.11K, #flops: 100, #acts: 10
+  )
+  (inner): InnerNet(
+    #params: 0.22K, #flops: 0.2K, #acts: 20
+    (fc1): Linear(
+      in_features=10, out_features=10, bias=True
+      #params: 0.11K, #flops: 100, #acts: 10
     )
     (fc2): Linear(
-    in_features=10, out_features=10, bias=True
-    #params: 0.11K, #flops: 100
+      in_features=10, out_features=10, bias=True
+      #params: 0.11K, #flops: 100, #acts: 10
     )
-    (inner): InnerNet(
-    #params: 0.22K, #flops: 0.2K
-    (fc1): Linear(
-        in_features=10, out_features=10, bias=True
-        #params: 0.11K, #flops: 100
-    )
-    (fc2): Linear(
-        in_features=10, out_features=10, bias=True
-        #params: 0.11K, #flops: 100
-    )
-    )
+  )
 )
 ```
 

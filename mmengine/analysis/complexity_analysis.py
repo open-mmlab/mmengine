@@ -299,6 +299,7 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/parameter_count.py
 
     in a nice table. It looks like this:
+
     +---------------------------------+----------------------+
     | name                            | #elements or shape   |
     +=================================+======================+
