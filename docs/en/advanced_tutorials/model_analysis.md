@@ -69,7 +69,7 @@ The return outputs is dict, which contains the following keys:
 - `activations_str`: with formatted string, e.g., 1.0G, 100M
 - `out_table`: print related information by table
 
-```
+```html
 ----------------------------------------------------------------------
 | module              | #parameters or shape | #flops | #activations |
 ----------------------------------------------------------------------
@@ -90,7 +90,7 @@ The return outputs is dict, which contains the following keys:
 ----------------------------------------------------------------------
 ```
 
-- `out_arch`:  print related information by network layers
+- `out_arch`: print related information by network layers
 
 ```bash
 TestNet(
