@@ -1,31 +1,38 @@
 # EpochBasedTraining to IterBasedTraining
 
-Many modules in MMEngine default to training models by epoch, such as `ParamScheduler`, `LoggerHook`, `CheckPointHook`, etc. Therefore, you need to adjust the configuration of these modules when training by iteration. For example, a commonly used epoch based configuration is as follows:
+Many modules in MMEngine default to training models by epoch, such as `ParamScheduler`, `LoggerHook`, `CheckPointHook`, etc. Therefore, you need to adjust the configuration of these modules if you want to train by iteration. For example, a commonly used epoch based configuration is as follows:
 
 ```python
 param_scheduler = dict(
     type='MultiStepLR',
     milestones=[6, 8]
+    by_epoch=True  # by_epoch is True by default
 )
 
 default_hooks = dict(
-    logger=dict(type='LoggerHook'),
-    checkpoint=dict(type='CheckpointHook', interval=2),
+    logger=dict(type='LoggerHook', log_metric_by_epoch=True),  # log_metric_by_epoch is True by default
+    checkpoint=dict(type='CheckpointHook', interval=2, by_epoch=True),  # by_epoch is True by default
 )
 
 train_cfg = dict(
-    by_epoch=True,
+    by_epoch=True,  # set by_epoch=True or type='EpochBasedTrainLoop'
     max_epochs=10,
     val_interval=2
 )
 
+log_processor = dict(
+    by_epoch=True
+)  # This is the default configuration, and just set it here for comparison.
+
 runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
+    # Assuming train_dataloader is configured with an epoch-based sampler
     train_dataloader=train_dataloader_cfg,
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     param_scheduler=param_scheduler
     default_hooks=default_hooks,
+    log_processor=log_processor,
     train_cfg=train_cfg,
     resume=True,
 )
@@ -188,8 +195,8 @@ class Accuracy(BaseMetric):
 
 ```python
 default_hooks = dict(
-    logger=dict(type='LoggerHook'),
-    checkpoint=dict(type='CheckpointHook', interval=2),
+    logger=dict(type='LoggerHook', log_metric_by_epoch=True),
+    checkpoint=dict(type='CheckpointHook', interval=2, by_epoch=True),
 )
 ```
 
@@ -219,6 +226,7 @@ default_hooks = dict(
 param_scheduler = dict(
     type='MultiStepLR',
     milestones=[6, 8]
+    by_epoch=True
 )
 ```
 
@@ -248,7 +256,7 @@ param_scheduler = dict(
 ```python
 # The default configuration of log_processor is used for epoch based training.
 # Defining it here additionally is for building runner with the same way.
-log_processor = dict(by_epoch=False)
+log_processor = dict(by_epoch=True)
 ```
 
 </div>
@@ -323,3 +331,11 @@ runner.train()
 
 </thead>
 </table>
+
+```{note}
+If the base configuration file has configured a epoch/iteration based sampler for the train_dataloader, then it is necessary to change it to a specified type of sampler in the current configuration file, or set it to None. When the sampler in the dataloader is set to None, MMEngine will choose either the InfiniteSampler (when by_epoch is False) or the DefaultSampler (when by_epoch is True) according to the train_cfg parameter.
+```
+
+```{note}
+If `type` is configured for the `train_cfg` in the base configuration, you must overwrite the type to target type (EpochBasedTrainLoop or IterBasedTrainLoop) rather than simply set `by_epoch` to True/False.
+```

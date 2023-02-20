@@ -6,6 +6,7 @@ MMEngine 很多模块默认按照 Epoch 训练模型，例如 ParamScheduler, Lo
 param_scheduler = dict(
     type='MultiStepLR',
     milestones=[6, 8]
+    by_epoch=True  # by_epoch 默认为 True，这边显示的写出来只是为了方便对比
 )
 
 default_hooks = dict(
@@ -14,10 +15,14 @@ default_hooks = dict(
 )
 
 train_cfg = dict(
-    by_epoch=True,
+    by_epoch=True,  # by_epoch 默认为 True，这边显示的写出来只是为了方便对比
     max_epochs=10,
     val_interval=2
 )
+
+log_processor = dict(
+    by_epoch=True
+)  # log_processor 的 by_epoch 默认为 True，这边显示的写出来只是为了方便对比， 实际上不需要设置
 
 runner = Runner(
     model=ResNet18(),
@@ -26,6 +31,7 @@ runner = Runner(
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     param_scheduler=param_scheduler
     default_hooks=default_hooks,
+    log_processor=log_processor,
     train_cfg=train_cfg,
     resume=True,
 )
@@ -188,8 +194,8 @@ class Accuracy(BaseMetric):
 
 ```python
 default_hooks = dict(
-    logger=dict(type='LoggerHook'),
-    checkpoint=dict(type='CheckpointHook', interval=2),
+    logger=dict(type='LoggerHook', log_metric_by_epoch=True),
+    checkpoint=dict(type='CheckpointHook', interval=2, by_epoch=True),
 )
 ```
 
@@ -218,7 +224,8 @@ default_hooks = dict(
 ```python
 param_scheduler = dict(
     type='MultiStepLR',
-    milestones=[6, 8]
+    milestones=[6, 8],
+    by_epoch=True,
 )
 ```
 
@@ -248,7 +255,7 @@ param_scheduler = dict(
 ```python
 # The default configuration of log_processor is used for epoch based training.
 # Defining it here additionally is for building runner with the same way.
-log_processor = dict(by_epoch=False)
+log_processor = dict(by_epoch=True)
 ```
 
 </div>
@@ -323,3 +330,11 @@ runner.train()
 
 </thead>
 </table>
+
+```{note}
+如果基础配置文件为 train_dataloader 配置了基于 iteration/epoch 采样的 sampler，则需要在当前配置文件中将其更改为指定类型的 sampler，或将其设置为 None。当 dataloader 中的 sampler 为 None，MMEngine 或根据 train_cfg 中的 by_epoch 参数选择 `InfiniteSampler`（False） 或 `DefaultSampler`（True）。
+```
+
+```{note}
+如果基础配置文件在 train_cfg 中指定了 type，那么必须在当前配置文件中将 type 覆盖为（IterBasedTrainLoop 或 EpochBasedTrainLoop），而不能简单的指定 by_epoch 参数。
+```
