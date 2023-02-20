@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import torch
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from torch import nn
@@ -421,7 +422,7 @@ def _stats_table_format(
     root_prefix = root_name + ('.' if root_name else '')
     fill(indent_lvl=1, prefix=root_prefix)
 
-    table = Table()
+    table = Table(box=box.ASCII2)
     for header in headers:
         table.add_column(header)
 

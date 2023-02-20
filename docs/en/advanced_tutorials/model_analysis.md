@@ -69,10 +69,10 @@ The return outputs is dict, which contains the following keys:
 - `activations_str`: with formatted string, e.g., 1.0G, 100M
 - `out_table`: print related information by table
 
-```html
-----------------------------------------------------------------------
+```
++---------------------+----------------------+--------+--------------+
 | module              | #parameters or shape | #flops | #activations |
-----------------------------------------------------------------------
++---------------------+----------------------+--------+--------------+
 | model               | 0.44K                | 0.4K   | 40           |
 |  fc1                |  0.11K               |  100   |  10          |
 |   fc1.weight        |   (10, 10)           |        |              |
@@ -87,7 +87,7 @@ The return outputs is dict, which contains the following keys:
 |   inner.fc2         |   0.11K              |   100  |   10         |
 |    inner.fc2.weight |    (10, 10)          |        |              |
 |    inner.fc2.bias   |    (10,)             |        |              |
-----------------------------------------------------------------------
++---------------------+----------------------+--------+--------------+
 ```
 
 - `out_arch`: print related information by network layers
