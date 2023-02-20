@@ -292,7 +292,7 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
 
 
 def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
-    """Format the parameter count of the model (and its submodules or
+    r"""Format the parameter count of the model (and its submodules or
     parameters)
 
     Adopted from
