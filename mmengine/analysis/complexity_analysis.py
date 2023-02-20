@@ -4,8 +4,9 @@ import typing
 from collections import defaultdict
 from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
-import tabulate
 import torch.nn as nn
+from rich.console import Console
+from rich.table import Table
 from torch import Tensor
 
 from .jit_analysis import JitModelAnalysis
@@ -349,7 +350,7 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     }
 
     # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
-    table: typing.List[typing.Tuple] = []
+    rows: typing.List[typing.Tuple] = []
 
     def format_size(x: int) -> str:
         if x > 1e8:
@@ -367,18 +368,24 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
             if name.count('.') == lvl and name.startswith(prefix):
                 indent = ' ' * (lvl + 1)
                 if name in param_shape:
-                    table.append(
+                    rows.append(
                         (indent + name, indent + str(param_shape[name])))
                 else:
-                    table.append((indent + name, indent + format_size(v)))
+                    rows.append((indent + name, indent + format_size(v)))
                     fill(lvl + 1, name + '.')
 
-    table.append(('model', format_size(count.pop(''))))
+    rows.append(('model', format_size(count.pop(''))))
     fill(0, '')
 
-    old_ws = tabulate.PRESERVE_WHITESPACE
-    tabulate.PRESERVE_WHITESPACE = True
-    tab = tabulate.tabulate(
-        table, headers=['name', '#elements or shape'], tablefmt='pipe')
-    tabulate.PRESERVE_WHITESPACE = old_ws
-    return tab
+    table = Table(title=f'parameter count of {model.__class__.__name__}')
+    table.add_column('name')
+    table.add_column('#elements or shape')
+
+    for row in rows:
+        table.add_row(*row)
+
+    console = Console()
+    with console.capture() as capture:
+        console.print(table, end='')
+
+    return capture.get()

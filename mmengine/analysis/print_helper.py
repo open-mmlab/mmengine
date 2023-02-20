@@ -6,8 +6,9 @@
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
-import tabulate
 import torch
+from rich.console import Console
+from rich.table import Table
 from torch import nn
 
 from .complexity_analysis import (ActivationAnalyzer, FlopAnalyzer,
@@ -385,7 +386,7 @@ def _stats_table_format(
         stat_columns = list(stat_columns)  # type: ignore
 
     headers = ['module'] + stat_columns
-    table: List[List[str]] = []
+    rows: List[List[str]] = []
 
     def build_row(name: str, stats: Dict[str, str],
                   indent_lvl: int) -> List[str]:
@@ -411,20 +412,27 @@ def _stats_table_format(
                 else:
                     pretty_mod_name = mod_name
                 row = build_row(pretty_mod_name, curr_stats, indent_lvl)
-                table.append(row)
+                rows.append(row)
                 fill(indent_lvl + 1, mod_name + '.')
 
     root_name, curr_stats = _fastforward('', statistics)
     row = build_row(root_name or 'model', curr_stats, indent_lvl=0)
-    table.append(row)
+    rows.append(row)
     root_prefix = root_name + ('.' if root_name else '')
     fill(indent_lvl=1, prefix=root_prefix)
 
-    old_ws = tabulate.PRESERVE_WHITESPACE
-    tabulate.PRESERVE_WHITESPACE = True
-    tab = tabulate.tabulate(table, headers=headers, tablefmt='pipe')
-    tabulate.PRESERVE_WHITESPACE = old_ws
-    return tab
+    table = Table()
+    for header in headers:
+        table.add_column(header)
+
+    for row in rows:
+        table.add_row(*row)
+
+    console = Console()
+    with console.capture() as capture:
+        console.print(table, end='')
+
+    return capture.get()
 
 
 def complexity_stats_str(
