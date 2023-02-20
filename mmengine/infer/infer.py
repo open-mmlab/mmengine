@@ -397,8 +397,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         Returns:
             str: The directory of the ``Config``.
         """
-        project = MODULE2PACKAGE[scope]
         try:
+            project = MODULE2PACKAGE[scope]
             module = importlib.import_module(scope)
         except ImportError as e:
             if scope not in MODULE2PACKAGE:
