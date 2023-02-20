@@ -7,19 +7,31 @@ import os.path as osp
 import re
 from abc import ABCMeta
 from collections import OrderedDict
+from functools import partial
+from itertools import accumulate
 from typing import Any, Mapping, Optional, Union
 
-from mmengine.config import ConfigDict
 from mmengine.utils import get_installed_path
 
-EAGER_IMPORTS = ['mmengine.config']
+# EAGER_IMPORTS = ['mmengine.config']
+
 
 class LazyCall:
 
-    def __init__(self, name_id, instance_id=None, **kwargs) -> None:
-        super().__setattr__('name_id', name_id)
+    def __init__(self, type, instance_id=None, *args, **kwargs) -> None:
+        super().__setattr__('type', type)
         super().__setattr__('kwargs', kwargs)
-        instance_id = id(self) if instance_id is None else instance_id 
+        super().__setattr__('args', args)
+        super().__setattr__('missed_args', {})
+        for key, value in kwargs.items():
+            if isinstance(value, LazyCall):
+                if value.inner_built and ('inner_built' not in self.__dict__):
+                    super().__setattr__('inner_built', True)
+                if value == '???':
+                    self.missed_args[key] = value
+                    super().__setattr__('inner_built', True)
+        super().__setattr__('inner_built', False)
+        instance_id = id(self) if instance_id is None else instance_id
         super().__setattr__('instance_id', instance_id)
         # self.args = args
 
@@ -29,15 +41,20 @@ class LazyCall:
         # built is used for duplicated built.
         def _build_lazy_call(kwargs, global_built):
             if isinstance(kwargs, Mapping):
-                return type(kwargs)({key: _build_lazy_call(value, global_built) for key, value in kwargs.items()})
+                return type(kwargs)({
+                    key: _build_lazy_call(value, global_built)
+                    for key, value in kwargs.items()
+                })
                 # for key, value in kwargs.items():
                 #     kwargs[key] = _build_lazy_call(value, global_built)
                 # return kwargs
             elif isinstance(kwargs, (list, tuple)):
-                return type(kwargs)([_build_lazy_call(value, global_built) for value in kwargs])
+                return type(kwargs)([
+                    _build_lazy_call(value, global_built) for value in kwargs
+                ])
                 # for i, value in enumerate(kwargs):
-                    # kwargs[i] = _build_lazy_call(kwargs[i], global_built)
-                # return kwargs
+                #     kwargs[i] = _build_lazy_call(kwargs[i], global_built)
+                # # return kwargs
             elif isinstance(kwargs, LazyCall):
                 if kwargs.instance_id not in global_built:
                     ret = kwargs.build(memo=global_built)
@@ -49,25 +66,27 @@ class LazyCall:
                 return kwargs
 
         kwargs = _build_lazy_call(copy.deepcopy(self.kwargs), memo)
-
-        if self.name_id in self.module_dict:
-            module = self.module_dict[self.name_id]
-            module = importlib.import_module(module)
-            func = getattr(module, self.name_id)
-            return func(**kwargs)
-        func_name_list = self.name_id.split('.')
+        args = _build_lazy_call(copy.deepcopy(self.args), memo)
 
         # Built by custom function: def xxx
-        if self.name_id in self.global_dict:
-            return self.global_dict[self.name_id](**kwargs)
-        for i in range(len(func_name_list)):
-            func_name = '.'.join(func_name_list[:i + 1])
+        if self.type in self.global_dict:
+            return self.global_dict[self.type](*args, **kwargs)
+
+        if self.type in self.module_dict:
+            module = self.module_dict[self.type]
+            module = importlib.import_module(module)
+            func = getattr(module, self.type)
+            return func(*args, **kwargs)
+
+        func_name_list = self.type.split('.')
+        for func_name in accumulate(func_name_list):
             if func_name in self.module_dict:
                 try:
+                    # Absolute import.
                     # import mmdet.models
                     # mmdet.models.xxx.xxx()
                     module = self.module_dict[func_name]
-                    attrs = func_name_list[i + 1:]
+                    attrs = self.type.rstrip(func_name).split('.')
                     func = importlib.import_module(module)
                     for attr in attrs:
                         func = getattr(func, attr)
@@ -78,11 +97,14 @@ class LazyCall:
                     for attr in func_name_list:
                         func = getattr(func, attr)
 
-                return func(**kwargs)
+                return func(*args, **kwargs)
         raise Exception()
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name == 'kwargs' or name == 'name_id' or name == 'instance_id':
+        assert not self.args, (
+            f'If you want to set attribute, please build {self.type} with '
+            'keyword args, but not positional args.')
+        if name == 'kwargs' or name == 'type' or name == 'instance_id':
             super().__setattr__(name, value)
             return
         self.kwargs[name] = value
@@ -95,7 +117,12 @@ class LazyCall:
     def __getattr__(self, name: str) -> Any:
         if name in self.kwargs:
             return self.kwargs[name]
-        raise ValueError()
+        return LazyAttr(name, self)
+        # try:
+        #     return super().__getattr__(name)
+        # except:
+        #     builder = partial(LazyCall, name)
+        #     return builder
 
     def __contains__(self, key):
         return key in self.kwargs
@@ -103,7 +130,7 @@ class LazyCall:
     def __deepcopy__(self, memo):
         cls = self.__class__
         ret = cls(
-            copy.deepcopy(self.name_id),
+            copy.deepcopy(self.type),
             instance_id=self.instance_id,
             **copy.deepcopy(self.kwargs))
         super(LazyCall, ret).__setattr__('global_dict', self.global_dict)
@@ -116,13 +143,48 @@ class LazyCall:
         super().__setattr__('module_dict', module_dict)
 
 
+class LazyAttrCall:
+
+    def __init__(self, attr, **kwargs) -> None:
+        self.kwargs = kwargs
+        self.attr = attr
+
+    def build(self):
+        return self.attr.build()(**self.kwargs)
+
+
+class LazyAttr:
+
+    def __init__(self, name, source) -> None:
+        self.name = name
+        self.source = source
+
+    def __call__(self, **kwargs: Any) -> Any:
+        return LazyAttrCall(self, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        return LazyAttr(name, self)
+
+    def build(self):
+        return getattr(self.source.build(), self.name)
+
+    # def build(self):
+    #     if isinstance(self.lazy, LazyCall):
+    #         return self.lazy_call.build(memo=None)
+    #     else:
+    #         return self.lazy.build()
+
+
 class LazyNameCall(LazyCall):
 
     def build(self, memo=None):
-        module = self.module_dict[self.name_id]
+        module = self.module_dict[self.type]
         module = importlib.import_module(module)
-        func = getattr(module, self.name_id)
+        func = getattr(module, self.type)
         return func
+
+    def __getattr__(self, name: str) -> Any:
+        return LazyAttr(name, self)
 
     # def _addindent(self, s_, numSpaces):
     #     s = s_.split('\n')
@@ -160,36 +222,44 @@ class Transform(ast.NodeTransformer):
         super().__init__()
 
     def visit_Call(self, node):
-        if hasattr(node.func, 'id'):
-            func_name = node.func.id
-        else:
-            attr = []
-            func = node.func
-            while True:
-                attr.insert(0, func.attr)
-                func = func.value
-                if isinstance(func, ast.Name):
-                    attr.insert(0, func.id)
-                    break
+        # a(): LazyCall a
+        # a.b(): LazyCall a.b, a is a module variable or previous built variable
+        # not lazycall
 
-            func_name = '.'.join(attr)
+        if not isinstance(node.func, ast.Name):
+            return node
 
-        if func_name in __builtins__ or func_name in globals():
-            return super().generic_visit(node)
-        # node.func.id = 'ConfigNode'
-        node.args.insert(0, ast.Constant(value=func_name, kind=None))
-        # node.ctx = ast.Load()
-        new_node = ast.Call(
-            ast.Name(id='LazyCall', ctx=ast.Load()),
-            args=node.args,
-            keywords=node.keywords)
-        return super().generic_visit(new_node)
+        def _visit_call(node):
+            if hasattr(node.func, 'id'):
+                func_name = node.func.id
+            else:
+                func_name = ''
+                func = node.func
+                while hasattr(func, 'attr'):
+                    try:
+                        func_name += func.attr
+                        func = func.value
+                    except:
+                        break
+
+            if func_name in __builtins__ or func_name in globals():
+                return super().generic_visit(node)
+            # node.func.id = 'ConfigNode'
+            node.args.insert(0, ast.Constant(value=func_name, kind=None))
+            # node.ctx = ast.Load()
+            new_node = ast.Call(
+                ast.Name(id='LazyCall', ctx=ast.Load()),
+                args=node.args,
+                keywords=node.keywords)
+            return super().generic_visit(new_node)
+
+        return _visit_call(node)
 
     def visit_ImportFrom(self, node):
         # Relative improt
-        for eager_import in EAGER_IMPORTS:
-            if node.module.startswith(eager_import):
-                return super().generic_visit(node)
+        # for eager_import in EAGER_IMPORTS:
+        #     if node.module.startswith(eager_import):
+        #         return super().generic_visit(node)
         module = f'{node.level*"."}{node.module}'
         if module in self.base_dict:
             for name in node.names:
@@ -212,10 +282,13 @@ class Transform(ast.NodeTransformer):
         else:
             return node
 
-    # def visit_Import(self, node: ast.Import):
-    #     for name in node.names:
-    #         module_dict[name.name] = module_dict
-    #     return node
+    def visit_Import(self, node: ast.Import):
+        for alias in node.names:
+            if hasattr(alias, 'asname'):
+                self.module_dict[alias.asname] = alias.name
+            else:
+                self.module_dict[alias.name] = alias.name
+        return None
 
     # def visit_Assign(self, node):
     #     if (isinstance(node.targets[0], ast.Name)
@@ -265,8 +338,7 @@ class Config(OrderedDict):
                     # Relative import
                     base_dir = osp.dirname(filepath)
                     module_path = osp.join(
-                        base_dir,
-                        *(['..'] * (level - 1)),
+                        base_dir, *(['..'] * (level - 1)),
                         f'{base_module[level:].replace(".", "/")}.py')
                 else:
                     # Absolute import
@@ -315,6 +387,7 @@ class Config(OrderedDict):
     def _to_config_dict(cls, cfg_dict, global_dict, module_dict):
         ordered_keys = cfg_dict.keys()
         result = OrderedDict()
+
         # Do not used generator-expression here for the building sequence.
         def _convert(cfg_dict):
             if isinstance(cfg_dict, dict):
@@ -381,5 +454,5 @@ class Config(OrderedDict):
 
 
 def convert_to(ori: LazyCall, target: LazyNameCall):
-    ori.name_id = target.name_id
+    ori.type = target.type
     return ori

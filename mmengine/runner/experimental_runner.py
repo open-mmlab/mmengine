@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.config.auto_call_config import LazyCall
+from mmengine.config.lazy import LazyCall
 from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
@@ -1151,6 +1151,9 @@ class Runner:
                             optimizer=optim_wrapper,
                             epoch_length=len(self.train_dataloader))))
             elif isinstance(scheduler, LazyCall):
+                scheduler.optimizer = optim_wrapper
+                scheduler = scheduler.build()
+                _ParamScheduler
                 param_schedulers.append(scheduler.build())
             else:
                 raise TypeError(

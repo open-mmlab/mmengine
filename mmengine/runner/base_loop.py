@@ -4,7 +4,7 @@ from typing import Any, Dict, Union
 
 from torch.utils.data import DataLoader
 
-from mmengine.config.auto_call_config import LazyCall
+from mmengine.config.lazy import LazyCall
 
 
 class BaseLoop(metaclass=ABCMeta):
@@ -18,6 +18,7 @@ class BaseLoop(metaclass=ABCMeta):
         dataloader (Dataloader or dict): An iterator to generate one batch of
             dataset each iteration.
     """
+
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
         self._runner = runner
         if isinstance(dataloader, (dict, LazyCall)):

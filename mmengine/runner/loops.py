@@ -7,13 +7,13 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import torch
 from torch.utils.data import DataLoader
 
+from mmengine.config.lazy import LazyCall
 from mmengine.evaluator import Evaluator
 from mmengine.logging import print_log
 from mmengine.registry import LOOPS
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
-from mmengine.config.auto_call_config import LazyCall
 
 
 @LOOPS.register_module()
