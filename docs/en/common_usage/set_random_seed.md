@@ -1,6 +1,6 @@
 # How to Set Random Seed
 
-There are two factors are introduced that affect whether an experiment is reproducible in [PyTorch REPRODUCIBILITY](https://pytorch.org/docs/stable/notes/randomness.html). One is the random number, and the other is the uncertainty of the implementation of certain operators.
+[PyTorch REPRODUCIBILITY](https://pytorch.org/docs/stable/notes/randomness.html) introduces two factors that affect the reproducibility of an experiment. One is the random number, and the other is the uncertainty of the implementation of certain operators.
 
 MMEngine provides the ability to set the random number and select a deterministic algorithm. Users can simply set the `randomness` parameter of the `Runner`, which eventually calls [set_random_seed](mmengine.runner.set_random_seed), and it has the following three fields:
 
