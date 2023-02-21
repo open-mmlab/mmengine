@@ -18,8 +18,8 @@ from mmengine.config import Config, ConfigDict
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
-from mmengine.fileio import (get_file_backend, isdir, join_path,
-                             list_dir_or_file, load)
+from mmengine.fileio import (exists, get_file_backend, isdir, isfile,
+                             join_path, list_dir_or_file, load)
 from mmengine.logging import print_log
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner.checkpoint import (_load_checkpoint,
@@ -148,7 +148,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         # Load config to cfg
         cfg: ConfigType
         if isinstance(model, str):
-            if osp.isfile(model):
+            if isfile(model):
                 cfg = Config.fromfile(model)
             else:
                 # Load config and weights from metafile. If `weights` is
@@ -380,7 +380,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                 model_aliases = [alias.lower() for alias in model_aliases]
             if (model_name == model or model in model_aliases):
                 cfg = Config.fromfile(
-                    osp.join(config_dir, model_cfg['Config']))
+                    join_path(config_dir, model_cfg['Config']))
                 weights = model_cfg['Weights']
                 weights = weights[0] if isinstance(weights, list) else weights
                 return cfg, weights
@@ -414,13 +414,14 @@ class BaseInferencer(metaclass=InferencerMeta):
         # The first element of module.__path__ means package installation path.
         package_path = module.__path__[0]
 
-        if osp.exists(osp.join(osp.dirname(package_path), 'configs')):
+        if exists(join_path(osp.dirname(package_path), 'configs')):
             config_dir = osp.dirname(package_path)
         else:
-            config_dir = osp.exists(osp.join(package_path, '.mim'))
-            assert config_dir, (
-                f'Cannot find Configs directory in {package_path}!, please '
-                f'check the completeness of the {scope}.')
+            config_dir = join_path(package_path, '.mim', 'configs')
+            if not exists(config_dir):
+                raise FileNotFoundError(
+                    f'Cannot find Configs directory in {package_path}!, '
+                    f'please check the completeness of the {scope}.')
         return config_dir
 
     def _init_model(
@@ -639,10 +640,10 @@ class BaseInferencer(metaclass=InferencerMeta):
         Yields:
             dict: Model config defined in metafile.
         """
-        meta_indexes = load(osp.join(config_dir, 'model-index.yml'))
+        meta_indexes = load(join_path(config_dir, 'model-index.yml'))
         for meta_path in meta_indexes['Import']:
             # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
-            meta_path = osp.join(config_dir, meta_path)
+            meta_path = join_path(config_dir, meta_path)
             metainfo = load(meta_path)
             yield from metainfo['Models']
 
