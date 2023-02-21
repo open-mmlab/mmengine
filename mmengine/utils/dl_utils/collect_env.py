@@ -123,11 +123,8 @@ def collect_env():
     except io.UnsupportedOperation as e:
         # JupyterLab on Windows changes sys.stdout, which has no `fileno` attr
         # Refer to: https://github.com/open-mmlab/mmengine/issues/931
-        env_info['MSVC'] = f'n/a, reason: {str(e)}'
-    except Exception as e:
-        # Other exceptions we haven't considered, record the reason but don't
-        # stop program from running
-        env_info['GCC'] = f'n/a, reason: {str(e)}'
+        # TODO: find a solution to get compiler info in Windows JupyterLab,
+        # while preserving backward-compatibility in other systems.
         env_info['MSVC'] = f'n/a, reason: {str(e)}'
 
     env_info['PyTorch'] = torch.__version__
