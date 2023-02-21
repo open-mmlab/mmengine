@@ -1,6 +1,8 @@
 # 从 EpochBased 切换至 IterBased
 
-MMEngine 很多模块默认按照 Epoch 训练模型，例如 ParamScheduler, LoggerHook, CheckPointHook 等，常见的 EpochBasedTraining 配置写法如下：
+MMEngine 支持两种训练模式，基于轮次的 EpochBased 方式和基于迭代次数的 IterBased 方式，这两种方式在下游算法库均有使用，例如 [MMDetection](https://github.com/open-mmlab/mmdetection) 默认使用 EpochBased 方式，[MMSegmentation](https://github.com/open-mmlab/mmsegmentation) 默认使用 IterBased 方式。
+
+MMEngine 很多模块默认以 EpochBased 的模式执行，例如 `ParamScheduler`, `LoggerHook`, `CheckpointHook` 等，常见的 EpochBased 配置写法如下：
 
 ```python
 param_scheduler = dict(
