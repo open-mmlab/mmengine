@@ -398,16 +398,17 @@ class BaseInferencer(metaclass=InferencerMeta):
             str: The directory of the ``Config``.
         """
         try:
-            project = MODULE2PACKAGE[scope]
             module = importlib.import_module(scope)
-        except ImportError as e:
+        except ImportError:
             if scope not in MODULE2PACKAGE:
-                raise ValueError(
+                raise KeyError(
                     f'{scope} is not a valid scope. The available scopes '
                     f'are {MODULE2PACKAGE.keys()}')
-            raise ImportError(
-                f'Cannot import {scope} correctly, please try to install '
-                f'the {project} by "pip install {project}"') from e
+            else:
+                project = MODULE2PACKAGE[scope]
+                raise ImportError(
+                    f'Cannot import {scope} correctly, please try to install '
+                    f'the {project} by "pip install {project}"')
         # Since none of OpenMMLab series packages are namespace packages
         # (https://docs.python.org/3/glossary.html#term-namespace-package),
         # The first element of module.__path__ means package installation path.
