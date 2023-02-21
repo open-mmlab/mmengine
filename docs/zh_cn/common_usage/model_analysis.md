@@ -6,8 +6,6 @@
    import torch.nn.functional as F
    import torchvision
    from mmengine.model import BaseModel
-   from mmengine.analysis import get_model_complexity_info
-
 
    class MMResNet50(BaseModel):
        def __init__(self):
@@ -27,6 +25,8 @@
 2. 统计计算量和参数量
 
    ```python
+   from mmengine.analysis import get_model_complexity_info
+
    input_shape = (3, 224, 224)
    model = MMResNet50()
    analysis_results = get_model_complexity_info(model, input_shape)
@@ -41,7 +41,7 @@
   <details>
     <summary>点击展开</summary>
 
-  ```
+  ```html
   +------------------------+----------------------+------------+--------------+
   | module                 | #parameters or shape | #flops     | #activations |
   +------------------------+----------------------+------------+--------------+
