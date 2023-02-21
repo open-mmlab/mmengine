@@ -244,7 +244,7 @@ class TestNPUProfilerHook(RunnerTestCase):
         hook.before_run(runner)
 
         hook.profiler = MagicMock()
-        hook.after_train_iter(runner, 1, 1, 1)
+        hook.after_train_iter(runner, 1)
 
     def test_with_runner(self):
         result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
@@ -269,9 +269,8 @@ class TestNPUProfilerHook(RunnerTestCase):
         runner.train()
 
         self.assertTrue(
-            ops.exists(result_path),
-            'ERROR::profiler result path is not generated!')
+            ops.exists(result_path), 'profiler result path is not generated!')
 
         self.assertTrue(
             os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1',
-            'ERROR::GE PROFILING fail!')
+            'GE PROFILING failed to start!')

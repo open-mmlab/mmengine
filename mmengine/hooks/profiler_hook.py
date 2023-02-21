@@ -248,7 +248,7 @@ class NPUProfilerHook(Hook):
 
     Args:
         begin (int): Number of start iterations for profiling. Defaults to 0.
-        end (int): Number of end iterations for profiling. Defaults to 0.
+        end (int): Number of end iterations for profiling. Defaults to 1.
         result_path (str): The path to save the profiling results file.
             Defaults to 'cann_profiling'.
         exit_after_profiling (bool): Whether to exit the program after
