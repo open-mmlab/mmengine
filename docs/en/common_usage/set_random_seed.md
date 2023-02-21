@@ -2,7 +2,7 @@
 
 As described in [PyTorch REPRODUCIBILITY](https://pytorch.org/docs/stable/notes/randomness.html), there are  2 factors affecting the reproducibility of an experiment, namely random number and nondeterministic algorithms.
 
-MMEngine provides the ability to set the random number and select a deterministic algorithm. Users can simply set the `randomness` parameter of the `Runner`, which eventually calls [set_random_seed](mmengine.runner.set_random_seed), and it has the following three fields:
+MMEngine provides the ability to set the random number and select a deterministic algorithm. Users can simply set the `randomness` argument of the `Runner`. The argument is eventually consumed in [set_random_seed](mmengine.runner.set_random_seed) and it has the following three fields:
 
 - seed: The random seed. If this argument is not set, a random number will be used.
 - differ_rand_seed: Whether to set different seeds for different processes by adding the `rank` (process index) to the seed.
