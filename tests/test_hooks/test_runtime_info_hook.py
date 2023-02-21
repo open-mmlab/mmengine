@@ -24,12 +24,12 @@ class DatasetWithMetainfo(DatasetWithoutMetainfo):
 
 class TestRuntimeInfoHook(RunnerTestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         DATASETS.register_module(module=DatasetWithoutMetainfo, force=True)
         DATASETS.register_module(module=DatasetWithMetainfo, force=True)
         return super().setUp()
 
-    def teardown_method(self):
+    def tearDown(self):
         DATASETS.module_dict.pop('DatasetWithoutMetainfo')
         DATASETS.module_dict.pop('DatasetWithMetainfo')
         return super().tearDown()

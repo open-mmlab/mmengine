@@ -27,7 +27,7 @@ class ToyModel(torch.nn.Module):
 
 class TestLRScheduler(TestCase):
 
-    def setup_method(self):
+    def setUp(self):
         """Setup the model and optimizer which are used in every test method.
 
         TestCase calls functions in this order: setUp() -> testMethod() ->

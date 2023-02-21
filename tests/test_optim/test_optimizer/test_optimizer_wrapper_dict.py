@@ -10,7 +10,7 @@ from mmengine.optim import OptimWrapper, OptimWrapperDict
 
 class TestOptimWrapperDict(TestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         self.model1 = nn.Linear(1, 1)
         self.model2 = nn.Linear(1, 1)
         self.optim1 = SGD(self.model1.parameters(), lr=0.1, momentum=0.8)

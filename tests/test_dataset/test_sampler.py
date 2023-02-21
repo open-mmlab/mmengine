@@ -11,7 +11,7 @@ from mmengine.dataset import DefaultSampler, InfiniteSampler
 
 class TestDefaultSampler(TestCase):
 
-    def setup_method(self):
+    def setUp(self):
         self.data_length = 100
         self.dataset = list(range(self.data_length))
 
@@ -83,7 +83,7 @@ class TestDefaultSampler(TestCase):
 
 class TestInfiniteSampler(TestCase):
 
-    def setup_method(self):
+    def setUp(self):
         self.data_length = 100
         self.dataset = list(range(self.data_length))
 

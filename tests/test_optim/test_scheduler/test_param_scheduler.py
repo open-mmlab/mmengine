@@ -37,7 +37,7 @@ class ToyModel(torch.nn.Module):
 
 class TestParameterScheduler(TestCase):
 
-    def setup_method(self):
+    def setUp(self):
         """Setup the model and optimizer which are used in every test method.
 
         TestCase calls functions in this order: setUp() -> testMethod() ->
@@ -1069,6 +1069,6 @@ class TestParameterScheduler(TestCase):
 
 class TestParameterSchedulerOptimWrapper(TestParameterScheduler):
 
-    def setup_method(self):
+    def setUp(self):
         super().setUp()
         self.optimizer = OptimWrapper(optimizer=self.optimizer)

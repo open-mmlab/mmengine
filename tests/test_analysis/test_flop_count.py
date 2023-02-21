@@ -175,7 +175,7 @@ class CustomNet(nn.Module):
 class TestFlopAnalyzer(unittest.TestCase):
     """Unittest for flop_count."""
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         # nn.Linear uses a different operator based on version, so make sure
         # we are testing the right thing.
         lin = nn.Linear(10, 10)
