@@ -25,6 +25,7 @@
    common_usage/save_gpu_memory.md
    common_usage/set_random_seed.md
    common_usage/set_interval.md
+   common_usage/epoch_to_iter.md
 
 .. toctree::
    :maxdepth: 3
