@@ -8,7 +8,7 @@ MMEngine provides the ability to set the random number and select a deterministi
 - differ_rand_seed: whether to set different seeds for different processes by adding the process index number to the seed.
 - deterministic: whether to set deterministic options for the CUDNN backend.
 
-Let's take the [Get Started in 15 Minutes](../get_started/15_minutes.md) as an example to demonstrate how to add `randomness` in MMEngine.
+Let's take the [Get Started in 15 Minutes](../get_started/15_minutes.md) as an example to demonstrate how to set `randomness` in MMEngine.
 
 ```python
 runner = Runner(
