@@ -24,6 +24,7 @@
    common_usage/speed_up_training.md
    common_usage/save_gpu_memory.md
    common_usage/set_random_seed.md
+   common_usage/model_analysis.md
    common_usage/set_interval.md
    common_usage/epoch_to_iter.md
 
@@ -56,6 +57,7 @@
    advanced_tutorials/manager_mixin.md
    advanced_tutorials/cross_library.md
    advanced_tutorials/test_time_augmentation.md
+   advanced_tutorials/model_analysis.md
 
 .. toctree::
    :maxdepth: 1

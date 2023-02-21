@@ -90,7 +90,7 @@ The return outputs is dict, which contains the following keys:
 +---------------------+----------------------+--------+--------------+
 ```
 
-- `out_arch`:  print related information by network layers
+- `out_arch`: print related information by network layers
 
 ```bash
 TestNet(
