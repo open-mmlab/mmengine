@@ -1,5 +1,7 @@
 # EpochBasedTraining to IterBasedTraining
 
+Epoch-based training and iteration-based training are two commonly used training way in MMEngine. For example, downstream repositories like [MMDetection](https://github.com/open-mmlab/mmdetection) choose to train the model by epoch and [MMSegmentation](https://github.com/open-mmlab/mmsegmentation) choose to train the model by iteration.
+
 Many modules in MMEngine default to training models by epoch, such as `ParamScheduler`, `LoggerHook`, `CheckPointHook`, etc. Therefore, you need to adjust the configuration of these modules if you want to train by iteration. For example, a commonly used epoch based configuration is as follows:
 
 ```python
