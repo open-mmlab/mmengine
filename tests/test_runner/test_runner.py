@@ -331,7 +331,7 @@ def custom_collate(data_batch, pad_value):
 
 class TestRunner(TestCase):
 
-    def setUp(self):
+    def setup_method(self):
         MODELS.register_module(module=ToyModel, force=True)
         MODELS.register_module(module=ToyModel1, force=True)
         MODELS.register_module(module=ToySyncBNModel, force=True)
@@ -412,7 +412,7 @@ class TestRunner(TestCase):
             checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
             sampler_seed=dict(type='DistSamplerSeedHook'))
 
-    def tearDown(self):
+    def teardown_method(self):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         MODELS.module_dict.pop('ToyModel')

@@ -57,14 +57,14 @@ class ToyDatasetTTA(Dataset):
 
 class TestBaseTTAModel(RunnerTestCase):
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         super().setUp()
         DATASETS.register_module(module=ToyDatasetTTA, force=True)
         MODELS.register_module(module=ToyTestTimeAugModel, force=True)
         MODELS.register_module(module=ToyModel, force=True)
         TRANSFORMS.register_module(module=ToyTTAPipeline, force=True)
 
-    def tearDown(self):
+    def teardown_method(self):
         super().tearDown()
         DATASETS.module_dict.pop('ToyDatasetTTA', None)
         MODELS.module_dict.pop('ToyTestTimeAugModel', None)

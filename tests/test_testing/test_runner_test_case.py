@@ -10,7 +10,7 @@ from mmengine.visualization import Visualizer
 
 class TestRunnerTestCase(RunnerTestCase):
 
-    def test_setup(self):
+    def test_setup_method(self):
         self.assertIsInstance(self.epoch_based_cfg, Config)
         self.assertIsInstance(self.iter_based_cfg, Config)
         self.assertIn('MASTER_ADDR', self.dist_cfg)
@@ -19,7 +19,7 @@ class TestRunnerTestCase(RunnerTestCase):
         self.assertIn('WORLD_SIZE', self.dist_cfg)
         self.assertIn('LOCAL_RANK', self.dist_cfg)
 
-    def test_tearDown(self):
+    def test_teardown_method(self):
         self.tearDown()
         self.assertEqual(MMLogger._instance_dict, {})
         self.assertEqual(MessageHub._instance_dict, {})

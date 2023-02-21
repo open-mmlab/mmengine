@@ -50,7 +50,7 @@ class MockVisBackend:
 
 class TestVisualizer(TestCase):
 
-    def setUp(self):
+    def setup_method(self):
         """Setup the demo image in every test method.
 
         TestCase calls functions in this order: setUp() -> testMethod() ->

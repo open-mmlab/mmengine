@@ -127,7 +127,7 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
         torch_dist.init_process_group(
             backend='gloo', rank=rank, world_size=world_size)
 
-    def setUp(self):
+    def setup_method(self):
         super().setUp()
         self._spawn_processes()
 
@@ -367,7 +367,7 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
         torch_dist.init_process_group(
             backend='nccl', rank=rank, world_size=world_size)
 
-    def setUp(self):
+    def setup_method(self):
         super().setUp()
         self._spawn_processes()
 

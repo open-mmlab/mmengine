@@ -57,7 +57,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     # Test `OptimWrapper.optim_context` will block the gradient
     # synchronization when using gradient accumulation strategy in distributed
     # data parallel training.
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         super().setUp()
         self._spawn_processes()
 
@@ -293,7 +293,7 @@ class TestOptimWrapper(MultiProcessTestCase):
 @unittest.skipIf(not torch.cuda.is_available(), reason='need gpu to test Apex')
 class TestApexOptimWrapper(TestCase):
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.model = ToyModel().cuda()
         self.optimizer = SGD(self.model.parameters(), lr=0.1)
 
@@ -387,7 +387,7 @@ class TestApexOptimWrapper(TestCase):
 
 class TestAmpOptimWrapper(TestCase):
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.model = ToyModel()
         self.optimizer = SGD(self.model.parameters(), lr=0.1)
 
