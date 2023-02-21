@@ -184,7 +184,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                     f'{obj_type} is not in the {registry.name} registry. '
                     f'Please check whether the value of `{obj_type}` is '
                     'correct or it was registered as expected. More details '
-                    'can be found at https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+                    'can be found at https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module'  # noqa: E501
                 )
         elif inspect.isclass(obj_type):
             runner_cls = obj_type
@@ -292,7 +292,7 @@ def build_scheduler_from_cfg(
                         f'{scheduler_type} is not in the {registry.name} '
                         'registry. Please check whether the value of '
                         f'`{scheduler_type}` is correct or it was registered '
-                        'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/tutorials/config.html#import-custom-python-modules'  # noqa: E501
+                        'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module'  # noqa: E501
                     )
             elif inspect.isclass(scheduler_type):
                 scheduler_cls = scheduler_type
