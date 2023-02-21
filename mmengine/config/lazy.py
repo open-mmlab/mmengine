@@ -160,9 +160,5 @@ class LazyCall:
 
         return ret
 
-    def set_build_variable(self, global_dict, module_dict):
-        super().__setattr__('global_dict', global_dict)
-        super().__setattr__('module_dict', module_dict)
-
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return LazyCall(self.type, self, None, *args, **kwds)
