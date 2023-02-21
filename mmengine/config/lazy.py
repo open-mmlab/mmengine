@@ -78,9 +78,11 @@ class LazyCall:
         super().__setattr__('args', args)
         instance_id = id(self) if instance_id is None else instance_id
         super().__setattr__('instance_id', instance_id)
-        # self.args = args
+        super().__setattr__('_uninitialized', False)
 
     def build(self, memo=None):
+        if self._uninitialized:
+            return self._build(*self.args, **self.kwargs)
         if memo is None:
             memo = dict()
         # built is used for duplicated built.
@@ -112,15 +114,15 @@ class LazyCall:
             else:
                 return kwargs
 
-        kwargs = _build_lazy_call(copy.deepcopy(self.kwargs), memo)
-        args = _build_lazy_call(copy.deepcopy(self.args), memo)
+        kwargs = _build_lazy_call(self.kwargs, memo)
+        args = _build_lazy_call(self.args, memo)
 
         return self._build(*args, **kwargs)
 
     def _build(self, *args, **kwargs):
-        for value in (self.args, self.kwargs.values):
+        for value in (*self.args, *self.kwargs.values()):
             if value == '???' or isinstance(value, Placeholder):
-                assert not self.args
+                # assert not self.args
                 return self
         return self.source.build()(*args, **kwargs)
 
@@ -137,6 +139,18 @@ class LazyCall:
     def setdefault(self, name, value):
         if name not in self.kwargs:
             self.kwargs[name] = value
+
+    def update(self, *args, **kwargs):
+        self.kwargs.update(*args, **kwargs)
+
+    def pop(self, *args, **kwargs):
+        return self.kwargs.pop(*args, **kwargs)
+
+    def __getitem__(self, key):
+        return self.kwargs[key]
+
+    def __setitem__(self, key, value):
+        self.kwargs[key] = value
 
     def __getattr__(self, name: str) -> Any:
         if name in self.kwargs:
@@ -160,5 +174,14 @@ class LazyCall:
 
         return ret
 
+    def copy(self):
+        return copy.deepcopy(self)
+
+    def update(self, *args, **kwargs):
+        self.kwargs.update(*args, **kwargs)
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return LazyCall(self.type, self, None, *args, **kwds)
+
+    def uninitialized(self):
+        super().__setattr__('_uninitialized', True)

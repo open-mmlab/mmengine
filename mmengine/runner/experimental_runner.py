@@ -1064,6 +1064,8 @@ class Runner:
         Returns:
             OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
         """  # noqa: E501
+        if isinstance(optim_wrapper, LazyCall):
+            constructor = self.cfg.constructor.build()
         if isinstance(optim_wrapper, OptimWrapper):
             return optim_wrapper
         if isinstance(optim_wrapper, (dict, ConfigDict, Config)):
@@ -1376,9 +1378,14 @@ class Runner:
         """
         if isinstance(loop, BaseLoop):
             return loop
+        elif isinstance(loop, LazyCall):
+            loop_cfg = copy.deepcopy(loop)
+            loop_cfg.update(runner=self, dataloader=self._train_dataloader)
+            return loop_cfg.build(overwrite=True)
         elif not isinstance(loop, dict):
             raise TypeError(
                 f'loop should be a Loop object or dict, but got {loop}')
+
 
         loop_cfg = copy.deepcopy(loop)
 
@@ -1423,6 +1430,12 @@ class Runner:
         if isinstance(loop, BaseLoop):
             return loop
         elif isinstance(loop, LazyCall):
+            loop_cfg = copy.deepcopy(loop)
+            loop_cfg.update(runner=self,
+                            dataloader=self._val_dataloader,
+                            evaluator=self._val_evaluator)
+            return loop_cfg.build(overwrite=True)
+        elif isinstance(loop, LazyCall):
             raise TypeError(
                 f'train_loop should be a Loop object or dict, but got {loop}')
 
@@ -1464,6 +1477,12 @@ class Runner:
         """
         if isinstance(loop, BaseLoop):
             return loop
+        elif isinstance(loop, LazyCall):
+            loop_cfg = copy.deepcopy(loop)
+            loop_cfg.update(runner=self,
+                            dataloader=self._val_dataloader,
+                            evaluator=self._val_evaluator)
+            return loop_cfg.build(overwrite=True)
         elif not isinstance(loop, dict):
             raise TypeError(
                 f'train_loop should be a Loop object or dict, but got {loop}')
