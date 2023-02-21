@@ -133,10 +133,8 @@ class TestEMAHook(RunnerTestCase):
                 parameter.data.copy_(torch.randn(parameter.shape))
 
         ema_hook.after_train_iter(runner, 1)
-        for p, p_ in zip(src_model.parameters(), ema_model.parameters()):
-            assert_allclose(p.data, p_.data)
-
-        runner.train_loop._epoch = 1
+        for src, ema in zip(src_model.parameters(), ema_model.parameters()):
+            assert_allclose(src.data, ema.data)
 
         with torch.no_grad():
             for parameter in src_model.parameters():
@@ -194,7 +192,7 @@ class TestEMAHook(RunnerTestCase):
                 checkpoint['state_dict'][key].cpu(),
                 ema_hook.ema_model.state_dict()[f'module.{key}'].cpu())
 
-        # Test a warning should be raise when resuming from a checkpoint
+        # Test a warning should be raised when resuming from a checkpoint
         # without `ema_state_dict`
         runner._resume = True
         ema_hook.after_load_checkpoint(runner, checkpoint)
@@ -203,7 +201,7 @@ class TestEMAHook(RunnerTestCase):
             self.assertRegex(cm.records[0].msg, 'There is no `ema_state_dict`')
 
         # Check the weight of state_dict and ema_state_dict have been swapped.
-        # when runner._resume is False
+        # when runner._resume is True
         runner._resume = True
         checkpoint = dict(
             state_dict=ToyModel().state_dict(),
