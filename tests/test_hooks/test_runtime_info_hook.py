@@ -7,21 +7,37 @@ from torch.optim import SGD
 
 from mmengine.hooks import RuntimeInfoHook
 from mmengine.optim import OptimWrapper, OptimWrapperDict
+from mmengine.registry import DATASETS
 from mmengine.testing import RunnerTestCase
+
+
+class DatasetWithoutMetainfo:
+    ...
+
+    def __len__(self):
+        return 12
+
+
+class DatasetWithMetainfo(DatasetWithoutMetainfo):
+    metainfo: dict = dict()
 
 
 class TestRuntimeInfoHook(RunnerTestCase):
 
+    def setUp(self) -> None:
+        DATASETS.register_module(module=DatasetWithoutMetainfo, force=True)
+        DATASETS.register_module(module=DatasetWithMetainfo, force=True)
+        return super().setUp()
+
+    def tearDown(self):
+        DATASETS.module_dict.pop('DatasetWithoutMetainfo')
+        DATASETS.module_dict.pop('DatasetWithMetainfo')
+        return super().tearDown()
+
     def test_before_train(self):
 
-        class DatasetWithoutMetainfo:
-            ...
-
-            def __len__(self):
-                return 12
-
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.train_dataloader.dataset.type = DatasetWithoutMetainfo
+        cfg.train_dataloader.dataset.type = 'DatasetWithoutMetainfo'
         runner = self.build_runner(cfg)
         hook = self._get_runtime_info_hook(runner)
         hook.before_train(runner)
@@ -33,10 +49,7 @@ class TestRuntimeInfoHook(RunnerTestCase):
         with self.assertRaisesRegex(KeyError, 'dataset_meta is not found'):
             runner.message_hub.get_info('dataset_meta')
 
-        class DatasetWithMetainfo(DatasetWithoutMetainfo):
-            metainfo = dict()
-
-        cfg.train_dataloader.dataset.type = DatasetWithMetainfo
+        cfg.train_dataloader.dataset.type = 'DatasetWithMetainfo'
         runner = self.build_runner(cfg)
         hook.before_train(runner)
         self.assertEqual(runner.message_hub.get_info('dataset_meta'), dict())
