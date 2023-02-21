@@ -43,10 +43,10 @@ There are four steps to convert the above configuration to iteration based train
 1. Set `by_epoch` in `train_cfg` to False, and set `max_iters` to the total number of training iterations and `val_interval` to the interval between validation iterations.
 
 ```python
-  train_cfg = dict(
-      by_epoch=False,
-      max_iters=10000,
-      val_interval=2000
+train_cfg = dict(
+    by_epoch=False,
+    max_iters=10000,
+    val_interval=2000
   )
 ```
 

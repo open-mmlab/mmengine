@@ -6,7 +6,7 @@ MMEngine 很多模块默认按照 Epoch 训练模型，例如 ParamScheduler, Lo
 param_scheduler = dict(
     type='MultiStepLR',
     milestones=[6, 8]
-    by_epoch=True  # by_epoch 默认为 True，这边显示的写出来只是为了方便对比
+    by_epoch=True  # by_epoch 默认为 True，这边显式的写出来只是为了方便对比
 )
 
 default_hooks = dict(
@@ -15,14 +15,14 @@ default_hooks = dict(
 )
 
 train_cfg = dict(
-    by_epoch=True,  # by_epoch 默认为 True，这边显示的写出来只是为了方便对比
+    by_epoch=True,  # by_epoch 默认为 True，这边显式的写出来只是为了方便对比
     max_epochs=10,
     val_interval=2
 )
 
 log_processor = dict(
     by_epoch=True
-)  # log_processor 的 by_epoch 默认为 True，这边显示的写出来只是为了方便对比， 实际上不需要设置
+)  # log_processor 的 by_epoch 默认为 True，这边显式的写出来只是为了方便对比， 实际上不需要设置
 
 runner = Runner(
     model=ResNet18(),
