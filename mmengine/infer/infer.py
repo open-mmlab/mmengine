@@ -369,7 +369,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             f'{self.scope} not in {MODULE2PACKAGE}!,'
             'please pass a valid scope.')
 
-        config_dir = BaseInferencer._get_config_dir(self.scope)
+        config_dir = BaseInferencer._get_repo_or_mim_dir(self.scope)
         for model_cfg in BaseInferencer._get_models_from_config_dir(
                 config_dir):
             model_name = model_cfg['Name'].lower()
@@ -387,9 +387,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         raise ValueError(f'Cannot find model: {model} in {self.scope}')
 
     @staticmethod
-    def _get_config_dir(scope):
-        """Get the directory of the ``Config`` when package is installed or
-        ``PYTHONPATH`` is set.
+    def _get_repo_or_mim_dir(scope):
+        """Get the directory where the ``Configs`` located when the package is
+        installed or ``PYTHONPATH`` is set.
 
         Args:
             scope (str): The scope of repository.
@@ -415,14 +415,15 @@ class BaseInferencer(metaclass=InferencerMeta):
         package_path = module.__path__[0]
 
         if exists(join_path(osp.dirname(package_path), 'configs')):
-            config_dir = osp.dirname(package_path)
+            repo_dir = osp.dirname(package_path)
+            return repo_dir
         else:
-            config_dir = join_path(package_path, '.mim', 'configs')
-            if not exists(config_dir):
+            mim_dir = join_path(package_path, '.mim')
+            if not exists(join_path(mim_dir, 'Configs')):
                 raise FileNotFoundError(
                     f'Cannot find Configs directory in {package_path}!, '
                     f'please check the completeness of the {scope}.')
-        return config_dir
+            return mim_dir
 
     def _init_model(
         self,
@@ -671,9 +672,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         assert scope in MODULE2PACKAGE, (
             f'{scope} not in {MODULE2PACKAGE}!, please make pass a valid '
             'scope.')
-        config_dir = BaseInferencer._get_config_dir(scope)
+        root_or_mim_dir = BaseInferencer._get_repo_or_mim_dir(scope)
         for model_cfg in BaseInferencer._get_models_from_config_dir(
-                config_dir):
+                root_or_mim_dir):
             model_name = [model_cfg['Name']]
             model_name.extend(model_cfg.get('Alias', []))
             for name in model_name:
