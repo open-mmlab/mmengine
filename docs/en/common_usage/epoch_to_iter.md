@@ -71,15 +71,15 @@ There are four steps to convert the above configuration to iteration based train
    )
    ```
 
-Alternatively, if you can ensure that the total number of iterations for IterBasedTraining and EpochBasedTraining is the same, simply set `convert_to_iter_based` to True.
+   Alternatively, if you can ensure that the total number of iterations for IterBasedTraining and EpochBasedTraining is the same, simply set `convert_to_iter_based` to True.
 
-```python
-param_scheduler = dict(
-    type='MultiStepLR',
-    milestones=[6, 8]
-    convert_to_iter_based=True
-)
-```
+   ```python
+   param_scheduler = dict(
+       type='MultiStepLR',
+       milestones=[6, 8]
+       convert_to_iter_based=True
+   )
+   ```
 
 4. Set by_epoch in log_processor to False.
 
