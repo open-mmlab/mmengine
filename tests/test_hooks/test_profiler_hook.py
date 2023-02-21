@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
+import os
 import os.path as ops
 import unittest
 from unittest.mock import MagicMock
@@ -7,7 +8,8 @@ from unittest.mock import MagicMock
 import torch
 
 import mmengine.hooks
-from mmengine.hooks import ProfilerHook
+from mmengine.device import is_npu_available
+from mmengine.hooks import NPUProfilerHook, ProfilerHook
 from mmengine.logging import MMLogger
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import is_installed
@@ -202,3 +204,73 @@ class TestProfilerHook(RunnerTestCase):
             ]
             runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
+
+
+@unittest.skipIf(
+    not is_npu_available(), reason='Ascend PyTorch and npu devices not exist')
+class TestNPUProfilerHook(RunnerTestCase):
+
+    def test_init(self):
+
+        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+
+        NPUProfilerHook(result_path=result_path)
+
+        with self.assertRaises(ValueError):
+            NPUProfilerHook(begin=1, end=0, result_path=result_path)
+
+    def test_before_run(self):
+        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        runner = MagicMock()
+        runner.max_iters = 1
+        runner.logger = MMLogger.get_instance('test_npu_profiler')
+
+        hook = NPUProfilerHook(result_path=result_path)
+        hook.before_run(runner)
+
+        with self.assertRaises(ValueError):
+            hook = NPUProfilerHook(begin=0, end=10, result_path=result_path)
+            hook.before_run(runner)
+
+    def test_after_train_iter(self):
+        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        runner = MagicMock()
+        runner.max_iters = 10000
+        runner.logger = MMLogger.get_instance('test_npu_profiler')
+
+        runner.iter = 0
+
+        hook = NPUProfilerHook(begin=0, end=10, result_path=result_path)
+        hook.before_run(runner)
+
+        hook.profiler = MagicMock()
+        hook.after_train_iter(runner, 1)
+
+    def test_with_runner(self):
+        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='NPUProfilerHook',
+                begin=0,
+                result_path=result_path,
+                exit_after_profiling=False)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
+        self.epoch_based_cfg['custom_hooks'] = [
+            dict(
+                type='NPUProfilerHook',
+                result_path=result_path,
+                ge_profiling_to_std_out=True,
+                exit_after_profiling=False)
+        ]
+        runner = self.build_runner(self.epoch_based_cfg)
+        runner.train()
+
+        self.assertTrue(
+            ops.exists(result_path), 'profiler result path is not generated!')
+
+        self.assertTrue(
+            os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1',
+            'GE PROFILING failed to start!')
