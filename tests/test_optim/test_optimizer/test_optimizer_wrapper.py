@@ -387,7 +387,7 @@ class TestApexOptimWrapper(TestCase):
 
 class TestAmpOptimWrapper(TestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         self.model = ToyModel()
         self.optimizer = SGD(self.model.parameters(), lr=0.1)
 
