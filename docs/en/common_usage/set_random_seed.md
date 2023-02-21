@@ -5,7 +5,7 @@ As described in [PyTorch REPRODUCIBILITY](https://pytorch.org/docs/stable/notes/
 MMEngine provides the ability to set the random number and select a deterministic algorithm. Users can simply set the `randomness` argument of the `Runner`. The argument is eventually consumed in [set_random_seed](mmengine.runner.set_random_seed) and it has the following three fields:
 
 - seed: The random seed. If this argument is not set, a random number will be used.
-- differ_rand_seed: Whether to set different seeds for different processes by adding the `rank` (process index) to the seed.
+- diff_rank_seed (bool): Whether to set different seeds for different processes by adding the `rank` (process index) to the seed.
 - deterministic: Whether to set deterministic options for the CUDNN backend.
 
 Let's take the [Get Started in 15 Minutes](../get_started/15_minutes.md) as an example to demonstrate how to set `randomness` in MMEngine.
