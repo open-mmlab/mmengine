@@ -14,6 +14,7 @@ from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+                                              LION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS)
 from mmengine.registry import build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
@@ -29,6 +30,14 @@ if not MMCV_FULL_AVAILABLE:
 def has_dadaptation() -> bool:
     try:
         import dadaptation  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_lion() -> bool:
+    try:
+        import lion_pytorch  # noqa: F401
         return True
     except ImportError:
         return False
@@ -220,6 +229,10 @@ class TestBuilder(TestCase):
         dadaptation_optimizers = ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']
         assert set(dadaptation_optimizers).issubset(
             set(DADAPTATION_OPTIMIZERS))
+
+    @unittest.skipIf(not has_lion(), 'lion-pytorch is not installed')
+    def test_lion_optimizers(self):
+        assert 'Lion' in LION_OPTIMIZERS
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``

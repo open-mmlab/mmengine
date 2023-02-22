@@ -1,4 +1,6 @@
 coverage
+dadaptation
+lion-pytorch
 lmdb
 parameterized
 pytest
