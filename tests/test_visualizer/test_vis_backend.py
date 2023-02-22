@@ -145,7 +145,7 @@ class TestTensorboardVisBackend:
         tensorboard_vis_backend.add_scalar('map', 0.9, step=0)
         tensorboard_vis_backend.add_scalar('map', 0.95, step=1)
         # test with numpy
-        with pytest.warns(None) as record:
+        with pytest.warns(UserWarning) as record:
             tensorboard_vis_backend.add_scalar('map', np.array(0.9), step=0)
             tensorboard_vis_backend.add_scalar('map', np.array(0.95), step=1)
             tensorboard_vis_backend.add_scalar('map', np.array(9), step=0)
