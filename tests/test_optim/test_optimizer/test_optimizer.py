@@ -93,7 +93,7 @@ class PseudoDataParallel(nn.Module):
 
 class TestBuilder(TestCase):
 
-    def setup_method(self):
+    def setUp(self):
         self.model = ExampleModel()
         self.base_lr = 0.01
         self.momentum = 0.0001
@@ -762,7 +762,7 @@ class TestBuilder(TestCase):
     reason='ZeRO requires pytorch>=1.8 with torch.distributed.rpc available.')
 class TestZeroOptimizer(MultiProcessTestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
 

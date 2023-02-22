@@ -47,13 +47,13 @@ class ToyModel3(ToyModel):
 
 class TestEMAHook(RunnerTestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         MODELS.register_module(name='DummyWrapper', module=DummyWrapper)
         MODELS.register_module(name='ToyModel2', module=ToyModel2)
         MODELS.register_module(name='ToyModel3', module=ToyModel3)
         return super().setUp()
 
-    def teardown_method(self):
+    def tearDown(self):
         MODELS.module_dict.pop('DummyWrapper')
         MODELS.module_dict.pop('ToyModel2')
         MODELS.module_dict.pop('ToyModel3')

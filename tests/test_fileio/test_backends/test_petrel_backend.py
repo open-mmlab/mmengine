@@ -573,7 +573,7 @@ else:
             cls.local_img_shape = (300, 400, 3)
             cls.petrel_dir = 'petrel://mmengine-test/data'
 
-        def setup_method(self):
+        def setUp(self):
             backend = PetrelBackend()
             backend.rmtree(self.petrel_dir)
             with build_temporary_directory() as tmp_dir:

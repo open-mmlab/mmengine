@@ -58,7 +58,7 @@ class ToyVisualizer(Visualizer):
 
 class TestBaseInferencer(RunnerTestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         super().setUp()
         runner = self.build_runner(copy.deepcopy(self.epoch_based_cfg))
         runner.train()
@@ -74,7 +74,7 @@ class TestBaseInferencer(RunnerTestCase):
                 preprocess_kwargs = set('a')
                 forward_kwargs = set('a')
 
-    def teardown_method(self):
+    def tearDown(self):
         VISUALIZERS._module_dict.pop('ToyVisualizer')
         return super().tearDown()
 

@@ -93,7 +93,7 @@ class FooModel(BaseModule):
 
 class TestBaseModule(TestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.BaseModule = BaseModule()
         self.model_cfg = dict(
@@ -114,7 +114,7 @@ class TestBaseModule(TestCase):
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
         self.logger = MMLogger.get_instance(self._testMethodName)
 
-    def teardown_method(self) -> None:
+    def tearDown(self) -> None:
         self.temp_dir.cleanup()
         logging.shutdown()
         MMLogger._instance_dict.clear()

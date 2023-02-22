@@ -58,14 +58,14 @@ class ToyTTAPipeline:
 
 class TestPrepareTTAHook(RunnerTestCase):
 
-    def setup_method(self) -> None:
+    def setUp(self) -> None:
         super().setUp()
         TRANSFORMS.register_module(module=ToyTTAPipeline, force=True)
         MODELS.register_module(module=ToyModel, force=True)
         MODELS.register_module(module=ToyTestTimeAugModel, force=True)
         DATASETS.register_module(module=ToyDatasetTTA, force=True)
 
-    def teardown_method(self):
+    def tearDown(self):
         super().tearDown()
         TRANSFORMS.module_dict.pop('ToyTTAPipeline', None)
         MODELS.module_dict.pop('ToyModel', None)
