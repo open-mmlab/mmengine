@@ -183,7 +183,7 @@ class TestVisualizer(TestCase):
         with pytest.raises(TypeError):
             visualizer.draw_points(positions=[1, 2])
         with pytest.raises(AssertionError):
-            visualizer.draw_points(positions=np.array([1, 2, 3]))
+            visualizer.draw_points(positions=np.array([1, 2, 3], dtype=object))
         # test color
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
