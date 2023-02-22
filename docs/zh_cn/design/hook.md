@@ -201,4 +201,4 @@ def main():
 - before_save_checkpoint
 - after_load_checkpoint
 
-你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](../api/hooks)。

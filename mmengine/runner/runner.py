@@ -170,7 +170,7 @@ class Runner:
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
             will be generated and it will be broadcasted to all other processes
-            if in distributed environment. If ``cudnn_benchmarch`` is
+            if in distributed environment. If ``cudnn_benchmark`` is
             ``True`` in ``env_cfg`` but ``deterministic`` is ``True`` in
             ``randomness``, the value of ``torch.backends.cudnn.benchmark``
             will be ``False`` finally.
@@ -625,7 +625,7 @@ class Runner:
                     mp_start_method='fork',
                     opencv_num_threads=0
                 ),
-                dist_cfg=dict(backend='nccl'),
+                dist_cfg=dict(backend='nccl', timeout=1800),
                 resource_limit=4096
             )
 
@@ -1053,7 +1053,7 @@ class Runner:
             MultiOptimWrapperConstructor which gets parameters passed to
             corresponding optimizers and compose the ``OptimWrapperDict``.
             More details about how to customize OptimizerConstructor can be
-            found at `optimizer-docs <https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html>`_.
+            found at `optimizer-docs`_.
 
         Returns:
             OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
@@ -1167,7 +1167,7 @@ class Runner:
           in runner, ``build_param_scheduler`` will return a dict containing
           the same keys with multiple optimizers and each value is a list of
           parameter schedulers. Note that, if you want different optimizers to
-          use different parameter shedulers to update optimizer's
+          use different parameter schedulers to update optimizer's
           hyper-parameters, the input parameter ``scheduler`` also needs to be
           a dict and its key are consistent with multiple optimizers.
           Otherwise, the same parameter schedulers will be used to update
@@ -1198,7 +1198,7 @@ class Runner:
             <mmengine.optim.scheduler.lr_scheduler.StepLR at 0x7f70f6eb6150>]
 
         Above examples only provide the case of one optimizer and one scheduler
-        or multiple shedulers. If you want to know how to set parameter
+        or multiple schedulers. If you want to know how to set parameter
         scheduler when using multiple optimizers, you can find more examples
         `optimizer-docs`_.
 
@@ -1208,7 +1208,7 @@ class Runner:
             schedulers build from ``scheduler``.
 
         .. _optimizer-docs:
-           https://mmengine.readthedocs.io/en/latest/tutorials/optimizer.html
+           https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
         """
         param_schedulers: ParamSchedulerType
         if not isinstance(self.optim_wrapper, OptimWrapperDict):
@@ -2027,7 +2027,7 @@ class Runner:
                 the model and checkpoint.
             revise_keys (list): A list of customized keywords to modify the
                 state_dict in checkpoint. Each item is a (pattern, replacement)
-                pair of the regular expression operations. Default: strip
+                pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
         checkpoint = _load_checkpoint(filename, map_location=map_location)
@@ -2233,7 +2233,7 @@ class Runner:
         if is_seq_of(param_scheduler, dict):
             for _param_scheduler in param_scheduler:
                 assert 'type' in _param_scheduler, (
-                    'Each parameter sheduler should contain the key type, '
+                    'Each parameter scheduler should contain the key type, '
                     f'but got {_param_scheduler}')
         elif isinstance(param_scheduler, dict):
             if 'type' not in param_scheduler:

@@ -56,7 +56,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         state_dict (OrderedDict): Weights.
         strict (bool): whether to strictly enforce that the keys
             in :attr:`state_dict` match the keys returned by this module's
-            :meth:`~torch.nn.Module.state_dict` function. Default: ``False``.
+            :meth:`~torch.nn.Module.state_dict` function. Defaults to False.
         logger (:obj:`logging.Logger`, optional): Logger to log the error
             message. If not specified, print function will be used.
     """
@@ -285,7 +285,7 @@ class CheckpointLoader:
         Args:
             filename (str): checkpoint file name with given prefix
             map_location (str, optional): Same as :func:`torch.load`.
-                Default: None
+                Defaults to None
             logger (str): The logger for message. Defaults to 'current'.
 
         Returns:
@@ -332,7 +332,7 @@ def load_from_http(filename,
             torchvision prefix
         map_location (str, optional): Same as :func:`torch.load`.
         model_dir (string, optional): directory in which to save the object,
-            Default: None
+            Defaults to None
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
@@ -364,7 +364,7 @@ def load_from_pavi(filename, map_location=None):
     Args:
         filename (str): checkpoint file path with pavi prefix
         map_location (str, optional): Same as :func:`torch.load`.
-          Default: None
+          Defaults to None
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
@@ -443,7 +443,7 @@ def load_from_openmmlab(filename, map_location=None):
         filename (str): checkpoint file path with open-mmlab or
         openmmlab prefix
         map_location (str, optional): Same as :func:`torch.load`.
-          Default: None
+          Defaults to None
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
@@ -504,9 +504,9 @@ def _load_checkpoint(filename, map_location=None, logger=None):
             ``open-mmlab://xxx``. Please refer to ``docs/model_zoo.md`` for
             details.
         map_location (str, optional): Same as :func:`torch.load`.
-           Default: None.
+           Defaults to None.
         logger (:mod:`logging.Logger`, optional): The logger for error message.
-           Default: None
+           Defaults to None
 
     Returns:
         dict or OrderedDict: The loaded checkpoint. It can be either an
@@ -524,7 +524,8 @@ def _load_checkpoint_with_prefix(prefix, filename, map_location=None):
         filename (str): Accept local filepath, URL, ``torchvision://xxx``,
             ``open-mmlab://xxx``. Please refer to ``docs/model_zoo.md`` for
             details.
-        map_location (str | None): Same as :func:`torch.load`. Default: None.
+        map_location (str | None): Same as :func:`torch.load`.
+            Defaults to None.
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
@@ -594,7 +595,7 @@ def load_checkpoint(model,
         logger (:mod:`logging.Logger` or None): The logger for error message.
         revise_keys (list): A list of customized keywords to modify the
             state_dict in checkpoint. Each item is a (pattern, replacement)
-            pair of the regular expression operations. Default: strip
+            pair of the regular expression operations. Defaults to strip
             the prefix 'module.' by [(r'^module\\.', '')].
 
     Returns:
@@ -668,7 +669,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
             module.
         prefix (str): Prefix of the key.
         keep_vars (bool): Whether to keep the variable property of the
-            parameters. Default: False.
+            parameters. Defaults to False.
 
     Returns:
         dict: A dictionary containing a whole state of the module.

@@ -2303,7 +2303,7 @@ class TestRunner(TestCase):
                               MultiStepLR)
         self.assertIsInstance(runner.param_schedulers['linear2'][0], StepLR)
 
-        # 2.7.3 test `resume` 2 optimizers and 0 sheduler list.
+        # 2.7.3 test `resume` 2 optimizers and 0 scheduler list.
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint18'
         cfg.optim_wrapper = optim_cfg

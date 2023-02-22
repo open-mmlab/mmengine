@@ -62,7 +62,7 @@ class LoggerHook(Hook):
             by epoch. It can be true when running in epoch based runner.
             If set to True, `after_val_epoch` will set `step` to self.epoch in
             `runner.visualizer.add_scalars`. Otherwise `step` will be
-            self.iter. Default to True.
+            self.iter. Defaults to True.
         backend_args (dict, optional): Arguments to instantiate the
             preifx of uri corresponding backend. Defaults to None.
             New in v0.2.0.
