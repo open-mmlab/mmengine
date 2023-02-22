@@ -18,5 +18,5 @@ __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
     'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'ProfilerHook',
-    'PrepareTTAHook', 'EarlyStoppingHook', 'NPUProfilerHook',
+    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook'
 ]
