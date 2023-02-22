@@ -59,7 +59,7 @@ class EarlyStoppingHook(Hook):
         assert rule in ['greater', 'less'], \
             '`rule` should be either "greater" or "less".'
         self.rule = rule
-        self.min_delta = min_delta
+        self.min_delta = min_delta if rule == 'greater' else -1 * min_delta
         self.strict = strict
         self.check_finite = check_finite
         self.patience = patience
