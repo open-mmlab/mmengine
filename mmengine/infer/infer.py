@@ -369,9 +369,9 @@ class BaseInferencer(metaclass=InferencerMeta):
             f'{self.scope} not in {MODULE2PACKAGE}!,'
             'please pass a valid scope.')
 
-        config_dir = BaseInferencer._get_repo_or_mim_dir(self.scope)
-        for model_cfg in BaseInferencer._get_models_from_config_dir(
-                config_dir):
+        repo_or_mim_dir = BaseInferencer._get_repo_or_mim_dir(self.scope)
+        for model_cfg in BaseInferencer._get_models_from_metafile(
+                repo_or_mim_dir):
             model_name = model_cfg['Name'].lower()
             model_aliases = model_cfg.get('Alias', [])
             if isinstance(model_aliases, str):
@@ -380,7 +380,7 @@ class BaseInferencer(metaclass=InferencerMeta):
                 model_aliases = [alias.lower() for alias in model_aliases]
             if (model_name == model or model in model_aliases):
                 cfg = Config.fromfile(
-                    osp.join(config_dir, model_cfg['Config']))
+                    osp.join(repo_or_mim_dir, model_cfg['Config']))
                 weights = model_cfg['Weights']
                 weights = weights[0] if isinstance(weights, list) else weights
                 return cfg, weights
@@ -395,7 +395,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             scope (str): The scope of repository.
 
         Returns:
-            str: The directory of the ``Config``.
+            str: The directory where the ``Configs`` is located.
         """
         try:
             module = importlib.import_module(scope)
@@ -630,21 +630,21 @@ class BaseInferencer(metaclass=InferencerMeta):
         )
 
     @staticmethod
-    def _get_models_from_config_dir(config_dir: str):
+    def _get_models_from_metafile(dir: str):
         """Load model config defined in metafile from package path.
 
         Args:
-            config_dir (str): Path to the directory of Config. It requires the
+            dir (str): Path to the directory of Config. It requires the
                 directory ``Config``, file ``model-index.yml`` exists in the
-                ``config_dir``.
+                ``dir``.
 
         Yields:
             dict: Model config defined in metafile.
         """
-        meta_indexes = load(osp.join(config_dir, 'model-index.yml'))
+        meta_indexes = load(osp.join(dir, 'model-index.yml'))
         for meta_path in meta_indexes['Import']:
             # meta_path example: mmcls/.mim/configs/conformer/metafile.yml
-            meta_path = osp.join(config_dir, meta_path)
+            meta_path = osp.join(dir, meta_path)
             metainfo = load(meta_path)
             yield from metainfo['Models']
 
@@ -673,7 +673,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             f'{scope} not in {MODULE2PACKAGE}!, please make pass a valid '
             'scope.')
         root_or_mim_dir = BaseInferencer._get_repo_or_mim_dir(scope)
-        for model_cfg in BaseInferencer._get_models_from_config_dir(
+        for model_cfg in BaseInferencer._get_models_from_metafile(
                 root_or_mim_dir):
             model_name = [model_cfg['Name']]
             model_name.extend(model_cfg.get('Alias', []))
