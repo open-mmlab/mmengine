@@ -145,5 +145,5 @@ class EarlyStoppingHook(Hook):
             runner.logger.info(message)
             if self.save_last:
                 runner.logger.info(
-                    f'Saving last checkpoint at {runner.epoch + 1} epochs.')
+                    f'Saving last checkpoint at {runner.epoch} epochs.')
                 # TODO how to save ref: CheckpointHook._save_checkpoint(runner)

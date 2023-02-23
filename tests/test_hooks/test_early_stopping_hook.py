@@ -153,7 +153,7 @@ class TestEarlyStoppingHook(RunnerTestCase):
                 break
         self.assertAlmostEqual(hook.best_score, 7 / 9)
 
-        # Check smalleast value
+        # Check smallest value
         runner = get_mock_runner()
         metrics = [{'loss': i / 9.} for i in range(8, 0, -1)]
         hook = EarlyStoppingHook(monitor='loss')
