@@ -102,3 +102,7 @@ html_css_files = ['css/readthedocs.css']
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
 copybutton_prompt_is_regexp = True
+
+
+def setup(app):
+    os.system('pip install -e ../../')
