@@ -1,6 +1,6 @@
 # Calculate the FLOPs and Parameters of Model
 
-1. Define Model
+1. Define a Model
 
    ```python
    import torch.nn.functional as F
@@ -22,7 +22,7 @@
                return x
    ```
 
-2. Count the number of calculation and parameter
+2. Calculate the FLOPs and Parameters
 
    ```python
    from mmengine.analysis import get_model_complexity_info
@@ -32,7 +32,7 @@
    analysis_results = get_model_complexity_info(model, input_shape)
    ```
 
-- Using table form to show
+- Show in table form
 
   ```python
   print(analysis_results['out_table'])
@@ -180,7 +180,7 @@
 
   </details>
 
-- Using Model structure to show
+- Show in model structure
 
   ```python
   print(analysis_results['out_arch'])
@@ -723,18 +723,18 @@
 
   </details>
 
-- Total number of calculation
+- Show FLOPs as a string
 
   ```python
   print("Model Flops:{}".format(analysis_results['flops_str']))
   # Model Flops:4.145G
   ```
 
-- Total number of Parameters
+- Show Parameters as a string
 
   ```python
   print("Model Parameters:{}".format(analysis_results['params_str']))
   # Model Parameters:25.557M
   ```
 
-For the definition of FLOPs and Parameters of model and more usage, please refer [Model Complexity Analysis](../advanced_tutorials/model_analysis.md)
+For the definition of FLOPs and Parameters of model and more usage, please refer to [Model Complexity Analysis](../advanced_tutorials/model_analysis.md)
