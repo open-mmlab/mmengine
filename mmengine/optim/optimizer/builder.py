@@ -57,6 +57,26 @@ def register_dadaptation_optimizers() -> List[str]:
 DADAPTATION_OPTIMIZERS = register_dadaptation_optimizers()
 
 
+def register_lion_optimizers() -> List[str]:
+    """Register Lion optimizer to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    optimizers = []
+    try:
+        from lion_pytorch import Lion
+    except ImportError:
+        pass
+    else:
+        OPTIMIZERS.register_module(module=Lion)
+        optimizers.append('Lion')
+    return optimizers
+
+
+LION_OPTIMIZERS = register_lion_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
