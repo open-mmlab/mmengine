@@ -17,7 +17,7 @@ class EarlyStoppingHook(Hook):
         monitor (str): The monitored metric key to decide early stopping.
         rule (str, optional): Comparison rule. Options are 'greater',
             'less'. Defaults to None.
-        min_delta(float, optional): Minimum difference to continue the
+        min_delta (float, optional): Minimum difference to continue the
             training. Defaults to 0.01.
         strict (bool, optional): Whether to crash the training when `monitor`
             is not found in the `metrics`. Defaults to False.
@@ -29,6 +29,9 @@ class EarlyStoppingHook(Hook):
             the monitored quantity reaches this threshold. Defaults to None.
         save_last (bool, optional): Whether to save last status when early
             stopping is enabled.
+            
+       Note:
+           `New in version 0.6.0.`
     """
     priority = 'LOWEST'
 
