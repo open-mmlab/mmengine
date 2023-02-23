@@ -18,7 +18,8 @@ from mmengine.config import Config, ConfigDict
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
 from mmengine.device import get_device
-from mmengine.fileio import get_file_backend, list_dir_or_file, load
+from mmengine.fileio import (get_file_backend, isdir, join_path,
+                             list_dir_or_file, load)
 from mmengine.logging import print_log
 from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner.checkpoint import (_load_checkpoint,
@@ -241,13 +242,13 @@ class BaseInferencer(metaclass=InferencerMeta):
         """
         if isinstance(inputs, str):
             backend = get_file_backend(inputs)
-            if hasattr(backend, 'isdir') and osp.isdir(inputs):
+            if hasattr(backend, 'isdir') and isdir(inputs):
                 # Backends like HttpsBackend do not implement `isdir`, so only
                 # those backends that implement `isdir` could accept the inputs
                 # as a directory
                 filename_list = list_dir_or_file(inputs, list_dir=False)
                 inputs = [
-                    osp.join(inputs, filename) for filename in filename_list
+                    join_path(inputs, filename) for filename in filename_list
                 ]
 
         if not isinstance(inputs, (list, tuple)):
