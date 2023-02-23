@@ -1,4 +1,4 @@
-# Count the FLOPs and Parameters of Model
+# Calculate the FLOPs and Parameters of Model
 
 1. Define Model
 
