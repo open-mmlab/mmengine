@@ -46,7 +46,7 @@ class AmpOptimWrapper(OptimWrapper):
         ``accumulative_counts``.
     """
 
-    def __init__(self, loss_scale='dynamic', **kwargs):
+    def __init__(self, loss_scale='dynamic', dtype=None, **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         assert is_cuda_available() or is_npu_available(), (
@@ -67,6 +67,19 @@ class AmpOptimWrapper(OptimWrapper):
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
+
+        # convert string value to torch.dtype
+        if isinstance(dtype, str):
+            try:
+                dtype = getattr(torch, dtype)
+            except AttributeError:
+                raise ValueError(f'{dtype} does not name a torch.dtype. '
+                                 'You may want to use "float32", '
+                                 '"bfloat32" etc.')
+        # check the type of dtype
+        assert dtype is None or isinstance(dtype, torch.dtype), (
+            f'dtype should be None or instance of torch.dtype, got {dtype}')
+        self.cast_dtype = dtype
 
     def backward(self, loss: torch.Tensor, **kwargs):
         """Perform gradient back propagation with :attr:`loss_scaler`.
@@ -133,5 +146,5 @@ class AmpOptimWrapper(OptimWrapper):
             model (nn.Module): The training model.
         """
         from mmengine.runner.amp import autocast
-        with super().optim_context(model), autocast():
+        with super().optim_context(model), autocast(dtype=self.cast_dtype):
             yield
