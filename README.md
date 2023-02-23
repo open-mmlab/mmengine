@@ -74,15 +74,16 @@ Major features:
 
 ## What's New
 
-v0.5.0 was released in 2023-01-20.
+v0.5.0 was released on 2023-02-23.
 
 Highlights:
 
-- Add `BaseInferencer` to provide a general inference interface
-- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
-- Deprecate support for Python3.6
+- Support use environment variable in the config file.
+- Add `ApexOptimWrapper`
+- Support analyzing model complexity.
+- Add `Lion` optimizer.
 
-Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v060-02232023) for more details.
 
 ## Installation
 

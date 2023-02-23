@@ -1,5 +1,60 @@
 # Changelog of v0.x
 
+## v0.6.0 (02/23/2023)
+
+### Highlights
+
+- Support use environment variable in the config file.
+- Add `ApexOptimWrapper`
+- Support analyzing model complexity.
+- Add `Lion` optimizer.
+
+### New Features & Enhancements
+
+- Support model complexity computation by @tonysy in https://github.com/open-mmlab/mmengine/pull/779
+- Add Lion optimizer by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/952
+- Support using environment variable in config file. by @jbwang1997 in https://github.com/open-mmlab/mmengine/pull/744
+- Improve registry infer_scope by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/334
+- Support configuring `timeout` in dist configuration by @apacha in https://github.com/open-mmlab/mmengine/pull/877
+- Beautify the print result of the registry by @Eiuyc in https://github.com/open-mmlab/mmengine/pull/922
+- Refine the style of table by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/941
+- Refine the `repr` of Registry by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/942
+- Feature NPUProfilerHook by @luomaoling in https://github.com/open-mmlab/mmengine/pull/925
+- Refactor hooks unittest by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/946
+- Temporarily fix `collect_env` raise errors and stops programs by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/944
+- Make sure Tensors to broadcast is contiguous by @XWHtorrentx in https://github.com/open-mmlab/mmengine/pull/948
+- Clean the UT warning caused by pytest by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/947
+
+### Bug fixes
+
+- Backend_args should not be modified by get_file_backend by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/897
+- Support update `np.ScalarType` data in message_hub by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/898
+- Support rendering Chinese character in `Visualizer` by @KevinNuNu in https://github.com/open-mmlab/mmengine/pull/887
+- Add `ApexOptimWrapper` by @xcnick in https://github.com/open-mmlab/mmengine/pull/742
+- Fix the Bug of `DefaultOptimWrapperConstructor` when the shared parameters do not require the grad by @HIT-cwh in https://github.com/open-mmlab/mmengine/pull/903
+- Support model complexity computation by @tonysy in https://github.com/open-mmlab/mmengine/pull/779
+
+### Docs
+
+- Add the document for the transition between IterBasedTraining and EpochBasedTraining by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/926
+- Introduce how to set random seed by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/914
+- Count FLOPs and parameters by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/939
+- Enhance README by @Xiangxu-0103 in https://github.com/open-mmlab/mmengine/pull/835
+- Add a document about debug tricks by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/938
+- Refine the format of changelog and visualization document by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/906
+- Move examples to a new directory by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/911
+- Resolve warnings in sphinx build by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/915
+- Fix docstring by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/913
+- How to set the interval parameter by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/917
+- Temporarily skip errors in building pdf docs at readthedocs by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/928
+- Add the links of twitter, discord, medium, and youtube by @vansin in https://github.com/open-mmlab/mmengine/pull/924
+- Fix typo `shedule` by @Dai-Wenxun in https://github.com/open-mmlab/mmengine/pull/936
+- Fix failed URL by @zhouzaida in https://github.com/open-mmlab/mmengine/pull/943
+
+### Contributors
+
+A total of 20 developers contributed to this release. Thanks @xcnick, @KevinNuNu, @apacha, @RangeKing, @Xiangxu-0103, @luomaoling, @Eiuyc, @XWHtorrentx, @vansin, @HIT-cwh, @wangjiangben-hw, @Dai-Wenxun, @tonysy, @jbwang1997, @C1rN09, @zhouzaida, @HAOCHENYE, @mzr1996, @LEFTeyex, @yaqi0510.
+
 ## v0.5.0 (01/20/2023)
 
 ### Highlights
