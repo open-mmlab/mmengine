@@ -15,7 +15,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   You can also launch distributed training from Python script
 
   ```python
-  python examples/distributed_training_launch.py --num-gpus 8
+  python examples/train.py --num-gpus 8
   ```
 
   If you need to specify the GPU index, you can set the `CUDA_VISIBLE_DEVICES` environment variable, e.g. use the 0th and 3rd GPU.
@@ -56,7 +56,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   On the first machine:
 
   ```bash
-  python examples/distributed_training_launch.py \
+  python examples/train.py \
       --num-gpus 8 \
       --num-nodes 2 \
       --node-rank 0 \
@@ -67,7 +67,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   On the second machine:
 
   ```bash
-  python examples/distributed_training_launch.py \
+  python examples/train.py \
       --num-gpus 8 \
       --num-nodes 2 \
       --node-rank 1 \

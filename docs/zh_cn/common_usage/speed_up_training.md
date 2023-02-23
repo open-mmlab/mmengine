@@ -9,19 +9,19 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
   假设当前机器有 8 张显卡，可以使用以下命令开启多卡训练
 
   ```bash
-  python -m torch.distributed.launch --nproc_per_node=8 examples/distributed_training --launcher pytorch
+  python -m torch.distributed.launch --nproc_per_node=8 examples/train.py --launcher pytorch
   ```
 
   MMEngine 也支持从 Python 脚本启动多卡训练
 
   ```bash
-  python examples/distributed_training_launch.py --num-gpus 8 --launcher pytorch
+  python examples/train.py --num-gpus 8 --launcher pytorch
   ```
 
   如果需要指定显卡的编号，可以设置 `CUDA_VISIBLE_DEVICES` 环境变量，例如使用第 0 和第 3 张卡
 
   ```bash
-  CUDA_VISIBLE_DEVICES=0,3 python -m torch.distributed.launch --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
+  CUDA_VISIBLE_DEVICES=0,3 python -m torch.distributed.launch --nproc_per_node=2 examples/train.py --launcher pytorch
   ```
 
 - 多机多卡
@@ -37,7 +37,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       --master_addr 127.0.0.1 \
       --master_port 29500 \
       --nproc_per_node=8 \
-      examples/distributed_training.py --launcher pytorch
+      examples/train.py --launcher pytorch
   ```
 
   第 2 台机器运行以下命令
@@ -49,7 +49,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       --master_addr ${ip address to node of rank 0 } \
       --master_port 29500 \
       --nproc_per_node=8 \
-      examples/distributed_training.py --launcher pytorch
+      examples/train.py --launcher pytorch
   ```
 
   如果想从 Python 脚本启动多机多卡训练：
@@ -57,7 +57,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
   第 1 台机器运行以下命令
 
   ```bash
-  python examples/distributed_training_launch.py \
+  python examples/train.py \
       --num-gpus 8 \
       --num-nodes 2 \
       --node-rank 0 \
@@ -68,7 +68,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
   第 2 台机器运行以下命令
 
   ```bash
-  python examples/distributed_training_launch.py \
+  python examples/train.py \
       --num-gpus 8 \
       --num-nodes 2 \
       --node-rank 1 \
@@ -87,7 +87,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
       --ntasks-per-node=8 \
       --cpus-per-task=5 \
       --kill-on-bad-exit=1 \
-      python examples/distributed_training.py --launcher="slurm"
+      python examples/train.py --launcher="slurm"
   ```
 
 ## 混合精度训练
