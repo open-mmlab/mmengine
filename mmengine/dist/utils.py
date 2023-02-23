@@ -6,6 +6,7 @@ import subprocess
 from collections.abc import Iterable, Mapping
 from typing import Callable, Optional, Tuple, Union
 
+import argparse
 import numpy as np
 import torch
 import torch.multiprocessing as mp
@@ -561,6 +562,67 @@ def cast_data_device(
 
 
 def launch(
+    main_func: Callable,
+    num_proc_per_node: Union[list, int] = 1,
+    num_nodes: int = 1,
+    node_rank: int = 0,
+    master_addr: str = '127.0.0.1',
+    master_port: str = 'auto',
+    args: Optional[argparse.Namespace] = None,
+):
+    """"A function used to launch distributed tasks.
+
+    It requires the passed function to accept only one argument, which
+    can either be ``None`` or of type ``argparse.ArgumentParser``.
+
+    Args:
+        main_func (Callable): Function only accepts one argument which
+            can either be ``None`` or of type ``argparse.ArgumentParser``.
+        num_proc_per_node (list or int): Number of valid processes for
+            nodes. For example, The task will be ran on 2 node A and
+            node B. A has 2 processes, and B has 4 valid processes. Then
+            ``num_proc_per_node`` should be [2, 4]. If
+            ``num_proc_per_node`` is a single ``int``, it means all
+            nodes launch ``num_proc_per_node`` processes.
+        num_nodes (int, optional): Number of used nodes. This argument is
+            only useful when ``num_proc_per_node`` is an int. Defaults to 1.
+        node_rank (int, optional): The rank of current node.
+            Defaults to 0.
+        master_addr (str, optional): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend. Defaults to '127.0.0.1'.
+        master_port (str, optional): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store. Defaults to 'auto'.
+        args (tuple, optional): Arguments passed to main_func. Defaults to ().
+    """
+    if not isinstance(num_proc_per_node, list):
+        num_proc_per_node = [num_proc_per_node] * num_nodes
+
+    if not isinstance(args, argparse.Namespace) and args is not None:
+        raise TypeError(
+            'args should be None or an ``argparse.ArgumentParser`` object'
+            f'but got {type(args)}')
+    tuple_args: tuple
+    if args is not None:
+        if sum(num_proc_per_node) > 1 or 'WORLD_SIZE' in os.environ:
+            launcher = 'pytorch'
+        elif 'SLURM_NTASKS' in os.environ:
+            launcher = 'slurm'
+        elif 'OMPI_COMM_WORLD_SIZE' in os.environ:
+            launcher = 'mpi'
+        else:
+            launcher = 'none'
+        if getattr(args, 'launcher', None) is None:
+            args.launcher = launcher
+        tuple_args = (args, )
+    else:
+        tuple_args = ()
+
+    return general_launch(main_func, num_proc_per_node, num_nodes, node_rank,
+                          master_addr, master_port, tuple_args)
+
+
+def general_launch(
         main_func: Callable,
         num_proc_per_node: Union[list, int] = 1,
         num_nodes: int = 1,
@@ -629,7 +691,7 @@ def _distributed_worker(
     node_rank: int,
     master_addr: str,
     master_port: str,
-    args,
+    args: tuple,
 ) -> None:
     """Run the task after initializing the environment.
 
@@ -654,7 +716,7 @@ def _distributed_worker(
             backend.
         master_port (str): The port on the ``master_addr`` that can
             be used to host the C10d TCP store.
-        args (tuple, optional): Arguments passde to main_func. Defaults to ().
+        args (tuple, optional): Arguments passde to main_func.
     """  # noqa: E501
     has_gpu = torch.cuda.is_available()
     if has_gpu:

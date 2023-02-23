@@ -61,7 +61,6 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
       --num-nodes 2 \
       --node-rank 0 \
       --master-port 29500 \
-      --launcher pytorch
   ```
 
   On the second machine:
@@ -73,7 +72,6 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
       --node-rank 1 \
       --master_addr ${ip address to node of rank 0 } \
       --master-port 29500
-      --launcher pytorch
   ```
 
   If you are running MMEngine in a slurm cluster, simply run the following command to enable training for 2 machines and 16 GPUs.

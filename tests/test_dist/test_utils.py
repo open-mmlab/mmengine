@@ -631,14 +631,14 @@ def test_launch():
     with tempfile.TemporaryDirectory() as tempdir:
         # Single process, single node.
         result = {}
-        dist.launch(main, args=(result, tempdir))
+        dist.general_launch(main, args=(result, tempdir))
         with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
             result = pickle.load(f)
             assert result == {}
 
         # Multiple process, single node
         result = {}
-        dist.launch(main, args=(result, tempdir), num_proc_per_node=3)
+        dist.general_launch(main, args=(result, tempdir), num_proc_per_node=3)
         with open(os.path.join(tempdir, 'result.pkl'), 'rb') as f:
             result = pickle.load(f)
             assert result == [{'0': '0'}, {'1': '1'}, {'2': '2'}]
@@ -647,7 +647,7 @@ def test_launch():
         result = {}
         for node_rank in range(2):
             proc = multiprocessing.Process(
-                target=dist.launch,
+                target=dist.general_launch,
                 args=(main, 2, 2, node_rank, '127.0.0.1', '7891', (result,
                                                                    tempdir)),
                 daemon=False)
@@ -661,7 +661,7 @@ def test_launch():
         result = {}
         for node_rank in range(2):
             proc = multiprocessing.Process(
-                target=dist.launch,
+                target=dist.general_launch,
                 args=(main, [2, 3], 2, node_rank, '127.0.0.1', '7891',
                       (result, tempdir)),
                 daemon=False)
