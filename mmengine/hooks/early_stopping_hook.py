@@ -29,7 +29,7 @@ class EarlyStoppingHook(Hook):
             the monitored quantity reaches this threshold. Defaults to None.
         save_last (bool, optional): Whether to save last status when early
             stopping is enabled.
-            
+
        Note:
            `New in version 0.6.0.`
     """
