@@ -9,9 +9,6 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
-metadata:
-  execution:
-    allow_errors: true
 ---
 
 # OptimWrapper
@@ -26,9 +23,11 @@ Now we use both the native optimizer of PyTorch and the OptimWrapper in MMEngine
 
 ### Model training
 
+
 **1.1 Single-precision training with SGD in PyTorch**
 
 ```{code-cell} ipython3
+
 import torch
 from torch.optim import SGD
 import torch.nn as nn
@@ -51,7 +50,7 @@ for input, target in zip(inputs, targets):
 **1.2 Single-precision training with OptimWrapper in MMEngine**
 
 ```{code-cell} ipython3
-from mmengine.optim import OptimWrappe
+from mmengine.optim import OptimWrapper
 
 optim_wrapper = OptimWrapper(optimizer=optimizer)
 
@@ -67,7 +66,7 @@ The `OptimWrapper.update_params` achieves the standard process for gradient comp
 
 **2.1 Mixed-precision training with SGD in PyTorch**
 
-```{code-cell} ipython3
+```python
 from torch.cuda.amp import autocast
 
 model = model.cuda()
@@ -85,7 +84,7 @@ for input, target in zip(inputs, targets):
 
 **2.2 Mixed-precision training with OptimWrapper in MMEngine**
 
-```{code-cell} ipython3
+```python
 from mmengine.optim import AmpOptimWrapper
 
 optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
@@ -103,7 +102,7 @@ To enable mixed precision training, users need to use `AmpOptimWrapper.optim_con
 
 **3.1 Mixed-precision training and gradient accumulation with SGD in PyTorch**
 
-```{code-cell} ipython3
+```python
 for idx, (input, target) in enumerate(zip(inputs, targets)):
     with autocast():
         output = model(input.cuda())
@@ -116,7 +115,7 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
 
 **3.2 Mixed-precision training and gradient accumulation with OptimWrapper in MMEngine**
 
-```{code-cell} ipython3
+```python
 optim_wrapper = AmpOptimWrapper(optimizer=optimizer, accumulative_counts=2)
 
 for input, target in zip(inputs, targets):
@@ -138,7 +137,7 @@ The OptimWrapper also provides a more fine-grained interface for users to custom
 
 We can use the above interface to implement the same logic of parameters updating as the Pytorch optimizer.
 
-```{code-cell} ipython3
+```python
 for idx, (input, target) in enumerate(zip(inputs, targets)):
     optimizer.zero_grad()
     with optim_wrapper.optim_context(model):
@@ -152,7 +151,7 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
 
 We can also configure a gradient clipping strategy for the OptimWrapper.
 
-```{code-cell} ipython3
+```python
 # based on torch.nn.utils.clip_grad_norm_ method
 optim_wrapper = AmpOptimWrapper(
     optimizer=optimizer, clip_grad=dict(max_norm=1))
@@ -186,7 +185,7 @@ print(optim_wrapper.get_momentum())  # {'momentum': [0]}
 
 Similar to the optimizer, the OptimWrapper provides the `state_dict` and `load_state_dict` interfaces for exporting and loading the optimizer states. For the `AmpOptimWrapper`, it can export mixed-precision training parameters as well.
 
-```{code-cell} ipython3
+```python
 import torch.nn as nn
 from torch.optim import SGD
 from mmengine.optim import OptimWrapper, AmpOptimWrapper
@@ -260,7 +259,7 @@ optim_wrapper = dict(optimizer=optimizer)
 
 To enable mixed-precision training and gradient accumulation, we change `type` to `AmpOptimWrapper` and specify the `accumulative_counts` parameter.
 
-```{code-cell} ipython3
+```python
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_counts=2)
 ```
