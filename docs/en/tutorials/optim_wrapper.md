@@ -51,7 +51,7 @@ for input, target in zip(inputs, targets):
 **1.2 Single-precision training with OptimWrapper in MMEngine**
 
 ```{code-cell} ipython3
-from mmengine.optim import OptimWrapper
+from mmengine.optim import OptimWrappe
 
 optim_wrapper = OptimWrapper(optimizer=optimizer)
 
