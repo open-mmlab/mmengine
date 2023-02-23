@@ -34,7 +34,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   python -m torch.distributed.launch \
       --nnodes 8 \
       --node_rank 0 \
-      --master_addr 127.0.0.1 \
+      --master-addr 127.0.0.1 \
       --master_port 29500 \
       --nproc_per_node=8 \
       examples/train.py --launcher pytorch
@@ -46,7 +46,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   python -m torch.distributed.launch \
       --nnodes 8 \
       --node_rank 1 \
-      --master_addr 127.0.0.1 \
+      --master-addr 127.0.0.1 \
       --master_port 29500 \
       --nproc_per_node=8 \
   ```
@@ -70,7 +70,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
       --num-gpus 8 \
       --num-nodes 2 \
       --node-rank 1 \
-      --master_addr ${ip address to node of rank 0 } \
+      --master-addr ${ip address to node of rank 0 } \
       --master-port 29500
   ```
 
