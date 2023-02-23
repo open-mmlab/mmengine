@@ -1078,7 +1078,7 @@ class Runner:
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
-                # defined either, Each value of `optim_wrapper` must be an
+                # defined either, each value of `optim_wrapper` must be an
                 # `OptimWrapper` instance since `DefaultOptimizerConstructor`
                 # will not handle the case of training with multiple
                 # optimizers. `build_optim_wrapper` will directly build the
