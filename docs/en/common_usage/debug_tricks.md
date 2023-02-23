@@ -2,7 +2,7 @@
 
 ## Set the Dataset's length
 
-Sometimes it's necessary to train several epochs during debug code, for example, verify in the debug mode or save the weight is meet expectation. However, if the Dataset is too large to take long time to train an epoch completed, in this situation can set the length of the Dataset. Attention, only inherited from [BaseDataset](mmengine.dataset.BaseDataset) can support this function, Please read usage of [BaseDataset](mmengine.dataset.BaseDataset).
+Sometimes it's necessary to train several epochs during debug code, for example, verify in the debug mode or save the weight is meet expectation. However, if the Dataset is too large to take long time to train an epoch completed, in this situation can set the length of the Dataset. Attention, only inherited from [BaseDataset](mmengine.dataset.BaseDataset) can support this function, Please read usage of [BaseDataset](../advanced_tutorials/basedataset.md).
 
 For example: Using `MMClassification` Refer [Document](https://mmclassification.readthedocs.io/en/dev-1.x/get_started.html) to install `MMClassification`.
 
