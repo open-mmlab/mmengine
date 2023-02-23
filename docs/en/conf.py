@@ -44,9 +44,9 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'myst_parser',
     'sphinx_copybutton',
     'sphinx.ext.autodoc.typehints',
+    'myst_nb',
 ]  # yapf: disable
 autodoc_typehints = 'description'
 myst_heading_anchors = 4
@@ -68,6 +68,11 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+nb_custom_formats = {
+    '.md': ['jupytext.reads', {
+        'fmt': 'mystnb'
+    }],
+}
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

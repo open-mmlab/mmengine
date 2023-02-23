@@ -1,3 +1,16 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.10.3
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 # OptimWrapper
 
 In previous tutorials of [runner](./runner.md) and [model](./model.md), we have more or less mentioned the concept of `OptimWrapper`, but we have not introduced why we need it and what are the advantages of `OptimWrapper` compared to Pytorch's native optimizer. In this tutorial, we will help you understand the advantages and demonstrate how to use the wrapper.
@@ -12,7 +25,7 @@ Now we use both the native optimizer of PyTorch and the OptimWrapper in MMEngine
 
 **1.1 Single-precision training with SGD in PyTorch**
 
-```python
+```{code-cell} ipython3
 import torch
 from torch.optim import SGD
 import torch.nn as nn
@@ -34,7 +47,7 @@ for input, target in zip(inputs, targets):
 
 **1.2 Single-precision training with OptimWrapper in MMEngine**
 
-```python
+```{code-cell} ipython3
 from mmengine.optim import OptimWrapper
 
 optim_wrapper = OptimWrapper(optimizer=optimizer)
@@ -51,7 +64,7 @@ The `OptimWrapper.update_params` achieves the standard process for gradient comp
 
 **2.1 Mixed-precision training with SGD in PyTorch**
 
-```python
+```{code-cell} ipython3
 from torch.cuda.amp import autocast
 
 model = model.cuda()
@@ -69,7 +82,7 @@ for input, target in zip(inputs, targets):
 
 **2.2 Mixed-precision training with OptimWrapper in MMEngine**
 
-```python
+```{code-cell} ipython3
 from mmengine.optim import AmpOptimWrapper
 
 optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
@@ -87,7 +100,7 @@ To enable mixed precision training, users need to use `AmpOptimWrapper.optim_con
 
 **3.1 Mixed-precision training and gradient accumulation with SGD in PyTorch**
 
-```python
+```{code-cell} ipython3
 for idx, (input, target) in enumerate(zip(inputs, targets)):
     with autocast():
         output = model(input.cuda())
@@ -100,7 +113,7 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
 
 **3.2 Mixed-precision training and gradient accumulation with OptimWrapper in MMEngine**
 
-```python
+```{code-cell} ipython3
 optim_wrapper = AmpOptimWrapper(optimizer=optimizer, accumulative_counts=2)
 
 for input, target in zip(inputs, targets):
@@ -122,7 +135,7 @@ The OptimWrapper also provides a more fine-grained interface for users to custom
 
 We can use the above interface to implement the same logic of parameters updating as the Pytorch optimizer.
 
-```python
+```{code-cell} ipython3
 for idx, (input, target) in enumerate(zip(inputs, targets)):
     optimizer.zero_grad()
     with optim_wrapper.optim_context(model):
@@ -136,7 +149,7 @@ for idx, (input, target) in enumerate(zip(inputs, targets)):
 
 We can also configure a gradient clipping strategy for the OptimWrapper.
 
-```python
+```{code-cell} ipython3
 # based on torch.nn.utils.clip_grad_norm_ method
 optim_wrapper = AmpOptimWrapper(
     optimizer=optimizer, clip_grad=dict(max_norm=1))
@@ -150,7 +163,7 @@ optim_wrapper = AmpOptimWrapper(
 
 The OptimWrapper provides the `get_lr` and `get_momentum` for the convenience of getting the learning rate and momentum of the first parameter group in the optimizer.
 
-```python
+```{code-cell} ipython3
 import torch.nn as nn
 from torch.optim import SGD
 
@@ -166,18 +179,11 @@ print(optim_wrapper.get_lr())  # {'lr': [0.01]}
 print(optim_wrapper.get_momentum())  # {'momentum': [0]}
 ```
 
-```
-0.01
-0
-{'lr': [0.01]}
-{'momentum': [0]}
-```
-
 ### Export/load state dicts
 
 Similar to the optimizer, the OptimWrapper provides the `state_dict` and `load_state_dict` interfaces for exporting and loading the optimizer states. For the `AmpOptimWrapper`, it can export mixed-precision training parameters as well.
 
-```python
+```{code-cell} ipython3
 import torch.nn as nn
 from torch.optim import SGD
 from mmengine.optim import OptimWrapper, AmpOptimWrapper
@@ -202,11 +208,6 @@ amp_optim_wrapper_new.load_state_dict(amp_optim_state_dict)
 optim_wrapper_new.load_state_dict(optim_state_dict)
 ```
 
-```
-{'state': {}, 'param_groups': [{'lr': 0.01, 'momentum': 0, 'dampening': 0, 'weight_decay': 0, 'nesterov': False, 'maximize': False, 'foreach': None, 'params': [0, 1]}]}
-{'state': {}, 'param_groups': [{'lr': 0.01, 'momentum': 0, 'dampening': 0, 'weight_decay': 0, 'nesterov': False, 'maximize': False, 'foreach': None, 'params': [0, 1]}], 'loss_scaler': {'scale': 65536.0, 'growth_factor': 2.0, 'backoff_factor': 0.5, 'growth_interval': 2000, '_growth_tracker': 0}}
-```
-
 ### Use multiple optimizers
 
 Considering that algorithms like GANs usually need to use multiple optimizers to train the generator and the discriminator, MMEngine provides a container class called `OptimWrapperDict` to manage them. `OptimWrapperDict` stores the sub-OptimWrapper in the form of `dict`, and can be accessed and traversed just like a `dict`.
@@ -215,7 +216,7 @@ Unlike regular OptimWrapper, `OptimWrapperDict` does not provide methods such as
 
 Users may wonder why not just use `dict` to manage multiple optimizers since `OptimWrapperDict` does not have training capabilities. Actually, the core function of `OptimWrapperDict` is to support exporting or loading the state dictionary of all sub-OptimWrapper and to support getting learning rates and momentums as well. Without `OptimWrapperDict`, MMEngine needs to do a lot of `if-else` in OptimWrapper to get the states of the `OptimWrappers`.
 
-```python
+```{code-cell} ipython3
 from torch.optim import SGD
 import torch.nn as nn
 
@@ -234,11 +235,6 @@ print(optim_dict.get_lr())  # {'gen.lr': [0.01], 'disc.lr': [0.01]}
 print(optim_dict.get_momentum())  # {'gen.momentum': [0], 'disc.momentum': [0]}
 ```
 
-```
-{'gen.lr': [0.01], 'disc.lr': [0.01]}
-{'gen.momentum': [0], 'disc.momentum': [0]}
-```
-
 As shown in the above example, `OptimWrapperDict` exports learning rates and momentums for all OptimWrappers easily, and `OptimWrapperDict` can export and load all the state dicts in a similar way.
 
 ### Configure the OptimWapper in [Runner](runner.md)
@@ -247,21 +243,21 @@ We first need to configure the `optimizer` for the OptimWrapper. MMEngine automa
 
 Now we take setting up a SGD OptimWrapper as an example.
 
-```python
+```{code-cell} ipython3
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer)
 ```
 
 Here we have set up an OptimWrapper with a SGD optimizer with the learning rate and momentum parameters as specified. Since OptimWrapper is designed for standard single precision training, we can also omit the `type` field in the configuration:
 
-```python
+```{code-cell} ipython3
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(optimizer=optimizer)
 ```
 
 To enable mixed-precision training and gradient accumulation, we change `type` to `AmpOptimWrapper` and specify the `accumulative_counts` parameter.
 
-```python
+```{code-cell} ipython3
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_counts=2)
 ```
@@ -280,7 +276,7 @@ Apart from the pre-requisite knowledge of the configs and the registries, it is 
 
 PyTorch's optimizer allows different hyperparameters to be set for each parameter in the model, such as using different learning rates for the backbone and head for a classification model.
 
-```python
+```{code-cell} ipython3
 from torch.optim import SGD
 import torch.nn as nn
 
@@ -301,7 +297,7 @@ The default optimizer wrapper constructor in MMEngine supports setting different
 
 Here, we set the weight decay coefficient in all normalization layers (`head.bn`) in `ToyModel` to 0 as follows.
 
-```python
+```{code-cell} ipython3
 from mmengine.optim import build_optim_wrapper
 from collections import OrderedDict
 
@@ -320,17 +316,6 @@ optim_wrapper = dict(
     optimizer=dict(type='SGD', lr=0.01, weight_decay=0.0001),
     paramwise_cfg=dict(norm_decay_mult=0))
 optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
-```
-
-```
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr=0.01
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr=0.01
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr=0.01
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:weight_decay=0.0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:weight_decay=0.0
 ```
 
 In addition to configuring the weight decay, `paramwise_cfg` of MMEngine's default optimizer wrapper constructor supports the following hyperparameters as well.
@@ -359,7 +344,7 @@ In addition, as shown in the PyTorch code above, in MMEngine we can also set dif
 
 If we want to set the learning rate and the decay coefficient to 0 for `backbone.layer0`, and set the learning rate to 0.001 for the rest of the modules in the `backbone`. At the same time, we want to keep all the learning rate to 0.001 for the `head` module. We can do it in this way:
 
-```python
+```{code-cell} ipython3
 optim_wrapper = dict(
     optimizer=dict(type='SGD', lr=0.01, weight_decay=0.0001),
     paramwise_cfg=dict(
@@ -371,51 +356,11 @@ optim_wrapper = dict(
 optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 ```
 
-```
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:lr=0.0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:weight_decay=0.0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:lr_mult=0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.weight:decay_mult=0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr=0.0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:weight_decay=0.0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:lr_mult=0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer0.bias:decay_mult=0
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:lr=0.01
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.weight:lr_mult=1
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr=0.01
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- backbone.layer1.bias:lr_mult=1
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:lr=0.001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.weight:lr_mult=0.1
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr=0.001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.linear.bias:lr_mult=0.1
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:lr=0.001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.weight:lr_mult=0.1
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:lr=0.001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:weight_decay=0.0001
-08/23 22:02:43 - mmengine - INFO - paramwise_options -- head.bn.bias:lr_mult=0.1
-```
-
 The state dictionary of the above model can be printed as the following:
 
-```python
+```{code-cell} ipython3
 for name, val in ToyModel().named_parameters():
     print(name)
-```
-
-```
-backbone.layer0.weight
-backbone.layer0.bias
-backbone.layer1.weight
-backbone.layer1.bias
-head.linear.weight
-head.linear.bias
-head.bn.weight
-head.bn.bias
 ```
 
 Each field in `custom_keys` is defined as follows.
@@ -430,7 +375,7 @@ Like other modules in MMEngine, the optimizer wrapper constructor is also manage
 
 For example, we can implement an optimizer wrapper constructor called `LayerDecayOptimWrapperConstructor` that automatically set decreasing learning rates for layers of different depths of the model.
 
-```python
+```{code-cell} ipython3
 from mmengine.optim import DefaultOptimWrapperConstructor
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS
 from mmengine.logging import print_log
@@ -481,18 +426,11 @@ optim_wrapper = dict(
 optimizer = build_optim_wrapper(model, optim_wrapper)
 ```
 
-```
-08/23 22:20:26 - mmengine - INFO - layer.linear.weight : lr=0.0025
-08/23 22:20:26 - mmengine - INFO - layer.linear.bias : lr=0.0025
-08/23 22:20:26 - mmengine - INFO - linear.weight : lr=0.005
-08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
-```
-
 When `add_params` is called for the first time, the `params` argument is an empty `list` and the `module` is the `ToyModel` instance. Please refer to the [Optimizer Wrapper Constructor Documentation](mmengine.optim.DefaultOptimWrapperConstructor) for detailed explanations on overloading.
 
 Similarly, if we want to construct multiple optimizers, we also need to implement a custom constructor.
 
-```python
+```{code-cell} ipython3
 @OPTIM_WRAPPER_CONSTRUCTORS.register_module()
 class MultipleOptimiWrapperConstructor:
     ...
