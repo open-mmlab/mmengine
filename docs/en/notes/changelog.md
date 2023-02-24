@@ -4,10 +4,10 @@
 
 ### Highlights
 
-- Support using environment variable in the config file.
 - Support `Apex` with `ApexOptimWrapper`
 - Support analyzing model complexity.
 - Add `Lion` optimizer.
+- Support using environment variable in the config file.
 
 ### New Features & Enhancements
 
