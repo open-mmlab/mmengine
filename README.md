@@ -78,10 +78,10 @@ v0.6.0 was released on 2023-02-24.
 
 Highlights:
 
-- Support use environment variable in the config file.
 - Add `ApexOptimWrapper`
 - Support analyzing model complexity.
 - Add `Lion` optimizer.
+- Support use environment variable in the config file.
 
 Read [Changelog](./docs/en/notes/changelog.md#v060-02232024) for more details.
 
