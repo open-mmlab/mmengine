@@ -516,6 +516,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available()
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
+        and hasattr(torch.cuda, 'is_bf16_supported')
         and torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
@@ -533,6 +534,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available()
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
+        and hasattr(torch.cuda, 'is_bf16_supported')
         and torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
@@ -552,6 +554,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available()
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
+        and hasattr(torch.cuda, 'is_bf16_supported')
         and torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
@@ -573,6 +576,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available()
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
+        and hasattr(torch.cuda, 'is_bf16_supported')
         and torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
@@ -599,6 +603,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available()
         and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
+        and hasattr(torch.cuda, 'is_bf16_supported')
         and torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
