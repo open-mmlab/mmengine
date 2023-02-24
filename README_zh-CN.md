@@ -69,7 +69,7 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 - [新增 Lion 优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html#id5)
 - 支持在配置文件使用环境变量
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-02232024)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-02242023)
 
 ## 安装
 

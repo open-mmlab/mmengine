@@ -4,8 +4,8 @@
 
 ### Highlights
 
-- Support use environment variable in the config file.
-- Add `ApexOptimWrapper`
+- Support using environment variable in the config file.
+- Support `Apex` with `ApexOptimWrapper`
 - Support analyzing model complexity.
 - Add `Lion` optimizer.
 
@@ -30,7 +30,7 @@
 - Backend_args should not be modified by get_file_backend by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/897
 - Support update `np.ScalarType` data in message_hub by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/898
 - Support rendering Chinese character in `Visualizer` by [@KevinNuNu](https://github.com/KevinNuNu) in https://github.com/open-mmlab/mmengine/pull/887
-- Add `ApexOptimWrapper` by [@xcnick](https://github.com/xcnick) in https://github.com/open-mmlab/mmengine/pull/742
+- Support `Apex` with `ApexOptimWrapper` by [@xcnick](https://github.com/xcnick) in https://github.com/open-mmlab/mmengine/pull/742
 - Fix the bug of `DefaultOptimWrapperConstructor` when the shared parameters do not require the grad by [@HIT-cwh](https://github.com/HIT-cwh) in https://github.com/open-mmlab/mmengine/pull/903
 - Support model complexity computation by [@tonysy](https://github.com/tonysy) in https://github.com/open-mmlab/mmengine/pull/779
 
@@ -53,7 +53,7 @@
 
 ### Contributors
 
-A total of 20 developers contributed to this release. Thanks [@xcnick](https://github.com/xcnick), [@KevinNuNu](https://github.com/KevinNuNu), [@apacha](https://github.com/apacha), [@RangeKing](https://github.com/RangeKing), [@Xiangxu-0103](https://github.com/Xiangxu-0103), [@luomaoling](https://github.com/luomaoling), [@Eiuyc](https://github.com/Eiuyc), [@XWHtorrentx](https://github.com/XWHtorrentx), [@vansin](https://github.com/vansin), [@HIT-cwh](https://github.com/HIT-cwh), [@wangjiangben-hw](https://github.com/wangjiangben-hw), [@Dai-Wenxun](https://github.com/Dai-Wenxun), [@tonysy](https://github.com/tonysy), [@jbwang1997](https://github.com/jbwang1997), [@C1rN09](https://github.com/C1rN09), [@zhouzaida](https://github.com/zhouzaida), [@HAOCHENYE](https://github.com/HAOCHENYE), [@mzr1996](https://github.com/mzr1996), [@LEFTeyex](https://github.com/LEFTeyex), [@yaqi0510](https://github.com/yaqi0510).
+A total of 15 developers contributed to this release. Thanks [@Eiuyc](https://github.com/Eiuyc), [@xcnick](https://github.com/xcnick), [@KevinNuNu](https://github.com/KevinNuNu), [@XWHtorrentx](https://github.com/XWHtorrentx), [@tonysy](https://github.com/tonysy), [@zhouzaida](https://github.com/zhouzaida), [@Xiangxu-0103](https://github.com/Xiangxu-0103), [@Dai-Wenxun](https://github.com/Dai-Wenxun), [@jbwang1997](https://github.com/jbwang1997), [@apacha](https://github.com/apacha), [@C1rN09](https://github.com/C1rN09), [@HIT-cwh](https://github.com/HIT-cwh), [@vansin](https://github.com/vansin), [@HAOCHENYE](https://github.com/HAOCHENYE), [@luomaoling](https://github.com/luomaoling).
 
 ## v0.5.0 (01/20/2023)
 

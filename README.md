@@ -78,12 +78,12 @@ v0.6.0 was released on 2023-02-24.
 
 Highlights:
 
-- Add `ApexOptimWrapper`
-- Support analyzing model complexity.
-- Add `Lion` optimizer.
-- Support use environment variable in the config file.
+- Support `Apex` with `ApexOptimWrapper`
+- [Support analyzing model complexity](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/model_analysis.html)
+- [Add `Lion` optimizer](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html#id5)
+- Support using environment variables in the config file
 
-Read [Changelog](./docs/en/notes/changelog.md#v060-02232024) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v060-02242023) for more details.
 
 ## Installation
 
