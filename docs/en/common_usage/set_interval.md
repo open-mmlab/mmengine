@@ -90,7 +90,7 @@ runner = Runner(
 runner.train()
 ```
 
-For more information on how to use `CheckpointHook`, please refer to the [CheckpointHook tutorial](../tutorials/hook.md#checkpointhoo).
+For more information on how to use `CheckpointHook`, please refer to the [CheckpointHook tutorial](../tutorials/hook.md#checkpointhook).
 
 ## Setting the interval for printing logs
 
