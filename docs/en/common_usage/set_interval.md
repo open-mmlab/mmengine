@@ -6,7 +6,7 @@ Under different training modes, the semantics of the interval in MMEngine will b
 
 ## Setting the Interval for Training and Validation
 
-To customize the interval for training and validation, set the `val_interval` parameter in the initialization parameter `train_cfg` of [Runner](https://github.com/open-mmlab/mmengine/blob/main/mmengine/runner/runner.py).
+To customize the interval for training and validation, set the `val_interval` parameter in the initialization parameter `train_cfg` of [Runner](mmengine.runner.Runner).
 
 - EpochBased
 
@@ -46,7 +46,7 @@ runner.train()
 
 ## Setting the Interval for Saving Weights
 
-To customize the interval for saving weights, set the `interval` parameter of [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py).
+To customize the interval for saving weights, set the `interval` parameter of [CheckpointHook](mmengine.hooks.CheckpointHook).
 
 - EpochBased
 
@@ -94,7 +94,7 @@ For more information on how to use `CheckpointHook`, please refer to the [Checkp
 
 ## Setting the interval for printing logs
 
-By default, logs are printed to the terminal once every 10 iterations. You can set the interval using the `interval` parameter of the [LoggerHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/logger_hook.py).
+By default, logs are printed to the terminal once every 10 iterations. You can set the interval using the `interval` parameter of the [LoggerHook](mmengine.hooks.LoggerHook).
 
 ```
 pythonCopy code# Print logs every 20 iterations
