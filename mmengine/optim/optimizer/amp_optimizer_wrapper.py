@@ -80,8 +80,8 @@ class AmpOptimWrapper(OptimWrapper):
                 dtype = getattr(torch, dtype)
             except AttributeError:
                 raise ValueError(f'{dtype} does not name a torch.dtype. '
-                                 'You may want to use "float32", '
-                                 '"bfloat32" etc.')
+                                 'You may want to use "float16", '
+                                 '"bfloat16" etc.')
         # check the type of dtype
         assert dtype is None or isinstance(dtype, torch.dtype), (
             f'dtype should be None or instance of torch.dtype, got {dtype}')
