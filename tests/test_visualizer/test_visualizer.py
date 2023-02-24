@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 
 from mmengine import VISBACKENDS, Config
+from mmengine.logging import MMLogger
 from mmengine.visualization import Visualizer
 
 
@@ -68,10 +69,7 @@ class TestVisualizer(TestCase):
         visualizer.get_image()
 
         # test save_dir
-        with pytest.warns(
-                Warning,
-                match='`Visualizer` backend is not initialized '
-                'because save_dir is None.'):
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             Visualizer()
 
         visualizer = Visualizer(

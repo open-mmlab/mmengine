@@ -5,7 +5,6 @@ import os
 import os.path as osp
 import pkgutil
 import re
-import warnings
 from collections import OrderedDict
 from importlib import import_module
 from tempfile import TemporaryDirectory
@@ -425,9 +424,11 @@ def load_from_torchvision(filename, map_location=None):
     """
     model_urls = get_torchvision_models()
     if filename.startswith('modelzoo://'):
-        warnings.warn(
+        print_log(
             'The URL scheme of "modelzoo://" is deprecated, please '
-            'use "torchvision://" instead', DeprecationWarning)
+            'use "torchvision://" instead',
+            logger='current',
+            level=logging.WARNING)
         model_name = filename[11:]
     else:
         model_name = filename[14:]
@@ -459,10 +460,11 @@ def load_from_openmmlab(filename, map_location=None):
 
     deprecated_urls = get_deprecated_model_names()
     if model_name in deprecated_urls:
-        warnings.warn(
+        print_log(
             f'{prefix_str}{model_name} is deprecated in favor '
             f'of {prefix_str}{deprecated_urls[model_name]}',
-            DeprecationWarning)
+            logger='current',
+            level=logging.WARNING)
         model_name = deprecated_urls[model_name]
     model_url = model_urls[model_name]
     # check if is url
@@ -715,9 +717,11 @@ def save_checkpoint(checkpoint,
             New in v0.2.0.
     """
     if file_client_args is not None:
-        warnings.warn(
+        print_log(
             '"file_client_args" will be deprecated in future. '
-            'Please use "backend_args" instead', DeprecationWarning)
+            'Please use "backend_args" instead',
+            logger='current',
+            level=logging.WARNING)
         if backend_args is not None:
             raise ValueError(
                 '"file_client_args" and "backend_args" cannot be set '

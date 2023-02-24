@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 if TYPE_CHECKING:
     from matplotlib.font_manager import FontProperties
 
+import logging
+
 import cv2
 import numpy as np
 import torch
@@ -13,6 +15,7 @@ import torch.nn.functional as F
 
 from mmengine.config import Config
 from mmengine.dist import master_only
+from mmengine.logging import print_log
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
@@ -163,8 +166,11 @@ class Visualizer(ManagerMixin):
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
         if save_dir is None:
-            warnings.warn('`Visualizer` backend is not initialized '
-                          'because save_dir is None.')
+            print_log(
+                '`Visualizer` backend is not initialized '
+                'because save_dir is None.',
+                logger='current',
+                level=logging.WARNING)
         elif vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
             names = [

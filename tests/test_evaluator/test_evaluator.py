@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
+from mmengine.logging import MMLogger
 from mmengine.registry import METRICS
 from mmengine.structures import BaseDataElement
 
@@ -110,7 +111,7 @@ class TestEvaluator(TestCase):
         # Test empty results
         cfg = dict(type='ToyMetric', dummy_metrics=dict(accuracy=1.0))
         evaluator = Evaluator(cfg)
-        with self.assertWarnsRegex(UserWarning, 'got empty `self.results`.'):
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             evaluator.evaluate(0)
 
     def test_composed_metrics(self):
@@ -185,7 +186,8 @@ class TestEvaluator(TestCase):
 
     def test_prefix(self):
         cfg = dict(type='NonPrefixedMetric')
-        with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
+        logger = MMLogger.get_current_instance()
+        with self.assertLogs(logger, 'WARNING'):
             _ = Evaluator(cfg)
 
     def test_get_metric_value(self):

@@ -2,15 +2,16 @@
 import copy
 import functools
 import gc
+import logging
 import os.path as osp
 import pickle
-import warnings
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from torch.utils.data import Dataset
 
 from mmengine.fileio import list_from_file, load
+from mmengine.logging import print_log
 from mmengine.registry import TRANSFORMS
 from mmengine.utils import is_abs
 
@@ -100,11 +101,13 @@ def force_full_init(old_func: Callable) -> Any:
         # `_fully_initialized` is False, call `full_init` and set
         # `_fully_initialized` to True
         if not getattr(obj, '_fully_initialized', False):
-            warnings.warn('Attribute `_fully_initialized` is not defined in '
-                          f'{type(obj)} or `type(obj)._fully_initialized is '
-                          'False, `full_init` will be called and '
-                          f'{type(obj)}._fully_initialized will be set to '
-                          'True')
+            print_log(
+                f'Attribute `_fully_initialized` is not defined in '
+                f'{type(obj)} or `type(obj)._fully_initialized is '
+                'False, `full_init` will be called and '
+                f'{type(obj)}._fully_initialized will be set to True',
+                logger='current',
+                level=logging.WARNING)
             obj.full_init()  # type: ignore
             obj._fully_initialized = True  # type: ignore
 
@@ -392,9 +395,11 @@ class BaseDataset(Dataset):
         # to manually call `full_init` before dataset fed into dataloader to
         # ensure all workers use shared RAM from master process.
         if not self._fully_initialized:
-            warnings.warn(
+            print_log(
                 'Please call `full_init()` method manually to accelerate '
-                'the speed.')
+                'the speed.',
+                logger='current',
+                level=logging.WARNING)
             self.full_init()
 
         if self.test_mode:
@@ -498,8 +503,11 @@ class BaseDataset(Dataset):
                 try:
                     cls_metainfo[k] = list_from_file(v)
                 except (TypeError, FileNotFoundError):
-                    warnings.warn(f'{v} is not a meta file, simply parsed as '
-                                  'meta information')
+                    print_log(
+                        f'{v} is not a meta file, simply parsed as meta '
+                        'information',
+                        logger='current',
+                        level=logging.WARNING)
                     cls_metainfo[k] = v
             else:
                 cls_metainfo[k] = v

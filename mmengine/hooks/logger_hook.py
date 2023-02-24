@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os
 import os.path as osp
-import warnings
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
@@ -12,6 +12,7 @@ import torch
 from mmengine.fileio import FileClient, dump
 from mmengine.fileio.io import get_file_backend
 from mmengine.hooks import Hook
+from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
@@ -94,9 +95,11 @@ class LoggerHook(Hook):
         self.out_dir = out_dir
 
         if file_client_args is not None:
-            warnings.warn(
+            print_log(
                 '"file_client_args" will be deprecated in future. '
-                'Please use "backend_args" instead', DeprecationWarning)
+                'Please use "backend_args" instead',
+                logger='current',
+                level=logging.WARNING)
             if backend_args is not None:
                 raise ValueError(
                     '"file_client_args" and "backend_args" cannot be set '
