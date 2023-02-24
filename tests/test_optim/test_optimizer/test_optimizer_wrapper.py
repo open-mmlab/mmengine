@@ -393,7 +393,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_init(self):
@@ -428,7 +428,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_step(self):
@@ -443,7 +443,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_backward(self):
@@ -460,7 +460,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_state_dict(self):
@@ -479,7 +479,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_load_state_dict(self):
@@ -503,7 +503,7 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0')),
         reason='`torch.cuda.amp` is only available when pytorch-gpu version '
         '>= 1.6')
     def test_optim_context(self):
@@ -515,9 +515,9 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
-        and hasattr(torch.cuda, 'is_bf16_supported')
-        and torch.cuda.is_bf16_supported(),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0'))
+        or not hasattr(torch.cuda, 'is_bf16_supported')
+        or not torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
     def test_step_bf16(self):
@@ -533,9 +533,9 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
-        and hasattr(torch.cuda, 'is_bf16_supported')
-        and torch.cuda.is_bf16_supported(),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0'))
+        or not hasattr(torch.cuda, 'is_bf16_supported')
+        or not torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
     def test_backward_bf16(self):
@@ -553,9 +553,9 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
-        and hasattr(torch.cuda, 'is_bf16_supported')
-        and torch.cuda.is_bf16_supported(),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0'))
+        or not hasattr(torch.cuda, 'is_bf16_supported')
+        or not torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
     def test_state_dict_bf16(self):
@@ -575,9 +575,9 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
-        and hasattr(torch.cuda, 'is_bf16_supported')
-        and torch.cuda.is_bf16_supported(),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0'))
+        or not hasattr(torch.cuda, 'is_bf16_supported')
+        or not torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
     def test_load_state_dict_bf16(self):
@@ -602,9 +602,9 @@ class TestAmpOptimWrapper(TestCase):
 
     @unittest.skipIf(
         not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0'))
-        and hasattr(torch.cuda, 'is_bf16_supported')
-        and torch.cuda.is_bf16_supported(),
+        or (digit_version(TORCH_VERSION) < digit_version('1.6.0'))
+        or not hasattr(torch.cuda, 'is_bf16_supported')
+        or not torch.cuda.is_bf16_supported(),
         reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
         'version >= 1.6 && bf16 supported by device')
     def test_optim_context_bf16(self):
