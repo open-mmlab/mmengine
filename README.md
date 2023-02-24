@@ -74,7 +74,7 @@ Major features:
 
 ## What's New
 
-v0.5.0 was released on 2023-02-23.
+v0.6.0 was released on 2023-02-24.
 
 Highlights:
 
@@ -83,7 +83,7 @@ Highlights:
 - Support analyzing model complexity.
 - Add `Lion` optimizer.
 
-Read [Changelog](./docs/en/notes/changelog.md#v060-02232023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v060-02232024) for more details.
 
 ## Installation
 

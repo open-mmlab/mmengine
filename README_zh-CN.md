@@ -60,16 +60,16 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 ## 最近进展
 
-最新版本 v0.6.0 在 2023.02.23 发布。
+最新版本 v0.6.0 在 2023.02.24 发布。
 
 亮点：
 
+- 新增 `ApexOptimWrapper` 支持 `Apex` 的混合精度训练功能
+- [支持计算模型复杂度](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/model_analysis.html)
+- [新增 Lion 优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html#id5)
 - 支持在配置文件使用环境变量
-- 新增 Lion 优化器
-- 新增 `ApexOptimWrapper`
-- 支持计算模型复杂度
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-02232023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-02232024)
 
 ## 安装
 

@@ -1,6 +1,6 @@
 # Changelog of v0.x
 
-## v0.6.0 (02/23/2023)
+## v0.6.0 (02/24/2023)
 
 ### Highlights
 
@@ -31,7 +31,7 @@
 - Support update `np.ScalarType` data in message_hub by @HAOCHENYE in https://github.com/open-mmlab/mmengine/pull/898
 - Support rendering Chinese character in `Visualizer` by @KevinNuNu in https://github.com/open-mmlab/mmengine/pull/887
 - Add `ApexOptimWrapper` by @xcnick in https://github.com/open-mmlab/mmengine/pull/742
-- Fix the Bug of `DefaultOptimWrapperConstructor` when the shared parameters do not require the grad by @HIT-cwh in https://github.com/open-mmlab/mmengine/pull/903
+- Fix the bug of `DefaultOptimWrapperConstructor` when the shared parameters do not require the grad by @HIT-cwh in https://github.com/open-mmlab/mmengine/pull/903
 - Support model complexity computation by @tonysy in https://github.com/open-mmlab/mmengine/pull/779
 
 ### Docs
