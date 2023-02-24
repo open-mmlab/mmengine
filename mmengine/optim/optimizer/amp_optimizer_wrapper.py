@@ -38,6 +38,12 @@ class AmpOptimWrapper(OptimWrapper):
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
 
+        dtype (str or torch.dtype, optional): The data type to autocast in amp.
+            If a ``str`` is given, it will be converted to ``torch.dtype``.
+            Valid ``str`` format are `'float16'`, `'float32'`, `'bfloat16'`. If
+            set to ``None``, the default data type will be used.
+            Defaults to None.
+
         **kwargs: Keyword arguments passed to OptimWrapper.
 
     Note:
