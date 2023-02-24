@@ -12,7 +12,7 @@
 ### New Features & Enhancements
 
 - Support model complexity computation by [@tonysy](https://github.com/tonysy) in https://github.com/open-mmlab/mmengine/pull/779
-- Add Lion optimizer by [@zhouzaida](https://github.com/zhouzaida)\](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/952
+- Add Lion optimizer by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/952
 - Support using environment variable in config file. by [@jbwang1997](https://github.com/jbwang1997) in https://github.com/open-mmlab/mmengine/pull/744
 - Improve registry infer_scope by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/334
 - Support configuring `timeout` in dist configuration by [@apacha](https://github.com/apacha) in https://github.com/open-mmlab/mmengine/pull/877
