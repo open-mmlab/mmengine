@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
-import io
 import logging
 import sys
 from collections.abc import Callable
@@ -131,11 +130,11 @@ class Registry:
         for name, obj in sorted(self._module_dict.items()):
             table.add_row(name, str(obj))
 
-        with io.StringIO() as sio:
-            console = Console(file=sio)
+        console = Console()
+        with console.capture() as capture:
             console.print(table, end='')
-            table_str = sio.getvalue()
-        return table_str
+
+        return capture.get()
 
     @staticmethod
     def infer_scope() -> str:
@@ -425,7 +424,7 @@ class Registry:
             >>> # hierarchical registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
             >>> # `ResNet` does not exist in `DETECTORS` but `get` method
-            >>> # will try to search from its parenet or ancestors
+            >>> # will try to search from its parents or ancestors
             >>> resnet_cls = DETECTORS.get('ResNet')
             >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
             >>> @CLASSIFIER.register_module()

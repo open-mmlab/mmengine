@@ -170,7 +170,7 @@ class Runner:
             as possible like seed and deterministic.
             Defaults to ``dict(seed=None)``. If seed is None, a random number
             will be generated and it will be broadcasted to all other processes
-            if in distributed environment. If ``cudnn_benchmarch`` is
+            if in distributed environment. If ``cudnn_benchmark`` is
             ``True`` in ``env_cfg`` but ``deterministic`` is ``True`` in
             ``randomness``, the value of ``torch.backends.cudnn.benchmark``
             will be ``False`` finally.
@@ -1078,7 +1078,7 @@ class Runner:
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
-                # defined either, Each value of `optim_wrapper` must be an
+                # defined either, each value of `optim_wrapper` must be an
                 # `OptimWrapper` instance since `DefaultOptimizerConstructor`
                 # will not handle the case of training with multiple
                 # optimizers. `build_optim_wrapper` will directly build the
