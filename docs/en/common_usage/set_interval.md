@@ -114,4 +114,3 @@ runner.train()
 ```
 
 For more information on how to use `LoggerHook`, please refer to the [LoggerHook tutorial](../tutorials/hook.md#loggerhook).
-
