@@ -30,7 +30,7 @@ runner.train()
 
 In `IterBased` mode, the default value of `val_interval` is 1000, which means to validate once after training 1000 iterations.
 
-```
+```python
 runner = Runner(
     model=MMResNet50(),
     work_dir='./work_dir',
