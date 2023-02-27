@@ -2,7 +2,7 @@
 
 MMEngine supports two training modes, `EpochBased` based on epochs and `IterBased` based on the number of iterations. Both of these modes are used in downstream algorithm libraries such as [MMDetection](https://github.com/open-mmlab/mmdetection), which uses the `EpochBased` mode by default, and [MMSegmentation](https://github.com/open-mmlab/mmsegmentation), which uses the `IterBased` mode by default.
 
-Under different training modes, the semantics of the interval in MMEngine will be different. The interval in `EpochBased` mode is based on epochs, while that in `IterBased` mode is based on iterations.
+In different training modes, the semantics of the interval in MMEngine will be different. In EpochBased mode, the interval is in terms of epochs, while in IterBased mode, the interval is in terms of iterations.
 
 ## Setting the Interval for Training and Validation
 
