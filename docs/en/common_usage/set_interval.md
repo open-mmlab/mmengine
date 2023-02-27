@@ -73,8 +73,8 @@ runner.train()
 
 By default, checkpoints are saved in terms of epochs. If you want to save checkpoints in terms of iterations, you need to set `by_epoch=False`.
 
-```
-# Set by_epoch=False and interval=500, which means to save weights once every 500 iterations
+```python
+# set by_epoch=False and interval=500, which means to save checkpoints every 500 iterations
 default_hooks = dict(checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=500))
 runner = Runner(
     model=MMResNet50(),
