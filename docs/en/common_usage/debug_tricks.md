@@ -2,17 +2,17 @@
 
 ## Set the Dataset's length
 
-Sometimes it's necessary to train several epochs during debug code, for example, verify in the debug mode or save the weight is meet expectation. However, if the Dataset is too large to take long time to train an epoch completed, in this situation can set the length of the Dataset. Attention, only inherited from [BaseDataset](mmengine.dataset.BaseDataset) can support this function, Please read usage of [BaseDataset](../advanced_tutorials/basedataset.md).
+During the process of debugging code, sometimes it is necessary to train for several epochs, such as debugging the validation process or checking whether the checkpoint saving meets expectations. However, if the dataset is too large, it may take a long time to complete one epoch, in which case the length of the dataset can be set. Note that only datasets inherited from [BaseDataset](mmengine.dataset.BaseDataset) support this feature, and the usage of BaseDataset can be found in the [BaseDataset](../advanced_tutorials/basedataset.md).
 
 For example: Using `MMClassification` Refer [Document](https://mmclassification.readthedocs.io/en/dev-1.x/get_started.html) to install `MMClassification`.
 
-Start training
+Launch training
 
 ```bash
 python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 ```
 
-Following is part of the training log, `3125` represents the number of iterators.
+Here is part of the training log, where `3125` represents the number of iterations to be performed.
 
 ```
 02/20 14:43:11 - mmengine - INFO - Epoch(train)   [1][ 100/3125]  lr: 1.0000e-01  eta: 6:12:01  time: 0.0149  data_time: 0.0003  memory: 214  loss: 2.0611
@@ -20,7 +20,7 @@ Following is part of the training log, `3125` represents the number of iterators
 02/20 14:43:14 - mmengine - INFO - Epoch(train)   [1][ 300/3125]  lr: 1.0000e-01  eta: 3:46:27  time: 0.0146  data_time: 0.0003  memory: 214  loss: 1.9858
 ```
 
-Turn of the training. modify `dataset` field in file [configs/base/datasets/cifar10_bs16.py](https://github.com/open-mmlab/mmclassification/blob/dev-1.x/configs/_base_/datasets/cifar10_bs16.py), set `indices=5000`.
+Turn off the training and set `indices` as `5000` in the `dataset` field in [configs/base/datasets/cifar10_bs16.py](https://github.com/open-mmlab/mmclassification/blob/dev-1.x/configs/_base_/datasets/cifar10_bs16.py), set `indices=5000`.
 
 ```python
 train_dataloader = dict(
@@ -36,13 +36,13 @@ train_dataloader = dict(
 )
 ```
 
-Reopen training
+Launch training again
 
 ```bash
 python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 ```
 
-Accord to following. The number of iterator has been changed to `313`, which can finished an epoch faster than before.
+As we can see, the number of iterations has changed to `313`. Compared to before, this can complete an epoch faster.
 
 ```
 02/20 14:44:58 - mmengine - INFO - Epoch(train)   [1][100/313]  lr: 1.0000e-01  eta: 0:31:09  time: 0.0154  data_time: 0.0004  memory: 214  loss: 2.1852
