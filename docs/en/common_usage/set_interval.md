@@ -92,7 +92,7 @@ runner.train()
 
 For more information on how to use `CheckpointHook`, please refer to the [CheckpointHook tutorial](../tutorials/hook.md#checkpointhook).
 
-## Setting the interval for printing logs
+## Setting the Interval for Printing Logs
 
 By default, logs are printed to the terminal once every 10 iterations. You can set the interval using the `interval` parameter of the [LoggerHook](mmengine.hooks.LoggerHook).
 
