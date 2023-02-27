@@ -50,7 +50,7 @@ To customize the interval for saving checkpoints, set the `interval` parameter o
 
 - EpochBased
 
-In `EpochBased` mode, the default value of `interval` is 1, which means saving weights once after training for one epoch.
+In `EpochBased` mode, the default value of `interval` is 1, which means to save checkpoints once after training for one epoch.
 
 ```
 # Set interval to 2, which means to save weights once every 2 epochs
