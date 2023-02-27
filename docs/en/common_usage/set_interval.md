@@ -1,4 +1,4 @@
-# Setting the Frequency of Logging, Weight Saving, and Validation
+# Setting the Frequency of Logging, Checkpoint Saving, and Validation
 
 MMEngine supports two training modes, `EpochBased` based on epochs and `IterBased` based on the number of iterations. Both of these modes are used in downstream algorithm libraries such as [MMDetection](https://github.com/open-mmlab/mmdetection), which uses the `EpochBased` mode by default, and [MMSegmentation](https://github.com/open-mmlab/mmsegmentation), which uses the `IterBased` mode by default.
 
