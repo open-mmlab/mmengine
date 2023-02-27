@@ -96,8 +96,8 @@ For more information on how to use `CheckpointHook`, please refer to the [Checkp
 
 By default, logs are printed to the terminal once every 10 iterations. You can set the interval using the `interval` parameter of the [LoggerHook](mmengine.hooks.LoggerHook).
 
-```
-pythonCopy code# Print logs every 20 iterations
+```python
+# print logs every 20 iterations
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 runner = Runner(
     model=MMResNet50(),
