@@ -40,8 +40,8 @@ class AmpOptimWrapper(OptimWrapper):
 
         dtype (str or torch.dtype, optional): The data type to autocast in amp.
             If a ``str`` is given, it will be converted to ``torch.dtype``.
-            Valid ``str`` format are `'float16'`, `'float32'`, `'bfloat16'`. If
-            set to ``None``, the default data type will be used.
+            Valid ``str`` format are `'float16'`, `'bfloat16'`, `'float32'`,
+            `'float64'`. If set to ``None``, the default data type will be used.
             Defaults to None.
 
         **kwargs: Keyword arguments passed to OptimWrapper.
@@ -51,6 +51,8 @@ class AmpOptimWrapper(OptimWrapper):
         the original `max_iters` should be multiplied by
         ``accumulative_counts``.
     """
+
+    valid_dtypes = ('float64', 'float32', 'float16', 'bfloat16', 'half')
 
     def __init__(self, loss_scale='dynamic', dtype=None, **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
@@ -76,13 +78,10 @@ class AmpOptimWrapper(OptimWrapper):
 
         # convert string value to torch.dtype
         if isinstance(dtype, str):
-            try:
-                dtype = getattr(torch, dtype)
-            except AttributeError:
-                raise ValueError(f'{dtype} does not name a torch.dtype. '
-                                 'You may want to use "float16", '
-                                 '"bfloat16" etc.')
-        # check the type of dtype
+            assert dtype in self.valid_dtypes, (
+                f'dtype should be any of {self.valid_dtypes}, got {dtype}')
+            dtype = getattr(torch, dtype)
+
         assert dtype is None or isinstance(dtype, torch.dtype), (
             f'dtype should be None or instance of torch.dtype, got {dtype}')
         self.cast_dtype = dtype
