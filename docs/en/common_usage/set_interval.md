@@ -12,7 +12,7 @@ To customize the interval for training and validation, set the `val_interval` pa
 
 In `EpochBased` mode, the default value of `val_interval` is 1, which means to validate once after training an epoch.
 
-```
+```python
 runner = Runner(
     model=MMResNet50(),
     work_dir='./work_dir',
