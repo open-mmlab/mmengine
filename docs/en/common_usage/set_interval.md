@@ -71,7 +71,7 @@ runner.train()
 
 - IterBased
 
-By default, weights are saved in units of epochs. If you want to save weights in units of iterations, you need to set `by_epoch=False`.
+By default, checkpoints are saved in terms of epochs. If you want to save checkpoints in terms of iterations, you need to set `by_epoch=False`.
 
 ```
 # Set by_epoch=False and interval=500, which means to save weights once every 500 iterations
