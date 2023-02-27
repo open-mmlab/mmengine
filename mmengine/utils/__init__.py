@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .manager import ManagerMeta, ManagerMixin
-from .misc import (check_prerequisites, concat_list, deprecated_api_warning,
-                   deprecated_function, has_method,
+from .misc import (apply_to, check_prerequisites, concat_list,
+                   deprecated_api_warning, deprecated_function, has_method,
                    import_modules_from_strings, is_list_of,
                    is_method_overridden, is_seq_of, is_str, is_tuple_of,
                    iter_cast, list_cast, requires_executable, requires_package,
@@ -27,5 +27,6 @@ __all__ = [
     'is_abs', 'is_method_overridden', 'has_method', 'digit_version',
     'get_git_hash', 'ManagerMeta', 'ManagerMixin', 'Timer', 'check_time',
     'TimerError', 'ProgressBar', 'track_iter_progress',
-    'track_parallel_progress', 'track_progress', 'deprecated_function'
+    'track_parallel_progress', 'track_progress', 'deprecated_function',
+    'apply_to'
 ]

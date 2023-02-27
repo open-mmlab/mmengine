@@ -3,7 +3,7 @@ import pytest
 
 from mmengine import MMLogger
 # yapf: disable
-from mmengine.utils.misc import (concat_list, deprecated_api_warning,
+from mmengine.utils.misc import (apply_to, concat_list, deprecated_api_warning,
                                  deprecated_function, has_method,
                                  import_modules_from_strings, is_list_of,
                                  is_method_overridden, is_seq_of, is_tuple_of,
@@ -283,3 +283,18 @@ def test_deprecated_function():
 
     Short summary."""  # noqa: E122
     assert expected_docstring.strip(' ') == deprecated_demo1.__doc__
+
+
+def test_apply_to():
+    # Test only apply `+1` to int object.
+    data = dict(a=1, b=2.0)
+    result = apply_to(data, lambda x: isinstance(x, int), lambda x: x + 1)
+    assert result == dict(a=2, b=2.0)
+
+    # Test with nested data
+    data = dict(a=[dict(c=1)], b=2.0)
+    result = apply_to(data, lambda x: isinstance(x, int), lambda x: x + 1)
+    assert dict(a=[dict(c=2)], b=2.0)
+
+    with pytest.raises(ValueError):
+        apply_to(data, lambda x: isinstance(x, list), lambda x: x)
