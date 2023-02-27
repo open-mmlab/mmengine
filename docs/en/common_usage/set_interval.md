@@ -46,7 +46,7 @@ runner.train()
 
 ## Setting the Interval for Saving Checkpoints
 
-To customize the interval for saving weights, set the `interval` parameter of [CheckpointHook](mmengine.hooks.CheckpointHook).
+To customize the interval for saving checkpoints, set the `interval` parameter of [CheckpointHook](mmengine.hooks.CheckpointHook).
 
 - EpochBased
 
