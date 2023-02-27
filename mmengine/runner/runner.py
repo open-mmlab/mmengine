@@ -2082,7 +2082,7 @@ class Runner:
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
         """
         if meta is None:
