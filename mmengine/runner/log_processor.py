@@ -137,7 +137,10 @@ class LogProcessor:
                                                    custom_cfg_copy)
         # tag is used to write log information to different backends.
         log_tag = self._collect_scalars(custom_cfg_copy, runner, mode)
-        # `log_tag` will pop 'lr' and loop other keys to `log_str`.
+        # If `self.log_with_hierarchy` is False, the tag is the same as
+        # log_tag Otherwise each key in tag starts with prefix `train`, `test`
+        # and `val`
+
         tag = self._collect_scalars(custom_cfg_copy, runner, mode,
                                     self.log_with_hierarchy)
         # Record learning rate.
@@ -145,7 +148,7 @@ class LogProcessor:
         for key, value in tag.items():
             if key.endswith('lr'):
                 key = self._remove_prefix(mode, key)
-                log_tag.pop(f'{key}')
+                log_tag.pop(key)
                 lr_str_list.append(f'{key}: '
                                    f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
@@ -255,6 +258,8 @@ class LogProcessor:
             self._remove_prefix(mode, cfg['data_src'])
             for cfg in self.custom_cfg
         ]
+
+        # Count the averaged time and data_time by epoch
         if 'time' not in custom_keys:
             custom_cfg_copy.append(
                 dict(
@@ -276,6 +281,7 @@ class LogProcessor:
         # move `time` or `data_time` to the end of the log
         tag = OrderedDict()
         time_tag = OrderedDict()
+        # pop `time` and `data_time` to log them at last.
         for key, value in ori_tag.items():
             if 'time' not in key:
                 tag[key] = value
@@ -347,7 +353,7 @@ class LogProcessor:
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
                 if not reserve_prefix:
-                    key = prefix_key.partition('/')[-1]
+                    key = self._remove_prefix(mode, prefix_key)
                 else:
                     key = prefix_key
                 mode_history_scalars[key] = log_buffer
@@ -393,7 +399,7 @@ class LogProcessor:
                 if self.log_with_hierarchy:
                     key = prefix_key
                 else:
-                    key = prefix_key.partition('/')[-1]
+                    key = self._remove_prefix(mode, prefix_key)
                 mode_infos[key] = value
         return mode_infos
 
@@ -433,16 +439,21 @@ class LogProcessor:
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, runner, batch_idx: int,
-                            custom_cfg: list) -> list:
+    def _parse_windows_size(self,
+                            runner,
+                            batch_idx: int,
+                            custom_cfg: Optional[list] = None) -> list:
         """Parse window_size defined in custom_cfg to int value.
 
         Args:
             runner (Runner): The runner of the training/testing/validation
                 process.
             batch_idx (int): The iteration index of current dataloader.
-            custom_cfg (list): A copy of ``self.custom_cfg``
+            custom_cfg (list): A copy of ``self.custom_cfg``. Defaults to None
+                to keep backward compatibility.
         """
+        if custom_cfg is None:
+            custom_cfg = copy.deepcopy(self.custom_cfg)
         for log_cfg in custom_cfg:
             window_size = log_cfg.get('window_size', None)
             if window_size is None or isinstance(window_size, int):
