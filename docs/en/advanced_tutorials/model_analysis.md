@@ -168,4 +168,4 @@ We provide more options to support custom output
 - `input_shape`: (tuple) the shape of the input, e.g., (3, 224, 224)
 - `inputs`: (optional: torch.Tensor), if given, `input_shape` will be ignored
 - `show_table`: (bool) whether return the statistics in the form of table, default: True
-- `show_arch`: (bool) whether return the statistics in the form of table,  default: True
+- `show_arch`: (bool) whether return the statistics by network layers,  default: True
