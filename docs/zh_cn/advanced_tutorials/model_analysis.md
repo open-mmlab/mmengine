@@ -1,6 +1,6 @@
 # 模型复杂度分析
 
-我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的 "parameter"、"activation" 和 "flops "的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供operator层级和模块级的flop计数。如果您对如何准确测量一个 operator 的flop的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
+我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的 "parameter"、"activation" 和 "flops "的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供 operator 层级和模块级的 flop 计数。如果您对如何准确测量一个运算符的 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
 
 ## 什么是 FLOPs
 
@@ -61,12 +61,12 @@ print("Model Parameters:{}".format(analysis_results['params_str']))
 
 返回的输出是一个包含以下7个键的字典:
 
-- `flops`: flop 的总数, e.g., 10000, 10000
-- `flops_str`: 格式化的字符串, e.g., 1.0G, 100M
-- `params`: 全部参数的数量, e.g., 10000, 10000
-- `params_str`: 格式化的字符串, e.g., 1.0G, 100M
-- `activations`: 激活量的总数, e.g., 10000, 10000
-- `activations_str`: 格式化的字符串, e.g., 1.0G, 100M
+- `flops`: flop 的总数, 例如, 10000, 10000
+- `flops_str`: 格式化的字符串, 例如, 1.0G, 100M
+- `params`: 全部参数的数量, 例如, 10000, 10000
+- `params_str`: 格式化的字符串, 例如, 1.0G, 100M
+- `activations`: 激活量的总数, 例如, 10000, 10000
+- `activations_str`: 格式化的字符串, 例如, 1.0G, 100M
 - `out_table`: 以表格形式打印相关信息
 
 ```
@@ -165,7 +165,7 @@ Model Parameters:25.557M
 我们提供了更多的选项来支持自定义输出内容：
 
 - `model`: (nn.Module) 待分析的模型
-- `input_shape`: (tuple) 输入尺寸, e.g., (3, 224, 224)
+- `input_shape`: (tuple) 输入尺寸，例如 (3, 224, 224)
 - `inputs`: (optional: torch.Tensor), 如果传入该参数, `input_shape` 会被忽略
-- `show_table`: (bool) 是否以表格形式返回统计结果，默认：True
-- `show_arch`: (bool) 是否以网络结构形式返回统计结果，默认：True
+- `show_table`: (bool) 是否以表格形式返回统计结果，默认值：True
+- `show_arch`: (bool) 是否以网络结构形式返回统计结果，默认值：True
