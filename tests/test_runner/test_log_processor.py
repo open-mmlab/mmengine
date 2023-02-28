@@ -47,26 +47,25 @@ class TestLogProcessor:
     def test_parse_windows_size(self):
         log_processor = LogProcessor()
         # Test parse 'epoch' window_size.
-        log_processor.custom_cfg = [
-            dict(data_src='loss_cls', window_size='epoch')
-        ]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1)
+        custom_cfg = [dict(data_src='loss_cls', window_size='epoch')]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
+                                                       custom_cfg)
         assert custom_cfg[0]['window_size'] == 2
 
         # Test parse 'global' window_size.
-        log_processor.custom_cfg = [
-            dict(data_src='loss_cls', window_size='global')
-        ]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1)
+        custom_cfg = [dict(data_src='loss_cls', window_size='global')]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
+                                                       custom_cfg)
         assert custom_cfg[0]['window_size'] == 11
 
         # Test parse int window_size
-        log_processor.custom_cfg = [dict(data_src='loss_cls', window_size=100)]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1)
+        custom_cfg = [dict(data_src='loss_cls', window_size=100)]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
+                                                       custom_cfg)
         assert custom_cfg[0]['window_size'] == 100
 
         # Invalid type window_size will raise TypeError.
-        log_processor.custom_cfg = [dict(data_src='loss_cls', window_size=[])]
+        custom_cfg = [dict(data_src='loss_cls', window_size=[])]
         with pytest.raises(TypeError):
             log_processor._parse_windows_size(custom_cfg, self.runner)
 
@@ -84,8 +83,9 @@ class TestLogProcessor:
             train_logs = dict(lr=0.1, time=1.0, data_time=1.0, loss_cls=1.0)
         else:
             train_logs = dict(time=1.0, data_time=1.0, loss_cls=1.0)
-        log_processor._collect_scalars = MagicMock(return_value=train_logs)
-        tag, out = log_processor.get_log_after_iter(self.runner, 1, mode)
+        log_processor._collect_scalars = \
+            lambda *args, **kwargs: copy.deepcopy(train_logs)
+        _, out = log_processor.get_log_after_iter(self.runner, 1, mode)
         # Verify that the correct context have been logged.
         cur_loop = log_processor._get_cur_loop(self.runner, mode)
         if by_epoch:
@@ -155,7 +155,7 @@ class TestLogProcessor:
             return_value=non_scalar_logs)
         _, out = log_processor.get_log_after_epoch(self.runner, 2, mode)
         expect_metric_str = ("accuracy: 0.9000  recall: {'cat': 1, 'dog': 0}  "
-                             'cm: \ntensor([1, 2, 3])\n')
+                             'cm: \ntensor([1, 2, 3])\ndata_time: 1.0000  ')
         if by_epoch:
             if mode == 'test':
                 assert out == 'Epoch(test) [5/5]  ' + expect_metric_str

@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import datetime
+import re
 from collections import OrderedDict
 from itertools import chain
 from typing import List, Optional, Tuple
@@ -98,11 +99,13 @@ class LogProcessor:
                  window_size=10,
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
-                 num_digits: int = 4):
+                 num_digits: int = 4,
+                 reserve_prefix=False):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self.num_digits = num_digits
+        self.reserve_prefix = reserve_prefix
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -123,16 +126,20 @@ class LogProcessor:
         current_loop = self._get_cur_loop(runner, mode)
         cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
-        custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
+        custom_cfg_copy = copy.deepcopy(self.custom_cfg)
+        custom_cfg_copy = self._parse_windows_size(runner, batch_idx,
+                                                   custom_cfg_copy)
         # tag is used to write log information to different backends.
-        tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        log_tag = self._collect_scalars(custom_cfg_copy, runner, mode)
         # `log_tag` will pop 'lr' and loop other keys to `log_str`.
-        log_tag = copy.deepcopy(tag)
+        tag = self._collect_scalars(custom_cfg_copy, runner, mode,
+                                    self.reserve_prefix)
         # Record learning rate.
         lr_str_list = []
         for key, value in tag.items():
             if key.endswith('lr'):
-                log_tag.pop(key)
+                key = self._remove_prefix(mode, key)
+                log_tag.pop(f'{key}')
                 lr_str_list.append(f'{key}: '
                                    f'{value:.{self.num_digits}e}')
         lr_str = ' '.join(lr_str_list)
@@ -183,14 +190,14 @@ class LogProcessor:
         log_str += f'{lr_str}  '
         # If IterTimerHook used in runner, eta, time, and data_time should be
         # recorded.
-        if (all(item in tag for item in ['time', 'data_time'])
+        if (all(item in log_tag for item in ['time', 'data_time'])
                 and 'eta' in runner.message_hub.runtime_info):
             eta = runner.message_hub.get_info('eta')
             eta_str = str(datetime.timedelta(seconds=int(eta)))
             log_str += f'eta: {eta_str}  '
-            log_str += (f'time: {tag["time"]:.{self.num_digits}f}  '
+            log_str += (f'time: {log_tag["time"]:.{self.num_digits}f}  '
                         f'data_time: '
-                        f'{tag["data_time"]:.{self.num_digits}f}  ')
+                        f'{log_tag["data_time"]:.{self.num_digits}f}  ')
             # Pop recorded keys
             log_tag.pop('time')
             log_tag.pop('data_time')
@@ -236,12 +243,39 @@ class LogProcessor:
         cur_loop = self._get_cur_loop(runner, mode)
         dataloader_len = len(cur_loop.dataloader)
 
-        custom_cfg_copy = self._parse_windows_size(runner, batch_idx)
+        custom_cfg_copy = copy.deepcopy(self.custom_cfg)
+        # remove prefix
+        custom_keys = [
+            self._remove_prefix(mode, cfg['data_src'])
+            for cfg in self.custom_cfg
+        ]
+        if 'time' not in custom_keys:
+            custom_cfg_copy.append(
+                dict(
+                    data_src=f'{mode}/time',
+                    window_size='epoch',
+                    method_name='mean'))
+        if 'data_time' not in custom_keys:
+            custom_cfg_copy.append(
+                dict(
+                    data_src=f'{mode}/data_time',
+                    window_size='epoch',
+                    method_name='mean'))
+        custom_cfg_copy = self._parse_windows_size(runner, batch_idx,
+                                                   custom_cfg_copy)
         # tag is used to write log information to different backends.
-        tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        ori_tag = self._collect_scalars(custom_cfg_copy, runner, mode,
+                                        self.reserve_prefix)
         non_scalar_tag = self._collect_non_scalars(runner, mode)
-        tag.pop('time', None)
-        tag.pop('data_time', None)
+        # move `time` or `data_time` to the end of the log
+        tag = OrderedDict()
+        time_tag = OrderedDict()
+        for key, value in ori_tag.items():
+            if 'time' not in key:
+                tag[key] = value
+            else:
+                time_tag[key] = value
+
         # By epoch:
         #     Epoch(val) [10][1000/1000]  ...
         #     Epoch(test) [1000/1000] ...
@@ -263,6 +297,8 @@ class LogProcessor:
         # message.
         log_items = []
         for name, val in chain(tag.items(), non_scalar_tag.items()):
+            if name in ('time', 'data_time'):
+                name = self._remove_prefix(mode, name)
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
             if isinstance(val, (torch.Tensor, np.ndarray)):
@@ -271,12 +307,18 @@ class LogProcessor:
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
 
+        for name, val in time_tag.items():
+            log_str += f'{name}: {val:.{self.num_digits}f}  '
+
         if with_non_scalar:
             tag.update(non_scalar_tag)
         return tag, log_str
 
-    def _collect_scalars(self, custom_cfg: List[dict], runner,
-                         mode: str) -> dict:
+    def _collect_scalars(self,
+                         custom_cfg: List[dict],
+                         runner,
+                         mode: str,
+                         reserve_prefix=False) -> dict:
         """Collect log information to compose a dict according to mode.
 
         Args:
@@ -298,7 +340,10 @@ class LogProcessor:
         # according to mode.
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
-                key = prefix_key.partition('/')[-1]
+                if not reserve_prefix:
+                    key = prefix_key.partition('/')[-1]
+                else:
+                    key = prefix_key
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
@@ -339,9 +384,15 @@ class LogProcessor:
         # extract log info and remove prefix to `mode_infos` according to mode.
         for prefix_key, value in infos.items():
             if prefix_key.startswith(mode):
-                key = prefix_key.partition('/')[-1]
+                if self.reserve_prefix:
+                    key = prefix_key
+                else:
+                    key = prefix_key.partition('/')[-1]
                 mode_infos[key] = value
         return mode_infos
+
+    def _remove_prefix(self, mode, key):
+        return re.sub(f'{mode}/(.*)', r'\1', key)
 
     def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""
@@ -375,7 +426,8 @@ class LogProcessor:
         _check_repeated_log_name()
         _check_window_size()
 
-    def _parse_windows_size(self, runner, batch_idx: int) -> list:
+    def _parse_windows_size(self, runner, batch_idx: int,
+                            custom_cfg: list) -> list:
         """Parse window_size defined in custom_cfg to int value.
 
         Args:
@@ -383,8 +435,7 @@ class LogProcessor:
                 process.
             batch_idx (int): The iteration index of current dataloader.
         """
-        custom_cfg_copy = copy.deepcopy(self.custom_cfg)
-        for log_cfg in custom_cfg_copy:
+        for log_cfg in custom_cfg:
             window_size = log_cfg.get('window_size', None)
             if window_size is None or isinstance(window_size, int):
                 continue
@@ -396,7 +447,7 @@ class LogProcessor:
                 raise TypeError(
                     'window_size should be int, epoch or global, but got '
                     f'invalid {window_size}')
-        return custom_cfg_copy
+        return custom_cfg
 
     def _get_max_memory(self, runner) -> int:
         """Returns the maximum GPU memory occupied by tensors in megabytes (MB)
