@@ -53,6 +53,12 @@ class LogProcessor:
               `epoch` to statistics log value by epoch.
         num_digits (int): The number of significant digit shown in the
             logging message.
+        log_with_hierarchy (bool): Whether to log with hierarchy. If it is
+            True.The information writed to visualizer backend such as
+            :obj:`LocalVisBackend` and :obj:`TensorboardBackend` will be logged
+            with hierarchy. For example, ``loss`` will be saved as
+            ``train/loss``, and accuracy will be saved as ``val/accuracy``.
+            Defaults to False
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -100,12 +106,12 @@ class LogProcessor:
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
                  num_digits: int = 4,
-                 reserve_prefix=False):
+                 log_with_hierarchy=False):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self.num_digits = num_digits
-        self.reserve_prefix = reserve_prefix
+        self.log_with_hierarchy = log_with_hierarchy
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -133,7 +139,7 @@ class LogProcessor:
         log_tag = self._collect_scalars(custom_cfg_copy, runner, mode)
         # `log_tag` will pop 'lr' and loop other keys to `log_str`.
         tag = self._collect_scalars(custom_cfg_copy, runner, mode,
-                                    self.reserve_prefix)
+                                    self.log_with_hierarchy)
         # Record learning rate.
         lr_str_list = []
         for key, value in tag.items():
@@ -265,7 +271,7 @@ class LogProcessor:
                                                    custom_cfg_copy)
         # tag is used to write log information to different backends.
         ori_tag = self._collect_scalars(custom_cfg_copy, runner, mode,
-                                        self.reserve_prefix)
+                                        self.log_with_hierarchy)
         non_scalar_tag = self._collect_non_scalars(runner, mode)
         # move `time` or `data_time` to the end of the log
         tag = OrderedDict()
@@ -384,14 +390,15 @@ class LogProcessor:
         # extract log info and remove prefix to `mode_infos` according to mode.
         for prefix_key, value in infos.items():
             if prefix_key.startswith(mode):
-                if self.reserve_prefix:
+                if self.log_with_hierarchy:
                     key = prefix_key
                 else:
                     key = prefix_key.partition('/')[-1]
                 mode_infos[key] = value
         return mode_infos
 
-    def _remove_prefix(self, mode, key):
+    def _remove_prefix(self, mode: str, key: str):
+        """Remove the prefix ``train``, ``val`` and ``test`` of the key."""
         return re.sub(f'{mode}/(.*)', r'\1', key)
 
     def _check_custom_cfg(self) -> None:
@@ -434,6 +441,7 @@ class LogProcessor:
             runner (Runner): The runner of the training/testing/validation
                 process.
             batch_idx (int): The iteration index of current dataloader.
+            custom_cfg (list): A copy of ``self.custom_cfg``
         """
         for log_cfg in custom_cfg:
             window_size = log_cfg.get('window_size', None)
