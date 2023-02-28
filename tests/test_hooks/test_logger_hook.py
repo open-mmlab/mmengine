@@ -21,20 +21,26 @@ class TestLoggerHook(RunnerTestCase):
         LoggerHook()
         LoggerHook(interval=100, ignore_last=False, interval_exp_name=100)
 
-        with self.assertRaisesRegex(AssertionError, 'interval must be'):
+        with self.assertRaisesRegex(TypeError, 'interval must be'):
             LoggerHook(interval='100')
 
-        with self.assertRaisesRegex(AssertionError, 'ignore_last must be'):
+        with self.assertRaisesRegex(ValueError, 'interval must be'):
+            LoggerHook(interval=-1)
+
+        with self.assertRaisesRegex(TypeError, 'ignore_last must be'):
             LoggerHook(ignore_last='False')
 
-        with self.assertRaisesRegex(AssertionError, 'interval_exp_name'):
+        with self.assertRaisesRegex(TypeError, 'interval_exp_name'):
             LoggerHook(interval_exp_name='100')
 
-        with self.assertRaisesRegex(AssertionError, 'out_suffix'):
+        with self.assertRaisesRegex(ValueError, 'interval_exp_name'):
+            LoggerHook(interval_exp_name=-1)
+
+        with self.assertRaisesRegex(TypeError, 'out_suffix'):
             LoggerHook(out_suffix=[100])
 
         # out_dir should be None or string or tuple of string.
-        with self.assertRaisesRegex(AssertionError, 'out_dir must be'):
+        with self.assertRaisesRegex(TypeError, 'out_dir must be'):
             LoggerHook(out_dir=1)
 
         with self.assertRaisesRegex(ValueError, 'file_client_args'):

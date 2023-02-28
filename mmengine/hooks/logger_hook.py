@@ -85,29 +85,30 @@ class LoggerHook(Hook):
                  log_metric_by_epoch: bool = True,
                  backend_args: Optional[dict] = None):
 
-        assert isinstance(interval, int) and interval > 0, (
-            'interval must be greater than 0')
-        self.interval = interval
+        if not isinstance(interval, int):
+            raise TypeError('interval must be an integer')
+        if interval <= 0:
+            raise ValueError('interval must be greater than 0')
 
-        assert isinstance(ignore_last, bool), ('ignore_last must be a boolean')
-        self.ignore_last = ignore_last
+        if not isinstance(ignore_last, bool):
+            raise TypeError('ignore_last must be a boolean')
 
-        assert isinstance(interval_exp_name, int) and interval_exp_name > 0, (
-            'interval_exp_name must be greater than 0')
-        self.interval_exp_name = interval_exp_name
+        if not isinstance(interval_exp_name, int):
+            raise TypeError('interval_exp_name must be an integer')
 
-        if out_dir is not None:
-            assert isinstance(
-                out_dir, (str, Path)), ('out_dir must be a str or Path object')
-        assert is_seq_of(out_suffix,
-                         str), ('out_suffix should be a sequence of str')
-        assert isinstance(keep_local, bool), ('keep_local must be a boolean')
+        if interval_exp_name <= 0:
+            raise ValueError('interval_exp_name must be greater than 0')
+
+        if out_dir is not None and not isinstance(out_dir, (str, Path)):
+            raise TypeError('out_dir must be a str or Path object')
+
+        if not isinstance(keep_local, bool):
+            raise TypeError('keep_local must be a boolean')
 
         if out_dir is None and file_client_args is not None:
             raise ValueError(
                 'file_client_args should be "None" when `out_dir` is not'
                 'specified.')
-        self.out_dir = out_dir
 
         if file_client_args is not None:
             warnings.warn(
@@ -121,8 +122,12 @@ class LoggerHook(Hook):
         if not (isinstance(out_suffix, str) or is_seq_of(out_suffix, str)):
             raise TypeError('out_suffix should be None or string or tuple of '
                             f'string, but got {type(out_suffix)}')
-        self.out_suffix = out_suffix
 
+        self.out_suffix = out_suffix
+        self.out_dir = out_dir
+        self.interval = interval
+        self.ignore_last = ignore_last
+        self.interval_exp_name = interval_exp_name
         self.keep_local = keep_local
         self.file_client_args = file_client_args
         self.json_log_path: Optional[str] = None
