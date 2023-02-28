@@ -6,9 +6,11 @@ import os.path as osp
 import pickle
 import platform
 import time
+import traceback
 import warnings
 from collections import OrderedDict
 from functools import partial
+from sys import stderr
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch
@@ -1747,6 +1749,8 @@ class Runner:
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
                 except TypeError as e:
+                    trace_msg = traceback.format_exc()
+                    print(f'\033[31m{trace_msg}\033[0m', file=stderr)
                     raise TypeError(f'{e} in {hook}') from None
 
     def register_hook(
