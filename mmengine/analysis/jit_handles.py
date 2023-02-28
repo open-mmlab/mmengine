@@ -217,8 +217,8 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Union[int, Any]:
     if len(input2) == 1:
         input2 = [input2[0], 1]
 
-    assert input1[-1] == input2[-2], input_shapes  # type: ignore
-    flop = prod(input1) * input2[-1]  # type: ignore
+    assert input1[-1] == input2[-2], input_shapes
+    flop = prod(input1) * input2[-1]
     return flop
 
 
