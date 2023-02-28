@@ -580,8 +580,6 @@ class TestFlopAnalyzer(unittest.TestCase):
             transpose=True,
             output_padding=output_padding9,
         )
-
-    def test_matmul(self) -> None:
         """Test flop count for operation matmul."""
         m = 20
         n = 10
@@ -593,6 +591,13 @@ class TestFlopAnalyzer(unittest.TestCase):
         gt_flop = m * n * p / 1e9
         gt_dict = defaultdict(float)
         gt_dict['matmul'] = gt_flop
+        self.assertDictEqual(
+            flop_dict, gt_dict,
+            'Matmul operation failed to pass the flop count test.')
+        # Test with single dimension y
+        y = torch.randn(n)
+        gt_dict['matmul'] = m * n * 1 / 1e9
+        flop_dict, _ = flop_count(m_net, (x, y))
         self.assertDictEqual(
             flop_dict, gt_dict,
             'Matmul operation failed to pass the flop count test.')
