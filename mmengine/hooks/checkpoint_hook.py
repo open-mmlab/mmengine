@@ -81,7 +81,7 @@ class CheckpointHook(Hook):
             Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
             accordingly.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:
