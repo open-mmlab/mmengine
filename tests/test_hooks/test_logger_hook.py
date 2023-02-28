@@ -201,28 +201,28 @@ class TestLoggerHook(RunnerTestCase):
         cfg.default_hooks.logger = dict(type='LoggerHook', out_dir=out_dir)
         runner = self.build_runner(cfg)
         runner.train()
-        self.assertTrue(os.listdir(out_dir) != 0)
+        self.assertTrue(os.listdir(out_dir))
         # clean the out_dir
         for filename in os.listdir(out_dir):
             shutil.rmtree(osp.join(out_dir, filename))
 
-        # Test out suffix
+        # Test out_suffix
         cfg.default_hooks.logger = dict(
             type='LoggerHook', out_dir=out_dir, out_suffix='.log')
         runner = self.build_runner(cfg)
         runner.train()
-        filename_list = scandir(out_dir, recursive=True)
+        filenames = scandir(out_dir, recursive=True)
         self.assertTrue(
-            all(filename.endswith('.log') for filename in filename_list))
+            all(filename.endswith('.log') for filename in filenames))
 
-        # Test keeplocal=False
+        # Test keep_local=False
         cfg.default_hooks.logger = dict(
             type='LoggerHook', out_dir=out_dir, keep_local=False)
         runner = self.build_runner(cfg)
         runner.train()
-        filename_list = scandir(runner._log_dir, recursive=True)
+        filenames = scandir(runner._log_dir, recursive=True)
 
-        for filename in filename_list:
+        for filename in filenames:
             self.assertFalse(
                 filename.endswith(('.log', '.json', '.py', '.yaml')),
                 f'{filename} should not be kept.')

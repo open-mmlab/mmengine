@@ -118,10 +118,9 @@ class LoggerHook(Hook):
                     '"file_client_args" and "backend_args" cannot be set '
                     'at the same time.')
 
-        if not (out_dir is None or isinstance(out_dir, str)
-                or is_seq_of(out_dir, str)):
-            raise TypeError('out_dir should be None or string or tuple of '
-                            f'string, but got {type(out_dir)}')
+        if not (isinstance(out_suffix, str) or is_seq_of(out_suffix, str)):
+            raise TypeError('out_suffix should be None or string or tuple of '
+                            f'string, but got {type(out_suffix)}')
         self.out_suffix = out_suffix
 
         self.keep_local = keep_local
