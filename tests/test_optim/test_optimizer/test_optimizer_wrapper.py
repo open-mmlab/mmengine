@@ -25,7 +25,7 @@ try:
 except ImportError:
     pass
 
-amp_valid_dtypes = ['float16', 'bfloat16', None]
+amp_valid_dtypes = ['float64', 'float32', 'float16', 'bfloat16', None]
 torch_dtypes = [
     torch.float16 if dtype is None else getattr(torch, dtype)
     for dtype in amp_valid_dtypes
@@ -514,7 +514,8 @@ class TestAmpOptimWrapper(TestCase):
     def test_optim_context(self, dtype, target_dtype):
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(
+            optimizer=self.optimizer, dtype=dtype)
         with amp_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
