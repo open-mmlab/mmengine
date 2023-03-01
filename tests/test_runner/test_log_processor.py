@@ -67,7 +67,7 @@ class TestLogProcessor:
         # Invalid type window_size will raise TypeError.
         custom_cfg = [dict(data_src='loss_cls', window_size=[])]
         with pytest.raises(TypeError):
-            log_processor._parse_windows_size(custom_cfg, self.runner)
+            log_processor._parse_windows_size(self.runner, 1, custom_cfg)
 
     @pytest.mark.parametrize('by_epoch,mode',
                              ([True, 'train'], [False, 'train'], [True, 'val'],

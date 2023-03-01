@@ -324,6 +324,7 @@ class LogProcessor:
 
         if with_non_scalar:
             tag.update(non_scalar_tag)
+        tag.update(time_tag)
         return tag, log_str
 
     def _collect_scalars(self,
