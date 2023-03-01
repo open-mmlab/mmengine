@@ -84,7 +84,6 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
             'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
-    # TODO: use local_rank instead of rank % num_gpus
     rank = int(os.environ['RANK'])
     if is_mlu_available():
         import torch_mlu  # noqa: F401
@@ -103,8 +102,8 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
     else:
-        num_gpus = torch.cuda.device_count()
-        local_rank = os.environ.get('LOCAL_RANK', None) or rank % num_gpus
+        # LOCAL_RANK is set by `torch.distributed.launch` since PyTorch 1.1
+        local_rank = int(os.environ['LOCAL_RANK'])
         torch.cuda.set_device(local_rank)
         torch_dist.init_process_group(backend=backend, **kwargs)
 
@@ -152,8 +151,13 @@ def _init_dist_slurm(backend, port=None) -> None:
     proc_id = int(os.environ['SLURM_PROCID'])
     ntasks = int(os.environ['SLURM_NTASKS'])
     node_list = os.environ['SLURM_NODELIST']
-    num_gpus = torch.cuda.device_count()
-    local_rank = os.environ.get('SLURM_LOCALID', None) or proc_id % num_gpus
+    # Not sure when this environment variable could be None, so use a fallback
+    local_id = os.environ.get('SLURM_LOCALID', None)
+    if local_id is not None:
+        local_rank = int(local_id)
+    else:
+        num_gpus = torch.cuda.device_count()
+        local_rank = proc_id % num_gpus
     torch.cuda.set_device(local_rank)
     addr = subprocess.getoutput(
         f'scontrol show hostname {node_list} | head -n1')
