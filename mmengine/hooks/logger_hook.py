@@ -120,7 +120,7 @@ class LoggerHook(Hook):
                     'at the same time.')
 
         if not (isinstance(out_suffix, str) or is_seq_of(out_suffix, str)):
-            raise TypeError('out_suffix should be None or string or tuple of '
+            raise TypeError('out_suffix should be a string or tuple of '
                             f'string, but got {type(out_suffix)}')
 
         self.out_suffix = out_suffix
