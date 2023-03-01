@@ -25,7 +25,11 @@ try:
 except ImportError:
     pass
 
-amp_valid_dtypes = ['float16', 'float32', 'float64', 'bfloat16', (None, )]
+amp_valid_dtypes = ['float16', 'bfloat16', None]
+torch_dtypes = [
+    torch.float16 if dtype is None else getattr(torch, dtype)
+    for dtype in amp_valid_dtypes
+]
 
 
 def bf16_supported() -> bool:
@@ -432,7 +436,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
-    @parameterized.expand(amp_valid_dtypes)
+    @parameterized.expand(list(zip(amp_valid_dtypes)))
     def test_step(self, dtype):
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
@@ -448,7 +452,7 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
-    @parameterized.expand(amp_valid_dtypes)
+    @parameterized.expand(list(zip(amp_valid_dtypes)))
     def test_backward(self, dtype):
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
@@ -506,9 +510,12 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
-    def test_optim_context(self):
+    @parameterized.expand(list(zip(amp_valid_dtypes, torch_dtypes)))
+    def test_optim_context(self, dtype, target_dtype):
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         with amp_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
-            self.assertEqual(y.dtype, torch.float16)
+            self.assertEqual(y.dtype, target_dtype)
