@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
-from typing import Optional, Union
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -60,7 +60,7 @@ class AmpOptimWrapper(OptimWrapper):
 
     def __init__(self,
                  loss_scale: str = 'dynamic',
-                 dtype: Optional[Union[str, torch.dtype]] = None,
+                 dtype: Union[str, torch.dtype] = None,
                  **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
