@@ -4,10 +4,10 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-import pytest
 import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
+from parameterized import parameterized
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import SGD, Adam, Optimizer
@@ -24,6 +24,13 @@ try:
     is_apex_available = True
 except ImportError:
     pass
+
+amp_valid_dtypes = ['float16', 'float32', 'float64', 'bfloat16', (None, )]
+
+
+def bf16_supported() -> bool:
+    return (hasattr(torch.cuda, 'is_bf16_supported')
+            and torch.cuda.is_bf16_supported())
 
 
 class ToyModel(nn.Module):
@@ -194,7 +201,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     # TODO: This unit test could cause CI to fail with some probability, which
     #       is caused by MultiProcessTestCase. This problem should be solved
     #       in the future).
-    @pytest.mark.skipif(True, reason='Solved in the future')
+    @unittest.skipIf(True, reason='Solved in the future')
     def test_clip_grads(self):
         # Test `clip_grad` with `clip_norm_`
         optim_wrapper = OptimWrapper(
@@ -425,9 +432,12 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
-    def test_step(self):
+    @parameterized.expand(amp_valid_dtypes)
+    def test_step(self, dtype):
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
         optimizer = MagicMock(spec=Optimizer)
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer, dtype=dtype)
         amp_optim_wrapper.loss_scaler = MagicMock()
         amp_optim_wrapper.step()
         amp_optim_wrapper.loss_scaler.step.assert_called_with(
@@ -438,8 +448,12 @@ class TestAmpOptimWrapper(TestCase):
     @unittest.skipIf(
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
-    def test_backward(self):
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+    @parameterized.expand(amp_valid_dtypes)
+    def test_backward(self, dtype):
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
+        amp_optim_wrapper = AmpOptimWrapper(
+            optimizer=self.optimizer, dtype=dtype)
         loss_scaler = MagicMock()
         scale_return = MagicMock()
         scale_fn = MagicMock(return_value=scale_return)
@@ -498,100 +512,3 @@ class TestAmpOptimWrapper(TestCase):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
             self.assertEqual(y.dtype, torch.float16)
-
-    @unittest.skipIf(
-        not torch.cuda.is_available()
-        or not hasattr(torch.cuda, 'is_bf16_supported')
-        or not torch.cuda.is_bf16_supported(),
-        reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
-        'installed && bf16 supported by device')
-    def test_step_bf16(self):
-        optimizer = MagicMock(spec=Optimizer)
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=optimizer, dtype='bfloat16')
-        amp_optim_wrapper.loss_scaler = MagicMock()
-        amp_optim_wrapper.step()
-        amp_optim_wrapper.loss_scaler.step.assert_called_with(
-            amp_optim_wrapper.optimizer)
-        amp_optim_wrapper.loss_scaler.update.assert_called_with(
-            amp_optim_wrapper._scale_update_param)
-
-    @unittest.skipIf(
-        not torch.cuda.is_available()
-        or not hasattr(torch.cuda, 'is_bf16_supported')
-        or not torch.cuda.is_bf16_supported(),
-        reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
-        'installed && bf16 supported by device')
-    def test_backward_bf16(self):
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype='bfloat16')
-        loss_scaler = MagicMock()
-        scale_return = MagicMock()
-        scale_fn = MagicMock(return_value=scale_return)
-        loss_scaler.scale = scale_fn
-        amp_optim_wrapper.loss_scaler = loss_scaler
-
-        amp_optim_wrapper.backward(1)
-        loss_scaler.scale.assert_called_with(1)
-        scale_return.backward.assert_called_with()
-
-    @unittest.skipIf(
-        not torch.cuda.is_available()
-        or not hasattr(torch.cuda, 'is_bf16_supported')
-        or not torch.cuda.is_bf16_supported(),
-        reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
-        'installed && bf16 supported by device')
-    def test_state_dict_bf16(self):
-        self.model = self.model.cuda()
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype='bfloat16')
-        loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
-        amp_optim_wrapper.update_params(loss)
-        state_dict = amp_optim_wrapper.state_dict()
-        scalar_state_dict = state_dict.pop('loss_scaler')
-        optim_state_dict = state_dict
-
-        self.assertDictEqual(optim_state_dict,
-                             amp_optim_wrapper.optimizer.state_dict())
-        self.assertDictEqual(scalar_state_dict,
-                             amp_optim_wrapper.loss_scaler.state_dict())
-
-    @unittest.skipIf(
-        not torch.cuda.is_available()
-        or not hasattr(torch.cuda, 'is_bf16_supported')
-        or not torch.cuda.is_bf16_supported(),
-        reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
-        'installed && bf16 supported by device')
-    def test_load_state_dict_bf16(self):
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype='bfloat16')
-        self.model = self.model.cuda()
-        # Test load from optimizer
-        optimizer = SGD(self.model.parameters(), lr=0.1)
-        amp_optim_wrapper.load_state_dict(optimizer.state_dict())
-
-        self.assertDictEqual(optimizer.state_dict(),
-                             amp_optim_wrapper.optimizer.state_dict())
-        # Test load from optim_wrapper
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
-        amp_optim_wrapper_ = AmpOptimWrapper(
-            optimizer=SGD(self.model.parameters(), lr=0.1))
-        amp_optim_wrapper_.load_state_dict(amp_optim_wrapper.state_dict())
-        self.assertDictEqual(amp_optim_wrapper.optimizer.state_dict(),
-                             amp_optim_wrapper_.optimizer.state_dict())
-        self.assertDictEqual(amp_optim_wrapper.loss_scaler.state_dict(),
-                             amp_optim_wrapper_.loss_scaler.state_dict())
-
-    @unittest.skipIf(
-        not torch.cuda.is_available()
-        or not hasattr(torch.cuda, 'is_bf16_supported')
-        or not torch.cuda.is_bf16_supported(),
-        reason='`torch.cuda.amp` with bf16 is only available when pytorch-gpu'
-        'installed && bf16 supported by device')
-    def test_optim_context_bf16(self):
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype='bfloat16')
-        with amp_optim_wrapper.optim_context(self.model):
-            x = torch.randn(1, 1, 1, 1).cuda()
-            y = nn.Conv2d(1, 1, 1).cuda()(x)
-            self.assertEqual(y.dtype, torch.bfloat16)
