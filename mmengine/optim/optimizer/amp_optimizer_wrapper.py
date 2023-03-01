@@ -48,7 +48,7 @@ class AmpOptimWrapper(OptimWrapper):
 
     Warnings:
         ``dtype`` argument is only available with PyTorch version >= 1.10.0. If
-        you use PyTorch of an older version, it will fallback to ``float16``.
+        you use PyTorch of an older version, it will be ignored.
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
