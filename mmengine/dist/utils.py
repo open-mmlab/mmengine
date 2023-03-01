@@ -152,9 +152,9 @@ def _init_dist_slurm(backend, port=None) -> None:
     ntasks = int(os.environ['SLURM_NTASKS'])
     node_list = os.environ['SLURM_NODELIST']
     # Not sure when this environment variable could be None, so use a fallback
-    local_id = os.environ.get('SLURM_LOCALID', None)
-    if local_id is not None:
-        local_rank = int(local_id)
+    local_rank_env = os.environ.get('SLURM_LOCALID', None)
+    if local_rank_env is not None:
+        local_rank = int(local_rank_env)
     else:
         num_gpus = torch.cuda.device_count()
         local_rank = proc_id % num_gpus
