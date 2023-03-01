@@ -41,9 +41,8 @@ class AmpOptimWrapper(OptimWrapper):
 
         dtype (str or torch.dtype, optional): The data type to autocast in amp.
             If a ``str`` is given, it will be converted to ``torch.dtype``.
-            Valid ``str`` format are `'float16'`, `'bfloat16'`, `'float32'`,
-            `'float64'`. If set to ``None``, the default data type will be used.
-            Defaults to None.
+            Valid ``str`` format are `'float16'` and `'bfloat16'`. If set to
+            ``None``, the default data type will be used. Defaults to None.
             `New in version 0.6.1.`
         **kwargs: Keyword arguments passed to OptimWrapper.
 
@@ -57,7 +56,7 @@ class AmpOptimWrapper(OptimWrapper):
         ``accumulative_counts``.
     """
 
-    valid_dtypes = ('float64', 'float32', 'float16', 'bfloat16', 'half')
+    valid_dtypes = ('float16', 'bfloat16')
 
     def __init__(self,
                  loss_scale: str = 'dynamic',
