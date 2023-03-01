@@ -44,8 +44,12 @@ class AmpOptimWrapper(OptimWrapper):
             Valid ``str`` format are `'float16'`, `'bfloat16'`, `'float32'`,
             `'float64'`. If set to ``None``, the default data type will be used.
             Defaults to None.
-
+            `New in version 0.6.1.`
         **kwargs: Keyword arguments passed to OptimWrapper.
+
+    Warnings:
+        ``dtype`` argument is only available with PyTorch version >= 1.10.0. If
+        you use PyTorch of an older version, it will fallback to ``float16``.
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
