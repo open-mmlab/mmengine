@@ -164,7 +164,7 @@ Model Parameters:25.557M
 
 ## 接口
 
-除了上述基本用法，get_model_complexity_info 还能接受以下参数，输出定制化的统计结果：
+除了上述基本用法，`get_model_complexity_info` 还能接受以下参数，输出定制化的统计结果：
 
 - `model`: (nn.Module) 待分析的模型
 - `input_shape`: (tuple) 输入尺寸，例如 (3, 224, 224)
