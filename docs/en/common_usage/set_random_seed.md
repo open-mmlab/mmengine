@@ -26,13 +26,9 @@ runner = Runner(
 runner.train()
 ```
 
-However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms chosen. Here we briefly explain why and where these fluctuations come from.
+However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms chosen. The core reason is that the atomic operations in CUDA are unordered and random during parallel training. 
 
-First, randomness not only exists in OpenMMLab algorithms like MMDetection. You may encounter it in most of the deep learning frameworks. The core reason is that the atomic operations in CUDA are unordered and random during parallel training.
-
-To further acknowledge this, you can refer to this PyTorch official [document](https://pytorch.org/docs/stable/notes/randomness.html), which explains the uncertainties an algorithm encounters during different training sessions in PyTorch and how to control them. One is the generation of random numbers, which can be controlled by setting the seed in Numpy and PyTorch. The other is the implementation of certain operators, which can be locked using some switches in PyTorch, such as `torch.use_deterministic_algorithms`. Currently, the OpenMMLab series algorithms provide interfaces to use the same seed and the same implementations during different training sessions in the same algorithm. This is why users can see the "Set random seed to 0, deterministic: True" in the log during the training.
-
-Then why do we still have fluctuations? This is because the CUDA implementation of some operators sometimes inevitably performs atomic operations such as adding, subtracting, multiplying, and dividing the same memory address multiple times in different CUDA kernels. In particular, during the `backward` process, the use of `atomicAdd` is very common. These atomic operations are unordered and random when computed. Therefore, when performing atomic operations at the same memory address multiple times, let's say adding multiple gradients at the same address, the order in which they are performed is uncertain, and even if each number is the same, the order in which the numbers are added will be different.
+The CUDA implementation of some operators sometimes inevitably performs atomic operations such as adding, subtracting, multiplying, and dividing the same memory address multiple times in different CUDA kernels. In particular, during the `backward` process, the use of `atomicAdd` is very common. These atomic operations are unordered and random when computed. Therefore, when performing atomic operations at the same memory address multiple times, let's say adding multiple gradients at the same address, the order in which they are performed is uncertain, and even if each number is the same, the order in which the numbers are added will be different.
 
 The randomness of the summing order leads to another problem, that is, since the summed values are generally floating point numbers that have the problem of precision loss, there will be a slight difference in the final result.
 
