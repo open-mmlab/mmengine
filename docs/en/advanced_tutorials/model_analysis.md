@@ -2,7 +2,7 @@
 
 We provide a tool to help with the complexity analysis for the network. We borrow the idea from the implementation of [fvcore](https://github.com/facebookresearch/fvcore) to build this tool, and plan to support more custom operators in the future. Currently, it provides the interfaces to compute "parameter", "activation" and "flops" of the given model, and supports printing the related information layer-by-layer in terms of network structure or table. The analysis tool provides both operator-level and module-level flop counts simultaneously. Please refer to [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md) for implementation details of how to accurately measure the flops of one operator if interested.
 
-## What's FLOPs
+## What's Flop
 
 Flop is not a well-defined metric in complexity analysis, we follow [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis) to use one fused multiple-add as one flop.
 
@@ -21,9 +21,10 @@ Let's start with the following examples.
 ### Code
 
 ```python
-import torch
 from torch import nn
 from mmengine.analysis import get_model_complexity_info
+
+
 # return a dict of analysis results, including:
 # ['flops', 'flops_str', 'activations', 'activations_str', 'params', 'params_str', 'out_table', 'out_arch']
 
@@ -69,7 +70,7 @@ The return outputs is dict, which contains the following keys:
 - `activations_str`: with formatted string, e.g., 1.0G, 100M
 - `out_table`: print related information by table
 
-```
+```text
 +---------------------+----------------------+--------+--------------+
 | module              | #parameters or shape | #flops | #activations |
 +---------------------+----------------------+--------+--------------+

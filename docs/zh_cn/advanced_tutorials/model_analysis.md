@@ -1,10 +1,10 @@
 # 模型复杂度分析
 
-我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的参数量（parameter）、激活量（activation） 和浮点运算量（FLOP）的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供算子（operator）级和模块级（Module）的浮点运算量统计。如果您对如何准确测量一个运算符的 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
+我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的参数量（parameter）、激活量（activation） 和浮点运算量）的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供算子（operator）级和模块级（Module）的浮点运算量统计。如果您对如何准确测量一个运算符的 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
 
-## 什么是 FLOPs
+## 什么是浮点运算量（flop）
 
-浮点运算数（FLOPs）在复杂性分析中不是一个定义非常明确的指标。参考 [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis) 的描述，将一组乘加运算定义为 1 个 flop。
+浮点运算量（flop）在复杂性分析中不是一个定义非常明确的指标。参考 [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis) 的描述，将一组乘加运算定义为 1 个 flop。
 
 ## 什么是激活量（activation）
 
@@ -71,7 +71,7 @@ print("Model Parameters:{}".format(analysis_results['params_str']))
 - `activations_str`: 格式化的字符串, 例如, 1.0G, 1M
 - `out_table`: 以表格形式打印相关信息
 
-```
+```text
 +---------------------+----------------------+--------+--------------+
 | module              | #parameters or shape | #flops | #activations |
 +---------------------+----------------------+--------+--------------+
@@ -125,7 +125,7 @@ TestNet(
 
 ```python
 import torch.nn.functional as F
-im
+import torchvision
 from mmengine.model import BaseModel
 from mmengine.analysis import get_model_complexity_info
 
@@ -164,7 +164,7 @@ Model Parameters:25.557M
 
 ## 接口
 
-我们提供了更多的选项来支持自定义输出内容：
+除了上述基本用法，get_model_complexity_info 还能接受以下参数，输出定制化的统计结果：
 
 - `model`: (nn.Module) 待分析的模型
 - `input_shape`: (tuple) 输入尺寸，例如 (3, 224, 224)
