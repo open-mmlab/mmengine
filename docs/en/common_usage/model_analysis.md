@@ -726,14 +726,14 @@
 - Show FLOPs as a string
 
   ```python
-  print("Model Flops:{}".format(analysis_results['flops_str']))
+  print('Model Flops:{}'.format(analysis_results['flops_str']))
   # Model Flops:4.145G
   ```
 
 - Show Parameters as a string
 
   ```python
-  print("Model Parameters:{}".format(analysis_results['params_str']))
+  print('Model Parameters:{}'.format(analysis_results['params_str']))
   # Model Parameters:25.557M
   ```
 
