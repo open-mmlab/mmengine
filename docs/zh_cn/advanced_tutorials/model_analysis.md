@@ -1,6 +1,6 @@
 # 模型复杂度分析
 
-我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的 "parameter"、"activation" 和 "flops "的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供 operator 层级和模块级的 flop 计数。如果您对如何准确测量一个运算符的 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
+我们提供了一个工具来帮助进行网络的复杂性分析。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义运算符。目前的工具提供了用于计算给定模型的参数量（parameter）、激活量（activation） 和浮点运算量（FLOP）的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供算子（operator）级和模块级（Module）的浮点运算量统计。如果您对如何准确测量一个运算符的 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
 
 ## 什么是 FLOPs
 
