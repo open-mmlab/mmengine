@@ -21,40 +21,42 @@
 ### 代码
 
 ```python
-import torch
 from torch import nn
+
 from mmengine.analysis import get_model_complexity_info
+
+
 # 以字典的形式返回分析结果，包括:
 # ['flops', 'flops_str', 'activations', 'activations_str', 'params', 'params_str', 'out_table', 'out_arch']
-
 class InnerNet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(10,10)
-        self.fc2 = nn.Linear(10,10)
+        self.fc1 = nn.Linear(10, 10)
+        self.fc2 = nn.Linear(10, 10)
+
     def forward(self, x):
         return self.fc1(self.fc2(x))
-
+    
 
 class TestNet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(10,10)
-        self.fc2 = nn.Linear(10,10)
+        self.fc1 = nn.Linear(10, 10)
+        self.fc2 = nn.Linear(10, 10)
         self.inner = InnerNet()
+
     def forward(self, x):
         return self.fc1(self.fc2(self.inner(x)))
 
+
 input_shape = (1, 10)
 model = TestNet()
-
 analysis_results = get_model_complexity_info(model, input_shape)
-
 print(analysis_results['out_table'])
 print(analysis_results['out_arch'])
-
 print("Model Flops:{}".format(analysis_results['flops_str']))
 print("Model Parameters:{}".format(analysis_results['params_str']))
+
 ```
 
 ### 结果描述
