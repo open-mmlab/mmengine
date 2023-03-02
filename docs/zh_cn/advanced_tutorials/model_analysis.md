@@ -4,7 +4,7 @@
 
 ## 什么是 FLOPs
 
-浮点运算数（FLOPs）在复杂性分析中不是一个定义非常明确的指标，我们按照 [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis)，使用 1 组乘-加运算作为 1 个 flop。
+浮点运算数（FLOPs）在复杂性分析中不是一个定义非常明确的指标。参考 [detectron2](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.FlopCountAnalysis) 的描述，将一组乘加运算定义为 1 个 flop。
 
 ## 什么是 activation
 
